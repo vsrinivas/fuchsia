@@ -8,8 +8,8 @@ use {
     fidl_fuchsia_boot as fboot, fidl_fuchsia_device_manager as fdevicemanager,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future, StreamExt},
@@ -54,37 +54,37 @@ async fn new_realm(
 ) -> Result<(RealmInstance, mpsc::UnboundedReceiver<Signal>), Error> {
     let (mocks_provider, recv_signals) = new_mocks_provider();
     let builder = RealmBuilder::new().await?;
+    let shutdown_shim =
+        builder.add_child("shutdown-shim", SHUTDOWN_SHIM_URL, ChildOptions::new()).await?;
+    let mocks_server =
+        builder.add_local_child("mocks-server", mocks_provider, ChildOptions::new()).await?;
+    // Give the shim logging
     builder
-        .add_child("shutdown-shim", SHUTDOWN_SHIM_URL, ChildOptions::new())
-        .await?
-        .add_mock_child("mocks-server", mocks_provider, ChildOptions::new())
-        .await?
-        // Give the shim logging
         .add_route(
-            RouteBuilder::protocol_marker::<fboot::WriteOnlyLogMarker>()
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("shutdown-shim")]),
+            Route::new()
+                .capability(Capability::protocol::<fboot::WriteOnlyLogMarker>())
+                .from(Ref::parent())
+                .to(&shutdown_shim),
         )
-        .await?
-        // Expose the shim's statecontrol.Admin so test cases can access it
+        .await?;
+    // Expose the shim's statecontrol.Admin so test cases can access it
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<fstatecontrol::AdminMarker>()
-                .source(RouteEndpoint::component("shutdown-shim"))
-                .targets(vec![RouteEndpoint::AboveRoot]),
+            Route::new()
+                .capability(Capability::protocol::<fstatecontrol::AdminMarker>())
+                .from(&shutdown_shim)
+                .to(Ref::parent()),
         )
-        .await?
-        // Give the shim the driver_manager and component_manager mocks, as those are always
-        // available to the shim in prod
+        .await?;
+    // Give the shim the driver_manager and component_manager mocks, as those are always available
+    // to the shim in prod
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<fdevicemanager::SystemStateTransitionMarker>()
-                .source(RouteEndpoint::component("mocks-server"))
-                .targets(vec![RouteEndpoint::component("shutdown-shim")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol_marker::<fsys::SystemControllerMarker>()
-                .source(RouteEndpoint::component("mocks-server"))
-                .targets(vec![RouteEndpoint::component("shutdown-shim")]),
+            Route::new()
+                .capability(Capability::protocol::<fdevicemanager::SystemStateTransitionMarker>())
+                .capability(Capability::protocol::<fsys::SystemControllerMarker>())
+                .from(&mocks_server)
+                .to(&shutdown_shim),
         )
         .await?;
 
@@ -92,28 +92,25 @@ async fn new_realm(
         RealmVariant::PowerManagerPresent => {
             builder
                 .add_route(
-                    RouteBuilder::protocol_marker::<fstatecontrol::AdminMarker>()
-                        .source(RouteEndpoint::component("mocks-server"))
-                        .targets(vec![RouteEndpoint::component("shutdown-shim")]),
+                    Route::new()
+                        .capability(Capability::protocol::<fstatecontrol::AdminMarker>())
+                        .from(&mocks_server)
+                        .to(&shutdown_shim),
                 )
                 .await?;
         }
         RealmVariant::PowerManagerIsntStartedYet => {
-            builder
-                .add_mock_child(
+            let black_hole = builder
+                .add_local_child(
                     "black-hole",
-                    move |mock_handles: MockHandles| {
+                    move |handles: LocalComponentHandles| {
                         Box::pin(async move {
-                            let outgoing_dir_handle = mock_handles.outgoing_dir;
+                            let _handles = handles;
                             // We want to hold the mock_handles for the lifetime of this mock component, but
                             // never do anything with them. This will cause FIDL requests to us to go
                             // unanswered, simulating the environment where a component is unable to launch due
                             // to pkgfs not coming online.
                             future::pending::<()>().await;
-                            println!(
-                                "look, I still have the outgoing dir: {:?}",
-                                outgoing_dir_handle
-                            );
                             panic!("the black hole component should never return")
                         })
                     },
@@ -122,9 +119,10 @@ async fn new_realm(
                 .await?;
             builder
                 .add_route(
-                    RouteBuilder::protocol_marker::<fstatecontrol::AdminMarker>()
-                        .source(RouteEndpoint::component("black-hole"))
-                        .targets(vec![RouteEndpoint::component("shutdown-shim")]),
+                    Route::new()
+                        .capability(Capability::protocol::<fstatecontrol::AdminMarker>())
+                        .from(&black_hole)
+                        .to(&shutdown_shim),
                 )
                 .await?;
         }

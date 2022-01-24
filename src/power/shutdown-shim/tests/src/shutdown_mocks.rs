@@ -9,27 +9,30 @@ use {
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
-    fuchsia_component_test::mock::MockHandles,
+    fuchsia_component_test::new::LocalComponentHandles,
     fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::BoxFuture, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
 };
 
 pub fn new_mocks_provider() -> (
-    impl Fn(MockHandles) -> BoxFuture<'static, Result<(), anyhow::Error>> + Sync + Send + 'static,
+    impl Fn(LocalComponentHandles) -> BoxFuture<'static, Result<(), anyhow::Error>>
+        + Sync
+        + Send
+        + 'static,
     mpsc::UnboundedReceiver<Signal>,
 ) {
     let (send_signals, recv_signals) = mpsc::unbounded();
 
     let mock =
-        move |mock_handles: MockHandles| run_mocks(send_signals.clone(), mock_handles).boxed();
+        move |handles: LocalComponentHandles| run_mocks(send_signals.clone(), handles).boxed();
 
     (mock, recv_signals)
 }
 
 async fn run_mocks(
     send_signals: mpsc::UnboundedSender<Signal>,
-    mock_handles: MockHandles,
+    handles: LocalComponentHandles,
 ) -> Result<(), Error> {
     let mut fs = fserver::ServiceFs::new();
     let send_admin_signals = send_signals.clone();
@@ -55,7 +58,7 @@ async fn run_mocks(
     let (proxy, _server_end) = create_proxy::<fio::DirectoryMarker>()?;
     fs.add_remote("black_hole", proxy);
 
-    fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
 
     Ok(())
