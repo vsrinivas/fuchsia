@@ -76,7 +76,7 @@ This section covers developing drivers on Fuchsia.
  - [Test components](/docs/concepts/testing/v1_test_component.md)
  - [Test environments](/docs/contribute/testing/environments.md)
  - [Testability rubrics](/docs/development/testing/testability_rubric.md)
- - [Test flake policy](/docs/concepts/testing/test_flake_policy.md)
+ - [Test flake policy](/docs/development/testing/test_flake_policy.md)
  - [Testing Isolated Cache Storage](/docs/concepts/testing/testing_isolated_cache_storage.md)
  - [Host-target interaction tests](/docs/development/testing/host_target_interaction_tests.md)
  - [Testing for Flakiness in CQ](/docs/development/testing/testing_for_flakiness_in_cq.md)

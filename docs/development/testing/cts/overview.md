@@ -27,7 +27,7 @@ production, protecting the fuchsia.diagnostics FIDL from compatibility issues.
 
 Note: TODO: Dashboards are currently internal-only
 
-[overview]: /docs/concepts/testing/compatibility_testing.md
+[overview]: /docs/development/testing/cts/compatibility_testing.md
 [rfc15]: /docs/contribute/governance/rfcs/0015_cts.md
 [faq]: /docs/development/testing/cts/faq.md
 [contributing]: /docs/development/testing/cts/contributing_tests.md

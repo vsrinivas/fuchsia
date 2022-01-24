@@ -321,7 +321,7 @@ Areas for future work:
 [covargs]: /tools/debug/covargs/
 [coverage-dashboard]: https://analysis.chromium.org/coverage/p/fuchsia
 [debugdata]: https://fuchsia.dev/reference/fidl/fuchsia.debugdata
-[flaky-policy]: /docs/concepts/testing/test_flake_policy.md
+[flaky-policy]: /docs/development/testing/test_flake_policy.md
 [fuchsia-coverage-ci]: https://ci.chromium.org/p/fuchsia/builders/ci/fuchsia-coverage
 [fuzz-testing]: /docs/contribute/testing/fuzz_testing.md
 [fx-smoke-test]: https://fuchsia.dev/reference/tools/fx/cmd/smoke-test
