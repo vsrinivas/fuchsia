@@ -184,6 +184,21 @@ macro_rules! on_added {
     };
 }
 
+macro_rules! match_cast {
+    ( $val:expr , { $( $to:ident ( $name:ident ) => $block:expr ),*  $( , _ => $default:expr )? $( , )? } ) => {{
+        let f = || {
+            $(
+                if let Some($name) = $val.try_cast::<$to>() {
+                    return $block;
+                }
+            )*
+            $($default)?
+        };
+
+        f()
+    }};
+}
+
 pub trait AsAny: Any + fmt::Debug {
     fn as_any(&self) -> &dyn Any;
     fn any_type_name(&self) -> &'static str;

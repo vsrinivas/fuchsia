@@ -70,7 +70,7 @@ fn left_different(points: &[math::Vec]) -> [math::Vec; 2] {
     points
         .windows(2)
         .find_map(|window| {
-            if let &[p0, p1] = window {
+            if let [p0, p1] = *window {
                 (!approx_eq(p0, p1)).then(|| [p0, p1])
             } else {
                 unreachable!()
@@ -84,7 +84,7 @@ pub fn right_different(points: &[math::Vec]) -> [math::Vec; 2] {
         .windows(2)
         .rev()
         .find_map(|window| {
-            if let &[p0, p1] = window {
+            if let [p0, p1] = *window {
                 (!approx_eq(p0, p1)).then(|| [p0, p1])
             } else {
                 unreachable!()
@@ -122,7 +122,7 @@ fn derive(points: &[math::Vec]) -> SmallVec<[math::Vec; 3]> {
     let mut derived = SmallVec::new();
 
     for window in points.windows(2) {
-        if let &[p0, p1] = window {
+        if let [p0, p1] = *window {
             derived.push((p1 - p0) * (points.len() - 1) as f32);
         }
     }
@@ -178,7 +178,7 @@ fn hull(points: &[math::Vec; 4], t: f32) -> SmallVec<[math::Vec; 10]> {
         next_points.clear();
 
         for window in points.windows(2) {
-            if let &[p0, p1] = window {
+            if let [p0, p1] = *window {
                 let point = p0.lerp(p1, t);
                 hull.push(point);
                 next_points.push(point);
@@ -397,7 +397,7 @@ impl Bezier {
 
         if let Self::Cubic(points) = self {
             for window in extrema.windows(2) {
-                if let &[t0, t1] = window {
+                if let [t0, t1] = *window {
                     pass0.push(split(points, t0, t1));
                 }
             }
@@ -518,7 +518,7 @@ mod tests {
         assert_approx_eq!(pos_offset[0].points()[1].x, 0.0);
         assert_approx_eq!(pos_offset[0].points()[1].y, 1.0);
 
-        let neg_offset = line.offset(-2.0f32.sqrt() / 2.0);
+        let neg_offset = line.offset(-(2.0f32.sqrt()) / 2.0);
         assert_eq!(neg_offset.len(), 1);
         assert_eq!(neg_offset[0].points().len(), 2);
         assert_approx_eq!(neg_offset[0].points()[1].x, 0.0);

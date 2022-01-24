@@ -73,6 +73,7 @@ fn should_split_cubic(
     too_far(from_out, one_third) || too_far(to_in, two_thirds)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn segment_cubic(
     from: math::Vec,
     from_out: math::Vec,

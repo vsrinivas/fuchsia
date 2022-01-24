@@ -163,6 +163,7 @@ fn area_cover_for_octant(x0: i32, x1: i32, y0: i32, y1: i32, octant: u8) -> (u8,
     (double_area_multiplier, cover)
 }
 
+#[allow(clippy::too_many_arguments)]
 #[inline]
 fn segment(
     layer_id: Option<u32>,

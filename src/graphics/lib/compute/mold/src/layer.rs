@@ -231,6 +231,9 @@ impl Layer {
 
     #[inline]
     pub fn set_transform(&mut self, transform: GeomPresTransform) -> &mut Self {
+        // We want to perform a cheap check for the common case without hampering this function too
+        // much.
+        #[allow(clippy::float_cmp)]
         let affine_transform =
             if transform.as_slice() == IDENTITY { None } else { Some(*transform.as_slice()) };
 

@@ -110,105 +110,42 @@ impl ObjectRef<'_, Component> {
     }
 
     pub fn build_dependencies(&self) {
-        if let Some(clipping_shape) = self.try_cast::<ClippingShape>() {
-            return clipping_shape.build_dependencies();
-        }
-
-        if let Some(shape) = self.try_cast::<Shape>() {
-            return shape.build_dependencies();
-        }
-
-        if let Some(points_path) = self.try_cast::<PointsPath>() {
-            return points_path.build_dependencies();
-        }
-
-        if let Some(path) = self.try_cast::<Path>() {
-            return path.build_dependencies();
-        }
-
-        if let Some(path_composer) = self.try_cast::<PathComposer>() {
-            return path_composer.build_dependencies();
-        }
-
-        if let Some(skin) = self.try_cast::<Skin>() {
-            return skin.build_dependencies();
-        }
-
-        if let Some(linear_gradient) = self.try_cast::<LinearGradient>() {
-            return linear_gradient.build_dependencies();
-        }
-
-        if let Some(transform_component) = self.try_cast::<TransformComponent>() {
-            return transform_component.build_dependencies();
-        }
+        match_cast!(self, {
+            ClippingShape(clipping_shape) => clipping_shape.build_dependencies(),
+            Shape(shape) => shape.build_dependencies(),
+            PointsPath(points_path) => points_path.build_dependencies(),
+            Path(path) => path.build_dependencies(),
+            PathComposer(path_composer) => path_composer.build_dependencies(),
+            Skin(skin) => skin.build_dependencies(),
+            LinearGradient(linear_gradient) => linear_gradient.build_dependencies(),
+            TransformComponent(transform_component) => transform_component.build_dependencies(),
+        })
     }
 
     pub fn on_dirty(&self, dirt: ComponentDirt) {
-        if let Some(path) = self.try_cast::<Path>() {
-            return path.on_dirty(dirt);
-        }
-
-        if let Some(skin) = self.try_cast::<Skin>() {
-            return skin.on_dirty(dirt);
-        }
-
-        if let Some(artboard) = self.try_cast::<Artboard>() {
-            return artboard.on_dirty(dirt);
-        }
+        match_cast!(self, {
+            Path(path) => path.on_dirty(dirt),
+            Skin(skin) => skin.on_dirty(dirt),
+            Artboard(artboard) => artboard.on_dirty(dirt),
+        })
     }
 
     pub fn update(&self, value: ComponentDirt) {
-        if let Some(ellipse) = self.try_cast::<Ellipse>() {
-            return ellipse.update(value);
-        }
-
-        if let Some(rectangle) = self.try_cast::<Rectangle>() {
-            return rectangle.update(value);
-        }
-
-        if let Some(triangle) = self.try_cast::<Triangle>() {
-            return triangle.update(value);
-        }
-
-        if let Some(polygon) = self.try_cast::<Polygon>() {
-            return polygon.update(value);
-        }
-
-        if let Some(clipping_shape) = self.try_cast::<ClippingShape>() {
-            return clipping_shape.update(value);
-        }
-
-        if let Some(shape) = self.try_cast::<Shape>() {
-            return shape.update(value);
-        }
-
-        if let Some(points_path) = self.try_cast::<PointsPath>() {
-            return points_path.update(value);
-        }
-
-        if let Some(path) = self.try_cast::<Path>() {
-            return path.update(value);
-        }
-
-        if let Some(path_composer) = self.try_cast::<PathComposer>() {
-            return path_composer.update(value);
-        }
-
-        if let Some(skin) = self.try_cast::<Skin>() {
-            return skin.update(value);
-        }
-
-        if let Some(linear_gradient) = self.try_cast::<LinearGradient>() {
-            return linear_gradient.update(value);
-        }
-
-        if let Some(transform_component) = self.try_cast::<TransformComponent>() {
-            return transform_component.update(value);
-        }
-
-        if let Some(artboard) = self.try_cast::<Artboard>() {
-            return artboard.update(value);
-        }
+        match_cast!(self, {
+            Ellipse(ellipse) => ellipse.update(value),
+            Rectangle(rectangle) => rectangle.update(value),
+            Triangle(triangle) => triangle.update(value),
+            Polygon(polygon) => polygon.update(value),
+            ClippingShape(clipping_shape) => clipping_shape.update(value),
+            Shape(shape) => shape.update(value),
+            PointsPath(points_path) => points_path.update(value),
+            Path(path) => path.update(value),
+            PathComposer(path_composer) => path_composer.update(value),
+            Skin(skin) => skin.update(value),
+            LinearGradient(linear_gradient) => linear_gradient.update(value),
+            TransformComponent(transform_component) => transform_component.update(value),
+            Artboard(artboard) => artboard.update(value),
+        })
     }
 }
 

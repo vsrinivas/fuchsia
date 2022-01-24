@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Direct float comparison happens in a few places in the rive-cpp code.
+#![allow(clippy::float_cmp)]
+
 #[macro_use]
 mod core;
 

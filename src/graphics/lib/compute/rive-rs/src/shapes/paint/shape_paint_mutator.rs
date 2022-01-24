@@ -38,32 +38,28 @@ impl ObjectRef<'_, ShapePaintMutator> {
 
 impl ObjectRef<'_, ShapePaintMutator> {
     fn render_opacity_changed(&self) {
-        if let Some(linear_gradient) = self.try_cast::<LinearGradient>() {
-            return linear_gradient.mark_gradient_dirty();
-        }
-
-        if let Some(solid_color) = self.try_cast::<SolidColor>() {
-            return solid_color.render_opacity_changed();
-        }
+        match_cast!(self, {
+            LinearGradient(linear_gradient) => linear_gradient.mark_gradient_dirty(),
+            SolidColor(solid_color) => solid_color.render_opacity_changed(),
+        })
     }
 
     pub fn init_paint_mutator(&self, component: Object<Component>) -> bool {
-        if let Some(fill) = component.try_cast::<Fill>() {
-            self.render_paint.set(fill.as_ref().init_render_paint(self.as_object()));
-            return true;
-        }
-
-        if let Some(stroke) = component.try_cast::<Stroke>() {
-            self.render_paint.set(stroke.as_ref().init_render_paint(self.as_object()));
-            return true;
-        }
-
-        if let Some(shape_paint) = component.try_cast::<ShapePaint>() {
-            self.render_paint.set(shape_paint.as_ref().init_render_paint(self.as_object()));
-            return true;
-        }
-
-        false
+        match_cast!(component, {
+            Fill(fill) => {
+                self.render_paint.set(fill.as_ref().init_render_paint(self.as_object()));
+                true
+            },
+            Stroke(stroke) => {
+                self.render_paint.set(stroke.as_ref().init_render_paint(self.as_object()));
+                true
+            },
+            ShapePaint(shape_paint) => {
+                self.render_paint.set(shape_paint.as_ref().init_render_paint(self.as_object()));
+                true
+            },
+            _ => false,
+        })
     }
 
     pub(crate) fn render_paint(&self) -> Rc<RefCell<RenderPaint>> {

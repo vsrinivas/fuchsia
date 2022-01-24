@@ -149,6 +149,7 @@ impl BufferLayout {
         buffer.as_mut_ptr() == self.ptr && buffer.len() == self.len
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn print<S: LayerProps>(
         &mut self,
         buffer: &mut [[u8; 4]],

@@ -545,12 +545,7 @@ mod tests {
         composition.get_mut(layer_id).unwrap().set_props(solid(REDF));
 
         composition.render(
-            Buffer {
-                buffer: &mut buffer,
-                width: 3 * TILE_SIZE,
-                layer_cache: layer_cache.clone(),
-                ..Default::default()
-            },
+            Buffer { buffer: &mut buffer, width: 3 * TILE_SIZE, layer_cache, ..Default::default() },
             BLACKF,
             None,
         );
@@ -623,12 +618,7 @@ mod tests {
         );
 
         composition.render(
-            Buffer {
-                buffer: &mut buffer,
-                width: TILE_SIZE,
-                layer_cache: layer_cache.clone(),
-                ..Default::default()
-            },
+            Buffer { buffer: &mut buffer, width: TILE_SIZE, layer_cache, ..Default::default() },
             BLACKF,
             None,
         );
@@ -696,7 +686,7 @@ mod tests {
             Buffer {
                 buffer: &mut buffer,
                 width: TILE_SIZE,
-                layer_cache: layer_cache0.clone(),
+                layer_cache: layer_cache0,
                 ..Default::default()
             },
             BLACKF,
@@ -712,7 +702,7 @@ mod tests {
             Buffer {
                 buffer: &mut buffer,
                 width: TILE_SIZE,
-                layer_cache: layer_cache1.clone(),
+                layer_cache: layer_cache1,
                 ..Default::default()
             },
             BLACKF,

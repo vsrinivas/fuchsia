@@ -264,13 +264,12 @@ impl ArtboardInner {
                     last.as_ref().next.set(Some(drawable.clone()));
                     drawable_ref.prev.set(Some(last));
                     target.last.set(Some(drawable.clone()));
-                    drawable_ref.next.set(None);
                 } else {
                     target.first.set(Some(drawable.clone()));
                     target.last.set(Some(drawable.clone()));
                     drawable_ref.prev.set(None);
-                    drawable_ref.next.set(None);
                 }
+                drawable_ref.next.set(None);
             } else {
                 drawable_ref.prev.set(last_drawable.clone());
                 drawable_ref.next.set(None);

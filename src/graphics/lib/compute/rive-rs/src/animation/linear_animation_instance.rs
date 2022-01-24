@@ -14,11 +14,11 @@ enum Direction {
     Backwards,
 }
 
-impl Into<f32> for Direction {
-    fn into(self) -> f32 {
-        match self {
-            Self::Forwards => 1.0,
-            Self::Backwards => -1.0,
+impl From<Direction> for f32 {
+    fn from(direction: Direction) -> Self {
+        match direction {
+            Direction::Forwards => 1.0,
+            Direction::Backwards => -1.0,
         }
     }
 }

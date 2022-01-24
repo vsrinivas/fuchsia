@@ -138,18 +138,19 @@ impl From<u32> for PointCommand {
     }
 }
 
-impl Into<u32> for PointCommand {
-    fn into(self) -> u32 {
-        match self {
-            Self::Start(i) => 0x7F80_0000 | (i as u32 & 0x3F_FFFF),
-            Self::Incr(point_command) => point_command.to_bits(),
-            Self::End(i, new_contour) => {
+impl From<PointCommand> for u32 {
+    fn from(command: PointCommand) -> Self {
+        match command {
+            PointCommand::Start(i) => 0x7F80_0000 | (i as u32 & 0x3F_FFFF),
+            PointCommand::Incr(point_command) => point_command.to_bits(),
+            PointCommand::End(i, new_contour) => {
                 0xFF80_0000 | (i as u32 & 0x3F_FFFF) | ((new_contour as u32) << 22)
             }
         }
     }
 }
 
+#[allow(clippy::many_single_char_names)]
 fn approx_atan2(y: f32, x: f32) -> f32 {
     let x_abs = x.abs();
     let y_abs = y.abs();

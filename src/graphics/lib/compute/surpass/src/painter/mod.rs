@@ -73,6 +73,7 @@ fn doubled_area_to_coverage(doubled_area: i32x8, fill_rule: FillRule) -> f32x8 {
     }
 }
 
+#[allow(clippy::many_single_char_names)]
 #[inline]
 fn linear_to_srgb_approx_simd(l: f32x8) -> f32x8 {
     let a = f32x8::splat(0.201_017_72f32);
@@ -90,6 +91,7 @@ fn linear_to_srgb_approx_simd(l: f32x8) -> f32x8 {
     m.select(n, l.le(f32x8::splat(0.003_130_8)))
 }
 
+#[allow(clippy::many_single_char_names)]
 #[inline]
 fn linear_to_srgb_approx(l: f32) -> f32 {
     let a = 0.201_017_72f32;
@@ -471,6 +473,7 @@ impl Painter {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn paint_tile_row<P: LayerProps>(
         &mut self,
         workbench: &mut LayerWorkbench,

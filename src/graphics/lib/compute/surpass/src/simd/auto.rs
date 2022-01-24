@@ -227,28 +227,28 @@ impl BitAnd for i8x16 {
     }
 }
 
-impl Into<[i32x8; 2]> for i8x16 {
-    fn into(self) -> [i32x8; 2] {
+impl From<i8x16> for [i32x8; 2] {
+    fn from(val: i8x16) -> Self {
         [
             i32x8([
-                self.0[0] as i32,
-                self.0[1] as i32,
-                self.0[2] as i32,
-                self.0[3] as i32,
-                self.0[4] as i32,
-                self.0[5] as i32,
-                self.0[6] as i32,
-                self.0[7] as i32,
+                val.0[0] as i32,
+                val.0[1] as i32,
+                val.0[2] as i32,
+                val.0[3] as i32,
+                val.0[4] as i32,
+                val.0[5] as i32,
+                val.0[6] as i32,
+                val.0[7] as i32,
             ]),
             i32x8([
-                self.0[8] as i32,
-                self.0[9] as i32,
-                self.0[10] as i32,
-                self.0[11] as i32,
-                self.0[12] as i32,
-                self.0[13] as i32,
-                self.0[14] as i32,
-                self.0[15] as i32,
+                val.0[8] as i32,
+                val.0[9] as i32,
+                val.0[10] as i32,
+                val.0[11] as i32,
+                val.0[12] as i32,
+                val.0[13] as i32,
+                val.0[14] as i32,
+                val.0[15] as i32,
             ]),
         ]
     }
@@ -263,28 +263,28 @@ impl i16x16 {
     }
 }
 
-impl Into<[i32x8; 2]> for i16x16 {
-    fn into(self) -> [i32x8; 2] {
+impl From<i16x16> for [i32x8; 2] {
+    fn from(val: i16x16) -> Self {
         [
             i32x8([
-                self.0[0] as i32,
-                self.0[1] as i32,
-                self.0[2] as i32,
-                self.0[3] as i32,
-                self.0[4] as i32,
-                self.0[5] as i32,
-                self.0[6] as i32,
-                self.0[7] as i32,
+                val.0[0] as i32,
+                val.0[1] as i32,
+                val.0[2] as i32,
+                val.0[3] as i32,
+                val.0[4] as i32,
+                val.0[5] as i32,
+                val.0[6] as i32,
+                val.0[7] as i32,
             ]),
             i32x8([
-                self.0[8] as i32,
-                self.0[9] as i32,
-                self.0[10] as i32,
-                self.0[11] as i32,
-                self.0[12] as i32,
-                self.0[13] as i32,
-                self.0[14] as i32,
-                self.0[15] as i32,
+                val.0[8] as i32,
+                val.0[9] as i32,
+                val.0[10] as i32,
+                val.0[11] as i32,
+                val.0[12] as i32,
+                val.0[13] as i32,
+                val.0[14] as i32,
+                val.0[15] as i32,
             ]),
         ]
     }

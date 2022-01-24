@@ -444,8 +444,8 @@ mod tests {
     fn colors(separate: &[f32x8; 4]) -> [[f32; 4]; 8] {
         let mut colors = [[0.0, 0.0, 0.0, 0.0]; 8];
 
-        for i in 0..8 {
-            colors[i] = [
+        for (i, color) in colors.iter_mut().enumerate() {
+            *color = [
                 separate[0].as_array()[i],
                 separate[1].as_array()[i],
                 separate[2].as_array()[i],

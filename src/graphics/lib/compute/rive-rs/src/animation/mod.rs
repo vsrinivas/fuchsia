@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// We want to keep structure similar to rive-cpp.
+#[allow(clippy::module_inception)]
 mod animation;
 mod animation_state;
 mod animator;

@@ -42,6 +42,8 @@ impl LinesBuilder {
         Self::default()
     }
 
+    // This type is only used in mold where it does not need `is_empty`.
+    #[allow(clippy::len_without_is_empty)]
     #[inline]
     pub fn len(&self) -> usize {
         if self.lines.layer_ids.len() <= self.cached_until.get() {
@@ -317,6 +319,8 @@ pub struct Lines {
 }
 
 impl Lines {
+    // This type is only used in mold where it does not need `is_empty`.
+    #[allow(clippy::len_without_is_empty)]
     #[inline]
     pub fn len(&self) -> usize {
         self.x.len()

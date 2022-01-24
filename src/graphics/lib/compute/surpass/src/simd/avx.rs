@@ -247,11 +247,11 @@ impl BitAnd for i8x16 {
     }
 }
 
-impl Into<[i32x8; 2]> for i8x16 {
-    fn into(self) -> [i32x8; 2] {
+impl From<i8x16> for [i32x8; 2] {
+    fn from(val: i8x16) -> Self {
         unsafe {
-            let _i8x16_lo = _mm_unpacklo_epi64(self.0, _mm_setzero_si128());
-            let _i8x16_hi = _mm_unpackhi_epi64(self.0, _mm_setzero_si128());
+            let _i8x16_lo = _mm_unpacklo_epi64(val.0, _mm_setzero_si128());
+            let _i8x16_hi = _mm_unpackhi_epi64(val.0, _mm_setzero_si128());
 
             [i32x8(_mm256_cvtepi8_epi32(_i8x16_lo)), i32x8(_mm256_cvtepi8_epi32(_i8x16_hi))]
         }
@@ -273,17 +273,13 @@ impl Default for i16x16 {
     }
 }
 
-impl Into<[i32x8; 2]> for i16x16 {
-    fn into(self) -> [i32x8; 2] {
+impl From<i16x16> for [i32x8; 2] {
+    fn from(val: i16x16) -> Self {
         unsafe {
             let mut _i16x8_lo = _mm_undefined_si128();
             let mut _i16x8_hi = _mm_undefined_si128();
 
-            _mm256_storeu2_m128i(
-                ptr::addr_of_mut!(_i16x8_hi),
-                ptr::addr_of_mut!(_i16x8_lo),
-                self.0,
-            );
+            _mm256_storeu2_m128i(ptr::addr_of_mut!(_i16x8_hi), ptr::addr_of_mut!(_i16x8_lo), val.0);
 
             [i32x8(_mm256_cvtepi16_epi32(_i16x8_lo)), i32x8(_mm256_cvtepi16_epi32(_i16x8_hi))]
         }

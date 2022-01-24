@@ -72,6 +72,8 @@ macro_rules! extract {
 pub struct PixelSegment(u64);
 
 impl PixelSegment {
+    #[allow(clippy::too_many_arguments)]
+    #[inline]
     pub fn new(
         is_none: bool,
         tile_y: i16,
@@ -110,38 +112,47 @@ impl PixelSegment {
         Self(val)
     }
 
+    #[inline]
     pub fn double_area(self) -> i16 {
         self.double_area_multiplier() as i16 * self.cover() as i16
     }
 
+    #[inline]
     pub fn is_none(self) -> bool {
         extract!(self.0, 0) == 0b1
     }
 
+    #[inline]
     pub fn tile_y(self) -> i16 {
         extract!(self.0 as i64, 1) as i16
     }
 
+    #[inline]
     pub fn tile_x(self) -> i16 {
         extract!(self.0 as i64, 2) as i16
     }
 
+    #[inline]
     pub fn layer_id(self) -> u32 {
         extract!(self.0, 3) as u32
     }
 
+    #[inline]
     pub fn local_y(self) -> u8 {
         extract!(self.0, 4) as u8
     }
 
+    #[inline]
     pub fn local_x(self) -> u8 {
         extract!(self.0, 5) as u8
     }
 
+    #[inline]
     fn double_area_multiplier(self) -> u8 {
         extract!(self.0, 6) as u8
     }
 
+    #[inline]
     pub fn cover(self) -> i8 {
         extract!(self.0 as i64, 7) as i8
     }
@@ -153,9 +164,9 @@ impl Default for PixelSegment {
     }
 }
 
-impl Into<u64> for &PixelSegment {
-    fn into(self) -> u64 {
-        self.0
+impl From<&PixelSegment> for u64 {
+    fn from(segment: &PixelSegment) -> Self {
+        segment.0
     }
 }
 
