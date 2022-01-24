@@ -11,5 +11,17 @@ group("zbi_tests") {
     "//:zbi_tests",
   ]
   testonly = true
-  deps = [ "//zircon/kernel/phys:tests" ]
+
+  deps = [
+    "//src/bringup/bin/bootsvc/integration_test:bootsvc-integration-tests",
+    "//src/bringup/bin/bootsvc/integration_test:bootsvc-root-job-test",
+    "//src/bringup/lib/mexec/tests",
+    "//zircon/kernel/phys:tests",
+    "//zircon/kernel/phys:tests",
+    "//zircon/system/utest/core:core-tests",
+  ]
+
+  if (current_cpu == "x64") {
+    deps += [ "//zircon/system/utest/core:core-tests-hpet" ]
+  }
 }
