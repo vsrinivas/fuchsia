@@ -7,7 +7,7 @@ use {
         capability::{CapabilityProvider, CapabilitySource},
         model::{
             addable_directory::AddableDirectoryWithResult,
-            component::WeakComponentInstance,
+            component::{BindReason, WeakComponentInstance},
             dir_tree::{DirTree, DirTreeCapability},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
@@ -389,6 +389,20 @@ impl Hub {
         Ok(())
     }
 
+    fn add_start_reason_file(
+        execution_directory: Directory,
+        bind_reason: &BindReason,
+        abs_moniker: &AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        let start_reason = format!("{}", bind_reason);
+        execution_directory.add_node(
+            "start_reason",
+            read_only_static(start_reason.into_bytes()),
+            abs_moniker,
+        )?;
+        Ok(())
+    }
+
     fn add_instance_id_file(
         directory: Directory,
         target_moniker: &AbsoluteMoniker,
@@ -461,6 +475,7 @@ impl Hub {
         target: &WeakComponentInstance,
         runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
+        bind_reason: &BindReason,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_start_instance_async");
 
@@ -511,6 +526,8 @@ impl Hub {
             Self::clone_dir(runtime.runtime_dir.as_ref()),
             &target_moniker,
         )?;
+
+        Self::add_start_reason_file(execution_directory.clone(), bind_reason, &target_moniker)?;
 
         instance.directory.add_node("exec", execution_directory, &target_moniker)?;
         instance.has_execution_directory = true;
@@ -648,8 +665,15 @@ impl Hook for Hub {
             Ok(EventPayload::Destroyed) => {
                 self.on_destroyed_async(target_moniker).await?;
             }
-            Ok(EventPayload::Started { component, runtime, component_decl, .. }) => {
-                self.on_started_async(target_moniker, component, &runtime, &component_decl).await?;
+            Ok(EventPayload::Started { component, runtime, component_decl, bind_reason }) => {
+                self.on_started_async(
+                    target_moniker,
+                    component,
+                    &runtime,
+                    &component_decl,
+                    bind_reason,
+                )
+                .await?;
             }
             Ok(EventPayload::Resolved { component, resolved_url, decl, config, .. }) => {
                 self.on_resolved_async(
@@ -841,6 +865,11 @@ mod tests {
             read_file(&hub_proxy, "exec/resolved_url").await
         );
 
+        assert_eq!(
+            format!("{}", BindReason::Root),
+            read_file(&hub_proxy, "exec/start_reason").await
+        );
+
         // Verify IDs
         assert_eq!("0", read_file(&hub_proxy, "id").await);
         assert_eq!("0", read_file(&hub_proxy, "children/a/id").await);
@@ -944,7 +973,7 @@ mod tests {
         )
         .expect("Failed to open directory");
         assert_eq!(
-            vec!["expose", "in", "out", "resolved_url", "runtime"],
+            vec!["expose", "in", "out", "resolved_url", "runtime", "start_reason"],
             list_directory(&old_hub_dir_proxy).await
         );
     }
@@ -1289,7 +1318,7 @@ mod tests {
         )
         .expect("Failed to open directory");
         assert_eq!(
-            vec!["expose", "in", "out", "resolved_url", "runtime"],
+            vec!["expose", "in", "out", "resolved_url", "runtime", "start_reason"],
             list_directory(&scoped_hub_dir_proxy).await
         );
     }

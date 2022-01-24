@@ -176,8 +176,8 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
             let source = self.source.upgrade()?;
             source
                 .bind(&BindReason::AccessCapability {
-                    target: ExtendedMoniker::ComponentInstance(self.target.abs_moniker.clone()),
-                    path: self.path.clone(),
+                    target: self.target.partial_abs_moniker.clone(),
+                    name: self.name.clone(),
                 })
                 .await?;
 

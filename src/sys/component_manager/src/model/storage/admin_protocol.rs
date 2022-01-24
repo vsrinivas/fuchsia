@@ -38,7 +38,6 @@ use {
     futures::{TryFutureExt, TryStreamExt},
     lazy_static::lazy_static,
     log::*,
-    moniker::ExtendedMoniker,
     moniker::{
         AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialRelativeMoniker, RelativeMoniker,
         RelativeMonikerBase,
@@ -185,7 +184,6 @@ impl StorageAdmin {
                 e,
             )
         })?;
-        let storage_moniker = component.abs_moniker().clone();
 
         let storage_capability_source_info = {
             match route_capability(RouteRequest::StorageBackingDirectory(storage_decl), &component)
@@ -224,10 +222,7 @@ impl StorageAdmin {
                         relative_moniker,
                         instance_id.as_ref(),
                         mode,
-                        &BindReason::AccessCapability {
-                            target: ExtendedMoniker::ComponentInstance(storage_moniker.clone()),
-                            path: storage_capability_source_info.backing_directory_path.clone(),
-                        },
+                        &BindReason::StorageAdmin,
                     )
                     .await?;
                     dir_proxy.clone(flags, object)?;
@@ -281,10 +276,7 @@ impl StorageAdmin {
                     match storage::open_isolated_storage_by_id(
                         storage_capability_source_info.clone(),
                         id,
-                        &BindReason::AccessCapability {
-                            target: ExtendedMoniker::ComponentInstance(storage_moniker.clone()),
-                            path: storage_capability_source_info.backing_directory_path.clone(),
-                        },
+                        &BindReason::StorageAdmin,
                     )
                     .await
                     {

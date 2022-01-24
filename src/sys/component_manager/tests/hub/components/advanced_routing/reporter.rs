@@ -75,7 +75,13 @@ async fn main() {
     )
     .await;
 
-    expect_dir_listing("/hub", vec!["expose", "in", "out", "resolved_url", "runtime"]).await;
+    expect_dir_listing(
+        "/hub",
+        vec!["expose", "in", "out", "resolved_url", "runtime", "start_reason"],
+    )
+    .await;
+
+    expect_file_content("/hub/start_reason", "Instance is an eager child").await;
 
     expect_file_content(
         "/sibling_hub/exec/resolved_url",

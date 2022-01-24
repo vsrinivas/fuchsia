@@ -37,7 +37,7 @@ use {
     async_trait::async_trait,
     clonable_error::ClonableError,
     cm_runner::{component_controller::ComponentController, NullRunner, RemoteRunner, Runner},
-    cm_rust::{self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
+    cm_rust::{self, CapabilityName, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
     config_encoder::ConfigFields,
@@ -59,8 +59,8 @@ use {
     },
     log::{error, warn},
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, ExtendedMoniker,
-        InstanceId, PartialAbsoluteMoniker, PartialChildMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, InstanceId,
+        PartialAbsoluteMoniker, PartialChildMoniker,
     },
     std::iter::Iterator,
     std::{
@@ -86,13 +86,10 @@ pub type WeakExtendedInstance = WeakExtendedInstanceInterface<ComponentInstance>
 pub enum BindReason {
     /// Indicates that the target is starting the component because it wishes to access
     /// the capability at path.
-    AccessCapability { target: ExtendedMoniker, path: CapabilityPath },
-    /// Indicates that the component is starting becasue the framework wishes to use
-    /// /pkgfs.
-    BasePkgResolver,
-    /// Indicates that the component is starting because a call to bind_child was made.
-    BindChild { parent: AbsoluteMoniker },
-    /// Indicates that the component is starting because of debugging.
+    AccessCapability { target: PartialAbsoluteMoniker, name: CapabilityName },
+    /// Indicates that the component is starting because it is in a single-run collection.
+    SingleRun,
+    /// Indicates that the component was explicitly started for debugging purposes.
     Debug,
     /// Indicates that the component was marked as eagerly starting by the parent.
     // TODO(fxbug.dev/50714): Include the parent BindReason.
@@ -101,11 +98,8 @@ pub enum BindReason {
     Eager,
     /// Indicates that this component is starting because it is the root component.
     Root,
-    /// Indicates that this component is starting because it was bound to through
-    /// the fuchsia.component.Binder protocol.
-    Binder,
-    /// This is an unsupported BindReason. If you are seeing this then this is a bug.
-    Unsupported,
+    /// Storage administration is occurring on this component.
+    StorageAdmin,
 }
 
 impl fmt::Display for BindReason {
@@ -114,21 +108,14 @@ impl fmt::Display for BindReason {
             f,
             "{}",
             match self {
-                BindReason::AccessCapability { target, path } => {
-                    format!("'{}' requested access to '{}'", target, path)
+                BindReason::AccessCapability { target, name } => {
+                    format!("'{}' requested capability '{}'", target, name)
                 }
-                BindReason::BasePkgResolver => {
-                    "the base package resolver attempted to open /pkgfs".to_string()
-                }
-                BindReason::BindChild { parent } => {
-                    format!("its parent '{}' requested to bind to it", parent)
-                }
-                BindReason::Debug => "it was requested to run for debugging purpose".to_string(),
-                BindReason::Eager => "it's eager".to_string(),
-                BindReason::Root => "it's the root".to_string(),
-                BindReason::Binder =>
-                    "it was bound to via fuchsia.component.Binder protocol".to_string(),
-                BindReason::Unsupported => "this is a bug".to_string(),
+                BindReason::SingleRun => "Instance is in a single_run collection".to_string(),
+                BindReason::Debug => "Instance was started from debugging workflow".to_string(),
+                BindReason::Eager => "Instance is an eager child".to_string(),
+                BindReason::Root => "Instance is the root".to_string(),
+                BindReason::StorageAdmin => "Storage administration on instance".to_string(),
             }
         )
     }

@@ -188,7 +188,13 @@ impl RealmCapabilityHost {
                 let (_client_end, server_end) =
                     fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
                 let weak_component = WeakComponentInstance::new(&component);
-                RealmCapabilityHost::bind_child(&weak_component, child_ref, server_end).await
+                RealmCapabilityHost::bind_child(
+                    &weak_component,
+                    child_ref,
+                    server_end,
+                    BindReason::SingleRun,
+                )
+                .await
             }
             Ok(_) => Ok(()),
             Err(e) => match e {
@@ -209,27 +215,25 @@ impl RealmCapabilityHost {
         component: &WeakComponentInstance,
         child: fdecl::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
+        bind_reason: BindReason,
     ) -> Result<(), fcomponent::Error> {
         match Self::get_child(component, child.clone()).await? {
             Some(child) => {
                 let mut exposed_dir = exposed_dir.into_channel();
-                child
-                    .bind(&BindReason::BindChild { parent: component.abs_moniker.clone() })
-                    .await
-                    .map_err(|e| match e {
-                        ModelError::ResolverError { err, .. } => {
-                            debug!("failed to resolve child: {}", err);
-                            fcomponent::Error::InstanceCannotResolve
-                        }
-                        ModelError::RunnerError { err } => {
-                            debug!("failed to start child: {}", err);
-                            fcomponent::Error::InstanceCannotStart
-                        }
-                        e => {
-                            error!("bind() failed: {}", e);
-                            fcomponent::Error::Internal
-                        }
-                    })?;
+                child.bind(&bind_reason).await.map_err(|e| match e {
+                    ModelError::ResolverError { err, .. } => {
+                        debug!("failed to resolve child: {}", err);
+                        fcomponent::Error::InstanceCannotResolve
+                    }
+                    ModelError::RunnerError { err } => {
+                        debug!("failed to start child: {}", err);
+                        fcomponent::Error::InstanceCannotStart
+                    }
+                    e => {
+                        error!("bind() failed: {}", e);
+                        fcomponent::Error::Internal
+                    }
+                })?;
                 let res = child.open_exposed(&mut exposed_dir).await;
                 match res {
                     Ok(()) => (),

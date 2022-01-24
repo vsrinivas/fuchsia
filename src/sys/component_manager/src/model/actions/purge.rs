@@ -103,7 +103,7 @@ async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> 
         let actions = component.lock_actions().await;
         vec![
             wait(actions.wait(ResolveAction::new())),
-            wait(actions.wait(StartAction::new(BindReason::Unsupported))),
+            wait(actions.wait(StartAction::new(BindReason::Debug))),
         ]
         .into_iter()
     };

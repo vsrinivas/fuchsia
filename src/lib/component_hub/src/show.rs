@@ -309,6 +309,7 @@ pub struct Execution {
     pub elf_runtime: Option<ElfRuntime>,
     pub merkle_root: Option<String>,
     pub outgoing_capabilities: Option<Vec<String>>,
+    pub start_reason: Option<String>,
 }
 
 impl Execution {
@@ -355,7 +356,9 @@ impl Execution {
             None
         };
 
-        Ok(Self { elf_runtime, merkle_root, outgoing_capabilities })
+        let start_reason = Some(exec_dir.read_file("start_reason").await?);
+
+        Ok(Self { elf_runtime, merkle_root, outgoing_capabilities, start_reason })
     }
 
     async fn parse_cmx(hub_dir: &Directory) -> Result<Self> {
@@ -388,12 +391,16 @@ impl Execution {
             None
         };
 
-        Ok(Self { elf_runtime, merkle_root, outgoing_capabilities })
+        Ok(Self { elf_runtime, merkle_root, outgoing_capabilities, start_reason: None })
     }
 }
 
 impl std::fmt::Display for Execution {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(start_reason) = &self.start_reason {
+            writeln!(f, "Start reason: {}", start_reason)?;
+        }
+
         if let Some(runtime) = &self.elf_runtime {
             write!(f, "{}", runtime)?;
         }
@@ -924,6 +931,7 @@ mod tests {
         // |- component_type
         // |- url
         // |- exec
+        //    |- start_reason
         //    |- in
         //       |- pkg
         //          |- meta
@@ -945,6 +953,10 @@ mod tests {
         fs::create_dir_all(root.join("exec/out/minfs")).unwrap();
         fs::create_dir_all(root.join("exec/runtime/elf")).unwrap();
 
+        File::create(root.join("exec/start_reason"))
+            .unwrap()
+            .write_all("Instance is the root".as_bytes())
+            .unwrap();
         File::create(root.join("exec/in/pkg/meta")).unwrap().write_all("1234".as_bytes()).unwrap();
 
         File::create(root.join("exec/runtime/elf/job_id"))
@@ -976,6 +988,10 @@ mod tests {
 
         assert!(component.execution.is_some());
         let execution = component.execution.as_ref().unwrap();
+
+        assert!(execution.start_reason.is_some());
+        let start_reason = execution.start_reason.as_ref().unwrap();
+        assert_eq!(start_reason, "Instance is the root");
 
         assert!(execution.elf_runtime.is_some());
         let elf_runtime = execution.elf_runtime.as_ref().unwrap();
@@ -1027,6 +1043,10 @@ mod tests {
             .unwrap();
         fs::create_dir_all(root.join("exec/in")).unwrap();
         fs::create_dir_all(root.join("exec/out")).unwrap();
+        File::create(root.join("exec/start_reason"))
+            .unwrap()
+            .write_all("Instance is the root".as_bytes())
+            .unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let components = find_components("stash".to_string(), hub_dir).await.unwrap();
@@ -1037,6 +1057,10 @@ mod tests {
 
         assert!(component.execution.is_some());
         let execution = component.execution.as_ref().unwrap();
+
+        assert!(execution.start_reason.is_some());
+        let start_reason = execution.start_reason.as_ref().unwrap();
+        assert_eq!(start_reason, "Instance is the root");
 
         assert!(execution.elf_runtime.is_none());
         assert!(execution.merkle_root.is_none());
@@ -1149,6 +1173,8 @@ mod tests {
 
         assert!(component.execution.is_some());
         let execution = component.execution.as_ref().unwrap();
+
+        assert!(execution.start_reason.is_none());
 
         assert!(execution.elf_runtime.is_some());
         let elf_runtime = execution.elf_runtime.as_ref().unwrap();

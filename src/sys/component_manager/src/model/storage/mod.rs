@@ -257,10 +257,8 @@ pub async fn delete_isolated_storage(
     relative_moniker: RelativeMoniker,
     instance_id: Option<&ComponentInstanceId>,
 ) -> Result<(), ModelError> {
-    // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
-    // capability to plumb through the correct BindReason.
     let root_dir =
-        open_storage_root(&storage_source_info, MODE_TYPE_DIRECTORY, &BindReason::Unsupported)
+        open_storage_root(&storage_source_info, MODE_TYPE_DIRECTORY, &BindReason::StorageAdmin)
             .await?;
 
     let (dir, name) = if let Some(instance_id) = instance_id {

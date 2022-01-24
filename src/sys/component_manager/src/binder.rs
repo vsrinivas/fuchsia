@@ -75,7 +75,11 @@ impl CapabilityProvider for BinderCapabilityProvider {
                     }
                 };
 
-                match source.bind(&BindReason::Binder).await {
+                let bind_reason = BindReason::AccessCapability {
+                    target: target.partial_abs_moniker.clone(),
+                    name: BINDER_SERVICE.clone(),
+                };
+                match source.bind(&bind_reason).await {
                     Ok(_) => {
                         source.scope_to_runtime(server_end).await;
                     }

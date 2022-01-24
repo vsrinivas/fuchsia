@@ -342,7 +342,7 @@ mod tests {
             )])
             .await;
 
-        match ActionSet::register(child.clone(), StartAction::new(BindReason::Unsupported)).await {
+        match ActionSet::register(child.clone(), StartAction::new(BindReason::Debug)).await {
             Err(ModelError::InstanceShutDown { moniker: m }) => {
                 assert_eq!(PartialAbsoluteMoniker::from(vec![TEST_CHILD_NAME]), m);
             }
