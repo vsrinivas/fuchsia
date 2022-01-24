@@ -26,10 +26,7 @@ class TestParent : public TestParentType {
   static zx_status_t Create(zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkRelease() {
-    // test-parent should never have its release called.
-    ZX_ASSERT_MSG(false, "TestParent::DdkRelease() invoked!\n");
-  }
+  void DdkRelease() { delete this; }
 };
 
 zx_status_t TestParent::Create(zx_device_t* parent) {
@@ -58,10 +55,7 @@ class SysDevice : public SysDeviceType {
                             zx_handle_t items_svc_handle);
 
   // Device protocol implementation.
-  void DdkRelease() {
-    // sysdev should never have its release called.
-    ZX_ASSERT_MSG(false, "SysDevice::DdkRelease() invoked!\n");
-  }
+  void DdkRelease() { delete this; }
 };
 
 zx_status_t SysDevice::Create(void* ctx, zx_device_t* parent, const char* name, const char* args,

@@ -83,10 +83,14 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
   }
   auto name = GetSymbol<const char*>(symbols, kName, "compat-device");
   auto context = GetSymbol<void*>(symbols, kContext);
-  auto ops = GetSymbol<const zx_protocol_device_t*>(symbols, kOps);
+  const zx_protocol_device_t* ops = nullptr;
   std::optional<Device*> parent_opt;
   if (auto parent = driver::SymbolValue<Device*>(symbols, kParent); parent.is_ok()) {
     parent_opt = *parent;
+  }
+  // Only look for an opts field if we don't have a linked parent.
+  if (!parent_opt) {
+    ops = GetSymbol<const zx_protocol_device_t*>(symbols, kOps);
   }
 
   // Open the compat driver's binary within the package.

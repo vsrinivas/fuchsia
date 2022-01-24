@@ -132,7 +132,7 @@ TEST_F(DeviceTest, AddChildDeviceWithInit) {
 
   // Add a child device.
   bool child_ctx = false;
-  zx_protocol_device_t child_ops{
+  static zx_protocol_device_t child_ops{
       .init = [](void* ctx) { *static_cast<bool*>(ctx) = true; },
   };
   device_add_args_t args{

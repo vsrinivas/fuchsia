@@ -57,6 +57,9 @@ Device::~Device() {
   if (vnode_teardown_callback_) {
     (*vnode_teardown_callback_)();
   }
+  if (HasOp(ops_, &zx_protocol_device_t::release)) {
+    ops_->release(context_);
+  }
 }
 
 zx_device_t* Device::ZxDevice() { return static_cast<zx_device_t*>(this); }
