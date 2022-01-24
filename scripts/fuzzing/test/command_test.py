@@ -98,7 +98,7 @@ class CommandTest(TestCaseWithFuzzer):
             'Stop manually with "fx fuzz stop {}".'.format(self.fuzzer),
         )
         cmd = [
-            'python3.8',
+            sys.executable,
             sys.argv[0],
             'start',
             '--monitor',
