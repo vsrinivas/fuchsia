@@ -226,7 +226,7 @@ impl UsbUpdateChecker<'_> {
         let (dir, remote) = fidl::endpoints::create_proxy::<DirectoryMarker>()
             .context("Creating directory proxy")?;
         resolver
-            .resolve(&url.to_string(), &mut vec![].into_iter(), remote)
+            .resolve(&url.to_string(), remote)
             .await
             .context("Sending FIDL request")?
             .map_err(|e| anyhow!("Package resolver error: {:?}", e))

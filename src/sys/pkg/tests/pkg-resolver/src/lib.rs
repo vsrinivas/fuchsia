@@ -889,7 +889,7 @@ impl<P: PkgFs> TestEnv<P> {
             .unwrap();
         let (proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
         let () = cache_service
-            .open(&mut hash.into(), &mut std::iter::empty(), server_end)
+            .open(&mut hash.into(), server_end)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)?;
@@ -996,8 +996,7 @@ pub fn resolve_package(
     url: &str,
 ) -> impl Future<Output = Result<DirectoryProxy, fidl_fuchsia_pkg::ResolveError>> {
     let (package, package_server_end) = fidl::endpoints::create_proxy().unwrap();
-    let selectors: Vec<&str> = vec![];
-    let response_fut = resolver.resolve(url, &mut selectors.into_iter(), package_server_end);
+    let response_fut = resolver.resolve(url, package_server_end);
     async move {
         let () = response_fut.await.unwrap()?;
         Ok(package)

@@ -315,12 +315,7 @@ async fn dynamic_index_needed_blobs() {
     let get_fut = env
         .proxies
         .package_cache
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(Status::from_raw));
 
     let (meta_far, _) = pkg.contents();
@@ -415,7 +410,7 @@ async fn dynamic_index_package_hash_update() {
     let get_fut = env
         .proxies
         .package_cache
-        .get(&mut meta_blob_info, &mut std::iter::empty(), needed_blobs_server_end, None)
+        .get(&mut meta_blob_info, needed_blobs_server_end, None)
         .map_ok(|res| res.map_err(Status::from_raw));
 
     let (meta_far, _) = pkg.contents();
@@ -553,12 +548,7 @@ async fn package_cache_get() {
     let get_fut = env
         .proxies
         .package_cache
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(zx::Status::from_raw));
 
     // Request received, expect client requesting meta far.
@@ -663,12 +653,7 @@ async fn package_cache_concurrent_gets() {
     let _get_fut = env
         .proxies
         .package_cache
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(zx::Status::from_raw));
 
     // Initiate concurrent connection to `PackageCache`.
@@ -685,12 +670,7 @@ async fn package_cache_concurrent_gets() {
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
     let (_dir, dir_server_end2) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
     let _get_fut = package_cache_proxy2
-        .get(
-            &mut meta_blob_info2,
-            &mut std::iter::empty(),
-            needed_blobs_server_end2,
-            Some(dir_server_end2),
-        )
+        .get(&mut meta_blob_info2, needed_blobs_server_end2, Some(dir_server_end2))
         .map_ok(|res| res.map_err(zx::Status::from_raw));
 
     let hierarchy = env
@@ -802,12 +782,7 @@ async fn retained_index_updated_and_persisted() {
     let get_fut = env
         .proxies
         .package_cache
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(zx::Status::from_raw));
 
     let hierarchy = env.inspect_hierarchy().await;
@@ -867,12 +842,7 @@ async fn retained_index_updated_and_persisted() {
     let get_fut2 = env
         .proxies
         .package_cache
-        .get(
-            &mut meta_blob_info2,
-            &mut std::iter::empty(),
-            needed_blobs_server_end2,
-            Some(dir_server_end2),
-        )
+        .get(&mut meta_blob_info2, needed_blobs_server_end2, Some(dir_server_end2))
         .map_ok(|res| res.map_err(zx::Status::from_raw));
 
     let (meta_far2, _contents2) = packages[1].contents();
@@ -950,12 +920,7 @@ async fn index_updated_mid_package_write() {
     let get_fut = env
         .proxies
         .package_cache
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(zx::Status::from_raw));
 
     let (meta_far, contents) = package.contents();

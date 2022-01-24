@@ -46,22 +46,19 @@ type ResolveError = strict enum : int32 {
 /// repository administration tools.
 @discoverable
 protocol PackageResolver {
-    /// Populates or updates the cache of a package with the given selectors.
+    /// Populates or updates the cache of a package.
     ///
     /// Ensures that a package is on the local filesystem.
     ///
     /// + request `package_url` the package URL for a package. The following link describes
     ///   the format, resource paths are not allowed:
     ///   https://fuchsia.dev/fuchsia-src/concepts/packages/package_url.
-    /// + request `selectors` the package selectors. This feature is unimplemented and the
-    ///   parameter will be ignored.
     /// + request `dir` a request for a directory that will be resolved when the package has
     ///   been successfully cached.
     /// * error indicates failure. See `ResolveError` for values and error scenarios.
     // TODO(fxbug.dev/45811) change `package_url` from string to PackageUrl
     Resolve(resource struct {
         package_url string;
-        selectors vector<string>;
         dir server_end:fuchsia.io.Directory;
     }) -> (struct {}) error ResolveError;
 

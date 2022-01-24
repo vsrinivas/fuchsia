@@ -221,11 +221,10 @@ pub mod for_tests {
                 ._pkg_resolver
                 .connect_to_protocol::<PackageResolverMarker>()
                 .context("getting resolver")?;
-            let selectors: Vec<&str> = vec![];
             let (package, package_remote) =
                 fidl::endpoints::create_proxy().context("creating package directory endpoints")?;
             let () = resolver
-                .resolve(url, &mut selectors.into_iter(), package_remote)
+                .resolve(url, package_remote)
                 .await
                 .unwrap()
                 .map_err(|e| anyhow!("Package resolver error: {:?}", e))?;

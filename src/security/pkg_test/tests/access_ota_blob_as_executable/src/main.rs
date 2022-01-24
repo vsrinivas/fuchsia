@@ -18,8 +18,8 @@ use {
     fuchsia_zircon::{AsHandleRef, Rights, Status},
     futures::join,
     io_util::directory::open_file,
+    std::convert::TryInto,
     std::fs::File,
-    std::{convert::TryInto, iter::empty},
 };
 
 const HELLO_WORLD_V0_META_FAR_PATH: &str = "/pkg/data/assemblies/v0/hello_world/meta.far";
@@ -83,7 +83,7 @@ async fn check_v0_cache_resolver_results() {
     let pkg_cache_proxy = connect_to_protocol::<PackageCacheMarker>().unwrap();
     let (hello_world_proxy, hello_world_server_end) = create_proxy::<DirectoryMarker>().unwrap();
     pkg_cache_proxy
-        .open(&mut hello_world_v0_merkle, &mut std::iter::empty(), hello_world_server_end)
+        .open(&mut hello_world_v0_merkle, hello_world_server_end)
         .await
         .unwrap()
         .unwrap();
@@ -93,7 +93,7 @@ async fn check_v0_cache_resolver_results() {
     let (hello_world_proxy, hello_world_server_end) = create_proxy::<DirectoryMarker>().unwrap();
     connect_to_protocol::<PackageResolverMarker>()
         .unwrap()
-        .resolve("fuchsia-pkg://fuchsia.com/hello_world", &mut empty(), hello_world_server_end)
+        .resolve("fuchsia-pkg://fuchsia.com/hello_world", hello_world_server_end)
         .await
         .unwrap()
         .unwrap();

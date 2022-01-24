@@ -23,7 +23,6 @@ protocol PackageCache {
     /// missing blobs are persisted, clients should call ['Sync'].
     ///
     /// + request `meta_far_blob` the blob info for the package's meta.far.
-    /// + request `selectors` the package selectors (TODO: link to docs).
     /// + request `needed_blobs` an iterator over all the blobs in the package that
     ///   are not present on the system.
     /// + request `dir` an optional request for a directory that will be resolved when the package
@@ -33,7 +32,6 @@ protocol PackageCache {
     ///       all the missing blobs were downloaded to the system.
     Get(resource struct {
         meta_far_blob BlobInfo;
-        selectors vector<string>;
         needed_blobs server_end:NeededBlobs;
         dir server_end:<fuchsia.io.Directory, optional>;
     }) -> (struct {}) error zx.status;
@@ -41,14 +39,12 @@ protocol PackageCache {
     /// Opens the package, or errors out if it is not present on the local system.
     ///
     /// + request `meta_far_blob_id` the blob id for the package's meta.far.
-    /// + request `selectors` the package selectors (TODO: link to docs).
     /// + request `dir` a request for a directory that will be resolved when the package has been
     ///   successfully cached.
     /// * error a zx_status value indicating failure. One of the following:
     ///     * `ZX_ERR_NOT_FOUND` if the package does not exist.
     Open(resource struct {
         meta_far_blob_id BlobId;
-        selectors vector<string>;
         dir server_end:fuchsia.io.Directory;
     }) -> (struct {}) error zx.status;
 

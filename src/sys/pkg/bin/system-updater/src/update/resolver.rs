@@ -53,7 +53,7 @@ async fn resolve_package(
 ) -> Result<DirectoryProxy, ResolveError> {
     let (dir, dir_server_end) =
         fidl::endpoints::create_proxy().map_err(ResolveError::CreateProxy)?;
-    let res = pkg_resolver.resolve(&url.to_string(), &mut std::iter::empty(), dir_server_end);
+    let res = pkg_resolver.resolve(&url.to_string(), dir_server_end);
     let res = res.await.map_err(|e| ResolveError::Fidl(e, url.clone()))?;
 
     let () = res.map_err(|raw| ResolveError::Error(raw.into(), url.clone()))?;

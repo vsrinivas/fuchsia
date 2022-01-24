@@ -257,7 +257,6 @@ impl MockResolverService {
             match event {
                 fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
                     package_url,
-                    selectors: _,
                     dir,
                     responder,
                 } => self.handle_resolve(package_url, dir, responder).await?,
@@ -422,7 +421,7 @@ mod tests {
         url: &str,
     ) -> impl Future<Output = Result<DirectoryProxy, ResolveError>> {
         let (package_dir, package_dir_server_end) = fidl::endpoints::create_proxy().unwrap();
-        let fut = proxy.resolve(url, &mut std::iter::empty(), package_dir_server_end);
+        let fut = proxy.resolve(url, package_dir_server_end);
 
         async move {
             let () = fut.await.unwrap()?;

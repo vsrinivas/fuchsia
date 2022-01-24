@@ -98,12 +98,7 @@ async fn packages_are_retained_gc_mid_process() {
     let get_fut = env
         .proxies
         .package_cache
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(zx::Status::from_raw));
 
     let (meta_far, contents) = package.contents();

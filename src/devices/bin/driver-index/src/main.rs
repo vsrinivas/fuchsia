@@ -228,7 +228,7 @@ impl ResolvedDriver {
         let mut base_url = component_url.clone();
         base_url.set_fragment(None);
 
-        let res = resolver.resolve(&base_url.as_str(), &mut std::iter::empty(), dir_server_end);
+        let res = resolver.resolve(&base_url.as_str(), dir_server_end);
         res.await?.map_err(|e| {
             anyhow::anyhow!("{}: Failed to resolve package: {:?}", component_url.as_str(), e)
         })?;
@@ -535,11 +535,8 @@ async fn load_base_drivers(
     resolver: fidl_fuchsia_pkg::PackageResolverProxy,
 ) -> Result<(), anyhow::Error> {
     let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
-    let res = resolver.resolve(
-        "fuchsia-pkg://fuchsia.com/driver-manager-base-config",
-        &mut std::iter::empty(),
-        dir_server_end,
-    );
+    let res =
+        resolver.resolve("fuchsia-pkg://fuchsia.com/driver-manager-base-config", dir_server_end);
     res.await?.map_err(|e| anyhow::anyhow!("Failed to resolve package: {:?}", e))?;
     let data = io_util::open_file(
         &dir,
@@ -667,7 +664,6 @@ mod tests {
                 match request {
                     fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
                         package_url: _,
-                        selectors: _,
                         dir,
                         responder,
                     } => {

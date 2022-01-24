@@ -101,12 +101,7 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) -> Directory
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
     let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
     let get_fut = package_cache
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(zx::Status::from_raw));
 
     let (meta_far, contents) = pkg.contents();
@@ -163,12 +158,7 @@ async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) {
     let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
 
     let get_fut = proxy
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(Status::from_raw));
 
     let (_meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
@@ -616,11 +606,10 @@ impl<P: PkgFs> TestEnv<P> {
 
     pub async fn open_package(&self, merkle: &str) -> Result<DirectoryProxy, zx::Status> {
         let (package, server_end) = fidl::endpoints::create_proxy().unwrap();
-        let status_fut = self.proxies.package_cache.open(
-            &mut merkle.parse::<BlobId>().unwrap().into(),
-            &mut vec![].into_iter(),
-            server_end,
-        );
+        let status_fut = self
+            .proxies
+            .package_cache
+            .open(&mut merkle.parse::<BlobId>().unwrap().into(), server_end);
 
         let () = status_fut.await.unwrap().map_err(zx::Status::from_raw)?;
         Ok(package)
@@ -637,7 +626,6 @@ impl<P: PkgFs> TestEnv<P> {
                     .parse::<BlobId>()
                     .unwrap()
                     .into(),
-                &mut vec![].into_iter(),
                 server_end,
             )
             .await

@@ -79,13 +79,12 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  ::fidl::VectorView<::fidl::StringView> selectors;
 
   // This is synchronous for now so we can get the proof of concept working.
   // Eventually we will want to do this asynchronously.
   auto result = resolver_client_->Resolve(
       ::fidl::StringView(fidl::StringView::FromExternal(package_url.package_path())),
-      std::move(selectors), std::move(endpoints->server));
+      std::move(endpoints->server));
   if (!result.ok() || result.Unwrap()->result.is_err()) {
     LOGF(ERROR, "Failed to resolve package");
     if (!result.ok()) {

@@ -154,11 +154,10 @@ async fn resolve_package(
     package_resolver: &PackageResolverProxy,
 ) -> Result<DirectoryProxy, ResolverError> {
     let package_url = package_url.root_url();
-    let selectors = Vec::new();
     let (proxy, server_end) =
         create_proxy::<DirectoryMarker>().expect("failed to create channel pair");
     package_resolver
-        .resolve(&package_url.to_string(), &mut selectors.into_iter(), server_end)
+        .resolve(&package_url.to_string(), server_end)
         .await
         .map_err(ResolverError::IoError)?
         .map_err(|err| match err {
@@ -395,14 +394,10 @@ mod tests {
             };
             while let Some(request) = server.try_next().await.unwrap() {
                 match request {
-                    PackageResolverRequest::Resolve { package_url, selectors, dir, responder } => {
+                    PackageResolverRequest::Resolve { package_url, dir, responder } => {
                         assert_eq!(
                             package_url, "fuchsia-pkg://fuchsia.com/test",
                             "unexpected package URL"
-                        );
-                        assert!(
-                            selectors.is_empty(),
-                            "Call to Resolve should not contain any selectors"
                         );
                         fs.clone().open(
                             ExecutionScope::new(),
@@ -450,14 +445,10 @@ mod tests {
             };
             while let Some(request) = server.try_next().await.unwrap() {
                 match request {
-                    PackageResolverRequest::Resolve { package_url, selectors, dir, responder } => {
+                    PackageResolverRequest::Resolve { package_url, dir, responder } => {
                         assert_eq!(
                             package_url, "fuchsia-pkg://fuchsia.com/test",
                             "unexpected package URL"
-                        );
-                        assert!(
-                            selectors.is_empty(),
-                            "Call to Resolve should not contain any selectors"
                         );
                         fs.clone().open(
                             ExecutionScope::new(),
@@ -498,12 +489,8 @@ mod tests {
             };
             while let Some(request) = server.try_next().await.unwrap() {
                 match request {
-                    PackageResolverRequest::Resolve { package_url, selectors, dir, responder } => {
+                    PackageResolverRequest::Resolve { package_url, dir, responder } => {
                         assert_eq!(package_url, "fuchsia-pkg://fuchsia.com/test?hash=9e3a3f63c018e2a4db0ef93903a87714f036e3e8ff982a7a2020eca86cc4677c", "unexpected package URL");
-                        assert!(
-                            selectors.is_empty(),
-                            "Call to Resolve should not contain any selectors"
-                        );
                         fs.clone().open(
                             ExecutionScope::new(),
                             fio::OPEN_RIGHT_READABLE,
@@ -637,14 +624,10 @@ mod tests {
         fasync::Task::spawn(async move {
             while let Some(request) = server.try_next().await.unwrap() {
                 match request {
-                    PackageResolverRequest::Resolve { package_url, selectors, dir, responder } => {
+                    PackageResolverRequest::Resolve { package_url, dir, responder } => {
                         assert_eq!(
                             package_url, "fuchsia-pkg://fuchsia.com/test",
                             "unexpected package URL"
-                        );
-                        assert!(
-                            selectors.is_empty(),
-                            "Call to Resolve should not contain any selectors"
                         );
                         fs.clone().open(
                             ExecutionScope::new(),

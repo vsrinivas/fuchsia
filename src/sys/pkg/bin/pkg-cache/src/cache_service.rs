@@ -54,13 +54,7 @@ pub async fn serve(
         .try_for_each_concurrent(None, |event| async {
             let cobalt_sender = cobalt_sender.clone();
             match event {
-                PackageCacheRequest::Get {
-                    meta_far_blob,
-                    selectors,
-                    needed_blobs,
-                    dir,
-                    responder,
-                } => {
+                PackageCacheRequest::Get { meta_far_blob, needed_blobs, dir, responder } => {
                     let id = serve_id.fetch_add(1, Ordering::SeqCst);
                     let meta_far_blob: BlobInfo = meta_far_blob.into();
                     let node = get_node.create_child(id.to_string());
@@ -74,7 +68,6 @@ pub async fn serve(
                         &package_index,
                         &blobfs,
                         meta_far_blob,
-                        selectors,
                         needed_blobs,
                         dir,
                         cobalt_sender,
@@ -87,14 +80,13 @@ pub async fn serve(
                     drop(node);
                     responder.send(&mut response.map_err(|status| status.into_raw()))?;
                 }
-                PackageCacheRequest::Open { meta_far_blob_id, selectors, dir, responder } => {
+                PackageCacheRequest::Open { meta_far_blob_id, dir, responder } => {
                     let meta_far_blob_id: BlobId = meta_far_blob_id.into();
                     trace::duration_begin!("app", "cache_open",
                         "meta_far_blob_id" => meta_far_blob_id.to_string().as_str()
                     );
                     let response =
-                        open(&pkgfs_versions, meta_far_blob_id, selectors, dir, cobalt_sender)
-                            .await;
+                        open(&pkgfs_versions, meta_far_blob_id, dir, cobalt_sender).await;
                     trace::duration_end!("app", "cache_open",
                         "status" => Status::from(response).to_string().as_str()
                     );
@@ -129,7 +121,6 @@ async fn get<'a>(
     package_index: &Arc<Mutex<PackageIndex>>,
     blobfs: &blobfs::Client,
     meta_far_blob: BlobInfo,
-    selectors: Vec<String>,
     needed_blobs: ServerEnd<NeededBlobsMarker>,
     dir_request: Option<ServerEnd<DirectoryMarker>>,
     mut cobalt_sender: CobaltSender,
@@ -139,9 +130,6 @@ async fn get<'a>(
     let _id_prop = node.create_string("meta-far-id", meta_far_blob.blob_id.to_string());
     let _length_prop = node.create_uint("meta-far-length", meta_far_blob.length);
 
-    if !selectors.is_empty() {
-        fx_log_warn!("Get() does not support selectors yet");
-    }
     let needed_blobs = needed_blobs.into_stream().map_err(|_| Status::INTERNAL)?;
 
     let pkg = if let Ok(pkg) = pkgfs_versions.open_package(&meta_far_blob.blob_id.into()).await {
@@ -230,15 +218,9 @@ async fn get<'a>(
 async fn open<'a>(
     pkgfs_versions: &'a pkgfs::versions::Client,
     meta_far_blob_id: BlobId,
-    selectors: Vec<String>,
     dir_request: ServerEnd<DirectoryMarker>,
     mut cobalt_sender: CobaltSender,
 ) -> Result<(), Status> {
-    // FIXME: need to implement selectors.
-    if !selectors.is_empty() {
-        fx_log_warn!("Open() does not support selectors yet");
-    }
-
     let pkg =
         pkgfs_versions.open_package(&meta_far_blob_id.into()).await.map_err(|err| match err {
             pkgfs::versions::OpenError::NotFound => {
@@ -2267,7 +2249,6 @@ mod get_handler_tests {
                     &package_index,
                     &blobfs,
                     meta_blob_info,
-                    vec![],
                     stream,
                     dir_request,
                     cobalt_sender,
@@ -2309,7 +2290,6 @@ mod get_handler_tests {
                 &package_index,
                 &blobfs,
                 meta_blob_info,
-                vec![],
                 stream,
                 None,
                 cobalt_sender,

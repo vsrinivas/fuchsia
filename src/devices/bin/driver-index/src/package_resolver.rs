@@ -17,7 +17,6 @@ pub async fn serve(stream: PackageResolverRequestStream) -> anyhow::Result<()> {
             match request {
                 fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
                     package_url,
-                    selectors: _,
                     dir,
                     responder,
                 } => {

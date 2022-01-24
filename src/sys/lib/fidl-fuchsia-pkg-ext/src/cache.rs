@@ -43,13 +43,12 @@ impl Client {
     pub async fn open(&self, meta_far_blob: BlobId) -> Result<PackageDirectory, OpenError> {
         let (pkg_dir, pkg_dir_server_end) = PackageDirectory::create_request()?;
 
-        let () = self
-            .proxy
-            .open(&mut meta_far_blob.into(), &mut std::iter::empty(), pkg_dir_server_end)
-            .await?
-            .map_err(|s| match Status::from_raw(s) {
-                Status::NOT_FOUND => OpenError::NotFound,
-                s => OpenError::UnexpectedResponse(s),
+        let () =
+            self.proxy.open(&mut meta_far_blob.into(), pkg_dir_server_end).await?.map_err(|s| {
+                match Status::from_raw(s) {
+                    Status::NOT_FOUND => OpenError::NotFound,
+                    s => OpenError::UnexpectedResponse(s),
+                }
             })?;
 
         Ok(pkg_dir)
@@ -64,7 +63,6 @@ impl Client {
 
         let get_fut = self.proxy.get(
             &mut meta_far_blob.into(),
-            &mut std::iter::empty(),
             needed_blobs_server_end,
             Some(pkg_dir_server_end),
         );
@@ -534,14 +532,8 @@ mod tests {
 
         async fn expect_open(&mut self, blob_id: BlobId) -> PendingOpen {
             match self.stream.next().await {
-                Some(Ok(PackageCacheRequest::Open {
-                    meta_far_blob_id,
-                    selectors,
-                    dir,
-                    responder,
-                })) => {
+                Some(Ok(PackageCacheRequest::Open { meta_far_blob_id, dir, responder })) => {
                     assert_eq!(BlobId::from(meta_far_blob_id), blob_id);
-                    assert_eq!(selectors, Vec::<String>::new());
                     let dir = dir.into_stream().unwrap();
 
                     PendingOpen { dir, responder }
@@ -554,13 +546,11 @@ mod tests {
             match self.stream.next().await {
                 Some(Ok(PackageCacheRequest::Get {
                     meta_far_blob,
-                    selectors,
                     needed_blobs,
                     dir,
                     responder,
                 })) => {
                     assert_eq!(BlobInfo::from(meta_far_blob), blob_info);
-                    assert_eq!(selectors, Vec::<String>::new());
                     let needed_blobs = needed_blobs.into_stream().unwrap();
                     let dir = dir.unwrap().into_stream().unwrap();
 

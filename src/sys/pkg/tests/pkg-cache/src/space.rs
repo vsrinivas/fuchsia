@@ -31,12 +31,7 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
     let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
     let get_fut = package_cache
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(Status::from_raw));
 
     let (meta_far, contents) = pkg.contents();
@@ -199,12 +194,7 @@ async fn gc_dynamic_index_protected() {
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
     let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
     let get_fut = package_cache
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(Status::from_raw));
 
     let (meta_far, contents) = pkgprime.contents();
@@ -334,12 +324,7 @@ async fn gc_updated_static_package() {
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
     let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
     let get_fut = package_cache
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(Status::from_raw));
 
     let (meta_far, contents) = pkgprime.contents();
@@ -447,12 +432,7 @@ async fn blob_write_fails_when_out_of_space() {
     let _get_fut = env
         .proxies
         .package_cache
-        .get(
-            &mut meta_blob_info,
-            &mut std::iter::empty(),
-            needed_blobs_server_end,
-            Some(dir_server_end),
-        )
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
         .map_ok(|res| res.map_err(Status::from_raw));
 
     let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();

@@ -92,15 +92,12 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
     callback(std::make_unique<fuchsia::sys::Package>(std::move(package)));
   };
 
-  std::vector<std::string> selectors;
-
   // TODO: if the resolver became unavailable in between the start of this
   // method and the following call to Resolve, our reconnection logic won't have
   // had a chance to execute, so we'll still block our client's request
   // indefinitely. to resolve this we'll maybe need to change the API or undergo
   // some more significant refactoring.
-  resolver_->Resolve(fuchsia_url.package_path(), std::move(selectors), std::move(dir_request),
-                     std::move(done_cb));
+  resolver_->Resolve(fuchsia_url.package_path(), std::move(dir_request), std::move(done_cb));
 }
 
 void PackageUpdatingLoader::EnsureConnectedToResolver() {

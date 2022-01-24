@@ -50,15 +50,15 @@ pub fn main() -> Result<(), anyhow::Error> {
 
 async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
     match command {
-        Command::Resolve(ResolveCommand { pkg_url, selectors }) => {
+        Command::Resolve(ResolveCommand { pkg_url }) => {
             let resolver = connect_to_protocol::<PackageResolverMarker>()
                 .context("Failed to connect to resolver service")?;
-            println!("resolving {} with the selectors {:?}", pkg_url, selectors);
+            println!("resolving {}", pkg_url);
 
             let (dir, dir_server_end) = fidl::endpoints::create_proxy()?;
 
             let () = resolver
-                .resolve(&pkg_url, &mut selectors.iter().map(|s| s.as_str()), dir_server_end)
+                .resolve(&pkg_url, dir_server_end)
                 .await?
                 .map_err(fidl_fuchsia_pkg_ext::ResolveError::from)
                 .with_context(|| format!("Failed to resolve {}", pkg_url))?;
@@ -107,7 +107,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             let cache = connect_to_protocol::<PackageCacheMarker>()
                 .context("Failed to connect to cache service")?;
             let (_, dir_server_end) = fidl::endpoints::create_proxy()?;
-            let res = cache.open(&mut blob_id, &mut vec![].into_iter(), dir_server_end).await?;
+            let res = cache.open(&mut blob_id, dir_server_end).await?;
             match res.map_err(zx::Status::from_raw) {
                 Ok(_) => {}
                 Err(zx::Status::NOT_FOUND) => {
@@ -126,19 +126,15 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             );
             Ok(0)
         }
-        Command::Open(OpenCommand { meta_far_blob_id, selectors }) => {
+        Command::Open(OpenCommand { meta_far_blob_id }) => {
             let cache = connect_to_protocol::<PackageCacheMarker>()
                 .context("Failed to connect to cache service")?;
-            println!("opening {} with the selectors {:?}", meta_far_blob_id, selectors);
+            println!("opening {}", meta_far_blob_id);
 
             let (dir, dir_server_end) = fidl::endpoints::create_proxy()?;
 
             let () = cache
-                .open(
-                    &mut meta_far_blob_id.into(),
-                    &mut selectors.iter().map(|s| s.as_str()),
-                    dir_server_end,
-                )
+                .open(&mut meta_far_blob_id.into(), dir_server_end)
                 .await?
                 .map_err(zx::Status::from_raw)?;
 

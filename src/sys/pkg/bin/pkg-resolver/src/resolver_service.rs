@@ -116,14 +116,9 @@ pub async fn run_resolver_service(
                 match event {
                     PackageResolverRequest::Resolve {
                         package_url,
-                        selectors,
                         dir,
                         responder,
                     } => {
-                        // FIXME: need to implement selectors.
-                        if !selectors.is_empty() {
-                            fx_log_warn!("resolve does not support selectors yet");
-                        }
                         let start_time = Instant::now();
                         let response = resolve(&package_fetcher, package_url.clone(), dir).await;
 

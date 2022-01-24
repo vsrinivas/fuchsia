@@ -39,14 +39,10 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
  public:
   explicit PackageResolverMock(std::optional<fuchsia::pkg::ResolveError> error) : error_(error) {}
 
-  virtual void Resolve(::std::string package_uri, ::std::vector<::std::string> selectors,
+  virtual void Resolve(::std::string package_uri,
                        ::fidl::InterfaceRequest<fuchsia::io::Directory> dir,
                        ResolveCallback callback) override {
-    std::vector<std::string> v_selectors;
-    for (const auto& s : selectors) {
-      v_selectors.push_back(s);
-    }
-    args_ = std::make_tuple(package_uri, v_selectors);
+    args_ = std::make_tuple(package_uri);
     fdio_service_connect("/pkg", dir.TakeChannel().release());
     if (error_) {
       callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithErr(
@@ -66,7 +62,7 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
 
   void Unbind() { bindings_.CloseAll(); }
 
-  typedef std::tuple<std::string, std::vector<std::string>> ArgsTuple;
+  typedef std::tuple<std::string> ArgsTuple;
   const ArgsTuple& args() const { return args_; }
 
  private:
@@ -170,7 +166,6 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   constexpr char kResolvedUrl[] = "fuchsia-pkg://fuchsia.com/sysmgr-integration-tests/0";
   const auto& args = resolver_service.args();
   EXPECT_EQ(std::get<0>(args), std::string(kResolvedUrl));
-  EXPECT_EQ(std::get<1>(args), std::vector<std::string>{});
 }
 
 TEST_F(PackageUpdatingLoaderTest, Failure) {

@@ -187,7 +187,7 @@ async fn latest_update_package_attempt(
         fidl::endpoints::create_proxy().map_err(errors::UpdatePackage::CreateDirectoryProxy)?;
     let update_package =
         channel_manager.get_target_channel_update_url().unwrap_or(UPDATE_PACKAGE_URL.to_owned());
-    let fut = package_resolver.resolve(&update_package, &mut vec![].into_iter(), dir_server_end);
+    let fut = package_resolver.resolve(&update_package, dir_server_end);
     let () = fut
         .await
         .map_err(errors::UpdatePackage::ResolveFidl)?
@@ -443,11 +443,9 @@ pub mod test_check_for_system_update_impl {
         fn resolve(
             &self,
             package_url: &str,
-            selectors: &mut dyn ExactSizeIterator<Item = &str>,
             dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
         ) -> Self::ResolveResponseFut {
             assert_eq!(package_url, self.expected_package_url);
-            assert_eq!(selectors.len(), 0);
             fdio::service_connect(
                 self.temp_dir.path().to_str().expect("path is utf8"),
                 dir.into_channel(),
@@ -559,7 +557,6 @@ pub mod test_check_for_system_update_impl {
             fn resolve(
                 &self,
                 _package_url: &str,
-                _selectors: &mut dyn ExactSizeIterator<Item = &str>,
                 _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::err(fidl::Error::Invalid)
@@ -619,7 +616,6 @@ pub mod test_check_for_system_update_impl {
             fn resolve(
                 &self,
                 package_url: &str,
-                selectors: &mut dyn ExactSizeIterator<Item = &str>,
                 dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 *self.call_count.lock() += 1;
@@ -629,7 +625,6 @@ pub mod test_check_for_system_update_impl {
                 }
 
                 assert_eq!(package_url, self.expected_package_url);
-                assert_eq!(selectors.len(), 0);
                 fdio::service_connect(
                     self.temp_dir.path().to_str().expect("path is utf8"),
                     dir.into_channel(),
@@ -679,7 +674,6 @@ pub mod test_check_for_system_update_impl {
             fn resolve(
                 &self,
                 _package_url: &str,
-                _selectors: &mut dyn ExactSizeIterator<Item = &str>,
                 _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::ok(Err(fidl_fuchsia_pkg::ResolveError::NoSpace))
@@ -726,7 +720,6 @@ pub mod test_check_for_system_update_impl {
             fn resolve(
                 &self,
                 _package_url: &str,
-                _selectors: &mut dyn ExactSizeIterator<Item = &str>,
                 _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::ok(Err(fidl_fuchsia_pkg::ResolveError::Internal))
@@ -767,7 +760,6 @@ pub mod test_check_for_system_update_impl {
             fn resolve(
                 &self,
                 _package_url: &str,
-                _selectors: &mut dyn ExactSizeIterator<Item = &str>,
                 _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::ok(Ok(()))

@@ -34,9 +34,6 @@ pub enum Command {
 pub struct ResolveCommand {
     #[argh(positional)]
     pub pkg_url: String,
-
-    #[argh(positional)]
-    pub selectors: Vec<String>,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -45,9 +42,6 @@ pub struct ResolveCommand {
 pub struct OpenCommand {
     #[argh(positional)]
     pub meta_far_blob_id: BlobId,
-
-    #[argh(positional)]
-    pub selectors: Vec<String>,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -328,13 +322,12 @@ mod tests {
 
     #[test]
     fn resolve() {
-        fn check(args: &[&str], expected_pkg_url: &str, expected_selectors: &[String]) {
+        fn check(args: &[&str], expected_pkg_url: &str) {
             assert_eq!(
                 Args::from_args(CMD_NAME, args),
                 Ok(Args {
                     command: Command::Resolve(ResolveCommand {
                         pkg_url: expected_pkg_url.to_string(),
-                        selectors: expected_selectors.into_iter().cloned().collect()
                     })
                 })
             );
@@ -342,37 +335,28 @@ mod tests {
 
         let url = "fuchsia-pkg://fuchsia.com/foo/bar";
 
-        check(&["resolve", url], url, &[]);
+        check(&["resolve", url], url);
 
-        check(
-            &["resolve", url, "selector1", "selector2"],
-            url,
-            &["selector1".to_string(), "selector2".to_string()],
-        );
+        check(&["resolve", url], url);
     }
 
     #[test]
     fn open() {
-        fn check(args: &[&str], expected_blob_id: &str, expected_selectors: &[String]) {
+        fn check(args: &[&str], expected_blob_id: &str) {
             assert_eq!(
                 Args::from_args(CMD_NAME, args),
                 Ok(Args {
                     command: Command::Open(OpenCommand {
                         meta_far_blob_id: expected_blob_id.parse().unwrap(),
-                        selectors: expected_selectors.into_iter().cloned().collect()
                     })
                 })
             )
         }
 
         let blob_id = "1111111111111111111111111111111111111111111111111111111111111111";
-        check(&["open", blob_id], blob_id, &[]);
+        check(&["open", blob_id], blob_id);
 
-        check(
-            &["open", blob_id, "selector1", "selector2"],
-            blob_id,
-            &["selector1".to_string(), "selector2".to_string()],
-        );
+        check(&["open", blob_id], blob_id);
     }
 
     #[test]
