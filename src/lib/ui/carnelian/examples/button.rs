@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! This is the button sample.
+
 use anyhow::Error;
 use argh::FromArgs;
 use carnelian::{
@@ -9,11 +11,11 @@ use carnelian::{
     color::Color,
     drawing::{load_font, measure_text_width, DisplayRotation, FontFace},
     input::{self},
-    make_app_assistant, make_message,
+    make_message,
     render::Context as RenderContext,
     scene::{
         facets::{
-            FacetId, SetColorMessage, TextFacetOptions, TextHorizontalAlignment,
+            FacetId, SetColorMessage, SetSizeMessage, TextFacetOptions, TextHorizontalAlignment,
             TextVerticalAlignment,
         },
         layout::{
@@ -22,12 +24,17 @@ use carnelian::{
         },
         scene::{Scene, SceneBuilder},
     },
-    App, AppAssistant, Message, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
-    ViewKey,
+    App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Message,
+    MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::size2;
+use fuchsia_async::{self as fasync};
 use fuchsia_zircon::{Event, Time};
-use std::path::PathBuf;
+use std::{
+    f32::consts::PI,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 /// Button Sample
 #[derive(Debug, FromArgs)]
@@ -42,16 +49,18 @@ struct Args {
 /// the button view assistant will understand and process.
 pub enum ButtonMessages {
     Pressed(Time),
+    Resize,
 }
 
 struct ButtonAppAssistant {
+    app_context: AppContext,
     display_rotation: DisplayRotation,
 }
 
-impl Default for ButtonAppAssistant {
-    fn default() -> Self {
+impl ButtonAppAssistant {
+    fn new(app_context: AppContext) -> Self {
         let args: Args = argh::from_env();
-        Self { display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0) }
+        Self { app_context, display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0) }
     }
 }
 
@@ -60,8 +69,8 @@ impl AppAssistant for ButtonAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(ButtonViewAssistant::new()?))
+    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        Ok(Box::new(ButtonViewAssistant::new(self.app_context.clone(), view_key)?))
     }
 
     fn filter_config(&mut self, config: &mut Config) {
@@ -227,9 +236,14 @@ struct SceneDetails {
 }
 
 struct ButtonViewAssistant {
+    app_context: AppContext,
+    view_key: ViewKey,
     focused: bool,
     bg_color: Color,
     red_light: bool,
+    original_indicator_size: Size,
+    indicator_size: Size,
+    animation_start: Instant,
     main_alignment_index: usize,
     cross_alignment_index: usize,
     column_main_alignment_index: usize,
@@ -250,17 +264,37 @@ const MAIN_AXIS_ALIGNMENTS: &'static [MainAxisAlignment] = &[
 ];
 
 impl ButtonViewAssistant {
-    fn new() -> Result<ButtonViewAssistant, Error> {
+    fn new(app_context: AppContext, view_key: ViewKey) -> Result<ButtonViewAssistant, Error> {
         let bg_color = Color::from_hash_code("#EBD5B3")?;
-        Ok(ButtonViewAssistant {
+        let mut b = ButtonViewAssistant {
+            app_context,
+            view_key,
             focused: false,
             bg_color,
             red_light: false,
+            original_indicator_size: Size::default(),
+            indicator_size: Size::default(),
+            animation_start: Instant::now(),
             main_alignment_index: 5,
             cross_alignment_index: 1,
             column_main_alignment_index: 5,
             scene_details: None,
+        };
+        b.schedule_resize_timer();
+        Ok(b)
+    }
+
+    fn schedule_resize_timer(&mut self) {
+        let timer =
+            fasync::Timer::new(fuchsia_async::Time::after(Duration::from_millis(16).into()));
+        let timer_context = self.app_context.clone();
+        let view_key = self.view_key;
+        fasync::Task::local(async move {
+            timer.await;
+            timer_context
+                .queue_message(MessageTarget::View(view_key), make_message(ButtonMessages::Resize));
         })
+        .detach();
     }
 
     fn set_red_light(&mut self, red_light: bool) {
@@ -272,6 +306,18 @@ impl ButtonViewAssistant {
                     .send_message(&scene_details.indicator, Box::new(SetColorMessage { color }));
             }
             self.red_light = red_light;
+        }
+    }
+
+    fn resize_indicator(&mut self, indicator_size: Size) {
+        if indicator_size != self.indicator_size {
+            if let Some(scene_details) = self.scene_details.as_mut() {
+                self.indicator_size = indicator_size;
+                scene_details.scene.send_message(
+                    &scene_details.indicator,
+                    Box::new(SetSizeMessage { size: self.indicator_size }),
+                );
+            }
         }
     }
 
@@ -312,6 +358,7 @@ impl ViewAssistant for ButtonViewAssistant {
             let mut builder = SceneBuilder::new().background_color(self.bg_color);
             let mut button = None;
             let mut indicator_id = None;
+            let mut indicator_size_opt = None;
             builder
                 .group()
                 .column()
@@ -320,6 +367,7 @@ impl ViewAssistant for ButtonViewAssistant {
                 .contents(|builder| {
                     let indicator_len = target_size.height.min(target_size.width) / 8.0;
                     let indicator_size = size2(indicator_len * 1.25, indicator_len);
+                    indicator_size_opt = Some(indicator_size);
                     let indicator_side_size = size2(indicator_len / 2.0, indicator_len * 1.5);
                     builder.start_group(
                         "indicator_row",
@@ -342,11 +390,14 @@ impl ViewAssistant for ButtonViewAssistant {
                 });
             let mut button = button.expect("button");
             let mut scene = builder.build();
-            scene.layout(target_size);
+            self.indicator_size = indicator_size_opt.expect("indicator_size_opt");
+            self.original_indicator_size = self.indicator_size;
             button.set_focused(&mut scene, self.focused);
+            self.animation_start = Instant::now();
             SceneDetails { scene, indicator: indicator_id.expect("indicator_id"), button }
         });
 
+        scene_details.scene.layout(context.size);
         scene_details.scene.render(render_context, ready_event, context)?;
         self.scene_details = Some(scene_details);
         context.request_render();
@@ -359,6 +410,18 @@ impl ViewAssistant for ButtonViewAssistant {
                 ButtonMessages::Pressed(value) => {
                     println!("value = {:#?}", value);
                     self.set_red_light(!self.red_light);
+                }
+                ButtonMessages::Resize => {
+                    let t = Instant::now().duration_since(self.animation_start).as_millis() % 3000;
+                    let f = t as f32 / 3000.0;
+                    let angle = f * PI * 2.0;
+                    let ratio = angle.sin();
+                    self.resize_indicator(size2(
+                        self.original_indicator_size.width + ratio * 80.0,
+                        self.indicator_size.height,
+                    ));
+                    self.schedule_resize_timer();
+                    self.app_context.request_render(self.view_key);
                 }
             }
         }
@@ -424,7 +487,21 @@ impl ViewAssistant for ButtonViewAssistant {
     }
 }
 
+fn make_app_assistant_fut(
+    app_context: &AppContext,
+) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
+    let f = async move {
+        let assistant = Box::new(ButtonAppAssistant::new(app_context.clone()));
+        Ok::<AppAssistantPtr, Error>(assistant)
+    };
+    Box::pin(f)
+}
+
+fn make_app_assistant() -> AssistantCreatorFunc {
+    Box::new(make_app_assistant_fut)
+}
+
 fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
-    App::run(make_app_assistant::<ButtonAppAssistant>())
+    App::run(make_app_assistant())
 }

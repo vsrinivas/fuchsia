@@ -149,6 +149,9 @@ impl Facet for RectangleFacet {
     fn handle_message(&mut self, msg: Box<dyn Any>) {
         if let Some(set_color) = msg.downcast_ref::<SetColorMessage>() {
             self.color = set_color.color;
+        } else if let Some(set_size) = msg.downcast_ref::<SetSizeMessage>() {
+            self.size = set_size.size;
+            self.raster = None;
         }
     }
 
