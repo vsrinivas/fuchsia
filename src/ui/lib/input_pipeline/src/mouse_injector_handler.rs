@@ -147,8 +147,8 @@ impl InputHandler for MouseInjectorHandler {
                         .get_modifiers()
                         .filter(|m| {
                             m.contains(
-                                fidl_fuchsia_ui_input3::Modifiers::Alt
-                                    | fidl_fuchsia_ui_input3::Modifiers::Shift,
+                                fidl_fuchsia_ui_input3::Modifiers::ALT
+                                    | fidl_fuchsia_ui_input3::Modifiers::SHIFT,
                             )
                         })
                         .is_some()

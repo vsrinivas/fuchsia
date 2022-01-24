@@ -39,10 +39,10 @@ pub(crate) struct HandleInfo {
 pub(crate) fn handle_info(hdl: HandleRef<'_>) -> Result<HandleInfo, Error> {
     let handle_type = match hdl.object_type() {
         fidl::ObjectType::CHANNEL => {
-            HandleType::Channel(ChannelRights::Read | ChannelRights::Write)
+            HandleType::Channel(ChannelRights::READ | ChannelRights::WRITE)
         }
         fidl::ObjectType::SOCKET => {
-            HandleType::Socket(SocketType::Stream, SocketRights::Read | SocketRights::Write)
+            HandleType::Socket(SocketType::Stream, SocketRights::READ | SocketRights::WRITE)
         }
         fidl::ObjectType::EVENTPAIR => HandleType::EventPair,
         _ => bail!("Unsupported handle type"),
@@ -67,8 +67,8 @@ pub(crate) fn handle_info(handle: HandleRef<'_>) -> Result<HandleInfo, Error> {
     let handle_type = match basic_info.object_type {
         zx::ObjectType::CHANNEL => {
             let mut rights = ChannelRights::empty();
-            rights.set(ChannelRights::Read, basic_info.rights.contains(zx::Rights::READ));
-            rights.set(ChannelRights::Write, basic_info.rights.contains(zx::Rights::WRITE));
+            rights.set(ChannelRights::READ, basic_info.rights.contains(zx::Rights::READ));
+            rights.set(ChannelRights::WRITE, basic_info.rights.contains(zx::Rights::WRITE));
             HandleType::Channel(rights)
         }
         zx::ObjectType::SOCKET => {
@@ -84,8 +84,8 @@ pub(crate) fn handle_info(handle: HandleRef<'_>) -> Result<HandleInfo, Error> {
                 _ => bail!("Unhandled socket options"),
             };
             let mut rights = SocketRights::empty();
-            rights.set(SocketRights::Read, basic_info.rights.contains(zx::Rights::READ));
-            rights.set(SocketRights::Write, basic_info.rights.contains(zx::Rights::WRITE));
+            rights.set(SocketRights::READ, basic_info.rights.contains(zx::Rights::READ));
+            rights.set(SocketRights::WRITE, basic_info.rights.contains(zx::Rights::WRITE));
             HandleType::Socket(socket_type, rights)
         }
         zx::ObjectType::EVENTPAIR => HandleType::EventPair,
@@ -113,8 +113,8 @@ impl WithRights for fidl::Channel {
         use fuchsia_zircon as zx;
         use zx::HandleBased;
         let mut zx_rights = self.basic_info()?.rights;
-        zx_rights.set(zx::Rights::READ, rights.contains(ChannelRights::Read));
-        zx_rights.set(zx::Rights::WRITE, rights.contains(ChannelRights::Write));
+        zx_rights.set(zx::Rights::READ, rights.contains(ChannelRights::READ));
+        zx_rights.set(zx::Rights::WRITE, rights.contains(ChannelRights::WRITE));
         zx_rights.insert(zx::Rights::TRANSFER);
         Ok(self.replace_handle(zx_rights)?)
     }
@@ -127,8 +127,8 @@ impl WithRights for fidl::Socket {
         use fuchsia_zircon as zx;
         use zx::HandleBased;
         let mut zx_rights = self.basic_info()?.rights;
-        zx_rights.set(zx::Rights::READ, rights.contains(SocketRights::Read));
-        zx_rights.set(zx::Rights::WRITE, rights.contains(SocketRights::Write));
+        zx_rights.set(zx::Rights::READ, rights.contains(SocketRights::READ));
+        zx_rights.set(zx::Rights::WRITE, rights.contains(SocketRights::WRITE));
         zx_rights.insert(zx::Rights::TRANSFER);
         Ok(self.replace_handle(zx_rights)?)
     }
@@ -138,7 +138,7 @@ impl WithRights for fidl::Socket {
 impl WithRights for fidl::Channel {
     type Rights = ChannelRights;
     fn with_rights(self, rights: ChannelRights) -> Result<Self, Error> {
-        if rights != ChannelRights::Read | ChannelRights::Write {
+        if rights != ChannelRights::READ | ChannelRights::WRITE {
             bail!("Restricted rights not supported on non-Fuchsia platforms");
         }
         Ok(self)
@@ -149,7 +149,7 @@ impl WithRights for fidl::Channel {
 impl WithRights for fidl::Socket {
     type Rights = SocketRights;
     fn with_rights(self, rights: SocketRights) -> Result<Self, Error> {
-        if rights != SocketRights::Read | SocketRights::Write {
+        if rights != SocketRights::READ | SocketRights::WRITE {
             bail!("Restricted rights not supported on non-Fuchsia platforms");
         }
         Ok(self)

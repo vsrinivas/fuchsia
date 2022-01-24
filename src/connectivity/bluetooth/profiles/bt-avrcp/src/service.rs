@@ -234,19 +234,19 @@ impl AvrcpClientController {
 
             let mut notification = Notification::EMPTY;
 
-            if self.notification_filter.contains(Notifications::PlaybackStatus) {
+            if self.notification_filter.contains(Notifications::PLAYBACK_STATUS) {
                 notification.status = self.notification_state.status;
             }
 
-            if self.notification_filter.contains(Notifications::Track) {
+            if self.notification_filter.contains(Notifications::TRACK) {
                 notification.track_id = self.notification_state.track_id;
             }
 
-            if self.notification_filter.contains(Notifications::TrackPos) {
+            if self.notification_filter.contains(Notifications::TRACK_POS) {
                 notification.pos = self.notification_state.pos;
             }
 
-            if self.notification_filter.contains(Notifications::Volume) {
+            if self.notification_filter.contains(Notifications::VOLUME) {
                 notification.volume = self.notification_state.volume;
             }
 
@@ -262,16 +262,16 @@ impl AvrcpClientController {
     fn filter_controller_event(&self, event: &PeerControllerEvent) -> bool {
         match *event {
             PeerControllerEvent::PlaybackStatusChanged(_) => {
-                self.notification_filter.contains(Notifications::PlaybackStatus)
+                self.notification_filter.contains(Notifications::PLAYBACK_STATUS)
             }
             PeerControllerEvent::TrackIdChanged(_) => {
-                self.notification_filter.contains(Notifications::Track)
+                self.notification_filter.contains(Notifications::TRACK)
             }
             PeerControllerEvent::PlaybackPosChanged(_) => {
-                self.notification_filter.contains(Notifications::TrackPos)
+                self.notification_filter.contains(Notifications::TRACK_POS)
             }
             PeerControllerEvent::VolumeChanged(_) => {
-                self.notification_filter.contains(Notifications::Volume)
+                self.notification_filter.contains(Notifications::VOLUME)
             }
         }
     }

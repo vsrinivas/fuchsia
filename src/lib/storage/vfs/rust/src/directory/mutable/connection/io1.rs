@@ -231,7 +231,7 @@ impl MutableConnection {
             .clone()
             .unlink(
                 &name,
-                options.flags.map(|f| f.contains(UnlinkFlags::MustBeDirectory)).unwrap_or(false),
+                options.flags.map(|f| f.contains(UnlinkFlags::MUST_BE_DIRECTORY)).unwrap_or(false),
             )
             .await
         {

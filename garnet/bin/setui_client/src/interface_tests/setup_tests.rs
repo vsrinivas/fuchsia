@@ -21,9 +21,9 @@ fn create_setup_setting(interfaces: ConfigurationInterfaces) -> SetupSettings {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn validate_setup() -> Result<(), Error> {
-    let expected_set_interfaces = ConfigurationInterfaces::Ethernet;
+    let expected_set_interfaces = ConfigurationInterfaces::ETHERNET;
     let expected_watch_interfaces =
-        ConfigurationInterfaces::Wifi | ConfigurationInterfaces::Ethernet;
+        ConfigurationInterfaces::WIFI | ConfigurationInterfaces::ETHERNET;
     let env = create_service!(
         Services::Setup, SetupRequest::Set { settings, reboot_device: _, responder, } => {
             if let Some(interfaces) = settings.enabled_configuration_interfaces {

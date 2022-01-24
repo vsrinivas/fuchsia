@@ -565,7 +565,7 @@ mod tests {
             source_name: "diagnostics".into(),
             target_name: "diagnostics".into(),
             target: ExposeTarget::Framework,
-            rights: Some(fio::Operations::Connect),
+            rights: Some(fio::Operations::CONNECT),
             subdir: None,
         })
     }

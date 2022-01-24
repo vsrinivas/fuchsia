@@ -8,13 +8,13 @@ use fidl_fidl_test_bitsmemberremove as fidl_lib;
 
 // [START contents]
 fn use_bits(bits: &fidl_lib::Flags) {
-    if bits.contains(fidl_lib::Flags::OptionA) {
+    if bits.contains(fidl_lib::Flags::OPTION_A) {
         println!("option A is set");
     }
-    if bits.contains(fidl_lib::Flags::OptionB) {
+    if bits.contains(fidl_lib::Flags::OPTION_B) {
         println!("option B is set");
     }
-    if bits.contains(fidl_lib::Flags::OptionC) {
+    if bits.contains(fidl_lib::Flags::OPTION_C) {
         println!("option C is set");
     }
     if bits.has_unknown_bits() {

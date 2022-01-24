@@ -131,9 +131,9 @@ impl<'a> Keymap<'a> {
         caps_lock: bool,
     ) -> Option<u32> {
         let modifier_state = ModifierState::new()
-            .with_if(Modifiers::LeftShift, shift)
-            .with_if(Modifiers::RightShift, shift);
-        let lock_state = LockStateKeys::new().with_if(LockState::CapsLock, caps_lock);
+            .with_if(Modifiers::LEFT_SHIFT, shift)
+            .with_if(Modifiers::RIGHT_SHIFT, shift);
+        let lock_state = LockStateKeys::new().with_if(LockState::CAPS_LOCK, caps_lock);
         let code_point = self.hid_usage_to_code_point(hid_usage, &modifier_state, &lock_state);
         match code_point {
             Ok(EMPTY_CODEPOINT) => None,
@@ -188,17 +188,17 @@ impl ModifierState {
 
         // For "sided" modifiers, maintain the "side-less" bit invariant too.
         match value {
-            Modifiers::LeftShift | Modifiers::RightShift => {
-                state.insert(Modifiers::Shift);
+            Modifiers::LEFT_SHIFT | Modifiers::RIGHT_SHIFT => {
+                state.insert(Modifiers::SHIFT);
             }
-            Modifiers::LeftAlt | Modifiers::RightAlt => {
-                state.insert(Modifiers::Alt);
+            Modifiers::LEFT_ALT | Modifiers::RIGHT_ALT => {
+                state.insert(Modifiers::ALT);
             }
-            Modifiers::LeftMeta | Modifiers::RightMeta => {
-                state.insert(Modifiers::Meta);
+            Modifiers::LEFT_META | Modifiers::RIGHT_META => {
+                state.insert(Modifiers::META);
             }
-            Modifiers::LeftCtrl | Modifiers::RightCtrl => {
-                state.insert(Modifiers::Ctrl);
+            Modifiers::LEFT_CTRL | Modifiers::RIGHT_CTRL => {
+                state.insert(Modifiers::CTRL);
             }
             _ => {}
         }
@@ -225,9 +225,9 @@ impl ModifierState {
     pub fn update(&mut self, event: KeyEventType, key: Key) {
         match event {
             KeyEventType::Pressed => match key {
-                Key::CapsLock => self.state.insert(Modifiers::CapsLock),
-                Key::NumLock => self.state.insert(Modifiers::NumLock),
-                Key::ScrollLock => self.state.insert(Modifiers::ScrollLock),
+                Key::CapsLock => self.state.insert(Modifiers::CAPS_LOCK),
+                Key::NumLock => self.state.insert(Modifiers::NUM_LOCK),
+                Key::ScrollLock => self.state.insert(Modifiers::SCROLL_LOCK),
                 // These modifiers are not defined yet in Key.
                 // Key::Function
                 // Key::Symbol
@@ -236,84 +236,84 @@ impl ModifierState {
                 // For "sided" modifiers, we must also maintain the "side-less"
                 // bit. Here, and everywhere below.
                 Key::LeftShift => {
-                    self.state.insert(Modifiers::LeftShift | Modifiers::Shift);
+                    self.state.insert(Modifiers::LEFT_SHIFT | Modifiers::SHIFT);
                 }
                 Key::RightShift => {
-                    self.state.insert(Modifiers::RightShift | Modifiers::Shift);
+                    self.state.insert(Modifiers::RIGHT_SHIFT | Modifiers::SHIFT);
                 }
                 Key::LeftAlt => {
-                    self.state.insert(Modifiers::LeftAlt | Modifiers::Alt);
+                    self.state.insert(Modifiers::LEFT_ALT | Modifiers::ALT);
                 }
                 Key::RightAlt => {
-                    self.state.insert(Modifiers::RightAlt | Modifiers::Alt);
+                    self.state.insert(Modifiers::RIGHT_ALT | Modifiers::ALT);
                 }
                 Key::LeftMeta => {
-                    self.state.insert(Modifiers::LeftMeta | Modifiers::Meta);
+                    self.state.insert(Modifiers::LEFT_META | Modifiers::META);
                 }
                 Key::RightMeta => {
-                    self.state.insert(Modifiers::RightMeta | Modifiers::Meta);
+                    self.state.insert(Modifiers::RIGHT_META | Modifiers::META);
                 }
                 Key::LeftCtrl => {
-                    self.state.insert(Modifiers::LeftCtrl | Modifiers::Ctrl);
+                    self.state.insert(Modifiers::LEFT_CTRL | Modifiers::CTRL);
                 }
                 Key::RightCtrl => {
-                    self.state.insert(Modifiers::RightCtrl | Modifiers::Ctrl);
+                    self.state.insert(Modifiers::RIGHT_CTRL | Modifiers::CTRL);
                 }
                 _ => {}
             },
             KeyEventType::Released => match key {
                 Key::CapsLock => {
-                    self.state.remove(Modifiers::CapsLock);
+                    self.state.remove(Modifiers::CAPS_LOCK);
                 }
-                Key::NumLock => self.state.remove(Modifiers::NumLock),
-                Key::ScrollLock => self.state.remove(Modifiers::ScrollLock),
+                Key::NumLock => self.state.remove(Modifiers::NUM_LOCK),
+                Key::ScrollLock => self.state.remove(Modifiers::SCROLL_LOCK),
 
                 Key::LeftShift => {
-                    self.state.remove(Modifiers::LeftShift);
-                    if !self.state.contains(Modifiers::RightShift) {
-                        self.state.remove(Modifiers::Shift);
+                    self.state.remove(Modifiers::LEFT_SHIFT);
+                    if !self.state.contains(Modifiers::RIGHT_SHIFT) {
+                        self.state.remove(Modifiers::SHIFT);
                     }
                 }
                 Key::RightShift => {
-                    self.state.remove(Modifiers::RightShift);
-                    if !self.test(Modifiers::LeftShift) {
-                        self.state.remove(Modifiers::Shift);
+                    self.state.remove(Modifiers::RIGHT_SHIFT);
+                    if !self.test(Modifiers::LEFT_SHIFT) {
+                        self.state.remove(Modifiers::SHIFT);
                     }
                 }
                 Key::LeftAlt => {
-                    self.state.remove(Modifiers::LeftAlt);
-                    if !self.state.contains(Modifiers::RightAlt) {
-                        self.state.remove(Modifiers::Alt);
+                    self.state.remove(Modifiers::LEFT_ALT);
+                    if !self.state.contains(Modifiers::RIGHT_ALT) {
+                        self.state.remove(Modifiers::ALT);
                     }
                 }
                 Key::RightAlt => {
-                    self.state.remove(Modifiers::RightAlt);
-                    if !self.test(Modifiers::LeftAlt) {
-                        self.state.remove(Modifiers::Alt);
+                    self.state.remove(Modifiers::RIGHT_ALT);
+                    if !self.test(Modifiers::LEFT_ALT) {
+                        self.state.remove(Modifiers::ALT);
                     }
                 }
                 Key::LeftMeta => {
-                    self.state.remove(Modifiers::LeftMeta);
-                    if !self.state.contains(Modifiers::RightMeta) {
-                        self.state.remove(Modifiers::Meta);
+                    self.state.remove(Modifiers::LEFT_META);
+                    if !self.state.contains(Modifiers::RIGHT_META) {
+                        self.state.remove(Modifiers::META);
                     }
                 }
                 Key::RightMeta => {
-                    self.state.remove(Modifiers::RightMeta);
-                    if !self.test(Modifiers::LeftMeta) {
-                        self.state.remove(Modifiers::Meta);
+                    self.state.remove(Modifiers::RIGHT_META);
+                    if !self.test(Modifiers::LEFT_META) {
+                        self.state.remove(Modifiers::META);
                     }
                 }
                 Key::LeftCtrl => {
-                    self.state.remove(Modifiers::LeftCtrl);
-                    if !self.state.contains(Modifiers::RightCtrl) {
-                        self.state.remove(Modifiers::Ctrl);
+                    self.state.remove(Modifiers::LEFT_CTRL);
+                    if !self.state.contains(Modifiers::RIGHT_CTRL) {
+                        self.state.remove(Modifiers::CTRL);
                     }
                 }
                 Key::RightCtrl => {
-                    self.state.remove(Modifiers::RightCtrl);
-                    if !self.test(Modifiers::LeftCtrl) {
-                        self.state.remove(Modifiers::Ctrl);
+                    self.state.remove(Modifiers::RIGHT_CTRL);
+                    if !self.test(Modifiers::LEFT_CTRL) {
+                        self.state.remove(Modifiers::CTRL);
                     }
                 }
                 _ => {}
@@ -406,9 +406,9 @@ impl LockStateKeys {
     /// Update the modifier tracker state with this event.
     pub fn update(&mut self, event: KeyEventType, key: Key) {
         let lock_key = match key {
-            Key::CapsLock => LockState::CapsLock,
-            Key::NumLock => LockState::NumLock,
-            Key::ScrollLock => LockState::ScrollLock,
+            Key::CapsLock => LockState::CAPS_LOCK,
+            Key::NumLock => LockState::NUM_LOCK,
+            Key::ScrollLock => LockState::SCROLL_LOCK,
             // FUNCTION_LOCK
             // SYMBOL_LOCK
             // etc.
@@ -519,14 +519,14 @@ mod tests {
             US_QWERTY.hid_usage_to_code_point(
                 HID_USAGE_KEY_1,
                 &ModifierState::new(),
-                &LockStateKeys::new().with(LockState::CapsLock),
+                &LockStateKeys::new().with(LockState::CAPS_LOCK),
             )?
         );
         assert_eq!(
             '!' as u32,
             US_QWERTY.hid_usage_to_code_point(
                 HID_USAGE_KEY_1,
-                &ModifierState::new().with(Modifiers::LeftShift),
+                &ModifierState::new().with(Modifiers::LEFT_SHIFT),
                 &LockStateKeys::new(),
             )?
         );
@@ -547,7 +547,7 @@ mod tests {
             'a' as u32,
             US_QWERTY.hid_usage_to_code_point(
                 HID_USAGE_KEY_A,
-                &ModifierState::new().with(Modifiers::CapsLock),
+                &ModifierState::new().with(Modifiers::CAPS_LOCK),
                 &LockStateKeys::new(),
             )?
         );
@@ -556,14 +556,14 @@ mod tests {
             US_QWERTY.hid_usage_to_code_point(
                 HID_USAGE_KEY_A,
                 &ModifierState::new(),
-                &LockStateKeys::new().with(LockState::CapsLock),
+                &LockStateKeys::new().with(LockState::CAPS_LOCK),
             )?
         );
         assert_eq!(
             'A' as u32,
             US_QWERTY.hid_usage_to_code_point(
                 HID_USAGE_KEY_A,
-                &ModifierState::new().with(Modifiers::RightShift),
+                &ModifierState::new().with(Modifiers::RIGHT_SHIFT),
                 &LockStateKeys::new(),
             )?
         );
@@ -571,7 +571,7 @@ mod tests {
             'A' as u32,
             US_QWERTY.hid_usage_to_code_point(
                 HID_USAGE_KEY_A,
-                &ModifierState::new().with(Modifiers::LeftShift),
+                &ModifierState::new().with(Modifiers::LEFT_SHIFT),
                 &LockStateKeys::new(),
             )?
         );
@@ -592,7 +592,7 @@ mod tests {
             'a' as u32,
             US_DVORAK.hid_usage_to_code_point(
                 HID_USAGE_KEY_A,
-                &ModifierState::new().with(Modifiers::CapsLock),
+                &ModifierState::new().with(Modifiers::CAPS_LOCK),
                 &LockStateKeys::new(),
             )?
         );
@@ -601,7 +601,7 @@ mod tests {
             US_DVORAK.hid_usage_to_code_point(
                 HID_USAGE_KEY_A,
                 &ModifierState::new(),
-                &LockStateKeys::new().with(LockState::CapsLock),
+                &LockStateKeys::new().with(LockState::CAPS_LOCK),
             )?
         );
         assert_eq!(
@@ -617,14 +617,14 @@ mod tests {
             US_DVORAK.hid_usage_to_code_point(
                 HID_USAGE_KEY_B,
                 &ModifierState::new(),
-                &LockStateKeys::new().with(LockState::CapsLock),
+                &LockStateKeys::new().with(LockState::CAPS_LOCK),
             )?
         );
         assert_eq!(
             'X' as u32,
             US_DVORAK.hid_usage_to_code_point(
                 HID_USAGE_KEY_B,
-                &ModifierState::new().with(Modifiers::LeftShift),
+                &ModifierState::new().with(Modifiers::LEFT_SHIFT),
                 &LockStateKeys::new(),
             )?
         );
@@ -640,7 +640,7 @@ mod tests {
             'N' as u32,
             US_DVORAK.hid_usage_to_code_point(
                 HID_USAGE_KEY_L,
-                &ModifierState::new().with(Modifiers::LeftShift),
+                &ModifierState::new().with(Modifiers::LEFT_SHIFT),
                 &LockStateKeys::new(),
             )?
         );
@@ -649,7 +649,7 @@ mod tests {
             US_DVORAK.hid_usage_to_code_point(
                 HID_USAGE_KEY_L,
                 &ModifierState::new(),
-                &LockStateKeys::new().with(LockState::CapsLock),
+                &LockStateKeys::new().with(LockState::CAPS_LOCK),
             )?
         );
         Ok(())
@@ -657,21 +657,21 @@ mod tests {
 
     // CapsLock ______/""""""""\_______/"""""""""\_______
     // Modifier ______/""""""""\_______/"""""""""\______
-    #[test_case(Key::CapsLock, Modifiers::CapsLock; "CapsLock")]
-    #[test_case(Key::NumLock, Modifiers::NumLock; "NumLock")]
-    #[test_case(Key::ScrollLock, Modifiers::ScrollLock; "ScrollLock")]
+    #[test_case(Key::CapsLock, Modifiers::CAPS_LOCK; "CapsLock")]
+    #[test_case(Key::NumLock, Modifiers::NUM_LOCK; "NumLock")]
+    #[test_case(Key::ScrollLock, Modifiers::SCROLL_LOCK; "ScrollLock")]
     // Key::Function
     // Key::Symbol
     // Key::AltGraph
     // Test "sided" modifiers.
-    #[test_case(Key::RightShift, Modifiers::RightShift|Modifiers::Shift; "RightShift")]
-    #[test_case(Key::LeftShift, Modifiers::LeftShift|Modifiers::Shift; "LeftShift")]
-    #[test_case(Key::RightAlt, Modifiers::RightAlt|Modifiers::Alt; "RightAlt")]
-    #[test_case(Key::LeftAlt, Modifiers::LeftAlt|Modifiers::Alt; "LeftAlt")]
-    #[test_case(Key::RightMeta, Modifiers::RightMeta|Modifiers::Meta; "RightMeta")]
-    #[test_case(Key::LeftMeta, Modifiers::LeftMeta|Modifiers::Meta; "LeftMeta")]
-    #[test_case(Key::RightCtrl, Modifiers::RightCtrl|Modifiers::Ctrl; "RightCtrl")]
-    #[test_case(Key::LeftCtrl, Modifiers::LeftCtrl|Modifiers::Ctrl; "LeftCtrl")]
+    #[test_case(Key::RightShift, Modifiers::RIGHT_SHIFT|Modifiers::SHIFT; "RightShift")]
+    #[test_case(Key::LeftShift, Modifiers::LEFT_SHIFT|Modifiers::SHIFT; "LeftShift")]
+    #[test_case(Key::RightAlt, Modifiers::RIGHT_ALT|Modifiers::ALT; "RightAlt")]
+    #[test_case(Key::LeftAlt, Modifiers::LEFT_ALT|Modifiers::ALT; "LeftAlt")]
+    #[test_case(Key::RightMeta, Modifiers::RIGHT_META|Modifiers::META; "RightMeta")]
+    #[test_case(Key::LeftMeta, Modifiers::LEFT_META|Modifiers::META; "LeftMeta")]
+    #[test_case(Key::RightCtrl, Modifiers::RIGHT_CTRL|Modifiers::CTRL; "RightCtrl")]
+    #[test_case(Key::LeftCtrl, Modifiers::LEFT_CTRL|Modifiers::CTRL; "LeftCtrl")]
     fn test_caps_lock_modifier(key: Key, modifier: Modifiers) {
         let mut modifier_state: ModifierState = Default::default();
         assert!(!modifier_state.test(modifier));
@@ -700,14 +700,14 @@ mod tests {
     //
     // KeyA is the first of the two sided keys, and KeyB is the second of the
     // two sided keys.
-    #[test_case(Key::LeftShift, Key::RightShift, Modifiers::Shift; "Shift/LR")]
-    #[test_case(Key::RightShift, Key::LeftShift, Modifiers::Shift; "Shift/RL")]
-    #[test_case(Key::LeftAlt, Key::RightAlt, Modifiers::Alt; "Alt/LR")]
-    #[test_case(Key::RightAlt, Key::LeftAlt, Modifiers::Alt; "Alt/RL")]
-    #[test_case(Key::LeftMeta, Key::RightMeta, Modifiers::Meta; "Meta/LR")]
-    #[test_case(Key::RightMeta, Key::LeftMeta, Modifiers::Meta; "Meta/RL")]
-    #[test_case(Key::RightCtrl, Key::LeftCtrl, Modifiers::Ctrl; "Ctrl/RL")]
-    #[test_case(Key::LeftCtrl, Key::RightCtrl, Modifiers::Ctrl; "Ctrl/LR")]
+    #[test_case(Key::LeftShift, Key::RightShift, Modifiers::SHIFT; "Shift/LR")]
+    #[test_case(Key::RightShift, Key::LeftShift, Modifiers::SHIFT; "Shift/RL")]
+    #[test_case(Key::LeftAlt, Key::RightAlt, Modifiers::ALT; "Alt/LR")]
+    #[test_case(Key::RightAlt, Key::LeftAlt, Modifiers::ALT; "Alt/RL")]
+    #[test_case(Key::LeftMeta, Key::RightMeta, Modifiers::META; "Meta/LR")]
+    #[test_case(Key::RightMeta, Key::LeftMeta, Modifiers::META; "Meta/RL")]
+    #[test_case(Key::RightCtrl, Key::LeftCtrl, Modifiers::CTRL; "Ctrl/RL")]
+    #[test_case(Key::LeftCtrl, Key::RightCtrl, Modifiers::CTRL; "Ctrl/LR")]
     fn test_sided_keys(key_a: Key, key_b: Key, modifier: Modifiers) {
         let mut modifier_state = ModifierState::new();
         assert!(
@@ -759,9 +759,9 @@ mod tests {
     //
     // Key       ______/""""""""\_______/"""""""""\_______
     // LockState ______/""""""""""""""""""""""""""\______
-    #[test_case(Key::CapsLock, LockState::CapsLock; "CapsLock")]
-    #[test_case(Key::NumLock, LockState::NumLock; "NumLock")]
-    #[test_case(Key::ScrollLock, LockState::ScrollLock; "ScrollLock")]
+    #[test_case(Key::CapsLock, LockState::CAPS_LOCK; "CapsLock")]
+    #[test_case(Key::NumLock, LockState::NUM_LOCK; "NumLock")]
+    #[test_case(Key::ScrollLock, LockState::SCROLL_LOCK; "ScrollLock")]
     fn test_lock_state(key: Key, lock_state: LockState) {
         let mut state: LockStateKeys = Default::default();
         assert!(!state.test(lock_state));
@@ -787,30 +787,30 @@ mod tests {
     #[test]
     fn test_modifier_tracker() {
         let mut modifier_state: ModifierState = Default::default();
-        assert!(!modifier_state.test(Modifiers::Shift));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
 
         modifier_state.update(KeyEventType::Pressed, Key::LeftShift);
-        assert!(modifier_state.test(Modifiers::Shift));
+        assert!(modifier_state.test(Modifiers::SHIFT));
         modifier_state.update(KeyEventType::Released, Key::LeftShift);
-        assert!(!modifier_state.test(Modifiers::Shift));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
 
         modifier_state.update(KeyEventType::Pressed, Key::RightShift);
-        assert!(modifier_state.test(Modifiers::Shift));
+        assert!(modifier_state.test(Modifiers::SHIFT));
         modifier_state.update(KeyEventType::Released, Key::RightShift);
-        assert!(!modifier_state.test(Modifiers::Shift));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
 
         modifier_state.update(KeyEventType::Pressed, Key::CapsLock);
-        assert!(!modifier_state.test(Modifiers::Shift));
-        assert!(modifier_state.test(Modifiers::CapsLock));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
+        assert!(modifier_state.test(Modifiers::CAPS_LOCK));
         modifier_state.update(KeyEventType::Released, Key::CapsLock);
-        assert!(!modifier_state.test(Modifiers::Shift));
-        assert!(!modifier_state.test(Modifiers::CapsLock));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
+        assert!(!modifier_state.test(Modifiers::CAPS_LOCK));
         modifier_state.update(KeyEventType::Pressed, Key::CapsLock);
-        assert!(!modifier_state.test(Modifiers::Shift));
-        assert!(modifier_state.test(Modifiers::CapsLock));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
+        assert!(modifier_state.test(Modifiers::CAPS_LOCK));
         modifier_state.update(KeyEventType::Released, Key::CapsLock);
-        assert!(!modifier_state.test(Modifiers::Shift));
-        assert!(!modifier_state.test(Modifiers::CapsLock));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
+        assert!(!modifier_state.test(Modifiers::CAPS_LOCK));
     }
 
     // CapsLock            ________/""""""""""\_______/"""""\_____
@@ -820,33 +820,33 @@ mod tests {
     #[test]
     fn test_interleaved_caps_lock_and_shift() {
         let mut modifier_state: ModifierState = Default::default();
-        assert!(!modifier_state.test(Modifiers::Shift));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
 
         modifier_state.update(KeyEventType::Pressed, Key::CapsLock);
-        assert!(!modifier_state.test(Modifiers::Shift));
-        assert!(modifier_state.test(Modifiers::CapsLock));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
+        assert!(modifier_state.test(Modifiers::CAPS_LOCK));
 
         modifier_state.update(KeyEventType::Pressed, Key::LeftShift);
-        assert!(modifier_state.test(Modifiers::Shift));
-        assert!(modifier_state.test(Modifiers::CapsLock));
+        assert!(modifier_state.test(Modifiers::SHIFT));
+        assert!(modifier_state.test(Modifiers::CAPS_LOCK));
 
         modifier_state.update(KeyEventType::Released, Key::CapsLock);
-        assert!(modifier_state.test(Modifiers::Shift));
-        assert!(!modifier_state.test(Modifiers::CapsLock));
+        assert!(modifier_state.test(Modifiers::SHIFT));
+        assert!(!modifier_state.test(Modifiers::CAPS_LOCK));
 
         modifier_state.update(KeyEventType::Released, Key::LeftShift);
         // Caps Lock is still active...
-        assert!(!modifier_state.test(Modifiers::Shift));
-        assert!(!modifier_state.test(Modifiers::CapsLock));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
+        assert!(!modifier_state.test(Modifiers::CAPS_LOCK));
 
         // Press and release Caps Lock again.
         modifier_state.update(KeyEventType::Pressed, Key::CapsLock);
-        assert!(!modifier_state.test(Modifiers::Shift));
-        assert!(modifier_state.test(Modifiers::CapsLock));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
+        assert!(modifier_state.test(Modifiers::CAPS_LOCK));
 
         modifier_state.update(KeyEventType::Released, Key::CapsLock);
-        assert!(!modifier_state.test(Modifiers::Shift));
-        assert!(!modifier_state.test(Modifiers::CapsLock));
+        assert!(!modifier_state.test(Modifiers::SHIFT));
+        assert!(!modifier_state.test(Modifiers::CAPS_LOCK));
     }
 
     #[test]
@@ -892,7 +892,7 @@ mod tests {
     ]
     #[test_case(
         Key::A,
-        ModifierState::new().with(Modifiers::LeftShift),
+        ModifierState::new().with(Modifiers::LEFT_SHIFT),
         LockStateKeys::new(),
         Some(KeyMeaning::Codepoint(65));
         "test basic mapping - capital letter")

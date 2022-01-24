@@ -239,9 +239,9 @@ impl KeyboardBinding {
         let mut modifiers = fidl_ui_input3::Modifiers::empty();
         for key in keys {
             let modifier = match key {
-                fidl_fuchsia_input::Key::CapsLock => Some(fidl_ui_input3::Modifiers::CapsLock),
-                fidl_fuchsia_input::Key::NumLock => Some(fidl_ui_input3::Modifiers::NumLock),
-                fidl_fuchsia_input::Key::ScrollLock => Some(fidl_ui_input3::Modifiers::ScrollLock),
+                fidl_fuchsia_input::Key::CapsLock => Some(fidl_ui_input3::Modifiers::CAPS_LOCK),
+                fidl_fuchsia_input::Key::NumLock => Some(fidl_ui_input3::Modifiers::NUM_LOCK),
+                fidl_fuchsia_input::Key::ScrollLock => Some(fidl_ui_input3::Modifiers::SCROLL_LOCK),
                 _ => None,
             };
             if let Some(modifier) = modifier {

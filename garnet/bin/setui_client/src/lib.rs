@@ -620,11 +620,11 @@ fn str_to_device_state(src: &str) -> Result<fidl_fuchsia_settings::DeviceState, 
             |acc, flag| {
                 acc.and_then(|acc| {
                     Ok(match flag {
-                        "available" | "v" => ToggleStateFlags::Available,
-                        "active" | "a" => ToggleStateFlags::Active,
-                        "muted" | "m" => ToggleStateFlags::Muted,
-                        "disabled" | "d" => ToggleStateFlags::Disabled,
-                        "error" | "e" => ToggleStateFlags::Error,
+                        "available" | "v" => ToggleStateFlags::AVAILABLE,
+                        "active" | "a" => ToggleStateFlags::ACTIVE,
+                        "muted" | "m" => ToggleStateFlags::MUTED,
+                        "disabled" | "d" => ToggleStateFlags::DISABLED,
+                        "error" | "e" => ToggleStateFlags::ERROR,
                         flag => {
                             return Err(format!("Unrecognized ToggleStateFlags value {:?}", flag))
                         }
@@ -659,12 +659,12 @@ fn str_to_theme(src: &str) -> Result<fidl_fuchsia_settings::Theme, String> {
         }
         "darkauto" => Ok(Theme {
             theme_type: Some(fidl_fuchsia_settings::ThemeType::Dark),
-            theme_mode: Some(fidl_fuchsia_settings::ThemeMode::Auto),
+            theme_mode: Some(fidl_fuchsia_settings::ThemeMode::AUTO),
             ..Theme::EMPTY
         }),
         "lightauto" => Ok(Theme {
             theme_type: Some(fidl_fuchsia_settings::ThemeType::Light),
-            theme_mode: Some(fidl_fuchsia_settings::ThemeMode::Auto),
+            theme_mode: Some(fidl_fuchsia_settings::ThemeMode::AUTO),
             ..Theme::EMPTY
         }),
         _ => Err(String::from("Couldn't parse theme.")),
@@ -675,8 +675,8 @@ fn str_to_interfaces(src: &str) -> Result<ConfigurationInterfaces, String> {
     src.to_lowercase().split(",").fold(Ok(ConfigurationInterfaces::empty()), |acc, flag| {
         acc.and_then(|acc| {
             Ok(match flag {
-                "eth" | "ethernet" => ConfigurationInterfaces::Ethernet,
-                "wireless" | "wifi" => ConfigurationInterfaces::Wifi,
+                "eth" | "ethernet" => ConfigurationInterfaces::ETHERNET,
+                "wireless" | "wifi" => ConfigurationInterfaces::WIFI,
                 bad_ifc => return Err(format!("Unknown interface: {:?}", bad_ifc)),
             } | acc)
         })

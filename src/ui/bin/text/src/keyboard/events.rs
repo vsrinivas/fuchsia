@@ -123,7 +123,7 @@ impl TryFrom<KeyEvent> for ui_input::KeyboardEvent {
         };
 
         let caps_lock = match inner.modifiers {
-            Some(modifiers) if modifiers.contains(ui_input3::Modifiers::CapsLock) => {
+            Some(modifiers) if modifiers.contains(ui_input3::Modifiers::CAPS_LOCK) => {
                 ui_input::MODIFIER_CAPS_LOCK
             }
             _ => ui_input::MODIFIER_NONE,
@@ -181,10 +181,10 @@ impl TryFrom<KeyEvent> for ui_input::KeyboardEvent {
             None => keymaps::US_QWERTY.hid_usage_to_code_point(
                 hid_usage,
                 &ModifierState::new()
-                    .with_if(Modifiers::LeftShift, left_shift == ui_input::MODIFIER_LEFT_SHIFT)
-                    .with_if(Modifiers::RightShift, right_shift == ui_input::MODIFIER_RIGHT_SHIFT),
+                    .with_if(Modifiers::LEFT_SHIFT, left_shift == ui_input::MODIFIER_LEFT_SHIFT)
+                    .with_if(Modifiers::RIGHT_SHIFT, right_shift == ui_input::MODIFIER_RIGHT_SHIFT),
                 &LockStateKeys::new()
-                    .with_if(LockState::CapsLock, caps_lock == ui_input::MODIFIER_CAPS_LOCK),
+                    .with_if(LockState::CAPS_LOCK, caps_lock == ui_input::MODIFIER_CAPS_LOCK),
             )?,
         };
         Ok(ui_input::KeyboardEvent {
@@ -231,9 +231,9 @@ mod test {
             type_: Some(ui_input3::KeyEventType::Pressed),
             key: Some(input::Key::A),
             modifiers: Some(
-                ui_input3::Modifiers::CapsLock
-                    | ui_input3::Modifiers::NumLock
-                    | ui_input3::Modifiers::ScrollLock,
+                ui_input3::Modifiers::CAPS_LOCK
+                    | ui_input3::Modifiers::NUM_LOCK
+                    | ui_input3::Modifiers::SCROLL_LOCK,
             ),
             ..ui_input3::KeyEvent::EMPTY
         };
@@ -261,9 +261,9 @@ mod test {
             type_: Some(ui_input3::KeyEventType::Pressed),
             key: Some(input::Key::B),
             modifiers: Some(
-                ui_input3::Modifiers::CapsLock
-                    | ui_input3::Modifiers::NumLock
-                    | ui_input3::Modifiers::ScrollLock,
+                ui_input3::Modifiers::CAPS_LOCK
+                    | ui_input3::Modifiers::NUM_LOCK
+                    | ui_input3::Modifiers::SCROLL_LOCK,
             ),
             ..ui_input3::KeyEvent::EMPTY
         };
@@ -545,7 +545,7 @@ mod test {
             zx::Time::ZERO,
             ui_input3::KeyEventType::Pressed,
             input::Key::Q,
-            ui_input3::Modifiers::CapsLock,
+            ui_input3::Modifiers::CAPS_LOCK,
             ui_input3::NonPrintableKey::Tab,
         );
         let key_event = KeyEvent::new(&event, HashSet::new())?;

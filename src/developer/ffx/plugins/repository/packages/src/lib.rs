@@ -142,7 +142,7 @@ async fn list_impl<W: Write>(
         .list_packages(
             &repo_name,
             server,
-            if cmd.include_components { ListFields::Components } else { ListFields::empty() },
+            if cmd.include_components { ListFields::COMPONENTS } else { ListFields::empty() },
         )
         .await?
     {
@@ -264,13 +264,13 @@ mod test {
                                 if !sent {
                                     sent = true;
                                     let pkg1_components =
-                                        if include_fields.intersects(ListFields::Components) {
+                                        if include_fields.intersects(ListFields::COMPONENTS) {
                                             Some(component(vec!["component1"]))
                                         } else {
                                             None
                                         };
                                     let pkg2_components =
-                                        if include_fields.intersects(ListFields::Components) {
+                                        if include_fields.intersects(ListFields::COMPONENTS) {
                                             Some(component(vec!["component2", "component3"]))
                                         } else {
                                             None
@@ -372,7 +372,7 @@ mod test {
 
     async fn run_impl(cmd: ListSubcommand) -> String {
         let repos = setup_repo_proxy(if cmd.include_components {
-            ListFields::Components
+            ListFields::COMPONENTS
         } else {
             ListFields::empty()
         })

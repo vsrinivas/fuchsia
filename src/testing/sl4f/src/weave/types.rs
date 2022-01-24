@@ -83,19 +83,19 @@ impl From<ResetConfig> for fidl_fuchsia_weave::ResetConfigFlags {
         let mut flags: fidl_fuchsia_weave::ResetConfigFlags =
             fidl_fuchsia_weave::ResetConfigFlags::empty();
         flags.set(
-            fidl_fuchsia_weave::ResetConfigFlags::NetworkConfig,
+            fidl_fuchsia_weave::ResetConfigFlags::NETWORK_CONFIG,
             item.network_config.unwrap_or(false),
         );
         flags.set(
-            fidl_fuchsia_weave::ResetConfigFlags::FabricConfig,
+            fidl_fuchsia_weave::ResetConfigFlags::FABRIC_CONFIG,
             item.fabric_config.unwrap_or(false),
         );
         flags.set(
-            fidl_fuchsia_weave::ResetConfigFlags::ServiceConfig,
+            fidl_fuchsia_weave::ResetConfigFlags::SERVICE_CONFIG,
             item.service_config.unwrap_or(false),
         );
         flags.set(
-            fidl_fuchsia_weave::ResetConfigFlags::OperationalCredentials,
+            fidl_fuchsia_weave::ResetConfigFlags::OPERATIONAL_CREDENTIALS,
             item.operational_credentials.unwrap_or(false),
         );
         flags

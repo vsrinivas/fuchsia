@@ -213,18 +213,18 @@ async fn run_cmd(args: Args) -> Result<(), Error> {
                 println!("Error: {:?}", rc);
             } else {
                 print!("WP state: ");
-                if state.contains(WpState::Force) {
+                if state.contains(WpState::FORCE) {
                     print!("force ");
                 }
-                if state.contains(WpState::Enable) {
+                if state.contains(WpState::ENABLE) {
                     println!("enabled");
                 } else {
                     println!("disabled");
                 }
                 print!("At boot:  ");
-                if state.contains(WpState::AtBootSet) {
+                if state.contains(WpState::AT_BOOT_SET) {
                     print!("force ");
-                    if state.contains(WpState::AtBootEnable) {
+                    if state.contains(WpState::AT_BOOT_ENABLE) {
                         println!("enable");
                     } else {
                         println!("disable");

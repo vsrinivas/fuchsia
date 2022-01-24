@@ -2209,7 +2209,7 @@ mod tests {
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                         source_name: Some("abc".to_string()),
                         target_path: Some("/foo/bar".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::UseDirectory::EMPTY
                     }),
@@ -2218,7 +2218,7 @@ mod tests {
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                         source_name: Some("abc".to_string()),
                         target_path: Some("/foo/bar/baz".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::UseDirectory::EMPTY
                     }),
@@ -2273,7 +2273,7 @@ mod tests {
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                         source_name: Some("abc".to_string()),
                         target_path: Some("/foo/bar".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::UseDirectory::EMPTY
                     }),
@@ -2305,7 +2305,7 @@ mod tests {
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                         source_name: Some("abc".to_string()),
                         target_path: Some("/foo/bar".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::UseDirectory::EMPTY
                     }),
@@ -2339,7 +2339,7 @@ mod tests {
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                         source_name: Some("abc".to_string()),
                         target_path: Some("/foo/bar".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::UseDirectory::EMPTY
                     }),
@@ -2499,7 +2499,7 @@ mod tests {
                         source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
                         source_name: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: Some("/foo".to_string()),
                         ..fdecl::UseDirectory::EMPTY
                     }),
@@ -2631,7 +2631,7 @@ mod tests {
                             source: Some(fdecl::Ref::Child(fdecl::ChildRef{ name: "no-such-child".to_string(), collection: None})),
                             source_name: Some("DirectoryName".to_string()),
                             target_path: Some("/data/DirectoryName".to_string()),
-                            rights: Some(fio2::Operations::Connect),
+                            rights: Some(fio2::Operations::CONNECT),
                             subdir: None,
                             ..fdecl::UseDirectory::EMPTY
                         }),
@@ -2684,7 +2684,7 @@ mod tests {
                             source: Some(fdecl::Ref::Child(fdecl::ChildRef{ name: "child".to_string(), collection: None})),
                             source_name: Some("DirectoryName".to_string()),
                             target_path: Some("/data/DirectoryName".to_string()),
-                            rights: Some(fio2::Operations::Connect),
+                            rights: Some(fio2::Operations::CONNECT),
                             subdir: None,
                             ..fdecl::UseDirectory::EMPTY
                         }),
@@ -3230,7 +3230,7 @@ mod tests {
                             source: Some(fdecl::Ref::Child(fdecl::ChildRef{ name: "child".to_string(), collection: None})),
                             source_name: Some("DirectoryName".to_string()),
                             target_path: Some("/data/DirectoryName".to_string()),
-                            rights: Some(fio2::Operations::Connect),
+                            rights: Some(fio2::Operations::CONNECT),
                             subdir: None,
                             ..fdecl::UseDirectory::EMPTY
                         }),
@@ -3356,7 +3356,7 @@ mod tests {
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_path: Some(format!("/d/{}", "d".repeat(1024))),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::UseDirectory::EMPTY
                     }),
@@ -3412,7 +3412,7 @@ mod tests {
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                         source_name: Some("crow".to_string()),
                         target_path: Some("/bar".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::UseDirectory::EMPTY
                     }),
@@ -3583,7 +3583,7 @@ mod tests {
                         source_name: Some("data".to_string()),
                         target_name: Some("data".to_string()),
                         target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::ExposeDirectory::EMPTY
                     }),
@@ -3650,7 +3650,7 @@ mod tests {
                         source_name: Some("foo/".to_string()),
                         target_name: Some("/".to_string()),
                         target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: Some("/foo".to_string()),
                         ..fdecl::ExposeDirectory::EMPTY
                     }),
@@ -3727,7 +3727,7 @@ mod tests {
                         source_name: Some("e".to_string()),
                         target_name: Some("f".to_string()),
                         target: Some(fdecl::Ref::Collection(fdecl::CollectionRef {name: "z".to_string()})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::ExposeDirectory::EMPTY
                     }),
@@ -3736,7 +3736,7 @@ mod tests {
                         source_name: Some("g".to_string()),
                         target_name: Some("h".to_string()),
                         target: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::ExposeDirectory::EMPTY
                     }),
@@ -3762,7 +3762,7 @@ mod tests {
                         source_name: Some("m".to_string()),
                         target_name: Some("n".to_string()),
                         target: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::ExposeDirectory::EMPTY
                     }),
@@ -3807,7 +3807,7 @@ mod tests {
                         source_name: Some("b".to_string()),
                         target_name: Some("b".to_string()),
                         target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::ExposeDirectory::EMPTY
                     }),
@@ -3891,7 +3891,7 @@ mod tests {
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_name: Some(format!("{}", "b".repeat(101))),
                         target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::ExposeDirectory::EMPTY
                     }),
@@ -3968,7 +3968,7 @@ mod tests {
                         source_name: Some("data".to_string()),
                         target_name: Some("data".to_string()),
                         target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         ..fdecl::ExposeDirectory::EMPTY
                     }),
@@ -4127,13 +4127,13 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("assets".to_string()),
                         source_path: Some("/path".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("assets2".to_string()),
                         source_path: Some("/path".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                     fdecl::Capability::Runner(fdecl::Runner {
@@ -4370,7 +4370,7 @@ mod tests {
                         }
                         )),
                         target_name: Some(format!("{}", "b".repeat(101))),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Strong),
                         ..fdecl::OfferDirectory::EMPTY
@@ -4384,7 +4384,7 @@ mod tests {
                         }
                         )),
                         target_name: Some(format!("{}", "b".repeat(101))),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Weak),
                         ..fdecl::OfferDirectory::EMPTY
@@ -4535,7 +4535,7 @@ mod tests {
                             }
                         )),
                         target_name: Some("assets".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Weak),
                         ..fdecl::OfferDirectory::EMPTY
@@ -4592,7 +4592,7 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("assets".to_string()),
                         source_path: Some("/data/assets".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                 ]);
@@ -4654,7 +4654,7 @@ mod tests {
                             collection: None,
                         })),
                         target_name: Some("/".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: Some("/foo".to_string()),
                         dependency_type: Some(fdecl::DependencyType::Strong),
                         ..fdecl::OfferDirectory::EMPTY
@@ -4775,7 +4775,7 @@ mod tests {
                         }
                         )),
                         target_name: Some("assets".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Strong),
                         ..fdecl::OfferDirectory::EMPTY
@@ -4919,7 +4919,7 @@ mod tests {
                         fdecl::CollectionRef { name: "modular".to_string() }
                         )),
                         target_name: Some("assets".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Weak),
                         ..fdecl::OfferDirectory::EMPTY
@@ -5055,7 +5055,7 @@ mod tests {
                         fdecl::CollectionRef { name: "modular".to_string() }
                         )),
                         target_name: Some("assets".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Strong),
                         ..fdecl::OfferDirectory::EMPTY
@@ -5067,7 +5067,7 @@ mod tests {
                         fdecl::CollectionRef { name: "modular".to_string() }
                         )),
                         target_name: Some("assets".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Weak),
                         ..fdecl::OfferDirectory::EMPTY
@@ -5212,7 +5212,7 @@ mod tests {
                         }
                         )),
                         target_name: Some("data".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Strong),
                         ..fdecl::OfferDirectory::EMPTY
@@ -5224,7 +5224,7 @@ mod tests {
                         fdecl::CollectionRef { name: "modular".to_string(), }
                         )),
                         target_name: Some("data".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Weak),
                         ..fdecl::OfferDirectory::EMPTY
@@ -5371,7 +5371,7 @@ mod tests {
                         source_name: Some("b".to_string()),
                         target: Some(fdecl::Ref::Child(fdecl::ChildRef { name: "child".to_string(), collection: None })),
                         target_name: Some("b".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Strong),
                         ..fdecl::OfferDirectory::EMPTY
@@ -6350,7 +6350,7 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("^bad".to_string()),
                         source_path: Some("&bad".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                     fdecl::Capability::Storage(fdecl::Storage {
@@ -6430,7 +6430,7 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("a".repeat(101)),
                         source_path: Some(format!("/{}", "c".repeat(1024))),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                     fdecl::Capability::Storage(fdecl::Storage {
@@ -6500,13 +6500,13 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("directory".to_string()),
                         source_path: Some("/directory".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("directory".to_string()),
                         source_path: Some("/directory".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                     fdecl::Capability::Storage(fdecl::Storage {
@@ -6980,7 +6980,7 @@ mod tests {
                 fdecl::Capability::Directory(fdecl::Directory {
                     name: Some("foo_dir".into()),
                     source_path: Some("/foo".into()),
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(fio2::Operations::CONNECT),
                     ..fdecl::Directory::EMPTY
                 }),
             ],
@@ -7025,7 +7025,7 @@ mod tests {
                 fdecl::Capability::Directory(fdecl::Directory {
                     name: Some("foo_dir".into()),
                     source_path: None,
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(fio2::Operations::CONNECT),
                     ..fdecl::Directory::EMPTY
                 }),
                 fdecl::Capability::Service(fdecl::Service {
@@ -7312,7 +7312,7 @@ mod tests {
                 target: None,  // Filled by macro
                 source_name: Some(format!("thing")),
                 target_name: Some(format!("thing")),
-                rights: Some(fio2::Operations::Connect),
+                rights: Some(fio2::Operations::CONNECT),
                 subdir: None,
                 dependency_type: Some(fdecl::DependencyType::Strong),
                 ..fdecl::OfferDirectory::EMPTY
@@ -7368,7 +7368,7 @@ mod tests {
                 target: None,  // Filled by macro
                 source_name: Some(format!("thing")),
                 target_name: Some(format!("thing")),
-                rights: Some(fio2::Operations::Connect),
+                rights: Some(fio2::Operations::CONNECT),
                 subdir: None,
                 dependency_type: None,  // Filled by macro
                 ..fdecl::OfferDirectory::EMPTY

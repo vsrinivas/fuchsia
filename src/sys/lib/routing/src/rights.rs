@@ -15,33 +15,33 @@ lazy_static! {
     // when supported.
     /// All rights corresponding to r*.
     pub static ref READ_RIGHTS: fio2::Operations =
-        fio2::Operations::Connect
-        | fio2::Operations::Enumerate
-        | fio2::Operations::Traverse
-        | fio2::Operations::ReadBytes
-        | fio2::Operations::GetAttributes;
+        fio2::Operations::CONNECT
+        | fio2::Operations::ENUMERATE
+        | fio2::Operations::TRAVERSE
+        | fio2::Operations::READ_BYTES
+        | fio2::Operations::GET_ATTRIBUTES;
     /// All rights corresponding to w*.
     pub static ref WRITE_RIGHTS: fio2::Operations =
-        fio2::Operations::Connect
-        | fio2::Operations::Enumerate
-        | fio2::Operations::Traverse
-        | fio2::Operations::WriteBytes
-        | fio2::Operations::ModifyDirectory
-        | fio2::Operations::UpdateAttributes;
+        fio2::Operations::CONNECT
+        | fio2::Operations::ENUMERATE
+        | fio2::Operations::TRAVERSE
+        | fio2::Operations::WRITE_BYTES
+        | fio2::Operations::MODIFY_DIRECTORY
+        | fio2::Operations::UPDATE_ATTRIBUTES;
 
     /// All the fio2 rights required to represent fio::OPEN_RIGHT_READABLE.
     static ref LEGACY_READABLE_RIGHTS: fio2::Operations =
-        fio2::Operations::ReadBytes
-        | fio2::Operations::GetAttributes
-        | fio2::Operations::Traverse
-        | fio2::Operations::Enumerate;
+        fio2::Operations::READ_BYTES
+        | fio2::Operations::GET_ATTRIBUTES
+        | fio2::Operations::TRAVERSE
+        | fio2::Operations::ENUMERATE;
     /// All the fio2 rights required to represent fio::OPEN_RIGHT_WRITABLE.
     static ref LEGACY_WRITABLE_RIGHTS: fio2::Operations =
-        fio2::Operations::WriteBytes
-        | fio2::Operations::UpdateAttributes
-        | fio2::Operations::ModifyDirectory;
+        fio2::Operations::WRITE_BYTES
+        | fio2::Operations::UPDATE_ATTRIBUTES
+        | fio2::Operations::MODIFY_DIRECTORY;
     /// All the fio2 rights required to represent fio::OPEN_RIGHT_EXECUTABLE.
-    static ref LEGACY_EXECUTABLE_RIGHTS: fio2::Operations = fio2::Operations::Execute;
+    static ref LEGACY_EXECUTABLE_RIGHTS: fio2::Operations = fio2::Operations::EXECUTE;
 }
 
 /// Opaque rights type to define new traits like PartialOrd on.
@@ -62,7 +62,7 @@ impl Rights {
         if rights.intersects(*LEGACY_WRITABLE_RIGHTS) {
             flags |= fio::OPEN_RIGHT_WRITABLE;
         }
-        if rights.contains(fio2::Operations::Execute) {
+        if rights.contains(fio2::Operations::EXECUTE) {
             flags |= fio::OPEN_RIGHT_EXECUTABLE;
         }
         // Since there is no direct translation for connect in CV1 we must explicitly define it
@@ -70,7 +70,7 @@ impl Rights {
         //
         // TODO(fxbug.dev/60673): Is this correct? ReadBytes | Connect seems like it should translate to
         // READABLE | WRITABLE, not empty rights.
-        if flags == 0 && rights.contains(fio2::Operations::Connect) {
+        if flags == 0 && rights.contains(fio2::Operations::CONNECT) {
             flags |= fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
         }
         flags
@@ -116,19 +116,19 @@ mod tests {
             Ok(())
         );
         assert_matches!(
-            Rights::from(fio2::Operations::ReadBytes | fio2::Operations::GetAttributes)
+            Rights::from(fio2::Operations::READ_BYTES | fio2::Operations::GET_ATTRIBUTES)
                 .validate_next(&Rights::from(*LEGACY_READABLE_RIGHTS)),
             Ok(())
         );
         assert_matches!(
             Rights::from(Rights::from(*LEGACY_READABLE_RIGHTS)).validate_next(&Rights::from(
-                fio2::Operations::ReadBytes | fio2::Operations::GetAttributes
+                fio2::Operations::READ_BYTES | fio2::Operations::GET_ATTRIBUTES
             )),
             Err(RightsRoutingError::Invalid)
         );
         assert_matches!(
-            Rights::from(fio2::Operations::WriteBytes).validate_next(&Rights::from(
-                fio2::Operations::ReadBytes | fio2::Operations::GetAttributes
+            Rights::from(fio2::Operations::WRITE_BYTES).validate_next(&Rights::from(
+                fio2::Operations::READ_BYTES | fio2::Operations::GET_ATTRIBUTES
             )),
             Err(RightsRoutingError::Invalid)
         );
@@ -154,31 +154,31 @@ mod tests {
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::ReadBytes).into_legacy(),
+            Rights::from(fio2::Operations::READ_BYTES).into_legacy(),
             fio::OPEN_RIGHT_READABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::GetAttributes).into_legacy(),
+            Rights::from(fio2::Operations::GET_ATTRIBUTES).into_legacy(),
             fio::OPEN_RIGHT_READABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::Traverse).into_legacy(),
+            Rights::from(fio2::Operations::TRAVERSE).into_legacy(),
             fio::OPEN_RIGHT_READABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::Enumerate).into_legacy(),
+            Rights::from(fio2::Operations::ENUMERATE).into_legacy(),
             fio::OPEN_RIGHT_READABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::WriteBytes).into_legacy(),
+            Rights::from(fio2::Operations::WRITE_BYTES).into_legacy(),
             fio::OPEN_RIGHT_WRITABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::UpdateAttributes).into_legacy(),
+            Rights::from(fio2::Operations::UPDATE_ATTRIBUTES).into_legacy(),
             fio::OPEN_RIGHT_WRITABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::ModifyDirectory).into_legacy(),
+            Rights::from(fio2::Operations::MODIFY_DIRECTORY).into_legacy(),
             fio::OPEN_RIGHT_WRITABLE
         );
     }

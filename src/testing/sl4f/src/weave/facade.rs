@@ -319,8 +319,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_reset_config() {
-        let flags: ResetConfigFlags = fidl_fuchsia_weave::ResetConfigFlags::NetworkConfig
-            | fidl_fuchsia_weave::ResetConfigFlags::ServiceConfig;
+        let flags: ResetConfigFlags = fidl_fuchsia_weave::ResetConfigFlags::NETWORK_CONFIG
+            | fidl_fuchsia_weave::ResetConfigFlags::SERVICE_CONFIG;
         let (facade, reset_config_fut) =
             MockStackBuilder::new().expect_reset_config(flags, Ok(())).build_stack();
 

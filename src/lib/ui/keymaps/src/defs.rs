@@ -439,7 +439,7 @@ impl From<(char, Option<char>, bool)> for KeyLevels {
 
 impl KeyLevels {
     pub fn get_key(&self, m: &impl ModifierChecker, l: &impl LockStateChecker) -> Option<char> {
-        if l.test(LockState::CapsLock) && self.is_letter || m.test(Modifiers::Shift) {
+        if l.test(LockState::CAPS_LOCK) && self.is_letter || m.test(Modifiers::SHIFT) {
             return self.shift_ch;
         }
         Some(self.ch)

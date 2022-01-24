@@ -189,7 +189,7 @@ async fn test_list_typefaces_by_name_substring(factory: &ProviderFactory) -> Res
     let (client, iterator) = create_proxy::<fonts_exp::ListTypefacesIteratorMarker>()?;
 
     let mut request = name_query("Noto");
-    request.flags = Some(fonts_exp::ListTypefacesFlags::MatchFamilyNameSubstring);
+    request.flags = Some(fonts_exp::ListTypefacesFlags::MATCH_FAMILY_NAME_SUBSTRING);
 
     font_provider
         .list_typefaces(request, iterator.into())

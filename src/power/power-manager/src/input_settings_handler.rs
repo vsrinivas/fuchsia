@@ -193,7 +193,7 @@ impl InputSettingsHandler {
             .ok_or(format_err!("Microphone DeviceState is None"))?
             .toggle_flags
             .ok_or(format_err!("Microphone ToggleStateFlags is None"))?
-            .contains(fsettings::ToggleStateFlags::Available);
+            .contains(fsettings::ToggleStateFlags::AVAILABLE);
 
         Ok(is_enabled)
     }
@@ -259,9 +259,9 @@ mod tests {
                     device_type: Some(fsettings::DeviceType::Microphone),
                     state: Some(fsettings::DeviceState {
                         toggle_flags: Some(if mic_enabled {
-                            fsettings::ToggleStateFlags::Available
+                            fsettings::ToggleStateFlags::AVAILABLE
                         } else {
-                            fsettings::ToggleStateFlags::Muted
+                            fsettings::ToggleStateFlags::MUTED
                         }),
                         ..fsettings::DeviceState::EMPTY
                     }),

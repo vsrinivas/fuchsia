@@ -109,13 +109,13 @@ pub fn new_connection_validate_flags(
 pub fn vmo_flags_to_rights(vmo_flags: VmoFlags) -> zx::Rights {
     // Map VMO flags to their respective rights.
     let mut rights = zx::Rights::NONE;
-    if vmo_flags.contains(VmoFlags::Read) {
+    if vmo_flags.contains(VmoFlags::READ) {
         rights |= zx::Rights::READ;
     }
-    if vmo_flags.contains(VmoFlags::Write) {
+    if vmo_flags.contains(VmoFlags::WRITE) {
         rights |= zx::Rights::WRITE;
     }
-    if vmo_flags.contains(VmoFlags::Execute) {
+    if vmo_flags.contains(VmoFlags::EXECUTE) {
         rights |= zx::Rights::EXECUTE;
     }
 
@@ -131,24 +131,24 @@ pub fn get_buffer_validate_flags(
     connection_flags: u32,
 ) -> Result<(), zx::Status> {
     // Disallow inconsistent flag combination.
-    if vmo_flags.contains(VmoFlags::PrivateClone) && vmo_flags.contains(VmoFlags::SharedBuffer) {
+    if vmo_flags.contains(VmoFlags::PRIVATE_CLONE) && vmo_flags.contains(VmoFlags::SHARED_BUFFER) {
         return Err(zx::Status::INVALID_ARGS);
     }
 
     // Ensure the requested rights in vmo_flags do not exceed those of the underlying connection.
-    if vmo_flags.contains(VmoFlags::Read) && connection_flags & OPEN_RIGHT_READABLE == 0 {
+    if vmo_flags.contains(VmoFlags::READ) && connection_flags & OPEN_RIGHT_READABLE == 0 {
         return Err(zx::Status::ACCESS_DENIED);
     }
-    if vmo_flags.contains(VmoFlags::Write) && connection_flags & OPEN_RIGHT_WRITABLE == 0 {
+    if vmo_flags.contains(VmoFlags::WRITE) && connection_flags & OPEN_RIGHT_WRITABLE == 0 {
         return Err(zx::Status::ACCESS_DENIED);
     }
-    if vmo_flags.contains(VmoFlags::Execute) && connection_flags & OPEN_RIGHT_EXECUTABLE == 0 {
+    if vmo_flags.contains(VmoFlags::EXECUTE) && connection_flags & OPEN_RIGHT_EXECUTABLE == 0 {
         return Err(zx::Status::ACCESS_DENIED);
     }
 
     // As documented in the fuchsia.io interface, if VMO_FLAG_EXEC is requested, ensure that the
     // connection also has OPEN_RIGHT_READABLE.
-    if vmo_flags.contains(VmoFlags::Execute) && connection_flags & OPEN_RIGHT_READABLE == 0 {
+    if vmo_flags.contains(VmoFlags::EXECUTE) && connection_flags & OPEN_RIGHT_READABLE == 0 {
         return Err(zx::Status::ACCESS_DENIED);
     }
 
@@ -182,9 +182,9 @@ mod tests {
     }
 
     fn rights_to_vmo_flags(readable: bool, writable: bool, executable: bool) -> VmoFlags {
-        return if readable { VmoFlags::Read } else { VmoFlags::empty() }
-            | if writable { VmoFlags::Write } else { VmoFlags::empty() }
-            | if executable { VmoFlags::Execute } else { VmoFlags::empty() };
+        return if readable { VmoFlags::READ } else { VmoFlags::empty() }
+            | if writable { VmoFlags::WRITE } else { VmoFlags::empty() }
+            | if executable { VmoFlags::EXECUTE } else { VmoFlags::empty() };
     }
 
     #[track_caller]
@@ -377,7 +377,7 @@ mod tests {
     fn get_buffer_validate_flags_invalid() {
         // Cannot specify both PRIVATE and EXACT at the same time, since they conflict.
         assert_eq!(
-            get_buffer_validate_flags(VmoFlags::PrivateClone | VmoFlags::SharedBuffer, 0),
+            get_buffer_validate_flags(VmoFlags::PRIVATE_CLONE | VmoFlags::SHARED_BUFFER, 0),
             Err(zx::Status::INVALID_ARGS)
         );
     }

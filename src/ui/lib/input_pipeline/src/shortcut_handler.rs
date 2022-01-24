@@ -220,7 +220,7 @@ mod tests {
         let shortcut_handler = create_shortcut_handler(true, false);
         let handle_result = press_key(
             fidl_fuchsia_input::Key::CapsLock,
-            Some(fidl_ui_input3::Modifiers::CapsLock),
+            Some(fidl_ui_input3::Modifiers::CAPS_LOCK),
             event_time,
             shortcut_handler,
         )
@@ -268,7 +268,7 @@ mod tests {
 
         let handle_result = release_key(
             fidl_fuchsia_input::Key::CapsLock,
-            Some(fidl_ui_input3::Modifiers::CapsLock),
+            Some(fidl_ui_input3::Modifiers::CAPS_LOCK),
             event_time,
             shortcut_handler,
         )

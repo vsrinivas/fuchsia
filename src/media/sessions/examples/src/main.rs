@@ -107,7 +107,7 @@ async fn main() -> Result<()> {
         media_images: None,
         player_status: None,
         player_capabilities: Some(PlayerCapabilities {
-            flags: Some(PlayerCapabilityFlags::Play | PlayerCapabilityFlags::Pause),
+            flags: Some(PlayerCapabilityFlags::PLAY | PlayerCapabilityFlags::PAUSE),
             ..Decodable::new_empty()
         }),
         metadata: Some(Metadata {

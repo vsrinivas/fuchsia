@@ -236,11 +236,11 @@ mod tests {
 
     #[test]
     fn test_deserialize_opt_fio2_operations_some() {
-        let connect_str = fio2::Operations::Connect.bits().to_string();
+        let connect_str = fio2::Operations::CONNECT.bits().to_string();
         let mut deserializer = Deserializer::from_str(&connect_str);
         assert_eq!(
             deserialize_opt_fio2_operations(&mut deserializer).unwrap(),
-            Some(fio2::Operations::Connect)
+            Some(fio2::Operations::CONNECT)
         );
     }
 
@@ -253,11 +253,11 @@ mod tests {
 
     #[test]
     fn test_serialize_opt_fio2_operations_some() {
-        let some_ops: Option<fio2::Operations> = Some(fio2::Operations::Connect);
+        let some_ops: Option<fio2::Operations> = Some(fio2::Operations::CONNECT);
         let mut data = Vec::new();
         let mut serializer = Serializer::new(&mut data);
         serialize_opt_fio2_operations(&some_ops, &mut serializer).unwrap();
-        assert_eq!(from_utf8(&data).unwrap(), &fio2::Operations::Connect.bits().to_string());
+        assert_eq!(from_utf8(&data).unwrap(), &fio2::Operations::CONNECT.bits().to_string());
     }
 
     #[test]
@@ -271,20 +271,20 @@ mod tests {
 
     #[test]
     fn test_deserialize_fio2_operations() {
-        let connect_str = fio2::Operations::Connect.bits().to_string();
+        let connect_str = fio2::Operations::CONNECT.bits().to_string();
         let mut deserializer = Deserializer::from_str(&connect_str);
         assert_eq!(
             deserialize_fio2_operations(&mut deserializer).unwrap(),
-            fio2::Operations::Connect
+            fio2::Operations::CONNECT
         );
     }
 
     #[test]
     fn test_serialize_fio2_operations() {
-        let ops = fio2::Operations::Connect;
+        let ops = fio2::Operations::CONNECT;
         let mut data = Vec::new();
         let mut serializer = Serializer::new(&mut data);
         serialize_fio2_operations(&ops, &mut serializer).unwrap();
-        assert_eq!(from_utf8(&data).unwrap(), &fio2::Operations::Connect.bits().to_string());
+        assert_eq!(from_utf8(&data).unwrap(), &fio2::Operations::CONNECT.bits().to_string());
     }
 }

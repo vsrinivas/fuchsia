@@ -168,7 +168,7 @@ impl AudioConsumerSink {
         if self.first_packet_sent.is_none() {
             let now = fasync::Time::now();
             self.first_packet_sent = Some(now);
-            self.audio_consumer.start(AudioConsumerStartFlags::SupplyDriven, 0, NO_TIMESTAMP)?;
+            self.audio_consumer.start(AudioConsumerStartFlags::SUPPLY_DRIVEN, 0, NO_TIMESTAMP)?;
         }
 
         let send_fut = self.stream_sink.send_packet(&mut packet);

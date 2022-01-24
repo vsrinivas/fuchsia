@@ -327,7 +327,7 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
 
     // set controller event filter to ones we support.
     let _ = controller_proxy
-        .set_notification_filter(Notifications::TrackPos | Notifications::Volume, 1)?;
+        .set_notification_filter(Notifications::TRACK_POS | Notifications::VOLUME, 1)?;
 
     let mut volume_value_received = false;
 

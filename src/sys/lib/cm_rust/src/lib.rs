@@ -1865,7 +1865,7 @@ mod tests {
                         source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
                         source_name: Some("dir".to_string()),
                         target_path: Some("/data".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: Some("foo/bar".to_string()),
                         ..fdecl::UseDirectory::EMPTY
                     }),
@@ -1916,7 +1916,7 @@ mod tests {
                         source_name: Some("dir".to_string()),
                         target_name: Some("data".to_string()),
                         target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: Some("foo/bar".to_string()),
                         ..fdecl::ExposeDirectory::EMPTY
                     }),
@@ -1982,7 +1982,7 @@ mod tests {
                             fdecl::CollectionRef { name: "modular".to_string() }
                         )),
                         target_name: Some("data".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Strong),
                         ..fdecl::OfferDirectory::EMPTY
@@ -2081,7 +2081,7 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("data".to_string()),
                         source_path: Some("/data".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                     fdecl::Capability::Storage(fdecl::Storage {
@@ -2260,7 +2260,7 @@ mod tests {
                             source: UseSource::Framework,
                             source_name: "dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
-                            rights: fio2::Operations::Connect,
+                            rights: fio2::Operations::CONNECT,
                             subdir: Some("foo/bar".into()),
                         }),
                         UseDecl::Storage(UseStorageDecl {
@@ -2292,7 +2292,7 @@ mod tests {
                             source_name: "dir".try_into().unwrap(),
                             target_name: "data".try_into().unwrap(),
                             target: ExposeTarget::Parent,
-                            rights: Some(fio2::Operations::Connect),
+                            rights: Some(fio2::Operations::CONNECT),
                             subdir: Some("foo/bar".into()),
                         }),
                         ExposeDecl::Runner(ExposeRunnerDecl {
@@ -2333,7 +2333,7 @@ mod tests {
                             source_name: "dir".try_into().unwrap(),
                             target: OfferTarget::Collection("modular".to_string()),
                             target_name: "data".try_into().unwrap(),
-                            rights: Some(fio2::Operations::Connect),
+                            rights: Some(fio2::Operations::CONNECT),
                             subdir: None,
                             dependency_type: DependencyType::Strong,
                         }),
@@ -2388,7 +2388,7 @@ mod tests {
                         CapabilityDecl::Directory(DirectoryDecl {
                             name: "data".into(),
                             source_path: Some("/data".try_into().unwrap()),
-                            rights: fio2::Operations::Connect,
+                            rights: fio2::Operations::CONNECT,
                         }),
                         CapabilityDecl::Storage(StorageDecl {
                             name: "cache".into(),

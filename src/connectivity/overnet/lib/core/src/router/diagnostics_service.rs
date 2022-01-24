@@ -110,7 +110,7 @@ async fn handle_diagnostic_requests(
                     let res = responder.send(ProbeResult {
                         node_description: if_probe_has_bit(
                             selector,
-                            ProbeSelector::NodeDescription,
+                            ProbeSelector::NODE_DESCRIPTION,
                             futures::future::ready(node_description(
                                 get_router()?.implementation(),
                             )),
@@ -118,19 +118,19 @@ async fn handle_diagnostic_requests(
                         .await,
                         links: if_probe_has_bit(
                             selector,
-                            ProbeSelector::Links,
+                            ProbeSelector::LINKS,
                             get_router()?.link_diagnostics(),
                         )
                         .await,
                         peer_connections: if_probe_has_bit(
                             selector,
-                            ProbeSelector::PeerConnections,
+                            ProbeSelector::PEER_CONNECTIONS,
                             get_router()?.peer_diagnostics(),
                         )
                         .await,
                         connecting_link_count: if_probe_has_bit(
                             selector,
-                            ProbeSelector::ConnectingLinkCount,
+                            ProbeSelector::CONNECTING_LINK_COUNT,
                             futures::future::ready(get_router()?.connecting_link_count()),
                         )
                         .await,

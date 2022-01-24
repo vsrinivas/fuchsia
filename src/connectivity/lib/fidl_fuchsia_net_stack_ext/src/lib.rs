@@ -230,7 +230,7 @@ fn test_display_interfaceinfo() {
   filepath   : /dev/class/ethernet/123
   mac        : 00:01:02:ff:fe:fd
   mtu        : 1500
-  features   : Wlan | Synthetic | Loopback
+  features   : WLAN | Wlan | SYNTHETIC | Synthetic | LOOPBACK | Loopback
   status     : ENABLED | LINK_UP
   addr       : 255.255.255.0/4
   addr       : 255.255.255.1/4"#

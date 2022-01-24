@@ -703,7 +703,7 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("bar_dir".into()),
                         source_path: Some("/bar".into()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                 ]),
@@ -716,7 +716,7 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("foo_dir".into()),
                         source_path: None,
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                     fdecl::Capability::Service(fdecl::Service {

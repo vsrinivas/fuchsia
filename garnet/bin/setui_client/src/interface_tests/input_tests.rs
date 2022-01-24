@@ -189,9 +189,16 @@ async fn test_input() -> Result<(), Error> {
     validate_watch().await?;
 
     println!("  client calls set input with microphone");
-    validate_set(DeviceType::Microphone, "microphone", 3, "Available | Active").await?;
+    validate_set(
+        DeviceType::Microphone,
+        "microphone",
+        3,
+        "AVAILABLE | Available | ACTIVE | Active",
+    )
+    .await?;
     println!("  client calls set input with camera");
-    validate_set(DeviceType::Camera, "camera", 3, "Available | Active").await?;
+    validate_set(DeviceType::Camera, "camera", 3, "AVAILABLE | Available | ACTIVE | Active")
+        .await?;
 
     // TODO(fxbug.dev/65686): Remove when clients are ported to new interface.
     println!("input2 service tests");
@@ -199,9 +206,16 @@ async fn test_input() -> Result<(), Error> {
     validate_input2_watch().await?;
 
     println!("  client calls set input with microphone");
-    validate_input2_set(DeviceType::Microphone, "microphone", 3, "Available | Active").await?;
+    validate_input2_set(
+        DeviceType::Microphone,
+        "microphone",
+        3,
+        "AVAILABLE | Available | ACTIVE | Active",
+    )
+    .await?;
     println!("  client calls set input with camera");
-    validate_input2_set(DeviceType::Camera, "camera", 3, "Available | Active").await?;
+    validate_input2_set(DeviceType::Camera, "camera", 3, "AVAILABLE | Available | ACTIVE | Active")
+        .await?;
 
     Ok(())
 }

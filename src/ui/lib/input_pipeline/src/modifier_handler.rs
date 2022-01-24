@@ -98,8 +98,8 @@ mod tests {
         // the key remains unhandled.
         let expected = InputEvent::from(get_unhandled_input_event(
             KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed)
-                .into_with_modifiers(Some(Modifiers::CapsLock))
-                .into_with_lock_state(Some(LockState::CapsLock)),
+                .into_with_modifiers(Some(Modifiers::CAPS_LOCK))
+                .into_with_lock_state(Some(LockState::CAPS_LOCK)),
         ));
         assert_eq!(vec![expected], result);
     }
@@ -133,18 +133,18 @@ mod tests {
         let expected = IntoIterator::into_iter([
             get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed)
-                    .into_with_modifiers(Some(Modifiers::CapsLock))
-                    .into_with_lock_state(Some(LockState::CapsLock)),
+                    .into_with_modifiers(Some(Modifiers::CAPS_LOCK))
+                    .into_with_lock_state(Some(LockState::CAPS_LOCK)),
             ),
             get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Released)
                     .into_with_modifiers(Some(Modifiers::from_bits_allow_unknown(0)))
-                    .into_with_lock_state(Some(LockState::CapsLock)),
+                    .into_with_lock_state(Some(LockState::CAPS_LOCK)),
             ),
             get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed)
-                    .into_with_modifiers(Some(Modifiers::CapsLock))
-                    .into_with_lock_state(Some(LockState::CapsLock)),
+                    .into_with_modifiers(Some(Modifiers::CAPS_LOCK))
+                    .into_with_lock_state(Some(LockState::CAPS_LOCK)),
             ),
             get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Released)
@@ -188,23 +188,23 @@ mod tests {
         let expected = IntoIterator::into_iter([
             get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Pressed)
-                    .into_with_modifiers(Some(Modifiers::CapsLock))
-                    .into_with_lock_state(Some(LockState::CapsLock)),
+                    .into_with_modifiers(Some(Modifiers::CAPS_LOCK))
+                    .into_with_lock_state(Some(LockState::CAPS_LOCK)),
             ),
             get_unhandled_input_event(
                 KeyboardEvent::new(Key::CapsLock, KeyEventType::Released)
                     .into_with_modifiers(Some(Modifiers::from_bits_allow_unknown(0)))
-                    .into_with_lock_state(Some(LockState::CapsLock)),
+                    .into_with_lock_state(Some(LockState::CAPS_LOCK)),
             ),
             get_unhandled_input_event(
                 KeyboardEvent::new(Key::A, KeyEventType::Pressed)
                     .into_with_modifiers(Some(Modifiers::from_bits_allow_unknown(0)))
-                    .into_with_lock_state(Some(LockState::CapsLock)),
+                    .into_with_lock_state(Some(LockState::CAPS_LOCK)),
             ),
             get_unhandled_input_event(
                 KeyboardEvent::new(Key::A, KeyEventType::Released)
                     .into_with_modifiers(Some(Modifiers::from_bits_allow_unknown(0)))
-                    .into_with_lock_state(Some(LockState::CapsLock)),
+                    .into_with_lock_state(Some(LockState::CAPS_LOCK)),
             ),
         ])
         .map(InputEvent::from)

@@ -67,7 +67,7 @@ impl Client {
                 port, 0, /* we are not interested in every event */
             )?
             .try_filter(|status| {
-                futures::future::ready(status.flags.contains(netdev::StatusFlags::Online))
+                futures::future::ready(status.flags.contains(netdev::StatusFlags::ONLINE))
             });
         futures::pin_mut!(stream);
         stream.next().await.expect("HangingGetStream should never terminate")

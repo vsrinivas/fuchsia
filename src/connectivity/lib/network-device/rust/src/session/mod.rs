@@ -473,7 +473,7 @@ impl DeviceInfo {
 
     /// Create a config for a primary session.
     pub fn primary_config(&self, buffer_length: usize) -> Result<Config> {
-        self.make_config(buffer_length, netdev::SessionFlags::Primary)
+        self.make_config(buffer_length, netdev::SessionFlags::PRIMARY)
     }
 }
 

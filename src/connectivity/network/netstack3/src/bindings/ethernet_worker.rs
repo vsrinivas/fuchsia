@@ -109,7 +109,7 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                                     info!("device {:?} status changed to: {:?}", id, status);
                                     // Handle the new device state. If this results in no change, no
                                     // state will be modified.
-                                    if status.contains(fidl_ethernet::DeviceStatus::Online) {
+                                    if status.contains(fidl_ethernet::DeviceStatus::ONLINE) {
                                         ctx.update_device_state(id, |dev_info| {
                                             dev_info.set_phy_up(true)
                                         });

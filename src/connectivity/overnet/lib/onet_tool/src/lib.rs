@@ -41,7 +41,7 @@ pub struct ListPeers {}
 async fn list_peers() -> Result<(), Error> {
     list_peers::list_peers()
         .try_for_each_concurrent(None, |peer| async move {
-            let desc = probe_node::probe_node(peer, probe_node::Selector::NodeDescription).await?;
+            let desc = probe_node::probe_node(peer, probe_node::Selector::NODE_DESCRIPTION).await?;
             let mut out = String::new();
             write!(&mut out, "{}", peer.id)?;
             if let Some(desc) = desc.node_description {
@@ -87,7 +87,7 @@ async fn list_links(args: ListLinks) -> Result<(), Error> {
             let mut links = loop {
                 let probe = probe_node::probe_node(
                     node,
-                    probe_node::Selector::Links | probe_node::Selector::ConnectingLinkCount,
+                    probe_node::Selector::LINKS | probe_node::Selector::CONNECTING_LINK_COUNT,
                 )
                 .await?;
                 let connecting_link_count = probe

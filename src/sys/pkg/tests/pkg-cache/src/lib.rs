@@ -469,7 +469,7 @@ where
             ).await.unwrap()
             .add_route(RouteBuilder::directory(
                     "pkgfs", "pkgfs",
-                    fidl_fuchsia_io2::RW_STAR_DIR | fidl_fuchsia_io2::Operations::Execute
+                    fidl_fuchsia_io2::RW_STAR_DIR | fidl_fuchsia_io2::Operations::EXECUTE
                 )
                 .source(RouteEndpoint::component("pkg_cache"))
                 .targets(vec![ RouteEndpoint::AboveRoot ])

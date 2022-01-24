@@ -29,7 +29,7 @@ mod test {
     #[test]
     fn fidl_crates_usage() {
         // [START bits]
-        let flags = fex::FileMode::Read | fex::FileMode::Write;
+        let flags = fex::FileMode::READ | fex::FileMode::WRITE;
         println!("{:?}", flags);
         // [END bits]
 

@@ -435,10 +435,10 @@ async fn main() -> Result<(), Error> {
 
     // set controller event filter to ones we support.
     let _ = controller.set_notification_filter(
-        Notifications::PlaybackStatus
-            | Notifications::Track
-            | Notifications::TrackPos
-            | Notifications::Volume,
+        Notifications::PLAYBACK_STATUS
+            | Notifications::TRACK
+            | Notifications::TRACK_POS
+            | Notifications::VOLUME,
         1,
     )?;
 

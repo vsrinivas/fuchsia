@@ -44,11 +44,11 @@ impl From<fidl_fuchsia_settings::ConfigurationInterfaces> for ConfigurationInter
     fn from(interfaces: fidl_fuchsia_settings::ConfigurationInterfaces) -> Self {
         let mut flags = ConfigurationInterfaceFlags::empty();
 
-        if interfaces.intersects(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet) {
+        if interfaces.intersects(fidl_fuchsia_settings::ConfigurationInterfaces::ETHERNET) {
             flags |= ConfigurationInterfaceFlags::ETHERNET;
         }
 
-        if interfaces.intersects(fidl_fuchsia_settings::ConfigurationInterfaces::Wifi) {
+        if interfaces.intersects(fidl_fuchsia_settings::ConfigurationInterfaces::WIFI) {
             flags |= ConfigurationInterfaceFlags::WIFI;
         }
 
@@ -61,11 +61,11 @@ impl From<ConfigurationInterfaceFlags> for fidl_fuchsia_settings::ConfigurationI
         let mut interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::empty();
 
         if flags.intersects(ConfigurationInterfaceFlags::ETHERNET) {
-            interfaces |= fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet;
+            interfaces |= fidl_fuchsia_settings::ConfigurationInterfaces::ETHERNET;
         }
 
         if flags.intersects(ConfigurationInterfaceFlags::WIFI) {
-            interfaces |= fidl_fuchsia_settings::ConfigurationInterfaces::Wifi;
+            interfaces |= fidl_fuchsia_settings::ConfigurationInterfaces::WIFI;
         }
 
         interfaces
@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn test_request_from_settings() {
         const CONFIGURATION_INTERFACES: Option<fidl_fuchsia_settings::ConfigurationInterfaces> =
-            Some(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet);
+            Some(fidl_fuchsia_settings::ConfigurationInterfaces::ETHERNET);
         const CONFIGURATION_INTERFACE_FLAG: ConfigurationInterfaceFlags =
             ConfigurationInterfaceFlags::ETHERNET;
         const SHOULD_REBOOT: bool = true;
@@ -173,7 +173,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn try_from_set_converts_supplied_params() {
         const CONFIGURATION_INTERFACES: Option<fidl_fuchsia_settings::ConfigurationInterfaces> =
-            Some(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet);
+            Some(fidl_fuchsia_settings::ConfigurationInterfaces::ETHERNET);
         const SHOULD_REBOOT: bool = true;
 
         let (proxy, server) =

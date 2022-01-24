@@ -158,14 +158,14 @@ async fn test_echo_pair() {
                     assert_matches!(
                         client1.wait_online(port1).await,
                         Ok(netdevice_client::PortStatus {
-                            flags: netdev::StatusFlags::Online,
+                            flags: netdev::StatusFlags::ONLINE,
                             mtu: DEFAULT_MTU
                         })
                     );
                     assert_matches!(
                         client2.wait_online(port2).await,
                         Ok(netdevice_client::PortStatus {
-                            flags: netdev::StatusFlags::Online,
+                            flags: netdev::StatusFlags::ONLINE,
                             mtu: DEFAULT_MTU
                         })
                     );
@@ -246,7 +246,7 @@ async fn test_status_stream() {
         assert_matches!(
             watcher.try_next().await,
             Ok(Some(netdevice_client::PortStatus {
-                flags: netdev::StatusFlags::Online,
+                flags: netdev::StatusFlags::ONLINE,
                 mtu: DEFAULT_MTU
             }))
         );

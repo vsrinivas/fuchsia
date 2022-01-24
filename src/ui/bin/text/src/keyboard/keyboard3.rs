@@ -558,7 +558,7 @@ mod tests {
 
         let (_view_ref, mut listener) = helper.create_and_focus_client().await?;
 
-        let (key, modifiers) = (input::Key::A, ui_input3::Modifiers::CapsLock);
+        let (key, modifiers) = (input::Key::A, ui_input3::Modifiers::CAPS_LOCK);
         let dispatched_event = create_key_event(key, modifiers);
 
         let (was_handled, _) = future::join(
@@ -652,7 +652,7 @@ mod tests {
         let mut helper = Helper::new();
         helper.create_fake_client().await?;
 
-        let (key, modifiers) = (input::Key::A, ui_input3::Modifiers::CapsLock);
+        let (key, modifiers) = (input::Key::A, ui_input3::Modifiers::CAPS_LOCK);
         let was_handled = helper.service.handle_key_event(create_key_event(key, modifiers)).await?;
         assert_eq!(was_handled, false);
 
@@ -679,7 +679,7 @@ mod tests {
                 zx::Time::ZERO,
                 ui_input3::KeyEventType::Pressed,
                 input::Key::A,
-                ui_input3::Modifiers::CapsLock,
+                ui_input3::Modifiers::CAPS_LOCK,
                 'A',
             );
 
@@ -714,7 +714,7 @@ mod tests {
 
         // Scope part of the test case to release listeners and borrows once done.
         {
-            let (key, modifiers) = (input::Key::B, ui_input3::Modifiers::NumLock);
+            let (key, modifiers) = (input::Key::B, ui_input3::Modifiers::NUM_LOCK);
             let dispatched_event = create_key_event(key, modifiers);
 
             // Setup key handing for both clients.
@@ -743,7 +743,7 @@ mod tests {
         let mut helper = Helper::new();
 
         let (_view_ref, _listener) = helper.create_and_focus_client_sync(&mut exec)?;
-        let (key, modifiers) = (input::Key::D, ui_input3::Modifiers::NumLock);
+        let (key, modifiers) = (input::Key::D, ui_input3::Modifiers::NUM_LOCK);
         let handle_fut = helper.service.handle_key_event(create_key_event(key, modifiers));
 
         // Do not respond to KeyboardListenerRequest to emulate client timeout.
@@ -769,7 +769,7 @@ mod tests {
         let mut helper = Helper::new();
 
         // Press a key.
-        let (key, modifiers) = (input::Key::A, ui_input3::Modifiers::CapsLock);
+        let (key, modifiers) = (input::Key::A, ui_input3::Modifiers::CAPS_LOCK);
         helper.service.handle_key_event(create_key_event(key, modifiers)).await?;
 
         assert_eq!(helper.service.get_keys_pressed().await, HashSet::from_iter(vec![key,]));

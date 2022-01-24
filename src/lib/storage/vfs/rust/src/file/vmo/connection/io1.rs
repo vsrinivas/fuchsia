@@ -893,14 +893,14 @@ impl VmoFileConnection {
 
         // The only sharing mode we support that disallows the VMO size to change currently
         // is VMO_FLAG_PRIVATE (`get_as_private`), so we require that to be set explicitly.
-        if flags.contains(VmoFlags::Write) && !flags.contains(VmoFlags::PrivateClone) {
+        if flags.contains(VmoFlags::WRITE) && !flags.contains(VmoFlags::PRIVATE_CLONE) {
             return responder(zx::Status::NOT_SUPPORTED, None);
         }
 
         // Disallow opening as both writable and executable. In addition to improving W^X
         // enforcement, this also eliminates any inconstiencies related to clones that use
         // SNAPSHOT_AT_LEAST_ON_WRITE since in that case, we cannot satisfy both requirements.
-        if flags.contains(VmoFlags::Execute) && flags.contains(VmoFlags::Write) {
+        if flags.contains(VmoFlags::EXECUTE) && flags.contains(VmoFlags::WRITE) {
             return responder(zx::Status::NOT_SUPPORTED, None);
         }
 
@@ -919,7 +919,7 @@ impl VmoFileConnection {
                 // callback here will make the implementation of those files systems easier.
                 let vmo_rights = vmo_flags_to_rights(flags);
                 // Unless private sharing mode is specified, we always default to shared.
-                let result = if flags.contains(VmoFlags::PrivateClone) {
+                let result = if flags.contains(VmoFlags::PRIVATE_CLONE) {
                     Self::get_as_private(&vmo, vmo_rights, *size)
                 }
                 else {

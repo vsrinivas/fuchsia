@@ -43,11 +43,11 @@ pub fn describe_setup_setting(setup_settings: &SetupSettings) -> String {
 fn describe_interfaces(interfaces: ConfigurationInterfaces) -> String {
     let mut interface_labels = Vec::new();
 
-    if interfaces.intersects(ConfigurationInterfaces::Ethernet) {
+    if interfaces.intersects(ConfigurationInterfaces::ETHERNET) {
         interface_labels.push("ethernet");
     }
 
-    if interfaces.intersects(ConfigurationInterfaces::Wifi) {
+    if interfaces.intersects(ConfigurationInterfaces::WIFI) {
         interface_labels.push("WiFi");
     }
 

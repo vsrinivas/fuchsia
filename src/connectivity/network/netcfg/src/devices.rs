@@ -180,8 +180,8 @@ impl Device for EthernetDevice {
                 .map(Into::into)
                 .context("error getting device info for ethdev")
                 .map_err(errors::Error::NonFatal)?;
-        let is_synthetic = features.contains(feth::Features::Synthetic);
-        let device_class = if features.contains(feth::Features::Wlan) {
+        let is_synthetic = features.contains(feth::Features::SYNTHETIC);
+        let device_class = if features.contains(feth::Features::WLAN) {
             fhwnet::DeviceClass::Wlan
         } else {
             fhwnet::DeviceClass::Ethernet

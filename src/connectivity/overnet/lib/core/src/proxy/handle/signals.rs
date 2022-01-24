@@ -63,56 +63,56 @@ impl Collector {
 fn to_wire_signals(signals: Signals) -> WireSignals {
     let mut out = WireSignals::empty();
     if signals.contains(Signals::USER_0) {
-        out.insert(WireSignals::User0);
+        out.insert(WireSignals::USER_0);
     }
     if signals.contains(Signals::USER_1) {
-        out.insert(WireSignals::User1);
+        out.insert(WireSignals::USER_1);
     }
     if signals.contains(Signals::USER_2) {
-        out.insert(WireSignals::User2);
+        out.insert(WireSignals::USER_2);
     }
     if signals.contains(Signals::USER_3) {
-        out.insert(WireSignals::User3);
+        out.insert(WireSignals::USER_3);
     }
     if signals.contains(Signals::USER_4) {
-        out.insert(WireSignals::User4);
+        out.insert(WireSignals::USER_4);
     }
     if signals.contains(Signals::USER_5) {
-        out.insert(WireSignals::User5);
+        out.insert(WireSignals::USER_5);
     }
     if signals.contains(Signals::USER_6) {
-        out.insert(WireSignals::User6);
+        out.insert(WireSignals::USER_6);
     }
     if signals.contains(Signals::USER_7) {
-        out.insert(WireSignals::User7);
+        out.insert(WireSignals::USER_7);
     }
     out
 }
 
 pub(crate) fn from_wire_signals(signals: WireSignals) -> Signals {
     let mut out = Signals::empty();
-    if signals.contains(WireSignals::User0) {
+    if signals.contains(WireSignals::USER_0) {
         out.insert(Signals::USER_0);
     }
-    if signals.contains(WireSignals::User1) {
+    if signals.contains(WireSignals::USER_1) {
         out.insert(Signals::USER_1);
     }
-    if signals.contains(WireSignals::User2) {
+    if signals.contains(WireSignals::USER_2) {
         out.insert(Signals::USER_2);
     }
-    if signals.contains(WireSignals::User3) {
+    if signals.contains(WireSignals::USER_3) {
         out.insert(Signals::USER_3);
     }
-    if signals.contains(WireSignals::User4) {
+    if signals.contains(WireSignals::USER_4) {
         out.insert(Signals::USER_4);
     }
-    if signals.contains(WireSignals::User5) {
+    if signals.contains(WireSignals::USER_5) {
         out.insert(Signals::USER_5);
     }
-    if signals.contains(WireSignals::User6) {
+    if signals.contains(WireSignals::USER_6) {
         out.insert(Signals::USER_6);
     }
-    if signals.contains(WireSignals::User7) {
+    if signals.contains(WireSignals::USER_7) {
         out.insert(Signals::USER_7);
     }
     out

@@ -1607,7 +1607,7 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("assets".to_string()),
                             target_path: Some("/data/assets".to_string()),
-                            rights: Some(fio2::Operations::ReadBytes),
+                            rights: Some(fio2::Operations::READ_BYTES),
                             subdir: None,
                             ..fdecl::UseDirectory::EMPTY
                         }
@@ -1618,7 +1618,7 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("config".to_string()),
                             target_path: Some("/data/config".to_string()),
-                            rights: Some(fio2::Operations::ReadBytes),
+                            rights: Some(fio2::Operations::READ_BYTES),
                             subdir: Some("fonts".to_string()),
                             ..fdecl::UseDirectory::EMPTY
                         }
@@ -1836,9 +1836,9 @@ mod tests {
                             target: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
                             target_name: Some("blob".to_string()),
                             rights: Some(
-                                fio2::Operations::Connect | fio2::Operations::Enumerate |
-                                fio2::Operations::Traverse | fio2::Operations::ReadBytes |
-                                fio2::Operations::GetAttributes
+                                fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
+                                fio2::Operations::TRAVERSE | fio2::Operations::READ_BYTES |
+                                fio2::Operations::GET_ATTRIBUTES
                             ),
                             subdir: None,
                             ..fdecl::ExposeDirectory::EMPTY
@@ -1976,9 +1976,9 @@ mod tests {
                         fdecl::Directory {
                             name: Some("blob".to_string()),
                             source_path: Some("/volumes/blobfs/blob".to_string()),
-                            rights: Some(fio2::Operations::Connect | fio2::Operations::Enumerate |
-                                fio2::Operations::Traverse | fio2::Operations::ReadBytes |
-                                fio2::Operations::GetAttributes
+                            rights: Some(fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
+                                fio2::Operations::TRAVERSE | fio2::Operations::READ_BYTES |
+                                fio2::Operations::GET_ATTRIBUTES
                             ),
                             ..fdecl::Directory::EMPTY
                         }
@@ -2750,7 +2750,7 @@ mod tests {
                         fdecl::Directory {
                             name: Some("mydirectory".to_string()),
                             source_path: Some("/directory".to_string()),
-                            rights: Some(fio2::Operations::Connect),
+                            rights: Some(fio2::Operations::CONNECT),
                             ..fdecl::Directory::EMPTY
                         }
                     ),
@@ -3166,9 +3166,9 @@ mod tests {
                             target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             target_name: Some("blobfs".to_string()),
                             rights: Some(
-                                fio2::Operations::Connect | fio2::Operations::Enumerate |
-                                fio2::Operations::Traverse | fio2::Operations::ReadBytes |
-                                fio2::Operations::GetAttributes
+                                fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
+                                fio2::Operations::TRAVERSE | fio2::Operations::READ_BYTES |
+                                fio2::Operations::GET_ATTRIBUTES
                             ),
                             subdir: None,
                             ..fdecl::ExposeDirectory::EMPTY
@@ -3213,9 +3213,9 @@ mod tests {
                         fdecl::Directory {
                             name: Some("blobfs".to_string()),
                             source_path: Some("/volumes/blobfs".to_string()),
-                            rights: Some(fio2::Operations::Connect | fio2::Operations::Enumerate |
-                                fio2::Operations::Traverse | fio2::Operations::ReadBytes |
-                                fio2::Operations::GetAttributes
+                            rights: Some(fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
+                                fio2::Operations::TRAVERSE | fio2::Operations::READ_BYTES |
+                                fio2::Operations::GET_ATTRIBUTES
                             ),
                             ..fdecl::Directory::EMPTY
                         }

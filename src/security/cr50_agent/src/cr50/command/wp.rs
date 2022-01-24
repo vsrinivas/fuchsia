@@ -73,6 +73,6 @@ mod tests {
 
         let mut deserializer = Deserializer::new(response);
         let res = WpResponse::deserialize(&mut deserializer).unwrap();
-        assert_eq!(res.get_state(), WpState::Enable | WpState::Force);
+        assert_eq!(res.get_state(), WpState::ENABLE | WpState::FORCE);
     }
 }

@@ -378,7 +378,7 @@ mod tests {
 
         let good_dir_name = CapabilityName("good_dir".to_string());
         let bad_dir_name = CapabilityName("bad_dir".to_string());
-        let offer_rights = Operations::Connect;
+        let offer_rights = Operations::CONNECT;
 
         let protocol_name = CapabilityName("protocol".to_string());
 

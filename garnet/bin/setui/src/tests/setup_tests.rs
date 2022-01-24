@@ -31,7 +31,7 @@ async fn test_setup_default() {
     let settings = setup_service.watch().await.expect("watch completed");
     assert_eq!(
         settings.enabled_configuration_interfaces,
-        Some(fidl_fuchsia_settings::ConfigurationInterfaces::Wifi)
+        Some(fidl_fuchsia_settings::ConfigurationInterfaces::WIFI)
     );
 }
 
@@ -71,12 +71,12 @@ async fn test_setup_with_reboot() {
     assert_eq!(
         settings.enabled_configuration_interfaces,
         Some(
-            fidl_fuchsia_settings::ConfigurationInterfaces::Wifi
-                | fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet
+            fidl_fuchsia_settings::ConfigurationInterfaces::WIFI
+                | fidl_fuchsia_settings::ConfigurationInterfaces::ETHERNET
         )
     );
 
-    let expected_interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet;
+    let expected_interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::ETHERNET;
 
     // Ensure setting interface propagates  change correctly
     let mut setup_settings = fidl_fuchsia_settings::SetupSettings::EMPTY;
@@ -123,10 +123,10 @@ async fn test_setup_no_reboot_with_set() {
     let settings = setup_service.watch().await.expect("watch completed");
     assert_eq!(
         settings.enabled_configuration_interfaces,
-        Some(fidl_fuchsia_settings::ConfigurationInterfaces::Wifi)
+        Some(fidl_fuchsia_settings::ConfigurationInterfaces::WIFI)
     );
 
-    let expected_interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet;
+    let expected_interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::ETHERNET;
 
     // Ensure setting interface propagates  change correctly
     let mut setup_settings = fidl_fuchsia_settings::SetupSettings::EMPTY;

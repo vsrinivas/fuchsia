@@ -55,10 +55,10 @@ impl RequestExt for fonts::Request {
 
         let mut flags = TypefaceRequestFlags::empty();
         if (self.flags & fonts::REQUEST_FLAG_NO_FALLBACK) != 0 {
-            flags |= TypefaceRequestFlags::ExactFamily;
+            flags |= TypefaceRequestFlags::EXACT_FAMILY;
         }
         if (self.flags & fonts::REQUEST_FLAG_EXACT_MATCH) != 0 {
-            flags |= TypefaceRequestFlags::ExactStyle;
+            flags |= TypefaceRequestFlags::EXACT_STYLE;
         }
 
         TypefaceRequest {
@@ -94,11 +94,11 @@ pub trait TypefaceRequestExt {
 
 impl TypefaceRequestExt for TypefaceRequest {
     fn exact_family(&self) -> bool {
-        self.flags.map_or(false, |flags| flags.contains(fonts::TypefaceRequestFlags::ExactFamily))
+        self.flags.map_or(false, |flags| flags.contains(fonts::TypefaceRequestFlags::EXACT_FAMILY))
     }
 
     fn exact_style(&self) -> bool {
-        self.flags.map_or(false, |flags| flags.contains(fonts::TypefaceRequestFlags::ExactStyle))
+        self.flags.map_or(false, |flags| flags.contains(fonts::TypefaceRequestFlags::EXACT_STYLE))
     }
 
     fn cache_miss_policy(&self) -> CacheMissPolicy {

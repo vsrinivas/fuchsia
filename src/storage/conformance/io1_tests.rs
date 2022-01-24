@@ -1625,7 +1625,7 @@ async fn unlink_must_be_directory() {
     let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
     let must_be_directory =
-        UnlinkOptions { flags: Some(UnlinkFlags::MustBeDirectory), ..UnlinkOptions::EMPTY };
+        UnlinkOptions { flags: Some(UnlinkFlags::MUST_BE_DIRECTORY), ..UnlinkOptions::EMPTY };
     test_dir
         .unlink("dir", must_be_directory.clone())
         .await

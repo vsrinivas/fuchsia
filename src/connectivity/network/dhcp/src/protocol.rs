@@ -1811,20 +1811,20 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::NodeTypes> for NodeType {
 
     fn try_from_fidl(fidl: fidl_fuchsia_net_dhcp::NodeTypes) -> Result<NodeType, Self::FromError> {
         match fidl {
-            fidl_fuchsia_net_dhcp::NodeTypes::BNode => Ok(NodeType::BNode),
-            fidl_fuchsia_net_dhcp::NodeTypes::PNode => Ok(NodeType::PNode),
-            fidl_fuchsia_net_dhcp::NodeTypes::MNode => Ok(NodeType::MNode),
-            fidl_fuchsia_net_dhcp::NodeTypes::HNode => Ok(NodeType::HNode),
+            fidl_fuchsia_net_dhcp::NodeTypes::B_NODE => Ok(NodeType::BNode),
+            fidl_fuchsia_net_dhcp::NodeTypes::P_NODE => Ok(NodeType::PNode),
+            fidl_fuchsia_net_dhcp::NodeTypes::M_NODE => Ok(NodeType::MNode),
+            fidl_fuchsia_net_dhcp::NodeTypes::H_NODE => Ok(NodeType::HNode),
             other => Err(ProtocolError::InvalidNodeType(other.bits())),
         }
     }
 
     fn try_into_fidl(self) -> Result<fidl_fuchsia_net_dhcp::NodeTypes, Self::IntoError> {
         match self {
-            NodeType::BNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::BNode),
-            NodeType::PNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::PNode),
-            NodeType::MNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::MNode),
-            NodeType::HNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::HNode),
+            NodeType::BNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::B_NODE),
+            NodeType::PNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::P_NODE),
+            NodeType::MNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::M_NODE),
+            NodeType::HNode => Ok(fidl_fuchsia_net_dhcp::NodeTypes::H_NODE),
         }
     }
 }

@@ -1224,10 +1224,10 @@ impl Into<fidl_fuchsia_net_dhcp::Option_> for NetBiosOverTcpipNodeType {
     fn into(self) -> fidl_fuchsia_net_dhcp::Option_ {
         let node_type = self.node_type.unwrap_or(NodeType::BNode(BNode {}));
         let fidl_node_type = match node_type {
-            NodeType::BNode(_) => fidl_fuchsia_net_dhcp::NodeTypes::BNode,
-            NodeType::HNode(_) => fidl_fuchsia_net_dhcp::NodeTypes::HNode,
-            NodeType::MNode(_) => fidl_fuchsia_net_dhcp::NodeTypes::MNode,
-            NodeType::PNode(_) => fidl_fuchsia_net_dhcp::NodeTypes::PNode,
+            NodeType::BNode(_) => fidl_fuchsia_net_dhcp::NodeTypes::B_NODE,
+            NodeType::HNode(_) => fidl_fuchsia_net_dhcp::NodeTypes::H_NODE,
+            NodeType::MNode(_) => fidl_fuchsia_net_dhcp::NodeTypes::M_NODE,
+            NodeType::PNode(_) => fidl_fuchsia_net_dhcp::NodeTypes::P_NODE,
         };
         fidl_fuchsia_net_dhcp::Option_::NetbiosOverTcpipNodeType(fidl_node_type)
     }

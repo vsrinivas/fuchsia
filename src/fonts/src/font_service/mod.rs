@@ -302,7 +302,7 @@ where
     ) -> Box<dyn Iterator<Item = &FontFamily> + 'a> {
         match request.family.as_ref() {
             Some(fonts::FamilyName { name }) => {
-                if flags.contains(fonts_exp::ListTypefacesFlags::MatchFamilyNameSubstring) {
+                if flags.contains(fonts_exp::ListTypefacesFlags::MATCH_FAMILY_NAME_SUBSTRING) {
                     Box::new(self.match_families_substr(name.clone()))
                 } else {
                     match self.match_family(&UniCase::new(name.clone())) {

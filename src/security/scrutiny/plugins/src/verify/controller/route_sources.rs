@@ -784,7 +784,7 @@ mod tests {
                     DirectoryDecl{
                         name: CapabilityName("root_dir".to_string()),
                         source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
-                        rights: fio2::Operations::Connect,
+                        rights: fio2::Operations::CONNECT,
                     }.into(),
                 ],
                 offers: vec![
@@ -794,7 +794,7 @@ mod tests {
                         target: OfferTarget::static_child("two_dir_user".to_string()),
                         target_name: CapabilityName("routed_from_provider".to_string()),
                         dependency_type: DependencyType::Strong,
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: Some(PathBuf::from_str("root_subdir").unwrap()),
                     }.into(),
                     OfferDirectoryDecl{
@@ -803,7 +803,7 @@ mod tests {
                         target: OfferTarget::static_child("two_dir_user".to_string()),
                         target_name: CapabilityName("routed_from_root".to_string()),
                         dependency_type: DependencyType::Strong,
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: Some(PathBuf::from_str("root_subdir").unwrap()),
                     }.into(),
                 ],
@@ -831,7 +831,7 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: CapabilityName("routed_from_provider".to_string()),
                         target_path: CapabilityPath::from_str("/data/from/provider").unwrap(),
-                        rights: fio2::Operations::Connect,
+                        rights: fio2::Operations::CONNECT,
                         subdir: Some(PathBuf::from_str("user_subdir").unwrap()),
                         dependency_type: DependencyType::Strong,
                     }.into(),
@@ -839,7 +839,7 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: CapabilityName("routed_from_root".to_string()),
                         target_path: CapabilityPath::from_str("/data/from/root").unwrap(),
-                        rights: fio2::Operations::Connect,
+                        rights: fio2::Operations::CONNECT,
                         subdir: Some(PathBuf::from_str("user_subdir").unwrap()),
                         dependency_type: DependencyType::Strong,
                     }.into(),
@@ -852,7 +852,7 @@ mod tests {
                     DirectoryDecl{
                         name: CapabilityName("provider_dir".to_string()),
                         source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
-                        rights: fio2::Operations::Connect,
+                        rights: fio2::Operations::CONNECT,
                     }.into(),
                 ],
                 exposes: vec![
@@ -861,7 +861,7 @@ mod tests {
                         source_name: CapabilityName("provider_dir".to_string()),
                         target: ExposeTarget::Parent,
                         target_name: CapabilityName("exposed_by_provider".to_string()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: Some(PathBuf::from_str("provider_subdir").unwrap()),
                     }.into(),
                 ],
@@ -1200,7 +1200,7 @@ mod tests {
                             capability: DirectoryDecl{
                                 name: CapabilityName("provider_dir".to_string()),
                                 source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
-                                rights: fio2::Operations::Connect,
+                                rights: fio2::Operations::CONNECT,
                             }.into(),
                         })
                     }
@@ -1272,7 +1272,7 @@ mod tests {
                                 capability: DirectoryDecl{
                                     name: CapabilityName("provider_dir".to_string()),
                                     source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
-                                    rights: fio2::Operations::Connect,
+                                    rights: fio2::Operations::CONNECT,
                                 }.into(),
                             })
                         }
@@ -1358,7 +1358,7 @@ mod tests {
                                 capability: DirectoryDecl{
                                     name: CapabilityName("root_dir".to_string()),
                                     source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
-                                    rights: fio2::Operations::Connect,
+                                    rights: fio2::Operations::CONNECT,
                                 }.into(),
                             })
                         },
@@ -1369,7 +1369,7 @@ mod tests {
                                 capability: DirectoryDecl{
                                     name: CapabilityName("provider_dir".to_string()),
                                     source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
-                                    rights: fio2::Operations::Connect,
+                                    rights: fio2::Operations::CONNECT,
                                 }.into(),
                             })
                         }
@@ -1465,7 +1465,7 @@ mod tests {
                                 capability: DirectoryDecl{
                                     name: CapabilityName("root_dir".to_string()),
                                     source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
-                                    rights: fio2::Operations::Connect,
+                                    rights: fio2::Operations::CONNECT,
                                 }.into(),
                             })
                         },
@@ -1476,7 +1476,7 @@ mod tests {
                                 capability: DirectoryDecl{
                                     name: CapabilityName("provider_dir".to_string()),
                                     source_path: Some(CapabilityPath::from_str("/data/to/user").unwrap()),
-                                    rights: fio2::Operations::Connect,
+                                    rights: fio2::Operations::CONNECT,
                                 }.into(),
                             })
                         }
@@ -2085,7 +2085,7 @@ mod tests {
                                     source: UseSource::Parent,
                                     source_name: CapabilityName("routed_from_root".to_string()),
                                     target_path: CapabilityPath::from_str("/data/from/root").unwrap(),
-                                    rights: fio2::Operations::Connect,
+                                    rights: fio2::Operations::CONNECT,
                                     subdir: Some(PathBuf::from_str("user_subdir").unwrap()),
                                     dependency_type: DependencyType::Strong,
                                 }.into(),
@@ -2099,7 +2099,7 @@ mod tests {
                                     source: UseSource::Parent,
                                     source_name: CapabilityName("routed_from_provider".to_string()),
                                     target_path: CapabilityPath::from_str("/data/from/provider").unwrap(),
-                                    rights: fio2::Operations::Connect,
+                                    rights: fio2::Operations::CONNECT,
                                     subdir: Some(PathBuf::from_str("user_subdir").unwrap()),
                                     dependency_type: DependencyType::Strong,
                                 }.into(),

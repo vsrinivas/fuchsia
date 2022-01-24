@@ -86,6 +86,6 @@ pub fn make_style_request(
     exact_style: bool,
 ) -> TypefaceRequest {
     let request_flags =
-        if exact_style { TypefaceRequestFlags::ExactStyle } else { TypefaceRequestFlags::empty() };
+        if exact_style { TypefaceRequestFlags::EXACT_STYLE } else { TypefaceRequestFlags::empty() };
     make_typeface_request(width, slant, weight, None, request_flags, None)
 }

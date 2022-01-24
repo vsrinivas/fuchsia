@@ -186,7 +186,7 @@ where
         let online = client
             .get_status()
             .await
-            .map(|s| s.contains(ethernet_worker::DeviceStatus::Online))
+            .map(|s| s.contains(ethernet_worker::DeviceStatus::ONLINE))
             .unwrap_or(false);
         let mac_addr = UnicastAddr::new(Mac::new(info.mac.octets))
             .ok_or(fidl_net_stack::Error::NotSupported)?;

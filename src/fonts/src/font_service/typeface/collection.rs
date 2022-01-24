@@ -210,7 +210,7 @@ mod tests {
             slant,
             weight,
             None,
-            TypefaceRequestFlags::ExactStyle,
+            TypefaceRequestFlags::EXACT_STYLE,
             None,
         )
     }

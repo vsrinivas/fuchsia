@@ -466,8 +466,8 @@ mod tests {
                     fidl_input::Key::CapsLock,
                     fidl_fuchsia_ui_input3::KeyEventType::Pressed,
                 )
-                .into_with_modifiers(Some(fidl_ui_input3::Modifiers::CapsLock))
-                .into_with_lock_state(Some(fidl_ui_input3::LockState::CapsLock)),
+                .into_with_modifiers(Some(fidl_ui_input3::Modifiers::CAPS_LOCK))
+                .into_with_lock_state(Some(fidl_ui_input3::LockState::CAPS_LOCK)),
                 &device_descriptor,
                 event_time_u64,
             ),
@@ -476,8 +476,8 @@ mod tests {
                     fidl_input::Key::A,
                     fidl_fuchsia_ui_input3::KeyEventType::Pressed,
                 )
-                .into_with_modifiers(Some(fidl_ui_input3::Modifiers::CapsLock))
-                .into_with_lock_state(Some(fidl_ui_input3::LockState::CapsLock)),
+                .into_with_modifiers(Some(fidl_ui_input3::Modifiers::CAPS_LOCK))
+                .into_with_lock_state(Some(fidl_ui_input3::LockState::CAPS_LOCK)),
                 &device_descriptor,
                 event_time_u64,
             ),
@@ -486,7 +486,7 @@ mod tests {
                     fidl_input::Key::CapsLock,
                     fidl_fuchsia_ui_input3::KeyEventType::Released,
                 )
-                .into_with_lock_state(Some(fidl_ui_input3::LockState::CapsLock)),
+                .into_with_lock_state(Some(fidl_ui_input3::LockState::CAPS_LOCK)),
                 &device_descriptor,
                 event_time_u64,
             ),
@@ -497,8 +497,8 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::CapsLock),
-                modifiers: Some(fidl_ui_input3::Modifiers::CapsLock),
-                lock_state: Some(fidl_ui_input3::LockState::CapsLock),
+                modifiers: Some(fidl_ui_input3::Modifiers::CAPS_LOCK),
+                lock_state: Some(fidl_ui_input3::LockState::CAPS_LOCK),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -506,8 +506,8 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::A),
-                modifiers: Some(fidl_ui_input3::Modifiers::CapsLock),
-                lock_state: Some(fidl_ui_input3::LockState::CapsLock),
+                modifiers: Some(fidl_ui_input3::Modifiers::CAPS_LOCK),
+                lock_state: Some(fidl_ui_input3::LockState::CAPS_LOCK),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(65)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -515,7 +515,7 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Released),
                 key: Some(fidl_input::Key::CapsLock),
-                lock_state: Some(fidl_ui_input3::LockState::CapsLock),
+                lock_state: Some(fidl_ui_input3::LockState::CAPS_LOCK),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -658,7 +658,7 @@ mod tests {
             create_unhandled_keyboard_event(
                 fidl_input::Key::LeftShift,
                 fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                Some(Modifiers::LeftShift | Modifiers::Shift),
+                Some(Modifiers::LEFT_SHIFT | Modifiers::SHIFT),
                 event_time_u64,
                 &device_descriptor,
                 /* keymap= */ None,
@@ -666,7 +666,7 @@ mod tests {
             create_unhandled_keyboard_event(
                 fidl_input::Key::RightShift,
                 fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                Some(Modifiers::LeftShift | Modifiers::RightShift | Modifiers::Shift),
+                Some(Modifiers::LEFT_SHIFT | Modifiers::RIGHT_SHIFT | Modifiers::SHIFT),
                 event_time_u64,
                 &device_descriptor,
                 /* keymap= */ None,
@@ -674,7 +674,7 @@ mod tests {
             create_unhandled_keyboard_event(
                 fidl_input::Key::A,
                 fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                Some(Modifiers::LeftShift | Modifiers::RightShift | Modifiers::Shift),
+                Some(Modifiers::LEFT_SHIFT | Modifiers::RIGHT_SHIFT | Modifiers::SHIFT),
                 event_time_u64,
                 &device_descriptor,
                 /* keymap= */ None,
@@ -686,7 +686,7 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::LeftShift),
-                modifiers: Some(Modifiers::LeftShift | Modifiers::Shift),
+                modifiers: Some(Modifiers::LEFT_SHIFT | Modifiers::SHIFT),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -694,7 +694,7 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::RightShift),
-                modifiers: Some(Modifiers::RightShift | Modifiers::LeftShift | Modifiers::Shift),
+                modifiers: Some(Modifiers::RIGHT_SHIFT | Modifiers::LEFT_SHIFT | Modifiers::SHIFT),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -702,7 +702,7 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::A),
-                modifiers: Some(Modifiers::RightShift | Modifiers::LeftShift | Modifiers::Shift),
+                modifiers: Some(Modifiers::RIGHT_SHIFT | Modifiers::LEFT_SHIFT | Modifiers::SHIFT),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(65)), // "A"
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },

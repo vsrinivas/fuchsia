@@ -220,14 +220,14 @@ fn main() {
                 name: Some("blobfs".to_string()),
                 source_path: Some("/volumes/blobfs".to_string()),
                 rights: Some(
-                    fio2::Operations::Connect
-                        | fio2::Operations::ReadBytes
-                        | fio2::Operations::WriteBytes
-                        | fio2::Operations::GetAttributes
-                        | fio2::Operations::UpdateAttributes
-                        | fio2::Operations::Enumerate
-                        | fio2::Operations::Traverse
-                        | fio2::Operations::ModifyDirectory,
+                    fio2::Operations::CONNECT
+                        | fio2::Operations::READ_BYTES
+                        | fio2::Operations::WRITE_BYTES
+                        | fio2::Operations::GET_ATTRIBUTES
+                        | fio2::Operations::UPDATE_ATTRIBUTES
+                        | fio2::Operations::ENUMERATE
+                        | fio2::Operations::TRAVERSE
+                        | fio2::Operations::MODIFY_DIRECTORY,
                 ),
                 ..Directory::EMPTY
             }),

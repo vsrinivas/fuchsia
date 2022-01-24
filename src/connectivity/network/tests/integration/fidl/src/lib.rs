@@ -208,10 +208,10 @@ async fn add_ethernet_interface<N: Netstack>(name: &str) {
         .find(|interface| interface.id == iface.id())
         .expect("find added ethernet interface");
     assert!(
-        !interface.properties.features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback),
+        !interface.properties.features.contains(fidl_fuchsia_hardware_ethernet::Features::LOOPBACK),
         "unexpected interface features: ({:b}).contains({:b})",
         interface.properties.features,
-        fidl_fuchsia_hardware_ethernet::Features::Loopback
+        fidl_fuchsia_hardware_ethernet::Features::LOOPBACK
     );
     assert_eq!(interface.properties.physical_status, fidl_fuchsia_net_stack::PhysicalStatus::Down);
 }

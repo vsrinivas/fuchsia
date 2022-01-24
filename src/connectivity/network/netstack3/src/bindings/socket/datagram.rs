@@ -1815,10 +1815,10 @@ where
             }
             // Shutting down a socket twice is valid so we can just blindly set
             // the corresponding flags.
-            if how.contains(fposix_socket::ShutdownMode::Write) {
+            if how.contains(fposix_socket::ShutdownMode::WRITE) {
                 *shutdown_write = true;
             }
-            if how.contains(fposix_socket::ShutdownMode::Read) {
+            if how.contains(fposix_socket::ShutdownMode::READ) {
                 *shutdown_read = true;
                 if let Err(e) = self
                     .get_state()
@@ -2730,7 +2730,7 @@ mod tests {
         let mut remote = A::create(A::REMOTE_ADDR, 300);
         assert_eq!(
             socket
-                .shutdown(fposix_socket::ShutdownMode::Write)
+                .shutdown(fposix_socket::ShutdownMode::WRITE)
                 .await
                 .unwrap()
                 .expect_err("should not shutdown an unconnected socket"),
@@ -2739,7 +2739,7 @@ mod tests {
         let () = socket.bind(&mut local).await.unwrap().expect("failed to bind");
         assert_eq!(
             socket
-                .shutdown(fposix_socket::ShutdownMode::Write)
+                .shutdown(fposix_socket::ShutdownMode::WRITE)
                 .await
                 .unwrap()
                 .expect_err("should not shutdown an unconnected socket"),
@@ -2758,7 +2758,7 @@ mod tests {
         // Cannot send
         let body = "Hello".as_bytes();
         let () = socket
-            .shutdown(fposix_socket::ShutdownMode::Write)
+            .shutdown(fposix_socket::ShutdownMode::WRITE)
             .await
             .unwrap()
             .expect("failed to shutdown");
@@ -2795,7 +2795,7 @@ mod tests {
         .detach();
 
         let () = socket
-            .shutdown(fposix_socket::ShutdownMode::Read)
+            .shutdown(fposix_socket::ShutdownMode::READ)
             .await
             .unwrap()
             .expect("failed to shutdown");
@@ -2812,17 +2812,17 @@ mod tests {
         );
 
         let () = socket
-            .shutdown(fposix_socket::ShutdownMode::Read)
+            .shutdown(fposix_socket::ShutdownMode::READ)
             .await
             .unwrap()
             .expect("failed to shutdown the socket twice");
         let () = socket
-            .shutdown(fposix_socket::ShutdownMode::Write)
+            .shutdown(fposix_socket::ShutdownMode::WRITE)
             .await
             .unwrap()
             .expect("failed to shutdown the socket twice");
         let () = socket
-            .shutdown(fposix_socket::ShutdownMode::Read | fposix_socket::ShutdownMode::Write)
+            .shutdown(fposix_socket::ShutdownMode::READ | fposix_socket::ShutdownMode::WRITE)
             .await
             .unwrap()
             .expect("failed to shutdown the socket twice");

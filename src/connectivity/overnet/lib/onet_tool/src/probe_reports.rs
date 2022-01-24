@@ -27,11 +27,11 @@ async fn probe(
     links: Option<&mut Vec<LinkDiagnosticInfo>>,
 ) -> Result<(), Error> {
     let probe_bits = ProbeSelector::empty()
-        | descriptions.as_ref().map_or(ProbeSelector::empty(), |_| ProbeSelector::NodeDescription)
+        | descriptions.as_ref().map_or(ProbeSelector::empty(), |_| ProbeSelector::NODE_DESCRIPTION)
         | peer_connections
             .as_ref()
-            .map_or(ProbeSelector::empty(), |_| ProbeSelector::PeerConnections)
-        | links.as_ref().map_or(ProbeSelector::empty(), |_| ProbeSelector::Links);
+            .map_or(ProbeSelector::empty(), |_| ProbeSelector::PEER_CONNECTIONS)
+        | links.as_ref().map_or(ProbeSelector::empty(), |_| ProbeSelector::LINKS);
     assert_ne!(probe_bits, ProbeSelector::empty());
 
     let descriptions = &Mutex::new(descriptions);

@@ -478,7 +478,7 @@ impl Repository {
 
         let mut packages = packages?;
 
-        if include_fields.intersects(ListFields::Components) {
+        if include_fields.intersects(ListFields::COMPONENTS) {
             for package in packages.iter_mut() {
                 match self.get_components_for_package(&trusted_targets, &package).await {
                     Ok(components) => package.entries = components,

@@ -51,10 +51,10 @@ impl SetUiFacade {
 
         match network_type {
             NetworkType::Ethernet => {
-                settings.enabled_configuration_interfaces = Some(ConfigurationInterfaces::Ethernet);
+                settings.enabled_configuration_interfaces = Some(ConfigurationInterfaces::ETHERNET);
             }
             NetworkType::Wifi => {
-                settings.enabled_configuration_interfaces = Some(ConfigurationInterfaces::Wifi);
+                settings.enabled_configuration_interfaces = Some(ConfigurationInterfaces::WIFI);
             }
             _ => return Err(format_err!("Network type must either be ethernet or wifi.")),
         }
@@ -76,8 +76,8 @@ impl SetUiFacade {
         };
         let setting = setup_service_proxy.watch().await?;
         match setting.enabled_configuration_interfaces {
-            Some(ConfigurationInterfaces::Ethernet) => Ok(to_value(NetworkType::Ethernet)?),
-            Some(ConfigurationInterfaces::Wifi) => Ok(to_value(NetworkType::Wifi)?),
+            Some(ConfigurationInterfaces::ETHERNET) => Ok(to_value(NetworkType::Ethernet)?),
+            Some(ConfigurationInterfaces::WIFI) => Ok(to_value(NetworkType::Wifi)?),
             _ => Ok(to_value(NetworkType::Unknown)?),
         }
     }
@@ -139,7 +139,7 @@ impl SetUiFacade {
                     .unwrap();
                 match device.state {
                     Some(state) => {
-                        muted = state.toggle_flags == Some(fsettings::ToggleStateFlags::Muted);
+                        muted = state.toggle_flags == Some(fsettings::ToggleStateFlags::MUTED);
                     }
                     _ => (),
                 }
@@ -253,7 +253,7 @@ impl SetUiFacade {
             name: Some(mic_device_name.to_string()),
             device_type: Some(fsettings::DeviceType::Microphone),
             state: Some(DeviceState {
-                toggle_flags: Some(fsettings::ToggleStateFlags::Available),
+                toggle_flags: Some(fsettings::ToggleStateFlags::AVAILABLE),
                 ..DeviceState::EMPTY
             }),
             ..InputState::EMPTY
@@ -262,7 +262,7 @@ impl SetUiFacade {
         // Change DeviceState if microphone should be muted- dependent on input enum.
         if mute_mic {
             input_states.state = Some(DeviceState {
-                toggle_flags: Some(fsettings::ToggleStateFlags::Muted),
+                toggle_flags: Some(fsettings::ToggleStateFlags::MUTED),
                 ..DeviceState::EMPTY
             });
         }
@@ -420,7 +420,7 @@ mod tests {
                         source_states: None,
                         mutable_toggle_state: None,
                         state: Some(DeviceState {
-                            toggle_flags: Some(fsettings::ToggleStateFlags::Available),
+                            toggle_flags: Some(fsettings::ToggleStateFlags::AVAILABLE),
                             ..DeviceState::EMPTY
                         }),
                         unknown_data: None,
@@ -443,7 +443,7 @@ mod tests {
                             name: Some("microphone".to_string()),
                             device_type: Some(fsettings::DeviceType::Microphone),
                             state: Some(DeviceState {
-                                toggle_flags: Some(fsettings::ToggleStateFlags::Muted),
+                                toggle_flags: Some(fsettings::ToggleStateFlags::MUTED),
                                 ..DeviceState::EMPTY
                             }),
                             ..InputState::EMPTY
@@ -484,7 +484,7 @@ mod tests {
                         source_states: None,
                         mutable_toggle_state: None,
                         state: Some(DeviceState {
-                            toggle_flags: Some(fsettings::ToggleStateFlags::Muted),
+                            toggle_flags: Some(fsettings::ToggleStateFlags::MUTED),
                             ..DeviceState::EMPTY
                         }),
                         unknown_data: None,
@@ -533,7 +533,7 @@ mod tests {
                         source_states: None,
                         mutable_toggle_state: None,
                         state: Some(DeviceState {
-                            toggle_flags: Some(fsettings::ToggleStateFlags::Muted),
+                            toggle_flags: Some(fsettings::ToggleStateFlags::MUTED),
                             ..DeviceState::EMPTY
                         }),
                         unknown_data: None,

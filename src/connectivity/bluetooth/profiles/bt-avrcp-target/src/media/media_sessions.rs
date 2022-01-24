@@ -222,7 +222,7 @@ impl MediaSessionsInner {
             |state| {
                 Ok(vec![fidl_avrcp::MediaPlayerItem {
                     player_id: Some(MEDIA_SESSION_ADDRESSED_PLAYER_ID),
-                    major_type: Some(fidl_avrcp::MajorPlayerType::Audio),
+                    major_type: Some(fidl_avrcp::MajorPlayerType::AUDIO),
                     sub_type: Some(fidl_avrcp::PlayerSubType::empty()),
                     playback_status: Some(
                         state.session_info().get_play_status().get_playback_status(),
@@ -1083,7 +1083,7 @@ pub(crate) mod tests {
         let res = sessions.get_media_player_items();
         let expected = vec![fidl_avrcp::MediaPlayerItem {
             player_id: Some(MEDIA_SESSION_ADDRESSED_PLAYER_ID),
-            major_type: Some(fidl_avrcp::MajorPlayerType::Audio),
+            major_type: Some(fidl_avrcp::MajorPlayerType::AUDIO),
             sub_type: Some(fidl_avrcp::PlayerSubType::empty()),
             playback_status: Some(fidl_avrcp::PlaybackStatus::Stopped),
             displayable_name: Some(MEDIA_SESSION_DISPLAYABLE_NAME.to_string()),

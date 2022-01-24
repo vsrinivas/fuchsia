@@ -340,7 +340,7 @@ async fn can_receive_deltas() -> Result<()> {
     player2
         .emit_delta(PlayerInfoDelta {
             player_capabilities: Some(PlayerCapabilities {
-                flags: Some(PlayerCapabilityFlags::Play),
+                flags: Some(PlayerCapabilityFlags::PLAY),
                 ..PlayerCapabilities::EMPTY
             }),
             ..Decodable::new_empty()
@@ -351,7 +351,7 @@ async fn can_receive_deltas() -> Result<()> {
     assert_eq!(
         delta.player_capabilities,
         Some(PlayerCapabilities {
-            flags: Some(PlayerCapabilityFlags::Play),
+            flags: Some(PlayerCapabilityFlags::PLAY),
             ..PlayerCapabilities::EMPTY
         })
     );
@@ -359,7 +359,7 @@ async fn can_receive_deltas() -> Result<()> {
     player1
         .emit_delta(PlayerInfoDelta {
             player_capabilities: Some(PlayerCapabilities {
-                flags: Some(PlayerCapabilityFlags::Pause),
+                flags: Some(PlayerCapabilityFlags::PAUSE),
                 ..PlayerCapabilities::EMPTY
             }),
             ..Decodable::new_empty()
@@ -370,7 +370,7 @@ async fn can_receive_deltas() -> Result<()> {
     assert_eq!(
         delta.player_capabilities,
         Some(PlayerCapabilities {
-            flags: Some(PlayerCapabilityFlags::Pause),
+            flags: Some(PlayerCapabilityFlags::PAUSE),
             ..PlayerCapabilities::EMPTY
         })
     );
@@ -595,7 +595,7 @@ async fn player_capabilities() -> Result<()> {
     let mut player = TestPlayer::new(&service).await?;
 
     let expected_player_capabilities = || PlayerCapabilities {
-        flags: Some(PlayerCapabilityFlags::Pause | PlayerCapabilityFlags::SkipForward),
+        flags: Some(PlayerCapabilityFlags::PAUSE | PlayerCapabilityFlags::SKIP_FORWARD),
         ..PlayerCapabilities::EMPTY
     };
 

@@ -27,8 +27,14 @@ use {
 
 bitflags! {
     pub struct MyBits: u32 {
+        const MY_FIRST_BIT = 1;
+        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to MY_FIRST_BIT"]
         const MyFirstBit = 1;
+        const MY_OTHER_BIT = 2;
+        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to MY_OTHER_BIT"]
         const MyOtherBit = 2;
+        const MASK = 4;
+        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to MASK"]
         const Mask = 4;
     }
 }
@@ -55,7 +61,11 @@ fidl_bits! {
 
 bitflags! {
     pub struct StrictBits: u64 {
+        const SMALLEST = 1;
+        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to SMALLEST"]
         const Smallest = 1;
+        const BIGGEST = 9223372036854775808;
+        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to BIGGEST"]
         const Biggest = 9223372036854775808;
     }
 }
@@ -82,7 +92,11 @@ fidl_bits! {
 
 bitflags! {
     pub struct FlexibleBits: u64 {
+        const SMALLEST = 1;
+        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to SMALLEST"]
         const Smallest = 1;
+        const BIGGEST = 9223372036854775808;
+        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to BIGGEST"]
         const Biggest = 9223372036854775808;
     }
 }

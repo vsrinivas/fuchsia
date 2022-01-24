@@ -100,10 +100,10 @@ impl AvrcpRelay {
             local: Some(true),
             player_capabilities: Some(sessions2::PlayerCapabilities {
                 flags: Some(
-                    sessions2::PlayerCapabilityFlags::Play
-                        | sessions2::PlayerCapabilityFlags::Pause
-                        | sessions2::PlayerCapabilityFlags::ChangeToNextItem
-                        | sessions2::PlayerCapabilityFlags::ChangeToPrevItem,
+                    sessions2::PlayerCapabilityFlags::PLAY
+                        | sessions2::PlayerCapabilityFlags::PAUSE
+                        | sessions2::PlayerCapabilityFlags::CHANGE_TO_NEXT_ITEM
+                        | sessions2::PlayerCapabilityFlags::CHANGE_TO_PREV_ITEM,
                 ),
                 ..sessions2::PlayerCapabilities::EMPTY
             }),
@@ -300,9 +300,9 @@ async fn connect_avrcp(
     let _ = avrcp.get_controller_for_target(&mut peer_id.into(), server).await?;
 
     controller.set_notification_filter(
-        avrcp::Notifications::PlaybackStatus
-            | avrcp::Notifications::Track
-            | avrcp::Notifications::Connection,
+        avrcp::Notifications::PLAYBACK_STATUS
+            | avrcp::Notifications::TRACK
+            | avrcp::Notifications::CONNECTION,
         0,
     )?;
 

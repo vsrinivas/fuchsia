@@ -631,7 +631,7 @@ mod test {
 
         let delta = PlayerInfoDelta {
             player_capabilities: Some(PlayerCapabilities {
-                flags: Some(PlayerCapabilityFlags::Play | PlayerCapabilityFlags::Pause),
+                flags: Some(PlayerCapabilityFlags::PLAY | PlayerCapabilityFlags::PAUSE),
                 ..PlayerCapabilities::EMPTY
             }),
             ..Decodable::new_empty()
@@ -652,7 +652,7 @@ mod test {
         let _ = player.next().await.expect("Polling player event");
 
         assert_data_tree!(inspector, root: {
-            test_player: {state: { player_capabilities: "ValidPlayerCapabilities { flags: Play | Pause }"}}
+            test_player: {state: { player_capabilities: "ValidPlayerCapabilities { flags: PLAY | Play | PAUSE | Pause }"}}
         });
 
         Ok(())

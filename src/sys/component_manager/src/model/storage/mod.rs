@@ -440,7 +440,7 @@ mod tests {
                         source: ExposeSource::Self_,
                         target_name: "data".try_into().unwrap(),
                         target: ExposeTarget::Parent,
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                     }))
                     .build(),
@@ -527,7 +527,7 @@ mod tests {
                         source: ExposeSource::Self_,
                         target_name: "data".try_into().unwrap(),
                         target: ExposeTarget::Parent,
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                     }))
                     .build(),
@@ -649,7 +649,7 @@ mod tests {
                         source: ExposeSource::Self_,
                         target_name: "data".try_into().unwrap(),
                         target: ExposeTarget::Parent,
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                     }))
                     .build(),
@@ -775,7 +775,7 @@ mod tests {
                         source: ExposeSource::Self_,
                         target_name: "data".try_into().unwrap(),
                         target: ExposeTarget::Parent,
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         subdir: None,
                     }))
                     .build(),

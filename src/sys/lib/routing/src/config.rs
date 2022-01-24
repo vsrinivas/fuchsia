@@ -757,7 +757,7 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("bar_dir".into()),
                         source_path: Some("/bar".into()),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: Some(fio2::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                 ]),
@@ -864,7 +864,7 @@ mod tests {
                     cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
                         name: "bar_dir".into(),
                         source_path: Some("/bar".parse().unwrap()),
-                        rights: fio2::Operations::Connect,
+                        rights: fio2::Operations::CONNECT,
                     }),
                 ],
                 builtin_capabilities: vec![

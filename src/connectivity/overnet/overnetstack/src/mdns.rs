@@ -28,7 +28,7 @@ async fn connect_to_proxy(
         .publish_service_instance(
             SERVICE_NAME,
             &format!("{:?}", node_id.0),
-            Media::Wired | Media::Wireless,
+            Media::WIRED | Media::WIRELESS,
             true,
             fidl::endpoints::ClientEnd::new(proxy),
         )

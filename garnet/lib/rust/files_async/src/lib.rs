@@ -330,7 +330,7 @@ pub async fn remove_dir_recursive(root_dir: &DirectoryProxy, name: &str) -> Resu
     root_dir
         .unlink(
             name,
-            UnlinkOptions { flags: Some(UnlinkFlags::MustBeDirectory), ..UnlinkOptions::EMPTY },
+            UnlinkOptions { flags: Some(UnlinkFlags::MUST_BE_DIRECTORY), ..UnlinkOptions::EMPTY },
         )
         .await
         .map_err(|e| Error::Fidl("unlink", e))?

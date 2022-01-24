@@ -265,7 +265,7 @@ async fn test_theme_type_light_theme_mode_empty() {
 async fn test_no_theme_set() {
     let expected_theme = Some(FidlTheme {
         theme_type: Some(FidlThemeType::Light),
-        theme_mode: Some(FidlThemeMode::Auto),
+        theme_mode: Some(FidlThemeMode::AUTO),
         ..FidlTheme::EMPTY
     });
     let display_proxy = setup_display_env().await;
@@ -277,7 +277,7 @@ async fn test_no_theme_set() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_theme_mode_auto() {
     let incoming_theme =
-        Some(FidlTheme { theme_mode: Some(FidlThemeMode::Auto), ..FidlTheme::EMPTY });
+        Some(FidlTheme { theme_mode: Some(FidlThemeMode::AUTO), ..FidlTheme::EMPTY });
     let expected_theme = Some(FidlTheme {
         theme_type: Some(FidlThemeType::Light),
         ..incoming_theme.clone().unwrap()
@@ -296,7 +296,7 @@ async fn test_theme_mode_auto() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_theme_mode_auto_and_type_light() {
     let incoming_theme = Some(FidlTheme {
-        theme_mode: Some(FidlThemeMode::Auto),
+        theme_mode: Some(FidlThemeMode::AUTO),
         theme_type: Some(FidlThemeType::Light),
         ..FidlTheme::EMPTY
     });
@@ -317,9 +317,9 @@ async fn test_theme_mode_auto_preserves_previous_type() {
     let first_incoming_theme =
         Some(FidlTheme { theme_type: Some(FidlThemeType::Light), ..FidlTheme::EMPTY });
     let second_incoming_theme =
-        Some(FidlTheme { theme_mode: Some(FidlThemeMode::Auto), ..FidlTheme::EMPTY });
+        Some(FidlTheme { theme_mode: Some(FidlThemeMode::AUTO), ..FidlTheme::EMPTY });
     let expected_theme = Some(FidlTheme {
-        theme_mode: Some(FidlThemeMode::Auto),
+        theme_mode: Some(FidlThemeMode::AUTO),
         theme_type: Some(FidlThemeType::Light),
         ..FidlTheme::EMPTY
     });
@@ -683,7 +683,7 @@ async fn test_set_multiple_fields_brightness(
                 low_light_mode: Some(FidlLowLightMode::Disable),
                 theme: Some(FidlTheme {
                     theme_type: Some(FidlThemeType::Light),
-                    theme_mode: Some(FidlThemeMode::Auto),
+                    theme_mode: Some(FidlThemeMode::AUTO),
                     ..FidlTheme::EMPTY
                 }),
                 ..DisplaySettings::EMPTY

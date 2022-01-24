@@ -187,7 +187,7 @@ async fn test_disconnecting_keyboard_client_disconnects_listener_with_connection
     assert_matches!(listener.is_terminated(), true);
 
     // Ensure that the other client is still connected.
-    let (key, modifiers) = (input::Key::A, ui_input3::Modifiers::CapsLock);
+    let (key, modifiers) = (input::Key::A, ui_input3::Modifiers::CAPS_LOCK);
     let dispatched_event = create_key_down_event(key, modifiers);
 
     let (was_handled, _) = future::join(

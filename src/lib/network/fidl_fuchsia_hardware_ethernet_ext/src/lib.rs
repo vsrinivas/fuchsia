@@ -70,11 +70,11 @@ impl std::str::FromStr for MacAddress {
 }
 
 pub fn is_wlan(features: fidl::Features) -> bool {
-    features.intersects(fidl::Features::Wlan)
+    features.intersects(fidl::Features::WLAN)
 }
 
 pub fn is_physical(features: fidl::Features) -> bool {
-    !features.intersects(fidl::Features::Synthetic | fidl::Features::Loopback)
+    !features.intersects(fidl::Features::SYNTHETIC | fidl::Features::LOOPBACK)
 }
 
 /// Information retrieved about an Ethernet device.

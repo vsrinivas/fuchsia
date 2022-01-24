@@ -44,7 +44,7 @@ pub fn list_peers() -> impl Stream<Item = Result<NodeId, Error>> {
                             // This async block returns Ok(()) if there is more work to do, and Err(()) if no new work is detected.
                             // The outer select_ok will return Ok(()) if *any* child returns Ok(()), and Err(()) if *all* children return Err(()).
                             log::trace!("check for new peers with {}", id);
-                            match probe_node(NodeId { id }, Selector::Links).on_timeout(Duration::from_secs(5), || Err(format_err!("timeout waiting for diagnostic probe"))). await {
+                            match probe_node(NodeId { id }, Selector::LINKS).on_timeout(Duration::from_secs(5), || Err(format_err!("timeout waiting for diagnostic probe"))). await {
                                 Ok(links) => {
                                     for link in links.links.unwrap_or_else(Vec::new) {
                                         if let Some(destination) = link.destination {

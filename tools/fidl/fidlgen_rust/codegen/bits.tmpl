@@ -15,6 +15,14 @@ bitflags! {
 		///{{ . }}
 		{{- end}}
 		const {{ .Name }} = {{ .Value }};
+
+		{{- if ne .Name .LegacyName }}
+		{{- range .DocComments}}
+		///{{ . }}
+		{{- end}}
+		#[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to {{ .Name }}"]
+		const {{ .LegacyName }} = {{ .Value }};
+		{{- end }}
 		{{- end }}
 	}
 }

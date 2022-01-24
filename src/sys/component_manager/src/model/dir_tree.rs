@@ -196,7 +196,7 @@ mod tests {
                     source: UseSource::Parent,
                     source_name: "baz-dir".into(),
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
-                    rights: fio2::Operations::Connect,
+                    rights: fio2::Operations::CONNECT,
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }),
@@ -269,7 +269,7 @@ mod tests {
                     source_name: "baz-dir".into(),
                     target_name: "hippo-dir".into(),
                     target: ExposeTarget::Parent,
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(fio2::Operations::CONNECT),
                     subdir: None,
                 }),
                 ExposeDecl::Directory(ExposeDirectoryDecl {
@@ -277,7 +277,7 @@ mod tests {
                     source_name: "foo-dir".into(),
                     target_name: "bar-dir".into(),
                     target: ExposeTarget::Parent,
-                    rights: Some(fio2::Operations::Connect),
+                    rights: Some(fio2::Operations::CONNECT),
                     subdir: None,
                 }),
                 ExposeDecl::Protocol(ExposeProtocolDecl {
