@@ -13,10 +13,12 @@
 namespace blobfs {
 
 // ensure inline request/response are the same sizes to fit in a FIFO
-static_assert(fuchsia_blobfs_internal::wire::DecompressRequest::PrimarySize ==
-              fuchsia_blobfs_internal::wire::DecompressResponse::PrimarySize);
-static_assert(fuchsia_blobfs_internal::wire::DecompressRequest::MaxOutOfLine == 0);
-static_assert(fuchsia_blobfs_internal::wire::DecompressResponse::MaxOutOfLine == 0);
+static_assert(fidl::TypeTraits<fuchsia_blobfs_internal::wire::DecompressRequest>::kPrimarySize ==
+              fidl::TypeTraits<fuchsia_blobfs_internal::wire::DecompressResponse>::kPrimarySize);
+static_assert(fidl::TypeTraits<fuchsia_blobfs_internal::wire::DecompressRequest>::kMaxOutOfLine ==
+              0);
+static_assert(fidl::TypeTraits<fuchsia_blobfs_internal::wire::DecompressResponse>::kMaxOutOfLine ==
+              0);
 
 class DecompressorImpl : public fuchsia::blobfs::internal::DecompressorCreator {
  public:

@@ -318,10 +318,10 @@ fidl::WireSyncEventHandler<::test_emptystruct::EmptyProtocol>::HandleOneEvent(
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::WireResponse<
-            ::test_emptystruct::EmptyProtocol::Receive>::MaxNumHandles >= x) {
-      x = ::fidl::WireResponse<
-          ::test_emptystruct::EmptyProtocol::Receive>::MaxNumHandles;
+    if (::fidl::TypeTraits<::fidl::WireResponse<
+            ::test_emptystruct::EmptyProtocol::Receive>>::kMaxNumHandles >= x) {
+      x = ::fidl::TypeTraits<::fidl::WireResponse<
+          ::test_emptystruct::EmptyProtocol::Receive>>::kMaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
       x = ZX_CHANNEL_MAX_MSG_HANDLES;

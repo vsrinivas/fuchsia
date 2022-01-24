@@ -125,15 +125,6 @@ class TableWithAttributes final {
   TableWithAttributes& operator=(TableWithAttributes&& other) noexcept =
       default;
 
-  static constexpr const fidl_type_t* Type =
-      &test_table_TableWithAttributesTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t MaxOutOfLineV1 = 24;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
@@ -279,14 +270,6 @@ class SimpleTable final {
   SimpleTable& operator=(const SimpleTable& other) noexcept = default;
   SimpleTable(SimpleTable&& other) noexcept = default;
   SimpleTable& operator=(SimpleTable&& other) noexcept = default;
-
-  static constexpr const fidl_type_t* Type = &test_table_SimpleTableTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 56;
-  static constexpr uint32_t MaxOutOfLineV1 = 96;
-  static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -468,15 +451,6 @@ class ReverseOrdinalTable final {
   ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other) noexcept =
       default;
 
-  static constexpr const fidl_type_t* Type =
-      &test_table_ReverseOrdinalTableTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 48;
-  static constexpr uint32_t MaxOutOfLineV1 = 72;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
@@ -584,14 +558,6 @@ class OlderSimpleTable final {
   OlderSimpleTable& operator=(const OlderSimpleTable& other) noexcept = default;
   OlderSimpleTable(OlderSimpleTable&& other) noexcept = default;
   OlderSimpleTable& operator=(OlderSimpleTable&& other) noexcept = default;
-
-  static constexpr const fidl_type_t* Type = &test_table_OlderSimpleTableTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t MaxOutOfLineV1 = 24;
-  static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -776,14 +742,6 @@ class NewerSimpleTable final {
   NewerSimpleTable(NewerSimpleTable&& other) noexcept = default;
   NewerSimpleTable& operator=(NewerSimpleTable&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &test_table_NewerSimpleTableTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 72;
-  static constexpr uint32_t MaxOutOfLineV1 = 120;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
@@ -854,14 +812,6 @@ class ExtensionTable final {
   ExtensionTable& operator=(const ExtensionTable& other) noexcept = default;
   ExtensionTable(ExtensionTable&& other) noexcept = default;
   ExtensionTable& operator=(ExtensionTable&& other) noexcept = default;
-
-  static constexpr const fidl_type_t* Type = &test_table_ExtensionTableTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -3369,15 +3319,6 @@ class SixtyFourOrdinalTable final {
   SixtyFourOrdinalTable& operator=(SixtyFourOrdinalTable&& other) noexcept =
       default;
 
-  static constexpr const fidl_type_t* Type =
-      &test_table_SixtyFourOrdinalTableTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 1032;
-  static constexpr uint32_t MaxOutOfLineV1 = 1544;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
@@ -3449,14 +3390,6 @@ class EmptyTable final {
   EmptyTable(EmptyTable&& other) noexcept = default;
   EmptyTable& operator=(EmptyTable&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &test_table_EmptyTableTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
@@ -3484,6 +3417,18 @@ class EmptyTable final {
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_table::wire::TableWithAttributes> {
+  static constexpr const fidl_type_t* kType =
+      &::test_table::wire::test_table_TableWithAttributesTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_table::wire::TableWithAttributes>
     : public std::true_type {};
 template <>
@@ -3493,10 +3438,34 @@ static_assert(
     std::is_standard_layout_v<::test_table::wire::TableWithAttributes>);
 
 template <>
+struct TypeTraits<::test_table::wire::SimpleTable> {
+  static constexpr const fidl_type_t* kType =
+      &::test_table::wire::test_table_SimpleTableTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 56;
+  static constexpr uint32_t kMaxOutOfLineV1 = 96;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_table::wire::SimpleTable> : public std::true_type {};
 template <>
 struct IsTable<::test_table::wire::SimpleTable> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_table::wire::SimpleTable>);
+
+template <>
+struct TypeTraits<::test_table::wire::ReverseOrdinalTable> {
+  static constexpr const fidl_type_t* kType =
+      &::test_table::wire::test_table_ReverseOrdinalTableTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 48;
+  static constexpr uint32_t kMaxOutOfLineV1 = 72;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_table::wire::ReverseOrdinalTable>
@@ -3508,11 +3477,35 @@ static_assert(
     std::is_standard_layout_v<::test_table::wire::ReverseOrdinalTable>);
 
 template <>
+struct TypeTraits<::test_table::wire::OlderSimpleTable> {
+  static constexpr const fidl_type_t* kType =
+      &::test_table::wire::test_table_OlderSimpleTableTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_table::wire::OlderSimpleTable>
     : public std::true_type {};
 template <>
 struct IsTable<::test_table::wire::OlderSimpleTable> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_table::wire::OlderSimpleTable>);
+
+template <>
+struct TypeTraits<::test_table::wire::NewerSimpleTable> {
+  static constexpr const fidl_type_t* kType =
+      &::test_table::wire::test_table_NewerSimpleTableTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 72;
+  static constexpr uint32_t kMaxOutOfLineV1 = 120;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_table::wire::NewerSimpleTable>
@@ -3522,11 +3515,35 @@ struct IsTable<::test_table::wire::NewerSimpleTable> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_table::wire::NewerSimpleTable>);
 
 template <>
+struct TypeTraits<::test_table::wire::ExtensionTable> {
+  static constexpr const fidl_type_t* kType =
+      &::test_table::wire::test_table_ExtensionTableTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_table::wire::ExtensionTable> : public std::true_type {
 };
 template <>
 struct IsTable<::test_table::wire::ExtensionTable> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_table::wire::ExtensionTable>);
+
+template <>
+struct TypeTraits<::test_table::wire::SixtyFourOrdinalTable> {
+  static constexpr const fidl_type_t* kType =
+      &::test_table::wire::test_table_SixtyFourOrdinalTableTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 1032;
+  static constexpr uint32_t kMaxOutOfLineV1 = 1544;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_table::wire::SixtyFourOrdinalTable>
@@ -3536,6 +3553,18 @@ struct IsTable<::test_table::wire::SixtyFourOrdinalTable>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::test_table::wire::SixtyFourOrdinalTable>);
+
+template <>
+struct TypeTraits<::test_table::wire::EmptyTable> {
+  static constexpr const fidl_type_t* kType =
+      &::test_table::wire::test_table_EmptyTableTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_table::wire::EmptyTable> : public std::true_type {};

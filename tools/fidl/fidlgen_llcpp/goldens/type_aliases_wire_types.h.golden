@@ -34,15 +34,6 @@ struct ExampleOfUseOfAliases;
 extern "C" const fidl_type_t test_typealiases_ExampleOfUseOfAliasesTable;
 
 struct ExampleOfUseOfAliases {
-  static constexpr const fidl_type_t* Type =
-      &test_typealiases_ExampleOfUseOfAliasesTable;
-  static constexpr uint32_t MaxNumHandles = 3;
-  static constexpr uint32_t PrimarySize = 88;
-  static constexpr uint32_t PrimarySizeV1 = 88;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   uint32_t field_of_u32 = {};
 
   ::fidl::VectorView<::fidl::StringView> field_of_vec_of_strings = {};
@@ -77,6 +68,19 @@ namespace fidl {
 template <>
 struct IsResource<::test_typealiases::wire::ExampleOfUseOfAliases>
     : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_typealiases::wire::ExampleOfUseOfAliases> {
+  static constexpr const fidl_type_t* kType =
+      &::test_typealiases::wire::test_typealiases_ExampleOfUseOfAliasesTable;
+  static constexpr uint32_t kMaxNumHandles = 3;
+  static constexpr uint32_t kPrimarySize = 88;
+  static constexpr uint32_t kPrimarySizeV1 = 88;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsFidlType<::test_typealiases::wire::ExampleOfUseOfAliases>
     : public std::true_type {};
@@ -101,8 +105,9 @@ static_assert(offsetof(::test_typealiases::wire::ExampleOfUseOfAliases,
                        field_of_client_end) == 76);
 static_assert(offsetof(::test_typealiases::wire::ExampleOfUseOfAliases,
                        field_of_nullable_client_end) == 80);
-static_assert(sizeof(::test_typealiases::wire::ExampleOfUseOfAliases) ==
-              ::test_typealiases::wire::ExampleOfUseOfAliases::PrimarySize);
+static_assert(
+    sizeof(::test_typealiases::wire::ExampleOfUseOfAliases) ==
+    TypeTraits<::test_typealiases::wire::ExampleOfUseOfAliases>::kPrimarySize);
 #endif  // __Fuchsia__
 
 }  // namespace fidl

@@ -14,9 +14,9 @@ namespace pci {
 
 // We need size both for the final serialized Device, as well as the out of line space used before
 // everything is serialized.
-constexpr size_t kAllocatorSize =
-    (PciFidl::wire::Device::PrimarySize + (PciFidl::wire::Device::MaxOutOfLine * 2)) *
-    PciFidl::wire::kMaxDevices;
+constexpr size_t kAllocatorSize = (fidl::TypeTraits<PciFidl::wire::Device>::kPrimarySize +
+                                   (fidl::TypeTraits<PciFidl::wire::Device>::kMaxOutOfLine * 2)) *
+                                  PciFidl::wire::kMaxDevices;
 
 static_assert(PciFidl::wire::kBaseConfigSize == PCI_BASE_CONFIG_SIZE);
 

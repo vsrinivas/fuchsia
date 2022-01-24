@@ -90,19 +90,6 @@ struct ::fidl::WireRequest<
     _InitHeader();
   }
   WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType = ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>;
 
@@ -129,19 +116,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasFlexibleEnvelope = true;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -164,19 +138,6 @@ struct ::fidl::WireRequest<
     _InitHeader();
   }
   WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasFlexibleEnvelope = true;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType = ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>;
 
@@ -203,19 +164,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -225,8 +173,161 @@ struct ::fidl::WireResponse<
  private:
   void _InitHeader();
 };
-#ifdef __Fuchsia__
 
+namespace fidl {
+
+template <>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_requestflexibleenvelope::
+          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
+                                   RequestStrictResponseFlexible>) ==
+    TypeTraits<
+        ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
+                                RequestStrictResponseFlexible>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
+                                     RequestStrictResponseFlexible>,
+             s) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_requestflexibleenvelope::
+          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(
+    sizeof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                    RequestStrictResponseFlexible>) ==
+    TypeTraits<
+        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                 RequestStrictResponseFlexible>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                      RequestStrictResponseFlexible>,
+             f) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_requestflexibleenvelope::
+          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
+                                   RequestFlexibleResponseStrict>) ==
+    TypeTraits<
+        ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
+                                RequestFlexibleResponseStrict>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
+                                     RequestFlexibleResponseStrict>,
+             s) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_requestflexibleenvelope::
+          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(
+    sizeof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                    RequestFlexibleResponseStrict>) ==
+    TypeTraits<
+        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                 RequestFlexibleResponseStrict>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                      RequestFlexibleResponseStrict>,
+             f) == 16);
+
+}  // namespace fidl
+namespace test_requestflexibleenvelope {
+#ifdef __Fuchsia__
+}  // namespace test_requestflexibleenvelope
 template <>
 class ::fidl::WireResult<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
@@ -801,81 +902,11 @@ class ::fidl::WireServer<::test_requestflexibleenvelope::Protocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
+namespace test_requestflexibleenvelope {
 #endif  // __Fuchsia__
 
+}  // namespace test_requestflexibleenvelope
 namespace fidl {
-
-template <>
-struct IsFidlType<::fidl::WireRequest<
-    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireRequest<
-    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                                   RequestStrictResponseFlexible>) ==
-    ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                            RequestStrictResponseFlexible>::PrimarySize);
-static_assert(
-    offsetof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                                     RequestStrictResponseFlexible>,
-             s) == 16);
-
-template <>
-struct IsFidlType<::fidl::WireResponse<
-    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireResponse<
-    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                    RequestStrictResponseFlexible>) ==
-    ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                             RequestStrictResponseFlexible>::PrimarySize);
-static_assert(
-    offsetof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                      RequestStrictResponseFlexible>,
-             f) == 16);
-
-template <>
-struct IsFidlType<::fidl::WireRequest<
-    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireRequest<
-    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                                   RequestFlexibleResponseStrict>) ==
-    ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                            RequestFlexibleResponseStrict>::PrimarySize);
-static_assert(
-    offsetof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                                     RequestFlexibleResponseStrict>,
-             s) == 16);
-
-template <>
-struct IsFidlType<::fidl::WireResponse<
-    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireResponse<
-    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                    RequestFlexibleResponseStrict>) ==
-    ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                             RequestFlexibleResponseStrict>::PrimarySize);
-static_assert(
-    offsetof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                      RequestFlexibleResponseStrict>,
-             f) == 16);
 
 #ifdef __Fuchsia__
 }  // namespace fidl

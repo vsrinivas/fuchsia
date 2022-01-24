@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/fit/nullable.h>
 #include <lib/stdcompat/span.h>
@@ -170,7 +171,7 @@ class OutgoingMessage : public ::fidl::Result {
   template <typename FidlType>
   void Encode(FidlType* data) {
     is_transactional_ = fidl::IsFidlMessage<FidlType>::value;
-    EncodeImpl(FidlType::Type, data);
+    EncodeImpl(fidl::TypeTraits<FidlType>::kType, data);
   }
 
   // Various helper functions for writing to other channel-like types.
@@ -192,8 +193,8 @@ class OutgoingMessage : public ::fidl::Result {
     typename internal::AssociatedTransport<TransportObject>::HandleMetadata
         result_handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
     CallImplForCallerProvidedBuffer(
-        internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)), FidlType::Type,
-        result_bytes, result_byte_capacity, result_handles,
+        internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
+        fidl::TypeTraits<FidlType>::kType, result_bytes, result_byte_capacity, result_handles,
         reinterpret_cast<fidl_handle_metadata_t*>(result_handle_metadata),
         ZX_CHANNEL_MAX_MSG_HANDLES, std::move(options));
   }
@@ -204,8 +205,8 @@ class OutgoingMessage : public ::fidl::Result {
   void Call(TransportObject&& transport, uint8_t** out_bytes, uint32_t* out_num_bytes,
             CallOptions options = {}) {
     CallImplForTransportProvidedBuffer(
-        internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)), FidlType::Type,
-        out_bytes, out_num_bytes, std::move(options));
+        internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
+        fidl::TypeTraits<FidlType>::kType, out_bytes, out_num_bytes, std::move(options));
   }
 
   bool is_transactional() const { return is_transactional_; }
@@ -475,7 +476,7 @@ class IncomingMessage : public ::fidl::Result {
   template <typename FidlType>
   void Decode(std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
     ZX_ASSERT(is_transactional_);
-    Decode(FidlType::Type, out_transformed_buffer);
+    Decode(fidl::TypeTraits<FidlType>::kType, out_transformed_buffer);
   }
 
   // Decodes the message using |FidlType| for the specified |wire_format_version|. If this
@@ -488,7 +489,7 @@ class IncomingMessage : public ::fidl::Result {
   void Decode(internal::WireFormatVersion wire_format_version,
               std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
     ZX_ASSERT(!is_transactional_);
-    Decode(wire_format_version, FidlType::Type, out_transformed_buffer);
+    Decode(wire_format_version, fidl::TypeTraits<FidlType>::kType, out_transformed_buffer);
   }
 
   // Release the handle ownership after the message has been converted to its
@@ -729,8 +730,9 @@ class DecodedMessage;
 
 // Specialization for transactional messages.
 template <typename FidlType, typename Transport>
-class DecodedMessage<FidlType, Transport, std::void_t<decltype(FidlType::MessageKind)>> final
-    : public ::fidl::internal::DecodedMessageBase<FidlType> {
+class DecodedMessage<FidlType, Transport,
+                     std::void_t<decltype(fidl::TypeTraits<FidlType>::kMessageKind)>>
+    final : public ::fidl::internal::DecodedMessageBase<FidlType> {
   using Base = ::fidl::internal::DecodedMessageBase<FidlType>;
 
  public:

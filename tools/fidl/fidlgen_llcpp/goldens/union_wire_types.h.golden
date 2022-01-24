@@ -81,14 +81,6 @@ class XUnionContainingEmptyStruct;
 extern "C" const fidl_type_t test_union_EmptyTable;
 
 struct Empty {
-  static constexpr const fidl_type_t* Type = &test_union_EmptyTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  static constexpr uint32_t PrimarySizeV1 = 1;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   uint8_t __reserved = {};
 
   class UnownedEncodedMessage;
@@ -158,15 +150,6 @@ class UnionWithAttributes {
     return envelope_.As<int64_t>().get_data();
   }
   ::test_union::wire::UnionWithAttributes::Tag Which() const;
-
-  static constexpr const fidl_type_t* Type =
-      &test_union_UnionWithAttributesTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -331,14 +314,6 @@ class Union {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::Union::Tag>(ordinal_);
   }
-
-  static constexpr const fidl_type_t* Type = &test_union_UnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -510,14 +485,6 @@ class StrictUnion {
     return static_cast<::test_union::wire::StrictUnion::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_union_StrictUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -648,15 +615,6 @@ class StrictSimpleXUnion {
     return static_cast<::test_union::wire::StrictSimpleXUnion::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_union_StrictSimpleXUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -762,14 +720,6 @@ class StrictFoo {
     return static_cast<::test_union::wire::StrictFoo::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_union_StrictFooTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -853,15 +803,6 @@ class StrictBoundedXUnion {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::StrictBoundedXUnion::Tag>(ordinal_);
   }
-
-  static constexpr const fidl_type_t* Type =
-      &test_union_StrictBoundedXUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
-  static constexpr uint32_t MaxOutOfLineV1 = 32;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -957,15 +898,6 @@ class ReverseOrdinalUnion {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::ReverseOrdinalUnion::Tag>(ordinal_);
   }
-
-  static constexpr const fidl_type_t* Type =
-      &test_union_ReverseOrdinalUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -1095,15 +1027,6 @@ class StrictPizzaOrPasta {
     return static_cast<::test_union::wire::StrictPizzaOrPasta::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_union_StrictPizzaOrPastaTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -1225,14 +1148,6 @@ class PizzaOrPasta {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::PizzaOrPasta::Tag>(ordinal_);
   }
-
-  static constexpr const fidl_type_t* Type = &test_union_PizzaOrPastaTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -1362,15 +1277,6 @@ class FlexiblePizzaOrPasta {
     return envelope_.As<::test_union::wire::Pasta>().get_data();
   }
   ::test_union::wire::FlexiblePizzaOrPasta::Tag Which() const;
-
-  static constexpr const fidl_type_t* Type =
-      &test_union_FlexiblePizzaOrPastaTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -1503,15 +1409,6 @@ class ExplicitPizzaOrPasta {
     return static_cast<::test_union::wire::ExplicitPizzaOrPasta::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_union_ExplicitPizzaOrPastaTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -1613,14 +1510,6 @@ class OlderSimpleUnion {
     return envelope_.As<float>().get_data();
   }
   ::test_union::wire::OlderSimpleUnion::Tag Which() const;
-
-  static constexpr const fidl_type_t* Type = &test_union_OlderSimpleUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -1779,14 +1668,6 @@ class NewerSimpleUnion {
     return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
   ::test_union::wire::NewerSimpleUnion::Tag Which() const;
-
-  static constexpr const fidl_type_t* Type = &test_union_NewerSimpleUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -1958,14 +1839,6 @@ class FlexibleUnion {
   }
   ::test_union::wire::FlexibleUnion::Tag Which() const;
 
-  static constexpr const fidl_type_t* Type = &test_union_FlexibleUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -2070,14 +1943,6 @@ class FlexibleFoo {
   }
   ::test_union::wire::FlexibleFoo::Tag Which() const;
 
-  static constexpr const fidl_type_t* Type = &test_union_FlexibleFooTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -2146,14 +2011,6 @@ class FieldCollision {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::FieldCollision::Tag>(ordinal_);
   }
-
-  static constexpr const fidl_type_t* Type = &test_union_FieldCollisionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -2255,14 +2112,6 @@ class ExplicitXUnion {
     return envelope_.As<float>().get_data();
   }
   ::test_union::wire::ExplicitXUnion::Tag Which() const;
-
-  static constexpr const fidl_type_t* Type = &test_union_ExplicitXUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -2382,14 +2231,6 @@ class ExplicitUnion {
     return static_cast<::test_union::wire::ExplicitUnion::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_union_ExplicitUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -2495,14 +2336,6 @@ class ExplicitStrictFoo {
     return static_cast<::test_union::wire::ExplicitStrictFoo::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_union_ExplicitStrictFooTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -2606,14 +2439,6 @@ class ExplicitFoo {
   }
   ::test_union::wire::ExplicitFoo::Tag Which() const;
 
-  static constexpr const fidl_type_t* Type = &test_union_ExplicitFooTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -2685,15 +2510,6 @@ class XUnionContainingEmptyStruct {
   }
   ::test_union::wire::XUnionContainingEmptyStruct::Tag Which() const;
 
-  static constexpr const fidl_type_t* Type =
-      &test_union_XUnionContainingEmptyStructTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -2713,15 +2529,6 @@ class XUnionContainingEmptyStruct {
 extern "C" const fidl_type_t test_union_StructWithNullableXUnionTable;
 
 struct StructWithNullableXUnion {
-  static constexpr const fidl_type_t* Type =
-      &test_union_StructWithNullableXUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   ::test_union::wire::OlderSimpleUnion x1 = {};
 
   class UnownedEncodedMessage;
@@ -2732,14 +2539,6 @@ struct StructWithNullableXUnion {
 extern "C" const fidl_type_t test_union_PizzaTable;
 
 struct Pizza {
-  static constexpr const fidl_type_t* Type = &test_union_PizzaTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   ::fidl::VectorView<::fidl::StringView> toppings = {};
 
   class UnownedEncodedMessage;
@@ -2750,14 +2549,6 @@ struct Pizza {
 extern "C" const fidl_type_t test_union_PastaTable;
 
 struct Pasta {
-  static constexpr const fidl_type_t* Type = &test_union_PastaTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t MaxOutOfLineV1 = 16;
-  static constexpr bool HasPointer = true;
-
   ::fidl::StringView sauce = {};
 
   class UnownedEncodedMessage;
@@ -2768,15 +2559,6 @@ struct Pasta {
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;
 
 struct NullableUnionStruct {
-  static constexpr const fidl_type_t* Type =
-      &test_union_NullableUnionStructTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   ::test_union::wire::Union the_union = {};
 
   class UnownedEncodedMessage;
@@ -2787,14 +2569,6 @@ struct NullableUnionStruct {
 extern "C" const fidl_type_t test_union_UnionSandwichTable;
 
 struct UnionSandwich {
-  static constexpr const fidl_type_t* Type = &test_union_UnionSandwichTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   uint32_t a = {};
 
   ::test_union::wire::ExplicitXUnion u = {};
@@ -2811,6 +2585,18 @@ struct UnionSandwich {
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_union::wire::StructWithNullableXUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_StructWithNullableXUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::StructWithNullableXUnion>
     : public std::true_type {};
 template <>
@@ -2819,8 +2605,21 @@ struct IsStruct<::test_union::wire::StructWithNullableXUnion>
 static_assert(
     std::is_standard_layout_v<::test_union::wire::StructWithNullableXUnion>);
 static_assert(offsetof(::test_union::wire::StructWithNullableXUnion, x1) == 0);
-static_assert(sizeof(::test_union::wire::StructWithNullableXUnion) ==
-              ::test_union::wire::StructWithNullableXUnion::PrimarySize);
+static_assert(
+    sizeof(::test_union::wire::StructWithNullableXUnion) ==
+    TypeTraits<::test_union::wire::StructWithNullableXUnion>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_union::wire::Pizza> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_PizzaTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::Pizza> : public std::true_type {};
@@ -2829,7 +2628,19 @@ struct IsStruct<::test_union::wire::Pizza> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::Pizza>);
 static_assert(offsetof(::test_union::wire::Pizza, toppings) == 0);
 static_assert(sizeof(::test_union::wire::Pizza) ==
-              ::test_union::wire::Pizza::PrimarySize);
+              TypeTraits<::test_union::wire::Pizza>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_union::wire::Pasta> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_PastaTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr uint32_t kMaxOutOfLineV1 = 16;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::Pasta> : public std::true_type {};
@@ -2838,7 +2649,19 @@ struct IsStruct<::test_union::wire::Pasta> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::Pasta>);
 static_assert(offsetof(::test_union::wire::Pasta, sauce) == 0);
 static_assert(sizeof(::test_union::wire::Pasta) ==
-              ::test_union::wire::Pasta::PrimarySize);
+              TypeTraits<::test_union::wire::Pasta>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_union::wire::NullableUnionStruct> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_NullableUnionStructTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::NullableUnionStruct>
@@ -2850,8 +2673,21 @@ static_assert(
     std::is_standard_layout_v<::test_union::wire::NullableUnionStruct>);
 static_assert(offsetof(::test_union::wire::NullableUnionStruct, the_union) ==
               0);
-static_assert(sizeof(::test_union::wire::NullableUnionStruct) ==
-              ::test_union::wire::NullableUnionStruct::PrimarySize);
+static_assert(
+    sizeof(::test_union::wire::NullableUnionStruct) ==
+    TypeTraits<::test_union::wire::NullableUnionStruct>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_union::wire::UnionSandwich> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_UnionSandwichTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::UnionSandwich> : public std::true_type {};
@@ -2862,7 +2698,19 @@ static_assert(offsetof(::test_union::wire::UnionSandwich, a) == 0);
 static_assert(offsetof(::test_union::wire::UnionSandwich, u) == 8);
 static_assert(offsetof(::test_union::wire::UnionSandwich, b) == 24);
 static_assert(sizeof(::test_union::wire::UnionSandwich) ==
-              ::test_union::wire::UnionSandwich::PrimarySize);
+              TypeTraits<::test_union::wire::UnionSandwich>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_union::wire::Empty> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_EmptyTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::Empty> : public std::true_type {};
@@ -2871,7 +2719,19 @@ struct IsStruct<::test_union::wire::Empty> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::Empty>);
 static_assert(offsetof(::test_union::wire::Empty, __reserved) == 0);
 static_assert(sizeof(::test_union::wire::Empty) ==
-              ::test_union::wire::Empty::PrimarySize);
+              TypeTraits<::test_union::wire::Empty>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_union::wire::UnionWithAttributes> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_UnionWithAttributesTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::UnionWithAttributes>
@@ -2883,16 +2743,52 @@ static_assert(
     std::is_standard_layout_v<::test_union::wire::UnionWithAttributes>);
 
 template <>
+struct TypeTraits<::test_union::wire::Union> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_UnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::Union> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::wire::Union> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::Union>);
 
 template <>
+struct TypeTraits<::test_union::wire::StrictUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_StrictUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::StrictUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::wire::StrictUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::StrictUnion>);
+
+template <>
+struct TypeTraits<::test_union::wire::StrictSimpleXUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_StrictSimpleXUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::StrictSimpleXUnion>
@@ -2904,10 +2800,34 @@ static_assert(
     std::is_standard_layout_v<::test_union::wire::StrictSimpleXUnion>);
 
 template <>
+struct TypeTraits<::test_union::wire::StrictFoo> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_StrictFooTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::StrictFoo> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::wire::StrictFoo> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::StrictFoo>);
+
+template <>
+struct TypeTraits<::test_union::wire::StrictBoundedXUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_StrictBoundedXUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 32;
+  static constexpr uint32_t kMaxOutOfLineV1 = 32;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::StrictBoundedXUnion>
@@ -2919,6 +2839,18 @@ static_assert(
     std::is_standard_layout_v<::test_union::wire::StrictBoundedXUnion>);
 
 template <>
+struct TypeTraits<::test_union::wire::ReverseOrdinalUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_ReverseOrdinalUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::ReverseOrdinalUnion>
     : public std::true_type {};
 template <>
@@ -2926,6 +2858,18 @@ struct IsUnion<::test_union::wire::ReverseOrdinalUnion>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::test_union::wire::ReverseOrdinalUnion>);
+
+template <>
+struct TypeTraits<::test_union::wire::StrictPizzaOrPasta> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_StrictPizzaOrPastaTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::StrictPizzaOrPasta>
@@ -2937,10 +2881,34 @@ static_assert(
     std::is_standard_layout_v<::test_union::wire::StrictPizzaOrPasta>);
 
 template <>
+struct TypeTraits<::test_union::wire::PizzaOrPasta> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_PizzaOrPastaTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::PizzaOrPasta> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::wire::PizzaOrPasta> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::PizzaOrPasta>);
+
+template <>
+struct TypeTraits<::test_union::wire::FlexiblePizzaOrPasta> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_FlexiblePizzaOrPastaTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::FlexiblePizzaOrPasta>
@@ -2952,6 +2920,18 @@ static_assert(
     std::is_standard_layout_v<::test_union::wire::FlexiblePizzaOrPasta>);
 
 template <>
+struct TypeTraits<::test_union::wire::ExplicitPizzaOrPasta> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_ExplicitPizzaOrPastaTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::ExplicitPizzaOrPasta>
     : public std::true_type {};
 template <>
@@ -2961,11 +2941,35 @@ static_assert(
     std::is_standard_layout_v<::test_union::wire::ExplicitPizzaOrPasta>);
 
 template <>
+struct TypeTraits<::test_union::wire::OlderSimpleUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_OlderSimpleUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::OlderSimpleUnion>
     : public std::true_type {};
 template <>
 struct IsUnion<::test_union::wire::OlderSimpleUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::OlderSimpleUnion>);
+
+template <>
+struct TypeTraits<::test_union::wire::NewerSimpleUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_NewerSimpleUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::NewerSimpleUnion>
@@ -2975,16 +2979,52 @@ struct IsUnion<::test_union::wire::NewerSimpleUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::NewerSimpleUnion>);
 
 template <>
+struct TypeTraits<::test_union::wire::FlexibleUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_FlexibleUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::FlexibleUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::wire::FlexibleUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::FlexibleUnion>);
 
 template <>
+struct TypeTraits<::test_union::wire::FlexibleFoo> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_FlexibleFooTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::FlexibleFoo> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::wire::FlexibleFoo> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::FlexibleFoo>);
+
+template <>
+struct TypeTraits<::test_union::wire::FieldCollision> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_FieldCollisionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::FieldCollision> : public std::true_type {
@@ -2994,6 +3034,18 @@ struct IsUnion<::test_union::wire::FieldCollision> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::FieldCollision>);
 
 template <>
+struct TypeTraits<::test_union::wire::ExplicitXUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_ExplicitXUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::ExplicitXUnion> : public std::true_type {
 };
 template <>
@@ -3001,10 +3053,34 @@ struct IsUnion<::test_union::wire::ExplicitXUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::ExplicitXUnion>);
 
 template <>
+struct TypeTraits<::test_union::wire::ExplicitUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_ExplicitUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::ExplicitUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::wire::ExplicitUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::ExplicitUnion>);
+
+template <>
+struct TypeTraits<::test_union::wire::ExplicitStrictFoo> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_ExplicitStrictFooTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::ExplicitStrictFoo>
@@ -3015,10 +3091,34 @@ struct IsUnion<::test_union::wire::ExplicitStrictFoo> : public std::true_type {
 static_assert(std::is_standard_layout_v<::test_union::wire::ExplicitStrictFoo>);
 
 template <>
+struct TypeTraits<::test_union::wire::ExplicitFoo> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_ExplicitFooTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_union::wire::ExplicitFoo> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::wire::ExplicitFoo> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_union::wire::ExplicitFoo>);
+
+template <>
+struct TypeTraits<::test_union::wire::XUnionContainingEmptyStruct> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::test_union_XUnionContainingEmptyStructTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_union::wire::XUnionContainingEmptyStruct>

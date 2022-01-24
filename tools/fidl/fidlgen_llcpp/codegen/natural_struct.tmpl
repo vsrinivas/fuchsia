@@ -14,7 +14,7 @@ class {{ .Name }};
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}
-extern "C" const fidl_type_t {{ .CodingTableType }};
+extern "C" const fidl_type_t {{ .CodingTableType.Name }};
 
 {{ .Docs }}
 class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}>  {
@@ -100,7 +100,7 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}>  {
 {{- define "Struct:Traits:NaturalTypesHeader" }}
   {{- IfdefFuchsia -}}
 
-  extern "C" const fidl_type_t {{ .CodingTableType }};
+  extern "C" const fidl_type_t {{ .CodingTableType.Self }};
 
   {{ if .IsResourceType }}
   template <>
@@ -112,7 +112,7 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}>  {
   template <>
   struct {{ .TypeTraits }} final {
   public:
-    static constexpr const fidl_type_t* kCodingTable = &{{ .CodingTableType }};
+    static constexpr const fidl_type_t* kCodingTable = &{{ .CodingTableType.Self }};
   };
 
   {{- /*

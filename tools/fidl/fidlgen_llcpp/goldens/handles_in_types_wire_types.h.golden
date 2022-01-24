@@ -106,15 +106,6 @@ class TableWithHandle final {
   TableWithHandle(TableWithHandle&& other) noexcept = default;
   TableWithHandle& operator=(TableWithHandle&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type =
-      &test_handlesintypes_TableWithHandleTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 24;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
@@ -197,15 +188,6 @@ class UnionWithHandle {
     return envelope_.As<::zx::vmo>().get_data();
   }
   ::test_handlesintypes::wire::UnionWithHandle::Tag Which() const;
-
-  static constexpr const fidl_type_t* Type =
-      &test_handlesintypes_UnionWithHandleTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
   void _CloseHandles();
 
   class UnownedEncodedMessage;
@@ -231,15 +213,6 @@ class UnionWithHandle {
 extern "C" const fidl_type_t test_handlesintypes_HandlesInTypesTable;
 
 struct HandlesInTypes {
-  static constexpr const fidl_type_t* Type =
-      &test_handlesintypes_HandlesInTypesTable;
-  static constexpr uint32_t MaxNumHandles = 4294967295;
-  static constexpr uint32_t PrimarySize = 96;
-  static constexpr uint32_t PrimarySizeV1 = 104;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   ::zx::vmo normal_handle = {};
 
   ::fidl::VectorView<::zx::vmo> handle_in_vec = {};
@@ -269,6 +242,19 @@ namespace fidl {
 template <>
 struct IsResource<::test_handlesintypes::wire::HandlesInTypes>
     : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_handlesintypes::wire::HandlesInTypes> {
+  static constexpr const fidl_type_t* kType =
+      &::test_handlesintypes::wire::test_handlesintypes_HandlesInTypesTable;
+  static constexpr uint32_t kMaxNumHandles = 4294967295;
+  static constexpr uint32_t kPrimarySize = 96;
+  static constexpr uint32_t kPrimarySizeV1 = 104;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsFidlType<::test_handlesintypes::wire::HandlesInTypes>
     : public std::true_type {};
@@ -289,14 +275,28 @@ static_assert(offsetof(::test_handlesintypes::wire::HandlesInTypes,
                        table_with_handle) == 64);
 static_assert(offsetof(::test_handlesintypes::wire::HandlesInTypes,
                        union_with_handle) == 80);
-static_assert(sizeof(::test_handlesintypes::wire::HandlesInTypes) ==
-              ::test_handlesintypes::wire::HandlesInTypes::PrimarySize);
+static_assert(
+    sizeof(::test_handlesintypes::wire::HandlesInTypes) ==
+    TypeTraits<::test_handlesintypes::wire::HandlesInTypes>::kPrimarySize);
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::test_handlesintypes::wire::TableWithHandle>
     : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_handlesintypes::wire::TableWithHandle> {
+  static constexpr const fidl_type_t* kType =
+      &::test_handlesintypes::wire::test_handlesintypes_TableWithHandleTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsFidlType<::test_handlesintypes::wire::TableWithHandle>
     : public std::true_type {};
@@ -311,6 +311,19 @@ static_assert(
 template <>
 struct IsResource<::test_handlesintypes::wire::UnionWithHandle>
     : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_handlesintypes::wire::UnionWithHandle> {
+  static constexpr const fidl_type_t* kType =
+      &::test_handlesintypes::wire::test_handlesintypes_UnionWithHandleTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsFidlType<::test_handlesintypes::wire::UnionWithHandle>
     : public std::true_type {};

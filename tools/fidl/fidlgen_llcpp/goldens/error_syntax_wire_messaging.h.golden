@@ -88,19 +88,6 @@ struct ::fidl::WireRequest<
 
   explicit WireRequest(::fidl::StringView s) : s(s) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::test_errorsyntax::
-          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 32;
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType = ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
 
@@ -130,19 +117,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::test_errorsyntax::
-          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -162,19 +136,6 @@ struct ::fidl::WireRequest<
 
   explicit WireRequest(::fidl::StringView s) : s(s) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::test_errorsyntax::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 32;
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType = ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>;
 
@@ -207,19 +168,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::test_errorsyntax::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -229,8 +177,160 @@ struct ::fidl::WireResponse<
  private:
   void _InitHeader();
 };
-#ifdef __Fuchsia__
 
+namespace fidl {
+
+template <>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireRequest<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_errorsyntax::
+          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 32;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                   ComposedCallWhichMayFail>) ==
+    TypeTraits<
+        ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                ComposedCallWhichMayFail>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                     ComposedCallWhichMayFail>,
+             s) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireResponse<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_errorsyntax::
+          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(
+    sizeof(::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                    ComposedCallWhichMayFail>) ==
+    TypeTraits<
+        ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                 ComposedCallWhichMayFail>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                      ComposedCallWhichMayFail>,
+             result) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireRequest<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_errorsyntax::
+          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 32;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>) ==
+    TypeTraits<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                       CallWhichMayFail>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::WireRequest<
+                 ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
+             s) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireResponse<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_errorsyntax::
+          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>) ==
+    TypeTraits<::fidl::WireResponse<
+        ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::
+        kPrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<
+                 ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
+             result) == 16);
+
+}  // namespace fidl
+namespace test_errorsyntax {
+#ifdef __Fuchsia__
+}  // namespace test_errorsyntax
 template <>
 class ::fidl::WireResult<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
@@ -818,81 +918,11 @@ class ::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
+namespace test_errorsyntax {
 #endif  // __Fuchsia__
 
+}  // namespace test_errorsyntax
 namespace fidl {
-
-template <>
-struct IsFidlType<::fidl::WireRequest<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireRequest<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                   ComposedCallWhichMayFail>) ==
-    ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                            ComposedCallWhichMayFail>::PrimarySize);
-static_assert(
-    offsetof(::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                     ComposedCallWhichMayFail>,
-             s) == 16);
-
-template <>
-struct IsFidlType<::fidl::WireResponse<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireResponse<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                    ComposedCallWhichMayFail>) ==
-    ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                             ComposedCallWhichMayFail>::PrimarySize);
-static_assert(
-    offsetof(::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                      ComposedCallWhichMayFail>,
-             result) == 16);
-
-template <>
-struct IsFidlType<::fidl::WireRequest<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireRequest<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<
-           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>) ==
-    ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                            CallWhichMayFail>::PrimarySize);
-static_assert(
-    offsetof(::fidl::WireRequest<
-                 ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
-             s) == 16);
-
-template <>
-struct IsFidlType<::fidl::WireResponse<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireResponse<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireResponse<
-           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>) ==
-    ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                             CallWhichMayFail>::PrimarySize);
-static_assert(
-    offsetof(::fidl::WireResponse<
-                 ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
-             result) == 16);
 
 #ifdef __Fuchsia__
 }  // namespace fidl

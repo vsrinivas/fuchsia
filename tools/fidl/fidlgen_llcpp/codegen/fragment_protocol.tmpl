@@ -65,6 +65,11 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
   {{- end }}
 {{- end }}
 
+{{ EnsureNamespace "fidl" }}
+{{ template "Protocol:Traits:WireMessagingHeader" . }}
+
+{{ EnsureNamespace . }}
+
 {{- IfdefFuchsia -}}
 {{- range .ClientMethods -}}
   {{- if .Transport.HasSyncClient }}
@@ -109,8 +114,29 @@ struct IsFidlMessage<{{ .WireRequest }}> : public std::true_type {};
 template <>
 struct IsResource<{{ .WireRequest }}> : public std::true_type {};
 {{- end }}
+
+
+template <>
+struct TypeTraits<{{ .WireRequest }}> {
+  static constexpr const fidl_type_t* kType =
+  {{- if .RequestArgs }}
+    &{{ .Request.WireCodingTable }};
+  {{- else }}
+    &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  {{- end }}
+  static constexpr uint32_t kMaxNumHandles = {{ .Request.TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t kPrimarySize = {{ .Request.TypeShapeV2.InlineSize }};
+  static constexpr uint32_t kPrimarySizeV1 = {{ .Request.TypeShapeV1.InlineSize }};
+  static constexpr uint32_t kMaxOutOfLine = {{ .Request.TypeShapeV2.MaxOutOfLine }};
+  static constexpr uint32_t kMaxOutOfLineV1 = {{ .Request.TypeShapeV1.MaxOutOfLine }};
+  static constexpr bool kHasFlexibleEnvelope = {{ .Request.TypeShapeV2.HasFlexibleEnvelope }};
+  static constexpr bool kHasPointer = {{ .Request.TypeShapeV2.HasPointer }};
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+    ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
 static_assert(sizeof({{ .WireRequest }})
-    == {{ .WireRequest }}::PrimarySize);
+    == TypeTraits<{{ .WireRequest }}>::kPrimarySize);
 {{- range $index, $param := .RequestArgs }}
 static_assert(offsetof({{ $method.WireRequest }}, {{ $param.Name }}) == {{ $param.OffsetV2 }});
 {{- end }}
@@ -129,8 +155,28 @@ struct IsFidlMessage<{{ .WireResponse }}> : public std::true_type {};
 template <>
 struct IsResource<{{ .WireResponse }}> : public std::true_type {};
 {{- end }}
+
+template <>
+struct TypeTraits<{{ .WireResponse }}> {
+  static constexpr const fidl_type_t* kType =
+  {{- if .ResponseArgs }}
+  &{{ .Response.WireCodingTable }};
+  {{- else }}
+  &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  {{- end }}
+  static constexpr uint32_t kMaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t kPrimarySize = {{ .Response.TypeShapeV2.InlineSize }};
+  static constexpr uint32_t kPrimarySizeV1 = {{ .Response.TypeShapeV1.InlineSize }};
+  static constexpr uint32_t kMaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};
+  static constexpr uint32_t kMaxOutOfLineV1 = {{ .Response.TypeShapeV1.MaxOutOfLine }};
+  static constexpr bool kHasFlexibleEnvelope = {{ .Response.TypeShapeV2.HasFlexibleEnvelope }};
+  static constexpr bool kHasPointer = {{ .Response.TypeShapeV2.HasPointer }};
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+    ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
 static_assert(sizeof({{ .WireResponse }})
-    == {{ .WireResponse }}::PrimarySize);
+    == TypeTraits<{{ .WireResponse }}>::kPrimarySize);
 {{- range $index, $param := .ResponseArgs }}
 static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $param.OffsetV2 }});
 {{- end }}

@@ -99,15 +99,6 @@ class UnionSize8Alignment4 {
         ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_unionsandwich_UnionSize8Alignment4Table;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -200,15 +191,6 @@ class UnionSize36Alignment4 {
         ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_unionsandwich_UnionSize36Alignment4Table;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
-  static constexpr uint32_t MaxOutOfLineV1 = 32;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -300,15 +282,6 @@ class UnionSize12Alignment4 {
     return static_cast<::test_unionsandwich::wire::UnionSize12Alignment4::Tag>(
         ordinal_);
   }
-
-  static constexpr const fidl_type_t* Type =
-      &test_unionsandwich_UnionSize12Alignment4Table;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -410,15 +383,6 @@ class UnionSize24Alignment8 {
         ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_unionsandwich_UnionSize24Alignment8Table;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t MaxOutOfLineV1 = 16;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -439,15 +403,6 @@ extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize8Alignment4Table;
 
 struct SandwichUnionSize8Alignment4 {
-  static constexpr const fidl_type_t* Type =
-      &test_unionsandwich_SandwichUnionSize8Alignment4Table;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   uint32_t before = {};
 
   ::test_unionsandwich::wire::UnionSize8Alignment4 union_ = {};
@@ -463,15 +418,6 @@ extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize36Alignment4Table;
 
 struct SandwichUnionSize36Alignment4 {
-  static constexpr const fidl_type_t* Type =
-      &test_unionsandwich_SandwichUnionSize36Alignment4Table;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
-  static constexpr uint32_t MaxOutOfLineV1 = 32;
-  static constexpr bool HasPointer = true;
-
   uint32_t before = {};
 
   ::test_unionsandwich::wire::UnionSize36Alignment4 union_ = {};
@@ -487,15 +433,6 @@ extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize12Alignment4Table;
 
 struct SandwichUnionSize12Alignment4 {
-  static constexpr const fidl_type_t* Type =
-      &test_unionsandwich_SandwichUnionSize12Alignment4Table;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   uint32_t before = {};
 
   ::test_unionsandwich::wire::UnionSize12Alignment4 union_ = {};
@@ -510,15 +447,6 @@ struct SandwichUnionSize12Alignment4 {
 extern "C" const fidl_type_t test_unionsandwich_StructSize16Alignment8Table;
 
 struct StructSize16Alignment8 {
-  static constexpr const fidl_type_t* Type =
-      &test_unionsandwich_StructSize16Alignment8Table;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   uint64_t f1 = {};
 
   uint64_t f2 = {};
@@ -532,15 +460,6 @@ extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize24Alignment8Table;
 
 struct SandwichUnionSize24Alignment8 {
-  static constexpr const fidl_type_t* Type =
-      &test_unionsandwich_SandwichUnionSize24Alignment8Table;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t MaxOutOfLineV1 = 16;
-  static constexpr bool HasPointer = true;
-
   uint32_t before = {};
 
   ::test_unionsandwich::wire::UnionSize24Alignment8 union_ = {};
@@ -555,6 +474,19 @@ struct SandwichUnionSize24Alignment8 {
 }  // namespace wire
 }  // namespace test_unionsandwich
 namespace fidl {
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize8Alignment4> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unionsandwich::wire::
+          test_unionsandwich_SandwichUnionSize8Alignment4Table;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize8Alignment4>
@@ -572,7 +504,21 @@ static_assert(offsetof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4,
                        after) == 24);
 static_assert(
     sizeof(::test_unionsandwich::wire::SandwichUnionSize8Alignment4) ==
-    ::test_unionsandwich::wire::SandwichUnionSize8Alignment4::PrimarySize);
+    TypeTraits<::test_unionsandwich::wire::SandwichUnionSize8Alignment4>::
+        kPrimarySize);
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize36Alignment4> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unionsandwich::wire::
+          test_unionsandwich_SandwichUnionSize36Alignment4Table;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 32;
+  static constexpr uint32_t kMaxOutOfLineV1 = 32;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize36Alignment4>
@@ -593,7 +539,21 @@ static_assert(
              after) == 24);
 static_assert(
     sizeof(::test_unionsandwich::wire::SandwichUnionSize36Alignment4) ==
-    ::test_unionsandwich::wire::SandwichUnionSize36Alignment4::PrimarySize);
+    TypeTraits<::test_unionsandwich::wire::SandwichUnionSize36Alignment4>::
+        kPrimarySize);
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize12Alignment4> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unionsandwich::wire::
+          test_unionsandwich_SandwichUnionSize12Alignment4Table;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize12Alignment4>
@@ -614,7 +574,21 @@ static_assert(
              after) == 24);
 static_assert(
     sizeof(::test_unionsandwich::wire::SandwichUnionSize12Alignment4) ==
-    ::test_unionsandwich::wire::SandwichUnionSize12Alignment4::PrimarySize);
+    TypeTraits<::test_unionsandwich::wire::SandwichUnionSize12Alignment4>::
+        kPrimarySize);
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::StructSize16Alignment8> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unionsandwich::wire::
+          test_unionsandwich_StructSize16Alignment8Table;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
 
 template <>
 struct IsFidlType<::test_unionsandwich::wire::StructSize16Alignment8>
@@ -629,7 +603,21 @@ static_assert(offsetof(::test_unionsandwich::wire::StructSize16Alignment8,
 static_assert(offsetof(::test_unionsandwich::wire::StructSize16Alignment8,
                        f2) == 8);
 static_assert(sizeof(::test_unionsandwich::wire::StructSize16Alignment8) ==
-              ::test_unionsandwich::wire::StructSize16Alignment8::PrimarySize);
+              TypeTraits<::test_unionsandwich::wire::StructSize16Alignment8>::
+                  kPrimarySize);
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize24Alignment8> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unionsandwich::wire::
+          test_unionsandwich_SandwichUnionSize24Alignment8Table;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr uint32_t kMaxOutOfLineV1 = 16;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_unionsandwich::wire::SandwichUnionSize24Alignment8>
@@ -650,7 +638,20 @@ static_assert(
              after) == 24);
 static_assert(
     sizeof(::test_unionsandwich::wire::SandwichUnionSize24Alignment8) ==
-    ::test_unionsandwich::wire::SandwichUnionSize24Alignment8::PrimarySize);
+    TypeTraits<::test_unionsandwich::wire::SandwichUnionSize24Alignment8>::
+        kPrimarySize);
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::UnionSize8Alignment4> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unionsandwich::wire::test_unionsandwich_UnionSize8Alignment4Table;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_unionsandwich::wire::UnionSize8Alignment4>
@@ -662,6 +663,19 @@ static_assert(std::is_standard_layout_v<
               ::test_unionsandwich::wire::UnionSize8Alignment4>);
 
 template <>
+struct TypeTraits<::test_unionsandwich::wire::UnionSize36Alignment4> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unionsandwich::wire::
+          test_unionsandwich_UnionSize36Alignment4Table;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 32;
+  static constexpr uint32_t kMaxOutOfLineV1 = 32;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_unionsandwich::wire::UnionSize36Alignment4>
     : public std::true_type {};
 template <>
@@ -671,6 +685,19 @@ static_assert(std::is_standard_layout_v<
               ::test_unionsandwich::wire::UnionSize36Alignment4>);
 
 template <>
+struct TypeTraits<::test_unionsandwich::wire::UnionSize12Alignment4> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unionsandwich::wire::
+          test_unionsandwich_UnionSize12Alignment4Table;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_unionsandwich::wire::UnionSize12Alignment4>
     : public std::true_type {};
 template <>
@@ -678,6 +705,19 @@ struct IsUnion<::test_unionsandwich::wire::UnionSize12Alignment4>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::test_unionsandwich::wire::UnionSize12Alignment4>);
+
+template <>
+struct TypeTraits<::test_unionsandwich::wire::UnionSize24Alignment8> {
+  static constexpr const fidl_type_t* kType =
+      &::test_unionsandwich::wire::
+          test_unionsandwich_UnionSize24Alignment8Table;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr uint32_t kMaxOutOfLineV1 = 16;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_unionsandwich::wire::UnionSize24Alignment8>

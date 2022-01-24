@@ -15,7 +15,7 @@ class {{ .Name }};
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}
-extern "C" const fidl_type_t {{ .CodingTableType }};
+extern "C" const fidl_type_t {{ .CodingTableType.Name }};
 
 {{ .Docs }}
 class {{ .Name }} final {

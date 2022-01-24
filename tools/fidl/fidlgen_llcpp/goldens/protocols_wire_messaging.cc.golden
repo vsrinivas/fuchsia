@@ -340,11 +340,11 @@ fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>::
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::WireResponse<
-            ::test_protocols::HandleRightsProtocol::AnEvent>::MaxNumHandles >=
+    if (::fidl::TypeTraits<::fidl::WireResponse<
+            ::test_protocols::HandleRightsProtocol::AnEvent>>::kMaxNumHandles >=
         x) {
-      x = ::fidl::WireResponse<
-          ::test_protocols::HandleRightsProtocol::AnEvent>::MaxNumHandles;
+      x = ::fidl::TypeTraits<::fidl::WireResponse<
+          ::test_protocols::HandleRightsProtocol::AnEvent>>::kMaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
       x = ZX_CHANNEL_MAX_MSG_HANDLES;
@@ -1758,15 +1758,19 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                                 OnEmptyResponse>::MaxNumHandles >= x) {
-      x = ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                                   OnEmptyResponse>::MaxNumHandles;
+    if (::fidl::TypeTraits<::fidl::WireResponse<
+            ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>::
+            kMaxNumHandles >= x) {
+      x = ::fidl::TypeTraits<::fidl::WireResponse<
+          ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>::
+          kMaxNumHandles;
     }
-    if (::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                                 OnWithResponse>::MaxNumHandles >= x) {
-      x = ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                                   OnWithResponse>::MaxNumHandles;
+    if (::fidl::TypeTraits<::fidl::WireResponse<
+            ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>::
+            kMaxNumHandles >= x) {
+      x = ::fidl::TypeTraits<::fidl::WireResponse<
+          ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>::
+          kMaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
       x = ZX_CHANNEL_MAX_MSG_HANDLES;
@@ -2698,10 +2702,10 @@ fidl::WireSyncEventHandler<::test_protocols::Transitional>::HandleOneEvent(
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::WireResponse<
-            ::test_protocols::Transitional::Event>::MaxNumHandles >= x) {
-      x = ::fidl::WireResponse<
-          ::test_protocols::Transitional::Event>::MaxNumHandles;
+    if (::fidl::TypeTraits<::fidl::WireResponse<
+            ::test_protocols::Transitional::Event>>::kMaxNumHandles >= x) {
+      x = ::fidl::TypeTraits<::fidl::WireResponse<
+          ::test_protocols::Transitional::Event>>::kMaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
       x = ZX_CHANNEL_MAX_MSG_HANDLES;
@@ -6519,10 +6523,10 @@ fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>::HandleOneEvent(
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::WireResponse<
-            ::test_protocols::ChannelProtocol::EventA>::MaxNumHandles >= x) {
-      x = ::fidl::WireResponse<
-          ::test_protocols::ChannelProtocol::EventA>::MaxNumHandles;
+    if (::fidl::TypeTraits<::fidl::WireResponse<
+            ::test_protocols::ChannelProtocol::EventA>>::kMaxNumHandles >= x) {
+      x = ::fidl::TypeTraits<::fidl::WireResponse<
+          ::test_protocols::ChannelProtocol::EventA>>::kMaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
       x = ZX_CHANNEL_MAX_MSG_HANDLES;

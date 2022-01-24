@@ -36,7 +36,8 @@ bool WalkerBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     ZX_ASSERT_MSG(decoded.ok(), "%s", decoded.FormatDescription().c_str());
 
     while (state->KeepRunning()) {
-      internal::Walk(FidlType::Type, reinterpret_cast<uint8_t*>(decoded.PrimaryObject()));
+      internal::Walk(fidl::TypeTraits<FidlType>::kType,
+                     reinterpret_cast<uint8_t*>(decoded.PrimaryObject()));
     }
   });
 

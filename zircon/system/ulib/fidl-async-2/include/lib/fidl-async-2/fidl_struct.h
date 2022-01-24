@@ -6,6 +6,7 @@
 #define LIB_FIDL_ASYNC_2_FIDL_STRUCT_H_
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <zircon/assert.h>
 
 #include <type_traits>
@@ -26,8 +27,9 @@ class FidlStruct {
   static_assert(sizeof(FidlCStruct) == sizeof(FidlLlcppStruct),
                 "parameters must be for same struct");
   // FidlStruct<> isn't meant for use with FIDL types where HasPointer is true.
-  static_assert(!FidlLlcppStruct::HasPointer);
-  static constexpr bool ProvideCopyAsLlcpp_v = (FidlLlcppStruct::MaxNumHandles == 0);
+  static_assert(!fidl::TypeTraits<FidlLlcppStruct>::kHasPointer);
+  static constexpr bool ProvideCopyAsLlcpp_v =
+      (fidl::TypeTraits<FidlLlcppStruct>::kMaxNumHandles == 0);
 
  public:
   using c_type = FidlCStruct;
@@ -51,7 +53,7 @@ class FidlStruct {
   }
 
   explicit FidlStruct(FidlLlcppStruct&& to_move_and_own_handles) {
-    ZX_DEBUG_ASSERT(!FidlLlcppStruct::HasPointer);
+    ZX_DEBUG_ASSERT(!fidl::TypeTraits<FidlLlcppStruct>::kHasPointer);
     *reinterpret_cast<FidlLlcppStruct*>(&storage_) = std::move(to_move_and_own_handles);
     ptr_ = &storage_;
   }
@@ -149,7 +151,7 @@ class FidlStruct {
   }
 
   FidlLlcppStruct TakeAsLlcpp() {
-    static_assert(!FidlLlcppStruct::HasPointer);
+    static_assert(!fidl::TypeTraits<FidlLlcppStruct>::kHasPointer);
     constexpr size_t kSize = sizeof(FidlLlcppStruct);
     ZX_DEBUG_ASSERT(*this);
     // un-manage handles
@@ -166,8 +168,8 @@ class FidlStruct {
   template <typename DummyFalse = std::false_type>
   std::enable_if_t<DummyFalse::value || ProvideCopyAsLlcpp_v, FidlLlcppStruct> CopyAsLlcpp() {
     static_assert(std::is_same_v<DummyFalse, std::false_type>, "don't override DummyFalse");
-    static_assert(!FidlLlcppStruct::HasPointer);
-    static_assert(FidlLlcppStruct::MaxNumHandles == 0);
+    static_assert(!fidl::TypeTraits<FidlLlcppStruct>::kHasPointer);
+    static_assert(fidl::TypeTraits<FidlLlcppStruct>::kMaxNumHandles == 0);
     ZX_DEBUG_ASSERT(*this);
     FidlLlcppStruct result;
     static_assert(sizeof(*get()) == sizeof(result));
@@ -203,7 +205,7 @@ class FidlStruct {
  private:
   void reset_internal(const FidlCStruct* to_copy_and_own_handles) {
     if (ptr_) {
-      fidl_close_handles(FidlLlcppStruct::Type, ptr_, nullptr);
+      fidl_close_handles(fidl::TypeTraits<FidlLlcppStruct>::kType, ptr_, nullptr);
     }
     if (to_copy_and_own_handles) {
       storage_ = *to_copy_and_own_handles;

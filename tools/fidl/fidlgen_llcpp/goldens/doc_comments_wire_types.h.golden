@@ -44,14 +44,6 @@ extern "C" const fidl_type_t test_doccomments_StructTable;
 ///
 /// struct comment #3
 struct Struct {
-  static constexpr const fidl_type_t* Type = &test_doccomments_StructTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 4;
-  static constexpr uint32_t PrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   /// struct member comment #1
   ///
   /// struct member comment #3
@@ -141,14 +133,6 @@ class Table final {
   Table(Table&& other) noexcept = default;
   Table& operator=(Table&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &test_doccomments_TableTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 24;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
@@ -231,14 +215,6 @@ class StrictUnion {
     return static_cast<::test_doccomments::wire::StrictUnion::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_doccomments_StrictUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -314,15 +290,6 @@ class FlexibleUnion {
   }
   ::test_doccomments::wire::FlexibleUnion::Tag Which() const;
 
-  static constexpr const fidl_type_t* Type =
-      &test_doccomments_FlexibleUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -349,13 +316,37 @@ constexpr int32_t kC = 4u;
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_doccomments::wire::Struct> {
+  static constexpr const fidl_type_t* kType =
+      &::test_doccomments::wire::test_doccomments_StructTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
 struct IsFidlType<::test_doccomments::wire::Struct> : public std::true_type {};
 template <>
 struct IsStruct<::test_doccomments::wire::Struct> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_doccomments::wire::Struct>);
 static_assert(offsetof(::test_doccomments::wire::Struct, field) == 0);
 static_assert(sizeof(::test_doccomments::wire::Struct) ==
-              ::test_doccomments::wire::Struct::PrimarySize);
+              TypeTraits<::test_doccomments::wire::Struct>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_doccomments::wire::Table> {
+  static constexpr const fidl_type_t* kType =
+      &::test_doccomments::wire::test_doccomments_TableTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_doccomments::wire::Table> : public std::true_type {};
@@ -364,12 +355,36 @@ struct IsTable<::test_doccomments::wire::Table> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_doccomments::wire::Table>);
 
 template <>
+struct TypeTraits<::test_doccomments::wire::StrictUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_doccomments::wire::test_doccomments_StrictUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_doccomments::wire::StrictUnion>
     : public std::true_type {};
 template <>
 struct IsUnion<::test_doccomments::wire::StrictUnion> : public std::true_type {
 };
 static_assert(std::is_standard_layout_v<::test_doccomments::wire::StrictUnion>);
+
+template <>
+struct TypeTraits<::test_doccomments::wire::FlexibleUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_doccomments::wire::test_doccomments_FlexibleUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_doccomments::wire::FlexibleUnion>

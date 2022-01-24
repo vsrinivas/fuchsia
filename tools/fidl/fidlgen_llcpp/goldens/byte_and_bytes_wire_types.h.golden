@@ -28,15 +28,6 @@ struct ByteAndBytes;
 extern "C" const fidl_type_t test_byteandbytes_ByteAndBytesTable;
 
 struct ByteAndBytes {
-  static constexpr const fidl_type_t* Type =
-      &test_byteandbytes_ByteAndBytesTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 56;
-  static constexpr uint32_t PrimarySizeV1 = 56;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   uint8_t single_byte = {};
 
   ::fidl::VectorView<uint8_t> many_bytes = {};
@@ -55,6 +46,18 @@ struct ByteAndBytes {
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_byteandbytes::wire::ByteAndBytes> {
+  static constexpr const fidl_type_t* kType =
+      &::test_byteandbytes::wire::test_byteandbytes_ByteAndBytesTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 56;
+  static constexpr uint32_t kPrimarySizeV1 = 56;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_byteandbytes::wire::ByteAndBytes>
     : public std::true_type {};
 template <>
@@ -70,7 +73,8 @@ static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes,
                        only_one_k_bytes) == 24);
 static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes,
                        opt_only_one_k_bytes) == 40);
-static_assert(sizeof(::test_byteandbytes::wire::ByteAndBytes) ==
-              ::test_byteandbytes::wire::ByteAndBytes::PrimarySize);
+static_assert(
+    sizeof(::test_byteandbytes::wire::ByteAndBytes) ==
+    TypeTraits<::test_byteandbytes::wire::ByteAndBytes>::kPrimarySize);
 
 }  // namespace fidl

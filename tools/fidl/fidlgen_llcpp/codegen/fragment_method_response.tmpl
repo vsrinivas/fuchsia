@@ -32,22 +32,6 @@ struct {{ .WireResponse }} final {
   _InitHeader();
   }
 
-  static constexpr const fidl_type_t* Type =
-  {{- if .ResponseArgs }}
-  &{{ .Response.WireCodingTable }};
-  {{- else }}
-  &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-  {{- end }}
-  static constexpr uint32_t MaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
-  static constexpr uint32_t PrimarySize = {{ .Response.TypeShapeV2.InlineSize }};
-  static constexpr uint32_t PrimarySizeV1 = {{ .Response.TypeShapeV1.InlineSize }};
-  static constexpr uint32_t MaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};
-  static constexpr uint32_t MaxOutOfLineV1 = {{ .Response.TypeShapeV1.MaxOutOfLine }};
-  static constexpr bool HasFlexibleEnvelope = {{ .Response.TypeShapeV2.HasFlexibleEnvelope }};
-  static constexpr bool HasPointer = {{ .Response.TypeShapeV2.HasPointer }};
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-
   {{- if .Response.IsResource }}
   void _CloseHandles();
   {{- end }}

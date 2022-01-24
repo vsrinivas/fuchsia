@@ -52,8 +52,10 @@ struct ::fidl::internal::WireServerDispatcher<::test_versions::OtherProtocol>
 };
 #endif  // __Fuchsia__
 
+namespace fidl {}  // namespace fidl
+namespace test_versions {
 #ifdef __Fuchsia__
-
+}  // namespace test_versions
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::test_versions::OtherProtocol> {
@@ -152,9 +154,9 @@ class ::fidl::WireServer<::test_versions::OtherProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
+namespace test_versions {
 #endif  // __Fuchsia__
 
-namespace test_versions {
 __LOCAL extern "C" const fidl_type_t
     test_versions_ProtocolFooRequestMessageTable;
 
@@ -201,18 +203,6 @@ struct ::fidl::WireRequest<::test_versions::Protocol::Foo> final {
 
   WireRequest() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -222,8 +212,39 @@ struct ::fidl::WireRequest<::test_versions::Protocol::Foo> final {
  private:
   void _InitHeader();
 };
-#ifdef __Fuchsia__
 
+namespace fidl {
+
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_versions::Protocol::Foo>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<::test_versions::Protocol::Foo>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>> {
+  static constexpr const fidl_type_t* kType =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::WireRequest<::test_versions::Protocol::Foo>) ==
+              TypeTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>>::
+                  kPrimarySize);
+
+}  // namespace fidl
+namespace test_versions {
+#ifdef __Fuchsia__
+}  // namespace test_versions
 template <>
 class ::fidl::WireResult<::test_versions::Protocol::Foo> final
     : public ::fidl::Result {
@@ -373,9 +394,8 @@ class ::fidl::WireServer<::test_versions::Protocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-#endif  // __Fuchsia__
-
 namespace test_versions {
+#endif  // __Fuchsia__
 
 class Service final {
   Service() = default;
@@ -453,15 +473,6 @@ class Service final {
 
 }  // namespace test_versions
 namespace fidl {
-
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_versions::Protocol::Foo>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireRequest<::test_versions::Protocol::Foo>>
-    : public std::true_type {};
-static_assert(sizeof(::fidl::WireRequest<::test_versions::Protocol::Foo>) ==
-              ::fidl::WireRequest<::test_versions::Protocol::Foo>::PrimarySize);
 
 #ifdef __Fuchsia__
 }  // namespace fidl

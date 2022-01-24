@@ -76,19 +76,6 @@ struct ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> final {
     _InitHeader();
   }
   WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::test_anonymous::
-          test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 48;
-  static constexpr uint32_t PrimarySizeV1 = 56;
-  static constexpr uint32_t MaxOutOfLine = 48;
-  static constexpr uint32_t MaxOutOfLineV1 = 72;
-  static constexpr bool HasFlexibleEnvelope = true;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType =
       ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>;
 
@@ -116,19 +103,6 @@ struct ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> final {
   }
   WireResponse() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::test_anonymous::
-          test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -138,8 +112,84 @@ struct ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> final {
  private:
   void _InitHeader();
 };
-#ifdef __Fuchsia__
 
+namespace fidl {
+
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::
+          test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 48;
+  static constexpr uint32_t kPrimarySizeV1 = 56;
+  static constexpr uint32_t kMaxOutOfLine = 48;
+  static constexpr uint32_t kMaxOutOfLineV1 = 72;
+  static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>) ==
+    TypeTraits<::fidl::WireRequest<
+        ::test_anonymous::SomeProtocol::SomeMethod>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
+             union_member) == 16);
+static_assert(
+    offsetof(::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
+             table_member) == 32);
+
+template <>
+struct IsFidlType<
+    ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::
+          test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(
+    sizeof(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>) ==
+    TypeTraits<::fidl::WireResponse<
+        ::test_anonymous::SomeProtocol::SomeMethod>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>,
+             result) == 16);
+
+}  // namespace fidl
+namespace test_anonymous {
+#ifdef __Fuchsia__
+}  // namespace test_anonymous
 template <>
 class ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod> final
     : public ::fidl::Result {
@@ -439,44 +489,11 @@ class ::fidl::WireServer<::test_anonymous::SomeProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
+namespace test_anonymous {
 #endif  // __Fuchsia__
 
+}  // namespace test_anonymous
 namespace fidl {
-
-template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>) ==
-    ::fidl::WireRequest<
-        ::test_anonymous::SomeProtocol::SomeMethod>::PrimarySize);
-static_assert(
-    offsetof(::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
-             union_member) == 16);
-static_assert(
-    offsetof(::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
-             table_member) == 32);
-
-template <>
-struct IsFidlType<
-    ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>) ==
-    ::fidl::WireResponse<
-        ::test_anonymous::SomeProtocol::SomeMethod>::PrimarySize);
-static_assert(
-    offsetof(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>,
-             result) == 16);
 
 #ifdef __Fuchsia__
 }  // namespace fidl

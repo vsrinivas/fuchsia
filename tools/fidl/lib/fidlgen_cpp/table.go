@@ -23,7 +23,7 @@ type Table struct {
 	fidlgen.Resourceness
 	nameVariants
 	AnonymousChildren   []ScopedLayout
-	CodingTableType     string
+	CodingTableType     name
 	Members             []TableMember
 	BiggestOrdinal      int
 	BackingBufferTypeV1 string
@@ -96,7 +96,7 @@ func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableM
 
 func (c *compiler) compileTable(val fidlgen.Table) *Table {
 	name := c.compileNameVariants(val.Name)
-	codingTableType := c.compileCodingTableType(val.Name)
+	codingTableType := name.Wire.ns.member(c.compileCodingTableType(val.Name))
 	r := Table{
 		Attributes:        Attributes{val.Attributes},
 		AnonymousChildren: c.getAnonymousChildren(val.Layout),

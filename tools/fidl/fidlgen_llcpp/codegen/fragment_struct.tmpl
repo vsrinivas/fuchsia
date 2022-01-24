@@ -16,18 +16,9 @@ struct {{ .Name }};
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}
-extern "C" const fidl_type_t {{ .CodingTableType }};
+extern "C" const fidl_type_t {{ .CodingTableType.Name }};
 {{ .Docs }}
 struct {{ .Name }} {
-  static constexpr const fidl_type_t* Type = &{{ .CodingTableType }};
-  static constexpr uint32_t MaxNumHandles = {{ .TypeShapeV2.MaxHandles }};
-  static constexpr uint32_t PrimarySize = {{ .TypeShapeV2.InlineSize }};
-  static constexpr uint32_t PrimarySizeV1 = {{ .TypeShapeV1.InlineSize }};
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = {{ .TypeShapeV2.MaxOutOfLine }};
-  static constexpr uint32_t MaxOutOfLineV1 = {{ .TypeShapeV1.MaxOutOfLine }};
-  static constexpr bool HasPointer = {{ .TypeShapeV2.HasPointer }};
-
 {{- range .AnonymousChildren }}
   using {{ .ScopedName }} = {{ .FlattenedName }};
 {{- end }}
@@ -76,6 +67,19 @@ void {{ . }}::_CloseHandles() {
 template <>
 struct IsResource<{{ . }}> : public std::true_type {};
 {{- end }}
+
+template<>
+struct TypeTraits<{{ . }}> {
+  static constexpr const fidl_type_t* kType = &{{ .CodingTableType }};
+  static constexpr uint32_t kMaxNumHandles = {{ .TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t kPrimarySize = {{ .TypeShapeV2.InlineSize }};
+  static constexpr uint32_t kPrimarySizeV1 = {{ .TypeShapeV1.InlineSize }};
+  [[maybe_unused]]
+  static constexpr uint32_t kMaxOutOfLine = {{ .TypeShapeV2.MaxOutOfLine }};
+  static constexpr uint32_t kMaxOutOfLineV1 = {{ .TypeShapeV1.MaxOutOfLine }};
+  static constexpr bool kHasPointer = {{ .TypeShapeV2.HasPointer }};
+};
+
 template <>
 struct IsFidlType<{{ . }}> : public std::true_type {};
 template <>
@@ -85,7 +89,7 @@ static_assert(std::is_standard_layout_v<{{ . }}>);
 {{- range .Members }}
 static_assert(offsetof({{ $struct }}, {{ .Name }}) == {{ .OffsetV2 }});
 {{- end }}
-static_assert(sizeof({{ . }}) == {{ . }}::PrimarySize);
+static_assert(sizeof({{ . }}) == TypeTraits<{{ . }}>::kPrimarySize);
 {{- if .IsResourceType }}
 {{- EndifFuchsia -}}
 {{- end }}

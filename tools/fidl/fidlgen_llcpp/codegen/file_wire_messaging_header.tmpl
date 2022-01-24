@@ -51,15 +51,11 @@ fidl/{{ .LibraryDots }}/cpp/wire_messaging.h
   {{ EnsureNamespace "fidl" }}
 
   {{- range (call .ProtocolsForTransport "Channel") }}
-    {{ template "Protocol:Traits:WireMessagingHeader" . }}
-  {{- end }}
-
-  {{- range (call .ProtocolsForTransport "Channel") }}
     {{ template "Protocol:ClientImpl:WireMessagingHeader" . }}
 
     {{ template "Protocol:EventSender:WireMessagingHeader" . }}
 
-    {{- end }}
+  {{- end }}
 
   {{ UnsetTransport -}}
   {{ EndOfFile }}

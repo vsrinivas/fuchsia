@@ -29,15 +29,6 @@ extern "C" const fidl_type_t test_escaping_DocCommentWithQuotesTable;
 
 /// "pleaseescapethisdocommentproperly"
 struct DocCommentWithQuotes {
-  static constexpr const fidl_type_t* Type =
-      &test_escaping_DocCommentWithQuotesTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  static constexpr uint32_t PrimarySizeV1 = 1;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   uint8_t __reserved = {};
 
   class UnownedEncodedMessage;
@@ -50,6 +41,18 @@ struct DocCommentWithQuotes {
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_escaping::wire::DocCommentWithQuotes> {
+  static constexpr const fidl_type_t* kType =
+      &::test_escaping::wire::test_escaping_DocCommentWithQuotesTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
 struct IsFidlType<::test_escaping::wire::DocCommentWithQuotes>
     : public std::true_type {};
 template <>
@@ -59,7 +62,8 @@ static_assert(
     std::is_standard_layout_v<::test_escaping::wire::DocCommentWithQuotes>);
 static_assert(offsetof(::test_escaping::wire::DocCommentWithQuotes,
                        __reserved) == 0);
-static_assert(sizeof(::test_escaping::wire::DocCommentWithQuotes) ==
-              ::test_escaping::wire::DocCommentWithQuotes::PrimarySize);
+static_assert(
+    sizeof(::test_escaping::wire::DocCommentWithQuotes) ==
+    TypeTraits<::test_escaping::wire::DocCommentWithQuotes>::kPrimarySize);
 
 }  // namespace fidl

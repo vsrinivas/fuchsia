@@ -48,8 +48,10 @@ struct ::fidl::internal::WireServerDispatcher<::test_handles::SomeProtocol>
 };
 #endif  // __Fuchsia__
 
+namespace fidl {}  // namespace fidl
+namespace test_handles {
 #ifdef __Fuchsia__
-
+}  // namespace test_handles
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::test_handles::SomeProtocol> {
@@ -147,8 +149,10 @@ class ::fidl::WireServer<::test_handles::SomeProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
+namespace test_handles {
 #endif  // __Fuchsia__
 
+}  // namespace test_handles
 namespace fidl {
 
 #ifdef __Fuchsia__

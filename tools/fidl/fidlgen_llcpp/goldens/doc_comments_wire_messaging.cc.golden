@@ -85,10 +85,10 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::WireResponse<
-            ::test_doccomments::Interface::OnEvent>::MaxNumHandles >= x) {
-      x = ::fidl::WireResponse<
-          ::test_doccomments::Interface::OnEvent>::MaxNumHandles;
+    if (::fidl::TypeTraits<::fidl::WireResponse<
+            ::test_doccomments::Interface::OnEvent>>::kMaxNumHandles >= x) {
+      x = ::fidl::TypeTraits<::fidl::WireResponse<
+          ::test_doccomments::Interface::OnEvent>>::kMaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
       x = ZX_CHANNEL_MAX_MSG_HANDLES;

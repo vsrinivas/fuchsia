@@ -120,14 +120,6 @@ class TableSmallArray final {
   TableSmallArray(TableSmallArray&& other) noexcept = default;
   TableSmallArray& operator=(TableSmallArray&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &test_arrays_TableSmallArrayTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t MaxOutOfLineV1 = 24;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
@@ -237,14 +229,6 @@ class TableLargeArray final {
   TableLargeArray(TableLargeArray&& other) noexcept = default;
   TableLargeArray& operator=(TableLargeArray&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &test_arrays_TableLargeArrayTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 408;
-  static constexpr uint32_t MaxOutOfLineV1 = 416;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
@@ -333,14 +317,6 @@ class UnionSmallArray {
     return static_cast<::test_arrays::wire::UnionSmallArray::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_arrays_UnionSmallArrayTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -422,14 +398,6 @@ class UnionLargeArray {
     return static_cast<::test_arrays::wire::UnionLargeArray::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_arrays_UnionLargeArrayTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 400;
-  static constexpr uint32_t MaxOutOfLineV1 = 400;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -449,14 +417,6 @@ class UnionLargeArray {
 extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
 
 struct StructSmallArray {
-  static constexpr const fidl_type_t* Type = &test_arrays_StructSmallArrayTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  static constexpr uint32_t PrimarySizeV1 = 8;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   ::fidl::Array<uint32_t, 2> a = {};
 
   class UnownedEncodedMessage;
@@ -467,14 +427,6 @@ struct StructSmallArray {
 extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
 
 struct StructLargeArray {
-  static constexpr const fidl_type_t* Type = &test_arrays_StructLargeArrayTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 400;
-  static constexpr uint32_t PrimarySizeV1 = 400;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   ::fidl::Array<uint32_t, 100> a = {};
 
   class UnownedEncodedMessage;
@@ -487,6 +439,18 @@ struct StructLargeArray {
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_arrays::wire::StructSmallArray> {
+  static constexpr const fidl_type_t* kType =
+      &::test_arrays::wire::test_arrays_StructSmallArrayTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
 struct IsFidlType<::test_arrays::wire::StructSmallArray>
     : public std::true_type {};
 template <>
@@ -495,7 +459,19 @@ struct IsStruct<::test_arrays::wire::StructSmallArray> : public std::true_type {
 static_assert(std::is_standard_layout_v<::test_arrays::wire::StructSmallArray>);
 static_assert(offsetof(::test_arrays::wire::StructSmallArray, a) == 0);
 static_assert(sizeof(::test_arrays::wire::StructSmallArray) ==
-              ::test_arrays::wire::StructSmallArray::PrimarySize);
+              TypeTraits<::test_arrays::wire::StructSmallArray>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_arrays::wire::StructLargeArray> {
+  static constexpr const fidl_type_t* kType =
+      &::test_arrays::wire::test_arrays_StructLargeArrayTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 400;
+  static constexpr uint32_t kPrimarySizeV1 = 400;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
 
 template <>
 struct IsFidlType<::test_arrays::wire::StructLargeArray>
@@ -506,7 +482,19 @@ struct IsStruct<::test_arrays::wire::StructLargeArray> : public std::true_type {
 static_assert(std::is_standard_layout_v<::test_arrays::wire::StructLargeArray>);
 static_assert(offsetof(::test_arrays::wire::StructLargeArray, a) == 0);
 static_assert(sizeof(::test_arrays::wire::StructLargeArray) ==
-              ::test_arrays::wire::StructLargeArray::PrimarySize);
+              TypeTraits<::test_arrays::wire::StructLargeArray>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_arrays::wire::TableSmallArray> {
+  static constexpr const fidl_type_t* kType =
+      &::test_arrays::wire::test_arrays_TableSmallArrayTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_arrays::wire::TableSmallArray>
@@ -516,6 +504,18 @@ struct IsTable<::test_arrays::wire::TableSmallArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::TableSmallArray>);
 
 template <>
+struct TypeTraits<::test_arrays::wire::TableLargeArray> {
+  static constexpr const fidl_type_t* kType =
+      &::test_arrays::wire::test_arrays_TableLargeArrayTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 408;
+  static constexpr uint32_t kMaxOutOfLineV1 = 416;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_arrays::wire::TableLargeArray>
     : public std::true_type {};
 template <>
@@ -523,11 +523,35 @@ struct IsTable<::test_arrays::wire::TableLargeArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::TableLargeArray>);
 
 template <>
+struct TypeTraits<::test_arrays::wire::UnionSmallArray> {
+  static constexpr const fidl_type_t* kType =
+      &::test_arrays::wire::test_arrays_UnionSmallArrayTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_arrays::wire::UnionSmallArray>
     : public std::true_type {};
 template <>
 struct IsUnion<::test_arrays::wire::UnionSmallArray> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_arrays::wire::UnionSmallArray>);
+
+template <>
+struct TypeTraits<::test_arrays::wire::UnionLargeArray> {
+  static constexpr const fidl_type_t* kType =
+      &::test_arrays::wire::test_arrays_UnionLargeArrayTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 400;
+  static constexpr uint32_t kMaxOutOfLineV1 = 400;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_arrays::wire::UnionLargeArray>

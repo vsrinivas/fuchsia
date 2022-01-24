@@ -79,18 +79,6 @@ struct ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
 
   WireRequest() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -100,8 +88,44 @@ struct ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
  private:
   void _InitHeader();
 };
-#ifdef __Fuchsia__
 
+namespace fidl {
+
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>> {
+  static constexpr const fidl_type_t* kType =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(
+        ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>) ==
+    TypeTraits<::fidl::WireRequest<
+        ::test_service::SecondProtocol::MethodOnSecond>>::kPrimarySize);
+
+}  // namespace fidl
+namespace test_service {
+#ifdef __Fuchsia__
+}  // namespace test_service
 template <>
 class ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond> final
     : public ::fidl::Result {
@@ -263,9 +287,9 @@ class ::fidl::WireServer<::test_service::SecondProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
+namespace test_service {
 #endif  // __Fuchsia__
 
-namespace test_service {
 __LOCAL extern "C" const fidl_type_t
     test_service_FirstProtocolMethodOnFirstRequestMessageTable;
 
@@ -315,18 +339,6 @@ struct ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst> final {
 
   WireRequest() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -336,8 +348,43 @@ struct ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst> final {
  private:
   void _InitHeader();
 };
-#ifdef __Fuchsia__
 
+namespace fidl {
+
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>> {
+  static constexpr const fidl_type_t* kType =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>) ==
+    TypeTraits<::fidl::WireRequest<
+        ::test_service::FirstProtocol::MethodOnFirst>>::kPrimarySize);
+
+}  // namespace fidl
+namespace test_service {
+#ifdef __Fuchsia__
+}  // namespace test_service
 template <>
 class ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst> final
     : public ::fidl::Result {
@@ -497,9 +544,8 @@ class ::fidl::WireServer<::test_service::FirstProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
-#endif  // __Fuchsia__
-
 namespace test_service {
+#endif  // __Fuchsia__
 
 class SingleMemberService final {
   SingleMemberService() = default;
@@ -851,33 +897,6 @@ class EmptyService final {
 
 }  // namespace test_service
 namespace fidl {
-
-template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
-    : public std::true_type {};
-static_assert(
-    sizeof(
-        ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>) ==
-    ::fidl::WireRequest<
-        ::test_service::SecondProtocol::MethodOnSecond>::PrimarySize);
-
-template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>) ==
-    ::fidl::WireRequest<
-        ::test_service::FirstProtocol::MethodOnFirst>::PrimarySize);
 
 #ifdef __Fuchsia__
 }  // namespace fidl

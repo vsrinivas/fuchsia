@@ -30,15 +30,6 @@ extern "C" const fidl_type_t
     test_structdefaultvalueenumlibraryreference_FooTable;
 
 struct Foo {
-  static constexpr const fidl_type_t* Type =
-      &test_structdefaultvalueenumlibraryreference_FooTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 4;
-  static constexpr uint32_t PrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   ::test_dependent::wire::MyEnum field = {};
 
   class UnownedEncodedMessage;
@@ -49,6 +40,19 @@ struct Foo {
 }  // namespace wire
 }  // namespace test_structdefaultvalueenumlibraryreference
 namespace fidl {
+
+template <>
+struct TypeTraits<::test_structdefaultvalueenumlibraryreference::wire::Foo> {
+  static constexpr const fidl_type_t* kType =
+      &::test_structdefaultvalueenumlibraryreference::wire::
+          test_structdefaultvalueenumlibraryreference_FooTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
 
 template <>
 struct IsFidlType<::test_structdefaultvalueenumlibraryreference::wire::Foo>
@@ -62,6 +66,7 @@ static_assert(offsetof(::test_structdefaultvalueenumlibraryreference::wire::Foo,
                        field) == 0);
 static_assert(
     sizeof(::test_structdefaultvalueenumlibraryreference::wire::Foo) ==
-    ::test_structdefaultvalueenumlibraryreference::wire::Foo::PrimarySize);
+    TypeTraits<::test_structdefaultvalueenumlibraryreference::wire::Foo>::
+        kPrimarySize);
 
 }  // namespace fidl

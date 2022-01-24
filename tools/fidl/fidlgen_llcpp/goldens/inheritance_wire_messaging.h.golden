@@ -68,18 +68,6 @@ struct ::fidl::WireRequest<::test_inheritance::Super::Foo> final {
 
   explicit WireRequest(::fidl::StringView s) : s(s) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::test_inheritance::test_inheritance_superfooRequestMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 32;
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType = ::fidl::WireResponse<::test_inheritance::Super::Foo>;
 
   class UnownedEncodedMessage;
@@ -100,18 +88,6 @@ struct ::fidl::WireResponse<::test_inheritance::Super::Foo> final {
   explicit WireResponse(int64_t y) : y(y) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::test_inheritance::test_inheritance_superfooResponseMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -121,8 +97,69 @@ struct ::fidl::WireResponse<::test_inheritance::Super::Foo> final {
  private:
   void _InitHeader();
 };
-#ifdef __Fuchsia__
 
+namespace fidl {
+
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_inheritance::Super::Foo>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<::test_inheritance::Super::Foo>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_inheritance::test_inheritance_superfooRequestMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 32;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::WireRequest<::test_inheritance::Super::Foo>) ==
+              TypeTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>>::
+                  kPrimarySize);
+static_assert(offsetof(::fidl::WireRequest<::test_inheritance::Super::Foo>,
+                       s) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_inheritance::Super::Foo>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<::test_inheritance::Super::Foo>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_inheritance::Super::Foo>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_inheritance::test_inheritance_superfooResponseMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 24;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(sizeof(::fidl::WireResponse<::test_inheritance::Super::Foo>) ==
+              TypeTraits<::fidl::WireResponse<::test_inheritance::Super::Foo>>::
+                  kPrimarySize);
+static_assert(offsetof(::fidl::WireResponse<::test_inheritance::Super::Foo>,
+                       y) == 16);
+
+}  // namespace fidl
+namespace test_inheritance {
+#ifdef __Fuchsia__
+}  // namespace test_inheritance
 template <>
 class ::fidl::WireResult<::test_inheritance::Super::Foo> final
     : public ::fidl::Result {
@@ -391,9 +428,9 @@ class ::fidl::WireServer<::test_inheritance::Super>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
+namespace test_inheritance {
 #endif  // __Fuchsia__
 
-namespace test_inheritance {
 __LOCAL extern "C" const fidl_type_t test_inheritance_subfooRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
@@ -440,18 +477,6 @@ struct ::fidl::WireRequest<::test_inheritance::Sub::Foo> final {
 
   explicit WireRequest(::fidl::StringView s) : s(s) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::test_inheritance::test_inheritance_subfooRequestMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 32;
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType = ::fidl::WireResponse<::test_inheritance::Sub::Foo>;
 
   class UnownedEncodedMessage;
@@ -472,18 +497,6 @@ struct ::fidl::WireResponse<::test_inheritance::Sub::Foo> final {
   explicit WireResponse(int64_t y) : y(y) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::test_inheritance::test_inheritance_subfooResponseMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -493,8 +506,69 @@ struct ::fidl::WireResponse<::test_inheritance::Sub::Foo> final {
  private:
   void _InitHeader();
 };
-#ifdef __Fuchsia__
 
+namespace fidl {
+
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_inheritance::Sub::Foo>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<::test_inheritance::Sub::Foo>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_inheritance::test_inheritance_subfooRequestMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 32;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(sizeof(::fidl::WireRequest<::test_inheritance::Sub::Foo>) ==
+              TypeTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>>::
+                  kPrimarySize);
+static_assert(offsetof(::fidl::WireRequest<::test_inheritance::Sub::Foo>, s) ==
+              16);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<::test_inheritance::Sub::Foo>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<::test_inheritance::Sub::Foo>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_inheritance::Sub::Foo>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_inheritance::test_inheritance_subfooResponseMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 24;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(sizeof(::fidl::WireResponse<::test_inheritance::Sub::Foo>) ==
+              TypeTraits<::fidl::WireResponse<::test_inheritance::Sub::Foo>>::
+                  kPrimarySize);
+static_assert(offsetof(::fidl::WireResponse<::test_inheritance::Sub::Foo>, y) ==
+              16);
+
+}  // namespace fidl
+namespace test_inheritance {
+#ifdef __Fuchsia__
+}  // namespace test_inheritance
 template <>
 class ::fidl::WireResult<::test_inheritance::Sub::Foo> final
     : public ::fidl::Result {
@@ -758,54 +832,11 @@ class ::fidl::WireServer<::test_inheritance::Sub>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
+namespace test_inheritance {
 #endif  // __Fuchsia__
 
+}  // namespace test_inheritance
 namespace fidl {
-
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_inheritance::Super::Foo>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireRequest<::test_inheritance::Super::Foo>>
-    : public std::true_type {};
-static_assert(sizeof(::fidl::WireRequest<::test_inheritance::Super::Foo>) ==
-              ::fidl::WireRequest<::test_inheritance::Super::Foo>::PrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_inheritance::Super::Foo>,
-                       s) == 16);
-
-template <>
-struct IsFidlType<::fidl::WireResponse<::test_inheritance::Super::Foo>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireResponse<::test_inheritance::Super::Foo>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireResponse<::test_inheritance::Super::Foo>) ==
-    ::fidl::WireResponse<::test_inheritance::Super::Foo>::PrimarySize);
-static_assert(offsetof(::fidl::WireResponse<::test_inheritance::Super::Foo>,
-                       y) == 16);
-
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_inheritance::Sub::Foo>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireRequest<::test_inheritance::Sub::Foo>>
-    : public std::true_type {};
-static_assert(sizeof(::fidl::WireRequest<::test_inheritance::Sub::Foo>) ==
-              ::fidl::WireRequest<::test_inheritance::Sub::Foo>::PrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_inheritance::Sub::Foo>, s) ==
-              16);
-
-template <>
-struct IsFidlType<::fidl::WireResponse<::test_inheritance::Sub::Foo>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireResponse<::test_inheritance::Sub::Foo>>
-    : public std::true_type {};
-static_assert(sizeof(::fidl::WireResponse<::test_inheritance::Sub::Foo>) ==
-              ::fidl::WireResponse<::test_inheritance::Sub::Foo>::PrimarySize);
-static_assert(offsetof(::fidl::WireResponse<::test_inheritance::Sub::Foo>, y) ==
-              16);
 
 #ifdef __Fuchsia__
 }  // namespace fidl

@@ -22,7 +22,7 @@ type Struct struct {
 	fidlgen.Resourceness
 	nameVariants
 	AnonymousChildren   []ScopedLayout
-	CodingTableType     string
+	CodingTableType     name
 	Members             []StructMember
 	BackingBufferTypeV1 string
 	BackingBufferTypeV2 string
@@ -107,7 +107,7 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 
 func (c *compiler) compileStruct(val fidlgen.Struct, anonMessageBody bool) *Struct {
 	name := c.compileNameVariants(val.Name)
-	codingTableType := c.compileCodingTableType(val.Name)
+	codingTableType := name.Wire.ns.member(c.compileCodingTableType(val.Name))
 	r := Struct{
 		Attributes:        Attributes{val.Attributes},
 		AnonymousChildren: c.getAnonymousChildren(val.Layout),

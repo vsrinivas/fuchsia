@@ -50,14 +50,6 @@ class SomeProtocolSomeMethodResult;
 extern "C" const fidl_type_t test_anonymous_TableDataTable;
 
 struct TableData {
-  static constexpr const fidl_type_t* Type = &test_anonymous_TableDataTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  static constexpr uint32_t PrimarySizeV1 = 1;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   uint8_t data = {};
 
   class UnownedEncodedMessage;
@@ -69,14 +61,6 @@ extern "C" const fidl_type_t
     test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 
 struct SomeProtocolSomeMethodResponse {
-  static constexpr const fidl_type_t* Type =
-      &test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 4;
-  static constexpr uint32_t PrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
   using BitsMember = test_anonymous::wire::BitsMember;
 
   ::test_anonymous::wire::BitsMember bits_member = {};
@@ -180,14 +164,6 @@ class TableMember final {
   TableMember& operator=(const TableMember& other) noexcept = default;
   TableMember(TableMember&& other) noexcept = default;
   TableMember& operator=(TableMember&& other) noexcept = default;
-
-  static constexpr const fidl_type_t* Type = &test_anonymous_TableMemberTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 48;
-  static constexpr uint32_t MaxOutOfLineV1 = 64;
-  static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -372,15 +348,6 @@ class FunctionApplication final {
   FunctionApplication& operator=(FunctionApplication&& other) noexcept =
       default;
 
-  static constexpr const fidl_type_t* Type =
-      &test_anonymous_FunctionApplicationTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
@@ -452,14 +419,6 @@ class UnionMember {
     return envelope_.As<uint8_t>().get_data();
   }
   ::test_anonymous::wire::UnionMember::Tag Which() const;
-
-  static constexpr const fidl_type_t* Type = &test_anonymous_UnionMemberTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -639,14 +598,6 @@ class Expression {
   }
   ::test_anonymous::wire::Expression::Tag Which() const;
 
-  static constexpr const fidl_type_t* Type = &test_anonymous_ExpressionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -768,15 +719,6 @@ class SomeProtocolSomeMethodResult {
         ::test_anonymous::wire::SomeProtocolSomeMethodResult::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_anonymous_SomeProtocol_SomeMethod_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -797,13 +739,6 @@ class SomeProtocolSomeMethodResult {
 extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
 
 struct OverrideTest {
-  static constexpr const fidl_type_t* Type = &test_anonymous_OverrideTestTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
-  static constexpr uint32_t PrimarySizeV1 = 56;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
   using Op = test_anonymous::wire::Op;
 
   ::test_anonymous::wire::Op op = {};
@@ -822,13 +757,37 @@ struct OverrideTest {
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_anonymous::wire::TableData> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::wire::test_anonymous_TableDataTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
 struct IsFidlType<::test_anonymous::wire::TableData> : public std::true_type {};
 template <>
 struct IsStruct<::test_anonymous::wire::TableData> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_anonymous::wire::TableData>);
 static_assert(offsetof(::test_anonymous::wire::TableData, data) == 0);
 static_assert(sizeof(::test_anonymous::wire::TableData) ==
-              ::test_anonymous::wire::TableData::PrimarySize);
+              TypeTraits<::test_anonymous::wire::TableData>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_anonymous::wire::OverrideTest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::wire::test_anonymous_OverrideTestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 40;
+  static constexpr uint32_t kPrimarySizeV1 = 56;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_anonymous::wire::OverrideTest>
@@ -841,7 +800,20 @@ static_assert(offsetof(::test_anonymous::wire::OverrideTest, op) == 0);
 static_assert(offsetof(::test_anonymous::wire::OverrideTest, left) == 8);
 static_assert(offsetof(::test_anonymous::wire::OverrideTest, right) == 24);
 static_assert(sizeof(::test_anonymous::wire::OverrideTest) ==
-              ::test_anonymous::wire::OverrideTest::PrimarySize);
+              TypeTraits<::test_anonymous::wire::OverrideTest>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::wire::
+          test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
 
 template <>
 struct IsFidlType<::test_anonymous::wire::SomeProtocolSomeMethodResponse>
@@ -855,7 +827,20 @@ static_assert(offsetof(::test_anonymous::wire::SomeProtocolSomeMethodResponse,
                        bits_member) == 0);
 static_assert(
     sizeof(::test_anonymous::wire::SomeProtocolSomeMethodResponse) ==
-    ::test_anonymous::wire::SomeProtocolSomeMethodResponse::PrimarySize);
+    TypeTraits<
+        ::test_anonymous::wire::SomeProtocolSomeMethodResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_anonymous::wire::TableMember> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::wire::test_anonymous_TableMemberTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 48;
+  static constexpr uint32_t kMaxOutOfLineV1 = 64;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_anonymous::wire::TableMember> : public std::true_type {
@@ -863,6 +848,18 @@ struct IsFidlType<::test_anonymous::wire::TableMember> : public std::true_type {
 template <>
 struct IsTable<::test_anonymous::wire::TableMember> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_anonymous::wire::TableMember>);
+
+template <>
+struct TypeTraits<::test_anonymous::wire::FunctionApplication> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::wire::test_anonymous_FunctionApplicationTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_anonymous::wire::FunctionApplication>
@@ -874,6 +871,18 @@ static_assert(
     std::is_standard_layout_v<::test_anonymous::wire::FunctionApplication>);
 
 template <>
+struct TypeTraits<::test_anonymous::wire::UnionMember> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::wire::test_anonymous_UnionMemberTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_anonymous::wire::UnionMember> : public std::true_type {
 };
 template <>
@@ -881,11 +890,36 @@ struct IsUnion<::test_anonymous::wire::UnionMember> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_anonymous::wire::UnionMember>);
 
 template <>
+struct TypeTraits<::test_anonymous::wire::Expression> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::wire::test_anonymous_ExpressionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_anonymous::wire::Expression> : public std::true_type {
 };
 template <>
 struct IsUnion<::test_anonymous::wire::Expression> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_anonymous::wire::Expression>);
+
+template <>
+struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodResult> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::wire::
+          test_anonymous_SomeProtocol_SomeMethod_ResultTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_anonymous::wire::SomeProtocolSomeMethodResult>

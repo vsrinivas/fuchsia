@@ -13,7 +13,7 @@ type Union struct {
 	fidlgen.Strictness
 	fidlgen.Resourceness
 	nameVariants
-	CodingTableType     string
+	CodingTableType     name
 	AnonymousChildren   []ScopedLayout
 	TagEnum             nameVariants
 	TagUnknown          nameVariants
@@ -58,7 +58,7 @@ func (um UnionMember) NameAndType() (string, Type) {
 
 func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 	name := c.compileNameVariants(val.Name)
-	codingTableType := c.compileCodingTableType(val.Name)
+	codingTableType := name.Wire.ns.member(c.compileCodingTableType(val.Name))
 	tagEnum := name.nest("Tag")
 	wireOrdinalEnum := name.Wire.nest("Ordinal")
 	u := Union{

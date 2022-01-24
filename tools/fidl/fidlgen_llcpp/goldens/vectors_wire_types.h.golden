@@ -28,15 +28,6 @@ struct ExampleUseOfVectors;
 extern "C" const fidl_type_t test_vectors_ExampleUseOfVectorsTable;
 
 struct ExampleUseOfVectors {
-  static constexpr const fidl_type_t* Type =
-      &test_vectors_ExampleUseOfVectorsTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 32;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   ::fidl::VectorView<uint8_t> vector_of_uint8 = {};
 
   ::fidl::VectorView<::fidl::VectorView<bool>> vector_of_vector_of_bool = {};
@@ -51,6 +42,18 @@ struct ExampleUseOfVectors {
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_vectors::wire::ExampleUseOfVectors> {
+  static constexpr const fidl_type_t* kType =
+      &::test_vectors::wire::test_vectors_ExampleUseOfVectorsTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 32;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_vectors::wire::ExampleUseOfVectors>
     : public std::true_type {};
 template <>
@@ -62,7 +65,8 @@ static_assert(offsetof(::test_vectors::wire::ExampleUseOfVectors,
                        vector_of_uint8) == 0);
 static_assert(offsetof(::test_vectors::wire::ExampleUseOfVectors,
                        vector_of_vector_of_bool) == 16);
-static_assert(sizeof(::test_vectors::wire::ExampleUseOfVectors) ==
-              ::test_vectors::wire::ExampleUseOfVectors::PrimarySize);
+static_assert(
+    sizeof(::test_vectors::wire::ExampleUseOfVectors) ==
+    TypeTraits<::test_vectors::wire::ExampleUseOfVectors>::kPrimarySize);
 
 }  // namespace fidl

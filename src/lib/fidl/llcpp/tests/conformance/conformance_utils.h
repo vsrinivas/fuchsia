@@ -137,7 +137,7 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
       uint32_t num_transformer_bytes;
       const char* error;
       zx_status_t status = internal__fidl_transform__may_break(
-          FIDL_TRANSFORMATION_V1_TO_V2, FidlType::Type, copied_bytes.data(),
+          FIDL_TRANSFORMATION_V1_TO_V2, fidl::TypeTraits<FidlType>::kType, copied_bytes.data(),
           static_cast<uint32_t>(copied_bytes.size()), transformer_buffer.get(),
           ZX_CHANNEL_MAX_MSG_BYTES, &num_transformer_bytes, &error);
       if (status != ZX_OK) {
@@ -147,8 +147,8 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
       }
 
       status = internal_fidl_decode_etc__v2__may_break(
-          FidlType::Type, transformer_buffer.get(), num_transformer_bytes, handle_infos.data(),
-          static_cast<uint32_t>(handle_infos.size()), &error);
+          fidl::TypeTraits<FidlType>::kType, transformer_buffer.get(), num_transformer_bytes,
+          handle_infos.data(), static_cast<uint32_t>(handle_infos.size()), &error);
       if (status != ZX_OK) {
         std::cout << "V2 decoder exited with status: " << status << " (error: " << error << ")"
                   << std::endl;
@@ -163,10 +163,11 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
       uint32_t actual_iovecs;
       uint32_t actual_handles;
       status = ::fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-          fidl::internal::ChannelTransport::EncodingConfiguration, FidlType::Type,
-          transformer_buffer.get(), iovec_buffer.get(), ZX_CHANNEL_MAX_MSG_IOVECS,
-          handle_buffer.get(), handle_metadata_buffer.get(), ZX_CHANNEL_MAX_MSG_HANDLES,
-          backing_buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &actual_iovecs, &actual_handles, &error);
+          fidl::internal::ChannelTransport::EncodingConfiguration,
+          fidl::TypeTraits<FidlType>::kType, transformer_buffer.get(), iovec_buffer.get(),
+          ZX_CHANNEL_MAX_MSG_IOVECS, handle_buffer.get(), handle_metadata_buffer.get(),
+          ZX_CHANNEL_MAX_MSG_HANDLES, backing_buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES,
+          &actual_iovecs, &actual_handles, &error);
       if (status != ZX_OK) {
         std::cout << "V2 encoder exited with status: " << status << " (error: " << error << ")"
                   << std::endl;

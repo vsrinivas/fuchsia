@@ -73,8 +73,8 @@ class {{ .WireEventDispatcher }} final :
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
     {{- range .Events }}
-    if ({{ .WireResponse }}::MaxNumHandles >= x) {
-      x = {{ .WireResponse }}::MaxNumHandles;
+    if (::fidl::TypeTraits<{{ .WireResponse }}>::kMaxNumHandles >= x) {
+      x = ::fidl::TypeTraits<{{ .WireResponse }}>::kMaxNumHandles;
     }
     {{- end }}
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {

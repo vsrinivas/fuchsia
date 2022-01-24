@@ -75,18 +75,6 @@ struct ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
   fidl_message_header_t _hdr;
 
   WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType =
       ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>;
 
@@ -111,19 +99,6 @@ struct ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>
   }
   WireResponse() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::test_transitivedependenciescompose::
-          test_transitivedependenciescompose_TopGetFooResponseMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -133,8 +108,80 @@ struct ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>
  private:
   void _InitHeader();
 };
-#ifdef __Fuchsia__
 
+namespace fidl {
+
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>> {
+  static constexpr const fidl_type_t* kType =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::test_transitivedependenciescompose::Top::GetFoo>) ==
+    TypeTraits<::fidl::WireRequest<
+        ::test_transitivedependenciescompose::Top::GetFoo>>::kPrimarySize);
+
+template <>
+struct IsFidlType<
+    ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_transitivedependenciescompose::
+          test_transitivedependenciescompose_TopGetFooResponseMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 24;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::test_transitivedependenciescompose::Top::GetFoo>) ==
+    TypeTraits<::fidl::WireResponse<
+        ::test_transitivedependenciescompose::Top::GetFoo>>::kPrimarySize);
+static_assert(
+    offsetof(
+        ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>,
+        foo) == 16);
+
+}  // namespace fidl
+namespace test_transitivedependenciescompose {
+#ifdef __Fuchsia__
+}  // namespace test_transitivedependenciescompose
 template <>
 class ::fidl::WireResult<::test_transitivedependenciescompose::Top::GetFoo>
     final : public ::fidl::Result {
@@ -444,41 +491,11 @@ class ::fidl::WireServer<::test_transitivedependenciescompose::Top>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
+namespace test_transitivedependenciescompose {
 #endif  // __Fuchsia__
 
+}  // namespace test_transitivedependenciescompose
 namespace fidl {
-
-template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<
-           ::test_transitivedependenciescompose::Top::GetFoo>) ==
-    ::fidl::WireRequest<
-        ::test_transitivedependenciescompose::Top::GetFoo>::PrimarySize);
-
-template <>
-struct IsFidlType<
-    ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireResponse<
-           ::test_transitivedependenciescompose::Top::GetFoo>) ==
-    ::fidl::WireResponse<
-        ::test_transitivedependenciescompose::Top::GetFoo>::PrimarySize);
-static_assert(
-    offsetof(
-        ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>,
-        foo) == 16);
 
 #ifdef __Fuchsia__
 }  // namespace fidl

@@ -59,14 +59,6 @@ struct Handles;
 extern "C" const fidl_type_t test_handles_HandlesTable;
 
 struct Handles {
-  static constexpr const fidl_type_t* Type = &test_handles_HandlesTable;
-  static constexpr uint32_t MaxNumHandles = 33;
-  static constexpr uint32_t PrimarySize = 132;
-  static constexpr uint32_t PrimarySizeV1 = 132;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   ::zx::handle plain_handle = {};
 
   ::zx::bti bti_handle = {};
@@ -148,6 +140,19 @@ namespace fidl {
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::test_handles::wire::Handles> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_handles::wire::Handles> {
+  static constexpr const fidl_type_t* kType =
+      &::test_handles::wire::test_handles_HandlesTable;
+  static constexpr uint32_t kMaxNumHandles = 33;
+  static constexpr uint32_t kPrimarySize = 132;
+  static constexpr uint32_t kPrimarySizeV1 = 132;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
 template <>
 struct IsFidlType<::test_handles::wire::Handles> : public std::true_type {};
 template <>
@@ -192,7 +197,7 @@ static_assert(offsetof(::test_handles::wire::Handles, some_protocol) == 124);
 static_assert(offsetof(::test_handles::wire::Handles, request_some_protocol) ==
               128);
 static_assert(sizeof(::test_handles::wire::Handles) ==
-              ::test_handles::wire::Handles::PrimarySize);
+              TypeTraits<::test_handles::wire::Handles>::kPrimarySize);
 #endif  // __Fuchsia__
 
 }  // namespace fidl

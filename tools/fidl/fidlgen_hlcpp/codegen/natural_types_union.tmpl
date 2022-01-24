@@ -206,8 +206,8 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}
-extern "C" const fidl_type_t {{ .CodingTableType }};
-const fidl_type_t* {{ .Name }}::FidlType = &{{ .CodingTableType }};
+extern "C" const fidl_type_t {{ .CodingTableType.Name }};
+const fidl_type_t* {{ .Name }}::FidlType = &{{ .CodingTableType.Name }};
 
 {{ .Name }}::{{ .Name }}() {}
 

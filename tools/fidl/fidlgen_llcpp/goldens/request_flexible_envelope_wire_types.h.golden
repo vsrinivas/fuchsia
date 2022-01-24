@@ -125,15 +125,6 @@ class StrictFoo {
         ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_requestflexibleenvelope_StrictFooTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -245,15 +236,6 @@ class FlexibleFoo {
   }
   ::test_requestflexibleenvelope::wire::FlexibleFoo::Tag Which() const;
 
-  static constexpr const fidl_type_t* Type =
-      &test_requestflexibleenvelope_FlexibleFooTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -276,6 +258,19 @@ class FlexibleFoo {
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::StrictFoo> {
+  static constexpr const fidl_type_t* kType =
+      &::test_requestflexibleenvelope::wire::
+          test_requestflexibleenvelope_StrictFooTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_requestflexibleenvelope::wire::StrictFoo>
     : public std::true_type {};
 template <>
@@ -283,6 +278,19 @@ struct IsUnion<::test_requestflexibleenvelope::wire::StrictFoo>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::test_requestflexibleenvelope::wire::StrictFoo>);
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::FlexibleFoo> {
+  static constexpr const fidl_type_t* kType =
+      &::test_requestflexibleenvelope::wire::
+          test_requestflexibleenvelope_FlexibleFooTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_requestflexibleenvelope::wire::FlexibleFoo>

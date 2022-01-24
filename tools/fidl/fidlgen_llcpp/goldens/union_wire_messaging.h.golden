@@ -81,18 +81,6 @@ struct ::fidl::WireRequest<
   fidl_message_header_t _hdr;
 
   WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType = ::fidl::WireResponse<
       ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>;
 
@@ -118,19 +106,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::test_union::
-          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  static constexpr uint32_t MaxOutOfLine = 32;
-  static constexpr uint32_t MaxOutOfLineV1 = 32;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -148,18 +123,6 @@ struct ::fidl::WireRequest<
   fidl_message_header_t _hdr;
 
   WireRequest() { _InitHeader(); }
-
-  static constexpr const fidl_type_t* Type =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType =
       ::fidl::WireResponse<::test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>;
@@ -186,19 +149,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::test_union::
-          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  static constexpr uint32_t PrimarySizeV1 = 40;
-  static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasFlexibleEnvelope = true;
-  static constexpr bool HasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -208,8 +158,158 @@ struct ::fidl::WireResponse<
  private:
   void _InitHeader();
 };
-#ifdef __Fuchsia__
 
+namespace fidl {
+
+template <>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireRequest<
+    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> {
+  static constexpr const fidl_type_t* kType =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::test_union::TestProtocol::
+               StrictXUnionHenceResponseMayBeStackAllocated>) ==
+    TypeTraits<::fidl::WireRequest<
+        ::test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>>::kPrimarySize);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireResponse<
+    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::
+          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  static constexpr uint32_t kMaxOutOfLine = 32;
+  static constexpr uint32_t kMaxOutOfLineV1 = 32;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::test_union::TestProtocol::
+               StrictXUnionHenceResponseMayBeStackAllocated>) ==
+    TypeTraits<::fidl::WireResponse<
+        ::test_union::TestProtocol::
+            StrictXUnionHenceResponseMayBeStackAllocated>>::kPrimarySize);
+static_assert(
+    offsetof(
+        ::fidl::WireResponse<::test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>,
+        xu) == 16);
+
+template <>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_union::TestProtocol::
+                            FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
+  static constexpr const fidl_type_t* kType =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::test_union::TestProtocol::
+               FlexibleXUnionHenceResponseMustBeHeapAllocated>) ==
+    TypeTraits<::fidl::WireRequest<
+        ::test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>>::kPrimarySize);
+
+template <>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::fidl::WireResponse<::test_union::TestProtocol::
+                             FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::
+          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = true;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+
+static_assert(
+    sizeof(::fidl::WireResponse<
+           ::test_union::TestProtocol::
+               FlexibleXUnionHenceResponseMustBeHeapAllocated>) ==
+    TypeTraits<::fidl::WireResponse<
+        ::test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireResponse<
+                           ::test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+                       xu) == 16);
+
+}  // namespace fidl
+namespace test_union {
+#ifdef __Fuchsia__
+}  // namespace test_union
 template <>
 class ::fidl::WireResult<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
@@ -787,82 +887,11 @@ class ::fidl::WireServer<::test_union::TestProtocol>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
+namespace test_union {
 #endif  // __Fuchsia__
 
+}  // namespace test_union
 namespace fidl {
-
-template <>
-struct IsFidlType<::fidl::WireRequest<
-    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireRequest<
-    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<
-           ::test_union::TestProtocol::
-               StrictXUnionHenceResponseMayBeStackAllocated>) ==
-    ::fidl::WireRequest<
-        ::test_union::TestProtocol::
-            StrictXUnionHenceResponseMayBeStackAllocated>::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl::WireResponse<
-    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireResponse<
-    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireResponse<
-           ::test_union::TestProtocol::
-               StrictXUnionHenceResponseMayBeStackAllocated>) ==
-    ::fidl::WireResponse<
-        ::test_union::TestProtocol::
-            StrictXUnionHenceResponseMayBeStackAllocated>::PrimarySize);
-static_assert(
-    offsetof(
-        ::fidl::WireResponse<::test_union::TestProtocol::
-                                 StrictXUnionHenceResponseMayBeStackAllocated>,
-        xu) == 16);
-
-template <>
-struct IsFidlType<::fidl::WireRequest<
-    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireRequest<
-    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<
-           ::test_union::TestProtocol::
-               FlexibleXUnionHenceResponseMustBeHeapAllocated>) ==
-    ::fidl::WireRequest<
-        ::test_union::TestProtocol::
-            FlexibleXUnionHenceResponseMustBeHeapAllocated>::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl::WireResponse<
-    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireResponse<
-    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireResponse<
-           ::test_union::TestProtocol::
-               FlexibleXUnionHenceResponseMustBeHeapAllocated>) ==
-    ::fidl::WireResponse<
-        ::test_union::TestProtocol::
-            FlexibleXUnionHenceResponseMustBeHeapAllocated>::PrimarySize);
-static_assert(offsetof(::fidl::WireResponse<
-                           ::test_union::TestProtocol::
-                               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
-                       xu) == 16);
 
 #ifdef __Fuchsia__
 }  // namespace fidl

@@ -40,15 +40,6 @@ class ExampleUnion;
 extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
 
 struct ExampleStruct {
-  static constexpr const fidl_type_t* Type =
-      &test_placementofattributes_ExampleStructTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 4;
-  static constexpr uint32_t PrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   uint32_t member = {};
 
   class UnownedEncodedMessage;
@@ -131,15 +122,6 @@ class ExampleTable final {
   ExampleTable(ExampleTable&& other) noexcept = default;
   ExampleTable& operator=(ExampleTable&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type =
-      &test_placementofattributes_ExampleTableTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 24;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<
@@ -218,15 +200,6 @@ class ExampleXUnion {
   }
   ::test_placementofattributes::wire::ExampleXUnion::Tag Which() const;
 
-  static constexpr const fidl_type_t* Type =
-      &test_placementofattributes_ExampleXUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -301,15 +274,6 @@ class ExampleUnion {
         ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_placementofattributes_ExampleUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -333,6 +297,19 @@ constexpr uint32_t kExampleConst = 0u;
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_placementofattributes::wire::ExampleStruct> {
+  static constexpr const fidl_type_t* kType =
+      &::test_placementofattributes::wire::
+          test_placementofattributes_ExampleStructTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
 struct IsFidlType<::test_placementofattributes::wire::ExampleStruct>
     : public std::true_type {};
 template <>
@@ -343,7 +320,21 @@ static_assert(std::is_standard_layout_v<
 static_assert(offsetof(::test_placementofattributes::wire::ExampleStruct,
                        member) == 0);
 static_assert(sizeof(::test_placementofattributes::wire::ExampleStruct) ==
-              ::test_placementofattributes::wire::ExampleStruct::PrimarySize);
+              TypeTraits<::test_placementofattributes::wire::ExampleStruct>::
+                  kPrimarySize);
+
+template <>
+struct TypeTraits<::test_placementofattributes::wire::ExampleTable> {
+  static constexpr const fidl_type_t* kType =
+      &::test_placementofattributes::wire::
+          test_placementofattributes_ExampleTableTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_placementofattributes::wire::ExampleTable>
@@ -355,6 +346,19 @@ static_assert(std::is_standard_layout_v<
               ::test_placementofattributes::wire::ExampleTable>);
 
 template <>
+struct TypeTraits<::test_placementofattributes::wire::ExampleXUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_placementofattributes::wire::
+          test_placementofattributes_ExampleXUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_placementofattributes::wire::ExampleXUnion>
     : public std::true_type {};
 template <>
@@ -362,6 +366,19 @@ struct IsUnion<::test_placementofattributes::wire::ExampleXUnion>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::test_placementofattributes::wire::ExampleXUnion>);
+
+template <>
+struct TypeTraits<::test_placementofattributes::wire::ExampleUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_placementofattributes::wire::
+          test_placementofattributes_ExampleUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_placementofattributes::wire::ExampleUnion>

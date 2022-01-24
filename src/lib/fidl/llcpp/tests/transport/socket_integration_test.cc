@@ -33,29 +33,37 @@ const struct FidlCodedStruct CodingTableStruct = {
     .name = "integration/TwoWayMessage"};
 
 struct TwoWayRequest {
-  static constexpr const fidl_type_t* Type = &CodingTableStruct;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-  static constexpr bool HasFlexibleEnvelope = false;
   fidl_message_header_t header;
   alignas(8) uint32_t payload;
 };
 
+template <>
+struct fidl::TypeTraits<TwoWayRequest> {
+  static constexpr const fidl_type_t* kType = &CodingTableStruct;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 24;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+  static constexpr bool kHasFlexibleEnvelope = false;
+};
+
 struct TwoWayResponse {
-  static constexpr const fidl_type_t* Type = &CodingTableStruct;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kResponse;
-  static constexpr bool HasFlexibleEnvelope = false;
   fidl_message_header_t header;
   alignas(8) uint32_t payload;
+};
+
+template <>
+struct fidl::TypeTraits<TwoWayResponse> {
+  static constexpr const fidl_type_t* kType = &CodingTableStruct;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 24;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+  static constexpr bool kHasFlexibleEnvelope = false;
 };
 
 template <>

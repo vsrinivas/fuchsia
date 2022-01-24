@@ -37,14 +37,6 @@ class Union;
 extern "C" const fidl_type_t test_versions_StructTable;
 
 struct Struct {
-  static constexpr const fidl_type_t* Type = &test_versions_StructTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 4;
-  static constexpr uint32_t PrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   uint32_t x = {};
 
   class UnownedEncodedMessage;
@@ -123,14 +115,6 @@ class Table final {
   Table(Table&& other) noexcept = default;
   Table& operator=(Table&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &test_versions_TableTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 24;
-  static constexpr bool HasPointer = true;
-
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
@@ -199,14 +183,6 @@ class Union {
   }
   ::test_versions::wire::Union::Tag Which() const;
 
-  static constexpr const fidl_type_t* Type = &test_versions_UnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -230,19 +206,55 @@ constexpr uint32_t kConst = 0u;
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_versions::wire::Struct> {
+  static constexpr const fidl_type_t* kType =
+      &::test_versions::wire::test_versions_StructTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
 struct IsFidlType<::test_versions::wire::Struct> : public std::true_type {};
 template <>
 struct IsStruct<::test_versions::wire::Struct> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_versions::wire::Struct>);
 static_assert(offsetof(::test_versions::wire::Struct, x) == 0);
 static_assert(sizeof(::test_versions::wire::Struct) ==
-              ::test_versions::wire::Struct::PrimarySize);
+              TypeTraits<::test_versions::wire::Struct>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_versions::wire::Table> {
+  static constexpr const fidl_type_t* kType =
+      &::test_versions::wire::test_versions_TableTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_versions::wire::Table> : public std::true_type {};
 template <>
 struct IsTable<::test_versions::wire::Table> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_versions::wire::Table>);
+
+template <>
+struct TypeTraits<::test_versions::wire::Union> {
+  static constexpr const fidl_type_t* kType =
+      &::test_versions::wire::test_versions_UnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_versions::wire::Union> : public std::true_type {};

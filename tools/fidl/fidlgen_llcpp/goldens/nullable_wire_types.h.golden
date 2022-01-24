@@ -48,15 +48,6 @@ class SimpleUnion;
 extern "C" const fidl_type_t test_nullable_StructWithNullableRequestTable;
 
 struct StructWithNullableRequest {
-  static constexpr const fidl_type_t* Type =
-      &test_nullable_StructWithNullableRequestTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 4;
-  static constexpr uint32_t PrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   ::fidl::ServerEnd<::test_nullable::SimpleProtocol> val = {};
 
   void _CloseHandles();
@@ -72,15 +63,6 @@ struct StructWithNullableRequest {
 extern "C" const fidl_type_t test_nullable_StructWithNullableProtocolTable;
 
 struct StructWithNullableProtocol {
-  static constexpr const fidl_type_t* Type =
-      &test_nullable_StructWithNullableProtocolTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 4;
-  static constexpr uint32_t PrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   ::fidl::ClientEnd<::test_nullable::SimpleProtocol> val = {};
 
   void _CloseHandles();
@@ -96,15 +78,6 @@ struct StructWithNullableProtocol {
 extern "C" const fidl_type_t test_nullable_StructWithNullableHandleTable;
 
 struct StructWithNullableHandle {
-  static constexpr const fidl_type_t* Type =
-      &test_nullable_StructWithNullableHandleTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 4;
-  static constexpr uint32_t PrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   ::zx::vmo val = {};
 
   void _CloseHandles();
@@ -118,14 +91,6 @@ struct StructWithNullableHandle {
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
 
 struct Int32Wrapper {
-  static constexpr const fidl_type_t* Type = &test_nullable_Int32WrapperTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 4;
-  static constexpr uint32_t PrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   int32_t val = {};
 
   class UnownedEncodedMessage;
@@ -206,14 +171,6 @@ class SimpleUnion {
     return static_cast<::test_nullable::wire::SimpleUnion::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_nullable_SimpleUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -234,15 +191,6 @@ class SimpleUnion {
 extern "C" const fidl_type_t test_nullable_StructWithNullableVectorTable;
 
 struct StructWithNullableVector {
-  static constexpr const fidl_type_t* Type =
-      &test_nullable_StructWithNullableVectorTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   ::fidl::VectorView<int32_t> val = {};
 
   class UnownedEncodedMessage;
@@ -253,15 +201,6 @@ struct StructWithNullableVector {
 extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
 
 struct StructWithNullableUnion {
-  static constexpr const fidl_type_t* Type =
-      &test_nullable_StructWithNullableUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   ::test_nullable::wire::SimpleUnion val = {};
 
   class UnownedEncodedMessage;
@@ -272,15 +211,6 @@ struct StructWithNullableUnion {
 extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
 
 struct StructWithNullableStruct {
-  static constexpr const fidl_type_t* Type =
-      &test_nullable_StructWithNullableStructTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  static constexpr uint32_t PrimarySizeV1 = 8;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   ::fidl::ObjectView<::test_nullable::wire::Int32Wrapper> val = {};
 
   class UnownedEncodedMessage;
@@ -291,15 +221,6 @@ struct StructWithNullableStruct {
 extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 
 struct StructWithNullableString {
-  static constexpr const fidl_type_t* Type =
-      &test_nullable_StructWithNullableStringTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
-  static constexpr bool HasPointer = true;
-
   ::fidl::StringView val = {};
 
   class UnownedEncodedMessage;
@@ -312,6 +233,18 @@ struct StructWithNullableString {
 namespace fidl {
 
 template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableVector> {
+  static constexpr const fidl_type_t* kType =
+      &::test_nullable::wire::test_nullable_StructWithNullableVectorTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_nullable::wire::StructWithNullableVector>
     : public std::true_type {};
 template <>
@@ -321,8 +254,21 @@ static_assert(
     std::is_standard_layout_v<::test_nullable::wire::StructWithNullableVector>);
 static_assert(offsetof(::test_nullable::wire::StructWithNullableVector, val) ==
               0);
-static_assert(sizeof(::test_nullable::wire::StructWithNullableVector) ==
-              ::test_nullable::wire::StructWithNullableVector::PrimarySize);
+static_assert(
+    sizeof(::test_nullable::wire::StructWithNullableVector) ==
+    TypeTraits<::test_nullable::wire::StructWithNullableVector>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_nullable::wire::test_nullable_StructWithNullableUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_nullable::wire::StructWithNullableUnion>
@@ -334,8 +280,21 @@ static_assert(
     std::is_standard_layout_v<::test_nullable::wire::StructWithNullableUnion>);
 static_assert(offsetof(::test_nullable::wire::StructWithNullableUnion, val) ==
               0);
-static_assert(sizeof(::test_nullable::wire::StructWithNullableUnion) ==
-              ::test_nullable::wire::StructWithNullableUnion::PrimarySize);
+static_assert(
+    sizeof(::test_nullable::wire::StructWithNullableUnion) ==
+    TypeTraits<::test_nullable::wire::StructWithNullableUnion>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableStruct> {
+  static constexpr const fidl_type_t* kType =
+      &::test_nullable::wire::test_nullable_StructWithNullableStructTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_nullable::wire::StructWithNullableStruct>
@@ -347,8 +306,21 @@ static_assert(
     std::is_standard_layout_v<::test_nullable::wire::StructWithNullableStruct>);
 static_assert(offsetof(::test_nullable::wire::StructWithNullableStruct, val) ==
               0);
-static_assert(sizeof(::test_nullable::wire::StructWithNullableStruct) ==
-              ::test_nullable::wire::StructWithNullableStruct::PrimarySize);
+static_assert(
+    sizeof(::test_nullable::wire::StructWithNullableStruct) ==
+    TypeTraits<::test_nullable::wire::StructWithNullableStruct>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableString> {
+  static constexpr const fidl_type_t* kType =
+      &::test_nullable::wire::test_nullable_StructWithNullableStringTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_nullable::wire::StructWithNullableString>
@@ -360,13 +332,27 @@ static_assert(
     std::is_standard_layout_v<::test_nullable::wire::StructWithNullableString>);
 static_assert(offsetof(::test_nullable::wire::StructWithNullableString, val) ==
               0);
-static_assert(sizeof(::test_nullable::wire::StructWithNullableString) ==
-              ::test_nullable::wire::StructWithNullableString::PrimarySize);
+static_assert(
+    sizeof(::test_nullable::wire::StructWithNullableString) ==
+    TypeTraits<::test_nullable::wire::StructWithNullableString>::kPrimarySize);
 
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::test_nullable::wire::StructWithNullableRequest>
     : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_nullable::wire::test_nullable_StructWithNullableRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
 template <>
 struct IsFidlType<::test_nullable::wire::StructWithNullableRequest>
     : public std::true_type {};
@@ -377,14 +363,28 @@ static_assert(std::is_standard_layout_v<
               ::test_nullable::wire::StructWithNullableRequest>);
 static_assert(offsetof(::test_nullable::wire::StructWithNullableRequest, val) ==
               0);
-static_assert(sizeof(::test_nullable::wire::StructWithNullableRequest) ==
-              ::test_nullable::wire::StructWithNullableRequest::PrimarySize);
+static_assert(
+    sizeof(::test_nullable::wire::StructWithNullableRequest) ==
+    TypeTraits<::test_nullable::wire::StructWithNullableRequest>::kPrimarySize);
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::test_nullable::wire::StructWithNullableProtocol>
     : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableProtocol> {
+  static constexpr const fidl_type_t* kType =
+      &::test_nullable::wire::test_nullable_StructWithNullableProtocolTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
 template <>
 struct IsFidlType<::test_nullable::wire::StructWithNullableProtocol>
     : public std::true_type {};
@@ -396,13 +396,27 @@ static_assert(std::is_standard_layout_v<
 static_assert(offsetof(::test_nullable::wire::StructWithNullableProtocol,
                        val) == 0);
 static_assert(sizeof(::test_nullable::wire::StructWithNullableProtocol) ==
-              ::test_nullable::wire::StructWithNullableProtocol::PrimarySize);
+              TypeTraits<::test_nullable::wire::StructWithNullableProtocol>::
+                  kPrimarySize);
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::test_nullable::wire::StructWithNullableHandle>
     : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_nullable::wire::StructWithNullableHandle> {
+  static constexpr const fidl_type_t* kType =
+      &::test_nullable::wire::test_nullable_StructWithNullableHandleTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
 template <>
 struct IsFidlType<::test_nullable::wire::StructWithNullableHandle>
     : public std::true_type {};
@@ -413,9 +427,22 @@ static_assert(
     std::is_standard_layout_v<::test_nullable::wire::StructWithNullableHandle>);
 static_assert(offsetof(::test_nullable::wire::StructWithNullableHandle, val) ==
               0);
-static_assert(sizeof(::test_nullable::wire::StructWithNullableHandle) ==
-              ::test_nullable::wire::StructWithNullableHandle::PrimarySize);
+static_assert(
+    sizeof(::test_nullable::wire::StructWithNullableHandle) ==
+    TypeTraits<::test_nullable::wire::StructWithNullableHandle>::kPrimarySize);
 #endif  // __Fuchsia__
+
+template <>
+struct TypeTraits<::test_nullable::wire::Int32Wrapper> {
+  static constexpr const fidl_type_t* kType =
+      &::test_nullable::wire::test_nullable_Int32WrapperTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
 
 template <>
 struct IsFidlType<::test_nullable::wire::Int32Wrapper> : public std::true_type {
@@ -425,7 +452,19 @@ struct IsStruct<::test_nullable::wire::Int32Wrapper> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_nullable::wire::Int32Wrapper>);
 static_assert(offsetof(::test_nullable::wire::Int32Wrapper, val) == 0);
 static_assert(sizeof(::test_nullable::wire::Int32Wrapper) ==
-              ::test_nullable::wire::Int32Wrapper::PrimarySize);
+              TypeTraits<::test_nullable::wire::Int32Wrapper>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_nullable::wire::SimpleUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_nullable::wire::test_nullable_SimpleUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_nullable::wire::SimpleUnion> : public std::true_type {

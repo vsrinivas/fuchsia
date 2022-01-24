@@ -89,9 +89,10 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
   zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_handles;
   const char* error_msg = nullptr;
-  zx_status_t status = fidl_encode_etc(
-      FidlType::Type, llcpp_decoded.PrimaryObject(), static_cast<uint32_t>(copied_bytes.size()),
-      handle_dispositions, std::size(handle_dispositions), &actual_handles, &error_msg);
+  zx_status_t status =
+      fidl_encode_etc(fidl::TypeTraits<FidlType>::kType, llcpp_decoded.PrimaryObject(),
+                      static_cast<uint32_t>(copied_bytes.size()), handle_dispositions,
+                      std::size(handle_dispositions), &actual_handles, &error_msg);
   // The decoded message is consumed by |fidl_encode_etc|, and handles are moved
   // to |handle_dispositions|.
   llcpp_decoded.ReleasePrimaryObject();

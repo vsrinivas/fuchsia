@@ -57,15 +57,6 @@ extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
 
 struct WithErrorSyntaxHandleInResultResponse {
-  static constexpr const fidl_type_t* Type =
-      &test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 4;
-  static constexpr uint32_t PrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   ::zx::handle h = {};
 
   void _CloseHandles();
@@ -80,15 +71,6 @@ extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
 struct WithErrorSyntaxErrorAsPrimitiveResponse {
-  static constexpr const fidl_type_t* Type =
-      &test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  static constexpr uint32_t PrimarySizeV1 = 1;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   uint8_t __reserved = {};
 
   class UnownedEncodedMessage;
@@ -100,15 +82,6 @@ extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
 struct WithErrorSyntaxErrorAsEnumResponse {
-  static constexpr const fidl_type_t* Type =
-      &test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  static constexpr uint32_t PrimarySizeV1 = 1;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   uint8_t __reserved = {};
 
   class UnownedEncodedMessage;
@@ -230,15 +203,6 @@ class WithErrorSyntaxHandleInResultResult {
         ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Tag>(
         ordinal_);
   }
-
-  static constexpr const fidl_type_t* Type =
-      &test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
   void _CloseHandles();
 
   class UnownedEncodedMessage;
@@ -395,15 +359,6 @@ class WithErrorSyntaxResponseAsStructResult {
         ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
-  static constexpr uint32_t MaxOutOfLineV1 = 24;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -532,15 +487,6 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
         ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -605,14 +551,6 @@ class TheUnion {
     return envelope_.As<uint32_t>().get_data();
   }
   ::test_protocols::wire::TheUnion::Tag Which() const;
-
-  static constexpr const fidl_type_t* Type = &test_protocols_TheUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -734,15 +672,6 @@ class WithErrorSyntaxErrorAsEnumResult {
         ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 8;
-  static constexpr bool HasPointer = true;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
@@ -764,15 +693,6 @@ extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
 struct WithErrorSyntaxResponseAsStructResponse {
-  static constexpr const fidl_type_t* Type =
-      &test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   int64_t a = {};
 
   int64_t b = {};
@@ -789,14 +709,6 @@ struct WithErrorSyntaxResponseAsStructResponse {
 extern "C" const fidl_type_t test_protocols_ProtocolEndsTable;
 
 struct ProtocolEnds {
-  static constexpr const fidl_type_t* Type = &test_protocols_ProtocolEndsTable;
-  static constexpr uint32_t MaxNumHandles = 4;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t PrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasPointer = false;
-
   ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> client = {};
 
   ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server = {};
@@ -821,6 +733,21 @@ namespace fidl {
 template <>
 struct IsResource<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
     : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
 template <>
 struct IsFidlType<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
     : public std::true_type {};
@@ -834,8 +761,23 @@ static_assert(
              h) == 0);
 static_assert(
     sizeof(::test_protocols::wire::WithErrorSyntaxHandleInResultResponse) ==
-    ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse::PrimarySize);
+    TypeTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>::
+        kPrimarySize);
 #endif  // __Fuchsia__
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 24;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
 
 template <>
 struct IsFidlType<
@@ -857,8 +799,22 @@ static_assert(
              c) == 16);
 static_assert(
     sizeof(::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse) ==
-    ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse::
-        PrimarySize);
+    TypeTraits<::test_protocols::wire::
+                   WithErrorSyntaxResponseAsStructResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
 
 template <>
 struct IsFidlType<
@@ -874,8 +830,21 @@ static_assert(
              __reserved) == 0);
 static_assert(
     sizeof(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse) ==
-    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse::
-        PrimarySize);
+    TypeTraits<::test_protocols::wire::
+                   WithErrorSyntaxErrorAsPrimitiveResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
 
 template <>
 struct IsFidlType<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>
@@ -890,12 +859,26 @@ static_assert(
              __reserved) == 0);
 static_assert(
     sizeof(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse) ==
-    ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse::PrimarySize);
+    TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>::
+        kPrimarySize);
 
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::test_protocols::wire::ProtocolEnds>
     : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocols::wire::ProtocolEnds> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::test_protocols_ProtocolEndsTable;
+  static constexpr uint32_t kMaxNumHandles = 4;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
 template <>
 struct IsFidlType<::test_protocols::wire::ProtocolEnds>
     : public std::true_type {};
@@ -908,13 +891,27 @@ static_assert(offsetof(::test_protocols::wire::ProtocolEnds, server) == 4);
 static_assert(offsetof(::test_protocols::wire::ProtocolEnds, client_opt) == 8);
 static_assert(offsetof(::test_protocols::wire::ProtocolEnds, server_opt) == 12);
 static_assert(sizeof(::test_protocols::wire::ProtocolEnds) ==
-              ::test_protocols::wire::ProtocolEnds::PrimarySize);
+              TypeTraits<::test_protocols::wire::ProtocolEnds>::kPrimarySize);
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>
     : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsFidlType<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>
     : public std::true_type {};
@@ -926,6 +923,20 @@ static_assert(std::is_standard_layout_v<
 #endif  // __Fuchsia__
 
 template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 24;
+  static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
     : public std::true_type {};
 template <>
@@ -933,6 +944,20 @@ struct IsUnion<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>);
+
+template <>
+struct TypeTraits<
+    ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>
@@ -944,10 +969,35 @@ static_assert(std::is_standard_layout_v<
               ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>);
 
 template <>
+struct TypeTraits<::test_protocols::wire::TheUnion> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::test_protocols_TheUnionTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
 struct IsFidlType<::test_protocols::wire::TheUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_protocols::wire::TheUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test_protocols::wire::TheUnion>);
+
+template <>
+struct TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocols::wire::
+          test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
 
 template <>
 struct IsFidlType<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>

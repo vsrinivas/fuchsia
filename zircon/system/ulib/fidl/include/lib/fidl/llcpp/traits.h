@@ -23,22 +23,9 @@
 // |IsFidlType<T>|    resolves to std::true_type.
 // |IsFidlMessage<T>| resolves to std::true_type iff |T| is a transactional message.
 // |IsResource<T>|    resolves to std::true_type iff |T| is a resource type.
-// |T::MaxNumHandles| is a uint32_t specifying the upper bound on the number of contained handles.
-// |T::PrimarySize|   is a uint32_t specifying the size in bytes of the inline part of the message.
-// |T::MaxOutOfLine|  is a uint32_t specifying the upper bound on the out-of-line message size.
-//                    It is std::numeric_limits<uint32_t>::max() if |T| is unbounded.
-// |T::HasPointer|    is a boolean specifying if the structure contains pointer indirections, hence
-//                    requires linearization when sending.
-// |T::Type|          is a fidl_type_t* pointing to the corresponding coding table, if any.
-//                    If the encoding/decoding of |T| can be elided, |T::Type| is NULL.
 //
-// Additionally, if |T| is a transactional message:
-//
-// |T::HasFlexibleEnvelope| is a bool specifying if this message contains a flexible xunion or
-//                          a flexible table.
-// |T::MessageKind|         identifies if this message is a request or a response. If undefined,
-//                          the type may be used either as a request or a response.
-//
+// |TypeTraits<T>| will be specialized for the type, see documentation below for
+//                 what fields it will contain.
 
 namespace fidl {
 
@@ -93,6 +80,37 @@ struct IsResource : public std::false_type {
 };
 #endif
 // Code-gen will explicitly conform the generated FIDL types to IsResource.
+
+// A type trait that contains several properties of fidl types which are
+// important for encoding/decoding.
+//
+// |kMaxNumHandles| is a uint32_t specifying the upper bound on the number of
+//                  contained handles.
+// |kPrimarySize|   is a uint32_t specifying the size in bytes of the inline part
+//                  of the message.
+// |kMaxOutOfLine|  is a uint32_t specifying the upper bound on the out-of-line
+//                  message size.  It is std::numeric_limits<uint32_t>::max() if
+//                  |T| is unbounded.
+// |kHasPointer|    is a boolean specifying if the structure contains pointer
+//                  indirections, hence requires linearization when sending.
+// |kType|          is a fidl_type_t* pointing to the corresponding coding table,
+//                  if any. If the encoding/decoding of |T| can be elided,
+//                  |kType| is NULL.
+//
+// Additionally, if |T| is a transactional message:
+//
+// |kHasFlexibleEnvelope| is a bool specifying if this message contains a
+//                        flexible xunion or a flexible table.
+// |kMessageKind|         identifies if this message is a request or a response.
+//                        If undefined, the type may be used either as a request
+//                        or a response.
+template <typename T>
+struct TypeTraits {};
+// Code-gen will explicitly conform the generated FIDL types to TypeTraits.
+
+// Const-ness is not significant for determining TypeTraits.
+template <typename T>
+struct TypeTraits<const T> : public TypeTraits<T> {};
 
 // String
 class StringView;
@@ -204,13 +222,13 @@ template <typename Protocol>
 struct ContainsHandle<ServerEnd<Protocol>> : std::true_type {};
 
 template <typename T>
-struct ContainsHandle<T,
-                      typename std::enable_if<IsFidlType<T>::value && T::MaxNumHandles == 0>::type>
+struct ContainsHandle<
+    T, typename std::enable_if<IsFidlType<T>::value && TypeTraits<T>::kMaxNumHandles == 0>::type>
     : std::false_type {};
 
 template <typename T>
-struct ContainsHandle<T,
-                      typename std::enable_if<(IsFidlType<T>::value && T::MaxNumHandles > 0)>::type>
+struct ContainsHandle<
+    T, typename std::enable_if<(IsFidlType<T>::value && TypeTraits<T>::kMaxNumHandles > 0)>::type>
     : std::true_type {};
 
 template <typename T, size_t N>
@@ -258,8 +276,9 @@ using void_t = typename make_void<T...>::type;
 template <typename FidlType, typename = void_t<>>
 struct IsResponseType : std::false_type {};
 template <typename FidlType>
-struct IsResponseType<FidlType, void_t<decltype(FidlType::MessageKind)>>
-    : std::integral_constant<bool, FidlType::MessageKind == TransactionalMessageKind::kResponse> {};
+struct IsResponseType<FidlType, void_t<decltype(TypeTraits<FidlType>::kMessageKind)>>
+    : std::integral_constant<bool, TypeTraits<FidlType>::kMessageKind ==
+                                       TransactionalMessageKind::kResponse> {};
 
 // Calculates the maximum possible message size for a FIDL type,
 // clamped at the Zircon channel transport packet size.
@@ -267,14 +286,14 @@ template <typename FidlType, const MessageDirection Direction>
 constexpr uint32_t ClampedMessageSize() {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
   if constexpr (Direction == MessageDirection::kReceiving) {
-    if (FidlType::HasFlexibleEnvelope) {
+    if (TypeTraits<FidlType>::kHasFlexibleEnvelope) {
       return ZX_CHANNEL_MAX_MSG_BYTES;
     }
   }
   // These can be modified to return the ::Alt variant when a migration
   // is ongoing
-  uint64_t primary = FidlAlign(FidlType::PrimarySizeV1);
-  uint64_t out_of_line = FidlAlign(FidlType::MaxOutOfLineV1);
+  uint64_t primary = FidlAlign(TypeTraits<FidlType>::kPrimarySizeV1);
+  uint64_t out_of_line = FidlAlign(TypeTraits<FidlType>::kMaxOutOfLineV1);
   uint64_t sum = primary + out_of_line;
   if (sum > ZX_CHANNEL_MAX_MSG_BYTES) {
     return ZX_CHANNEL_MAX_MSG_BYTES;
@@ -289,11 +308,11 @@ template <typename FidlType, const MessageDirection Direction>
 constexpr uint32_t ClampedHandleCount() {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
   if constexpr (Direction == MessageDirection::kReceiving) {
-    if (FidlType::HasFlexibleEnvelope) {
+    if (TypeTraits<FidlType>::kHasFlexibleEnvelope) {
       return ZX_CHANNEL_MAX_MSG_HANDLES;
     }
   }
-  uint32_t raw_max_handles = FidlType::MaxNumHandles;
+  uint32_t raw_max_handles = TypeTraits<FidlType>::kMaxNumHandles;
   if (raw_max_handles > ZX_CHANNEL_MAX_MSG_HANDLES) {
     return ZX_CHANNEL_MAX_MSG_HANDLES;
   } else {

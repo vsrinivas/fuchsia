@@ -71,18 +71,6 @@ struct ::fidl::WireRequest<::test_driveroneway::OneWay::Send> final {
   }
   WireRequest() { _InitHeader(); }
 
-  static constexpr const fidl_type_t* Type =
-      &::test_driveroneway::test_driveroneway_OneWaySendRequestMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  static constexpr uint32_t PrimarySizeV1 = 24;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
 
@@ -92,8 +80,42 @@ struct ::fidl::WireRequest<::test_driveroneway::OneWay::Send> final {
  private:
   void _InitHeader();
 };
-#ifdef __Fuchsia__
 
+namespace fidl {
+
+template <>
+struct IsFidlType<::fidl::WireRequest<::test_driveroneway::OneWay::Send>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl::WireRequest<::test_driveroneway::OneWay::Send>>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_driveroneway::OneWay::Send>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_driveroneway::test_driveroneway_OneWaySendRequestMessageTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 24;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(::fidl::WireRequest<::test_driveroneway::OneWay::Send>) ==
+    TypeTraits<
+        ::fidl::WireRequest<::test_driveroneway::OneWay::Send>>::kPrimarySize);
+static_assert(offsetof(::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
+                       payload) == 16);
+
+}  // namespace fidl
+namespace test_driveroneway {
+#ifdef __Fuchsia__
+}  // namespace test_driveroneway
 template <>
 class ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> final
     : public ::fidl::Result {
@@ -207,21 +229,11 @@ class ::fdf::WireServer<::test_driveroneway::OneWay>
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::IncomingTransportContext transport_context) final;
 };
+namespace test_driveroneway {
 #endif  // __Fuchsia__
 
+}  // namespace test_driveroneway
 namespace fidl {
-
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_driveroneway::OneWay::Send>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireRequest<::test_driveroneway::OneWay::Send>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<::test_driveroneway::OneWay::Send>) ==
-    ::fidl::WireRequest<::test_driveroneway::OneWay::Send>::PrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
-                       payload) == 16);
 
 #ifdef __Fuchsia__
 }  // namespace fidl

@@ -66,12 +66,16 @@ const struct FidlCodedStruct CodingTableStruct = {
     .name = "coding/Input"};
 
 struct Input {
-  static constexpr const fidl_type_t* Type = &CodingTableStruct;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 4;
-  static constexpr uint32_t PrimarySizeV1 = 4;
-  static constexpr uint32_t MaxOutOfLineV1 = 0;
   fidl_handle_t h;
+};
+
+template <>
+struct fidl::TypeTraits<Input> {
+  static constexpr const fidl_type_t* kType = &CodingTableStruct;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
 };
 
 template <>
