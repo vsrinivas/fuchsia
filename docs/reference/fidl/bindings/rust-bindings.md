@@ -141,10 +141,8 @@ Given the [bits][lang-bits] definition:
 
 The FIDL toolchain generates a set of
 [`bitflags`](https://fuchsia-docs.firebaseapp.com/rust/bitflags/) called
-`FileMode` with flags `FileMode::Read`, `FileMode::Write`, and
-`FileMode::Execute`. Bits members are emitted in camel case in the generated
-Rust code.
-<!-- TODO(fxbug.dev/47034): Should be UPPER_SNAKE_CASE, not CamelCase. -->
+`FileMode` with flags `FileMode::READ`, `FileMode::WRITE`, and
+`FileMode::EXECUTE`.
 
 The `bitflags` struct also provides the following methods:
 
