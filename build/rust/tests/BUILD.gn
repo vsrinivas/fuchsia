@@ -1,0 +1,133 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_host_test.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/testing/host_test_data.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":clippy_test($host_toolchain)" ]
+}
+
+# The dep chain A->B->C will exercise the functionality of both direct and
+# transitive deps for A
+rustc_binary("a") {
+  name = "a"
+  with_unit_tests = true
+  deps = [ ":b" ]
+  source_root = "a/main.rs"
+  sources = [
+    "a/main.rs",
+    "a/other.rs",
+  ]
+}
+
+rustc_library("b") {
+  name = "b"
+  deps = [ ":c" ]
+  source_root = "b/lib.rs"
+  sources = [ "b/lib.rs" ]
+}
+
+rustc_library("c") {
+  name = "c"
+  source_root = "c/lib.rs"
+  sources = [ "c/lib.rs" ]
+}
+
+if (is_host) {
+  rustc_library("d") {
+    name = "d"
+    source_root = "d/lib.rs"
+    sources = [ "d/lib.rs" ]
+  }
+
+  gen_dir = "gen/build/rust/tests"
+  host = "host_$host_cpu"
+
+  python_host_test("clippy_test") {
+    main_source = "test.py"
+    extra_args = [ host ]
+    deps = [
+      ":copy_clippy",
+      ":copy_other_toolchain",
+      ":copy_script",
+      ":copy_workaround",
+    ]
+  }
+
+  host_test_data("copy_clippy") {
+    sources = [
+      "$root_build_dir/$gen_dir/a.clippy",
+      "$root_build_dir/$gen_dir/a.clippy.deps",
+      "$root_build_dir/$gen_dir/a.clippy.transdeps",
+      "$root_build_dir/$gen_dir/a_test.clippy",
+      "$root_build_dir/$gen_dir/b.clippy",
+      "$root_build_dir/$gen_dir/b.clippy.deps",
+      "$root_build_dir/$gen_dir/c.clippy",
+    ]
+    deps = [
+      # explicit dependency on "a" is required so that the metadata walk finds
+      # it and its deps even though we never need to build them
+      ":a($default_toolchain)",
+      ":a.clippy($default_toolchain)",
+      ":a.clippy.depsfile($default_toolchain)",
+      ":a.clippy.transdepsfile($default_toolchain)",
+      ":a_test($default_toolchain)",
+      ":a_test.clippy($default_toolchain)",
+      ":b.clippy($default_toolchain)",
+      ":b.clippy.depsfile($default_toolchain)",
+      ":c.clippy($default_toolchain)",
+    ]
+    outputs = [ "$target_gen_dir/out/default/$gen_dir/{{source_file_part}}" ]
+  }
+
+  host_test_data("copy_other_toolchain") {
+    sources = [ "$root_build_dir/$host/$gen_dir/d.clippy" ]
+    deps = [
+      # "d" dep necessary for metadata collection
+      ":d($host_toolchain)",
+      ":d.clippy($host_toolchain)",
+    ]
+    outputs =
+        [ "$target_gen_dir/out/default/$host/$gen_dir/{{source_file_part}}" ]
+  }
+
+  host_test_data("copy_script") {
+    sources = [
+      "//tools/devshell/contrib/lib/rust/clippy.py",
+      "//tools/devshell/contrib/lib/rust/rust.py",
+    ]
+    outputs = [
+      "$target_gen_dir/tools/devshell/contrib/lib/rust/{{source_file_part}}",
+    ]
+  }
+
+  # The `host_test_data` can copy over all of the clippy related targets, but
+  # unfortunately due to generated_file targets only following dep edges, we can't
+  # actually depend on clippy_target_mapping.json because it collects metadata
+  # from //:default. To avoid this we use an additional action to copy it over
+  # without making it an explicit dep in GN. Note that this requires allowlisting
+  # the script from our hermeticity checker.
+  _mapping = "clippy_target_mapping.json"
+  _temp = "$target_gen_dir/$_mapping.tmp"
+  host_test_data("copy_workaround") {
+    sources = [ _temp ]
+    deps = [ ":copy_crimes" ]
+    outputs = [ "$target_gen_dir/out/default/$_mapping" ]
+  }
+  action("copy_crimes") {
+    _depfile = "$target_gen_dir/copy_crimes.d"
+    script = "//build/rust/tests/copy_crimes.sh"
+    args = [
+      _mapping,
+      rebase_path(_temp, root_build_dir),
+      rebase_path(_depfile, root_build_dir),
+    ]
+    depfile = _depfile
+    outputs = [ _temp ]
+  }
+}

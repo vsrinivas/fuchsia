@@ -10,9 +10,9 @@ from pathlib import Path
 import platform
 import re
 
-ROOT_PATH = Path(os.environ["FUCHSIA_DIR"])
+ROOT_PATH = Path(os.environ.get("FUCHSIA_DIR", ""))
 FX_PATH = ROOT_PATH / "scripts" / "fx"
-FUCHSIA_BUILD_DIR = Path(os.environ["FUCHSIA_BUILD_DIR"])
+FUCHSIA_BUILD_DIR = Path(os.environ.get("FUCHSIA_BUILD_DIR", ""))
 PREBUILT_DIR = ROOT_PATH / "prebuilt"
 PREBUILT_THIRD_PARTY_DIR = PREBUILT_DIR / "third_party"
 HOST_PLATFORM = (

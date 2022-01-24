@@ -18,6 +18,7 @@ group("tests") {
     "fidl:tests",
     "images:tests",
     "python:tests",
+    "rust:tests",
     "sdk:tests",
     "tools:tests",
     "tracer:tests",

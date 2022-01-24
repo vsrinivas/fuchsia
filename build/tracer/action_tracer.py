@@ -808,6 +808,7 @@ def main():
         # Because the clippy linter is effectively the same as the rust compiler,
         # and we don't enforce hemeticity on rustc, we also exempt clippy.
         "clippy_wrapper.sh",
+        "copy_crimes.sh",
     }
     if os.path.basename(script) in ignored_scripts:
         return retval
