@@ -5,7 +5,7 @@ hypervisor. The hypervisor and VMM are collectively referred to as "Machina".
 
 These instructions will guide you through creating minimal Zircon and Linux
 guests. For instructions on building a more comprehensive Linux guest system
-see the [debian_guest](../packages/debian_guest/README.md) package.
+see the [debian_guest](./packages/debian_guest/README.md) package.
 
 These instructions assume familiarity with how to build Fuchsia images and
 boot them on your target device.

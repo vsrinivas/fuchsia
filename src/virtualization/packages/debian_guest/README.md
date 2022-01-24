@@ -11,7 +11,7 @@ all writes are volatile and will disappear when the guest shuts down.
 
 ```
 $ cd $FUCHSIA_DIR
-$ ./src/virtualization/packages/debian_guest/build-image.sh x64
+$ ./src/virtualization/packages/debian_guest/build-image.sh prebuilt/virtualization/packages/debian_guest x64
 $ fx set core.x64 --with-base "//src/virtualization,//src/virtualization/packages/debian_guest"
 $ fx build
 $ fx pave
