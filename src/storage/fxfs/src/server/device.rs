@@ -453,7 +453,6 @@ impl BlockServer {
 mod tests {
     use {
         crate::server::testing::{open_file_checked, TestFixture},
-        anyhow::Error,
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_hardware_block::BlockAndNodeMarker,
         fidl_fuchsia_io::{
@@ -461,8 +460,10 @@ mod tests {
             OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fs_management::{asynchronous::Filesystem, Blobfs},
-        fuchsia_async as fasync, fuchsia_zircon as zx,
-        futures::try_join,
+        fuchsia_async as fasync,
+        fuchsia_merkle::MerkleTree,
+        fuchsia_zircon as zx,
+        futures::join,
         remote_block_device::{BlockClient, RemoteBlockClient, VmoId},
         std::collections::HashSet,
     };
@@ -471,13 +472,12 @@ mod tests {
     async fn test_block_server() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
-        try_join!(
+        join!(
             async {
                 let blobfs = Filesystem::from_channel(client_channel, Blobfs::default())
                     .expect("create filesystem from channel failed");
                 blobfs.format().await.expect("format blobfs failed");
                 blobfs.fsck().await.expect("fsck failed");
-                Result::<_, Error>::Ok(())
             },
             async {
                 let fixture = TestFixture::new().await;
@@ -491,7 +491,7 @@ mod tests {
                 )
                 .await;
                 let status = file.truncate(2 * 1024 * 1024).await.expect("truncate failed");
-                zx::Status::ok(status).expect("File truncate failed");
+                zx::Status::ok(status).expect("file truncate failed");
                 assert_eq!(file.close().await.expect("FIDL call failed"), 0);
 
                 root.open(
@@ -503,10 +503,8 @@ mod tests {
                 .expect("open failed");
 
                 fixture.close().await;
-                Ok(())
             }
-        )
-        .expect("client or server failed");
+        );
     }
 
     #[fasync::run(10, test)]
@@ -518,7 +516,7 @@ mod tests {
         let (client_channel_copy2, server_channel_copy2) =
             zx::Channel::create().expect("Channel::create failed");
 
-        try_join!(
+        join!(
             async {
                 // Putting original block device in its own execution scope to test that the
                 // clone will work independent of the original
@@ -557,7 +555,6 @@ mod tests {
                     .await
                     .expect("read_at failed");
                 assert_eq!(&read_buf, &write_buf);
-                Result::<_, Error>::Ok(())
             },
             async {
                 let fixture = TestFixture::new().await;
@@ -571,21 +568,21 @@ mod tests {
                 .expect("open failed");
 
                 fixture.close().await;
-                Ok(())
             }
-        )
-        .expect("client or server failed");
+        );
     }
 
     #[fasync::run(10, test)]
     async fn test_attach_vmo() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
-        try_join!(
+        join!(
             async {
-                let remote_block_device = RemoteBlockClient::new(client_channel).await?;
+                let remote_block_device = RemoteBlockClient::new(client_channel)
+                    .await
+                    .expect("RemoteBlockClient::new failed");
                 let mut vmo_set = HashSet::new();
-                let vmo = zx::Vmo::create(1)?;
+                let vmo = zx::Vmo::create(1).expect("Vmo::create failed");
                 for _ in 1..5 {
                     match remote_block_device.attach_vmo(&vmo).await {
                         Ok(vmo_id) => {
@@ -598,7 +595,6 @@ mod tests {
                         Err(e) => panic!("unexpected error {:?}", e),
                     }
                 }
-                Result::<_, Error>::Ok(())
             },
             async {
                 let fixture = TestFixture::new().await;
@@ -612,25 +608,24 @@ mod tests {
                 .expect("open failed");
 
                 fixture.close().await;
-                Ok(())
             }
-        )
-        .expect("client or server failed");
+        );
     }
 
     #[fasync::run(10, test)]
     async fn test_detach_vmo() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
-        try_join!(
+        join!(
             async {
-                let remote_block_device = RemoteBlockClient::new(client_channel).await?;
-                let vmo = zx::Vmo::create(1)?;
-                let vmo_id = remote_block_device.attach_vmo(&vmo).await?;
+                let remote_block_device = RemoteBlockClient::new(client_channel)
+                    .await
+                    .expect("RemoteBlockClient::new failed");
+                let vmo = zx::Vmo::create(1).expect("Vmo::create failed");
+                let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
                 let vmo_id_copy = VmoId::new(vmo_id.id());
                 remote_block_device.detach_vmo(vmo_id).await.expect("detach failed");
                 remote_block_device.detach_vmo(vmo_id_copy).await.expect_err("detach succeeded");
-                Result::<_, Error>::Ok(())
             },
             async {
                 let fixture = TestFixture::new().await;
@@ -644,19 +639,19 @@ mod tests {
                 .expect("open failed");
 
                 fixture.close().await;
-                Ok(())
             }
-        )
-        .expect("client or server failed");
+        );
     }
 
     #[fasync::run(10, test)]
     async fn test_read_write_files() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
-        try_join!(
+        join!(
             async {
-                let remote_block_device = RemoteBlockClient::new(client_channel).await?;
+                let remote_block_device = RemoteBlockClient::new(client_channel)
+                    .await
+                    .expect("RemoteBlockClient::new failed");
                 let vmo = zx::Vmo::create(131072).expect("create vmo failed");
                 let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
 
@@ -689,7 +684,6 @@ mod tests {
                 );
 
                 remote_block_device.detach_vmo(vmo_id).await.expect("detach failed");
-                Result::<_, Error>::Ok(())
             },
             async {
                 let fixture = TestFixture::new().await;
@@ -703,21 +697,20 @@ mod tests {
                 .expect("open failed");
 
                 fixture.close().await;
-                Ok(())
             }
-        )
-        .expect("client or server failed");
+        );
     }
 
     #[fasync::run(10, test)]
     async fn test_flush_is_called() {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
-        try_join!(
+        join!(
             async {
-                let remote_block_device = RemoteBlockClient::new(client_channel).await?;
+                let remote_block_device = RemoteBlockClient::new(client_channel)
+                    .await
+                    .expect("RemoteBlockClient::new failed");
                 remote_block_device.flush().await.expect("flush failed");
-                Result::<_, Error>::Ok(())
             },
             async {
                 let fixture = TestFixture::new().await;
@@ -731,10 +724,8 @@ mod tests {
                 .expect("open failed");
 
                 fixture.close().await;
-                Ok(())
             }
-        )
-        .expect("client or server failed");
+        );
     }
 
     #[fasync::run(10, test)]
@@ -742,7 +733,7 @@ mod tests {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
 
-        try_join!(
+        join!(
             async {
                 let original_block_device = ClientEnd::<BlockAndNodeMarker>::new(client_channel)
                     .into_proxy()
@@ -751,7 +742,6 @@ mod tests {
                     original_block_device.get_attr().await.expect("get_attr failed");
                 zx::Status::ok(status).expect("block get_attr failed");
                 assert_eq!(attr.mode, MODE_TYPE_BLOCK_DEVICE);
-                Result::<_, Error>::Ok(())
             },
             async {
                 let fixture = TestFixture::new().await;
@@ -765,10 +755,8 @@ mod tests {
                 .expect("open failed");
 
                 fixture.close().await;
-                Ok(())
             }
-        )
-        .expect("client or server failed");
+        );
     }
 
     #[fasync::run(10, test)]
@@ -776,7 +764,7 @@ mod tests {
         let (client_channel, server_channel) =
             zx::Channel::create().expect("Channel::create failed");
         let file_size = 2 * 1024 * 1024;
-        try_join!(
+        join!(
             async {
                 let original_block_device = ClientEnd::<BlockAndNodeMarker>::new(client_channel)
                     .into_proxy()
@@ -786,7 +774,6 @@ mod tests {
                 zx::Status::ok(status).expect("block get_info failed");
                 let info = maybe_info.expect("block get_info failed");
                 assert_eq!(info.block_count * info.block_size as u64, file_size);
-                Result::<_, Error>::Ok(())
             },
             async {
                 let fixture = TestFixture::new().await;
@@ -800,7 +787,7 @@ mod tests {
                 )
                 .await;
                 let status = file.truncate(file_size).await.expect("truncate failed");
-                zx::Status::ok(status).expect("File truncate failed");
+                zx::Status::ok(status).expect("file truncate failed");
                 assert_eq!(file.close().await.expect("FIDL call failed"), 0);
 
                 root.open(
@@ -812,9 +799,81 @@ mod tests {
                 .expect("open failed");
 
                 fixture.close().await;
-                Ok(())
             }
-        )
-        .expect("client or server failed");
+        );
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_blobfs() {
+        let (client_channel, server_channel) =
+            zx::Channel::create().expect("Channel::create failed");
+        join!(
+            async {
+                let blobfs = Filesystem::from_channel(client_channel, Blobfs::default())
+                    .expect("create filesystem from channel failed");
+                blobfs.format().await.expect("format blobfs failed");
+                blobfs.fsck().await.expect("fsck failed");
+                // Mount blobfs
+                let serving = blobfs.serve().await.expect("serve blobfs failed");
+
+                let content = String::from("Hello world!").into_bytes();
+                let merkle_root_hash =
+                    MerkleTree::from_reader(&content[..]).unwrap().root().to_string();
+                {
+                    let file = io_util::directory::open_file(
+                        serving.root(),
+                        &merkle_root_hash,
+                        OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE,
+                    )
+                    .await
+                    .expect("open file failed");
+                    file.truncate(content.len() as u64).await.expect("truncate file failed");
+                    file.write(&content).await.expect("write to file failed");
+                }
+                // Check that blobfs can be successfully unmounted
+                let blobfs = serving.shutdown().await.expect("shutdown blobfs failed");
+
+                let serving = blobfs.serve().await.expect("serve blobfs faield");
+                {
+                    let file = io_util::directory::open_file(
+                        serving.root(),
+                        &merkle_root_hash,
+                        OPEN_RIGHT_READABLE,
+                    )
+                    .await
+                    .expect("open file failed");
+                    let read_content =
+                        io_util::file::read(&file).await.expect("read from file failed");
+                    assert_eq!(content, read_content);
+                }
+
+                serving.shutdown().await.expect("shutdown blobfs failed");
+            },
+            async {
+                let fixture = TestFixture::new().await;
+                let root = fixture.root();
+
+                let file = open_file_checked(
+                    &root,
+                    OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_FILE,
+                    "block_device",
+                )
+                .await;
+                let status = file.truncate(5 * 1024 * 1024).await.expect("truncate failed");
+                zx::Status::ok(status).expect("file truncate failed");
+                assert_eq!(file.close().await.expect("FIDL call failed"), 0);
+
+                root.open(
+                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_BLOCK_DEVICE,
+                    "block_device",
+                    ServerEnd::new(server_channel),
+                )
+                .expect("open failed");
+
+                fixture.close().await;
+            }
+        );
     }
 }

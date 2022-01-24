@@ -120,6 +120,7 @@ if (is_fuchsia) {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//src/lib/storage/fs_management/rust:fs_management",
+    "//src/sys/pkg/lib/fuchsia-merkle",
   ]
   fxfs_sources += [
     "src/object_store/vmo_data_buffer.rs",
