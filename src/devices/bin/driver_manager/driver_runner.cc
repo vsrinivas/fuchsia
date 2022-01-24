@@ -174,7 +174,7 @@ void DriverComponent::on_fidl_error(fidl::UnbindInfo info) {
   // The only valid way a driver host should shut down the Driver channel
   // is with the ZX_OK epitaph.
   if (info.reason() != fidl::Reason::kPeerClosed || info.status() != ZX_OK) {
-    LOGF(WARNING, "DriverComponent: driver channel shutdown with: %s",
+    LOGF(ERROR, "DriverComponent: driver channel shutdown with: %s",
          info.FormatDescription().data());
   }
 
@@ -203,7 +203,7 @@ void DriverComponent::StopDriver() {
 
   auto result = driver_->Stop();
   if (!result.ok()) {
-    LOGF(INFO, "Failed to stop a driver: %s", result.FormatDescription().data());
+    LOGF(ERROR, "Failed to stop a driver: %s", result.FormatDescription().data());
   }
   stop_in_progress_ = true;
 }

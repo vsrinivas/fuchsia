@@ -9,6 +9,11 @@
     program: {
         runner: "elf",
         binary: "bin/driver_host2",
+
+        // DriverHost cannot be shut down until its Driver Components have
+        // exited. Currently if it gets a Stop event it will ignore it, and
+        // exit naturally once its drivers have exited.
+        lifecycle: { stop_event: "notify" },
     },
     capabilities: [
         { protocol: "fuchsia.driver.framework.DriverHost" },
