@@ -377,12 +377,7 @@ class SingleWebDriverConnector {
       _log.fine('Trying DevTools on device port $remotePort');
       await _recreateWebDriver(remotePort);
       if (await _checkCurrentWebDriver(urlMatcher)) {
-        var url = await _webDriver.currentUrl;
-        // Truncate extremely long URLs in logs (e.g. data URLs).
-        if (url.length > 80) {
-          url = '${url.substring(0, 80)}... (truncated)';
-        }
-        _log.info('Connected to DevTools on device port $remotePort: $url');
+        _log.info('Connected to DevTools on device port $remotePort');
         return _webDriver;
       }
     }
@@ -397,16 +392,25 @@ class SingleWebDriverConnector {
 
   Future<bool> _checkCurrentWebDriver(bool Function(String) urlMatcher) async {
     if (_webDriver == null) {
+      _log.fine('No webdriver.');
       return false;
     }
     try {
       await _webDriver.window;
     } on WebDriverException {
+      _log.fine('No current window.');
       return false;
     }
     final url = await _webDriver.currentUrl;
     if (url == null) {
+      _log.fine('No current URL.');
       return false;
+    }
+    // Truncate extremely long URLs in logs (e.g. data URLs).
+    if (url.length > 80) {
+      _log.fine('Current URL: ${url.substring(0, 80)}... (truncated)');
+    } else {
+      _log.fine('Current URL: $url');
     }
     return urlMatcher(url);
   }
@@ -414,19 +418,28 @@ class SingleWebDriverConnector {
   /// Creates a new Webdriver connection using the specified DUT port.
   ///
   /// It will first drop the current connection if there is one.
-  ///
-  /// Retries up to [tries] times on errors (e.g. network issues).
-  Future<void> _recreateWebDriver(int remotePort, {int tries = 5}) async {
+  Future<void> _recreateWebDriver(int remotePort) async {
+    if (_webDriver != null) {
+      try {
+        await _webDriver.quit();
+      } on WebDriverException {
+        // Exceptions are safe to ignore here; we will create a new session.
+      }
+      _webDriver = null;
+    }
     await _maybeDropProxy();
     _devtoolsDevicePort = remotePort;
     _devtoolsAccessPoint = await _portForwarder.forwardPort(remotePort);
-    return _webDriver = await retry(
-      () async {
-        return await _webDriverHelper.createAsyncDriver(
-            _devtoolsAccessPoint, _chromeDriverUri);
-      },
-      maxAttempts: tries,
-    );
+    // Do not retry here. ChromeDriver already retries connections to DevTools
+    // internally for up to 60s (hard-coded).
+    // https://source.chromium.org/chromium/chromium/src/+/main:chrome/test/chromedriver/chrome_launcher.cc;l=390;drc=e35572b59f0e12a3b98a8565e714dc6ce65f9ae4
+    try {
+      _webDriver = await _webDriverHelper.createAsyncDriver(
+          _devtoolsAccessPoint, _chromeDriverUri);
+    } on WebDriverException catch (e) {
+      // Do not throw so we may try the next port.
+      _log.fine('Failed to create WebDriver: $e');
+    }
   }
 
   Future<void> _maybeDropProxy() async {
