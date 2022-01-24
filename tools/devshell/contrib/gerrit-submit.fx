@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Code submission and review
-#### EXECUTABLE=${FUCHSIA_DIR}/tools/devshell/contrib/gerrit-submit-lib/submit.py
+#### EXECUTABLE=${FUCHSIA_DIR}/tools/devshell/contrib/gerrit-submit-lib/python_wrapper.sh
 ### Submits chains of CLs to Gerrit
 ## usage: submit.py [-h] [--host HOST] [--num-retries N] [-n] [-t] [--ignore-comments] CL
 ##
