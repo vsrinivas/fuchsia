@@ -61,3 +61,6 @@ toc:
 - title: "Time"
   section:
   - include: /docs/concepts/time/_toc.yaml
+- title: "UI"
+  section:
+  - include: /docs/concepts/ui/_toc.yaml
