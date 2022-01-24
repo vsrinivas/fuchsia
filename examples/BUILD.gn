@@ -19,7 +19,6 @@ group("examples") {
     "intl",
     "isolated_cache",
     "rust",
-    "speech",
     "time",
   ]
 }

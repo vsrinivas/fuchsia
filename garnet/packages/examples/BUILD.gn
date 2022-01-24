@@ -32,7 +32,6 @@ group("all") {
     "//garnet/packages/examples:overnet",
     "//garnet/packages/examples:rust",
     "//garnet/packages/examples:scenic",
-    "//garnet/packages/examples:speech",
     "//garnet/packages/examples:tcp",
   ]
 }
@@ -68,11 +67,6 @@ group("overnet") {
     "//src/connectivity/overnet/examples/echo:overnet-echo",
     "//src/connectivity/overnet/examples/interface_passing:overnet-interface-passing",
   ]
-}
-
-group("speech") {
-  testonly = true
-  public_deps = [ "//examples/speech/tts/speak" ]
 }
 
 group("benchmark") {
