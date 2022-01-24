@@ -4,6 +4,7 @@
 
 use {
     crate::io::Directory,
+    ansi_term::Color,
     anyhow::{format_err, Context, Result},
     fuchsia_async::TimeoutExt,
     futures::future::{join, join_all, BoxFuture},
@@ -15,8 +16,24 @@ use {
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-static SPACER: &str = "  ";
 static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
+
+macro_rules! pretty_print {
+    ( $f: expr, $title: expr, $value: expr ) => {
+        writeln!($f, "{:>22}: {}", $title, $value)
+    };
+}
+
+macro_rules! pretty_print_list {
+    ( $f: expr, $title: expr, $list: expr ) => {
+        if !$list.is_empty() {
+            writeln!($f, "{:>22}: {}", $title, &$list[0])?;
+            for item in &$list[1..] {
+                writeln!($f, "{:>22}  {}", " ", item)?;
+            }
+        }
+    };
+}
 
 async fn does_url_match_query(query: &str, hub_dir: &Directory) -> bool {
     let url = hub_dir.read_file("url").await.expect("Could not read component URL");
@@ -280,22 +297,16 @@ impl ElfRuntime {
 
 impl std::fmt::Display for ElfRuntime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Job ID: {}", self.job_id)?;
+        if let Some(utc_estimate) = &self.process_start_time_utc_estimate {
+            pretty_print!(f, "Running since", utc_estimate)?;
+        } else if let Some(ticks) = &self.process_start_time {
+            pretty_print!(f, "Running for", format!("{} ticks", ticks))?;
+        }
+
+        pretty_print!(f, "Job ID", self.job_id)?;
 
         if let Some(process_id) = &self.process_id {
-            writeln!(f, "Process ID: {}", process_id)?;
-        }
-
-        if let Some(ticks) = &self.process_start_time {
-            writeln!(f, "Process Start Time (ticks): {}", ticks)?;
-        } else {
-            writeln!(f, "Process Start Time (ticks): (not available)")?;
-        }
-
-        if let Some(utc_estimate) = &self.process_start_time_utc_estimate {
-            writeln!(f, "Process Start Time (UTC estimate): {}", utc_estimate)?;
-        } else {
-            writeln!(f, "Process Start Time (UTC estimate): (not available)")?;
+            pretty_print!(f, "Process ID", process_id)?;
         }
 
         Ok(())
@@ -398,7 +409,7 @@ impl Execution {
 impl std::fmt::Display for Execution {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(start_reason) = &self.start_reason {
-            writeln!(f, "Start reason: {}", start_reason)?;
+            pretty_print!(f, "Start reason", start_reason)?;
         }
 
         if let Some(runtime) = &self.elf_runtime {
@@ -406,14 +417,11 @@ impl std::fmt::Display for Execution {
         }
 
         if let Some(merkle_root) = &self.merkle_root {
-            writeln!(f, "Merkle root: {}", merkle_root)?;
+            pretty_print!(f, "Merkle root", merkle_root)?;
         }
 
         if let Some(outgoing_capabilities) = &self.outgoing_capabilities {
-            writeln!(f, "Outgoing Capabilities ({}):", outgoing_capabilities.len())?;
-            for capability in outgoing_capabilities {
-                writeln!(f, "{}{}", SPACER, capability)?;
-            }
+            pretty_print_list!(f, "Outgoing Capabilities", outgoing_capabilities);
         }
 
         Ok(())
@@ -478,23 +486,32 @@ impl Resolved {
 impl std::fmt::Display for Resolved {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(instance_id) = &self.instance_id {
-            writeln!(f, "Instance ID: {}", instance_id)?;
+            pretty_print!(f, "Instance ID", instance_id)?;
         }
-        writeln!(f, "Incoming Capabilities ({}):", self.incoming_capabilities.len())?;
-        for capability in &self.incoming_capabilities {
-            writeln!(f, "{}{}", SPACER, capability)?;
-        }
-
-        writeln!(f, "Exposed Capabilities ({}):", self.exposed_capabilities.len())?;
-        for capability in &self.exposed_capabilities {
-            writeln!(f, "{}{}", SPACER, capability)?;
-        }
+        pretty_print_list!(f, "Incoming Capabilities", self.incoming_capabilities);
+        pretty_print_list!(f, "Exposed Capabilities", self.exposed_capabilities);
 
         if !self.config.is_empty() {
-            writeln!(f, "Configuration ({}):", self.config.len())?;
             let max_len = self.config.iter().map(|f| f.key.len()).max().unwrap();
-            for field in &self.config {
-                writeln!(f, "{}{:width$} -> {}", SPACER, field.key, field.value, width = max_len)?;
+
+            let first_field = &self.config[0];
+            writeln!(
+                f,
+                "{:>22}: {:width$} -> {}",
+                "Configuration",
+                first_field.key,
+                first_field.value,
+                width = max_len
+            )?;
+            for field in &self.config[1..] {
+                writeln!(
+                    f,
+                    "{:>22}  {:width$} -> {}",
+                    " ",
+                    field.key,
+                    field.value,
+                    width = max_len
+                )?;
             }
         }
         Ok(())
@@ -549,22 +566,22 @@ impl Component {
 
 impl std::fmt::Display for Component {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Moniker: {}", self.moniker)?;
-        writeln!(f, "URL: {}", self.url)?;
-        writeln!(f, "Type: {}", self.component_type)?;
+        pretty_print!(f, "Moniker", self.moniker)?;
+        pretty_print!(f, "URL", self.url)?;
+        pretty_print!(f, "Type", self.component_type)?;
 
         if let Some(resolved) = &self.resolved {
-            writeln!(f, "Component State: Resolved")?;
+            pretty_print!(f, "Component State", Color::Green.paint("Resolved"))?;
             write!(f, "{}", resolved)?;
         } else {
-            writeln!(f, "Component State: Unresolved")?;
+            pretty_print!(f, "Component State", Color::Red.paint("Unresolved"))?;
         }
 
         if let Some(execution) = &self.execution {
-            writeln!(f, "Execution State: Running")?;
+            pretty_print!(f, "Execution State", Color::Green.paint("Running"))?;
             write!(f, "{}", execution)?;
         } else {
-            writeln!(f, "Execution State: Stopped")?;
+            pretty_print!(f, "Execution State", Color::Red.paint("Stopped"))?;
         }
 
         Ok(())
