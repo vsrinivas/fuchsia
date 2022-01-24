@@ -85,7 +85,7 @@ fn read_channel_sync(chan: &zx::Channel, buf: &mut zx::MessageBuf) -> Result<(),
 ///
 /// Once this function has completed, the process' exit code (if one is available) can be read from
 /// `process_context.exit_code`.
-fn run_task(mut current_task: CurrentTask, exceptions: zx::Channel) -> Result<i32, Error> {
+fn run_task(current_task: &mut CurrentTask, exceptions: zx::Channel) -> Result<i32, Error> {
     let mut buffer = zx::MessageBuf::new();
     loop {
         read_channel_sync(&exceptions, &mut buffer)?;
@@ -129,7 +129,7 @@ fn run_task(mut current_task: CurrentTask, exceptions: zx::Channel) -> Result<i3
             args.4,
             args.5
         );
-        match dispatch_syscall(&mut current_task, syscall_number, args) {
+        match dispatch_syscall(current_task, syscall_number, args) {
             Ok(SyscallResult::Exit(error_code)) => {
                 strace!(current_task, "-> exit {:#x}", error_code);
                 exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
@@ -150,12 +150,12 @@ fn run_task(mut current_task: CurrentTask, exceptions: zx::Channel) -> Result<i3
             }
         }
 
-        dequeue_signal(&mut current_task);
+        dequeue_signal(current_task);
 
         // Handle the debug address after the thread is set up to continue, because
         // `set_process_debug_addr` expects the register state to be in a post-syscall state (most
         // importantly the instruction pointer needs to be "correct").
-        set_process_debug_addr(&mut current_task)?;
+        set_process_debug_addr(current_task)?;
 
         thread.write_state_general_regs(current_task.registers)?;
         exception.set_exception_state(&ZX_EXCEPTION_STATE_HANDLED)?;
@@ -273,14 +273,16 @@ fn start_task(current_task: &CurrentTask) -> Result<zx::Channel, zx::Status> {
     Ok(exceptions)
 }
 
-pub fn spawn_task<F>(current_task: CurrentTask, task_complete: F)
+pub fn spawn_task<F>(mut current_task: CurrentTask, task_complete: F)
 where
     F: FnOnce(Result<i32, Error>) + Send + Sync + 'static,
 {
     std::thread::spawn(move || {
         task_complete(|| -> Result<i32, Error> {
             let exceptions = start_task(&current_task)?;
-            run_task(current_task, exceptions)
+            // Unwrap the error because if we don't, we'll panic anyway from destroying the task
+            // without having previous called sys_exit(), and that will swallow the actual error.
+            Ok(run_task(&mut current_task, exceptions).unwrap())
         }());
     });
 }
