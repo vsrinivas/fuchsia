@@ -254,11 +254,6 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("auto-publishes new package version", func(t *testing.T) {
-		if hasTarget(t, baseURL, "testpackage/1") {
-			t.Fatalf("prematurely found target package")
-		}
-
-		cfg.PkgVersion = "1"
 		build.BuildTestPackage(cfg)
 
 		// expect an event when the package is updated
@@ -267,7 +262,7 @@ func TestServer(t *testing.T) {
 			t.Errorf("got %q, want %q", got, want)
 		}
 
-		if !hasTarget(t, baseURL, "testpackage/1") {
+		if !hasTarget(t, baseURL, "testpackage/0") {
 			t.Fatal("missing target package")
 		}
 	})

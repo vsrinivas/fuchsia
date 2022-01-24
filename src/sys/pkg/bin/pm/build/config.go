@@ -75,7 +75,6 @@ func (c *Config) InitFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.KeyPath, "k", c.KeyPath, "deprecated; do not use")
 	fs.StringVar(&c.TempDir, "t", c.TempDir, "temporary directory")
 	fs.StringVar(&c.PkgName, "n", c.PkgName, "name of the packages")
-	fs.StringVar(&c.PkgVersion, "version", c.PkgVersion, "version of the packages")
 	fs.Func("api-level", "package API level", func(value string) error {
 		if c.PkgABIRevision != 0 {
 			return fmt.Errorf("cannot specify both --api-level and --abi-revision")
@@ -167,6 +166,7 @@ func (c *Config) Package() (pkg.Package, error) {
 			p.Name = filepath.Base(p.Name)
 		}
 	}
+
 	return p, nil
 }
 

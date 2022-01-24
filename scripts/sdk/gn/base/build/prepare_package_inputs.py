@@ -96,7 +96,8 @@ def _write_build_ids_txt(readelf_exec, binary_paths, ids_txt_path):
         # Create a set to dedupe stripped binary paths in case both the stripped and
         # unstripped versions of a binary are specified.
         readelf_stdout = subprocess.check_output(
-            [readelf_exec, '-n'] + sorted(unprocessed_binary_paths)).decode('utf8')
+            [readelf_exec, '-n'] +
+            sorted(unprocessed_binary_paths)).decode('utf8')
 
         if len(binary_paths) == 1:
             # Readelf won't report a binary's path if only one was provided to the
@@ -174,18 +175,18 @@ def _write_gn_deps_file(
 
         # The deps file is space-delimited, so filenames containing spaces
         # must have them escaped.
-        deps_list = [f.replace(' ','\\ ') for f in deps_list]
+        deps_list = [f.replace(' ', '\\ ') for f in deps_list]
 
         deps_string = ' '.join(sorted(deps_list))
         depfile.write('%s: %s' % (package_manifest, deps_string))
 
 
 def _write_meta_package_manifest(
-        manifest_entries, manifest_path, app_name, out_dir, package_version):
+        manifest_entries, manifest_path, app_name, out_dir):
     # Write meta/package manifest file and add to archive manifest.
     meta_package = os.path.join(os.path.dirname(manifest_path), 'package')
     with open(meta_package, 'w') as package_json:
-        json_payload = {'version': package_version, 'name': app_name}
+        json_payload = {'version': '0', 'name': app_name}
         json.dump(json_payload, package_json)
         package_json_filepath = os.path.relpath(package_json.name, out_dir)
         manifest_entries['meta/package'] = package_json_filepath
@@ -221,7 +222,8 @@ def _write_component_manifest(
 
 def _is_in_excluded_dir(filename, dir_exclusions):
     """Returns true if |filename| is rooted under any |dir_exclusions|."""
-    return any([filename.startswith(excluded_dir) for excluded_dir in dir_exclusions])
+    return any(
+        [filename.startswith(excluded_dir) for excluded_dir in dir_exclusions])
 
 
 def _write_package_manifest(
@@ -281,8 +283,7 @@ def _build_manifest(args):
     # because of runtime libraries.
     manifest_entries = {}
     _write_meta_package_manifest(
-        manifest_entries, args.manifest_path, args.app_name, args.out_dir,
-        args.package_version)
+        manifest_entries, args.manifest_path, args.app_name, args.out_dir)
     for component_item in component_info:
         _write_package_manifest(
             manifest_entries, expanded_files, args.out_dir, args.exclude_file,
@@ -297,7 +298,8 @@ def _build_manifest(args):
             manifest.write('%s=%s\n' % (key, manifest_entries[key]))
 
     binaries = [f for f in expanded_files if _is_binary(f)]
-    _write_build_ids_txt(args.readelf_exec, sorted(binaries), args.build_ids_file)
+    _write_build_ids_txt(
+        args.readelf_exec, sorted(binaries), args.build_ids_file)
 
     # Omit any excluded_files from the expanded_files written to the depfile.
     gen_dir = os.path.normpath(os.path.join(args.out_dir, 'gen'))
@@ -306,7 +308,9 @@ def _build_manifest(args):
     expanded_deps_files = [
         path for path in expanded_files
         if make_package_path(path, roots) not in excluded_files_set and
-        not _is_in_excluded_dir(make_package_path(path, roots), args.exclude_dir)]
+        not _is_in_excluded_dir(
+            make_package_path(path, roots), args.exclude_dir)
+    ]
 
     _write_gn_deps_file(
         args.depfile_path, args.manifest_path, component_manifests,
@@ -342,8 +346,6 @@ def main():
     parser.add_argument(
         '--build-ids-file', required=True, help='Debug symbol index path.')
     parser.add_argument('--json-file', required=True)
-    parser.add_argument(
-        '--package-version', default='0', help='Version of the package')
     parser.add_argument(
         '--readelf-exec', default='readelf', help='readelf executable to use.')
 

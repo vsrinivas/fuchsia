@@ -52,6 +52,11 @@ func (pkg *Package) Validate() error {
 			return ErrInvalidPackageVersion
 		}
 	}
+
+	if pkg.Version != "0" {
+		return ErrInvalidPackageVersion
+	}
+
 	return nil
 }
 

@@ -570,7 +570,6 @@ impl PackageBuilder {
             .options(fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_NAMESPACE)
             .arg("pm")?
             .arg(format!("-n={}", self.name))?
-            .arg("-version=0")?
             .arg("-m=/in/package.manifest")?
             .arg(format!("-o={}", package_mount_path))?
             .arg("build")?
