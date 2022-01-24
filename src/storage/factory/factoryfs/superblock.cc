@@ -13,11 +13,6 @@
 #include <iomanip>
 #include <limits>
 
-#ifdef __Fuchsia__
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
-#endif
-
 namespace factoryfs {
 
 namespace {

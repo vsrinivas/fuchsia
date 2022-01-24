@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <lib/service/llcpp/service.h>
 #include <limits.h>
 #include <time.h>
 #include <zircon/assert.h>

@@ -9,7 +9,6 @@
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/abr/data.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

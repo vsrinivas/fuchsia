@@ -4,7 +4,7 @@
 
 #include <ctype.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/cksum.h>
 #include <lib/fdio/cpp/caller.h>
 #include <zircon/assert.h>
@@ -491,14 +491,13 @@ class LibGptTest {
     fbl::unique_fd fd(open(disk_path_, O_RDWR));
     ASSERT_TRUE(fd.is_valid(), "Could not open block device to fetch info");
     fdio_cpp::UnownedFdioCaller disk_caller(fd.get());
-    fuchsia_hardware_block_BlockInfo block_info;
-    zx_status_t status;
-    ASSERT_OK(
-        fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status, &block_info));
-    ASSERT_OK(status);
+    auto info_res =
+        fidl::WireCall(disk_caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_OK(info_res.status());
+    ASSERT_OK(info_res->status);
 
-    blk_size_ = block_info.block_size;
-    blk_count_ = block_info.block_count;
+    blk_size_ = info_res->info->block_size;
+    blk_count_ = info_res->info->block_count;
 
     ASSERT_GE(GetDiskSize(), kAcceptableMinimumSize, "Insufficient disk space for tests");
     fd_ = std::move(fd);

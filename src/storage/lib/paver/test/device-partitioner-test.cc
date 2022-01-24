@@ -8,7 +8,6 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/driver-integration-test/fixture.h>

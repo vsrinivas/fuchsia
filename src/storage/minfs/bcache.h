@@ -23,7 +23,6 @@
 #include "src/storage/minfs/format.h"
 
 #ifdef __Fuchsia__
-#include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/zx/vmo.h>
 
 #include <storage/buffer/vmo_buffer.h>

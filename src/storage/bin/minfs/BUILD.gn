@@ -5,8 +5,6 @@
 executable("minfs") {
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/block_client/cpp",

@@ -4,7 +4,6 @@
 
 #include "src/storage/factory/factoryfs/fsck.h"
 
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>

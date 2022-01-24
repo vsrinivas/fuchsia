@@ -4,7 +4,6 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.minfs/cpp/wire.h>
-#include <fuchsia/minfs/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <unistd.h>
 #include <zircon/errors.h>
@@ -32,13 +31,12 @@ namespace {
 using DirtyCacheTest = fs_test::FilesystemTest;
 
 void EnableStats(DirtyCacheTest* fs) {
-  fbl::unique_fd dir_fd(open(fs->fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
-  EXPECT_TRUE(dir_fd);
-
-  fdio_cpp::FdioCaller caller(dir_fd.duplicate());
-  zx_status_t status;
-  EXPECT_EQ(fuchsia_minfs_MinfsToggleMetrics(caller.borrow_channel(), true, &status), ZX_OK);
-  EXPECT_EQ(status, ZX_OK);
+  fbl::unique_fd fd = fs->fs().GetRootFd();
+  ASSERT_TRUE(fd);
+  fdio_cpp::FdioCaller caller(std::move(fd));
+  auto res = fidl::WireCall(caller.borrow_as<fuchsia_minfs::Minfs>())->ToggleMetrics(true);
+  EXPECT_EQ(res.status(), ZX_OK);
+  EXPECT_EQ(res->status, ZX_OK);
 }
 
 class BufferedFile {

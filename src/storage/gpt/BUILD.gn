@@ -26,7 +26,6 @@ zx_library("gpt") {
       "guid.cc",
     ]
     deps = [
-      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
       "//sdk/lib/fit",
       "//src/lib/utf_conversion",
       "//zircon/system/ulib/mbr",

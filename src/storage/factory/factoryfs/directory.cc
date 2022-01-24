@@ -5,7 +5,6 @@
 #include "src/storage/factory/factoryfs/directory.h"
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fuchsia/device/c/fidl.h>
 #include <sys/stat.h>
 #include <zircon/assert.h>
 

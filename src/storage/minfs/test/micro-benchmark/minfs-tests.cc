@@ -4,9 +4,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <fuchsia/minfs/c/fidl.h>
 #include <getopt.h>
 #include <lib/fdio/cpp/caller.h>
 #include <limits.h>
@@ -42,8 +39,6 @@
 
 namespace minfs_micro_benchmark {
 namespace {
-
-using MinfsFidlMetrics = fuchsia_minfs_Metrics;
 
 template <const MinfsProperties& fs_properties>
 class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {

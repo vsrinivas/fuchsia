@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <fuchsia/hardware/block/c/fidl.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
 #include <stddef.h>

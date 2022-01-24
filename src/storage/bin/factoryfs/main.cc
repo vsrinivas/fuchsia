@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
 #include <getopt.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>

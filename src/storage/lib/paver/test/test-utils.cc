@@ -5,7 +5,6 @@
 #include "src/storage/lib/paver/test/test-utils.h"
 
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>

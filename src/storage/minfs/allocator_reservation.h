@@ -17,10 +17,6 @@
 #include "src/storage/minfs/pending_work.h"
 #include "src/storage/minfs/superblock.h"
 
-#ifdef __Fuchsia__
-#include <fuchsia/minfs/c/fidl.h>
-#endif
-
 namespace minfs {
 
 // Forward declaration for a reference to the internal allocator.

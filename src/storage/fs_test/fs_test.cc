@@ -10,7 +10,6 @@
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.ramdisk/cpp/wire.h>
 #include <fuchsia/fs/cpp/fidl.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>

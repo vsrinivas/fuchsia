@@ -4,7 +4,6 @@
 
 #ifdef __Fuchsia__
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fuchsia/device/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>

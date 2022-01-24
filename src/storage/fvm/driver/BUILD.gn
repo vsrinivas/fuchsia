@@ -56,7 +56,6 @@ source_set("shared") {
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//src/lib/ddk",

@@ -2,10 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Please do not add more entries to this list. We plan to remove
-# abseil-cpp from the Fuchsia platform source tree once cobalt
-# moves out-of-tree.
-
 declare_args() {
   # Enforce every allocation in a ssr manner [for test]
   f2fs_force_ssr = true
@@ -88,7 +84,6 @@ static_library("f2fs") {
 
   if (is_fuchsia) {
     public_deps += [
-      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
       "//src/lib/storage/block_client/cpp",
       "//zircon/system/ulib/zircon-internal",
     ]

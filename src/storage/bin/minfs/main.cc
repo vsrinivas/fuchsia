@@ -5,7 +5,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
