@@ -94,7 +94,7 @@ impl DirectoryReporter {
     pub fn new(root: PathBuf) -> Result<Self, Error> {
         let artifact_dir = artifact_dir_name(&EntityId::TestRun);
 
-        Self::ensure_directory_exists(root.as_path())?;
+        ensure_directory_exists(root.as_path())?;
 
         let mut entries = HashMap::new();
         entries.insert(
@@ -116,13 +116,6 @@ impl DirectoryReporter {
 
     pub(super) fn add_report(&self, entity: &EntityId) -> Result<File, Error> {
         self.new_artifact_inner(entity, directory::ArtifactType::Report)
-    }
-
-    fn ensure_directory_exists(absolute: &Path) -> Result<(), Error> {
-        match absolute.exists() {
-            true => Ok(()),
-            false => DirBuilder::new().recursive(true).create(&absolute),
-        }
     }
 
     fn persist_run_summary(&self) -> Result<(), Error> {
@@ -153,7 +146,7 @@ impl DirectoryReporter {
         let name = filename_for_type(&artifact_type);
 
         let artifact_dir = self.root.join(&entry.artifact_dir);
-        Self::ensure_directory_exists(&artifact_dir)?;
+        ensure_directory_exists(&artifact_dir)?;
 
         let artifact = File::create(artifact_dir.join(name))?;
 
@@ -289,7 +282,7 @@ impl Reporter for DirectoryReporter {
             self.name_counter.fetch_add(1, Ordering::Relaxed),
         );
         let artifact_dir = self.root.join(&entry.artifact_dir).join(&name);
-        Self::ensure_directory_exists(&artifact_dir)?;
+        ensure_directory_exists(&artifact_dir)?;
 
         entry.artifacts.push((
             name,
@@ -329,8 +322,19 @@ impl DirectoryWrite for DirectoryDirectoryWriter {
                 ),
             ));
         }
+        if let Some(parent) = new_path.parent() {
+            ensure_directory_exists(parent)?;
+        }
+
         let file = File::create(new_path)?;
         Ok(Box::new(file))
+    }
+}
+
+fn ensure_directory_exists(dir: &Path) -> Result<(), Error> {
+    match dir.exists() {
+        true => Ok(()),
+        false => DirBuilder::new().recursive(true).create(&dir),
     }
 }
 
@@ -811,8 +815,7 @@ mod test {
             .expect("make custom directory");
         assert!(directory.new_file("file.txt".as_ref()).is_ok());
 
-        // Files in subdirectories currently fail if the preceding path does not exist.
-        assert!(directory.new_file("this/is/a/file/path.txt".as_ref()).is_err());
+        assert!(directory.new_file("this/is/a/file/path.txt".as_ref()).is_ok());
 
         assert!(directory.new_file("../file.txt".as_ref()).is_err());
         assert!(directory.new_file("/file.txt".as_ref()).is_err());
