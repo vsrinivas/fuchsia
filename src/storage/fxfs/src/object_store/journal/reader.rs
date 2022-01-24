@@ -6,7 +6,7 @@ use {
     crate::{
         object_handle::{ObjectHandle, ReadObjectHandle},
         object_store::journal::{fletcher64, Checksum, JournalCheckpoint, RESET_XOR},
-        serialized_types::{Version, VersionLatest},
+        serialized_types::{Version, VersionLatest, VersionNumber},
     },
     anyhow::{bail, Error},
     byteorder::{ByteOrder, LittleEndian},
@@ -41,7 +41,7 @@ pub struct JournalReader<OH: ObjectHandle> {
     checksums: Vec<Checksum>,
 
     // The version of types to deserialize.
-    version: u32,
+    version: VersionNumber,
 
     // Indicates a bad checksum has been detected and no more data can be read.
     bad_checksum: bool,
@@ -85,7 +85,7 @@ impl<OH: ReadObjectHandle> JournalReader<OH> {
     /// Sets the version of Key and Value to deserialize.
     /// This can change across Journal RESET boundaries when the tail of the journal is written to
     /// by newer versions of the code.
-    pub fn set_version(&mut self, version: u32) {
+    pub fn set_version(&mut self, version: VersionNumber) {
         self.version = version
     }
 
@@ -114,7 +114,6 @@ impl<OH: ReadObjectHandle> JournalReader<OH> {
         self.fill_buf().await?;
         let mut cursor = std::io::Cursor::new(self.buffer());
         let version = self.version;
-        assert!(version != 0);
         match T::deserialize_from_version(&mut cursor, version) {
             Ok(record) => {
                 let consumed = cursor.position() as usize;
@@ -287,7 +286,7 @@ mod tests {
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
-            &JournalCheckpoint { version: 1, ..JournalCheckpoint::default() },
+            &JournalCheckpoint { version: u32::version(), ..JournalCheckpoint::default() },
         );
         let value = reader.deserialize().await.expect("deserialize failed");
         assert_eq!(value, ReadResult::Some(4u32));
@@ -296,7 +295,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_journal_file_checkpoint() {
         let object = Arc::new(FakeObject::new());
-        let checkpoint = JournalCheckpoint { version: 1, ..JournalCheckpoint::default() };
+        let checkpoint =
+            JournalCheckpoint { version: u32::version(), ..JournalCheckpoint::default() };
         let mut reader =
             JournalReader::new(FakeObjectHandle::new(object.clone()), TEST_BLOCK_SIZE, &checkpoint);
         assert_eq!(reader.journal_file_checkpoint(), checkpoint);
@@ -337,7 +337,7 @@ mod tests {
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
-            &JournalCheckpoint { version: 1, ..JournalCheckpoint::default() },
+            &JournalCheckpoint { version: u32::version(), ..JournalCheckpoint::default() },
         );
         assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(4u32));
         reader.skip_to_end_of_block();
@@ -356,7 +356,7 @@ mod tests {
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
-            &JournalCheckpoint { version: 1, ..JournalCheckpoint::default() },
+            &JournalCheckpoint { version: u32::version(), ..JournalCheckpoint::default() },
         );
         assert_eq!(reader.handle().get_size(), TEST_BLOCK_SIZE * 3);
     }
@@ -387,7 +387,7 @@ mod tests {
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
-            &JournalCheckpoint { version: 1, ..JournalCheckpoint::default() },
+            &JournalCheckpoint { version: u32::version(), ..JournalCheckpoint::default() },
         );
         assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(4u8));
         for _ in 0..count {
@@ -412,7 +412,7 @@ mod tests {
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
-            &JournalCheckpoint { version: 1, ..JournalCheckpoint::default() },
+            &JournalCheckpoint { version: u32::version(), ..JournalCheckpoint::default() },
         );
         assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(4u32));
         assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(7u32));
@@ -439,7 +439,7 @@ mod tests {
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
-            &JournalCheckpoint { version: 1, ..JournalCheckpoint::default() },
+            &JournalCheckpoint { version: u32::version(), ..JournalCheckpoint::default() },
         );
         assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(4u32));
         assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(7u32));
@@ -484,7 +484,7 @@ mod tests {
         let checkpoint = JournalCheckpoint {
             file_offset: TEST_BLOCK_SIZE - std::mem::size_of::<Checksum>() as u64 - 1,
             checksum: 0,
-            version: 1,
+            version: u32::version(),
         };
         let mut reader =
             JournalReader::new(FakeObjectHandle::new(object.clone()), TEST_BLOCK_SIZE, &checkpoint);

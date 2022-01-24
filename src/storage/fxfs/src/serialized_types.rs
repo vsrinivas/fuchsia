@@ -63,13 +63,13 @@ pub use traits::*;
 #[cfg(test)]
 mod test_traits;
 
-// For test use, we add [Version] and [VersionLatest] to primitive integer types.
+// For test use, we add [Version] and [VersionLatest] to primitive integer types (i32, ...).
 #[cfg(test)]
 pub use test_traits::*;
 
 #[cfg(test)]
 mod tests;
 
-// Re-export all types.
+// Re-export all FxFS types.
 mod types;
 pub use types::*;

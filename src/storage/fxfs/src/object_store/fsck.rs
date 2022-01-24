@@ -29,7 +29,6 @@ use {
         serialized_types::VersionLatest,
     },
     anyhow::{anyhow, Context, Error},
-    byteorder::{LittleEndian, ReadBytesExt},
     futures::try_join,
     std::{
         ops::Bound,
@@ -333,12 +332,12 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
             let info = if handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
                 let mut cursor = std::io::Cursor::new(&serialized_info[..]);
-                let version = cursor.read_u32::<LittleEndian>()?;
-                self.assert(
-                    StoreInfo::deserialize_from_version(&mut cursor, version)
+                let (store_info, _version) = self.assert(
+                    StoreInfo::deserialize_with_version(&mut cursor)
                         .context("Failed to deserialize StoreInfo"),
                     FsckFatal::MalformedStore(store_id),
-                )?
+                )?;
+                store_info
             } else {
                 // The store_info will be absent for a newly created and empty object store.
                 StoreInfo::default()

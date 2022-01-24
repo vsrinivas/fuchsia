@@ -3,17 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::{
-        allocator::Allocator,
-        crypt::{Crypt, InsecureCrypt},
-        filesystem::{self, Filesystem, Info, SyncOptions},
-        journal::JournalCheckpoint,
-        object_manager::ObjectManager,
-        transaction::{
-            LockKey, LockManager, MetadataReservation, Options, ReadGuard, Transaction,
-            TransactionHandler, TransactionLocks, WriteGuard,
+    crate::{
+        object_store::{
+            allocator::Allocator,
+            crypt::{Crypt, InsecureCrypt},
+            filesystem::{self, Filesystem, Info, SyncOptions},
+            journal::JournalCheckpoint,
+            object_manager::ObjectManager,
+            transaction::{
+                LockKey, LockManager, MetadataReservation, Options, ReadGuard, Transaction,
+                TransactionHandler, TransactionLocks, WriteGuard,
+            },
+            ObjectStore,
         },
-        ObjectStore,
+        serialized_types::VersionNumber,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -121,7 +124,8 @@ impl TransactionHandler for FakeFilesystem {
         let checkpoint = JournalCheckpoint {
             file_offset: self.num_syncs.load(Ordering::Relaxed),
             checksum: 0,
-            version: 987654321,
+            // note: intentionally bad version number here to ensure it's never used.
+            version: VersionNumber { major: 0xffff, minor: 0 },
         };
         self.lock_manager.commit_prepare(transaction).await;
         self.object_manager.apply_transaction(transaction, &checkpoint).await;

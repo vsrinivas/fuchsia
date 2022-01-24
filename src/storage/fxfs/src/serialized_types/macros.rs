@@ -93,9 +93,12 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
         out = quote! {
             #out
             impl Version for #ident {
-                fn version() -> u32 {
-                    let versions : [u32; #count] = [ #(#versions),* ];
-                    *versions.iter().max().unwrap()
+                fn version() -> VersionNumber {
+                    let versions : [u16; #count] = [ #(#versions),* ];
+                    VersionNumber {
+                        major: *versions.iter().max().unwrap(),
+                        minor: 0
+                    }
                 }
             }
         };
@@ -111,9 +114,11 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
         out = quote! {
             #out
             impl VersionLatest for #ident {
-                fn deserialize_from_version<R>(reader: &mut R, version: u32) -> anyhow::Result<Self>
+                fn deserialize_from_version<R>(
+                    reader: &mut R,
+                    version: VersionNumber) -> anyhow::Result<Self>
                 where R: std::io::Read, Self: Sized {
-                    match version {
+                    match version.major {
                         #body
                         _ => anyhow::bail!(format!(
                                 "Invalid version {} for {}.", version, stringify!(#ident))),

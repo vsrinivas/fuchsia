@@ -689,7 +689,7 @@ mod tests {
                     OrdLowerBound, OrdUpperBound,
                 },
             },
-            serialized_types::{versioned_type, Version, VersionLatest},
+            serialized_types::{versioned_type, Version, VersionLatest, VersionNumber},
         },
         fuchsia_async as fasync,
         rand::Rng,

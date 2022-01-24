@@ -8,7 +8,7 @@ use crate::{
         AllocatorInfo, AllocatorKey, AllocatorValue, ExtentKey, ExtentValue, JournalRecord,
         ObjectKey, ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
     },
-    serialized_types::{versioned_type, Version, VersionLatest},
+    serialized_types::{versioned_type, Version, VersionLatest, VersionNumber},
 };
 
 // If all layer files are compacted the the journal flushed, and super-block both rewritten, all

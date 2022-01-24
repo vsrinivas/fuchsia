@@ -21,10 +21,9 @@ use {
             ObjectStore, StoreObjectHandle,
         },
         range::RangeExt,
-        serialized_types::Version,
+        serialized_types::{Version, VersionLatest},
     },
     anyhow::{bail, ensure, Error},
-    byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
@@ -199,9 +198,9 @@ impl SuperBlock {
         );
 
         reader.fill_buf().await?;
-        let consumed;
+        let super_block;
         let version;
-        {
+        reader.consume({
             let mut cursor = std::io::Cursor::new(reader.buffer());
             // Validate magic bytes.
             let mut magic_bytes: [u8; 8] = [0; 8];
@@ -209,17 +208,11 @@ impl SuperBlock {
             if magic_bytes.as_slice() != SUPER_BLOCK_MAGIC.as_slice() {
                 bail!(format!("Invalid magic: {:?}", magic_bytes));
             }
-            version = cursor.read_u32::<LittleEndian>()?;
-            consumed = cursor.position() as usize;
-        }
-        reader.consume(consumed);
+            (super_block, version) = SuperBlock::deserialize_with_version(&mut cursor)?;
+            cursor.position() as usize
+        });
         reader.set_version(version);
-        let result = reader.deserialize::<SuperBlock>().await?;
-        if let ReadResult::Some(super_block) = result {
-            Ok((super_block, ItemReader { reader }))
-        } else {
-            bail!("{:?}", result);
-        }
+        Ok((super_block, ItemReader { reader }))
     }
 
     /// Writes the super-block and the records from the root parent store.
@@ -239,8 +232,7 @@ impl SuperBlock {
         let mut writer = SuperBlockWriter::new(handle, object_manager.metadata_reservation());
 
         writer.writer.write(SUPER_BLOCK_MAGIC)?;
-        writer.writer.write_u32::<LittleEndian>(SuperBlock::version())?;
-        self.serialize_into(&mut writer.writer)?;
+        self.serialize_with_version(&mut writer.writer)?;
 
         let tree = root_parent_store.tree();
         let layer_set = tree.layer_set();

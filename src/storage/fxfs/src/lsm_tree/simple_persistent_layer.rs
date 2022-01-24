@@ -9,7 +9,7 @@ use {
         },
         object_handle::{ReadObjectHandle, WriteBytes},
         round::{round_down, round_up},
-        serialized_types::{Version, VersionLatest},
+        serialized_types::{Version, VersionLatest, VersionNumber},
     },
     anyhow::{bail, Context, Error},
     async_trait::async_trait,
@@ -31,7 +31,7 @@ use {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LayerInfo {
     /// The version of the key and value structs serialized in this layer.
-    pub key_value_version: u32,
+    pub key_value_version: VersionNumber,
     /// The block size used within this layer file. Each block starts with a 2 byte item count so
     /// there is a 64k item limit per block.
     pub block_size: u64,
@@ -161,12 +161,11 @@ impl SimplePersistentLayer {
         let physical_block_size = object_handle.block_size();
 
         // The first block contains layer file information instead of key/value data.
-        let layer_info = {
+        let (layer_info, _version) = {
             let mut buffer = object_handle.allocate_buffer(physical_block_size as usize);
             object_handle.read(0, buffer.as_mut()).await?;
             let mut cursor = std::io::Cursor::new(buffer.as_slice());
-            let version = cursor.read_u32::<LittleEndian>()?;
-            LayerInfo::deserialize_from_version(&mut cursor, version)?
+            LayerInfo::deserialize_with_version(&mut cursor)?
         };
 
         // We expect the layer block size to be a multiple of the physical block size.
@@ -295,8 +294,7 @@ impl<W: WriteBytes, K: Key, V: Value> SimplePersistentLayerWriter<W, K, V> {
         {
             buf.resize(layer_info.block_size as usize, 0);
             let mut cursor = std::io::Cursor::new(&mut buf);
-            cursor.write_u32::<LittleEndian>(LayerInfo::version())?;
-            layer_info.serialize_into(&mut cursor)?;
+            layer_info.serialize_with_version(&mut cursor)?;
             len = cursor.position();
         }
         writer.write_bytes(&buf[..len as usize]).await?;

@@ -647,7 +647,7 @@ mod tests {
                     LayerIterator, LayerIteratorMut, MutableLayer,
                 },
             },
-            serialized_types::{versioned_type, Version, VersionLatest},
+            serialized_types::{versioned_type, Version, VersionLatest, VersionNumber},
         },
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, future::join_all, join},

@@ -46,12 +46,12 @@ use {
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
         round::round_down,
-        serialized_types::Version,
+        serialized_types::{Version, VersionNumber},
         trace_duration,
     },
     anyhow::{anyhow, bail, Context, Error},
     async_utils::event::Event,
-    byteorder::{ByteOrder, LittleEndian, WriteBytesExt},
+    byteorder::{ByteOrder, LittleEndian},
     futures::{self, future::poll_fn, FutureExt},
     once_cell::sync::OnceCell,
     rand::Rng,
@@ -106,7 +106,7 @@ pub struct JournalCheckpoint {
     // If versioned, the version of elements stored in the journal. e.g. JournalRecord version.
     // This can change across reset events so we store it along with the offset and checksum to
     // know which version to deserialize.
-    pub version: u32,
+    pub version: VersionNumber,
 }
 
 // All journal blocks are covered by a fletcher64 checksum as the last 8 bytes in a block.
@@ -363,8 +363,12 @@ impl Journal {
             let result = reader.deserialize().await?;
             match result {
                 ReadResult::Reset => {
-                    let version = LittleEndian::read_u32(reader.buffer());
-                    reader.consume(std::mem::size_of::<u32>());
+                    let version;
+                    reader.consume({
+                        let mut cursor = std::io::Cursor::new(reader.buffer());
+                        version = VersionNumber::deserialize_from(&mut cursor)?;
+                        cursor.position() as usize
+                    });
                     reader.set_version(version);
                     if current_transaction.is_some() {
                         current_transaction = None;
@@ -695,9 +699,9 @@ impl Journal {
         let (size, zero_offset) = {
             let mut inner = self.inner.lock().unwrap();
 
+            // If this is the first write after a RESET, we need to output version first.
             if std::mem::take(&mut inner.output_reset_version) {
-                // TODO(ripper): Change this to a 'VersionNumber' type or something with maj/min.
-                inner.writer.write_u32::<LittleEndian>(JournalRecord::version())?;
+                JournalRecord::version().serialize_into(&mut inner.writer)?;
             }
 
             if let Some(discard_offset) = inner.discard_offset {

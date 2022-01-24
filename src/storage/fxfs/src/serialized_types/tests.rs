@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::serialized_types::{versioned_type, Version, VersionLatest},
+    crate::serialized_types::{versioned_type, Version, VersionLatest, VersionNumber},
     serde::{Deserialize, Serialize},
     std::convert::From,
     std::io::Cursor,
@@ -47,9 +47,9 @@ fn test_deserialize_from_version() {
     let f2 = FooV2 { a: 1, b: 1 };
     let f3 = FooV3 { a: 1, c: 256 };
 
-    assert_eq!(FooV1::version(), 2);
-    assert_eq!(FooV2::version(), 3);
-    assert_eq!(FooV3::version(), 4);
+    assert_eq!(FooV1::version().major, 2);
+    assert_eq!(FooV2::version().major, 3);
+    assert_eq!(FooV3::version().major, 4);
 
     let mut v: Vec<u8> = Vec::new();
     f1.serialize_into(&mut v).expect("FooV1");
@@ -76,5 +76,9 @@ fn test_deserialize_from_version() {
     );
 
     // Unsupported version.
-    assert!(FooV3::deserialize_from_version(&mut Cursor::new(&v), 5).is_err());
+    assert!(FooV3::deserialize_from_version(
+        &mut Cursor::new(&v),
+        VersionNumber { major: 5, minor: 0 }
+    )
+    .is_err());
 }
