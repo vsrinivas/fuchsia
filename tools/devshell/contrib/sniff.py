@@ -1,35 +1,11 @@
-#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-"""Fuchsia packet capture and display tool.
-
-fx sniff captures the packets flowing in-and-out the Fuchsia target device
-and displays the packets in a useful view. This is to run on the development
-host.
-
-fx sniff will automatically filter out fx-workflow related packets such as ssh,
-package server, logs, zxdb, etc., so that the user can focus on the application
-of interest. For those who need to debug the fx workflow itself,
-the full command under use is also printed; one can easily modify to meet
-their own needs.
-
-[Typical usages]
-$ fx sniff wlan                    # capture packets over WLAN interface,
-                                   # and show their summaries
-$ fx sniff --view hex eth          # capture packets over Ethernet interface,
-                                   # and show their hexadecimal dump
-$ fx sniff --view wireshark wlan   # capture packets over WLAN interface,
-                                   # and start wireshark GUI for display
-$ fx sniff --file myfile eth       # capture packets and store
-                                   # at //out/myfile.pcapng
-$ fx sniff -t 10 wlan              # capture for 10 sec
-$ fx sniff --help                  # show all command line options
-"""
 
 import argparse
 import fcntl
 import os
+import re
 import subprocess
 import sys
 import termios
@@ -117,52 +93,16 @@ def get_interface_names():
     Returns:
       A list of interface names.
     """
-    result = run_cmd(u"fx shell net if list")
+    result = run_cmd(u"fx shell tcpdump --list-interfaces")
 
     names = []
     for line in result.split(u"\n"):
-        if u"name" not in line:
-            # Look for name field only.
-            continue
-        parsed = line.split()
-        if len(parsed) != 2:
-            continue
+        if not line:
+            break
 
-        name = parsed[1].strip()
+        names.append(re.match("^\d+\.(\w+)\s", line).groups()[0])
 
-        if name == u"lo":
-            # sniffing on loopback interface is not supported
-            continue
-        names.append(name)
     return names
-
-
-def get_interface_filepath(interface_name):
-    """Get the filepaths for all the interfaces on the target.
-
-    Args:
-      interface_name: interface name.
-
-    Returns:
-      A list of the interface file paths.
-    """
-    result = run_cmd(u"fx shell net if list %s" % interface_name)
-
-    filepaths = []
-    for line in result.split(u"\n"):
-        if u"filepath" not in line:
-            continue
-        parsed = line.split()
-        if len(parsed) != 2:
-            continue
-
-        filepath = parsed[1].strip()
-
-        if filepath.lower() == u"[none]":
-            # sniffing on loopback interface is not supported
-            continue
-        filepaths.append(filepath)
-    return filepaths
 
 
 def has_fuzzy_name(name_under_test, names):
@@ -183,29 +123,27 @@ def build_cmd(args):
     Returns:
       cmd string.
     """
+
     fx_workflow_filter = (
-        u"not ( "
-        u"port ssh or dst port 8083 or dst port 2345 or port 1900 "
-        u"or ip6 dst port 33330-33341 or ip6 dst port 33337-33338"
-        u" )")
+        u' "not ('
+        u'port ssh or dst port 8083 or dst port 2345 or port 1900 '
+        u'or (ip6 and (dst portrange 33330-33341 or dst portrange 33337-33338))'
+        u')"')
 
     # Pay special attention to the escape sequence
     # This command goes through the host shell, and ssh shell.
-    cmd_prefix = u"fx shell sh -c '\"netdump -t %s -f \\\"%s\\\" " % (
-        args.timeout, fx_workflow_filter)
-    cmd_suffix = u" %s\"'" % args.interface_filepath
+    cmd_prefix = u"tcpdump -l --packet-buffered -i \"%s\" --no-promiscuous-mode " % (
+        args.interface_name)
+    cmd_suffix = fx_workflow_filter
     cmd_options = u""
+    host_cmd = u""
+
+    output_file = None
+    if args.file:
+        output_file = u"%s%s" % (TARGET_TMP_DIR, args.file)
 
     # Build more options
-    if args.file:
-        full_path = u"%s%s" % (TARGET_TMP_DIR, args.file)
-        cmd_options += u"-w %s " % full_path
-
-    if args.view == u"summary":
-        cmd_options += u""  # Default behavior
-    elif args.view == u"hex":
-        cmd_options += u"--hexdump"
-    elif args.view == u"wireshark":
+    if args.wireshark:
         (result, err_str) = has_wireshark_env()
         if not result:
             msg = (
@@ -214,10 +152,18 @@ def build_cmd(args):
                 u"such as X Display: %s" % err_str)
             print(msg)
             return
-        cmd_options += u"--pcapdump"
-        cmd_suffix += u" | wireshark -k -i -"
+        cmd_options += u"-w -"
+        if output_file:
+            cmd_suffix += u" | tee %s" % output_file
+        host_cmd += u" | wireshark -k -i -"
+    elif output_file:
+        cmd_options += u"-w %s " % output_file
 
-    cmd = cmd_prefix + cmd_options + cmd_suffix
+    cmd = u"fx shell '" + cmd_prefix + cmd_options + cmd_suffix + u"'" + host_cmd
+
+    if args.timeout:
+        cmd = ("timeout %ss " % args.timeout) + cmd
+
     return cmd
 
 
@@ -300,36 +246,25 @@ def main():
         sys.exit(1)
 
     iface_names = get_interface_names()
+    iface_name_help = "Choose one interface name from: " + ", ".join(
+        iface_names)
 
     parser = argparse.ArgumentParser(
         description=u"Capture packets on the target, Display on the host")
 
     parser.add_argument(
-        u"interface_name",
-        nargs=u"?",
-        default=u"",
-        help=u"Choose one interface name from: %s" %
-        (" ".join(i for i in iface_names)))
+        u"interface_name", nargs=u"?", default=u"", help=iface_name_help)
     parser.add_argument(
         u"-t", u"--timeout", default=30, help=u"Time duration to sniff")
     parser.add_argument(
-        u"--view",
-        nargs=u"?",
-        choices=[u"wireshark", u"hex", u"summary"],
-        default=u"summary",
-        const=u"summary",
-        help=u"Wireshark requires X Display GUI environment.")
+        u"--wireshark", action="store_true", help=u"Display on Wireshark.")
     parser.add_argument(
         u"--file",
         type=str,
         default=u"",
-        help=u"Store PCAPNG file in //out directory. May use with --view option"
+        help=
+        u"Store PCAPNG file in //out directory. May use with --wireshark option"
     )
-    parser.add_argument(
-        u"--iface_filepath",
-        dest=u"iface_filepath",
-        default=u"",
-        help=u"Specify the interface filepath directly. For advanced users.")
 
     args = parser.parse_args()
 
@@ -339,19 +274,9 @@ def main():
             args.file = args.file + ".pcapng"
 
     if not has_fuzzy_name(args.interface_name, iface_names):
-        print(
-            u"Choose one interface name from: %s" %
-            " ".join(i for i in iface_names))
+        print(iface_name_help)
         sys.exit(1)
 
-    iface_file_paths = get_interface_filepath(args.interface_name)
-    if len(iface_file_paths) != 1:
-        msg = u"Querying interface name |%s| yielded non-unique result: %s" % (
-            args.interface_name, u" ".join(f for f in iface_file_paths))
-        print(msg)
-        sys.exit(1)
-
-    args.interface_filepath = iface_file_paths[0]
     do_sniff(build_cmd(args))
     print(u"\nEnd of fx sniff")
 
