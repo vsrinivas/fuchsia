@@ -137,7 +137,7 @@ class RewriteTransaction : public fidl::Transaction {
       auto indicator_response = reinterpret_cast<
           const fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>*>(
           indicator_msg_bytes.data());
-      switch (indicator_response->xu.which()) {
+      switch (indicator_response->xu.Which()) {
         case test::wire::FlexibleXUnion::Tag::kWantMoreThan30Bytes: {
           // Create a message with more bytes than expected
           constexpr uint32_t kUnknownBytes = 5000;
@@ -341,7 +341,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreBytes) {
   auto result = client->GetUnknownXUnionMoreBytes();
   EXPECT_TRUE(result.ok());
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
-  ASSERT_EQ(result.value().xu.which(), test::wire::FlexibleXUnion::Tag::kUnknown);
+  ASSERT_EQ(result.value().xu.Which(), test::wire::FlexibleXUnion::Tag::kUnknown);
 }
 
 static_assert(fidl::internal::ClampedHandleCount<
@@ -354,7 +354,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreHandles) {
   auto result = client->GetUnknownXUnionMoreHandles();
   EXPECT_TRUE(result.ok());
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
-  ASSERT_EQ(result.value().xu.which(), test::wire::FlexibleXUnion::Tag::kUnknown);
+  ASSERT_EQ(result.value().xu.Which(), test::wire::FlexibleXUnion::Tag::kUnknown);
 }
 
 static_assert(fidl::internal::ClampedMessageSize<

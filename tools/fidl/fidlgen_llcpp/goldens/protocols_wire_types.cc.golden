@@ -102,7 +102,7 @@ void ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
                 offsetof(fidl_xunion_v2_t, envelope));
 }
 
-auto ::test_protocols::wire::TheUnion::which() const
+auto ::test_protocols::wire::TheUnion::Which() const
     -> ::test_protocols::wire::TheUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {

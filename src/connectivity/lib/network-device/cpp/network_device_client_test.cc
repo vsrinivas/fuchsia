@@ -297,7 +297,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
       std::move(frame), [&wrote_frame](fidl::WireResponse<tun::Device::WriteFrame>* response) {
         const tun::wire::DeviceWriteFrameResult& result = response->result;
         wrote_frame = true;
-        switch (result.which()) {
+        switch (result.Which()) {
           case tun::wire::DeviceWriteFrameResult::Tag::kErr:
             FAIL() << "Failed to write to device " << zx_status_get_string(result.err());
             break;
@@ -312,7 +312,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
   tun_device->ReadFrame([&done, &send_data](fidl::WireResponse<tun::Device::ReadFrame>* response) {
     done = true;
     const tun::wire::DeviceReadFrameResult& result = response->result;
-    switch (result.which()) {
+    switch (result.Which()) {
       case tun::wire::DeviceReadFrameResult::Tag::kErr:
         FAIL() << "Failed to read from device " << zx_status_get_string(result.err());
         break;
@@ -367,7 +367,7 @@ TEST_F(NetDeviceTest, TestEcho) {
           std::move(frame),
           [&write_bridge, &write_frame](fidl::WireResponse<tun::Device::WriteFrame>* response) {
             const tun::wire::DeviceWriteFrameResult& result = response->result;
-            switch (result.which()) {
+            switch (result.Which()) {
               case tun::wire::DeviceWriteFrameResult::Tag::kErr:
                 write_bridge.completer.complete_error(result.err());
                 break;
@@ -411,7 +411,7 @@ TEST_F(NetDeviceTest, TestEcho) {
     tun_device->ReadFrame([&read_bridge, &receive_frame,
                            &waiting](fidl::WireResponse<tun::Device::ReadFrame>* response) {
       const tun::wire::DeviceReadFrameResult& result = response->result;
-      switch (result.which()) {
+      switch (result.Which()) {
         case tun::wire::DeviceReadFrameResult::Tag::kErr:
           read_bridge.completer.complete_error(result.err());
           break;
@@ -452,7 +452,7 @@ TEST_F(NetDeviceTest, TestEchoPair) {
   {
     fidl::WireResult result = tun_pair.sync()->AddPort(DefaultPairPortConfig());
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().result.which(), tun::wire::DevicePairAddPortResult::Tag::kResponse)
+    ASSERT_EQ(result.value().result.Which(), tun::wire::DevicePairAddPortResult::Tag::kResponse)
         << zx_status_get_string(result.value().result.err());
   }
   zx::status port_id = GetPortId([&tun_pair](fidl::ServerEnd<netdev::Port> port) {
@@ -657,7 +657,7 @@ TEST_F(NetDeviceTest, PadTxFrames) {
     tun_device->ReadFrame([&done, &expect](fidl::WireResponse<tun::Device::ReadFrame>* response) {
       done = true;
       const tun::wire::DeviceReadFrameResult& result = response->result;
-      switch (result.which()) {
+      switch (result.Which()) {
         case tun::wire::DeviceReadFrameResult::Tag::kErr:
           ADD_FAILURE() << "Read frame failed " << zx_status_get_string(result.err());
           break;
@@ -780,7 +780,7 @@ TEST_F(NetDeviceTest, CancelsWaitOnTeardown) {
                            [](fidl::WireResponse<tun::Device::WriteFrame>* response) {
                              const tun::wire::DeviceWriteFrameResult& result = response->result;
                              zx_status_t status = [&result]() {
-                               switch (result.which()) {
+                               switch (result.Which()) {
                                  case tun::wire::DeviceWriteFrameResult::Tag::kResponse:
                                    return ZX_OK;
                                  case tun::wire::DeviceWriteFrameResult::Tag::kErr:

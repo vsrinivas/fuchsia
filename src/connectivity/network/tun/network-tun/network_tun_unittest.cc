@@ -109,8 +109,8 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_network::PortWatcher>> GetPortWatche
 
 struct OwnedPortEvent {
   OwnedPortEvent(const fuchsia_hardware_network::wire::DevicePortEvent& event)
-      : which(event.which()) {
-    switch (event.which()) {
+      : which(event.Which()) {
+    switch (event.Which()) {
       case fuchsia_hardware_network::wire::DevicePortEvent::Tag::kExisting:
         port_id = event.existing();
         break;
@@ -281,7 +281,7 @@ class SimpleClient {
       return session_result.status();
     }
     fuchsia_hardware_network::wire::DeviceOpenSessionResult& result = session_result.value().result;
-    switch (result.which()) {
+    switch (result.Which()) {
       case fuchsia_hardware_network::wire::DeviceOpenSessionResult::Tag::kErr:
         return result.err();
       case fuchsia_hardware_network::wire::DeviceOpenSessionResult::Tag::kResponse:
@@ -303,7 +303,7 @@ class SimpleClient {
       return wire_result.status();
     }
     const auto& result = wire_result.value().result;
-    switch (result.which()) {
+    switch (result.Which()) {
       case fuchsia_hardware_network::wire::SessionAttachResult::Tag::kResponse:
         port_id_ = port_id;
         return ZX_OK;
@@ -632,7 +632,7 @@ class TunTest : public gtest::RealLoopFixture {
     if (result.status() != ZX_OK) {
       return zx::error(result.status());
     }
-    switch (result.value().result.which()) {
+    switch (result.value().result.Which()) {
       case fuchsia_net_tun::wire::DevicePairAddPortResult::Tag::kResponse:
         return zx::ok(std::move(pair));
       case fuchsia_net_tun::wire::DevicePairAddPortResult::Tag::kErr:
@@ -995,7 +995,7 @@ TEST_F(TunTest, SimpleRxTx) {
     ASSERT_OK(read_frame_wire_result.status());
     fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
-    switch (read_frame_result.which()) {
+    switch (read_frame_result.Which()) {
       case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kResponse:
         GTEST_FAIL() << "Got frame with " << read_frame_result.response().frame.data().count()
                      << "bytes, expected error";
@@ -1018,7 +1018,7 @@ TEST_F(TunTest, SimpleRxTx) {
     ASSERT_OK(read_frame_wire_result.status());
     fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
-    switch (read_frame_result.which()) {
+    switch (read_frame_result.Which()) {
       case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kResponse:
         ASSERT_EQ(read_frame_result.response().frame.frame_type(),
                   fuchsia_hardware_network::wire::FrameType::kEthernet);
@@ -1052,7 +1052,7 @@ TEST_F(TunTest, SimpleRxTx) {
 
     fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
         write_frame_wire_result.value().result;
-    switch (write_frame_result.which()) {
+    switch (write_frame_result.Which()) {
       case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse:
         GTEST_FAIL() << "WriteFrame succeeded unexpectedly";
         break;
@@ -1082,7 +1082,7 @@ TEST_F(TunTest, SimpleRxTx) {
 
     fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
         write_frame_wire_result.value().result;
-    switch (write_frame_result.which()) {
+    switch (write_frame_result.Which()) {
       case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse:
         break;
       case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kErr:
@@ -1372,7 +1372,7 @@ TEST_F(TunTest, RejectsMissingFrameFields) {
 
     fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
         write_frame_wire_result.value().result;
-    switch (write_frame_result.which()) {
+    switch (write_frame_result.Which()) {
       case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse:
         GTEST_FAIL() << "WriteFrame succeeded unexpectedly";
         break;
@@ -1415,7 +1415,7 @@ TEST_F(TunTest, RejectsIfOffline) {
 
     fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
         write_frame_wire_result.value().result;
-    switch (write_frame_result.which()) {
+    switch (write_frame_result.Which()) {
       case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse:
         GTEST_FAIL() << "WriteFrame succeeded unexpectedly";
         break;
@@ -1447,7 +1447,7 @@ TEST_F(TunTest, RejectsIfOffline) {
     ASSERT_OK(read_frame_wire_result.status());
     fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
-    switch (read_frame_result.which()) {
+    switch (read_frame_result.Which()) {
       case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kResponse: {
         ASSERT_EQ(read_frame_result.response().frame.frame_type(),
                   fuchsia_hardware_network::wire::FrameType::kEthernet);
@@ -1626,7 +1626,7 @@ TEST_F(TunTest, ReportsInternalTxErrors) {
     ASSERT_OK(read_frame_wire_result.status());
     fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
-    ASSERT_EQ(read_frame_result.which(), fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kErr);
+    ASSERT_EQ(read_frame_result.Which(), fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kErr);
     ASSERT_STATUS(read_frame_result.err(), ZX_ERR_SHOULD_WAIT);
   }
   const buffer_descriptor_t* desc = client.descriptor(descriptor);
@@ -1680,7 +1680,7 @@ TEST_F(TunTest, ChainsRxBuffers) {
   frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(send_data));
   fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
   ASSERT_OK(write_frame_wire_result.status());
-  ASSERT_EQ(write_frame_wire_result.value().result.which(),
+  ASSERT_EQ(write_frame_wire_result.value().result.Which(),
             fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse)
       << zx_status_get_string(write_frame_wire_result.value().result.err());
 
@@ -1849,7 +1849,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
     port_config.base().set_id(port.base_id);
     fidl::WireResult result = tun->AddPort(std::move(port_config));
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().result.which(),
+    ASSERT_EQ(result.value().result.Which(),
               fuchsia_net_tun::wire::DevicePairAddPortResult::Tag::kResponse)
         << zx_status_get_string(result.value().result.err());
 
@@ -1881,7 +1881,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
     port_config.base().set_id(ports[0].base_id);
     fidl::WireResult result = tun->AddPort(std::move(port_config));
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().result.which(),
+    ASSERT_EQ(result.value().result.Which(),
               fuchsia_net_tun::wire::DevicePairAddPortResult::Tag::kErr);
     ASSERT_EQ(result.value().result.err(), ZX_ERR_ALREADY_EXISTS);
   }
@@ -1891,7 +1891,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
 
     fidl::WireResult result = tun->RemovePort(port.base_id);
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().result.which(),
+    ASSERT_EQ(result.value().result.Which(),
               fuchsia_net_tun::wire::DevicePairRemovePortResult::Tag::kResponse)
         << zx_status_get_string(result.value().result.err());
 
@@ -1912,7 +1912,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
   // Removing a port that doesn't exist anymore returns the appropriate error.
   fidl::WireResult result = tun->RemovePort(ports[0].base_id);
   ASSERT_OK(result.status());
-  ASSERT_EQ(result.value().result.which(),
+  ASSERT_EQ(result.value().result.Which(),
             fuchsia_net_tun::wire::DevicePairRemovePortResult::Tag::kErr);
   ASSERT_EQ(result.value().result.err(), ZX_ERR_NOT_FOUND);
 }

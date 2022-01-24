@@ -2,7 +2,7 @@
 
 #include <fidl/test.union/cpp/wire_types.h>
 
-auto ::test_union::wire::UnionWithAttributes::which() const
+auto ::test_union::wire::UnionWithAttributes::Which() const
     -> ::test_union::wire::UnionWithAttributes::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -85,7 +85,7 @@ void ::test_union::wire::PizzaOrPasta::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_v2_t, envelope));
 }
 
-auto ::test_union::wire::FlexiblePizzaOrPasta::which() const
+auto ::test_union::wire::FlexiblePizzaOrPasta::Which() const
     -> ::test_union::wire::FlexiblePizzaOrPasta::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -114,7 +114,7 @@ void ::test_union::wire::ExplicitPizzaOrPasta::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_v2_t, envelope));
 }
 
-auto ::test_union::wire::OlderSimpleUnion::which() const
+auto ::test_union::wire::OlderSimpleUnion::Which() const
     -> ::test_union::wire::OlderSimpleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -134,7 +134,7 @@ void ::test_union::wire::OlderSimpleUnion::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_v2_t, envelope));
 }
 
-auto ::test_union::wire::NewerSimpleUnion::which() const
+auto ::test_union::wire::NewerSimpleUnion::Which() const
     -> ::test_union::wire::NewerSimpleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -155,7 +155,7 @@ void ::test_union::wire::NewerSimpleUnion::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_v2_t, envelope));
 }
 
-auto ::test_union::wire::FlexibleUnion::which() const
+auto ::test_union::wire::FlexibleUnion::Which() const
     -> ::test_union::wire::FlexibleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -177,7 +177,7 @@ void ::test_union::wire::FlexibleUnion::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_v2_t, envelope));
 }
 
-auto ::test_union::wire::FlexibleFoo::which() const
+auto ::test_union::wire::FlexibleFoo::Which() const
     -> ::test_union::wire::FlexibleFoo::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -205,7 +205,7 @@ void ::test_union::wire::FieldCollision::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_v2_t, envelope));
 }
 
-auto ::test_union::wire::ExplicitXUnion::which() const
+auto ::test_union::wire::ExplicitXUnion::Which() const
     -> ::test_union::wire::ExplicitXUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -241,7 +241,7 @@ void ::test_union::wire::ExplicitStrictFoo::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_v2_t, envelope));
 }
 
-auto ::test_union::wire::ExplicitFoo::which() const
+auto ::test_union::wire::ExplicitFoo::Which() const
     -> ::test_union::wire::ExplicitFoo::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -261,7 +261,7 @@ void ::test_union::wire::ExplicitFoo::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_v2_t, envelope));
 }
 
-auto ::test_union::wire::XUnionContainingEmptyStruct::which() const
+auto ::test_union::wire::XUnionContainingEmptyStruct::Which() const
     -> ::test_union::wire::XUnionContainingEmptyStruct::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {

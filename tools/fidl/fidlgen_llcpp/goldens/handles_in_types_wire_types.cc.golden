@@ -41,7 +41,7 @@ void ::test_handlesintypes::wire::HandlesInTypes::_CloseHandles() {
 
 #ifdef __Fuchsia__
 
-auto ::test_handlesintypes::wire::UnionWithHandle::which() const
+auto ::test_handlesintypes::wire::UnionWithHandle::Which() const
     -> ::test_handlesintypes::wire::UnionWithHandle::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {

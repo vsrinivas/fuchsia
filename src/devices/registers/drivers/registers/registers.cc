@@ -313,7 +313,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
     }
 
     if (begin) {
-      tag = reg.masks().begin()->mask().which();
+      tag = reg.masks().begin()->mask().Which();
       begin = false;
     }
 
@@ -323,7 +323,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_INTERNAL;
       }
 
-      if (mask.mask().which() != tag) {
+      if (mask.mask().Which() != tag) {
         zxlogf(ERROR, "Width of registers don't match up.");
         return ZX_ERR_INTERNAL;
       }

@@ -113,7 +113,7 @@ TEST(CreateWithInfo, Unsupported) {
   ASSERT_NE(context, nullptr);
 
   // The socket in node_info should be preserved.
-  EXPECT_EQ(node_info.which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
+  EXPECT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
   EXPECT_TRUE(node_info.stream_socket().socket.is_valid());
 
   std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));

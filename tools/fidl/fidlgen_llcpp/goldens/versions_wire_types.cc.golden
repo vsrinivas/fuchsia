@@ -2,7 +2,7 @@
 
 #include <fidl/test.versions/cpp/wire_types.h>
 
-auto ::test_versions::wire::Union::which() const
+auto ::test_versions::wire::Union::Which() const
     -> ::test_versions::wire::Union::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {

@@ -197,7 +197,7 @@ class Union {
     ZX_ASSERT(ordinal_ == ::test_versions::wire::Union::Ordinal::kX);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_versions::wire::Union::Tag which() const;
+  ::test_versions::wire::Union::Tag Which() const;
 
   static constexpr const fidl_type_t* Type = &test_versions_UnionTable;
   static constexpr uint32_t MaxNumHandles = 0;

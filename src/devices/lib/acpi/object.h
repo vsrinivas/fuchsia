@@ -26,7 +26,7 @@ class Object {
   // Initialize this object with a FIDL ACPI object.
   explicit Object(const fuchsia_hardware_acpi::wire::Object& object) {
     using Tag = fuchsia_hardware_acpi::wire::Object::Tag;
-    switch (object.which()) {
+    switch (object.Which()) {
       case Tag::kIntegerVal: {
         value_ = object.integer_val();
         break;

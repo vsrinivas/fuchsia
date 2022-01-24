@@ -451,7 +451,7 @@ class UnionMember {
               ::test_anonymous::wire::UnionMember::Ordinal::kUnionData);
     return envelope_.As<uint8_t>().get_data();
   }
-  ::test_anonymous::wire::UnionMember::Tag which() const;
+  ::test_anonymous::wire::UnionMember::Tag Which() const;
 
   static constexpr const fidl_type_t* Type = &test_anonymous_UnionMemberTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -637,7 +637,7 @@ class Expression {
     return envelope_.As<::test_anonymous::wire::FunctionApplication>()
         .get_data();
   }
-  ::test_anonymous::wire::Expression::Tag which() const;
+  ::test_anonymous::wire::Expression::Tag Which() const;
 
   static constexpr const fidl_type_t* Type = &test_anonymous_ExpressionTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -762,7 +762,7 @@ class SomeProtocolSomeMethodResult {
     return envelope_.As<::test_anonymous::wire::SomeProtocolSomeMethodError>()
         .get_data();
   }
-  ::test_anonymous::wire::SomeProtocolSomeMethodResult::Tag which() const {
+  ::test_anonymous::wire::SomeProtocolSomeMethodResult::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<
         ::test_anonymous::wire::SomeProtocolSomeMethodResult::Tag>(ordinal_);

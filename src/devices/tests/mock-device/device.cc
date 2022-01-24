@@ -392,7 +392,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
                            ProcessActionsContext* ctx) {
   for (size_t i = 0; i < actions.count(); ++i) {
     auto& action = actions[i];
-    switch (action.which()) {
+    switch (action.Which()) {
       case device_mock::wire::Action::Tag::kReturnStatus: {
         if (i != actions.count() - 1) {
           printf("MockDevice::ProcessActions: return_status was not the final entry\n");

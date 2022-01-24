@@ -196,7 +196,7 @@ class UnionWithHandle {
               ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH);
     return envelope_.As<::zx::vmo>().get_data();
   }
-  ::test_handlesintypes::wire::UnionWithHandle::Tag which() const;
+  ::test_handlesintypes::wire::UnionWithHandle::Tag Which() const;
 
   static constexpr const fidl_type_t* Type =
       &test_handlesintypes_UnionWithHandleTable;

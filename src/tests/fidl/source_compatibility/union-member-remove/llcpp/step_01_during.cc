@@ -26,7 +26,7 @@ fidl_test::wire::JsonValue writer(fidl::AnyArena& allocator, const std::string& 
 }
 
 std::string reader(const fidl_test::wire::JsonValue& value) {
-  switch (value.which()) {
+  switch (value.Which()) {
     case fidl_test::wire::JsonValue::Tag::kIntValue:
       return std::to_string(value.int_value());
     case fidl_test::wire::JsonValue::Tag::kStringValue:

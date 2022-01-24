@@ -248,7 +248,7 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr fidlExpr, expectedValue gid
 	}
 	actualFieldExpr := fidlSprintf("%s.%s()", actualVar, fidlgen.ToSnakeCase(field.Key.Name))
 	fieldEquality := b.visit(actualFieldExpr, field.Value, fieldDecl)
-	return boolSprintf("(%s.which() == %s::Tag::%s && %s)",
+	return boolSprintf("(%s.Which() == %s::Tag::%s && %s)",
 		actualVar, declName(decl), fidlgen.ConstNameToKCamelCase(field.Key.Name), fieldEquality)
 }
 

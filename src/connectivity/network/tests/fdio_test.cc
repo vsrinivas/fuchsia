@@ -109,7 +109,7 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
   auto response = client->Describe();
   ASSERT_OK(response.status());
   const fuchsia_io::wire::NodeInfo& node_info = response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
+  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
 
@@ -207,7 +207,7 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
   auto describe_response = client->Describe();
   ASSERT_OK(describe_response.status());
   const fuchsia_io::wire::NodeInfo& node_info = describe_response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), TypeParam::tag());
+  ASSERT_EQ(node_info.Which(), TypeParam::tag());
 
   zx_signals_t observed;
 
@@ -275,7 +275,7 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
   auto response = client->Describe();
   ASSERT_OK(response.status());
   const fuchsia_io::wire::NodeInfo& node_info = response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
+  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
 

@@ -201,7 +201,7 @@ class SimpleUnion {
     ZX_ASSERT(ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kB);
     return envelope_.As<float>().get_data();
   }
-  ::test_nullable::wire::SimpleUnion::Tag which() const {
+  ::test_nullable::wire::SimpleUnion::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_nullable::wire::SimpleUnion::Tag>(ordinal_);
   }

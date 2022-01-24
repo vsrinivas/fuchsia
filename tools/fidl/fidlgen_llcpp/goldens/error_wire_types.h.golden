@@ -120,7 +120,7 @@ class ExampleFooResult {
     ZX_ASSERT(ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_error::wire::ExampleFooResult::Tag which() const {
+  ::test_error::wire::ExampleFooResult::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_error::wire::ExampleFooResult::Tag>(ordinal_);
   }

@@ -7,7 +7,7 @@ namespace fidl_test = fidl_test_unionflexiblestrict;
 
 // [START contents]
 void use_union(fidl_test::wire::JsonValue* value) {
-  switch (value->which()) {
+  switch (value->Which()) {
     case fidl_test::wire::JsonValue::Tag::kIntValue:
       printf("int value: %d\n", value->int_value());
       break;

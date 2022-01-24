@@ -119,7 +119,7 @@ class StrictFoo {
               ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  ::test_requestflexibleenvelope::wire::StrictFoo::Tag which() const {
+  ::test_requestflexibleenvelope::wire::StrictFoo::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_requestflexibleenvelope::wire::StrictFoo::Tag>(
         ordinal_);
@@ -243,7 +243,7 @@ class FlexibleFoo {
               ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  ::test_requestflexibleenvelope::wire::FlexibleFoo::Tag which() const;
+  ::test_requestflexibleenvelope::wire::FlexibleFoo::Tag Which() const;
 
   static constexpr const fidl_type_t* Type =
       &test_requestflexibleenvelope_FlexibleFooTable;

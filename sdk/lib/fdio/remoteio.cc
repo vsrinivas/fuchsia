@@ -115,7 +115,7 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
     }
   }
 
-  switch (info.which()) {
+  switch (info.Which()) {
     case fio::wire::NodeInfo::Tag::kDatagramSocket: {
       auto& socket = info.mutable_datagram_socket();
       return fdio_datagram_socket_create(

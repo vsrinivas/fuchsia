@@ -33,7 +33,7 @@ TEST(NameProviderTest, GetDeviceName) {
   fidl::WireResult response = fidl::WireCall(client_end.value())->GetDeviceName();
   ASSERT_OK(response.status());
   fuchsia_device::wire::NameProviderGetDeviceNameResult& result = response.value().result;
-  switch (result.which()) {
+  switch (result.Which()) {
     case fuchsia_device::wire::NameProviderGetDeviceNameResult::Tag::kErr:
       FAIL() << zx_status_get_string(result.err());
     case fuchsia_device::wire::NameProviderGetDeviceNameResult::Tag::kResponse: {

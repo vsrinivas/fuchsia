@@ -110,7 +110,7 @@ class NetDeviceDriverTest : public ::testing::Test {
       const netdev::wire::DevicePortEvent& event = result.value().event;
 
       netdev::wire::PortId id;
-      switch (event.which()) {
+      switch (event.Which()) {
         case netdev::wire::DevicePortEvent::Tag::kAdded:
           id = event.added();
           break;
@@ -119,7 +119,7 @@ class NetDeviceDriverTest : public ::testing::Test {
           break;
         case netdev::wire::DevicePortEvent::Tag::kIdle:
         case netdev::wire::DevicePortEvent::Tag::kRemoved:
-          ADD_FAILURE() << "Unexpected port watcher event " << static_cast<uint32_t>(event.which());
+          ADD_FAILURE() << "Unexpected port watcher event " << static_cast<uint32_t>(event.Which());
           return zx::error(ZX_ERR_INTERNAL);
       }
       if (id.base == base_id) {

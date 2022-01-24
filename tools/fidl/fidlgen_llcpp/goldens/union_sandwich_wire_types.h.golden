@@ -93,7 +93,7 @@ class UnionSize8Alignment4 {
         ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_unionsandwich::wire::UnionSize8Alignment4::Tag which() const {
+  ::test_unionsandwich::wire::UnionSize8Alignment4::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_unionsandwich::wire::UnionSize8Alignment4::Tag>(
         ordinal_);
@@ -194,7 +194,7 @@ class UnionSize36Alignment4 {
         ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant);
     return envelope_.As<::fidl::Array<uint8_t, 32>>().get_data();
   }
-  ::test_unionsandwich::wire::UnionSize36Alignment4::Tag which() const {
+  ::test_unionsandwich::wire::UnionSize36Alignment4::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_unionsandwich::wire::UnionSize36Alignment4::Tag>(
         ordinal_);
@@ -295,7 +295,7 @@ class UnionSize12Alignment4 {
         ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant);
     return envelope_.As<::fidl::Array<uint8_t, 6>>().get_data();
   }
-  ::test_unionsandwich::wire::UnionSize12Alignment4::Tag which() const {
+  ::test_unionsandwich::wire::UnionSize12Alignment4::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_unionsandwich::wire::UnionSize12Alignment4::Tag>(
         ordinal_);
@@ -404,7 +404,7 @@ class UnionSize24Alignment8 {
     return envelope_.As<::test_unionsandwich::wire::StructSize16Alignment8>()
         .get_data();
   }
-  ::test_unionsandwich::wire::UnionSize24Alignment8::Tag which() const {
+  ::test_unionsandwich::wire::UnionSize24Alignment8::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_unionsandwich::wire::UnionSize24Alignment8::Tag>(
         ordinal_);

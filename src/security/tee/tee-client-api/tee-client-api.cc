@@ -429,7 +429,7 @@ TEEC_Result PostprocessValue(uint32_t param_type, const fuchsia_tee::wire::Param
   ZX_DEBUG_ASSERT(param_type == TEEC_VALUE_INPUT || param_type == TEEC_VALUE_OUTPUT ||
                   param_type == TEEC_VALUE_INOUT);
 
-  if (zx_param.which() != fuchsia_tee::wire::Parameter::Tag::kValue) {
+  if (zx_param.Which() != fuchsia_tee::wire::Parameter::Tag::kValue) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
@@ -472,7 +472,7 @@ TEEC_Result PostprocessTemporaryMemref(uint32_t param_type,
   ZX_DEBUG_ASSERT(param_type == TEEC_MEMREF_TEMP_INPUT || param_type == TEEC_MEMREF_TEMP_OUTPUT ||
                   param_type == TEEC_MEMREF_TEMP_INOUT);
 
-  if (zx_param.which() != fuchsia_tee::wire::Parameter::Tag::kBuffer) {
+  if (zx_param.Which() != fuchsia_tee::wire::Parameter::Tag::kBuffer) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
@@ -523,7 +523,7 @@ TEEC_Result PostprocessWholeMemref(const fuchsia_tee::wire::Parameter& zx_param,
   ZX_DEBUG_ASSERT(out_memory_ref);
   ZX_DEBUG_ASSERT(out_memory_ref->parent);
 
-  if (zx_param.which() != fuchsia_tee::wire::Parameter::Tag::kBuffer) {
+  if (zx_param.Which() != fuchsia_tee::wire::Parameter::Tag::kBuffer) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
@@ -550,7 +550,7 @@ TEEC_Result PostprocessPartialMemref(uint32_t param_type,
                   param_type == TEEC_MEMREF_PARTIAL_OUTPUT ||
                   param_type == TEEC_MEMREF_PARTIAL_INOUT);
 
-  if (zx_param.which() != fuchsia_tee::wire::Parameter::Tag::kBuffer) {
+  if (zx_param.Which() != fuchsia_tee::wire::Parameter::Tag::kBuffer) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
@@ -603,7 +603,7 @@ TEEC_Result PostprocessOperation(
 
     switch (param_type) {
       case TEEC_NONE:
-        if (parameter_set[i].which() != fuchsia_tee::wire::Parameter::Tag::kNone) {
+        if (parameter_set[i].Which() != fuchsia_tee::wire::Parameter::Tag::kNone) {
           rc = TEEC_ERROR_BAD_PARAMETERS;
         }
         break;
@@ -638,7 +638,7 @@ TEEC_Result PostprocessOperation(
 
   // This check catches the case where we received more parameters than we expected.
   for (size_t i = num_params; i < parameter_set.count(); i++) {
-    if (parameter_set[i].which() != fuchsia_tee::wire::Parameter::Tag::kNone) {
+    if (parameter_set[i].Which() != fuchsia_tee::wire::Parameter::Tag::kNone) {
       return TEEC_ERROR_BAD_PARAMETERS;
     }
   }

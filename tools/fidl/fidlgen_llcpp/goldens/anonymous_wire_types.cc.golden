@@ -2,7 +2,7 @@
 
 #include <fidl/test.anonymous/cpp/wire_types.h>
 
-auto ::test_anonymous::wire::UnionMember::which() const
+auto ::test_anonymous::wire::UnionMember::Which() const
     -> ::test_anonymous::wire::UnionMember::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -21,7 +21,7 @@ void ::test_anonymous::wire::UnionMember::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_v2_t, envelope));
 }
 
-auto ::test_anonymous::wire::Expression::which() const
+auto ::test_anonymous::wire::Expression::Which() const
     -> ::test_anonymous::wire::Expression::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {

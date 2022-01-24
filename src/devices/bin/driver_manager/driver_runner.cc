@@ -42,7 +42,7 @@ template <typename R, typename F>
 std::optional<R> VisitOffer(fdecl::wire::Offer& offer, F apply) {
   // Note, we access each field of the union as mutable, so that `apply` can
   // modify the field if necessary.
-  switch (offer.which()) {
+  switch (offer.Which()) {
     case fdecl::wire::Offer::Tag::kService:
       return apply(offer.mutable_service());
     case fdecl::wire::Offer::Tag::kProtocol:

@@ -23,33 +23,33 @@ TEST(XUnionPayload, Primitive) {
     EXPECT_TRUE(test_union.has_invalid_tag());
     int32_t primitive = 5;
     test_union.set_primitive(std::move(primitive));
-    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.which());
+    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.Which());
     EXPECT_EQ(5, test_union.primitive());
   }
   {
     llcpp_test::wire::TestUnion test_union;
     EXPECT_TRUE(test_union.has_invalid_tag());
     test_union.set_primitive(5);
-    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.which());
+    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.Which());
     EXPECT_EQ(5, test_union.primitive());
   }
   {
     int32_t primitive = 5;
     auto test_union = llcpp_test::wire::TestUnion::WithPrimitive(std::move(primitive));
-    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.which());
+    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.Which());
     EXPECT_EQ(5, test_union.primitive());
   }
 }
 
 TEST(XUnionPayload, WhichDisallowedWhenUninitialized) {
   llcpp_test::wire::TestUnion test_union;
-  ASSERT_DEATH({ test_union.which(); }, "!has_invalid_tag()");
+  ASSERT_DEATH({ test_union.Which(); }, "!has_invalid_tag()");
 }
 
 TEST(XUnionPayload, Struct) {
   llcpp_test::wire::CopyableStruct copyable{.x = 5};
   auto test_xunion = llcpp_test::wire::TestXUnion::WithCopyable(std::move(copyable));
-  EXPECT_EQ(llcpp_test::wire::TestXUnion::Tag::kCopyable, test_xunion.which());
+  EXPECT_EQ(llcpp_test::wire::TestXUnion::Tag::kCopyable, test_xunion.Which());
 }
 
 TEST(XUnionPayload, CopyableStruct) {
@@ -58,12 +58,12 @@ TEST(XUnionPayload, CopyableStruct) {
     EXPECT_TRUE(test_union.has_invalid_tag());
     llcpp_test::wire::CopyableStruct copyable_struct{.x = 5};
     test_union.set_copyable(std::move(copyable_struct));
-    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kCopyable, test_union.which());
+    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kCopyable, test_union.Which());
   }
   {
     llcpp_test::wire::CopyableStruct copyable_struct{.x = 5};
     auto test_union = llcpp_test::wire::TestUnion::WithCopyable(std::move(copyable_struct));
-    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kCopyable, test_union.which());
+    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kCopyable, test_union.Which());
   }
 }
 
@@ -73,7 +73,7 @@ TEST(XUnionPayload, MoveOnlyStruct) {
     EXPECT_TRUE(test_union.has_invalid_tag());
     llcpp_test::wire::MoveOnlyStruct move_only_struct{.h = zx::handle()};
     test_union.set_move_only(std::move(move_only_struct));
-    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kMoveOnly, test_union.which());
+    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kMoveOnly, test_union.Which());
   }
   {
     llcpp_test::wire::TestUnion test_union;
@@ -83,14 +83,14 @@ TEST(XUnionPayload, MoveOnlyStruct) {
     llcpp_test::wire::MoveOnlyStruct move_only_struct{.h = std::move(event)};
     EXPECT_NE(ZX_HANDLE_INVALID, move_only_struct.h.get());
     test_union.set_move_only(std::move(move_only_struct));
-    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kMoveOnly, test_union.which());
+    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kMoveOnly, test_union.Which());
     EXPECT_EQ(ZX_HANDLE_INVALID, move_only_struct.h.get());
     EXPECT_NE(ZX_HANDLE_INVALID, test_union.move_only().h.get());
   }
   {
     llcpp_test::wire::MoveOnlyStruct move_only_struct{.h = zx::handle()};
     auto test_union = llcpp_test::wire::TestUnion::WithMoveOnly(std::move(move_only_struct));
-    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kMoveOnly, test_union.which());
+    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kMoveOnly, test_union.Which());
   }
 }
 
@@ -148,7 +148,7 @@ TEST(XUnion, UnknownBytes) {
       0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x01, 0x00,  // inline envelope, 0 handles
   };
   auto check_tag = [](const llcpp_test::wire::TestXUnion& xu) {
-    EXPECT_EQ(xu.which(), llcpp_test::wire::TestXUnion::Tag::kUnknown);
+    EXPECT_EQ(xu.Which(), llcpp_test::wire::TestXUnion::Tag::kUnknown);
   };
   llcpp_types_test_utils::CannotProxyUnknownEnvelope<
       fidl::WireResponse<llcpp_test::MsgWrapper::TestXUnion>>(bytes, {}, std::move(check_tag));
@@ -169,7 +169,7 @@ TEST(XUnion, UnknownHandlesResource) {
   std::vector<zx_handle_t> handles = {h1, h2, h3};
 
   auto check_tag = [](const llcpp_test::wire::TestXUnion& xu) {
-    EXPECT_EQ(xu.which(), llcpp_test::wire::TestXUnion::Tag::kUnknown);
+    EXPECT_EQ(xu.Which(), llcpp_test::wire::TestXUnion::Tag::kUnknown);
   };
   llcpp_types_test_utils::CannotProxyUnknownEnvelope<
       fidl::WireResponse<llcpp_test::MsgWrapper::TestXUnion>>(bytes, handles, std::move(check_tag));
@@ -190,7 +190,7 @@ TEST(XUnion, UnknownHandlesNonResource) {
   std::vector<zx_handle_t> handles = {h1, h2, h3};
 
   auto check_tag = [](const llcpp_test::wire::TestNonResourceXUnion& xu) {
-    EXPECT_EQ(xu.which(), llcpp_test::wire::TestNonResourceXUnion::Tag::kUnknown);
+    EXPECT_EQ(xu.Which(), llcpp_test::wire::TestNonResourceXUnion::Tag::kUnknown);
   };
   llcpp_types_test_utils::CannotProxyUnknownEnvelope<
       fidl::WireResponse<llcpp_test::MsgWrapper::TestNonResourceXUnion>>(bytes, handles,

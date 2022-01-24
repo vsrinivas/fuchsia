@@ -1376,7 +1376,7 @@ var1.v = std::move(var2);
 		[[maybe_unused]] auto& f1 = actual;
 [[maybe_unused]] auto& f2 = f1.v;
 
-		return ((f2.which() == test_conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
+		return ((f2.Which() == test_conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
 	};
 	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
 		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
@@ -1400,7 +1400,7 @@ var1.v = std::move(var2);
 		[[maybe_unused]] auto& f1 = actual;
 [[maybe_unused]] auto& f2 = f1.v;
 
-		return ((f2.which() == test_conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
+		return ((f2.Which() == test_conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
 	};
 	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
 		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
@@ -1426,7 +1426,7 @@ var1.v = std::move(var2);
 		[[maybe_unused]] auto& f1 = actual;
 [[maybe_unused]] auto& f2 = f1.v;
 
-		return ((f2.which() == test_conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
+		return ((f2.Which() == test_conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
 	};
 	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
 		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
@@ -1450,7 +1450,7 @@ var1.v = std::move(var2);
 		[[maybe_unused]] auto& f1 = actual;
 [[maybe_unused]] auto& f2 = f1.v;
 
-		return ((f2.which() == test_conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
+		return ((f2.Which() == test_conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
 	};
 	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
 		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));

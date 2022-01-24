@@ -116,9 +116,9 @@ class {{ .Name }} {
   {{- end }}
 
   {{- if .IsFlexible }}
-  {{ .TagEnum }} which() const;
+  {{ .TagEnum }} Which() const;
   {{- else }}
-  {{ .TagEnum }} which() const {
+  {{ .TagEnum }} Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<{{ .TagEnum }}>(ordinal_);
   }
@@ -173,7 +173,7 @@ class {{ .Name }} {
 {{- IfdefFuchsia -}}
 {{- end }}
 {{- if .IsFlexible }}
-auto {{ . }}::which() const -> {{ .TagEnum }} {
+auto {{ . }}::Which() const -> {{ .TagEnum }} {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
   {{- range .Members }}

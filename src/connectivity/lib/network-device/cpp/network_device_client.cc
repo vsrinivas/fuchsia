@@ -195,7 +195,7 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
                              return;
                            }
                            netdev::wire::DeviceOpenSessionResult& open_result = result->result;
-                           switch (open_result.which()) {
+                           switch (open_result.Which()) {
                              case netdev::wire::DeviceOpenSessionResult::Tag::kErr:
                                res.complete_error(open_result.err());
                                break;
@@ -314,7 +314,7 @@ void NetworkDeviceClient::AttachPort(netdev::wire::PortId port_id,
                          completer.complete_error(result.status());
                          return;
                        }
-                       switch (result->result.which()) {
+                       switch (result->result.Which()) {
                          case netdev::wire::SessionAttachResult::Tag::kResponse:
                            completer.complete_ok();
                            break;
@@ -341,7 +341,7 @@ void NetworkDeviceClient::DetachPort(netdev::wire::PortId port_id, ErrorCallback
                          completer.complete_error(result.status());
                          return;
                        }
-                       switch (result->result.which()) {
+                       switch (result->result.Which()) {
                          case netdev::wire::SessionDetachResult::Tag::kResponse:
                            completer.complete_ok();
                            break;
@@ -463,7 +463,7 @@ void NetworkDeviceClient::GetPorts(PortsCallback callback) {
           return;
         }
         const netdev::wire::DevicePortEvent& event = result->event;
-        switch (event.which()) {
+        switch (event.Which()) {
           case netdev::wire::DevicePortEvent::Tag::kIdle:
             completer.complete_ok(std::make_pair(std::move(ports), true));
             break;

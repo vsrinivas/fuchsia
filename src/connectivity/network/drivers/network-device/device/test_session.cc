@@ -94,7 +94,7 @@ zx_status_t TestSession::AttachPort(netdev::wire::PortId port_id,
     return wire_result.status();
   }
   const auto& result = wire_result.value().result;
-  switch (result.which()) {
+  switch (result.Which()) {
     case netdev::wire::SessionAttachResult::Tag::kResponse:
       return ZX_OK;
     case netdev::wire::SessionAttachResult::Tag::kErr:
@@ -108,7 +108,7 @@ zx_status_t TestSession::DetachPort(netdev::wire::PortId port_id) {
     return wire_result.status();
   }
   const auto& result = wire_result.value().result;
-  switch (result.which()) {
+  switch (result.Which()) {
     case netdev::wire::SessionDetachResult::Tag::kResponse:
       return ZX_OK;
     case netdev::wire::SessionDetachResult::Tag::kErr:

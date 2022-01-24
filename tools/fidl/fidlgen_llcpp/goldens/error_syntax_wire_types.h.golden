@@ -165,7 +165,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
     return envelope_.As<uint32_t>().get_data();
   }
   ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag
-  which() const {
+  Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_errorsyntax::wire::
                            ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag>(

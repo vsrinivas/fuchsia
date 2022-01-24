@@ -157,7 +157,7 @@ class UnionWithAttributes {
     ZX_ASSERT(ordinal_ == ::test_union::wire::UnionWithAttributes::Ordinal::kX);
     return envelope_.As<int64_t>().get_data();
   }
-  ::test_union::wire::UnionWithAttributes::Tag which() const;
+  ::test_union::wire::UnionWithAttributes::Tag Which() const;
 
   static constexpr const fidl_type_t* Type =
       &test_union_UnionWithAttributesTable;
@@ -327,7 +327,7 @@ class Union {
         ::test_union::wire::Union::Ordinal::kVectorStringAlsoNeedsConstructor);
     return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
-  ::test_union::wire::Union::Tag which() const {
+  ::test_union::wire::Union::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::Union::Tag>(ordinal_);
   }
@@ -505,7 +505,7 @@ class StrictUnion {
                               kVectorStringAlsoNeedsConstructor);
     return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
-  ::test_union::wire::StrictUnion::Tag which() const {
+  ::test_union::wire::StrictUnion::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::StrictUnion::Tag>(ordinal_);
   }
@@ -643,7 +643,7 @@ class StrictSimpleXUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictSimpleXUnion::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-  ::test_union::wire::StrictSimpleXUnion::Tag which() const {
+  ::test_union::wire::StrictSimpleXUnion::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::StrictSimpleXUnion::Tag>(ordinal_);
   }
@@ -757,7 +757,7 @@ class StrictFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  ::test_union::wire::StrictFoo::Tag which() const {
+  ::test_union::wire::StrictFoo::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::StrictFoo::Tag>(ordinal_);
   }
@@ -849,7 +849,7 @@ class StrictBoundedXUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictBoundedXUnion::Ordinal::kV);
     return envelope_.As<::fidl::VectorView<uint8_t>>().get_data();
   }
-  ::test_union::wire::StrictBoundedXUnion::Tag which() const {
+  ::test_union::wire::StrictBoundedXUnion::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::StrictBoundedXUnion::Tag>(ordinal_);
   }
@@ -953,7 +953,7 @@ class ReverseOrdinalUnion {
               ::test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_union::wire::ReverseOrdinalUnion::Tag which() const {
+  ::test_union::wire::ReverseOrdinalUnion::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::ReverseOrdinalUnion::Tag>(ordinal_);
   }
@@ -1090,7 +1090,7 @@ class StrictPizzaOrPasta {
               ::test_union::wire::StrictPizzaOrPasta::Ordinal::kPasta);
     return envelope_.As<::test_union::wire::Pasta>().get_data();
   }
-  ::test_union::wire::StrictPizzaOrPasta::Tag which() const {
+  ::test_union::wire::StrictPizzaOrPasta::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::StrictPizzaOrPasta::Tag>(ordinal_);
   }
@@ -1221,7 +1221,7 @@ class PizzaOrPasta {
     ZX_ASSERT(ordinal_ == ::test_union::wire::PizzaOrPasta::Ordinal::kPasta);
     return envelope_.As<::test_union::wire::Pasta>().get_data();
   }
-  ::test_union::wire::PizzaOrPasta::Tag which() const {
+  ::test_union::wire::PizzaOrPasta::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::PizzaOrPasta::Tag>(ordinal_);
   }
@@ -1361,7 +1361,7 @@ class FlexiblePizzaOrPasta {
               ::test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPasta);
     return envelope_.As<::test_union::wire::Pasta>().get_data();
   }
-  ::test_union::wire::FlexiblePizzaOrPasta::Tag which() const;
+  ::test_union::wire::FlexiblePizzaOrPasta::Tag Which() const;
 
   static constexpr const fidl_type_t* Type =
       &test_union_FlexiblePizzaOrPastaTable;
@@ -1498,7 +1498,7 @@ class ExplicitPizzaOrPasta {
               ::test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPasta);
     return envelope_.As<::test_union::wire::Pasta>().get_data();
   }
-  ::test_union::wire::ExplicitPizzaOrPasta::Tag which() const {
+  ::test_union::wire::ExplicitPizzaOrPasta::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::ExplicitPizzaOrPasta::Tag>(ordinal_);
   }
@@ -1612,7 +1612,7 @@ class OlderSimpleUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::OlderSimpleUnion::Ordinal::kF);
     return envelope_.As<float>().get_data();
   }
-  ::test_union::wire::OlderSimpleUnion::Tag which() const;
+  ::test_union::wire::OlderSimpleUnion::Tag Which() const;
 
   static constexpr const fidl_type_t* Type = &test_union_OlderSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -1778,7 +1778,7 @@ class NewerSimpleUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::NewerSimpleUnion::Ordinal::kV);
     return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
-  ::test_union::wire::NewerSimpleUnion::Tag which() const;
+  ::test_union::wire::NewerSimpleUnion::Tag Which() const;
 
   static constexpr const fidl_type_t* Type = &test_union_NewerSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -1956,7 +1956,7 @@ class FlexibleUnion {
                               kVectorStringAlsoNeedsConstructor);
     return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
-  ::test_union::wire::FlexibleUnion::Tag which() const;
+  ::test_union::wire::FlexibleUnion::Tag Which() const;
 
   static constexpr const fidl_type_t* Type = &test_union_FlexibleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -2068,7 +2068,7 @@ class FlexibleFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::FlexibleFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  ::test_union::wire::FlexibleFoo::Tag which() const;
+  ::test_union::wire::FlexibleFoo::Tag Which() const;
 
   static constexpr const fidl_type_t* Type = &test_union_FlexibleFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -2142,7 +2142,7 @@ class FieldCollision {
               ::test_union::wire::FieldCollision::Ordinal::kFieldCollisionTag);
     return envelope_.As<int32_t>().get_data();
   }
-  ::test_union::wire::FieldCollision::Tag which() const {
+  ::test_union::wire::FieldCollision::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::FieldCollision::Tag>(ordinal_);
   }
@@ -2254,7 +2254,7 @@ class ExplicitXUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitXUnion::Ordinal::kF);
     return envelope_.As<float>().get_data();
   }
-  ::test_union::wire::ExplicitXUnion::Tag which() const;
+  ::test_union::wire::ExplicitXUnion::Tag Which() const;
 
   static constexpr const fidl_type_t* Type = &test_union_ExplicitXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -2377,7 +2377,7 @@ class ExplicitUnion {
         ::test_union::wire::ExplicitUnion::Ordinal::kStringNeedsConstructor);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-  ::test_union::wire::ExplicitUnion::Tag which() const {
+  ::test_union::wire::ExplicitUnion::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::ExplicitUnion::Tag>(ordinal_);
   }
@@ -2490,7 +2490,7 @@ class ExplicitStrictFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  ::test_union::wire::ExplicitStrictFoo::Tag which() const {
+  ::test_union::wire::ExplicitStrictFoo::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::ExplicitStrictFoo::Tag>(ordinal_);
   }
@@ -2604,7 +2604,7 @@ class ExplicitFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  ::test_union::wire::ExplicitFoo::Tag which() const;
+  ::test_union::wire::ExplicitFoo::Tag Which() const;
 
   static constexpr const fidl_type_t* Type = &test_union_ExplicitFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -2683,7 +2683,7 @@ class XUnionContainingEmptyStruct {
               ::test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty);
     return envelope_.As<::test_union::wire::Empty>().get_data();
   }
-  ::test_union::wire::XUnionContainingEmptyStruct::Tag which() const;
+  ::test_union::wire::XUnionContainingEmptyStruct::Tag Which() const;
 
   static constexpr const fidl_type_t* Type =
       &test_union_XUnionContainingEmptyStructTable;

@@ -216,7 +216,7 @@ class ExampleXUnion {
         ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_placementofattributes::wire::ExampleXUnion::Tag which() const;
+  ::test_placementofattributes::wire::ExampleXUnion::Tag Which() const;
 
   static constexpr const fidl_type_t* Type =
       &test_placementofattributes_ExampleXUnionTable;
@@ -295,7 +295,7 @@ class ExampleUnion {
         ::test_placementofattributes::wire::ExampleUnion::Ordinal::kVariant);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_placementofattributes::wire::ExampleUnion::Tag which() const {
+  ::test_placementofattributes::wire::ExampleUnion::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_placementofattributes::wire::ExampleUnion::Tag>(
         ordinal_);

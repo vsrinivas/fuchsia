@@ -2271,8 +2271,8 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
         return zx::error(watch.status());
       }
       netdev::wire::DevicePortEvent& e = watch.value().event;
-      PortEvent event = {.which = e.which()};
-      switch (e.which()) {
+      PortEvent event = {.which = e.Which()};
+      switch (e.Which()) {
         case netdev::wire::DevicePortEvent::Tag::kIdle:
           break;
         case netdev::wire::DevicePortEvent::Tag::kExisting:
@@ -2397,7 +2397,7 @@ TEST_F(NetworkDeviceTest, PortWatcherEnforcesQueueLimit) {
   // adding ports will happen.
   fidl::WireResult result = fidl::WireCall(watcher)->Watch();
   ASSERT_OK(result.status());
-  ASSERT_EQ(result.value().event.which(), netdev::wire::DevicePortEvent::Tag::kIdle);
+  ASSERT_EQ(result.value().event.Which(), netdev::wire::DevicePortEvent::Tag::kIdle);
 
   // Add and remove ports until we've used up all the event queue.
   std::unique_ptr<FakeNetworkPortImpl> port;

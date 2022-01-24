@@ -259,7 +259,7 @@ class FidlControlDataProcessor {
 
     if (control_data.has_timestamp()) {
       fsocket::wire::Timestamp timestamp = control_data.timestamp();
-      switch (timestamp.which()) {
+      switch (timestamp.Which()) {
         case fsocket::wire::Timestamp::Tag::kNanoseconds: {
           std::chrono::duration t = std::chrono::nanoseconds(timestamp.nanoseconds());
           std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(t);
@@ -338,7 +338,7 @@ fsocket::wire::RecvMsgFlags to_recvmsg_flags(int flags) {
 fsocket::wire::SendMsgFlags to_sendmsg_flags(int flags) { return fsocket::wire::SendMsgFlags(); }
 
 socklen_t fidl_to_sockaddr(const fnet::wire::SocketAddress& fidl, void* addr, socklen_t addr_len) {
-  switch (fidl.which()) {
+  switch (fidl.Which()) {
     case fnet::wire::SocketAddress::Tag::kIpv4: {
       const auto& ipv4 = fidl.ipv4();
       struct sockaddr_in tmp = {
@@ -379,7 +379,7 @@ uint16_t fidl_protoassoc_to_protocol(const fpacketsocket::wire::ProtocolAssociat
     return 0;
   }
 
-  switch (protocol.which()) {
+  switch (protocol.Which()) {
     case fpacketsocket::wire::ProtocolAssociation::Tag::kAll:
       return ETH_P_ALL;
     case fpacketsocket::wire::ProtocolAssociation::Tag::kSpecified:
@@ -388,7 +388,7 @@ uint16_t fidl_protoassoc_to_protocol(const fpacketsocket::wire::ProtocolAssociat
 }
 
 void populate_from_fidl_hwaddr(const fpacketsocket::wire::HardwareAddress& addr, sockaddr_ll& s) {
-  switch (addr.which()) {
+  switch (addr.Which()) {
     case fpacketsocket::wire::HardwareAddress::Tag::kUnknown:
       // The server is newer than us and sending a variant we don't understand.
       __FALLTHROUGH;
@@ -565,7 +565,7 @@ SockOptResult GetSockOptProcessor::StoreOption(const TruncatingStringView& value
 
 template <>
 SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::OptionalUint8& value) {
-  switch (value.which()) {
+  switch (value.Which()) {
     case fsocket::wire::OptionalUint8::Tag::kValue:
       return StoreOption(static_cast<int32_t>(value.value()));
     case fsocket::wire::OptionalUint8::Tag::kUnset:
@@ -575,7 +575,7 @@ SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::OptionalUint
 
 template <>
 SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::OptionalUint32& value) {
-  switch (value.which()) {
+  switch (value.Which()) {
     case fsocket::wire::OptionalUint32::Tag::kValue:
       ZX_ASSERT(value.value() < std::numeric_limits<int32_t>::max());
       return StoreOption(static_cast<int32_t>(value.value()));
@@ -950,7 +950,7 @@ struct BaseSocket {
         }
         if constexpr (std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>>) {
           return proc.Process(client()->GetInfo(), [](const auto& response) {
-            switch (response.proto.which()) {
+            switch (response.proto.Which()) {
               case frawsocket::wire::ProtocolAssociation::Tag::kUnassociated:
                 return IPPROTO_RAW;
               case frawsocket::wire::ProtocolAssociation::Tag::kAssociated:
@@ -1687,7 +1687,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
         int len = 0;
         for (const auto& iface : interfaces) {
           for (const auto& address : iface.addresses()) {
-            if (address.addr.which() == fnet::wire::IpAddress::Tag::kIpv4) {
+            if (address.addr.Which() == fnet::wire::IpAddress::Tag::kIpv4) {
               len += sizeof(struct ifreq);
             }
           }
@@ -1723,7 +1723,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
           // family for compatibility; this is the behavior documented in the
           // manual. See: https://man7.org/linux/man-pages/man7/netdevice.7.html
           const auto& addr = address.addr;
-          if (addr.which() != fnet::wire::IpAddress::Tag::kIpv4) {
+          if (addr.Which() != fnet::wire::IpAddress::Tag::kIpv4) {
             continue;
           }
 
@@ -2112,7 +2112,7 @@ zx_status_t socket_with_event<RawSocket>::getsockopt(int level, int optname, voi
           case IPV6_CHECKSUM:
             return proc.Process(
                 zxio_socket_with_event().client->GetIpv6Checksum(), [](const auto& response) {
-                  switch (response.config.which()) {
+                  switch (response.config.Which()) {
                     case frawsocket::wire::Ipv6ChecksumConfiguration::Tag::kDisabled:
                       return -1;
                     case frawsocket::wire::Ipv6ChecksumConfiguration::Tag::kOffset:
@@ -2547,7 +2547,7 @@ struct stream_socket : public zxio {
       return zx::error(response.status());
     }
     fsocket::wire::BaseSocketGetErrorResult result = response.value().result;
-    switch (result.which()) {
+    switch (result.Which()) {
       case fsocket::wire::BaseSocketGetErrorResult::Tag::kResponse:
         return zx::ok(0);
       case fsocket::wire::BaseSocketGetErrorResult::Tag::kErr:
@@ -2716,7 +2716,7 @@ struct packet_socket : public base_socket_with_event<PacketSocket> {
         .sll_protocol = htons(fidl_protoassoc_to_protocol(info.protocol)),
     };
 
-    switch (info.bound_interface.which()) {
+    switch (info.bound_interface.Which()) {
       case fpacketsocket::wire::BoundInterface::Tag::kAll:
         sll.sll_ifindex = 0;
         sll.sll_halen = 0;

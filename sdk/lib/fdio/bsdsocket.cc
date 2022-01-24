@@ -453,7 +453,7 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
     return EAI_SYSTEM;
   }
   const fnet_name::wire::LookupLookupIpResult& wire_result = fidl_result.value().result;
-  switch (wire_result.which()) {
+  switch (wire_result.Which()) {
     case fnet_name::wire::LookupLookupIpResult::Tag::kResponse: {
       const fnet_name::wire::LookupResult& result = wire_result.response().result;
       if (!result.has_addresses()) {
@@ -465,7 +465,7 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
       int count = 0;
       for (const fnet::wire::IpAddress& addr : result.addresses()) {
         address& address = buf[count++];
-        switch (addr.which()) {
+        switch (addr.Which()) {
           case fnet::wire::IpAddress::Tag::kIpv4: {
             address = {
                 .family = AF_INET,
@@ -686,7 +686,7 @@ int getifaddrs(struct ifaddrs** ifap) {
       const auto& addr = address.addr;
       const uint8_t prefix_len = address.prefix_len;
 
-      switch (addr.which()) {
+      switch (addr.Which()) {
         case fnet::wire::IpAddress::Tag::kIpv4: {
           const auto& addr_bytes = addr.ipv4().addr;
           copy_addr(&ifs->ifa.ifa_addr, AF_INET, &ifs->addr,

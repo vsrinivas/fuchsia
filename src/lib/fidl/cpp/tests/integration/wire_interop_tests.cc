@@ -79,7 +79,7 @@ void MockData::CheckWireFile(const fidl_cpp_wire_interop_test::wire::Node& node)
   ASSERT_TRUE(node.has_name());
   EXPECT_EQ(fidl::StringView{kFileName}.get(), node.name().get());
   ASSERT_TRUE(node.has_kind());
-  EXPECT_EQ(fidl_cpp_wire_interop_test::wire::Kind::Tag::kFile, node.kind().which());
+  EXPECT_EQ(fidl_cpp_wire_interop_test::wire::Kind::Tag::kFile, node.kind().Which());
   std::vector<uint8_t> content(node.kind().file().content.begin(),
                                node.kind().file().content.end());
   EXPECT_EQ(kFileContent, content);
@@ -127,7 +127,7 @@ void MockData::CheckWireDir(const fidl_cpp_wire_interop_test::wire::Node& node) 
   EXPECT_TRUE(node.has_name());
   EXPECT_EQ(fidl::StringView{kDirName}.get(), node.name().get());
   EXPECT_TRUE(node.has_kind());
-  EXPECT_EQ(fidl_cpp_wire_interop_test::wire::Kind::Tag::kDirectory, node.kind().which());
+  EXPECT_EQ(fidl_cpp_wire_interop_test::wire::Kind::Tag::kDirectory, node.kind().Which());
   const fidl_cpp_wire_interop_test::wire::Directory& dir = node.kind().directory();
   EXPECT_EQ(1, dir.children->elements.count());
   const fidl_cpp_wire_interop_test::wire::Node& child = dir.children->elements[0];

@@ -57,7 +57,7 @@ void FidlOpenValidator(const zx::channel& directory, const char* path,
     void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) override {
       event_tag_ok_ = true;
       status_ok_ = event->s == ZX_OK;
-      node_info_ok_ = event->info.which() == expected_tag_;
+      node_info_ok_ = event->info.Which() == expected_tag_;
     }
 
     zx_status_t Unknown() override {

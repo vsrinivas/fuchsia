@@ -299,7 +299,7 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
             return result.status();
           }
           const auto& response = result.value();
-          switch (response.result.which()) {
+          switch (response.result.Which()) {
             case fuchsia_paver::wire::ReadResult::Tag::kErr:
               return response.result.err();
             case fuchsia_paver::wire::ReadResult::Tag::kEof:

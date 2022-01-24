@@ -223,7 +223,7 @@ class WithErrorSyntaxHandleInResultResult {
                   Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Tag which()
+  ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Tag Which()
       const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<
@@ -387,7 +387,7 @@ class WithErrorSyntaxResponseAsStructResult {
                   Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::Tag which()
+  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::Tag Which()
       const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<
@@ -524,7 +524,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
                   Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::Tag which()
+  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::Tag Which()
       const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<
@@ -604,7 +604,7 @@ class TheUnion {
     ZX_ASSERT(ordinal_ == ::test_protocols::wire::TheUnion::Ordinal::kV);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_protocols::wire::TheUnion::Tag which() const;
+  ::test_protocols::wire::TheUnion::Tag Which() const;
 
   static constexpr const fidl_type_t* Type = &test_protocols_TheUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -727,7 +727,7 @@ class WithErrorSyntaxErrorAsEnumResult {
                               WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr);
     return envelope_.As<::test_protocols::wire::ErrorEnum>().get_data();
   }
-  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Tag which() const {
+  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<
         ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Tag>(

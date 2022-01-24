@@ -63,7 +63,7 @@ void ZxSocketInfo(int fd, zx_info_socket_t& out_info) {
   auto response = client->Describe();
   ASSERT_OK(response.status());
   const fuchsia_io::wire::NodeInfo& node_info = response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
+  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
 
   ASSERT_OK(zx_object_get_info(node_info.stream_socket().socket.get(), ZX_INFO_SOCKET, &out_info,
                                sizeof(zx_info_socket_t), nullptr, nullptr));

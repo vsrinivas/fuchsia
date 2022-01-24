@@ -241,7 +241,7 @@ class OnlyLlcpp {
               ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_bindingsdenylist::wire::OnlyLlcpp::Tag which() const {
+  ::test_bindingsdenylist::wire::OnlyLlcpp::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_bindingsdenylist::wire::OnlyLlcpp::Tag>(ordinal_);
   }
@@ -380,7 +380,7 @@ class DenyEachBindingOnlyDenySyzkallerResult {
     return envelope_.As<uint32_t>().get_data();
   }
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::Tag
-  which() const {
+  Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_bindingsdenylist::wire::
                            DenyEachBindingOnlyDenySyzkallerResult::Tag>(
@@ -516,7 +516,7 @@ class DenyEachBindingOnlyDenyRustResult {
                               DenyEachBindingOnlyDenyRustResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag which()
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag Which()
       const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<
@@ -660,7 +660,7 @@ class DenyEachBindingOnlyDenyLibfuzzerResult {
     return envelope_.As<uint32_t>().get_data();
   }
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::Tag
-  which() const {
+  Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_bindingsdenylist::wire::
                            DenyEachBindingOnlyDenyLibfuzzerResult::Tag>(
@@ -791,7 +791,7 @@ class DenyEachBindingOnlyDenyGoResult {
                               DenyEachBindingOnlyDenyGoResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag which()
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag Which()
       const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<
@@ -928,7 +928,7 @@ class DenyEachBindingOnlyDenyDartResult {
                               DenyEachBindingOnlyDenyDartResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::Tag which()
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::Tag Which()
       const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<

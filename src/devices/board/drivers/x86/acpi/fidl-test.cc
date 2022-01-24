@@ -66,8 +66,8 @@ void CheckEq(ACPI_OBJECT value, ACPI_OBJECT expected) {
 
 void CheckEq(facpi::Object value, facpi::Object expected) {
   using Tag = fuchsia_hardware_acpi::wire::Object::Tag;
-  ASSERT_EQ(value.which(), expected.which());
-  switch (value.which()) {
+  ASSERT_EQ(value.Which(), expected.Which());
+  switch (value.Which()) {
     case Tag::kIntegerVal: {
       ASSERT_EQ(value.integer_val(), expected.integer_val());
       break;

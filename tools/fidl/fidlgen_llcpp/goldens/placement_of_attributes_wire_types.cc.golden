@@ -2,7 +2,7 @@
 
 #include <fidl/test.placementofattributes/cpp/wire_types.h>
 
-auto ::test_placementofattributes::wire::ExampleXUnion::which() const
+auto ::test_placementofattributes::wire::ExampleXUnion::Which() const
     -> ::test_placementofattributes::wire::ExampleXUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {

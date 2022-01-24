@@ -68,9 +68,9 @@ TEST(InlineXUnionInStruct, Success) {
     ASSERT_EQ(msg.before.size(), before.size());
     ASSERT_STREQ(msg.after.begin(), &after[0]);
     ASSERT_EQ(msg.after.size(), after.size());
-    ASSERT_EQ(msg.xu.which(), llcpp_misc::wire::SampleXUnion::Tag::kSu);
+    ASSERT_EQ(msg.xu.Which(), llcpp_misc::wire::SampleXUnion::Tag::kSu);
     const llcpp_misc::wire::SimpleUnion& su = msg.xu.su();
-    ASSERT_EQ(su.which(), llcpp_misc::wire::SimpleUnion::Tag::kI64);
+    ASSERT_EQ(su.Which(), llcpp_misc::wire::SimpleUnion::Tag::kI64);
     ASSERT_EQ(su.i64(), 0xdeadbeef);
   }
 }
@@ -119,7 +119,7 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     ASSERT_EQ(msg.before.size(), before.size());
     ASSERT_STREQ(msg.after.begin(), &after[0]);
     ASSERT_EQ(msg.after.size(), after.size());
-    ASSERT_EQ(msg.xu.which(), llcpp_misc::wire::SampleXUnion::Tag::kI);
+    ASSERT_EQ(msg.xu.Which(), llcpp_misc::wire::SampleXUnion::Tag::kI);
     const int32_t& i = msg.xu.i();
     ASSERT_EQ(i, integer);
   }
@@ -153,7 +153,7 @@ TEST(SampleXUnion, Success) {
         static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
     ASSERT_TRUE(decoded.ok());
     const llcpp_misc::wire::SampleXUnion& xu = *decoded.PrimaryObject();
-    ASSERT_EQ(xu.which(), llcpp_misc::wire::SampleXUnion::Tag::kI);
+    ASSERT_EQ(xu.Which(), llcpp_misc::wire::SampleXUnion::Tag::kI);
     const int32_t& i = xu.i();
     ASSERT_EQ(i, integer);
   }
@@ -382,7 +382,7 @@ TEST(ComplexTable, Success) {
     ASSERT_TRUE(msg.simple().has_y());
     ASSERT_EQ(msg.simple().y(), table_y);
     ASSERT_TRUE(msg.has_u());
-    ASSERT_EQ(msg.u().which(), llcpp_misc::wire::SampleXUnion::Tag::kI);
+    ASSERT_EQ(msg.u().Which(), llcpp_misc::wire::SampleXUnion::Tag::kI);
     const int32_t& i = msg.u().i();
     ASSERT_EQ(i, xunion_i);
     ASSERT_TRUE(msg.has_strings());

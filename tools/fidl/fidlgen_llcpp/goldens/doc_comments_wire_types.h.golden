@@ -226,7 +226,7 @@ class StrictUnion {
               ::test_doccomments::wire::StrictUnion::Ordinal::kField);
     return envelope_.As<int32_t>().get_data();
   }
-  ::test_doccomments::wire::StrictUnion::Tag which() const {
+  ::test_doccomments::wire::StrictUnion::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_doccomments::wire::StrictUnion::Tag>(ordinal_);
   }
@@ -312,7 +312,7 @@ class FlexibleUnion {
               ::test_doccomments::wire::FlexibleUnion::Ordinal::kField);
     return envelope_.As<int32_t>().get_data();
   }
-  ::test_doccomments::wire::FlexibleUnion::Tag which() const;
+  ::test_doccomments::wire::FlexibleUnion::Tag Which() const;
 
   static constexpr const fidl_type_t* Type =
       &test_doccomments_FlexibleUnionTable;

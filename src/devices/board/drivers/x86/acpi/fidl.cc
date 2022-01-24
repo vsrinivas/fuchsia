@@ -376,7 +376,7 @@ acpi::status<fuchsia_hardware_acpi::wire::Object> EvaluateObjectFidlHelper::Enco
 acpi::status<> EvaluateObjectFidlHelper::DecodeObject(
     const fuchsia_hardware_acpi::wire::Object& obj, ACPI_OBJECT* out) {
   using Tag = fuchsia_hardware_acpi::wire::Object::Tag;
-  switch (obj.which()) {
+  switch (obj.Which()) {
     case Tag::kIntegerVal: {
       out->Integer.Type = ACPI_TYPE_INTEGER;
       out->Integer.Value = obj.integer_val();

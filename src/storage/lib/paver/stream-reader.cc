@@ -40,7 +40,7 @@ zx_status_t StreamReader::Read(void* buf, size_t buf_size, size_t* size_actual) 
       return call_result.status();
     }
     const fuchsia_paver::wire::ReadResult& read_result = call_result.value().result;
-    switch (read_result.which()) {
+    switch (read_result.Which()) {
       case fuchsia_paver::wire::ReadResult::Tag::kErr:
         return read_result.err();
       case fuchsia_paver::wire::ReadResult::Tag::kEof:

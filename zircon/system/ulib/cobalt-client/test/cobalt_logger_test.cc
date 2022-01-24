@@ -128,7 +128,7 @@ class FakeLoggerService : public fidl::WireServer<fuchsia_cobalt::Logger> {
       }
     }
 
-    switch (event.payload.which()) {
+    switch (event.payload.Which()) {
       case EventData::Tag::kIntHistogram:
         storage_.Log(info, event.payload.int_histogram().data(),
                      event.payload.int_histogram().count());

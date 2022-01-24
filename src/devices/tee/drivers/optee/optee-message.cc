@@ -36,7 +36,7 @@ zx_status_t Message::TryInitializeParameters(
     MessageParam& optee_param = params()[starting_param_index + i];
     fuchsia_tee::wire::Parameter& zx_param = parameter_set[i];
 
-    switch (zx_param.which()) {
+    switch (zx_param.Which()) {
       case fuchsia_tee::wire::Parameter::Tag::kNone:
         optee_param.attribute = MessageParam::kAttributeTypeNone;
         break;

@@ -79,7 +79,7 @@ void PortWatcher::Watch(WatchRequestView request, WatchCompleter::Sync& complete
 
 zx_status_t PortWatcher::QueueEvent(const PortWatcher::Event& event) {
   LOGF_TRACE("network-device: PortWatcher::%s(%ld); queue = %ld", __FUNCTION__,
-             event.event().which(), event_queue_.size());
+             event.event().Which(), event_queue_.size());
   if (event_queue_.size() == kMaximumQueuedEvents) {
     return ZX_ERR_CANCELED;
   }
@@ -121,7 +121,7 @@ void PortWatcher::ProcessEvent(const Event& event) {
 }
 
 PortWatcher::Event::Event(const PortWatcher::Event& other) {
-  switch (other.event_.which()) {
+  switch (other.event_.Which()) {
     case netdev::wire::DevicePortEvent::Tag::kExisting:
       SetExisting(other.port_id_);
       break;
