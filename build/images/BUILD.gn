@@ -1479,3 +1479,8 @@ generated_file("image_paths") {
   data_keys = [ "image_paths" ]
   deps = [ ":images" ]
 }
+
+group("tests") {
+  deps = [ "assembly:tests" ]
+  testonly = true
+}

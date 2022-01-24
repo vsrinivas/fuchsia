@@ -165,6 +165,7 @@ if (include_fvm_blob_sparse) {
 group("fuchsia") {
   testonly = fuchsia_zbi_testonly
   public_deps = [
+    ":convert_size_limits_to_size_budgets",
     ":fuchsia_assembly",
     ":update",
   ]
@@ -174,6 +175,28 @@ group("fuchsia") {
   if (include_fvm_blob_sparse) {
     public_deps += [ ":copy_fvm_blob_sparse" ]
   }
+}
+
+action("convert_size_limits_to_size_budgets") {
+  script = "//build/images/assembly/convert_size_limits.py"
+  inputs = [
+    "$root_build_dir/size_checker.json",
+    "$target_out_dir/fuchsia_product_config.json",
+  ]
+  outputs = [ "$target_out_dir/size_budgets.json" ]
+  deps = [
+    ":fuchsia_product_config",
+    "//tools/size_checker/cmd:size_checker_json",
+  ]
+  testonly = fuchsia_zbi_testonly
+  args = [
+    "--size_limits",
+    rebase_path("$root_build_dir/size_checker.json", root_build_dir),
+    "--product_config",
+    rebase_path("$target_out_dir/fuchsia_product_config.json", root_build_dir),
+    "--output",
+    rebase_path("$target_out_dir/size_budgets.json", root_build_dir),
+  ]
 }
 
 assemble_system("fuchsia_assembly") {

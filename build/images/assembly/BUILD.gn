@@ -1,0 +1,20 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_host_test.gni")
+
+if (is_host) {
+  python_host_test("convert_size_limits_test") {
+    main_source = "convert_size_limits_test.py"
+    sources = [ "convert_size_limits.py" ]
+    libraries = [ "//third_party/parameterized" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  if (is_host) {
+    deps = [ ":convert_size_limits_test" ]
+  }
+}
