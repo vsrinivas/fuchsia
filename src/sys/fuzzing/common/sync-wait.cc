@@ -4,6 +4,7 @@
 
 #include "src/sys/fuzzing/common/sync-wait.h"
 
+#include <lib/backtrace-request/backtrace-request.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
@@ -27,6 +28,9 @@ zx_status_t WaitFor(const char* what, Waiter* waiter) {
   }
   auto elapsed = threshold / zx::sec(1);
   FX_LOGS(WARNING) << "Still waiting for " << what << " after " << elapsed << " seconds...";
+  if (gThreshold >= ZX_SEC(30)) {
+    backtrace_request();
+  }
   auto start = zx::clock::get_monotonic() - threshold;
   status = (*waiter)(zx::time::infinite());
   elapsed = (zx::clock::get_monotonic() - start) / zx::sec(1);

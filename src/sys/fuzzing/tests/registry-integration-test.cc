@@ -92,7 +92,10 @@ class RegistryIntegrationTest : public ::testing::Test {
     outer = process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
     ASSERT_EQ(outer, ZX_OK) << zx_status_get_string(outer);
     EXPECT_EQ(info.return_code, 0);
+    ShutdownDispatcher();
   }
+
+  void ShutdownDispatcher() { dispatcher_.Shutdown(); }
 
   void TearDown() override { process_.kill(); }
 
@@ -158,6 +161,8 @@ TEST_F(RegistryIntegrationTest, ConnectThenTimeout) {
   auto outer = Connect(&controller, deadline, &inner);
   ASSERT_EQ(outer, ZX_OK) << zx_status_get_string(outer);
   EXPECT_EQ(inner, ZX_ERR_TIMED_OUT) << zx_status_get_string(inner);
+
+  ShutdownDispatcher();
 }
 
 }  // namespace fuzzing

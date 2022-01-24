@@ -48,6 +48,7 @@ source_set("common") {
     "//src/lib/fxl",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/backtrace-request",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
