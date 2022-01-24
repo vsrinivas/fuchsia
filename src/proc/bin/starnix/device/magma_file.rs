@@ -363,6 +363,18 @@ impl FileOps for MagmaFile {
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_CREATE_BUFFER as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_GET_BUFFER_ID => {
+                let (control, mut response): (
+                    virtio_magma_get_buffer_id_ctrl_t,
+                    virtio_magma_get_buffer_id_resp_t,
+                ) = read_control_and_response(current_task, &command)?;
+
+                response.result_return =
+                    unsafe { magma_get_buffer_id(control.buffer as magma_buffer_t) };
+
+                response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_ID as u32;
+                current_task.mm.write_object(UserRef::new(response_address), &response)
+            }
             t => {
                 log::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)
