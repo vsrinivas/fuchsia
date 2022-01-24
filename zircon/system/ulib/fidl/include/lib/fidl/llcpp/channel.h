@@ -101,13 +101,61 @@ zx::status<fidl::ClientEnd<Protocol>> CreateEndpoints(fidl::ServerEnd<Protocol>*
   return zx::ok(fidl::ClientEnd<Protocol>(std::move(endpoints->client)));
 }
 
-// This class manages a server connection and its binding to an
-// |async_dispatcher_t*|, which may be multi-threaded. See the detailed
+// This class manages a server connection over a Zircon channel and its binding
+// to an |async_dispatcher_t*|, which may be multi-threaded. See the detailed
 // documentation on the |BindServer| APIs.
 template <typename Protocol>
-class ServerBindingRef : public ServerBindingRefImpl<Protocol, typename Protocol::Transport> {
+class ServerBindingRef : public internal::ServerBindingRefBase {
  public:
-  using ServerBindingRefImpl<Protocol, typename Protocol::Transport>::ServerBindingRefImpl;
+  ~ServerBindingRef() = default;
+
+  ServerBindingRef(ServerBindingRef&&) noexcept = default;
+  ServerBindingRef& operator=(ServerBindingRef&&) noexcept = default;
+
+  ServerBindingRef(const ServerBindingRef&) = default;
+  ServerBindingRef& operator=(const ServerBindingRef&) = default;
+
+  // Triggers an asynchronous unbind operation. If specified, |on_unbound| will be invoked on a
+  // dispatcher thread, passing in the channel and the unbind reason. On return, the dispatcher
+  // will no longer have any wait associated with the channel (though handling of any already
+  // in-flight transactions will continue).
+  //
+  // This may be called from any thread.
+  //
+  // WARNING: While it is safe to invoke Unbind() from any thread, it is unsafe to wait on the
+  // OnUnboundFn from a dispatcher thread, as that will likely deadlock.
+  using ServerBindingRefBase::Unbind;
+
+  // Triggers an asynchronous unbind operation. Eventually, the epitaph will be sent over the
+  // channel which will be subsequently closed. If specified, |on_unbound| will be invoked giving
+  // the unbind reason as an argument.
+  //
+  // This may be called from any thread.
+  void Close(zx_status_t epitaph) {
+    if (auto binding = ServerBindingRefBase::binding().lock())
+      binding->Close(std::move(binding), epitaph);
+  }
+
+  // Return the interface for sending FIDL events. If the server has been unbound, calls on the
+  // interface return error with status ZX_ERR_CANCELED.
+  // TODO(fxbug.dev/85688): Migrate to |fidl::WireSendEvent| and remove this function.
+  auto operator->() const {
+    return internal::Arrow<internal::WireWeakEventSender<Protocol>>(
+        ServerBindingRefBase::binding());
+  }
+  auto operator*() const {
+    return internal::WireWeakEventSender<Protocol>(ServerBindingRefBase::binding());
+  }
+
+ private:
+  // This is so that only |BindServerTypeErased| will be able to construct a
+  // new instance of |ServerBindingRef|.
+  friend internal::ServerBindingRefType<Protocol> internal::BindServerTypeErased<Protocol>(
+      async_dispatcher_t* dispatcher, fidl::internal::ServerEndType<Protocol> server_end,
+      internal::IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound);
+
+  explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding> internal_binding)
+      : ServerBindingRefBase(std::move(internal_binding)) {}
 };
 
 // |BindServer| starts handling message on |server_end| using implementation
@@ -470,8 +518,7 @@ internal::WeakEventSenderVeneer<internal::WireWeakEventSender, FidlProtocol> Wir
     const ServerBindingRef<FidlProtocol>& binding_ref) {
   return internal::WeakEventSenderVeneer<internal::WireWeakEventSender, FidlProtocol>(
       internal::BorrowBinding(
-          static_cast<const fidl::ServerBindingRefImpl<FidlProtocol, internal::ChannelTransport>&>(
-              binding_ref)));
+          static_cast<const fidl::internal::ServerBindingRefBase&>(binding_ref)));
 }
 
 // Return an interface for sending FIDL events over |server_end|. Call it like:

@@ -128,9 +128,28 @@ class ServerEnd final : public internal::ServerEndBase<Protocol, internal::Socke
 };
 
 template <typename Protocol>
-class ServerBindingRef : public fidl::ServerBindingRefImpl<Protocol, typename Protocol::Transport> {
+class ServerBindingRef : public fidl::internal::ServerBindingRefBase {
  public:
-  using fidl::ServerBindingRefImpl<Protocol, typename Protocol::Transport>::ServerBindingRefImpl;
+  // Triggers an asynchronous unbind operation. If specified, |on_unbound| will be invoked on a
+  // dispatcher thread, passing in the channel and the unbind reason. On return, the dispatcher
+  // will no longer have any wait associated with the channel (though handling of any already
+  // in-flight transactions will continue).
+  //
+  // This may be called from any thread.
+  //
+  // WARNING: While it is safe to invoke Unbind() from any thread, it is unsafe to wait on the
+  // OnUnboundFn from a dispatcher thread, as that will likely deadlock.
+  using ServerBindingRefBase::Unbind;
+
+ private:
+  // This is so that only |BindServerTypeErased| will be able to construct a
+  // new instance of |ServerBindingRef|.
+  friend internal::ServerBindingRefType<Protocol> internal::BindServerTypeErased<Protocol>(
+      async_dispatcher_t* dispatcher, fidl::internal::ServerEndType<Protocol> server_end,
+      internal::IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound);
+
+  explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding> internal_binding)
+      : ServerBindingRefBase(std::move(internal_binding)) {}
 };
 
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>

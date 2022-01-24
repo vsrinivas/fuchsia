@@ -10,18 +10,24 @@
 
 namespace fdf {
 
-// This class manages a server connection and its binding to an
-// |fdf_dispatcher_t*|, which may be multi-threaded. See the detailed
+// This class manages a server connection over an fdf channel and its binding to
+// an |fdf_dispatcher_t*|, which may be multi-threaded. See the detailed
 // documentation on the |BindServer| APIs.
 template <typename Protocol>
-class ServerBindingRef : public fidl::ServerBindingRefImpl<Protocol, typename Protocol::Transport> {
-  using ServerBindingRefImpl = fidl::ServerBindingRefImpl<Protocol, typename Protocol::Transport>;
-
+class ServerBindingRef : public fidl::internal::ServerBindingRefBase {
  public:
-  // Inherit the base class's constructors.
-  using ServerBindingRefImpl::ServerBindingRefImpl;
-  // Inherit the base class's Unbind implementation.
-  using ServerBindingRefImpl::Unbind;
+  using ServerBindingRefBase::ServerBindingRefBase;
+
+  // Triggers an asynchronous unbind operation. If specified, |on_unbound| will be invoked on a
+  // dispatcher thread, passing in the channel and the unbind reason. On return, the dispatcher
+  // will no longer have any wait associated with the channel (though handling of any already
+  // in-flight transactions will continue).
+  //
+  // This may be called from any thread.
+  //
+  // WARNING: While it is safe to invoke Unbind() from any thread, it is unsafe to wait on the
+  // OnUnboundFn from a dispatcher thread, as that will likely deadlock.
+  using ServerBindingRefBase::Unbind;
 };
 
 // |BindServer| starts handling message on |server_end| using implementation
