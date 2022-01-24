@@ -359,6 +359,8 @@ fn inspect_record_counters(
                     connect_attempts_count: counters.connect_attempts_count,
                     connect_successful_count: counters.connect_successful_count,
                     disconnect_count: counters.disconnect_count,
+                    roaming_disconnect_count: counters.roaming_disconnect_count,
+                    non_roaming_non_user_disconnect_count: counters.non_roaming_disconnect_count,
                     tx_high_packet_drop_duration: counters.tx_high_packet_drop_duration.into_nanos(),
                     rx_high_packet_drop_duration: counters.rx_high_packet_drop_duration.into_nanos(),
                     tx_very_high_packet_drop_duration: counters.tx_very_high_packet_drop_duration.into_nanos(),
@@ -917,7 +919,9 @@ impl Telemetry {
             }
             TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
                 self.log_disconnect_event_inspect(&info);
-                self.stats_logger.log_stat(StatOp::AddDisconnectCount).await;
+                self.stats_logger
+                    .log_stat(StatOp::AddDisconnectCount(info.disconnect_source))
+                    .await;
 
                 let duration = now - self.last_checked_connection_state;
                 match &self.connection_state {
@@ -1170,7 +1174,18 @@ impl StatsLogger {
             StatOp::AddConnectSuccessfulCount => {
                 StatCounters { connect_successful_count: 1, ..zero }
             }
-            StatOp::AddDisconnectCount => StatCounters { disconnect_count: 1, ..zero },
+            StatOp::AddDisconnectCount(disconnect_source) => match disconnect_source {
+                fidl_sme::DisconnectSource::User(reason) => {
+                    if is_roam_disconnect(reason) {
+                        StatCounters { disconnect_count: 1, roaming_disconnect_count: 1, ..zero }
+                    } else {
+                        StatCounters { disconnect_count: 1, ..zero }
+                    }
+                }
+                fidl_sme::DisconnectSource::Mlme(_) | fidl_sme::DisconnectSource::Ap(_) => {
+                    StatCounters { disconnect_count: 1, non_roaming_disconnect_count: 1, ..zero }
+                }
+            },
             StatOp::AddTxHighPacketDropDuration(duration) => {
                 StatCounters { tx_high_packet_drop_duration: duration, ..zero }
             }
@@ -1339,6 +1354,26 @@ impl StatsLogger {
                 metric_id: metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID,
                 event_codes: vec![dpdc_ratio_dim as u32],
                 payload: MetricEventPayload::Count(1),
+            });
+        }
+
+        let roam_dpdc_ratio = c.roaming_disconnect_count as f64 / connected_dur_in_day;
+        if roam_dpdc_ratio.is_finite() {
+            metric_events.push(MetricEvent {
+                metric_id: metrics::ROAMING_DISCONNECT_PER_DAY_CONNECTED_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(roam_dpdc_ratio)),
+            });
+        }
+
+        let non_roam_dpdc_ratio = c.non_roaming_disconnect_count as f64 / connected_dur_in_day;
+        if non_roam_dpdc_ratio.is_finite() {
+            metric_events.push(MetricEvent {
+                metric_id: metrics::NON_ROAMING_DISCONNECT_PER_DAY_CONNECTED_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                    non_roam_dpdc_ratio,
+                )),
             });
         }
 
@@ -2187,7 +2222,7 @@ enum StatOp {
     AddDowntimeNoSavedNeighborDuration(zx::Duration),
     AddConnectAttemptsCount,
     AddConnectSuccessfulCount,
-    AddDisconnectCount,
+    AddDisconnectCount(fidl_sme::DisconnectSource),
     AddTxHighPacketDropDuration(zx::Duration),
     AddRxHighPacketDropDuration(zx::Duration),
     AddTxVeryHighPacketDropDuration(zx::Duration),
@@ -2204,6 +2239,8 @@ struct StatCounters {
     connect_attempts_count: u64,
     connect_successful_count: u64,
     disconnect_count: u64,
+    roaming_disconnect_count: u64,
+    non_roaming_disconnect_count: u64,
     tx_high_packet_drop_duration: zx::Duration,
     rx_high_packet_drop_duration: zx::Duration,
     tx_very_high_packet_drop_duration: zx::Duration,
@@ -2236,6 +2273,10 @@ impl Add for StatCounters {
             connect_successful_count: self.connect_successful_count
                 + other.connect_successful_count,
             disconnect_count: self.disconnect_count + other.disconnect_count,
+            roaming_disconnect_count: self.roaming_disconnect_count
+                + other.roaming_disconnect_count,
+            non_roaming_disconnect_count: self.non_roaming_disconnect_count
+                + other.non_roaming_disconnect_count,
             tx_high_packet_drop_duration: self.tx_high_packet_drop_duration
                 + other.tx_high_packet_drop_duration,
             rx_high_packet_drop_duration: self.rx_high_packet_drop_duration
@@ -2277,6 +2318,12 @@ impl SaturatingAdd for StatCounters {
                 .connect_successful_count
                 .saturating_add(v.connect_successful_count),
             disconnect_count: self.disconnect_count.saturating_add(v.disconnect_count),
+            roaming_disconnect_count: self
+                .roaming_disconnect_count
+                .saturating_add(v.roaming_disconnect_count),
+            non_roaming_disconnect_count: self
+                .non_roaming_disconnect_count
+                .saturating_add(v.non_roaming_disconnect_count),
             tx_high_packet_drop_duration: zx::Duration::from_nanos(
                 self.tx_high_packet_drop_duration
                     .into_nanos()
@@ -2976,14 +3023,23 @@ mod tests {
             stats: contains {
                 "1d_counters": contains {
                     disconnect_count: 0u64,
+                    roaming_disconnect_count: 0u64,
                 },
                 "7d_counters": contains {
                     disconnect_count: 0u64,
+                    roaming_disconnect_count: 0u64,
                 },
             }
         });
 
-        let info = fake_disconnect_info();
+        // Send a non-roaming disconnect
+        let info = DisconnectInfo {
+            disconnect_source: fidl_sme::DisconnectSource::Ap(fidl_sme::DisconnectCause {
+                reason_code: fidl_ieee80211::ReasonCode::StaLeaving,
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DisassociateIndication,
+            }),
+            ..fake_disconnect_info()
+        };
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
@@ -2993,14 +3049,23 @@ mod tests {
             stats: contains {
                 "1d_counters": contains {
                     disconnect_count: 1u64,
+                    roaming_disconnect_count: 0u64,
+                    non_roaming_non_user_disconnect_count: 1u64,
                 },
                 "7d_counters": contains {
                     disconnect_count: 1u64,
+                    roaming_disconnect_count: 0u64,
+                    non_roaming_non_user_disconnect_count: 1u64,
                 },
             }
         });
 
-        let info = fake_disconnect_info();
+        let info = DisconnectInfo {
+            disconnect_source: fidl_sme::DisconnectSource::User(
+                fidl_sme::UserDisconnectReason::Startup,
+            ),
+            ..fake_disconnect_info()
+        };
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
@@ -3010,9 +3075,40 @@ mod tests {
             stats: contains {
                 "1d_counters": contains {
                     disconnect_count: 2u64,
+                    roaming_disconnect_count: 0u64,
+                    non_roaming_non_user_disconnect_count: 1u64,
                 },
                 "7d_counters": contains {
                     disconnect_count: 2u64,
+                    roaming_disconnect_count: 0u64,
+                    non_roaming_non_user_disconnect_count: 1u64,
+                },
+            }
+        });
+
+        // Send a roaming disconnect
+        let info = DisconnectInfo {
+            disconnect_source: fidl_sme::DisconnectSource::User(
+                fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch,
+            ),
+            ..fake_disconnect_info()
+        };
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
+            stats: contains {
+                "1d_counters": contains {
+                    disconnect_count: 3u64,
+                    roaming_disconnect_count: 1u64,
+                    non_roaming_non_user_disconnect_count: 1u64,
+                },
+                "7d_counters": contains {
+                    disconnect_count: 3u64,
+                    roaming_disconnect_count: 1u64,
+                    non_roaming_non_user_disconnect_count: 1u64,
                 },
             }
         });
@@ -3318,33 +3414,72 @@ mod tests {
         assert_eq!(uptime_ratio_breakdowns[0].payload, MetricEventPayload::Count(1));
     }
 
-    #[fuchsia::test]
-    fn test_log_daily_disconnect_per_day_connected_cobalt_metric() {
-        let (mut test_helper, mut test_fut) = setup_test();
+    /// Send a random connect event and 4 hours later send a disconnect with the specified
+    /// disconnect source.
+    fn connect_and_disconnect_with_source(
+        test_helper: &mut TestHelper,
+        mut test_fut: Pin<&mut impl Future<Output = ()>>,
+        disconnect_source: fidl_sme::DisconnectSource,
+    ) {
         test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
-        test_helper.advance_by(6.hours(), test_fut.as_mut());
+        test_helper.advance_by(4.hours(), test_fut.as_mut());
 
-        let info = fake_disconnect_info();
+        let info = DisconnectInfo { disconnect_source, ..fake_disconnect_info() };
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        test_helper.drain_cobalt_events(&mut test_fut);
+    }
 
-        test_helper.advance_by(18.hours(), test_fut.as_mut());
+    #[fuchsia::test]
+    fn test_log_daily_disconnect_per_day_connected_cobalt_metric() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Send 1 roaming, 1 non-roaming, and 1 user disconnect with the device connected for a
+        // total of 12 hours. The user disconnect is counted toward total disconnects but not for
+        // roaming or non-roaming disconnects.
+        let non_roaming_source = fidl_sme::DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+            reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
+            mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
+        });
+        connect_and_disconnect_with_source(&mut test_helper, test_fut.as_mut(), non_roaming_source);
+
+        let roaming_source = fidl_sme::DisconnectSource::User(
+            fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch,
+        );
+        connect_and_disconnect_with_source(&mut test_helper, test_fut.as_mut(), roaming_source);
+
+        let user_source = fidl_sme::DisconnectSource::User(
+            fidl_sme::UserDisconnectReason::FidlStopClientConnectionsRequest,
+        );
+        connect_and_disconnect_with_source(&mut test_helper, test_fut.as_mut(), user_source);
+
+        test_helper.advance_by(12.hours(), test_fut.as_mut());
 
         let dpdc_ratios =
             test_helper.get_logged_metrics(metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID);
         assert_eq!(dpdc_ratios.len(), 1);
-        // 1 disconnect, 0.25 day connected => 4 disconnects per day connected
-        // (which equals 40_0000 in TenThousandth unit)
-        assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(40_000));
+        // 3 disconnects, 0.5 day connected => 6 disconnects per day connected
+        assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(60_000));
+
+        // 1 roaming disconnect, 0.5 day connected => 2 roaming disconnects per day connected
+        let non_roam_dpdc_ratios = test_helper
+            .get_logged_metrics(metrics::NON_ROAMING_DISCONNECT_PER_DAY_CONNECTED_METRIC_ID);
+        assert_eq!(non_roam_dpdc_ratios.len(), 1);
+        assert_eq!(non_roam_dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(20_000));
+
+        let roam_dpdc_ratios =
+            test_helper.get_logged_metrics(metrics::ROAMING_DISCONNECT_PER_DAY_CONNECTED_METRIC_ID);
+        assert_eq!(roam_dpdc_ratios.len(), 1);
+        assert_eq!(roam_dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(20_000));
 
         let dpdc_ratios_7d =
             test_helper.get_logged_metrics(metrics::DISCONNECT_PER_DAY_CONNECTED_7D_METRIC_ID);
         assert_eq!(dpdc_ratios_7d.len(), 1);
-        assert_eq!(dpdc_ratios_7d[0].payload, MetricEventPayload::IntegerValue(40_000));
+        assert_eq!(dpdc_ratios_7d[0].payload, MetricEventPayload::IntegerValue(60_000));
 
         let device_high_disconnect =
             test_helper.get_logged_metrics(metrics::DEVICE_WITH_HIGH_DISCONNECT_RATE_METRIC_ID);
@@ -3355,7 +3490,7 @@ mod tests {
         assert_eq!(dpdc_ratio_breakdowns.len(), 1);
         assert_eq!(
             dpdc_ratio_breakdowns[0].event_codes,
-            &[metrics::DeviceDisconnectPerDayConnectedBreakdownMetricDimensionDpdcRatio::UpTo5
+            &[metrics::DeviceDisconnectPerDayConnectedBreakdownMetricDimensionDpdcRatio::UpTo10
                 as u32]
         );
         assert_eq!(dpdc_ratio_breakdowns[0].payload, MetricEventPayload::Count(1));
@@ -3366,7 +3501,7 @@ mod tests {
         assert_eq!(dpdc_ratio_7d_breakdowns.len(), 1);
         assert_eq!(
             dpdc_ratio_7d_breakdowns[0].event_codes,
-            &[metrics::DeviceDisconnectPerDayConnectedBreakdown7dMetricDimensionDpdcRatio::UpTo5
+            &[metrics::DeviceDisconnectPerDayConnectedBreakdown7dMetricDimensionDpdcRatio::MoreThan5
                 as u32]
         );
         assert_eq!(dpdc_ratio_7d_breakdowns[0].payload, MetricEventPayload::Count(1));
@@ -3386,12 +3521,22 @@ mod tests {
         assert_eq!(dpdc_ratios.len(), 1);
         assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(0));
 
+        let non_roam_dpdc_ratios = test_helper
+            .get_logged_metrics(metrics::NON_ROAMING_DISCONNECT_PER_DAY_CONNECTED_METRIC_ID);
+        assert_eq!(non_roam_dpdc_ratios.len(), 1);
+        assert_eq!(non_roam_dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(0));
+
         let dpdc_ratios_7d =
             test_helper.get_logged_metrics(metrics::DISCONNECT_PER_DAY_CONNECTED_7D_METRIC_ID);
         assert_eq!(dpdc_ratios_7d.len(), 1);
-        // 1 disconnect, 1.25 day connected => 0.8 disconnects per day connected
-        // (which equals 80000 in TenThousandth unit)
-        assert_eq!(dpdc_ratios_7d[0].payload, MetricEventPayload::IntegerValue(8000));
+        // 3 disconnects, 1.5 day connected => 2 disconnects per day connected
+        // (which equals 20,000 in TenThousandth unit)
+        assert_eq!(dpdc_ratios_7d[0].payload, MetricEventPayload::IntegerValue(20_000));
+
+        let roam_dpdc_ratios =
+            test_helper.get_logged_metrics(metrics::ROAMING_DISCONNECT_PER_DAY_CONNECTED_METRIC_ID);
+        assert_eq!(roam_dpdc_ratios.len(), 1);
+        assert_eq!(roam_dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(0));
 
         let dpdc_ratio_breakdowns = test_helper
             .get_logged_metrics(metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID);
@@ -3402,14 +3547,14 @@ mod tests {
         );
         assert_eq!(dpdc_ratio_breakdowns[0].payload, MetricEventPayload::Count(1));
 
-        // In the last 7 days, 1 disconnects and 1.25 days connected => 0.8 dpdc ratio
+        // In the last 7 days, 3 disconnects and 1.25 days connected => 2.4 dpdc ratio
         let dpdc_ratio_7d_breakdowns = test_helper.get_logged_metrics(
             metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_7D_METRIC_ID,
         );
         assert_eq!(dpdc_ratio_7d_breakdowns.len(), 1);
         assert_eq!(
             dpdc_ratio_7d_breakdowns[0].event_codes,
-            &[metrics::DeviceDisconnectPerDayConnectedBreakdown7dMetricDimensionDpdcRatio::UpTo1
+            &[metrics::DeviceDisconnectPerDayConnectedBreakdown7dMetricDimensionDpdcRatio::UpTo5
                 as u32]
         );
         assert_eq!(dpdc_ratio_7d_breakdowns[0].payload, MetricEventPayload::Count(1));
