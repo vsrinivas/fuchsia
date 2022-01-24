@@ -3,13 +3,14 @@
 #pragma once
 
 #include <fidl/test.nullable/cpp/wire.h>
-namespace test_nullable {
+namespace fidl {
 namespace testing {
 
-class SimpleProtocol_TestBase
+template <>
+class WireTestBase<::test_nullable::SimpleProtocol>
     : public ::fidl::WireServer<::test_nullable::SimpleProtocol> {
  public:
-  virtual ~SimpleProtocol_TestBase() {}
+  virtual ~WireTestBase<::test_nullable::SimpleProtocol>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Add(AddRequestView request,
@@ -17,5 +18,12 @@ class SimpleProtocol_TestBase
     NotImplemented_("Add", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_nullable {
+namespace testing {
+using SimpleProtocol_TestBase =
+    ::fidl::testing::WireTestBase<::test_nullable::SimpleProtocol>;
 }  // namespace testing
 }  // namespace test_nullable

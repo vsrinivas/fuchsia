@@ -16,6 +16,7 @@ const transportNamespaceMarker = "[TRANSPORT]"
 var zxNs namespace = newNamespace("zx")
 var fidlNs namespace = newNamespace("fidl")
 var internalNs namespace = fidlNs.append("internal")
+var testingNs namespace = fidlNs.append("testing")
 var transportNs namespace = newNamespace(transportNamespaceMarker)
 
 // variant controls how we refer to domain object declarations.

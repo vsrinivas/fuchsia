@@ -3,13 +3,14 @@
 #pragma once
 
 #include <fidl/test.anonymous/cpp/wire.h>
-namespace test_anonymous {
+namespace fidl {
 namespace testing {
 
-class SomeProtocol_TestBase
+template <>
+class WireTestBase<::test_anonymous::SomeProtocol>
     : public ::fidl::WireServer<::test_anonymous::SomeProtocol> {
  public:
-  virtual ~SomeProtocol_TestBase() {}
+  virtual ~WireTestBase<::test_anonymous::SomeProtocol>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void SomeMethod(SomeMethodRequestView request,
@@ -17,5 +18,12 @@ class SomeProtocol_TestBase
     NotImplemented_("SomeMethod", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_anonymous {
+namespace testing {
+using SomeProtocol_TestBase =
+    ::fidl::testing::WireTestBase<::test_anonymous::SomeProtocol>;
 }  // namespace testing
 }  // namespace test_anonymous

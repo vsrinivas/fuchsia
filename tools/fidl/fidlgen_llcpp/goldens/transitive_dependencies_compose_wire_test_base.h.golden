@@ -3,13 +3,14 @@
 #pragma once
 
 #include <fidl/test.transitivedependenciescompose/cpp/wire.h>
-namespace test_transitivedependenciescompose {
+namespace fidl {
 namespace testing {
 
-class Top_TestBase
+template <>
+class WireTestBase<::test_transitivedependenciescompose::Top>
     : public ::fidl::WireServer<::test_transitivedependenciescompose::Top> {
  public:
-  virtual ~Top_TestBase() {}
+  virtual ~WireTestBase<::test_transitivedependenciescompose::Top>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void GetFoo(GetFooRequestView request,
@@ -17,5 +18,12 @@ class Top_TestBase
     NotImplemented_("GetFoo", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_transitivedependenciescompose {
+namespace testing {
+using Top_TestBase =
+    ::fidl::testing::WireTestBase<::test_transitivedependenciescompose::Top>;
 }  // namespace testing
 }  // namespace test_transitivedependenciescompose

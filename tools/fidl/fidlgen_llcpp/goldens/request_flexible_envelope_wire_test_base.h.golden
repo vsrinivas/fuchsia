@@ -3,13 +3,14 @@
 #pragma once
 
 #include <fidl/test.requestflexibleenvelope/cpp/wire.h>
-namespace test_requestflexibleenvelope {
+namespace fidl {
 namespace testing {
 
-class Protocol_TestBase
+template <>
+class WireTestBase<::test_requestflexibleenvelope::Protocol>
     : public ::fidl::WireServer<::test_requestflexibleenvelope::Protocol> {
  public:
-  virtual ~Protocol_TestBase() {}
+  virtual ~WireTestBase<::test_requestflexibleenvelope::Protocol>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void RequestStrictResponseFlexible(
@@ -23,5 +24,12 @@ class Protocol_TestBase
     NotImplemented_("RequestFlexibleResponseStrict", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_requestflexibleenvelope {
+namespace testing {
+using Protocol_TestBase =
+    ::fidl::testing::WireTestBase<::test_requestflexibleenvelope::Protocol>;
 }  // namespace testing
 }  // namespace test_requestflexibleenvelope

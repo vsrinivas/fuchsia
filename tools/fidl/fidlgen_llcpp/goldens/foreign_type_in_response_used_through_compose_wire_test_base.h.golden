@@ -3,13 +3,16 @@
 #pragma once
 
 #include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/wire.h>
-namespace test_foreigntypeinresponseusedthroughcompose {
+namespace fidl {
 namespace testing {
 
-class Top_TestBase : public ::fidl::WireServer<
-                         ::test_foreigntypeinresponseusedthroughcompose::Top> {
+template <>
+class WireTestBase<::test_foreigntypeinresponseusedthroughcompose::Top>
+    : public ::fidl::WireServer<
+          ::test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
-  virtual ~Top_TestBase() {}
+  virtual ~WireTestBase<::test_foreigntypeinresponseusedthroughcompose::Top>() {
+  }
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void GetFoo(GetFooRequestView request,
@@ -17,5 +20,12 @@ class Top_TestBase : public ::fidl::WireServer<
     NotImplemented_("GetFoo", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_foreigntypeinresponseusedthroughcompose {
+namespace testing {
+using Top_TestBase = ::fidl::testing::WireTestBase<
+    ::test_foreigntypeinresponseusedthroughcompose::Top>;
 }  // namespace testing
 }  // namespace test_foreigntypeinresponseusedthroughcompose

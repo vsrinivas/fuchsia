@@ -159,6 +159,14 @@ class WireCompleterBase;
 #endif  // __Fuchsia__
 
 }  // namespace internal
+
+namespace testing {
+
+template <typename FidlProtocol>
+class WireTestBase;
+
+}  // namespace testing
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_WIRE_MESSAGING_DECLARATIONS_H_

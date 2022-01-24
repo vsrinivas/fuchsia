@@ -3,12 +3,14 @@
 #pragma once
 
 #include <fidl/test.error/cpp/wire.h>
-namespace test_error {
+namespace fidl {
 namespace testing {
 
-class Example_TestBase : public ::fidl::WireServer<::test_error::Example> {
+template <>
+class WireTestBase<::test_error::Example>
+    : public ::fidl::WireServer<::test_error::Example> {
  public:
-  virtual ~Example_TestBase() {}
+  virtual ~WireTestBase<::test_error::Example>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Foo(FooRequestView request,
@@ -16,5 +18,11 @@ class Example_TestBase : public ::fidl::WireServer<::test_error::Example> {
     NotImplemented_("Foo", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_error {
+namespace testing {
+using Example_TestBase = ::fidl::testing::WireTestBase<::test_error::Example>;
 }  // namespace testing
 }  // namespace test_error

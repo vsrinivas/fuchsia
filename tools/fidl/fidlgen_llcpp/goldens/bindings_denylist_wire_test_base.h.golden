@@ -3,21 +3,35 @@
 #pragma once
 
 #include <fidl/test.bindingsdenylist/cpp/wire.h>
-namespace test_bindingsdenylist {
+namespace fidl {
 namespace testing {
 
-class Allowed_TestBase
+template <>
+class WireTestBase<::test_bindingsdenylist::Allowed>
     : public ::fidl::WireServer<::test_bindingsdenylist::Allowed> {
  public:
-  virtual ~Allowed_TestBase() {}
+  virtual ~WireTestBase<::test_bindingsdenylist::Allowed>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 };
 
-class OnlyLibfuzzerAndDeps_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_bindingsdenylist {
+namespace testing {
+using Allowed_TestBase =
+    ::fidl::testing::WireTestBase<::test_bindingsdenylist::Allowed>;
+
+}  // namespace testing
+}  // namespace test_bindingsdenylist
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
     : public ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
  public:
-  virtual ~OnlyLibfuzzerAndDeps_TestBase() {}
+  virtual ~WireTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void LibfuzzerNeedsNonemptyProtocol(
@@ -27,19 +41,45 @@ class OnlyLibfuzzerAndDeps_TestBase
   }
 };
 
-class OnlyCppAndDeps_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_bindingsdenylist {
+namespace testing {
+using OnlyLibfuzzerAndDeps_TestBase = ::fidl::testing::WireTestBase<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
+
+}  // namespace testing
+}  // namespace test_bindingsdenylist
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_bindingsdenylist::OnlyCppAndDeps>
     : public ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps> {
  public:
-  virtual ~OnlyCppAndDeps_TestBase() {}
+  virtual ~WireTestBase<::test_bindingsdenylist::OnlyCppAndDeps>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 };
 
-class ImportsSameNameContext_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_bindingsdenylist {
+namespace testing {
+using OnlyCppAndDeps_TestBase =
+    ::fidl::testing::WireTestBase<::test_bindingsdenylist::OnlyCppAndDeps>;
+
+}  // namespace testing
+}  // namespace test_bindingsdenylist
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_bindingsdenylist::ImportsSameNameContext>
     : public ::fidl::WireServer<
           ::test_bindingsdenylist::ImportsSameNameContext> {
  public:
-  virtual ~ImportsSameNameContext_TestBase() {}
+  virtual ~WireTestBase<::test_bindingsdenylist::ImportsSameNameContext>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Unattributed(UnattributedRequestView request,
@@ -53,10 +93,23 @@ class ImportsSameNameContext_TestBase
   }
 };
 
-class DenyEachBinding_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_bindingsdenylist {
+namespace testing {
+using ImportsSameNameContext_TestBase = ::fidl::testing::WireTestBase<
+    ::test_bindingsdenylist::ImportsSameNameContext>;
+
+}  // namespace testing
+}  // namespace test_bindingsdenylist
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_bindingsdenylist::DenyEachBinding>
     : public ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding> {
  public:
-  virtual ~DenyEachBinding_TestBase() {}
+  virtual ~WireTestBase<::test_bindingsdenylist::DenyEachBinding>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void OnlyDenyDart(OnlyDenyDartRequestView request,
@@ -82,5 +135,12 @@ class DenyEachBinding_TestBase
     NotImplemented_("OnlyDenySyzkaller", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_bindingsdenylist {
+namespace testing {
+using DenyEachBinding_TestBase =
+    ::fidl::testing::WireTestBase<::test_bindingsdenylist::DenyEachBinding>;
 }  // namespace testing
 }  // namespace test_bindingsdenylist

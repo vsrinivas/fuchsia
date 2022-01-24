@@ -3,13 +3,14 @@
 #pragma once
 
 #include <fidl/test.service/cpp/wire.h>
-namespace test_service {
+namespace fidl {
 namespace testing {
 
-class SecondProtocol_TestBase
+template <>
+class WireTestBase<::test_service::SecondProtocol>
     : public ::fidl::WireServer<::test_service::SecondProtocol> {
  public:
-  virtual ~SecondProtocol_TestBase() {}
+  virtual ~WireTestBase<::test_service::SecondProtocol>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void MethodOnSecond(
@@ -19,10 +20,23 @@ class SecondProtocol_TestBase
   }
 };
 
-class FirstProtocol_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_service {
+namespace testing {
+using SecondProtocol_TestBase =
+    ::fidl::testing::WireTestBase<::test_service::SecondProtocol>;
+
+}  // namespace testing
+}  // namespace test_service
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_service::FirstProtocol>
     : public ::fidl::WireServer<::test_service::FirstProtocol> {
  public:
-  virtual ~FirstProtocol_TestBase() {}
+  virtual ~WireTestBase<::test_service::FirstProtocol>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void MethodOnFirst(
@@ -31,5 +45,12 @@ class FirstProtocol_TestBase
     NotImplemented_("MethodOnFirst", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_service {
+namespace testing {
+using FirstProtocol_TestBase =
+    ::fidl::testing::WireTestBase<::test_service::FirstProtocol>;
 }  // namespace testing
 }  // namespace test_service

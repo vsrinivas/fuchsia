@@ -3,15 +3,23 @@
 #pragma once
 
 #include <fidl/test.handles/cpp/wire.h>
-namespace test_handles {
+namespace fidl {
 namespace testing {
 
-class SomeProtocol_TestBase
+template <>
+class WireTestBase<::test_handles::SomeProtocol>
     : public ::fidl::WireServer<::test_handles::SomeProtocol> {
  public:
-  virtual ~SomeProtocol_TestBase() {}
+  virtual ~WireTestBase<::test_handles::SomeProtocol>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_handles {
+namespace testing {
+using SomeProtocol_TestBase =
+    ::fidl::testing::WireTestBase<::test_handles::SomeProtocol>;
 }  // namespace testing
 }  // namespace test_handles

@@ -3,12 +3,14 @@
 #pragma once
 
 #include <fidl/test.inheritance/cpp/wire.h>
-namespace test_inheritance {
+namespace fidl {
 namespace testing {
 
-class Super_TestBase : public ::fidl::WireServer<::test_inheritance::Super> {
+template <>
+class WireTestBase<::test_inheritance::Super>
+    : public ::fidl::WireServer<::test_inheritance::Super> {
  public:
-  virtual ~Super_TestBase() {}
+  virtual ~WireTestBase<::test_inheritance::Super>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Foo(FooRequestView request,
@@ -17,9 +19,22 @@ class Super_TestBase : public ::fidl::WireServer<::test_inheritance::Super> {
   }
 };
 
-class Sub_TestBase : public ::fidl::WireServer<::test_inheritance::Sub> {
+}  // namespace testing
+}  // namespace fidl
+namespace test_inheritance {
+namespace testing {
+using Super_TestBase = ::fidl::testing::WireTestBase<::test_inheritance::Super>;
+
+}  // namespace testing
+}  // namespace test_inheritance
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_inheritance::Sub>
+    : public ::fidl::WireServer<::test_inheritance::Sub> {
  public:
-  virtual ~Sub_TestBase() {}
+  virtual ~WireTestBase<::test_inheritance::Sub>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Foo(FooRequestView request,
@@ -27,5 +42,11 @@ class Sub_TestBase : public ::fidl::WireServer<::test_inheritance::Sub> {
     NotImplemented_("Foo", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_inheritance {
+namespace testing {
+using Sub_TestBase = ::fidl::testing::WireTestBase<::test_inheritance::Sub>;
 }  // namespace testing
 }  // namespace test_inheritance

@@ -3,13 +3,14 @@
 #pragma once
 
 #include <fidl/test.union/cpp/wire.h>
-namespace test_union {
+namespace fidl {
 namespace testing {
 
-class TestProtocol_TestBase
+template <>
+class WireTestBase<::test_union::TestProtocol>
     : public ::fidl::WireServer<::test_union::TestProtocol> {
  public:
-  virtual ~TestProtocol_TestBase() {}
+  virtual ~WireTestBase<::test_union::TestProtocol>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
@@ -26,5 +27,12 @@ class TestProtocol_TestBase
                     _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_union {
+namespace testing {
+using TestProtocol_TestBase =
+    ::fidl::testing::WireTestBase<::test_union::TestProtocol>;
 }  // namespace testing
 }  // namespace test_union

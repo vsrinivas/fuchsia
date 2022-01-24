@@ -3,13 +3,14 @@
 #pragma once
 
 #include <fidl/test.protocolrequest/cpp/wire.h>
-namespace test_protocolrequest {
+namespace fidl {
 namespace testing {
 
-class Parent_TestBase
+template <>
+class WireTestBase<::test_protocolrequest::Parent>
     : public ::fidl::WireServer<::test_protocolrequest::Parent> {
  public:
-  virtual ~Parent_TestBase() {}
+  virtual ~WireTestBase<::test_protocolrequest::Parent>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void GetChild(GetChildRequestView request,
@@ -32,12 +33,32 @@ class Parent_TestBase
   }
 };
 
-class Child_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_protocolrequest {
+namespace testing {
+using Parent_TestBase =
+    ::fidl::testing::WireTestBase<::test_protocolrequest::Parent>;
+
+}  // namespace testing
+}  // namespace test_protocolrequest
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_protocolrequest::Child>
     : public ::fidl::WireServer<::test_protocolrequest::Child> {
  public:
-  virtual ~Child_TestBase() {}
+  virtual ~WireTestBase<::test_protocolrequest::Child>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_protocolrequest {
+namespace testing {
+using Child_TestBase =
+    ::fidl::testing::WireTestBase<::test_protocolrequest::Child>;
 }  // namespace testing
 }  // namespace test_protocolrequest

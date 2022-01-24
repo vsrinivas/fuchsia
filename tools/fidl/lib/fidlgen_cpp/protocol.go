@@ -288,6 +288,7 @@ type protocolInner struct {
 	SyncEventAllocationV2 allocation
 	Methods               []Method
 	FuzzingName           string
+	DeprecatedTestBase    nameVariants
 	TestBase              nameVariants
 }
 
@@ -811,6 +812,8 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 	}
 
 	fuzzingName := strings.ReplaceAll(strings.ReplaceAll(string(p.Name), ".", "_"), "/", "_")
+	testBaseNames := protocolName.appendName("_TestBase").appendNamespace("testing")
+	testBaseNames.Wire = testingNs.member("WireTestBase").template(protocolName.Wire)
 	r := newProtocol(protocolInner{
 		Attributes:              Attributes{p.Attributes},
 		nameVariants:            protocolName,
@@ -824,9 +827,10 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		SyncEventAllocationV2: computeAllocation(
 			maxResponseSizeV2, messageDirectionResponse.queryBoundedness(
 				clientContext, anyEventHasFlexibleEnvelope(methods))),
-		Methods:     methods,
-		FuzzingName: fuzzingName,
-		TestBase:    protocolName.appendName("_TestBase").appendNamespace("testing"),
+		Methods:            methods,
+		FuzzingName:        fuzzingName,
+		DeprecatedTestBase: protocolName.appendName("_TestBase").appendNamespace("testing"),
+		TestBase:           testBaseNames,
 	})
 	var transport *Transport
 	if len(p.Transports()) != 1 {

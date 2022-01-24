@@ -3,13 +3,14 @@
 #pragma once
 
 #include <fidl/test.protocols/cpp/wire.h>
-namespace test_protocols {
+namespace fidl {
 namespace testing {
 
-class HandleRightsProtocol_TestBase
+template <>
+class WireTestBase<::test_protocols::HandleRightsProtocol>
     : public ::fidl::WireServer<::test_protocols::HandleRightsProtocol> {
  public:
-  virtual ~HandleRightsProtocol_TestBase() {}
+  virtual ~WireTestBase<::test_protocols::HandleRightsProtocol>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void NoResponseMethod(
@@ -24,11 +25,24 @@ class HandleRightsProtocol_TestBase
   }
 };
 
-class WithAndWithoutRequestResponse_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_protocols {
+namespace testing {
+using HandleRightsProtocol_TestBase =
+    ::fidl::testing::WireTestBase<::test_protocols::HandleRightsProtocol>;
+
+}  // namespace testing
+}  // namespace test_protocols
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_protocols::WithAndWithoutRequestResponse>
     : public ::fidl::WireServer<
           ::test_protocols::WithAndWithoutRequestResponse> {
  public:
-  virtual ~WithAndWithoutRequestResponse_TestBase() {}
+  virtual ~WireTestBase<::test_protocols::WithAndWithoutRequestResponse>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void NoRequestNoResponse(
@@ -63,10 +77,23 @@ class WithAndWithoutRequestResponse_TestBase
   }
 };
 
-class Transitional_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_protocols {
+namespace testing {
+using WithAndWithoutRequestResponse_TestBase = ::fidl::testing::WireTestBase<
+    ::test_protocols::WithAndWithoutRequestResponse>;
+
+}  // namespace testing
+}  // namespace test_protocols
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_protocols::Transitional>
     : public ::fidl::WireServer<::test_protocols::Transitional> {
  public:
-  virtual ~Transitional_TestBase() {}
+  virtual ~WireTestBase<::test_protocols::Transitional>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Request(RequestRequestView request,
@@ -79,10 +106,23 @@ class Transitional_TestBase
   }
 };
 
-class MethodWithUnion_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_protocols {
+namespace testing {
+using Transitional_TestBase =
+    ::fidl::testing::WireTestBase<::test_protocols::Transitional>;
+
+}  // namespace testing
+}  // namespace test_protocols
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_protocols::MethodWithUnion>
     : public ::fidl::WireServer<::test_protocols::MethodWithUnion> {
  public:
-  virtual ~MethodWithUnion_TestBase() {}
+  virtual ~WireTestBase<::test_protocols::MethodWithUnion>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void UnionMethod(UnionMethodRequestView request,
@@ -91,10 +131,23 @@ class MethodWithUnion_TestBase
   }
 };
 
-class WithProtocolEnds_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_protocols {
+namespace testing {
+using MethodWithUnion_TestBase =
+    ::fidl::testing::WireTestBase<::test_protocols::MethodWithUnion>;
+
+}  // namespace testing
+}  // namespace test_protocols
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_protocols::WithProtocolEnds>
     : public ::fidl::WireServer<::test_protocols::WithProtocolEnds> {
  public:
-  virtual ~WithProtocolEnds_TestBase() {}
+  virtual ~WireTestBase<::test_protocols::WithProtocolEnds>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void ClientEnds(ClientEndsRequestView request,
@@ -112,10 +165,23 @@ class WithProtocolEnds_TestBase
   }
 };
 
-class ManyParameters_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_protocols {
+namespace testing {
+using WithProtocolEnds_TestBase =
+    ::fidl::testing::WireTestBase<::test_protocols::WithProtocolEnds>;
+
+}  // namespace testing
+}  // namespace test_protocols
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_protocols::ManyParameters>
     : public ::fidl::WireServer<::test_protocols::ManyParameters> {
  public:
-  virtual ~ManyParameters_TestBase() {}
+  virtual ~WireTestBase<::test_protocols::ManyParameters>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Fifteen(FifteenRequestView request,
@@ -124,10 +190,23 @@ class ManyParameters_TestBase
   }
 };
 
-class WithErrorSyntax_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_protocols {
+namespace testing {
+using ManyParameters_TestBase =
+    ::fidl::testing::WireTestBase<::test_protocols::ManyParameters>;
+
+}  // namespace testing
+}  // namespace test_protocols
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_protocols::WithErrorSyntax>
     : public ::fidl::WireServer<::test_protocols::WithErrorSyntax> {
  public:
-  virtual ~WithErrorSyntax_TestBase() {}
+  virtual ~WireTestBase<::test_protocols::WithErrorSyntax>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void ResponseAsStruct(
@@ -151,10 +230,23 @@ class WithErrorSyntax_TestBase
   }
 };
 
-class DiscoverableProtocol_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_protocols {
+namespace testing {
+using WithErrorSyntax_TestBase =
+    ::fidl::testing::WireTestBase<::test_protocols::WithErrorSyntax>;
+
+}  // namespace testing
+}  // namespace test_protocols
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_protocols::DiscoverableProtocol>
     : public ::fidl::WireServer<::test_protocols::DiscoverableProtocol> {
  public:
-  virtual ~DiscoverableProtocol_TestBase() {}
+  virtual ~WireTestBase<::test_protocols::DiscoverableProtocol>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Method(MethodRequestView request,
@@ -163,10 +255,23 @@ class DiscoverableProtocol_TestBase
   }
 };
 
-class ChannelProtocol_TestBase
+}  // namespace testing
+}  // namespace fidl
+namespace test_protocols {
+namespace testing {
+using DiscoverableProtocol_TestBase =
+    ::fidl::testing::WireTestBase<::test_protocols::DiscoverableProtocol>;
+
+}  // namespace testing
+}  // namespace test_protocols
+namespace fidl {
+namespace testing {
+
+template <>
+class WireTestBase<::test_protocols::ChannelProtocol>
     : public ::fidl::WireServer<::test_protocols::ChannelProtocol> {
  public:
-  virtual ~ChannelProtocol_TestBase() {}
+  virtual ~WireTestBase<::test_protocols::ChannelProtocol>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void MethodA(MethodARequestView request,
@@ -186,5 +291,12 @@ class ChannelProtocol_TestBase
     NotImplemented_("MutateSocket", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_protocols {
+namespace testing {
+using ChannelProtocol_TestBase =
+    ::fidl::testing::WireTestBase<::test_protocols::ChannelProtocol>;
 }  // namespace testing
 }  // namespace test_protocols

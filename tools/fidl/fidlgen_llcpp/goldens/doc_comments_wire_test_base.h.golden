@@ -3,13 +3,14 @@
 #pragma once
 
 #include <fidl/test.doccomments/cpp/wire.h>
-namespace test_doccomments {
+namespace fidl {
 namespace testing {
 
-class Interface_TestBase
+template <>
+class WireTestBase<::test_doccomments::Interface>
     : public ::fidl::WireServer<::test_doccomments::Interface> {
  public:
-  virtual ~Interface_TestBase() {}
+  virtual ~WireTestBase<::test_doccomments::Interface>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Method(MethodRequestView request,
@@ -17,5 +18,12 @@ class Interface_TestBase
     NotImplemented_("Method", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_doccomments {
+namespace testing {
+using Interface_TestBase =
+    ::fidl::testing::WireTestBase<::test_doccomments::Interface>;
 }  // namespace testing
 }  // namespace test_doccomments

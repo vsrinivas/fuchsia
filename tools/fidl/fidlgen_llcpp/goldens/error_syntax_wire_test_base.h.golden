@@ -3,13 +3,14 @@
 #pragma once
 
 #include <fidl/test.errorsyntax/cpp/wire.h>
-namespace test_errorsyntax {
+namespace fidl {
 namespace testing {
 
-class ExampleUseOfErrorSyntax_TestBase
+template <>
+class WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax>
     : public ::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax> {
  public:
-  virtual ~ExampleUseOfErrorSyntax_TestBase() {}
+  virtual ~WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax>() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void ComposedCallWhichMayFail(
@@ -23,5 +24,12 @@ class ExampleUseOfErrorSyntax_TestBase
     NotImplemented_("CallWhichMayFail", _completer);
   }
 };
+
+}  // namespace testing
+}  // namespace fidl
+namespace test_errorsyntax {
+namespace testing {
+using ExampleUseOfErrorSyntax_TestBase =
+    ::fidl::testing::WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax>;
 }  // namespace testing
 }  // namespace test_errorsyntax
