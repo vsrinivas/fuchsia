@@ -58,7 +58,8 @@ template("fidl_library") {
 
     is_sdk_publishable =
         defined(invoker.sdk_category) && invoker.sdk_category != "internal" &&
-        invoker.sdk_category != "experimental"
+        invoker.sdk_category != "experimental" &&
+        invoker.sdk_category != "excluded"
     if (is_sdk_publishable) {
       verify_api_summary_target_name = "${target_name}_verify_api_summary"
 
