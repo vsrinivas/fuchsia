@@ -11,6 +11,7 @@
 
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
+#include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <netinet/ip6.h>
