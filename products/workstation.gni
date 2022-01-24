@@ -168,3 +168,6 @@ use_modern_input_injection = true
 # Create an additional (initially empty) account partition in FVM to enable
 # user data protection.
 include_account_in_fvm = true
+
+# Use Flatland as the default graphics protocol in Scenic.
+use_flatland_by_default = true
