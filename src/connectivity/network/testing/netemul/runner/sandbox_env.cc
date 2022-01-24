@@ -13,7 +13,8 @@ namespace netemul {
 
 constexpr const char* kDevmgrUrl =
     "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netemul-devmgr.cmx";
-constexpr const char* kNetworkTunUrl = "fuchsia-pkg://fuchsia.com/network-tun#meta/network-tun.cmx";
+constexpr const char* kNetworkTunUrl =
+    "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/network-tun.cmx";
 
 class ServiceHolder {
  public:

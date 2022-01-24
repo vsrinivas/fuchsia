@@ -65,10 +65,7 @@ fuchsia_component("component-v2") {
 }
 
 fuchsia_package("network-tun") {
-  deps = [
-    ":component",
-    ":component-v2",
-  ]
+  deps = [ ":component-v2" ]
 }
 
 test("network_tun_unittest") {
@@ -100,7 +97,6 @@ group("tests") {
   deps = [ ":network-tun-test" ]
 }
 
-config_data("config") {
-  for_pkg = "sysmgr"
-  sources = [ "network_tun.config" ]
+# TODO(https://fxbug.dev/90436): Remove once no longer used OOT
+group("config") {
 }

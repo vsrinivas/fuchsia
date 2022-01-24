@@ -200,5 +200,6 @@ fuchsia_package("netemul-sandbox") {
     ":netemul-devmgr",
     ":netemul-sandbox-component",
     ":netstack-intermediary",
+    "//src/connectivity/network/tun/network-tun:component",
   ]
 }

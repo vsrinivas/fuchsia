@@ -16,6 +16,12 @@
             environment: "#full-resolver-env",
         },
     ],
+    use: [
+        {
+            protocol: "fuchsia.net.tun.Control",
+            from: "#network-tun",
+        },
+    ],
     offer: [
         {
             protocol: "fuchsia.logger.LogSink",

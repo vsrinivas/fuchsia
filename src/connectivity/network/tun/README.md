@@ -6,11 +6,9 @@ fashion to what `TUN/TAP` interfaces provide on other OSes.
 
 ## Setup
 
-You can use `network-tun` from the `sys` realm if you add
-`--with //src/connectivity/network/tun:config` to your `fx set` line.
-
-To use it in your CFv2 tests, include the manifest shard in your `cml` file
-(recommended):
+To use it in your CFv2 tests, depend upon the network-tun v2 component from
+your test package, and include the manifest shard in your `cml` file in order
+to inject the manifest (recommended):
 
 ```json5
 {
@@ -20,12 +18,13 @@ To use it in your CFv2 tests, include the manifest shard in your `cml` file
 }
 ```
 
-To use it in legacy tests inject it in your test's `cmx` file (deprecated):
+To use it in legacy tests, depend upon the network-tun v1 component from your test
+package, and inject the manifest in your test's `cmx` file (deprecated):
 
 ```json
 {
    "injected-services": {
-      "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/network-tun#meta/network-tun.cmx"
+      "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/your-test-pkg#meta/network-tun.cmx"
    }
 }
 ```
