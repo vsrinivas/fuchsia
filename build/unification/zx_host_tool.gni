@@ -1,6 +1,0 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# TODO(fxbug.dev/60410): delete this file when all uses migrated to the below.
-import("//build/zircon/zx_host_tool.gni")
