@@ -29,6 +29,7 @@ group("structured_config") {
     "//src/diagnostics/detect:*",
     "//src/experiences/session_shells/ermine/session:*",
     "//src/lib/component_hub/tests:*",
+    "//src/lib/fuchsia-component-test/tests/echo_client_sc:*",
     "//src/session/bin/session_manager:*",
     "//src/session/examples/hello-world-session:*",
     "//src/sys/component_manager/tests/hub:*",

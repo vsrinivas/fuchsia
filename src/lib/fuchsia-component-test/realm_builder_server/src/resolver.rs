@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Error},
+    anyhow::{anyhow, Context, Error},
     cm_fidl_validator,
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_component_decl as fcdecl, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
@@ -12,6 +12,7 @@ use {
         lock::{Mutex, MutexGuard},
         TryStreamExt,
     },
+    io_util::{open_file, read_file_bytes, OPEN_RIGHT_READABLE},
     std::{collections::HashMap, path::Path, sync::Arc},
     tracing::*,
     url::Url,
@@ -99,7 +100,7 @@ impl Registry {
                     if let Some(ResolveableComponent { decl, package_dir }) =
                         component_decls_guard.get(&parsed_url).cloned()
                     {
-                        let package = if let Some(p) = package_dir {
+                        let package = if let Some(p) = &package_dir {
                             let (client_end, server_end) =
                                 create_endpoints::<fio::DirectoryMarker>()?;
                             p.clone(
@@ -114,10 +115,41 @@ impl Registry {
                         } else {
                             None
                         };
+
+                        let config_values = if let Some(fcdecl::Config { value_source, .. }) =
+                            &decl.config
+                        {
+                            if let Some(fcdecl::ConfigValueSource::PackagePath(path)) = value_source
+                            {
+                                if let Some(p) = package_dir {
+                                    let path = Path::new(path);
+                                    let file = open_file(&p, path, OPEN_RIGHT_READABLE)
+                                        .context("Could not open config value file from pkg dir")?;
+                                    let config_values_bytes = read_file_bytes(&file)
+                                        .await
+                                        .context("Could not read config value file")?;
+                                    Some(fmem::Data::Bytes(config_values_bytes))
+                                } else {
+                                    return Err(anyhow!(
+                                        "Expected package directory for opening config values at {:?}, but none was provided",
+                                        path
+                                    ));
+                                }
+                            } else {
+                                return Err(anyhow!(
+                                    "Expected ConfigValueSource::PackagePath, got {:?}",
+                                    value_source
+                                ));
+                            }
+                        } else {
+                            None
+                        };
+
                         responder.send(&mut Ok(fsys::Component {
                             resolved_url: Some(component_url),
                             decl: Some(encode(decl)?),
                             package,
+                            config_values,
                             ..fsys::Component::EMPTY
                         }))?;
                     } else {

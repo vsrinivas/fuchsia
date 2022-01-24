@@ -147,6 +147,7 @@ fuchsia_test_package("fuchsia-component-test-tests") {
     ":fuchsia_component_test_tests_component",
     ":realm_component",
     ":realm_with_wait_component",
+    "echo_client_sc",
     "//examples/components/routing:echo_realm",
     "//examples/components/routing/echo_client:echo_client_component",
     "//examples/components/routing/echo_server:echo_server_component",

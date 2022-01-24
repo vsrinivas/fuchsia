@@ -29,6 +29,7 @@ const V1_ECHO_CLIENT_URL: &'static str =
 const V2_ECHO_CLIENT_ABSOLUTE_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_client.cm";
 const V2_ECHO_CLIENT_RELATIVE_URL: &'static str = "#meta/echo_client.cm";
+const V2_ECHO_CLIENT_STRUCTURED_CONFIG_RELATIVE_URL: &'static str = "#meta/echo_client_sc.cm";
 
 const V1_ECHO_SERVER_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_server.cmx";
@@ -746,6 +747,51 @@ async fn altered_echo_client_args() -> Result<(), Error> {
         }
     }
     builder.replace_component_decl(&echo_client, echo_client_decl).await?;
+    let _instance = builder.build().await?;
+
+    assert!(receive_echo_server_called.next().await.is_some());
+
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn echo_client_structured_config() -> Result<(), Error> {
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
+
+    let builder = RealmBuilder::new().await?;
+    let echo_client = builder
+        .add_child(
+            "echo_client",
+            V2_ECHO_CLIENT_STRUCTURED_CONFIG_RELATIVE_URL,
+            ChildOptions::new().eager(),
+        )
+        .await?;
+    let echo_server = builder
+        .add_local_child(
+            "echo_server",
+            move |handles| {
+                echo_server_mock("Hello Fuchsia!", send_echo_server_called.clone(), handles).boxed()
+            },
+            ChildOptions::new(),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fecho::EchoMarker>())
+                .from(&echo_server)
+                .to(&echo_client),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&echo_client),
+        )
+        .await?;
+
     let _instance = builder.build().await?;
 
     assert!(receive_echo_server_called.next().await.is_some());
