@@ -980,7 +980,9 @@ bool Importer::HandleWaitOneDone(trace_ticks_t event_time, zx_koid_t thread, zx_
 
 bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                            bool cpu_trace) {
-  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(static_cast<trace_cpu_number_t>(thread))
+                : GetThreadRef(thread);
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_context_write_instant_event_record(context_, event_time, &thread_ref, &probe_category_ref_,
                                            &name_ref, TRACE_SCOPE_THREAD, nullptr, 0u);
@@ -989,7 +991,9 @@ bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t 
 
 bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                            bool cpu_trace, uint32_t arg0, uint32_t arg1) {
-  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(static_cast<trace_cpu_number_t>(thread))
+                : GetThreadRef(thread);
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_arg_t args[] = {trace_make_arg(arg0_name_ref_, trace_make_uint32_arg_value(arg0)),
                         trace_make_arg(arg1_name_ref_, trace_make_uint32_arg_value(arg1))};
@@ -1000,7 +1004,9 @@ bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t 
 
 bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                            bool cpu_trace, uint64_t arg0, uint64_t arg1) {
-  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(static_cast<trace_cpu_number_t>(thread))
+                : GetThreadRef(thread);
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_arg_t args[] = {trace_make_arg(arg0_name_ref_, trace_make_uint64_arg_value(arg0)),
                         trace_make_arg(arg1_name_ref_, trace_make_uint64_arg_value(arg1))};
@@ -1057,7 +1063,9 @@ bool Importer::HandleVcpuUnblock(trace_ticks_t event_time, zx_koid_t thread, uin
 
 bool Importer::HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread,
                                    uint32_t event_name_id, uint32_t group, bool cpu_trace) {
-  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(static_cast<trace_cpu_number_t>(thread))
+                : GetThreadRef(thread);
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_string_ref_t category_ref = GetCategoryForGroup(group);
   trace_context_write_duration_begin_event_record(context_, event_time, &thread_ref, &category_ref,
@@ -1069,7 +1077,9 @@ bool Importer::HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread,
 bool Importer::HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread,
                                    uint32_t event_name_id, uint32_t group, bool cpu_trace,
                                    uint64_t arg0, uint64_t arg1) {
-  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(static_cast<trace_cpu_number_t>(thread))
+                : GetThreadRef(thread);
   trace_arg_t args[] = {trace_make_arg(arg0_name_ref_, trace_make_uint64_arg_value(arg0)),
                         trace_make_arg(arg1_name_ref_, trace_make_uint64_arg_value(arg1))};
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
@@ -1082,7 +1092,9 @@ bool Importer::HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread,
 
 bool Importer::HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                                  uint32_t group, bool cpu_trace) {
-  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(static_cast<trace_cpu_number_t>(thread))
+                : GetThreadRef(thread);
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_string_ref_t category_ref = GetCategoryForGroup(group);
   trace_context_write_duration_end_event_record(context_, event_time, &thread_ref, &category_ref,
@@ -1093,7 +1105,9 @@ bool Importer::HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread, uin
 
 bool Importer::HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                                  uint32_t group, bool cpu_trace, uint64_t arg0, uint64_t arg1) {
-  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(static_cast<trace_cpu_number_t>(thread))
+                : GetThreadRef(thread);
   trace_arg_t args[] = {trace_make_arg(arg0_name_ref_, trace_make_uint64_arg_value(arg0)),
                         trace_make_arg(arg1_name_ref_, trace_make_uint64_arg_value(arg1))};
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
@@ -1106,7 +1120,9 @@ bool Importer::HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread, uin
 
 bool Importer::HandleFlowBegin(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                                uint32_t group, bool cpu_trace, trace_flow_id_t flow_id) {
-  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(static_cast<trace_cpu_number_t>(thread))
+                : GetThreadRef(thread);
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_string_ref_t category_ref = GetCategoryForGroup(group);
   trace_context_write_flow_begin_event_record(context_, event_time, &thread_ref, &category_ref,
@@ -1117,7 +1133,9 @@ bool Importer::HandleFlowBegin(trace_ticks_t event_time, zx_koid_t thread, uint3
 
 bool Importer::HandleFlowEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                              uint32_t group, bool cpu_trace, trace_flow_id_t flow_id) {
-  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(static_cast<trace_cpu_number_t>(thread))
+                : GetThreadRef(thread);
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_string_ref_t category_ref = GetCategoryForGroup(group);
   trace_context_write_flow_end_event_record(context_, event_time, &thread_ref, &category_ref,
@@ -1128,7 +1146,9 @@ bool Importer::HandleFlowEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_
 
 bool Importer::HandleFlowStep(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                               uint32_t group, bool cpu_trace, trace_flow_id_t flow_id) {
-  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(static_cast<trace_cpu_number_t>(thread))
+                : GetThreadRef(thread);
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_string_ref_t category_ref = GetCategoryForGroup(group);
   trace_context_write_flow_step_event_record(context_, event_time, &thread_ref, &category_ref,
@@ -1140,7 +1160,9 @@ bool Importer::HandleFlowStep(trace_ticks_t event_time, zx_koid_t thread, uint32
 bool Importer::HandleCounter(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                              uint32_t group, bool cpu_trace, trace_counter_id_t counter_id,
                              int64_t value) {
-  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(static_cast<trace_cpu_number_t>(thread))
+                : GetThreadRef(thread);
   trace_arg_t args[] = {trace_make_arg(arg0_name_ref_, trace_make_int64_arg_value(value))};
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_string_ref_t category_ref = GetCategoryForGroup(group);

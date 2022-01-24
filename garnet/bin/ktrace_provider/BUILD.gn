@@ -21,9 +21,6 @@ source_set("importer") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {
@@ -52,9 +49,6 @@ executable("bin") {
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/system/ulib/zircon-internal",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_package_with_single_component("ktrace_provider") {
@@ -81,9 +75,6 @@ executable("importer_test_app") {
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-test-utils",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("ktrace_provider_tests") {

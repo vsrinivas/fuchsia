@@ -594,10 +594,6 @@ config("Wno-conversion") {
   # $ scripts/gn/trim_visibility.py --target="//build/config:Wno-conversion"
   visibility = [
     "//examples/fidl/llcpp/unittests:*",
-    "//garnet/bin/cpuperf_provider:*",
-    "//garnet/bin/insntrace:*",
-    "//garnet/bin/insntrace/tests:*",
-    "//garnet/bin/ktrace_provider:*",
     "//garnet/bin/trace:*",
     "//garnet/bin/trace/tests:*",
     "//garnet/bin/trace_manager:*",

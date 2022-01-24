@@ -43,7 +43,7 @@ void LogImporter::Start() {
   }
 
   start_time_ = zx_clock_get_monotonic();
-  time_scale_ = zx_ticks_per_second() / 1'000'000'000.0;
+  time_scale_ = static_cast<double>(zx_ticks_per_second()) / 1'000'000'000.0;
 
   wait_.set_object(log_.get());
   wait_.set_trigger(ZX_LOG_READABLE);
@@ -82,8 +82,10 @@ void LogImporter::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait, 
     if (auto context = trace_acquire_context()) {
       trace_thread_ref_t thread_ref =
           trace_make_inline_thread_ref(log_record->pid, log_record->tid);
-      trace_context_write_log_record(context, log_record->timestamp * time_scale_, &thread_ref,
-                                     log_record->data, log_record->datalen);
+      trace_context_write_log_record(
+          context,
+          static_cast<trace_ticks_t>(static_cast<double>(log_record->timestamp) * time_scale_),
+          &thread_ref, log_record->data, log_record->datalen);
       trace_release_context(context);
     }
   }
