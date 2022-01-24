@@ -394,6 +394,33 @@ impl FileOps for MagmaFile {
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_CREATE_SEMAPHORE as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_QUERY_RETURNS_BUFFER2 => {
+                let (control, mut response): (
+                    virtio_magma_query_returns_buffer2_ctrl_t,
+                    virtio_magma_query_returns_buffer2_resp_t,
+                ) = read_control_and_response(current_task, &command)?;
+
+                let mut handle_out = 0;
+                response.result_return = unsafe {
+                    magma_query_returns_buffer2(
+                        control.device as magma_device_t,
+                        control.id,
+                        &mut handle_out,
+                    ) as u64
+                };
+                let vmo = unsafe { zx::Vmo::from(zx::Handle::from_raw(handle_out)) };
+                let file = Anon::new_file(
+                    anon_fs(current_task.kernel()),
+                    Box::new(VmoFileObject::new(Arc::new(vmo))),
+                    OpenFlags::RDWR,
+                );
+                let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
+
+                response.handle_out = fd.raw() as usize;
+                response.hdr.type_ =
+                    virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_QUERY_RETURNS_BUFFER2 as u32;
+                current_task.mm.write_object(UserRef::new(response_address), &response)
+            }
             t => {
                 log::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)
