@@ -50,7 +50,7 @@ class LoadGeneratorThread : public fbl::SinglyLinkedListable<std::unique_ptr<Loa
   static volatile bool quit_;
 
   unsigned int seed_;
-  bool thread_started_;
+  bool thread_started_{false};
   thrd_t thread_;
   volatile double accumulator_;
 };
