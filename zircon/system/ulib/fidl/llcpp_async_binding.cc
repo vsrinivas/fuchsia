@@ -378,6 +378,7 @@ void AsyncServerBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_
 
         // If required, send the epitaph.
         if (info.reason() == Reason::kClose) {
+          ZX_ASSERT(server_end.type() == FIDL_TRANSPORT_TYPE_CHANNEL);
           info = UnbindInfo::Close(fidl_epitaph_write(server_end.handle(), info.status()));
         }
 
