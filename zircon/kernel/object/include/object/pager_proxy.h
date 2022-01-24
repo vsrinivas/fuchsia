@@ -95,7 +95,10 @@ class PagerProxy : public PageProvider,
   PortPacket packet_ = PortPacket(nullptr, this);
   // Bool indicating whether or not packet_ is currently queued in the port.
   bool packet_busy_ TA_GUARDED(mtx_) = false;
-  // The page_request_t which corresponds to the current packet_.
+  // The page_request_t which corresponds to the current packet_. Can be set to nullptr if the
+  // PageSource calls ClearAsyncRequest to take back the request while the packet is still busy -
+  // this can happen if ClearAsyncRequest races with a PagerProxy::Free coming from port dequeue.
+  // More details about this race can be found in fxbug.dev/91935.
   page_request_t* active_request_ TA_GUARDED(mtx_) = nullptr;
   // Queue of page_request_t's that have come in while packet_ is busy. The
   // head of this queue is sent to the port when packet_ is freed.

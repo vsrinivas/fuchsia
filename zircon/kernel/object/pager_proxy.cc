@@ -60,6 +60,7 @@ void PagerProxy::QueuePacketLocked(page_request_t* request) {
     return;
   }
 
+  DEBUG_ASSERT(active_request_ == nullptr);
   packet_busy_ = true;
   active_request_ = request;
 
@@ -118,6 +119,11 @@ void PagerProxy::ClearAsyncRequest(page_request_t* request) {
       VM_KTRACE_DURATION(1, "page_request_queue", active_request_->offset, active_request_->length);
       VM_KTRACE_FLOW_END(1, "page_request_queue", reinterpret_cast<uintptr_t>(&packet_));
     }
+    // This request is being taken back by the PageSource, so we can't hold a reference to it
+    // anymore. This will remain null until OnPacketFreedLocked is called (and a new packet gets
+    // queued as a result), either by us here below or by PagerProxy::Free, since packet_busy_ is
+    // true and will be true until OnPacketFreedLocked is called.
+    active_request_ = nullptr;
     // Condition on whether or not we actually cancel the packet, to make sure
     // we don't race with a call to PagerProxy::Free.
     if (port_->CancelQueued(&packet_)) {
@@ -217,9 +223,14 @@ void PagerProxy::Free(PortPacket* packet) {
 
   Guard<Mutex> guard{&mtx_};
   if (active_request_ != &complete_request_) {
-    // Trace flow events require an enclosing duration.
-    VM_KTRACE_DURATION(1, "page_request_queue", active_request_->offset, active_request_->length);
-    VM_KTRACE_FLOW_END(1, "page_request_queue", reinterpret_cast<uintptr_t>(packet));
+    // This request is still active, i.e. it has not been taken back by the PageSource with
+    // ClearAsyncRequest. So we are responsible for relinquishing ownership of the request.
+    if (active_request_ != nullptr) {
+      // Trace flow events require an enclosing duration.
+      VM_KTRACE_DURATION(1, "page_request_queue", active_request_->offset, active_request_->length);
+      VM_KTRACE_FLOW_END(1, "page_request_queue", reinterpret_cast<uintptr_t>(packet));
+      active_request_ = nullptr;
+    }
     OnPacketFreedLocked();
   } else {
     // Freeing the complete_request_ indicates we have completed a pending action that might have
@@ -239,8 +250,10 @@ void PagerProxy::Free(PortPacket* packet) {
 }
 
 void PagerProxy::OnPacketFreedLocked() {
+  // We are here because the active request has been freed. And packet_busy_ is still true, so no
+  // new request will have become active yet.
+  DEBUG_ASSERT(active_request_ == nullptr);
   packet_busy_ = false;
-  active_request_ = nullptr;
   if (!list_is_empty(&pending_requests_)) {
     QueuePacketLocked(list_remove_head_type(&pending_requests_, page_request, provider_node));
   }
