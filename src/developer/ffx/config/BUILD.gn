@@ -13,21 +13,14 @@ if (is_host) {
 
     deps = [
       "macro:config-macros",
-      "//src/connectivity/overnet/lib/hoist",
-
-      # "//src/developer/ffx/core:lib",
       "//src/developer/ffx/lib/errors:lib",
       "//src/lib/analytics/rust:lib",
-      "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:async-lock",
-      "//third_party/rust_crates:async-trait",
-      "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:home",
       "//third_party/rust_crates:lazy_static",
-      "//third_party/rust_crates:libc",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:serde",
@@ -36,7 +29,8 @@ if (is_host) {
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:thiserror",
     ]
-    non_rust_deps = [ "//third_party/boringssl" ]
+
+    test_deps = [ "//src/lib/fuchsia-async" ]
 
     sources = [
       "src/api/mod.rs",

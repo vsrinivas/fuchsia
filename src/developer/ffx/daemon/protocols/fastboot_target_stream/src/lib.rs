@@ -5,8 +5,8 @@
 use {
     anyhow::{anyhow, Result},
     async_trait::async_trait,
-    ffx_core::TryStreamUtilExt,
     ffx_daemon_target::{fastboot::find_devices, FASTBOOT_CHECK_INTERVAL},
+    ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fuchsia_async::Task,

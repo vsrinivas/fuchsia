@@ -5,7 +5,7 @@ use {
     anyhow::{anyhow, Context as _, Result},
     async_lock::Mutex,
     async_trait::async_trait,
-    ffx_core::TryStreamUtilExt,
+    ffx_stream_util::TryStreamUtilExt,
     fuchsia_async::Task,
     futures::prelude::*,
     pin_project::pin_project,

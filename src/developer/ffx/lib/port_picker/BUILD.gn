@@ -4,14 +4,24 @@
 
 import("//build/rust/rustc_library.gni")
 
-rustc_library("port_picker") {
-  name = "port_picker"
-  with_unit_tests = true
-  edition = "2018"
-  sources = [ "src/lib.rs" ]
+if (is_host) {
+  rustc_library("lib") {
+    name = "port_picker"
+    with_unit_tests = true
+    edition = "2018"
+    sources = [ "src/lib.rs" ]
+  }
 }
 
 group("tests") {
   testonly = true
   deps = [ ":lib_test($host_toolchain)" ]
+}
+
+group("port_picker") {
+  testonly = true
+  deps = [
+    ":lib($host_toolchain)",
+    ":tests",
+  ]
 }

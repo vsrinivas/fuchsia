@@ -172,11 +172,11 @@ template("ffx_plugin") {
       source_root = args_source_root
       deps = args_deps + [
                "//src/developer/ffx/core:lib",
-               "//src/developer/ffx/config:lib",
-               "//third_party/rust_crates:anyhow",
                "//third_party/rust_crates:argh",
+
+               # TODO: remove the implicit anyhow dependency, have args_deps declare it instead.
+               "//third_party/rust_crates:anyhow",
              ]
-      non_rust_deps = [ "//third_party/boringssl" ]
 
       assert(
           defined(invoker.args_sources),

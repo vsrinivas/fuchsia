@@ -4,7 +4,7 @@
 use {
     anyhow::{anyhow, Result},
     async_trait::async_trait,
-    ffx_core::TryStreamUtilExt,
+    ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fuchsia_async::Task,

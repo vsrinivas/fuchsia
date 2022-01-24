@@ -6,6 +6,7 @@ use analytics::{add_custom_event, init, make_batch, metrics_event_batch::Metrics
 use anyhow::Result;
 use fidl_fuchsia_developer_bridge::VersionInfo;
 use fuchsia_async::TimeoutExt;
+use log;
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 

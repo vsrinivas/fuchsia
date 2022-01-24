@@ -10,6 +10,8 @@ ffx_plugin("ffx_target_default") {
 
   args_sources = [ "src/args.rs" ]
 
+  args_deps = [ "//src/developer/ffx/config:lib" ]
+
   sources = [ "src/lib.rs" ]
 
   deps = [

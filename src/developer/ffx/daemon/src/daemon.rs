@@ -8,8 +8,6 @@ use {
     ascendd::Ascendd,
     async_trait::async_trait,
     ffx_build_version::build_info,
-    ffx_core::metrics::{add_daemon_launch_event, add_daemon_metrics_event},
-    ffx_core::TryStreamUtilExt,
     ffx_daemon_core::events::{self, EventHandler},
     ffx_daemon_events::{
         DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo, WireTrafficType,
@@ -18,6 +16,8 @@ use {
     ffx_daemon_target::target::Target,
     ffx_daemon_target::target_collection::TargetCollection,
     ffx_daemon_target::zedboot::zedboot_discovery,
+    ffx_metrics::{add_daemon_launch_event, add_daemon_metrics_event},
+    ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, ProtocolMarker, RequestStream},
     fidl_fuchsia_developer_bridge::{
         self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,

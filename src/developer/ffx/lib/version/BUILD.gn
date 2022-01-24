@@ -22,3 +22,11 @@ group("tests") {
     "build:truncate($host_toolchain)",
   ]
 }
+
+group("version") {
+  testonly = true
+  deps = [
+    ":lib",
+    ":tests",
+  ]
+}

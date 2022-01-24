@@ -9,11 +9,11 @@ use {
     async_utils::async_once::Once,
     buildid,
     errors::{ffx_bail, ffx_error, FfxError, ResultExt as _},
-    ffx_core::metrics::{add_ffx_launch_and_timing_events, init_metrics_svc},
     ffx_core::Injector,
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
     ffx_lib_args::{from_env, redact_arg_values, Ffx},
     ffx_lib_sub_command::Subcommand,
+    ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc},
     ffx_writer::Writer,
     fidl::endpoints::{create_proxy, ProtocolMarker},
     fidl_fuchsia_developer_bridge::{

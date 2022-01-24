@@ -64,6 +64,11 @@ if (is_host) {
 
     args_sources = [ "src/args.rs" ]
 
+    args_deps = [
+      "//src/developer/ffx/config:lib",
+      "//src/developer/ffx/lib/writer:lib",
+    ]
+
     sources = [
       "src/lib.rs",
       "src/main.rs",

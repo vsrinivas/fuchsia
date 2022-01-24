@@ -6,10 +6,10 @@ use {
     crate::reboot,
     anyhow::{anyhow, Context as _, Result},
     diagnostics::{get_streaming_min_timestamp, run_diagnostics_streaming},
-    ffx_core::TryStreamUtilExt,
     ffx_daemon_events::TargetEvent,
     ffx_daemon_target::logger::streamer::GenericDiagnosticsStreamer,
     ffx_daemon_target::target::Target,
+    ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_bridge::{self as bridge},
     fuchsia_async::{

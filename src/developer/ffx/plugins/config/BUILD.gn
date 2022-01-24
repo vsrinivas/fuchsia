@@ -9,7 +9,11 @@ ffx_plugin("ffx_config_plugin") {
   edition = "2018"
   with_unit_tests = true
   args_with_unit_tests = true
-  args_deps = [ "//third_party/rust_crates:serde_json" ]
+  args_deps = [
+    "//src/developer/ffx/config:lib",
+    "//third_party/rust_crates:serde_json",
+  ]
+
   deps = [
     "//src/lib/analytics/rust:lib",
     "//third_party/rust_crates:serde",
