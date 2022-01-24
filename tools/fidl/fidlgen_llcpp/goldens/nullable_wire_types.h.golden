@@ -135,10 +135,11 @@ class SimpleUnion {
     envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
-  int32_t& mutable_a() {
+  int32_t& a() {
     ZX_ASSERT(ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kA);
     return envelope_.As<int32_t>().get_data();
   }
+  int32_t& mutable_a() { return a(); }
   const int32_t& a() const {
     ZX_ASSERT(ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kA);
     return envelope_.As<int32_t>().get_data();
@@ -158,10 +159,11 @@ class SimpleUnion {
     envelope_.As<float>().set_data(std::move(elem));
   }
 
-  float& mutable_b() {
+  float& b() {
     ZX_ASSERT(ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kB);
     return envelope_.As<float>().get_data();
   }
+  float& mutable_b() { return b(); }
   const float& b() const {
     ZX_ASSERT(ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kB);
     return envelope_.As<float>().get_data();

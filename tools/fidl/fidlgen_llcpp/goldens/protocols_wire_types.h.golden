@@ -149,14 +149,17 @@ class WithErrorSyntaxHandleInResultResult {
         .set_data(std::move(elem));
   }
 
-  ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse&
-  mutable_response() {
+  ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse& response() {
     ZX_ASSERT(ordinal_ ==
               ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
                   Ordinal::kResponse);
     return envelope_
         .As<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>()
         .get_data();
+  }
+  ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse&
+  mutable_response() {
+    return response();
   }
   const ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse&
   response() const {
@@ -184,12 +187,13 @@ class WithErrorSyntaxHandleInResultResult {
     envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
-  uint32_t& mutable_err() {
+  uint32_t& err() {
     ZX_ASSERT(ordinal_ ==
               ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
                   Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
+  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
@@ -304,14 +308,17 @@ class WithErrorSyntaxResponseAsStructResult {
             allocator, std::forward<Args>(args)...));
   }
 
-  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse&
-  mutable_response() {
+  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse& response() {
     ZX_ASSERT(ordinal_ ==
               ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
                   Ordinal::kResponse);
     return envelope_
         .As<::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>()
         .get_data();
+  }
+  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse&
+  mutable_response() {
+    return response();
   }
   const ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse&
   response() const {
@@ -339,12 +346,13 @@ class WithErrorSyntaxResponseAsStructResult {
     envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
-  uint32_t& mutable_err() {
+  uint32_t& err() {
     ZX_ASSERT(ordinal_ ==
               ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
                   Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
+  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
@@ -432,14 +440,17 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
         .set_data(std::move(elem));
   }
 
-  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse&
-  mutable_response() {
+  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse& response() {
     ZX_ASSERT(ordinal_ ==
               ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
                   Ordinal::kResponse);
     return envelope_
         .As<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>()
         .get_data();
+  }
+  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse&
+  mutable_response() {
+    return response();
   }
   const ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse&
   response() const {
@@ -467,12 +478,13 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
     envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
-  uint32_t& mutable_err() {
+  uint32_t& err() {
     ZX_ASSERT(ordinal_ ==
               ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
                   Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
+  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
@@ -542,10 +554,11 @@ class TheUnion {
     envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
-  uint32_t& mutable_v() {
+  uint32_t& v() {
     ZX_ASSERT(ordinal_ == ::test_protocols::wire::TheUnion::Ordinal::kV);
     return envelope_.As<uint32_t>().get_data();
   }
+  uint32_t& mutable_v() { return v(); }
   const uint32_t& v() const {
     ZX_ASSERT(ordinal_ == ::test_protocols::wire::TheUnion::Ordinal::kV);
     return envelope_.As<uint32_t>().get_data();
@@ -619,14 +632,17 @@ class WithErrorSyntaxErrorAsEnumResult {
         .set_data(std::move(elem));
   }
 
-  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse&
-  mutable_response() {
+  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse& response() {
     ZX_ASSERT(ordinal_ ==
               ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
                   Ordinal::kResponse);
     return envelope_
         .As<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>()
         .get_data();
+  }
+  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse&
+  mutable_response() {
+    return response();
   }
   const ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse& response()
       const {
@@ -655,11 +671,12 @@ class WithErrorSyntaxErrorAsEnumResult {
     envelope_.As<::test_protocols::wire::ErrorEnum>().set_data(std::move(elem));
   }
 
-  ::test_protocols::wire::ErrorEnum& mutable_err() {
+  ::test_protocols::wire::ErrorEnum& err() {
     ZX_ASSERT(ordinal_ == ::test_protocols::wire::
                               WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr);
     return envelope_.As<::test_protocols::wire::ErrorEnum>().get_data();
   }
+  ::test_protocols::wire::ErrorEnum& mutable_err() { return err(); }
   const ::test_protocols::wire::ErrorEnum& err() const {
     ZX_ASSERT(ordinal_ == ::test_protocols::wire::
                               WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr);

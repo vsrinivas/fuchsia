@@ -96,7 +96,7 @@ class DirentIteratorImpl {
     if (result->result.is_err()) {
       return result->result.err();
     }
-    auto& response = result->result.mutable_response();
+    auto& response = result->result.response();
     fidl_entries_ = response.entries;
     return ZX_OK;
   }

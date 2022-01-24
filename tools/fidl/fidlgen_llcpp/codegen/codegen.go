@@ -33,11 +33,8 @@ func closeHandles(argumentName string, argumentValue string, argumentType cpp.Ty
 	}
 	name := argumentName
 	value := argumentValue
-	if access {
+	if access || mutableAccess {
 		name = fmt.Sprintf("%s()", name)
-		value = name
-	} else if mutableAccess {
-		name = fmt.Sprintf("mutable_%s()", name)
 		value = name
 	}
 

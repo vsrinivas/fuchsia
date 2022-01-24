@@ -177,14 +177,14 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       return zxio_dir_init(storage, node.TakeChannel().release());
     }
     case fio::wire::NodeInfo::Tag::kFile: {
-      auto& file = info.mutable_file();
+      auto& file = info.file();
       zx::event event = std::move(file.event);
       zx::stream stream = std::move(file.stream);
       return zxio_file_init(storage, node.TakeChannel().release(), event.release(),
                             stream.release());
     }
     case fio::wire::NodeInfo::Tag::kPipe: {
-      auto& pipe = info.mutable_pipe();
+      auto& pipe = info.pipe();
       zx::socket socket = std::move(pipe.socket);
       zx_info_socket_t socket_info;
       zx_status_t status =
@@ -198,12 +198,12 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       return zxio_remote_init(storage, node.TakeChannel().release(), ZX_HANDLE_INVALID);
     }
     case fio::wire::NodeInfo::Tag::kTty: {
-      auto& tty = info.mutable_tty();
+      auto& tty = info.tty();
       zx::eventpair event = std::move(tty.event);
       return zxio_remote_init(storage, node.TakeChannel().release(), event.release());
     }
     case fio::wire::NodeInfo::Tag::kVmofile: {
-      auto& file = info.mutable_vmofile();
+      auto& file = info.vmofile();
       auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
       auto result = fidl::WireCall(control.borrow())->Seek(0, fio::wire::SeekOrigin::kStart);
       zx_status_t status = result.status();

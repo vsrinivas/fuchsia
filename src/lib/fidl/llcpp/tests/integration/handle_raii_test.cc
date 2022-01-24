@@ -87,10 +87,10 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     test::wire::HandleUnion u;
     if (request->field == 1) {
       u.set_h1(zx::event());
-      zx::event::create(0, &u.mutable_h1());
+      zx::event::create(0, &u.h1());
     } else if (request->field == 2) {
       u.set_h2(test::wire::HandleStruct());
-      zx::event::create(0, &u.mutable_h2().h);
+      zx::event::create(0, &u.h2().h);
     }
     completer.Reply(std::move(u));
   }
@@ -103,7 +103,7 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
       u.u.set_h1(std::move(event));
     } else if (request->field == 2) {
       u.u.set_h2(test::wire::HandleStruct());
-      zx::event::create(0, &u.u.mutable_h2().h);
+      zx::event::create(0, &u.u.h2().h);
     }
     completer.Reply(std::move(u));
   }
@@ -159,7 +159,7 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
       u.set_h1(std::move(event));
     } else if (request->field == 2) {
       u.set_h2(test::wire::HandleStruct());
-      zx::event::create(0, &u.mutable_h2().h);
+      zx::event::create(0, &u.h2().h);
     }
     completer.Reply(std::move(u));
   }
@@ -175,7 +175,7 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
         u->u.set_h1(std::move(event));
       } else if (request->field == 2) {
         u->u.set_h2(test::wire::HandleStruct());
-        zx::event::create(0, &u->u.mutable_h2().h);
+        zx::event::create(0, &u->u.h2().h);
       }
       completer.Reply(u);
     } else {
@@ -228,7 +228,7 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
         reply.u.set_h1(std::move(event));
       } else if (request->field == 2) {
         reply.u.set_h2(test::wire::HandleStruct());
-        zx::event::create(0, &reply.u.mutable_h2().h);
+        zx::event::create(0, &reply.u.h2().h);
       }
     }
     completer.Reply(std::move(reply));

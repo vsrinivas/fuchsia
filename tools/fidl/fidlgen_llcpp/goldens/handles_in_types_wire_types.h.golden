@@ -177,11 +177,12 @@ class UnionWithHandle {
     envelope_.As<::zx::vmo>().set_data(std::move(elem));
   }
 
-  ::zx::vmo& mutable_h() {
+  ::zx::vmo& h() {
     ZX_ASSERT(ordinal_ ==
               ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH);
     return envelope_.As<::zx::vmo>().get_data();
   }
+  ::zx::vmo& mutable_h() { return h(); }
   const ::zx::vmo& h() const {
     ZX_ASSERT(ordinal_ ==
               ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH);

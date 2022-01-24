@@ -117,22 +117,22 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
 
   switch (info.Which()) {
     case fio::wire::NodeInfo::Tag::kDatagramSocket: {
-      auto& socket = info.mutable_datagram_socket();
+      auto& socket = info.datagram_socket();
       return fdio_datagram_socket_create(
           std::move(socket.event), fidl::ClientEnd<fsocket::DatagramSocket>(node.TakeChannel()));
     }
     case fio::wire::NodeInfo::Tag::kStreamSocket: {
-      auto& socket = info.mutable_stream_socket().socket;
+      auto& socket = info.stream_socket().socket;
       return fdio_stream_socket_create(std::move(socket),
                                        fidl::ClientEnd<fsocket::StreamSocket>(node.TakeChannel()));
     }
     case fio::wire::NodeInfo::Tag::kRawSocket: {
-      auto& socket = info.mutable_raw_socket();
+      auto& socket = info.raw_socket();
       return fdio_raw_socket_create(std::move(socket.event),
                                     fidl::ClientEnd<frawsocket::Socket>(node.TakeChannel()));
     }
     case fio::wire::NodeInfo::Tag::kPacketSocket: {
-      auto& socket = info.mutable_packet_socket();
+      auto& socket = info.packet_socket();
       return fdio_packet_socket_create(std::move(socket.event),
                                        fidl::ClientEnd<fpacketsocket::Socket>(node.TakeChannel()));
     }

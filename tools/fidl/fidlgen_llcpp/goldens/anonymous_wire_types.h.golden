@@ -408,11 +408,12 @@ class UnionMember {
     envelope_.As<uint8_t>().set_data(std::move(elem));
   }
 
-  uint8_t& mutable_union_data() {
+  uint8_t& union_data() {
     ZX_ASSERT(ordinal_ ==
               ::test_anonymous::wire::UnionMember::Ordinal::kUnionData);
     return envelope_.As<uint8_t>().get_data();
   }
+  uint8_t& mutable_union_data() { return union_data(); }
   const uint8_t& union_data() const {
     ZX_ASSERT(ordinal_ ==
               ::test_anonymous::wire::UnionMember::Ordinal::kUnionData);
@@ -493,10 +494,11 @@ class Expression {
         ::fidl::ObjectView<uint64_t>(allocator, std::forward<Args>(args)...));
   }
 
-  uint64_t& mutable_value() {
+  uint64_t& value() {
     ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kValue);
     return envelope_.As<uint64_t>().get_data();
   }
+  uint64_t& mutable_value() { return value(); }
   const uint64_t& value() const {
     ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kValue);
     return envelope_.As<uint64_t>().get_data();
@@ -534,10 +536,11 @@ class Expression {
         allocator, std::forward<Args>(args)...));
   }
 
-  ::test_anonymous::wire::OverrideTest& mutable_bin_op() {
+  ::test_anonymous::wire::OverrideTest& bin_op() {
     ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kBinOp);
     return envelope_.As<::test_anonymous::wire::OverrideTest>().get_data();
   }
+  ::test_anonymous::wire::OverrideTest& mutable_bin_op() { return bin_op(); }
   const ::test_anonymous::wire::OverrideTest& bin_op() const {
     ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kBinOp);
     return envelope_.As<::test_anonymous::wire::OverrideTest>().get_data();
@@ -581,12 +584,15 @@ class Expression {
             allocator, std::forward<Args>(args)...));
   }
 
-  ::test_anonymous::wire::FunctionApplication& mutable_function_application() {
+  ::test_anonymous::wire::FunctionApplication& function_application() {
     ZX_ASSERT(
         ordinal_ ==
         ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication);
     return envelope_.As<::test_anonymous::wire::FunctionApplication>()
         .get_data();
+  }
+  ::test_anonymous::wire::FunctionApplication& mutable_function_application() {
+    return function_application();
   }
   const ::test_anonymous::wire::FunctionApplication& function_application()
       const {
@@ -665,12 +671,15 @@ class SomeProtocolSomeMethodResult {
         .set_data(std::move(elem));
   }
 
-  ::test_anonymous::wire::SomeProtocolSomeMethodResponse& mutable_response() {
+  ::test_anonymous::wire::SomeProtocolSomeMethodResponse& response() {
     ZX_ASSERT(ordinal_ == ::test_anonymous::wire::SomeProtocolSomeMethodResult::
                               Ordinal::kResponse);
     return envelope_
         .As<::test_anonymous::wire::SomeProtocolSomeMethodResponse>()
         .get_data();
+  }
+  ::test_anonymous::wire::SomeProtocolSomeMethodResponse& mutable_response() {
+    return response();
   }
   const ::test_anonymous::wire::SomeProtocolSomeMethodResponse& response()
       const {
@@ -699,12 +708,15 @@ class SomeProtocolSomeMethodResult {
         .set_data(std::move(elem));
   }
 
-  ::test_anonymous::wire::SomeProtocolSomeMethodError& mutable_err() {
+  ::test_anonymous::wire::SomeProtocolSomeMethodError& err() {
     ZX_ASSERT(
         ordinal_ ==
         ::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal::kErr);
     return envelope_.As<::test_anonymous::wire::SomeProtocolSomeMethodError>()
         .get_data();
+  }
+  ::test_anonymous::wire::SomeProtocolSomeMethodError& mutable_err() {
+    return err();
   }
   const ::test_anonymous::wire::SomeProtocolSomeMethodError& err() const {
     ZX_ASSERT(

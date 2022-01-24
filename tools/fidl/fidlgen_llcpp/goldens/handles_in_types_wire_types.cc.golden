@@ -86,7 +86,7 @@ void ::test_handlesintypes::wire::UnionWithHandle::_Move(
 void ::test_handlesintypes::wire::UnionWithHandle::_CloseHandles() {
   switch (ordinal_) {
     case ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH: {
-      mutable_h().reset();
+      h().reset();
       break;
     }
     default:

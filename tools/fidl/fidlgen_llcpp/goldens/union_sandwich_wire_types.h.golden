@@ -81,12 +81,13 @@ class UnionSize8Alignment4 {
     envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
-  uint32_t& mutable_variant() {
+  uint32_t& variant() {
     ZX_ASSERT(
         ordinal_ ==
         ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant);
     return envelope_.As<uint32_t>().get_data();
   }
+  uint32_t& mutable_variant() { return variant(); }
   const uint32_t& variant() const {
     ZX_ASSERT(
         ordinal_ ==
@@ -173,12 +174,13 @@ class UnionSize36Alignment4 {
         allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl::Array<uint8_t, 32>& mutable_variant() {
+  ::fidl::Array<uint8_t, 32>& variant() {
     ZX_ASSERT(
         ordinal_ ==
         ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant);
     return envelope_.As<::fidl::Array<uint8_t, 32>>().get_data();
   }
+  ::fidl::Array<uint8_t, 32>& mutable_variant() { return variant(); }
   const ::fidl::Array<uint8_t, 32>& variant() const {
     ZX_ASSERT(
         ordinal_ ==
@@ -265,12 +267,13 @@ class UnionSize12Alignment4 {
         allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl::Array<uint8_t, 6>& mutable_variant() {
+  ::fidl::Array<uint8_t, 6>& variant() {
     ZX_ASSERT(
         ordinal_ ==
         ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant);
     return envelope_.As<::fidl::Array<uint8_t, 6>>().get_data();
   }
+  ::fidl::Array<uint8_t, 6>& mutable_variant() { return variant(); }
   const ::fidl::Array<uint8_t, 6>& variant() const {
     ZX_ASSERT(
         ordinal_ ==
@@ -363,12 +366,15 @@ class UnionSize24Alignment8 {
             allocator, std::forward<Args>(args)...));
   }
 
-  ::test_unionsandwich::wire::StructSize16Alignment8& mutable_variant() {
+  ::test_unionsandwich::wire::StructSize16Alignment8& variant() {
     ZX_ASSERT(
         ordinal_ ==
         ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant);
     return envelope_.As<::test_unionsandwich::wire::StructSize16Alignment8>()
         .get_data();
+  }
+  ::test_unionsandwich::wire::StructSize16Alignment8& mutable_variant() {
+    return variant();
   }
   const ::test_unionsandwich::wire::StructSize16Alignment8& variant() const {
     ZX_ASSERT(

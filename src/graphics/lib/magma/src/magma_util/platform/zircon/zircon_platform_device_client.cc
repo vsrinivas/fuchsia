@@ -58,7 +58,7 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
     if (result->result.is_err())
       return DRETF(false, "Got error response: %d", result->result.err());
 
-    zx::vmo buffer = std::move(result->result.mutable_response().buffer);
+    zx::vmo buffer = std::move(result->result.response().buffer);
     *buffer_out = buffer.release();
 
     return true;

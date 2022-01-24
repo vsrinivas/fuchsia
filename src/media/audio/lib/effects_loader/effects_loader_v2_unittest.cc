@@ -59,7 +59,7 @@ TEST_F(EffectsLoaderV2Test, CreateEffect) {
   ASSERT_TRUE(config_result.ok());
 
   // Check a few fields to make sure the config matches expectations.
-  auto& config = config_result->result.mutable_response().processor_configuration;
+  auto& config = config_result->result.response().processor_configuration;
   ASSERT_TRUE(config.has_inputs());
   ASSERT_TRUE(config.has_outputs());
   EXPECT_EQ(config.inputs().count(), 1u);

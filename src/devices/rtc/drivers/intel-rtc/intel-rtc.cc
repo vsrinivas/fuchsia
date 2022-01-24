@@ -253,7 +253,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
     return pio.ok() ? pio->result.err() : pio.status();
   }
 
-  zx::resource io_port = std::move(pio->result.mutable_response().pio);
+  zx::resource io_port = std::move(pio->result.response().pio);
   zx_info_resource_t resource_info;
   zx_status_t status =
       io_port.get_info(ZX_INFO_RESOURCE, &resource_info, sizeof(resource_info), nullptr, nullptr);
@@ -277,9 +277,8 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  std::unique_ptr<RtcDevice> rtc =
-      std::make_unique<RtcDevice>(parent, std::move(pio->result.mutable_response().pio),
-                                  resource_info.base, resource_info.size);
+  std::unique_ptr<RtcDevice> rtc = std::make_unique<RtcDevice>(
+      parent, std::move(pio->result.response().pio), resource_info.base, resource_info.size);
   auto time = rtc->ReadTime();
   auto new_time = rtc::SanitizeRtc(parent, time);
   rtc->WriteTime(new_time);

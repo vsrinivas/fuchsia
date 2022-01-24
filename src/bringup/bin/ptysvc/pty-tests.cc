@@ -82,7 +82,7 @@ zx::eventpair GetEvent(Connection* conn) {
   if (result.status() != ZX_OK) {
     return {};
   }
-  zx::eventpair event = std::move(result->info.mutable_tty().event);
+  zx::eventpair event = std::move(result->info.tty().event);
   return event;
 }
 

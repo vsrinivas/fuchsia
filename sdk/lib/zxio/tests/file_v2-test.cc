@@ -95,7 +95,7 @@ class FileV2 : public zxtest::Test {
     zx::stream stream;
     if (result->info.has_representation()) {
       EXPECT_TRUE(result->info.representation().is_file());
-      fio2::wire::FileInfo& file = result->info.representation().mutable_file();
+      fio2::wire::FileInfo& file = result->info.representation().file();
       if (file.has_observer()) {
         observer = std::move(file.observer());
       }
@@ -138,7 +138,7 @@ class TestServerEvent final : public TestServerBase {
       fio2::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator,
                               fio2::wire::Representation::WithFile(allocator, allocator));
-      info.representation().mutable_file().set_observer(std::move(client_observer));
+      info.representation().file().set_observer(std::move(client_observer));
       completer.Reply(std::move(info));
       return;
     }
@@ -308,7 +308,7 @@ class TestServerStream final : public TestServerBase {
       fio2::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator,
                               fio2::wire::Representation::WithFile(allocator, allocator));
-      info.representation().mutable_file().set_stream(std::move(client_stream));
+      info.representation().file().set_stream(std::move(client_stream));
       completer.Reply(std::move(info));
       return;
     }

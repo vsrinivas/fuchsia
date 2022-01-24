@@ -94,8 +94,8 @@ class File : public zxtest::Test {
 
     EXPECT_TRUE(result->info.is_file());
     return zxio_file_init(&file_, client_end.value().TakeChannel().release(),
-                          result->info.mutable_file().event.release(),
-                          result->info.mutable_file().stream.release());
+                          result->info.file().event.release(),
+                          result->info.file().stream.release());
   }
 
   void TearDown() override {

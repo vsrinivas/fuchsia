@@ -538,7 +538,7 @@ void DriverHostControllerConnection::CreateDevice(CreateDeviceRequestView reques
 
 StatusOrConn DriverHostControllerConnection::CreateNewProxyDevice(
     CreateDeviceRequestView& request) {
-  auto& proxy = request->type.mutable_new_proxy();
+  auto& proxy = request->type.new_proxy();
 
   auto driver = GetProxyDriver(driver_host_context_);
   if (driver == nullptr) {
@@ -565,7 +565,7 @@ StatusOrConn DriverHostControllerConnection::CreateNewProxyDevice(
 }
 
 StatusOrConn DriverHostControllerConnection::CreateProxyDevice(CreateDeviceRequestView& request) {
-  auto& proxy = request->type.mutable_proxy();
+  auto& proxy = request->type.proxy();
   // This does not operate under the driver_host api lock,
   // since the newly created device is not visible to
   // any API surface until a driver is bound to it.
@@ -641,7 +641,7 @@ StatusOrConn DriverHostControllerConnection::CreateProxyDevice(CreateDeviceReque
 
 StatusOrConn DriverHostControllerConnection::CreateCompositeDevice(
     CreateDeviceRequestView& request) {
-  auto& composite = request->type.mutable_composite();
+  auto& composite = request->type.composite();
   // Convert the fragment IDs into zx_device references
   CompositeFragments fragments_list(new CompositeFragment[composite.fragments.count()],
                                     composite.fragments.count());
@@ -957,7 +957,7 @@ zx_status_t DriverHostContext::LoadFirmware(const zx_driver_t* drv,
   if (result.is_err()) {
     call_status = result.err();
   } else {
-    auto resp = std::move(result.mutable_response());
+    auto resp = std::move(result.response());
     *size = resp.size;
     vmo = std::move(resp.vmo);
   }
@@ -1001,7 +1001,7 @@ void DriverHostContext::LoadFirmwareAsync(const zx_driver_t* drv,
         if (result->result.is_err()) {
           call_status = result->result.err();
         } else {
-          auto& resp = result->result.mutable_response();
+          auto& resp = result->result.response();
           size = resp.size;
           vmo = std::move(resp.vmo);
         }
@@ -1030,7 +1030,7 @@ zx_status_t DriverHostContext::GetMetadata(const fbl::RefPtr<zx_device_t>& dev, 
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK) {
     if (response->result.is_response()) {
-      const auto& r = response.Unwrap()->result.mutable_response();
+      const auto& r = response.Unwrap()->result.response();
       if (r.data.count() > buflen) {
         return ZX_ERR_BUFFER_TOO_SMALL;
       }

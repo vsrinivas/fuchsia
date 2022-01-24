@@ -72,7 +72,7 @@ void IntelDspStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& co
     LOG(ERROR, "Error on GetVmo res = %d", result.status());
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
   } else {
-    auto& response = result->result.mutable_response();
+    auto& response = result->result.response();
     completer.ReplySuccess(response.num_frames, std::move(response.ring_buffer));
   }
 }

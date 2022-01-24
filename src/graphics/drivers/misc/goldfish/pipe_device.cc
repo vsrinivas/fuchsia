@@ -141,7 +141,7 @@ zx_status_t PipeDevice::Bind() {
   }
 
   fbl::AutoLock lock(&mmio_lock_);
-  auto& mmio = mmio_result->result.mutable_response().mmio;
+  auto& mmio = mmio_result->result.response().mmio;
   status = ddk::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
@@ -163,7 +163,7 @@ zx_status_t PipeDevice::Bind() {
            !irq.ok() ? irq.status() : irq->result.err());
     return status;
   }
-  irq_.reset(irq->result.mutable_response().irq.release());
+  irq_.reset(irq->result.response().irq.release());
 
   int rc = thrd_create_with_name(
       &irq_thread_, [](void* arg) { return static_cast<PipeDevice*>(arg)->IrqHandler(); }, this,

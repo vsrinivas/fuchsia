@@ -201,7 +201,7 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
                                break;
                              case netdev::wire::DeviceOpenSessionResult::Tag::kResponse:
                                netdev::wire::DeviceOpenSessionResponse& response =
-                                   open_result.mutable_response();
+                                   open_result.response();
                                session_.Bind(std::move(response.session), dispatcher_, this);
                                rx_fifo_ = std::move(response.fifos.rx);
                                tx_fifo_ = std::move(response.fifos.tx);

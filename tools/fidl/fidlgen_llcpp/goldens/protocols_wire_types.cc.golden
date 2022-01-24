@@ -73,7 +73,7 @@ void ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
   switch (ordinal_) {
     case ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::Ordinal::
         kResponse: {
-      mutable_response()._CloseHandles();
+      response()._CloseHandles();
       break;
     }
     default:

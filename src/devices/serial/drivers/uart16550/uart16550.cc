@@ -84,14 +84,14 @@ zx_status_t Uart16550::Init() {
     zxlogf(DEBUG, "%s: acpi_.GetPio failed", __func__);
     return pio.ok() ? pio->result.err() : pio.status();
   }
-  io_port.reset(pio->result.mutable_response().pio.release());
+  io_port.reset(pio->result.response().pio.release());
 
   auto irq = acpi_fidl_.borrow()->MapInterrupt(kIrqIndex);
   if (!irq.ok() || irq->result.is_err()) {
     zxlogf(ERROR, "%s: acpi_.MapInterrupt failed", __func__);
     return irq.ok() ? irq->result.err() : irq.status();
   }
-  interrupt_.reset(irq->result.mutable_response().irq.release());
+  interrupt_.reset(irq->result.response().irq.release());
 
   zx_info_resource_t resource_info;
   zx_status_t status =

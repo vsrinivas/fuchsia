@@ -278,7 +278,7 @@ int ReadStress(SdioClient client, uint32_t address, int argc, const char** argv)
       return 1;
     }
 
-    dma_vmo = std::move(result->result.mutable_response().txn.dma_vmo);
+    dma_vmo = std::move(result->result.response().txn.dma_vmo);
   }
 
   const zx::duration elapsed = zx::clock::get_monotonic() - start;

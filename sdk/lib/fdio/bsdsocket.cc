@@ -109,9 +109,8 @@ int socket(int domain, int type, int protocol) {
         return ERRNO(static_cast<int32_t>(socket_result->result.err()));
       }
 
-      zx::status create_node_result =
-          create_node(type, fidl::ClientEnd<fio::Node>(
-                                socket_result->result.mutable_response().socket.TakeChannel()));
+      zx::status create_node_result = create_node(
+          type, fidl::ClientEnd<fio::Node>(socket_result->result.response().socket.TakeChannel()));
       if (create_node_result.is_error()) {
         return ERROR(create_node_result.error_value());
       }
@@ -156,7 +155,7 @@ int socket(int domain, int type, int protocol) {
           if (result->result.is_err()) {
             return ERRNO(static_cast<int32_t>(result->result.err()));
           }
-          client_end.channel() = result->result.mutable_response().s.TakeChannel();
+          client_end.channel() = result->result.response().s.TakeChannel();
         } break;
         default:
           return ERRNO(EPROTONOSUPPORT);
@@ -197,7 +196,7 @@ int socket(int domain, int type, int protocol) {
       if (result->result.is_err()) {
         return ERRNO(static_cast<int32_t>(result->result.err()));
       }
-      client_end.channel() = result->result.mutable_response().s.TakeChannel();
+      client_end.channel() = result->result.response().s.TakeChannel();
     } break;
     case SOCK_RAW: {
       if (protocol == 0) {
@@ -239,7 +238,7 @@ int socket(int domain, int type, int protocol) {
       if (result->result.is_err()) {
         return ERRNO(static_cast<int32_t>(result->result.err()));
       }
-      client_end.channel() = result->result.mutable_response().s.TakeChannel();
+      client_end.channel() = result->result.response().s.TakeChannel();
     } break;
     default:
       return ERRNO(EPROTONOSUPPORT);

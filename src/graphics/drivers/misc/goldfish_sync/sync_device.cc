@@ -98,7 +98,7 @@ zx_status_t SyncDevice::Bind() {
 
   {
     fbl::AutoLock lock(&mmio_lock_);
-    auto& mmio = mmio_result->result.mutable_response().mmio;
+    auto& mmio = mmio_result->result.response().mmio;
     status = ddk::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
     if (status != ZX_OK) {
@@ -113,7 +113,7 @@ zx_status_t SyncDevice::Bind() {
            !result.ok() ? result.status() : result->result.err());
     return result.status();
   }
-  irq_.reset(result->result.mutable_response().irq.release());
+  irq_.reset(result->result.response().irq.release());
 
   irq_thread_.emplace(thrd_t{});
   int rc = thrd_create_with_name(

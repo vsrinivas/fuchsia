@@ -293,7 +293,7 @@ zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
   // fast_playback_notifications not supported (set to an invalid channel).
   auto result = fidl::WireCall(rb_ch_)->GetVmo(frames, irqs_per_ring);
   uint64_t rb_sz = static_cast<uint64_t>(result->result.response().num_frames) * frame_sz_;
-  rb_vmo_ = std::move(result->result.mutable_response().ring_buffer);
+  rb_vmo_ = std::move(result->result.response().ring_buffer);
 
   // We have the buffer, fetch the underlying size of the VMO (a rounded up
   // multiple of pages) and sanity check it against the effective size the

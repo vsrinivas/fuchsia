@@ -2390,7 +2390,7 @@ struct stream_socket : public zxio {
       return ZX_OK;
     }
     *out_code = 0;
-    *out_handle = result.mutable_response().s.channel().release();
+    *out_handle = result.response().s.channel().release();
     auto const& out = result.response().addr;
     // Result address has invalid tag when it's not provided by the server (when want_addr
     // is false).

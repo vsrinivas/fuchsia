@@ -285,8 +285,7 @@ class SimpleClient {
       case fuchsia_hardware_network::wire::DeviceOpenSessionResult::Tag::kErr:
         return result.err();
       case fuchsia_hardware_network::wire::DeviceOpenSessionResult::Tag::kResponse:
-        fuchsia_hardware_network::wire::DeviceOpenSessionResponse& response =
-            result.mutable_response();
+        fuchsia_hardware_network::wire::DeviceOpenSessionResponse& response = result.response();
         session_ = fidl::BindSyncClient(std::move(response.session));
         rx_ = std::move(response.fifos.rx);
         tx_ = std::move(response.fifos.tx);

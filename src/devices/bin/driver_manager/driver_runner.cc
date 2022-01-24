@@ -44,19 +44,19 @@ std::optional<R> VisitOffer(fdecl::wire::Offer& offer, F apply) {
   // modify the field if necessary.
   switch (offer.Which()) {
     case fdecl::wire::Offer::Tag::kService:
-      return apply(offer.mutable_service());
+      return apply(offer.service());
     case fdecl::wire::Offer::Tag::kProtocol:
-      return apply(offer.mutable_protocol());
+      return apply(offer.protocol());
     case fdecl::wire::Offer::Tag::kDirectory:
-      return apply(offer.mutable_directory());
+      return apply(offer.directory());
     case fdecl::wire::Offer::Tag::kStorage:
-      return apply(offer.mutable_storage());
+      return apply(offer.storage());
     case fdecl::wire::Offer::Tag::kRunner:
-      return apply(offer.mutable_runner());
+      return apply(offer.runner());
     case fdecl::wire::Offer::Tag::kResolver:
-      return apply(offer.mutable_resolver());
+      return apply(offer.resolver());
     case fdecl::wire::Offer::Tag::kEvent:
-      return apply(offer.mutable_event());
+      return apply(offer.event());
     case fdecl::wire::Offer::Tag::kUnknown:
       return {};
   }

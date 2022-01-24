@@ -31,8 +31,8 @@ zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, c
     return res.value().result.err();
   }
 
-  Setup(std::move(res.value().result.mutable_response().session),
-        std::move(res.value().result.mutable_response().fifos));
+  Setup(std::move(res.value().result.response().session),
+        std::move(res.value().result.response().fifos));
 
   return ZX_OK;
 }

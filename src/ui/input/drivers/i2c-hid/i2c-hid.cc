@@ -515,7 +515,7 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
   }
   auto irq_result = acpi_client_.borrow()->MapInterrupt(0);
   if (irq_result.ok() && irq_result->result.is_response()) {
-    irq_ = std::move(irq_result->result.mutable_response().irq);
+    irq_ = std::move(irq_result->result.response().irq);
   } else {
     zxlogf(WARNING, "Failed to map IRQ: %s",
            irq_result.ok() ? zx_status_get_string(irq_result->result.err())

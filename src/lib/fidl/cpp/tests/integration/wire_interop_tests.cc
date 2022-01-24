@@ -62,7 +62,7 @@ fidl_cpp_wire_interop_test::wire::Node MockData::MakeWireFile(fidl::AnyArena& ar
   node.set_name(arena, kFileName);
   fidl_cpp_wire_interop_test::wire::Kind kind;
   kind.set_file(arena);
-  kind.mutable_file().content = fidl::VectorView<uint8_t>::FromExternal(kFileContent);
+  kind.file().content = fidl::VectorView<uint8_t>::FromExternal(kFileContent);
   node.set_kind(arena, kind);
   return node;
 }
@@ -104,7 +104,7 @@ fidl_cpp_wire_interop_test::wire::Node MockData::MakeWireDir(fidl::AnyArena& are
   kind.set_directory(arena);
   node.set_kind(arena, kind);
   fidl::ObjectView<fidl_cpp_wire_interop_test::wire::Children>& children =
-      kind.mutable_directory().children;
+      kind.directory().children;
   children.Allocate(arena);
   children->elements.Allocate(arena, 1);
   children->elements[0] = MakeWireFile(arena);
