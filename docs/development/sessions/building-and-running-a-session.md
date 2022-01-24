@@ -65,17 +65,16 @@ World Session](/docs/development/sessions/writing-a-hello-world-session.md).
 ## Launch a session from the command line {#launch-a-session-from-the-command-line}
 
 There are cases when you don't want your session to launch at boot but still
-want to be able to launch it from the command line. There still needs to be a
-session launched at boot so configure the build to use the default
-`session_manager` configuration.
+want to be able to launch it from the command line. `session_manager` needs
+to be running to launch a session. The `session_manager_for_dev` target
+ensures `session_manager` itself starts, but does not launch a session.
 
 To launch a session from the command line, do the following:
 
-1. Run the following command to include the `session_manager` and the
-`session_manager` configuration file, `session_manager.config`, in the base
-image while also including your session in the build.
+1. Add the `session_manager_for_dev` target in the base dependency set, in
+addition to the session target.
 
-   <pre class="prettyprint"><code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with-base=//src/session,//src/session/bin/session_manager:session_manager.config --with=<var>//path/to/your/session</var></code></pre>
+   <pre class="prettyprint"><code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with-base=//src/session/bin/session_manager:session_manager_for_dev --with=<var>//path/to/your/session</var></code></pre>
 
    `fx list-products` and `fx list-boards` will show lists of the products and
    boards available to be used in the `fx set` command. For more information on
