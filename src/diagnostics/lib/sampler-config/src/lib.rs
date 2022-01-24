@@ -369,7 +369,7 @@ impl SamplerConfig {
 
     // Parse the ProjectConfigurations for every project from config data.
     // If a FIRE directory is given, load FIRE data and convert it to ProjectConfig's.
-    pub fn from_directories_internal(
+    fn from_directories_internal(
         minimum_sample_rate_sec: i64,
         sampler_dir: impl AsRef<Path>,
         fire_dir: Option<impl AsRef<Path>>,
@@ -382,12 +382,9 @@ impl SamplerConfig {
         project_configs.append(&mut load_many(legacy_sampler_config_paths)?);
         if let Some(fire_dir) = fire_dir {
             let fire_project_paths = paths_matching_name(&fire_dir, "*/projects/*.json5")?;
-            // TODO(fxbug.dev/89288): Switch back to just json5 as soon as everything supports JSON5.
             let fire_component_paths = paths_matching_name(&fire_dir, "*/components.json5")?;
-            let fire_component_json_paths = paths_matching_name(&fire_dir, "*/components.json")?;
             let fire_project_templates = load_many(fire_project_paths)?;
-            let mut fire_components = load_many::<ComponentIdInfoList>(fire_component_paths)?;
-            fire_components.extend(load_many::<ComponentIdInfoList>(fire_component_json_paths)?);
+            let fire_components = load_many::<ComponentIdInfoList>(fire_component_paths)?;
             let fire_components =
                 fire_components.into_iter().flatten().collect::<Vec<ComponentIdInfo>>();
             project_configs
@@ -615,11 +612,11 @@ mod tests {
         let fire_dir = tempfile::tempdir().unwrap();
         let fire_load_path = fire_dir.path();
         let sampler_config_path = sampler_load_path.join("config");
-        let fire_config_path = fire_load_path.join("config");
-        let fire_json_config_path = fire_load_path.join("config_json");
+        let fire_config_path_1 = fire_load_path.join("config1");
+        let fire_config_path_2 = fire_load_path.join("config2");
         fs::create_dir(&sampler_config_path).unwrap();
-        fs::create_dir(&fire_config_path).unwrap();
-        fs::create_dir(&fire_json_config_path).unwrap();
+        fs::create_dir(&fire_config_path_1).unwrap();
+        fs::create_dir(&fire_config_path_2).unwrap();
         fs::write(
             sampler_config_path.join("some_name.json"),
             r#"{
@@ -639,7 +636,7 @@ mod tests {
         )
         .unwrap();
         fs::write(
-            fire_json_config_path.join("components.json"),
+            fire_config_path_1.join("components.json5"),
             r#"[
                 {
                     "id": 42,
@@ -650,7 +647,7 @@ mod tests {
         )
         .unwrap();
         fs::write(
-            fire_config_path.join("components.json5"),
+            fire_config_path_2.join("components.json5"),
             r#"[
                 {
                     id: 43,
@@ -660,9 +657,9 @@ mod tests {
             ]"#,
         )
         .unwrap();
-        fs::create_dir(fire_config_path.join("projects")).unwrap();
+        fs::create_dir(fire_config_path_1.join("projects")).unwrap();
         fs::write(
-            fire_config_path.join("projects/some_name.json5"),
+            fire_config_path_1.join("projects/some_name.json5"),
             r#"{
             "project_id": 13,
             "customer_id": 7,
@@ -680,7 +677,7 @@ mod tests {
         )
         .unwrap();
         fs::write(
-            fire_config_path.join("projects/another_name.json5"),
+            fire_config_path_1.join("projects/another_name.json5"),
             r#"{
             "project_id": 13,
             "poll_rate_sec": 60,
