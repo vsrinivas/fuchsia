@@ -5,8 +5,8 @@
 use {
     fidl_fidl_test_components as ftest, fidl_fuchsia_data as fdata, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     futures::channel::mpsc,
     futures::prelude::*,
@@ -59,63 +59,42 @@ async fn build_reboot_on_terminate_realm(
 
     // The actual test runs in a nested component manager that is configured with
     // reboot_on_terminate_enabled.
-    builder
+    let component_manager = builder
         .add_child("component_manager", "#meta/component_manager.cm", ChildOptions::new().eager())
         .await
         .unwrap();
 
     // The root component will use Trigger to report its shutdown.
-    builder
-        .add_mock_child(
+    let trigger = builder
+        .add_local_child(
             "trigger",
-            move |mock_handles| Box::pin(trigger_mock(send_trigger_called.clone(), mock_handles)),
+            move |handles| Box::pin(trigger_mock(send_trigger_called.clone(), handles)),
             ChildOptions::new(),
         )
         .await
         .unwrap();
     builder
         .add_route(
-            RouteBuilder::protocol("fidl.test.components.Trigger")
-                .source(RouteEndpoint::component("trigger"))
-                .targets(vec![RouteEndpoint::component("component_manager")]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fidl.test.components.Trigger"))
+                .from(&trigger)
+                .to(&component_manager),
         )
         .await
         .unwrap();
 
-    // Forward logging to debug test breakages.
     builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("component_manager")]),
-        )
-        .await
-        .unwrap();
-    builder
-        .add_route(
-            RouteBuilder::protocol("fuchsia.boot.WriteOnlyLog")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("component_manager")]),
-        )
-        .await
-        .unwrap();
-
-    // Forward loader so that nested component_manager can load packages.
-    builder
-        .add_route(
-            RouteBuilder::protocol("fuchsia.sys.Loader")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("component_manager")]),
-        )
-        .await
-        .unwrap();
-
-    // Component manager needs fuchsia.process.Launcher to spawn new processes.
-    builder
-        .add_route(
-            RouteBuilder::protocol("fuchsia.process.Launcher")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("component_manager")]),
+            Route::new()
+                // Forward logging to debug test breakages.
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .capability(Capability::protocol_by_name("fuchsia.boot.WriteOnlyLog"))
+                // Forward loader so that nested component_manager can load packages.
+                .capability(Capability::protocol_by_name("fuchsia.sys.Loader"))
+                // Component manager needs fuchsia.process.Launcher to spawn new processes.
+                .capability(Capability::protocol_by_name("fuchsia.process.Launcher"))
+                .from(Ref::parent())
+                .to(&component_manager),
         )
         .await
         .unwrap();
@@ -125,7 +104,7 @@ async fn build_reboot_on_terminate_realm(
 
 async fn trigger_mock(
     send_trigger_called: mpsc::UnboundedSender<()>,
-    mock_handles: MockHandles,
+    handles: LocalComponentHandles,
 ) -> Result<(), anyhow::Error> {
     let mut fs = ServiceFs::new();
     let mut tasks = vec![];
@@ -140,13 +119,13 @@ async fn trigger_mock(
             }
         }));
     });
-    fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }
 
 async fn set_component_manager_url(builder: &RealmBuilder, url: &str) {
-    let mut cm_decl = builder.get_decl("component_manager").await.unwrap();
+    let mut cm_decl = builder.get_component_decl("component_manager").await.unwrap();
     let program = cm_decl.program.as_mut().unwrap();
     program.info.entries.as_mut().unwrap().push(fdata::DictionaryEntry {
         key: "args".into(),
@@ -156,5 +135,5 @@ async fn set_component_manager_url(builder: &RealmBuilder, url: &str) {
             url.to_string(),
         ]))),
     });
-    builder.set_decl("component_manager", cm_decl).await.unwrap();
+    builder.replace_component_decl("component_manager", cm_decl).await.unwrap();
 }

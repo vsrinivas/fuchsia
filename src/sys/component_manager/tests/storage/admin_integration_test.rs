@@ -7,8 +7,8 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
         DEFAULT_COLLECTION_NAME,
     },
     futures::{
@@ -24,14 +24,17 @@ fn new_data_user_mock<T: Into<String>, U: Into<String>>(
     filename: T,
     contents: U,
 ) -> (
-    impl Fn(MockHandles) -> BoxFuture<'static, Result<(), anyhow::Error>> + Sync + Send + 'static,
+    impl Fn(LocalComponentHandles) -> BoxFuture<'static, Result<(), anyhow::Error>>
+        + Sync
+        + Send
+        + 'static,
     impl Future<Output = ()>,
 ) {
     let (send, recv) = mpsc::channel(1);
     let filename = filename.into();
     let contents = contents.into();
 
-    let mock = move |mock_handles: MockHandles| {
+    let mock = move |mock_handles: LocalComponentHandles| {
         let mut send_clone = send.clone();
         let filename_clone = filename.clone();
         let contents_clone = contents.clone();
@@ -82,21 +85,15 @@ async fn collect_storage_user_monikers<T: AsRef<str>>(
 async fn single_storage_user() {
     let (mock, done_signal) = new_data_user_mock("file", "data");
     let builder = RealmBuilder::new().await.unwrap();
+    let storage_user =
+        builder.add_local_child("storage-user", mock, ChildOptions::new().eager()).await.unwrap();
     builder
-        .add_mock_child("storage-user", mock, ChildOptions::new().eager())
-        .await
-        .unwrap()
         .add_route(
-            RouteBuilder::storage("data", "/data")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("storage-user")]),
-        )
-        .await
-        .unwrap()
-        .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("storage-user")]),
+            Route::new()
+                .capability(Capability::storage("data").path("/data"))
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&storage_user),
         )
         .await
         .unwrap();
@@ -150,21 +147,17 @@ async fn multiple_storage_users() {
         (0..NUM_MOCKS).map(|_| new_data_user_mock("file", "data")).unzip();
     for (mock_idx, mock) in mocks.into_iter().enumerate() {
         let mock_name = format!("storage-user-{:?}", mock_idx);
+        let mock_ref = builder
+            .add_local_child(mock_name.as_str(), mock, ChildOptions::new().eager())
+            .await
+            .unwrap();
         builder
-            .add_mock_child(mock_name.as_str(), mock, ChildOptions::new().eager())
-            .await
-            .unwrap()
             .add_route(
-                RouteBuilder::storage("data", "/data")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component(&mock_name)]),
-            )
-            .await
-            .unwrap()
-            .add_route(
-                RouteBuilder::protocol("fuchsia.logger.LogSink")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component(&mock_name)]),
+                Route::new()
+                    .capability(Capability::storage("data").path("/data"))
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(Ref::parent())
+                    .to(&mock_ref),
             )
             .await
             .unwrap();
@@ -196,21 +189,15 @@ async fn multiple_storage_users() {
 async fn purged_storage_user() {
     let (mock, done_signal) = new_data_user_mock("file", "data");
     let builder = RealmBuilder::new().await.unwrap();
+    let storage_user =
+        builder.add_local_child("storage-user", mock, ChildOptions::new().eager()).await.unwrap();
     builder
-        .add_mock_child("storage-user", mock, ChildOptions::new().eager())
-        .await
-        .unwrap()
         .add_route(
-            RouteBuilder::storage("data", "/data")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("storage-user")]),
-        )
-        .await
-        .unwrap()
-        .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("storage-user")]),
+            Route::new()
+                .capability(Capability::storage("data").path("/data"))
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&storage_user),
         )
         .await
         .unwrap();

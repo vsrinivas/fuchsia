@@ -753,6 +753,7 @@ impl RealmBuilder {
             .add_route(
                 Route::new()
                     .capability(Capability::directory("hub").path("/hub").rights(fio2::RW_STAR_DIR))
+                    .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
                     .from(Ref::child("component_manager"))
                     .to(Ref::parent()),
             )

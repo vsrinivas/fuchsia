@@ -15,14 +15,14 @@
 use {
     fidl_fidl_test_components as ftest, fidl_fuchsia_io2 as fio2,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
+    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     futures::prelude::*,
 };
 
 #[fuchsia::test]
 async fn boot_resolver_can_be_routed_from_component_manager() {
     let builder = RealmBuilder::new().await.unwrap();
-    builder
+    let component_manager = builder
         .add_child(
             "component-manager",
             "fuchsia-pkg://fuchsia.com/boot-resolver-routing-tests#meta/component_manager.cm",
@@ -30,8 +30,8 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
         )
         .await
         .unwrap();
-    builder
-        .add_mock_child(
+    let mock_boot = builder
+        .add_local_child(
             "mock-boot",
             |mock_handles| {
                 async move {
@@ -57,9 +57,10 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
     // TODO(fxbug.dev/37534): Add the execute bit when supported.
     builder
         .add_route(
-            RouteBuilder::directory("boot", "/boot", fio2::R_STAR_DIR)
-                .source(RouteEndpoint::component("mock-boot"))
-                .targets(vec![RouteEndpoint::component("component-manager")]),
+            Route::new()
+                .capability(Capability::directory("boot").path("/boot").rights(fio2::R_STAR_DIR))
+                .from(&mock_boot)
+                .to(&component_manager),
         )
         .await
         .unwrap();
@@ -67,29 +68,23 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
     // This is the test protocol that is expected to be callable.
     builder
         .add_route(
-            RouteBuilder::protocol("fidl.test.components.Trigger")
-                .source(RouteEndpoint::component("component-manager"))
-                .targets(vec![RouteEndpoint::AboveRoot]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fidl.test.components.Trigger"))
+                .from(&component_manager)
+                .to(Ref::parent()),
         )
         .await
         .unwrap();
 
-    // Forward logging to debug test breakages.
     builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("component-manager")]),
-        )
-        .await
-        .unwrap();
-
-    // Component manager needs fuchsia.process.Launcher to spawn new processes.
-    builder
-        .add_route(
-            RouteBuilder::protocol("fuchsia.process.Launcher")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("component-manager")]),
+            Route::new()
+                // Forward logging to debug test breakages.
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                // Component manager needs fuchsia.process.Launcher to spawn new processes.
+                .capability(Capability::protocol_by_name("fuchsia.process.Launcher"))
+                .from(Ref::parent())
+                .to(&component_manager),
         )
         .await
         .unwrap();

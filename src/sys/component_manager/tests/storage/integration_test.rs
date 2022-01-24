@@ -5,8 +5,8 @@
 use {
     component_events::{events::*, matcher::*},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component_test::{
-        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
     },
 };
 
@@ -14,20 +14,14 @@ use {
 /// Routes some capabilities like LogSink and EventSource to the root.
 async fn start_nested_cm(cm_url: &str, root_url: &str) -> RealmInstance {
     let builder = RealmBuilder::new().await.unwrap();
-    builder.add_child("root", root_url, ChildOptions::new().eager()).await.unwrap();
+    let root = builder.add_child("root", root_url, ChildOptions::new().eager()).await.unwrap();
     builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component("root")]),
-        )
-        .await
-        .unwrap();
-    builder
-        .add_route(
-            RouteBuilder::protocol("fuchsia.sys2.EventSource")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component("root")]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
+                .from(Ref::parent())
+                .to(&root),
         )
         .await
         .unwrap();

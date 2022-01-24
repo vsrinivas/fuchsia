@@ -5,36 +5,23 @@
 use {
     component_events::{events::*, matcher::*},
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
+    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
 };
 
 async fn start_nested_cm_and_wait_for_clean_stop(root_url: &str, moniker_to_wait_on: &str) {
     let builder = RealmBuilder::new().await.unwrap();
-    builder.add_child("root", root_url, ChildOptions::new().eager()).await.unwrap();
+    let root = builder.add_child("root", root_url, ChildOptions::new().eager()).await.unwrap();
     builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component("root")]),
-        )
-        .await
-        .unwrap();
-    builder
-        .add_route(
-            RouteBuilder::protocol("fuchsia.sys2.EventSource")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component("root")]),
-        )
-        .await
-        .unwrap();
-    builder
-        .add_route(
-            RouteBuilder::event(
-                fuchsia_component_test::Event::DirectoryReady("diagnostics".to_string()),
-                cm_rust::EventMode::Async,
-            )
-            .source(RouteEndpoint::AboveRoot)
-            .targets(vec![RouteEndpoint::component("root")]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
+                .capability(Capability::event(
+                    fuchsia_component_test::Event::DirectoryReady("diagnostics".to_string()),
+                    cm_rust::EventMode::Async,
+                ))
+                .from(Ref::parent())
+                .to(&root),
         )
         .await
         .unwrap();

@@ -9,21 +9,22 @@ use {
         sequence::{EventSequence, Ordering},
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
+    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn destroy() {
     let builder = RealmBuilder::new().await.unwrap();
-    builder
+    let collection_realm = builder
         .add_child("collection_realm", "#meta/collection_realm.cm", ChildOptions::new().eager())
         .await
         .unwrap();
     builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component("collection_realm")]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&collection_realm),
         )
         .await
         .unwrap();
@@ -77,7 +78,7 @@ async fn destroy() {
 #[fasync::run_singlethreaded(test)]
 async fn destroy_and_recreate() {
     let builder = RealmBuilder::new().await.unwrap();
-    builder
+    let destroy_and_recreate = builder
         .add_child(
             "destroy_and_recreate",
             "#meta/destroy_and_recreate.cm",
@@ -87,9 +88,10 @@ async fn destroy_and_recreate() {
         .unwrap();
     builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component("destroy_and_recreate")]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&destroy_and_recreate),
         )
         .await
         .unwrap();

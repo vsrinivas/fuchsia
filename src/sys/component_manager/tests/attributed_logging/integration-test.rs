@@ -9,7 +9,7 @@ use {
         sequence::{self, EventSequence},
     },
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
+    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
 };
 
 #[fuchsia::test]
@@ -17,12 +17,16 @@ use {
 /// component manager tries to connect to this.
 async fn check_logsink_requested() {
     let builder = RealmBuilder::new().await.unwrap();
-    builder.add_child("empty_child", "#meta/empty.cm", ChildOptions::new().eager()).await.unwrap();
+    let empty_child = builder
+        .add_child("empty_child", "#meta/empty.cm", ChildOptions::new().eager())
+        .await
+        .unwrap();
     builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component("empty_child")]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&empty_child),
         )
         .await
         .unwrap();

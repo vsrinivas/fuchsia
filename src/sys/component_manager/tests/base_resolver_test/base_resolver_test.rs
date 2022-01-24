@@ -5,7 +5,7 @@
 use {
     component_events::{events::*, matcher::*},
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_component_test::{ChildOptions, RealmBuilder},
+    fuchsia_component_test::new::{ChildOptions, RealmBuilder},
 };
 
 #[fuchsia::test]
