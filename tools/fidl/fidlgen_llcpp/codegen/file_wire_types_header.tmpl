@@ -29,7 +29,7 @@ fidl/{{ .LibraryDots }}/cpp/wire_types.h
   #include <lib/stdcompat/optional.h>
   {{- IfdefFuchsia -}}
     {{ range .HandleTypes -}}
-      #include <lib/zx/{{ . }}.h>
+      #include <{{ . }}>
     {{ end -}}
     {{ if .ContainsDriverReferences -}}
     #include <lib/fidl_driver/cpp/wire_types.h>

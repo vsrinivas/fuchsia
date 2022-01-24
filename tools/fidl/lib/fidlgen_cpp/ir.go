@@ -754,7 +754,7 @@ func compile(r fidlgen.Root) *Root {
 	// find all unique handle types referenced by the library
 	var handleTypes []string
 	for k := range c.handleTypes {
-		handleTypes = append(handleTypes, string(k))
+		handleTypes = append(handleTypes, handleHeaderName(k))
 	}
 	sort.Sort(sort.StringSlice(handleTypes))
 	root.HandleTypes = handleTypes

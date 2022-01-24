@@ -82,3 +82,17 @@ var handleSubtypeConsts = map[fidlgen.HandleSubtype]string{
 	fidlgen.Vmar:         "VMAR",
 	fidlgen.Vmo:          "VMO",
 }
+
+// Header names for to use for handles where the name isn't the same as HandleSubtype.
+// For any subtype not in this list, string(HandleSubtype) is used instead.
+var handleHeaderNames = map[fidlgen.HandleSubtype]string{
+	fidlgen.SuspendToken: "lib/zx/suspend_token.h",
+}
+
+// Get the correct header to include in order to use the given handle subtype.
+func handleHeaderName(h fidlgen.HandleSubtype) string {
+	if header, ok := handleHeaderNames[h]; ok {
+		return header
+	}
+	return fmt.Sprintf("lib/zx/%s.h", string(h))
+}

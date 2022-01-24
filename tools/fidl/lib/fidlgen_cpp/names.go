@@ -247,7 +247,16 @@ func (dn nameVariants) nestVariants(v nameVariants) nameVariants {
 
 // nameVariantsForHandle returns the C++ name for a handle type
 func nameVariantsForHandle(t fidlgen.HandleSubtype) nameVariants {
+	if typeName, ok := handleTypeNames[t]; ok {
+		return commonNameVariants(zxNs.member(typeName))
+	}
 	return commonNameVariants(zxNs.member(string(t)))
+}
+
+// Type names for to use for handles where the name isn't the same as HandleSubtype.
+// For any subtype not in this list, string(HandleSubtype) is used instead.
+var handleTypeNames = map[fidlgen.HandleSubtype]string{
+	fidlgen.SuspendToken: "suspend_token",
 }
 
 // primitiveNameVariants returns a nameVariants for a primitive type, common across all bindings.

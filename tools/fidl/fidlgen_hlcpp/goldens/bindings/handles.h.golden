@@ -135,7 +135,7 @@ class Handles final {
 
   ::zx::socket socket_handle{};
 
-  ::zx::suspendtoken suspendtoken_handle{};
+  ::zx::suspend_token suspendtoken_handle{};
 
   ::zx::thread thread_handle{};
 
@@ -261,7 +261,7 @@ struct IsMemcpyCompatible<::test::handles::Handles>
           IsMemcpyCompatible<::zx::profile>::value &&
           IsMemcpyCompatible<::zx::resource>::value &&
           IsMemcpyCompatible<::zx::socket>::value &&
-          IsMemcpyCompatible<::zx::suspendtoken>::value &&
+          IsMemcpyCompatible<::zx::suspend_token>::value &&
           IsMemcpyCompatible<::zx::thread>::value &&
           IsMemcpyCompatible<::zx::timer>::value &&
           IsMemcpyCompatible<::zx::vcpu>::value &&
