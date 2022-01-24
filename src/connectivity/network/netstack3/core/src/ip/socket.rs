@@ -1274,6 +1274,7 @@ mod tests {
             // select an address when the client fails to specify one.
             can_select: bool,
         },
+        Unroutable,
     }
 
     struct NewSocketTestCase {
@@ -1302,36 +1303,39 @@ mod tests {
             },
         );
 
-        let DummyEventDispatcherConfig {
-            local_ip,
-            remote_ip,
-            subnet: _,
-            local_mac: _,
-            remote_mac: _,
-        } = cfg;
+        let DummyEventDispatcherConfig { local_ip, remote_ip, subnet, local_mac: _, remote_mac: _ } =
+            cfg;
         let mut ctx = DummyEventDispatcherBuilder::from_config(cfg).build::<DummyEventDispatcher>();
         let NewSocketTestCase { local_ip_type, remote_ip_type, expected_result } = test_case;
+
+        let remove_all_local_addrs = |ctx: &mut Ctx<DummyEventDispatcher>| {
+            let mut devices = crate::device::list_devices(&ctx);
+            let device = devices.next().unwrap();
+            assert_eq!(devices.next(), None);
+            drop(devices);
+            let subnets = crate::device::get_assigned_ip_addr_subnets::<
+                DummyEventDispatcher,
+                I::Addr,
+            >(&ctx, device)
+            .collect::<Vec<AddrSubnet<I::Addr>>>();
+            for subnet in subnets {
+                crate::device::del_ip_addr(ctx, device, &subnet.addr())
+                    .expect("failed to remove addr from device");
+            }
+        };
 
         let (expected_from_ip, from_ip) = match local_ip_type {
             AddressType::LocallyOwned => (local_ip, Some(local_ip)),
             AddressType::Remote => (remote_ip, Some(remote_ip)),
             AddressType::Unspecified { can_select } => {
                 if !can_select {
-                    let mut devices = crate::device::list_devices(&ctx);
-                    let device = devices.next().unwrap();
-                    assert_eq!(devices.next(), None);
-                    drop(devices);
-                    let subnets = crate::device::get_assigned_ip_addr_subnets::<
-                        DummyEventDispatcher,
-                        I::Addr,
-                    >(&ctx, device)
-                    .collect::<Vec<AddrSubnet<I::Addr>>>();
-                    for subnet in subnets {
-                        crate::device::del_ip_addr(&mut ctx, device, &subnet.addr())
-                            .expect("failed to remove addr from device");
-                    }
+                    remove_all_local_addrs(&mut ctx);
                 }
                 (local_ip, None)
+            }
+            AddressType::Unroutable => {
+                remove_all_local_addrs(&mut ctx);
+                (local_ip, Some(local_ip))
             }
         };
 
@@ -1340,6 +1344,11 @@ mod tests {
             AddressType::Remote => (remote_ip, NextHop::Remote(remote_ip)),
             AddressType::Unspecified { can_select: _ } => {
                 panic!("remote_ip_type cannot be unspecified")
+            }
+            AddressType::Unroutable => {
+                crate::ip::del_device_route(&mut ctx, subnet)
+                    .expect("failed to delete route to subnet");
+                (remote_ip, NextHop::Remote(remote_ip))
             }
         };
 
@@ -1449,6 +1458,24 @@ mod tests {
                 }
             );
         }
+    }
+
+    #[ip_test]
+    fn test_new_unroutable_local_to_remote<I: Ip>() {
+        test_new::<I>(NewSocketTestCase {
+            local_ip_type: AddressType::Unroutable,
+            remote_ip_type: AddressType::Remote,
+            expected_result: Err(IpSockUnroutableError::LocalAddrNotAssigned.into()),
+        });
+    }
+
+    #[ip_test]
+    fn test_new_local_to_unroutable_remote<I: Ip>() {
+        test_new::<I>(NewSocketTestCase {
+            local_ip_type: AddressType::LocallyOwned,
+            remote_ip_type: AddressType::Unroutable,
+            expected_result: Err(IpSockUnroutableError::NoRouteToRemoteAddr.into()),
+        });
     }
 
     #[ip_test]
@@ -1574,6 +1601,7 @@ mod tests {
             AddressType::LocallyOwned => (local_ip, Some(local_ip)),
             AddressType::Remote => panic!("from_addr_type cannot be remote"),
             AddressType::Unspecified { can_select: _ } => (local_ip, None),
+            AddressType::Unroutable => panic!("from_addr_type cannot be unroutable"),
         };
 
         let to_ip = match to_addr_type {
@@ -1582,6 +1610,7 @@ mod tests {
             AddressType::Unspecified { can_select: _ } => {
                 panic!("to_addr_type cannot be unspecified")
             }
+            AddressType::Unroutable => panic!("to_addr_type cannot be unroutable"),
         };
 
         let sock = IpSocketContext::<I>::new_ip_socket(
