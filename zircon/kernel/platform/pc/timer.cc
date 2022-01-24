@@ -34,6 +34,7 @@
 #include <ktl/limits.h>
 #include <lk/init.h>
 #include <phys/handoff.h>
+#include <platform/boot_timestamps.h>
 #include <platform/console.h>
 #include <platform/pc.h>
 #include <platform/pc/hpet.h>
@@ -45,9 +46,9 @@
 extern "C" {
 
 // Samples taken at the first instruction in the kernel.
-uint64_t kernel_entry_ticks;
+arch::EarlyTicks kernel_entry_ticks;
 // ... and at the entry to normal virtual-space kernel code.
-uint64_t kernel_virtual_entry_ticks;
+arch::EarlyTicks kernel_virtual_entry_ticks;
 
 }  // extern "C"
 
@@ -133,6 +134,10 @@ static struct fp_32_64 ns_per_hpet;
 static uint32_t ns_per_hpet_rounded_up;
 affine::Ratio hpet_ticks_to_clock_monotonic;  // Non-static so that hpet_init has access
 
+// TODO(fxb/91701): Make this ktl::atomic when we start to mutate the offset to
+// deal with suspend.
+static uint64_t raw_ticks_to_ticks_offset{0};
+
 #define INTERNAL_FREQ 1193182U
 #define INTERNAL_FREQ_3X 3579546U
 
@@ -150,7 +155,7 @@ zx_ticks_t current_ticks_hpet(void) { return hpet_get_value(); }
 
 zx_ticks_t current_ticks_pit(void) { return pit_ticks; }
 
-zx_ticks_t platform_current_ticks() {
+zx_ticks_t platform_current_raw_ticks() {
   // Directly call the ticks functions to avoid the cost of a virtual (indirect) call.
   if (wall_clock == CLOCK_TSC) {
     return current_ticks_rdtsc();
@@ -168,7 +173,53 @@ zx_ticks_t platform_current_ticks() {
   }
 }
 
+zx_ticks_t platform_current_ticks() {
+  // TODO(fxb/91701): switch to the ABA method of reading the offset when we start
+  // to allow the offset to be changed as a result of coming out of system
+  // suspend.
+  return platform_current_raw_ticks() + raw_ticks_to_ticks_offset;
+}
+
+zx_ticks_t platform_get_raw_ticks_to_ticks_offset() {
+  // TODO(fxb/91701): consider the memory order semantics of this load when the
+  // time comes.
+  return raw_ticks_to_ticks_offset;
+}
+
 const affine::Ratio& rdtsc_to_nanos() { return rdtsc_ticks_to_clock_monotonic; }
+
+zx_duration_t convert_raw_tsc_duration_to_nanoseconds(int64_t duration) {
+  return rdtsc_ticks_to_clock_monotonic.Scale(duration);
+}
+
+zx_time_t convert_raw_tsc_timestamp_to_clock_monotonic(int64_t ts) {
+  if (wall_clock == CLOCK_TSC) {
+    // If TSC is being used as our clock monotonic reference, then conversion is
+    // simple.  We just need to convert from the raw TSC timestamps to a ticks
+    // timestamp by adding the offset established at boot time, then scale by
+    // the ticks -> mono ratio.
+    //
+    // TODO(fxb/91701): consider the memory order semantics of this load when the
+    // time comes.
+    int64_t abs_ticks = ts + raw_ticks_to_ticks_offset;
+    return rdtsc_ticks_to_clock_monotonic.Scale(abs_ticks);
+  } else {
+    // If we are using something other than TSC as our monotonic reference, then
+    // things are slightly more tricky.  We need to figure out how far in the
+    // future this TSC timestamp is (in nanoseconds), and then add that delta to
+    // the current time to establish the new deadline.
+    //
+    // Bracket our observation of current time with two observations of ticks,
+    // and use the average of those two values to create the ticks half of the
+    // correspondence pair.
+    uint64_t before_tsc = current_ticks_rdtsc();
+    zx_time_t now_mono = current_time();
+    uint64_t after_tsc = current_ticks_rdtsc();
+    uint64_t now_tsc = (before_tsc >> 1) + (after_tsc >> 1) + (before_tsc & after_tsc & 1);
+    int64_t time_till_tsc_timestamp = zx_time_sub_time(ts, now_tsc);
+    return now_mono = rdtsc_ticks_to_clock_monotonic.Scale(time_till_tsc_timestamp);
+  }
+}
 
 // Round up t to a clock tick, so that when the APIC timer fires, the wall time
 // will have elapsed.
@@ -546,7 +597,12 @@ static void pc_init_timer(uint level) {
 
     // Set up our wall clock to rdtsc, and stash the initial
     // transformation from ticks to clock monotonic.
+    //
+    // We cannot (or at least, really should not) reset the TSC to zero, so
+    // instead we use the time of clock selection ("now" according to the TSC)
+    // to define the zero point on our ticks timeline moving forward.
     platform_set_ticks_to_time_ratio(rdtsc_ticks_to_clock_monotonic);
+    raw_ticks_to_ticks_offset = -current_ticks_rdtsc();
     wall_clock = CLOCK_TSC;
   } else {
     if (constant_tsc || invariant_tsc) {
@@ -559,9 +615,10 @@ static void pc_init_timer(uint level) {
       // Set up our wall clock to the HPET, and stash the initial
       // transformation from ticks to clock monotonic.
       platform_set_ticks_to_time_ratio(hpet_ticks_to_clock_monotonic);
-      wall_clock = CLOCK_HPET;
+      raw_ticks_to_ticks_offset = 0;
       hpet_set_value(0);
       hpet_enable();
+      wall_clock = CLOCK_HPET;
     } else {
       if (force_wallclock && gBootOptions->x86_wallclock != WallclockType::kPit) {
         panic("Could not satisfy kernel.wallclock choice\n");
@@ -570,7 +627,6 @@ static void pc_init_timer(uint level) {
       // Set up our wall clock to pit, and stash the initial
       // transformation from ticks to clock monotonic.
       platform_set_ticks_to_time_ratio({1'000'000, 1});
-      wall_clock = CLOCK_PIT;
 
       set_pit_frequency(1000);  // ~1ms granularity
 
@@ -578,6 +634,9 @@ static void pc_init_timer(uint level) {
       zx_status_t status = register_permanent_int_handler(irq, &pit_timer_tick, NULL);
       DEBUG_ASSERT(status == ZX_OK);
       unmask_interrupt(irq);
+
+      raw_ticks_to_ticks_offset = -current_ticks_pit();
+      wall_clock = CLOCK_PIT;
     }
   }
 
@@ -604,7 +663,12 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
     }
 
     // We rounded up to the tick after above.
-    const uint64_t tsc_deadline = u64_mul_u64_fp32_64(deadline, tsc_per_ns);
+    //
+    // TODO(fxb/91701): If/when we start to use the raw ticks -> ticks offset to
+    // manage fixing up the timer when coming out of suspend, we need to come
+    // back here and reconsider memory order issues.
+    const uint64_t tsc_deadline =
+        u64_mul_u64_fp32_64(deadline, tsc_per_ns) - raw_ticks_to_ticks_offset;
     LTRACEF("Scheduling oneshot timer: %" PRIu64 " deadline\n", tsc_deadline);
     apic_timer_set_tsc_deadline(tsc_deadline, false /* unmasked */);
     kcounter_add(platform_timer_set_counter, 1);
@@ -674,7 +738,10 @@ void platform_shutdown_timer(void) {
 }
 
 zx_ticks_t platform_convert_early_ticks(arch::EarlyTicks sample) {
-  return wall_clock == CLOCK_TSC ? static_cast<zx_ticks_t>(sample.tsc) : 0;
+  // Early tick timestamps are always raw ticks.  We need to convert back to
+  // ticks by subtracting the raw_ticks to ticks offset.
+  return wall_clock == CLOCK_TSC ? static_cast<zx_ticks_t>(sample.tsc) + raw_ticks_to_ticks_offset
+                                 : 0;
 }
 
 // Currently, usermode can access our source of ticks only if we have chosen TSC

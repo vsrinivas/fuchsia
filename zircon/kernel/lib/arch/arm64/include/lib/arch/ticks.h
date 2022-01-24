@@ -26,6 +26,8 @@ struct EarlyTicks {
         __arm_rsr64("cntvct_el0"),
     };
   }
+
+  [[gnu::always_inline]] static EarlyTicks Zero() { return {0, 0}; }
 };
 
 }  // namespace arch

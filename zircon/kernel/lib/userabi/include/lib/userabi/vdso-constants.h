@@ -27,14 +27,15 @@
 // |++ padding (1)
 // |++ ticks to mono ratio (2)
 // |
-// + 3 64-bit integers
+// + 4 64-bit integers
 // | ticks_per_second (1)
+// | raw_ticks to ticks offset (1)
 // | physmem amount (1)
 // | version_string_len
 // |
 // + max version string size (64 bytes)
 //
-#define VDSO_CONSTANTS_SIZE ((10 * 4) + (3 * 8) + MAX_VERSION_STRING_SIZE)
+#define VDSO_CONSTANTS_SIZE ((10 * 4) + (4 * 8) + MAX_VERSION_STRING_SIZE)
 
 #ifndef __ASSEMBLER__
 
@@ -77,6 +78,9 @@ struct vdso_constants {
 
   // Conversion factor for zx_ticks_get return values to seconds.
   zx_ticks_t ticks_per_second;
+
+  // Offset for converting from the raw system timer to zx_ticks_t
+  zx_ticks_t raw_ticks_to_ticks_offset;
 
   // Ratio which relates ticks (zx_ticks_get) to clock monotonic (zx_clock_get_monotonic).
   // Specifically...

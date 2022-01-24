@@ -107,6 +107,17 @@ std::string_view DataFaultStatusCodeToString(SError::DataFaultStatusCode code) {
   }
 }
 
+// Note: This function assumes that the timer being used by the host is the
+// virtual view of the ARM system timer, or equivalent (eg. the physical timer
+// with CNTVOFF_EL2 set to zero).  This is _currently_ true, as the Fuchsia EL2
+// code seems to always set CNTVOFF_EL2 offset to zero, and then just leave it
+// there for all time.  If this ever changes, this code will need to be updated
+// to account for the difference between the physical and virtual views of the
+// system timer.
+static inline zx_ticks_t convert_raw_ticks_to_ticks(zx_ticks_t raw_ticks) {
+  return raw_ticks + platform_get_raw_ticks_to_ticks_offset();
+}
+
 static void next_pc(GuestState* guest_state) { guest_state->system_state.elr_el2 += 4; }
 
 static bool timer_enabled(GuestState* guest_state) {
@@ -116,9 +127,11 @@ static bool timer_enabled(GuestState* guest_state) {
 }
 
 void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
-  if (timer_enabled(guest_state) &&
-      static_cast<uint64_t>(current_ticks()) >= guest_state->cntv_cval_el0) {
-    gich_state->Track(kTimerVector, hypervisor::InterruptType::PHYSICAL);
+  if (timer_enabled(guest_state)) {
+    zx_ticks_t guest_ticks_deadline = convert_raw_ticks_to_ticks(guest_state->cntv_cval_el0);
+    if (current_ticks() >= guest_ticks_deadline) {
+      gich_state->Track(kTimerVector, hypervisor::InterruptType::PHYSICAL);
+    }
   }
 }
 
@@ -139,10 +152,11 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
 
   zx_time_t deadline = ZX_TIME_INFINITE;
   if (timer_enabled(guest_state)) {
-    if (static_cast<uint64_t>(current_ticks()) >= guest_state->cntv_cval_el0) {
+    zx_ticks_t guest_ticks_deadline = convert_raw_ticks_to_ticks(guest_state->cntv_cval_el0);
+    if (current_ticks() >= guest_ticks_deadline) {
       return ZX_OK;
     }
-    deadline = platform_get_ticks_to_time_ratio().Scale(guest_state->cntv_cval_el0);
+    deadline = platform_get_ticks_to_time_ratio().Scale(guest_ticks_deadline);
   }
   return gich_state->Wait(deadline);
 }

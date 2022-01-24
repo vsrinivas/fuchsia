@@ -196,6 +196,7 @@ void SetConstants(const fbl::RefPtr<VmObject>& vmo) {
       PAGE_SIZE,
       0,
       per_second,
+      platform_get_raw_ticks_to_ticks_offset(),
       ticks_to_mono_ratio.numerator(),
       ticks_to_mono_ratio.denominator(),
       pmm_count_total_bytes(),

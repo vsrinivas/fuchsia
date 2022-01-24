@@ -12,6 +12,7 @@
 
 #include <lk/init.h>
 #include <phys/handoff.h>
+#include <platform/boot_timestamps.h>
 #include <platform/timer.h>
 #include <vm/physmap.h>
 
@@ -24,10 +25,6 @@ namespace {
 // pointers that we must copy out of.
 BootOptions gBootOptionsInstance;
 
-// Samples taken at the first instruction in the kernel
-// and at the entry to normal virtual-space kernel code.
-extern "C" arch::EarlyTicks kernel_entry_ticks, kernel_virtual_entry_ticks;
-
 // When using physboot, other samples are available in the handoff data too.
 //
 // **NOTE** Each sample here is represented in the userland test code in
@@ -39,6 +36,7 @@ extern "C" arch::EarlyTicks kernel_entry_ticks, kernel_virtual_entry_ticks;
 // kernel_boot_stats.cc should be updated to give the new intervals appropriate
 // names for the performance tracking infrastructure (see the pages at
 // https://chromeperf.appspot.com/report and look for "fuchsia.kernel.boot").
+KCOUNTER(timeline_hw_startup, "boot.timeline.hw")
 KCOUNTER(timeline_zbi_entry, "boot.timeline.zbi")
 KCOUNTER(timeline_physboot_setup, "boot.timeline.physboot-setup")
 KCOUNTER(timeline_decompress_start, "boot.timeline.decompress-start")
@@ -85,6 +83,7 @@ void TimelineCounters(unsigned int level) {
     }
   }
   Set(timeline_virtual_entry, kernel_virtual_entry_ticks);
+  Set(timeline_hw_startup, arch::EarlyTicks::Zero());
 }
 
 // This can happen really any time after the platform clock is configured.

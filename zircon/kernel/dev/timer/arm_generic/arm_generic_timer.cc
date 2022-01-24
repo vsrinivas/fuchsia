@@ -29,6 +29,7 @@
 #include <ktl/limits.h>
 #include <lk/init.h>
 #include <phys/handoff.h>
+#include <platform/boot_timestamps.h>
 #include <platform/timer.h>
 
 #define LOCAL_TRACE 0
@@ -78,6 +79,10 @@ timer_irq_assignment timer_assignment;
 // event stream state
 uint32_t event_stream_shift;
 uint32_t event_stream_freq;
+
+// TODO(fxb/91701): Make this ktl::atomic when we start to mutate the offset to
+// deal with suspend.
+uint64_t raw_ticks_to_ticks_offset{0};
 
 }  // anonymous namespace
 
@@ -257,10 +262,25 @@ static interrupt_eoi platform_tick(void* arg) {
   return IRQ_EOI_DEACTIVATE;
 }
 
-zx_ticks_t platform_current_ticks() { return read_ct(); }
+zx_ticks_t platform_current_raw_ticks() { return read_ct(); }
+
+zx_ticks_t platform_current_ticks() {
+  // TODO(fxb/91701): switch to the ABA method of reading the offset when we start
+  // to allow the offset to be changed as a result of coming out of system
+  // suspend.
+  return read_ct() + raw_ticks_to_ticks_offset;
+}
+
+zx_ticks_t platform_get_raw_ticks_to_ticks_offset() {
+  // TODO(fxb/91701): consider the memory order semantics of this load when the
+  // time comes.
+  return raw_ticks_to_ticks_offset;
+}
 
 zx_ticks_t platform_convert_early_ticks(arch::EarlyTicks sample) {
-  return sample.*reg_procs.early_ticks;
+  // Early tick timestamps are always raw ticks.  We need to convert back to
+  // ticks by subtracting the raw_ticks to ticks offset.
+  return sample.*reg_procs.early_ticks + raw_ticks_to_ticks_offset;
 }
 
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
@@ -271,9 +291,14 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
   }
 
   // Add one to the deadline, since with very high probability the deadline
-  // straddles a counter tick.
+  // straddles a counter tick. Adjust the deadline from normalized ticks to raw
+  // ticks in the process.
+  //
+  // TODO(fxb/91701): If/when we start to use the raw ticks -> ticks offset to
+  // manage fixing up the timer when coming out of suspend, we need to come back
+  // here and reconsider memory order issues.
   const affine::Ratio time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
-  const uint64_t cntpct_deadline = time_to_ticks.Scale(deadline) + 1;
+  const uint64_t cntpct_deadline = time_to_ticks.Scale(deadline) + 1 - raw_ticks_to_ticks_offset;
 
   // Even if the deadline has already passed, the ARMv8-A timer will fire the
   // interrupt.
@@ -455,6 +480,10 @@ void ArmGenericTimerInit(const dcfg_arm_generic_timer_driver_t& config) {
   }
   ZX_ASSERT(reg_procs.early_ticks);
 
+  // We cannot actually reset the value on the ticks timer, so instead we use
+  // the time of clock selection (now) to define the zero point on our ticks
+  // timeline moving forward.
+  raw_ticks_to_ticks_offset = -reg_procs.read_ct();
   arch::ThreadMemoryBarrier();
 
   dprintf(INFO, "arm generic timer using %s timer, irq %d\n", timer_str, timer_irq);

@@ -669,8 +669,9 @@ zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
   uint32_t shift = BITS_SHIFT(local_apic_state->lvt_divide_config, 1, 0) |
                    (BIT_SHIFT(local_apic_state->lvt_divide_config, 3) << 2);
   uint32_t divisor_shift = (shift + 1) & 7;
-  zx_duration_t duration = rdtsc_to_nanos().Scale(
-      static_cast<int64_t>(local_apic_state->lvt_initial_count << divisor_shift));
+  int64_t duration_tsc_ticks =
+      static_cast<int64_t>(local_apic_state->lvt_initial_count << divisor_shift);
+  zx_duration_t duration = convert_raw_tsc_duration_to_nanoseconds(duration_tsc_ticks);
   return zx_time_add_duration(current_time(), duration);
 }
 
@@ -897,7 +898,8 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
       }
       next_rip(exit_info, vmcs);
       int64_t tsc_deadline = static_cast<int64_t>(guest_state.EdxEax());
-      update_timer(local_apic_state, rdtsc_to_nanos().Scale(tsc_deadline));
+      zx_time_t mono_deadline = convert_raw_tsc_timestamp_to_clock_monotonic(tsc_deadline);
+      update_timer(local_apic_state, mono_deadline);
       return ZX_OK;
     }
     case kX2ApicMsrBase ... kX2ApicMsrMax:

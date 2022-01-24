@@ -21,6 +21,7 @@ struct EarlyTicks {
   uint64_t tsc;
 
   [[gnu::always_inline]] static EarlyTicks Get() { return {_rdtsc()}; }
+  [[gnu::always_inline]] static EarlyTicks Zero() { return {0}; }
 };
 
 }  // namespace arch

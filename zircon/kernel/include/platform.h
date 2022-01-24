@@ -32,8 +32,21 @@ zx_time_t current_time(void);
 /* high-precision timer ticks per second */
 zx_ticks_t ticks_per_second(void);
 
-/* Reads a platform-specific fixed-rate monotonic counter */
+/* Reads a platform-specific fixed-rate monotonic counter
+ * The "raw" form of the counter should give the current counter value (and is
+ * almost certainly not what you want).  The normal form will give the counter
+ * value, potentially adjusted by a constant used to make the ticks timeline
+ * start ticking from 0 when the system boots.
+ */
+zx_ticks_t platform_current_raw_ticks(void);
 zx_ticks_t platform_current_ticks(void);
+
+/* Access the platform specific offset from the raw ticks timeline to the ticks
+ * timeline.  The only current legit uses for this function are when
+ * initializing the RO data for the VDSO, and when fixing up timer values during
+ * vmexit on ARM (see arch/arm64/hypervisor/vmexit.cc).
+ */
+zx_ticks_t platform_get_raw_ticks_to_ticks_offset(void);
 
 /* high-precision timer current_ticks */
 static inline zx_ticks_t current_ticks(void) { return platform_current_ticks(); }

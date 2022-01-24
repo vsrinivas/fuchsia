@@ -46,6 +46,8 @@ constexpr std::pair<const char*, const char*> kTimelineSteps[] = {
     {"boot.timeline.init", "KernelBootComplete"},
 };
 
+constexpr const char* kHWStartupTime = "boot.timeline.hw";
+
 // Return the property named `name` in the given node.
 //
 // Aborts if the name cannot be found or is of the wrong type.
@@ -63,7 +65,14 @@ int64_t GetIntValueOrDie(const inspect::NodeValue& node, const std::string& name
 
 void WriteBootTimelineStats(perftest::ResultsSet& results, const inspect::Hierarchy& timeline) {
   const inspect::NodeValue& node = timeline.node();
-  ZX_ASSERT(node.properties().size() == std::size(kTimelineSteps));
+
+  // The number of nodes we find starting with boot.timeline.* should be one
+  // more than the number of timeline steps we have.  The missing step
+  // (boot.timeline.hw) is the time, on the target's "ticks" timeline at which
+  // we _think_ the hardware started up, if we may assume that the HW's
+  // reference clock started ticking from 0.  This is the value we want to use
+  // as the initial value of last_step_ticks.
+  ZX_ASSERT(node.properties().size() == std::size(kTimelineSteps) + 1);
 
   double ms_per_tick = 1000.0 / static_cast<double>(zx_ticks_per_second());
   auto add_result = [ms_per_tick, &results](const char* result_name, zx_ticks_t before,
@@ -74,18 +83,11 @@ void WriteBootTimelineStats(perftest::ResultsSet& results, const inspect::Hierar
 
   // Export the difference in time between each stage of the timeline.
   std::optional<zx_ticks_t> first_step_ticks;
-  zx_ticks_t last_step_ticks = 0;
-  size_t missing_steps = 0;
+  zx_ticks_t last_step_ticks = GetIntValueOrDie(node, kHWStartupTime);
   for (auto [name, result_name] : kTimelineSteps) {
     zx_ticks_t step_ticks = GetIntValueOrDie(node, name);
     if (!first_step_ticks) {
       first_step_ticks = step_ticks;
-    } else if (step_ticks == 0) {
-      // TODO(fxbug.dev/32414): With use_physboot=false the counters for the
-      // intermediate steps will read as zero because those steps weren't done.
-      // Omit those samples.
-      ++missing_steps;
-      continue;
     }
     add_result(result_name, last_step_ticks, step_ticks);
     last_step_ticks = step_ticks;
@@ -96,10 +98,9 @@ void WriteBootTimelineStats(perftest::ResultsSet& results, const inspect::Hierar
   ZX_ASSERT(last_step_ticks > *first_step_ticks);
   add_result("KernelBootTotal", *first_step_ticks, last_step_ticks);
 
-  size_t expected_steps = std::size(kTimelineSteps) - missing_steps + 1;
-  ZX_ASSERT_MSG(results.results()->size() == expected_steps,
-                "found %zu results from %zu steps and %zu missing", results.results()->size(),
-                std::size(kTimelineSteps), missing_steps);
+  constexpr size_t kExpectedSteps = std::size(kTimelineSteps) + 1;
+  ZX_ASSERT_MSG(results.results()->size() == kExpectedSteps, "found %zu results from %zu steps",
+                results.results()->size(), std::size(kTimelineSteps));
 }
 
 // Add a test result recording the amount of free memory after kernel init.

@@ -8,17 +8,37 @@
 #include <x86intrin.h>
 #endif
 
-__EXPORT zx_ticks_t _zx_ticks_get(void) {
+#include <stdatomic.h>
+
+namespace {
+
 #if __aarch64__
+inline zx_ticks_t get_raw_ticks() {
   // read the virtual counter
   zx_ticks_t ticks;
   __asm__ volatile("mrs %0, cntvct_el0" : "=r"(ticks));
   return ticks;
+}
+
+inline zx_ticks_t get_raw_ticks_arm_a73() {
+  zx_ticks_t ticks1, ticks2;
+  __asm__ volatile("mrs %0, cntvct_el0" : "=r"(ticks1));
+  __asm__ volatile("mrs %0, cntvct_el0" : "=r"(ticks2));
+  return (((ticks1 ^ ticks2) >> 32) & 1) ? ticks1 : ticks2;
+}
 #elif __x86_64__
-  return __rdtsc();
+inline zx_ticks_t get_raw_ticks() { return __rdtsc(); }
 #else
 #error Unsupported architecture
 #endif
+
+}  // namespace
+
+// TODO(fxb/91701): switch to the ABA method of reading the offset when we start
+// to allow the offset to be changed as a result of coming out of system
+// suspend.
+__EXPORT zx_ticks_t _zx_ticks_get(void) {
+  return get_raw_ticks() + DATA_CONSTANTS.raw_ticks_to_ticks_offset;
 }
 
 #if __aarch64__
@@ -31,10 +51,7 @@ __EXPORT zx_ticks_t _zx_ticks_get(void) {
 // kernel to mitigate the errata.  It will be selected by the kernel during VDSO
 // construction if needed.
 VDSO_KERNEL_EXPORT zx_ticks_t CODE_ticks_get_arm_a73(void) {
-  zx_ticks_t ticks1, ticks2;
-  __asm__ volatile("mrs %0, cntvct_el0" : "=r"(ticks1));
-  __asm__ volatile("mrs %0, cntvct_el0" : "=r"(ticks2));
-  return (((ticks1 ^ ticks2) >> 32) & 1) ? ticks1 : ticks2;
+  return get_raw_ticks_arm_a73() + DATA_CONSTANTS.raw_ticks_to_ticks_offset;
 }
 #endif
 
