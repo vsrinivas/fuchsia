@@ -101,8 +101,6 @@ TEST(NaturalResponsePayload, Encode) {
 
 TEST(NaturalResponseWithHandle, Encode) {
   // Expected message.
-  // TODO(fxbug.dev/79584): Remove the V2 wire format enabler once that is the default.
-  fidl::internal::HLCPPWireFormatV2Enabler v2_enabler;
   // clang-format off
   std::vector<uint8_t> bytes = {
       // Payload, a union with the handle variant selected.

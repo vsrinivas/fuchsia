@@ -21,15 +21,15 @@ namespace fidl {
 
 namespace internal {
 
-extern std::atomic_int hlcpp_enable_v2_encode;
+extern std::atomic_int hlcpp_enable_v1_encode;
 
-struct HLCPPWireFormatV2Enabler {
-  HLCPPWireFormatV2Enabler() { hlcpp_enable_v2_encode++; }
-  ~HLCPPWireFormatV2Enabler() { hlcpp_enable_v2_encode--; }
+struct HLCPPWireFormatV1Enabler {
+  HLCPPWireFormatV1Enabler() { hlcpp_enable_v1_encode++; }
+  ~HLCPPWireFormatV1Enabler() { hlcpp_enable_v1_encode--; }
 };
 
 static WireFormatVersion DefaultHLCPPEncoderWireFormat() {
-  return (hlcpp_enable_v2_encode > 0) ? WireFormatVersion::kV2 : WireFormatVersion::kV1;
+  return (hlcpp_enable_v1_encode > 0) ? WireFormatVersion::kV1 : WireFormatVersion::kV2;
 }
 
 }  // namespace internal

@@ -10,7 +10,7 @@
 
 namespace fidl {
 namespace internal {
-std::atomic_int hlcpp_enable_v2_encode(0);
+std::atomic_int hlcpp_enable_v1_encode(0);
 }
 
 namespace {

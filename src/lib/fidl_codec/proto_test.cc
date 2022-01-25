@@ -272,7 +272,7 @@ TEST_F(ProtoValueTest, FidlMessageValue) {
              "Message: num_bytes=56 num_handles=0 "
              "ordinal=432a041a7505f6aa(test.fidlcodec.examples/FidlCodecTestInterface.StringInt)\n"
              "  data=\n"
-             "    0000: 00, 00, 00, 00, 00, 00, 00, 01, aa, f6, 05, 75, 1a, 04, 2a, 43, \n"
+             "    0000: 00, 00, 00, 00, 02, 00, 00, 01, aa, f6, 05, 75, 1a, 04, 2a, 43, \n"
              "    0010: 0a, 00, 00, 00, 00, 00, 00, 00, ff, ff, ff, ff, ff, ff, ff, ff, \n"
              "    0020: 64, 00, 00, 00, 00, 00, 00, 00, 48, 65, 6c, 6c, 6f, 20, 46, 49, \n"
              "    0030: 44, 4c, 00, 00, 00, 00, 00, 00\n");

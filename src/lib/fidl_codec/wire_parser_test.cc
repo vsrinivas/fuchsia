@@ -265,7 +265,7 @@ TEST_F(WireParserTest, ParseSingleString) {
   TEST_F(WireParserTest, Parse##_testname) {                                  \
     TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, __VA_ARGS__);   \
     {                                                                         \
-      fidl::internal::HLCPPWireFormatV2Enabler enabler;                       \
+      fidl::internal::HLCPPWireFormatV1Enabler enabler;                       \
       TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, __VA_ARGS__); \
     }                                                                         \
   }
@@ -998,15 +998,14 @@ TEST_DECODE_WIRE(
     GetArrayNullableUnion(1234, "harpo", "chico"))
 
 TEST_F(WireParserTest, BadU8U16UnionStruct) {
-  TEST_DECODE_WIRE_BODY_COMMON(U8U16UnionStruct, -1, 0,
-                               "{\"s\":{\"u\":{\"variant_u8\":\"(invalid)\"}}}",
+  TEST_DECODE_WIRE_BODY_COMMON(U8U16UnionStruct, -1, 0, "{\"s\":{\"u\":null}}",
                                "{\n"
                                "  s: #gre#test.fidlcodec.examples/U8U16UnionStructType#rst# = {\n"
                                "    u: #gre#test.fidlcodec.examples/U8U16Union#rst# = "
-                               "{ variant_u8: #gre#uint8#rst# = #red#invalid#rst# }\n"
+                               "#red#null#rst#\n"
                                "  }\n"
                                "}",
-                               24, GetU8U16UnionStruct(12));
+                               16, GetU8U16UnionStruct(12));
 }
 
 namespace {
