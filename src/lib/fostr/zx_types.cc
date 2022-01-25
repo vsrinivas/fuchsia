@@ -103,10 +103,15 @@ std::ostream& operator<<(std::ostream& os, const zx::duration& value) {
     return os << "<infinite_past>";
   }
 
-  uint64_t s = value.to_nsecs();
+  int64_t s = value.to_nsecs();
 
   if (s == 0) {
     return os << "0";
+  }
+
+  if (s < 0) {
+    os << "-";
+    s = -s;
   }
 
   int64_t ns = s % 1000;
@@ -129,10 +134,15 @@ std::ostream& operator<<(std::ostream& os, const zx::time& value) {
     return os << "<infinite_past>";
   }
 
-  uint64_t s = value.get();
+  int64_t s = value.get();
 
   if (s == 0) {
     return os << "0";
+  }
+
+  if (s < 0) {
+    os << "-";
+    s = -s;
   }
 
   int64_t ns = s % 1000;
