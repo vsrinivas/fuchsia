@@ -4,7 +4,7 @@
 
 library fuchsia.update.config;
 
-/// User specified preference for automatic updates
+/// User specified preference for automatic updates.
 type OptOutPreference = strict enum {
 
     /// Allow all updates to be automatically applied.
@@ -12,6 +12,15 @@ type OptOutPreference = strict enum {
 
     /// Only allow security updates to be automatically applied.
     ALLOW_ONLY_SECURITY_UPDATES = 2;
+};
+
+/// An error encountered while administering the user's opt-out preference.
+type OptOutAdminError = flexible enum {
+
+    /// There was an internal error in setting the value.  The client is not
+    /// expected to be able to do something meaningful about this error,
+    /// except to try again later.
+    INTERNAL = 1;
 };
 
 /// The state of the update system's opt-out functionality.
@@ -37,10 +46,5 @@ protocol OptOutAdmin {
     /// * error Any error encountered while persisting the new setting.
     Set(struct {
         value OptOutPreference;
-    }) -> (struct {}) error strict enum {
-        /// There was an internal error in setting the value.  The client is not
-        /// expected to be able to do something meaningful about this error,
-        /// except to try again later.
-        INTERNAL = 1;
-    };
+    }) -> (struct {}) error OptOutAdminError;
 };
