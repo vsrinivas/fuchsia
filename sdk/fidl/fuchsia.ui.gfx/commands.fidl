@@ -597,7 +597,7 @@ type DetachLightsCmd = struct {
 ///
 /// Constraints:
 /// - `material_id` refs a `Material`.
-/// - `texture_id` refs a `Image`, `ImagePipe`, or nothing.
+/// - `texture_id` refs a `Image`, `ImagePipe2`, or nothing.
 ///
 /// If no texture is provided (i.e. `texture_id` is zero), a solid color is used.
 /// If a texture is provided, then the value sampled from the texture is
@@ -698,7 +698,7 @@ type RemoveAllLayersCmd = struct {
 
 /// Set a compositor's layer stack, replacing the current stack (if any).
 /// Constraints:
-/// - `compositor_id` refs a `DisplayCompositor` or `ImagePipeCompositor`.
+/// - `compositor_id` refs a `DisplayCompositor`.
 /// - `layer_stack_id` refs a `LayerStack`.
 type SetLayerStackCmd = struct {
     compositor_id uint32;

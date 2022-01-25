@@ -494,24 +494,6 @@ class MeasuringTape {
     num_handles_ += 1;
   }
 
-  void Measure(const ::fuchsia::ui::gfx::ImagePipeArgs& value) {
-    num_bytes_ += FIDL_ALIGN(4);
-    MeasureHandles(value);
-  }
-
-  void MeasureHandles(const ::fuchsia::ui::gfx::ImagePipeArgs& value) {
-    num_handles_ += 1;
-  }
-
-  void Measure(const ::fuchsia::ui::gfx::ImagePipeCompositorArgs& value) {
-    num_bytes_ += FIDL_ALIGN(4);
-    MeasureHandles(value);
-  }
-
-  void MeasureHandles(const ::fuchsia::ui::gfx::ImagePipeCompositorArgs& value) {
-    num_handles_ += 1;
-  }
-
   void Measure(const ::fuchsia::ui::gfx::ImportResourceCmdDeprecated& value) {
     num_bytes_ += FIDL_ALIGN(12);
     MeasureHandles(value);
@@ -692,19 +674,9 @@ class MeasuringTape {
         Measure(_image3);
         break;
       }
-      case ::fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe: {
-        __attribute__((unused)) auto const& _image_pipe = value.image_pipe();
-        Measure(_image_pipe);
-        break;
-      }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe2: {
         __attribute__((unused)) auto const& _image_pipe2 = value.image_pipe2();
         Measure(_image_pipe2);
-        break;
-      }
-      case ::fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipeCompositor: {
-        __attribute__((unused)) auto const& _image_pipe_compositor = value.image_pipe_compositor();
-        Measure(_image_pipe_compositor);
         break;
       }
       case ::fuchsia::ui::gfx::ResourceArgs::Tag::kLayer: {

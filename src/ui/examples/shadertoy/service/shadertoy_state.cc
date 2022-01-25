@@ -97,7 +97,7 @@ void ShadertoyState::SetMouse(glm::vec4 i_mouse) {
 }
 
 void ShadertoyState::SetImage(uint32_t channel,
-                              fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
+                              fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request) {
   FX_CHECK(false) << "unimplemented";
 }
 

@@ -24,7 +24,7 @@ class MockImagePipeUpdater : public ImagePipeUpdater {
       scheduling::SessionId scheduling_id, zx::time presentation_time,
       fxl::WeakPtr<ImagePipeBase> image_pipe, std::vector<zx::event> acquire_fences,
       std::vector<zx::event> release_fences,
-      fuchsia::images::ImagePipe::PresentImageCallback callback) override {
+      fuchsia::images::ImagePipe2::PresentImageCallback callback) override {
     ++schedule_update_call_count_;
     return ++latest_present_id_;
   }

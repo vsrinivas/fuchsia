@@ -14,7 +14,7 @@ type ResourceArgs = strict resource union {
     // Memory resources.
     1: memory MemoryArgs;
     2: image ImageArgs;
-    3: image_pipe ImagePipeArgs;
+    3: reserved;
     4: buffer BufferArgs;
 
     // Views.
@@ -39,7 +39,7 @@ type ResourceArgs = strict resource union {
     // Layers.
    16: compositor CompositorArgs;
    17: display_compositor DisplayCompositorArgs;
-   18: image_pipe_compositor ImagePipeCompositorArgs;
+   18: reserved;
    19: layer_stack LayerStackArgs;
    20: layer LayerArgs;
 
@@ -65,10 +65,6 @@ type ResourceArgs = strict resource union {
    32: image_pipe2 ImagePipe2Args;
    33: image2 ImageArgs2;
    34: image3 ImageArgs3;
-};
-
-type ImagePipeArgs = resource struct {
-    image_pipe_request server_end:fuchsia.images.ImagePipe;
 };
 
 /// `ImagePipe2` is a `Resource` that can be used as a `Texture` for a `Material`.
@@ -212,12 +208,6 @@ type DisplayCompositorArgs = struct {
     dummy uint32 = 0;
 };
 
-/// An ImagePipeCompositor draws its attached `LayerStack` into an image that is
-/// presented on an image-pipe.
-type ImagePipeCompositorArgs = resource struct {
-    target client_end:fuchsia.images.ImagePipe;
-};
-
 /// A LayerStack is a stack of layers that are attached to a Compositor, which
 /// draws them in order of increasing Z-order (or rather, presents the illusion
 /// of drawing them in that order: it may apply any optimizations that don't
@@ -336,7 +326,7 @@ type PointLightArgs = struct {
 ///
 /// Supported commands:
 /// - SetTextureCmd: sets the texture, or it can be left as zero (no texture).
-///   The texture can be an Image or ImagePipe.
+///   The texture can be an Image or ImagePipe2.
 /// - SetColorCmd: sets the color.
 type MaterialArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.

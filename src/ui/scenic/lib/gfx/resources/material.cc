@@ -9,7 +9,6 @@
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_base.h"
-#include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 
 namespace scenic_impl {
 namespace gfx {

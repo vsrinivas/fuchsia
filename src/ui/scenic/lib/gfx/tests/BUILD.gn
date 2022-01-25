@@ -163,8 +163,6 @@ executable("unittests") {
     "host_image_unittest.cc",
     "id_unittest.cc",
     "image_pipe2_unittest.cc",
-    "image_pipe_render_unittest.cc",
-    "image_pipe_unittest.cc",
     "image_pipe_unittest_common.cc",
     "image_pipe_updater_unittest.cc",
     "memory_unittest.cc",

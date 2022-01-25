@@ -5,15 +5,11 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.images") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "vector-bounds-not-specified" ]
-
   sdk_category = "partner"
 
   sources = [
     "encoded_image.fidl",
     "image_info.fidl",
-    "image_pipe.fidl",
     "image_pipe2.fidl",
     "memory_type.fidl",
     "presentation_info.fidl",

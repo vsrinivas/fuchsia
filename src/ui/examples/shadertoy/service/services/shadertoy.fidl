@@ -57,6 +57,6 @@ protocol Shadertoy {
     // TODO: implement cubemap support.
     SetImage(resource struct {
         channel uint32;
-        image_pipe server_end:fuchsia.images.ImagePipe;
+        image_pipe server_end:fuchsia.images.ImagePipe2;
     });
 };

@@ -31,7 +31,7 @@ scheduling::PresentId ImagePipeUpdater::ScheduleImagePipeUpdate(
     scheduling::SessionId scheduling_id, zx::time presentation_time,
     fxl::WeakPtr<ImagePipeBase> image_pipe, std::vector<zx::event> acquire_fences,
     std::vector<zx::event> release_fences,
-    fuchsia::images::ImagePipe::PresentImageCallback callback) {
+    fuchsia::images::ImagePipe2::PresentImageCallback callback) {
   TRACE_DURATION("gfx", "ImagePipeUpdater::ScheduleImagePipeUpdate", "scheduling_id",
                  scheduling_id);
 

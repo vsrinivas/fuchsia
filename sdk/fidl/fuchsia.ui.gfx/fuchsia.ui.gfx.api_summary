@@ -176,10 +176,6 @@ struct/member fuchsia.ui.gfx/ImageArgs3.width uint32
 resource struct fuchsia.ui.gfx/ImageArgs3
 struct/member fuchsia.ui.gfx/ImagePipe2Args.image_pipe_request server_end:fuchsia.images/ImagePipe2
 resource struct fuchsia.ui.gfx/ImagePipe2Args
-struct/member fuchsia.ui.gfx/ImagePipeArgs.image_pipe_request server_end:fuchsia.images/ImagePipe
-resource struct fuchsia.ui.gfx/ImagePipeArgs
-struct/member fuchsia.ui.gfx/ImagePipeCompositorArgs.target fuchsia.images/ImagePipe
-resource struct fuchsia.ui.gfx/ImagePipeCompositorArgs
 struct/member fuchsia.ui.gfx/ImportResourceCmdDeprecated.id uint32
 struct/member fuchsia.ui.gfx/ImportResourceCmdDeprecated.spec fuchsia.ui.gfx/ImportSpec
 struct/member fuchsia.ui.gfx/ImportResourceCmdDeprecated.token zx/handle:EVENTPAIR
@@ -266,9 +262,7 @@ union/member fuchsia.ui.gfx/ResourceArgs.entity_node fuchsia.ui.gfx/EntityNodeAr
 union/member fuchsia.ui.gfx/ResourceArgs.image fuchsia.ui.gfx/ImageArgs
 union/member fuchsia.ui.gfx/ResourceArgs.image2 fuchsia.ui.gfx/ImageArgs2
 union/member fuchsia.ui.gfx/ResourceArgs.image3 fuchsia.ui.gfx/ImageArgs3
-union/member fuchsia.ui.gfx/ResourceArgs.image_pipe fuchsia.ui.gfx/ImagePipeArgs
 union/member fuchsia.ui.gfx/ResourceArgs.image_pipe2 fuchsia.ui.gfx/ImagePipe2Args
-union/member fuchsia.ui.gfx/ResourceArgs.image_pipe_compositor fuchsia.ui.gfx/ImagePipeCompositorArgs
 union/member fuchsia.ui.gfx/ResourceArgs.layer fuchsia.ui.gfx/LayerArgs
 union/member fuchsia.ui.gfx/ResourceArgs.layer_stack fuchsia.ui.gfx/LayerStackArgs
 union/member fuchsia.ui.gfx/ResourceArgs.material fuchsia.ui.gfx/MaterialArgs

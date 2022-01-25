@@ -20,7 +20,7 @@ struct ImagePipeUpdateResults {
   bool image_updated;
 };
 
-// Abstract superclass for ImagePipe and ImagePipe2.
+// Abstract superclass for ImagePipe2.
 // TODO(fxbug.dev/35636): This class is to be DEPRECATED in favor of ImagePipe2.
 class ImagePipeBase : public ImageBase {
  public:

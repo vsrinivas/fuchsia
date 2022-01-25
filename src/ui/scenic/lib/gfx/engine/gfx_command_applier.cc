@@ -28,9 +28,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/gpu_image.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
-#include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe2.h"
-#include "src/ui/scenic/lib/gfx/resources/image_pipe_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/ambient_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/directional_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/point_light.h"
@@ -257,10 +255,6 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(Session* session, CommandContext*
       return ApplyCreateImage2(session, id, std::move(command.resource.image2()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImage3:
       return ApplyCreateImage3(session, id, std::move(command.resource.image3()));
-    case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe: {
-      return ApplyCreateImagePipe(session, id, std::move(command.resource.image_pipe()),
-                                  command_context->image_pipe_updater);
-    }
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe2: {
       return ApplyCreateImagePipe2(session, id, std::move(command.resource.image_pipe2()),
                                    command_context->image_pipe_updater);
@@ -316,9 +310,6 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(Session* session, CommandContext*
     case fuchsia::ui::gfx::ResourceArgs::Tag::kDisplayCompositor:
       return ApplyCreateDisplayCompositor(session, command_context, id,
                                           std::move(command.resource.display_compositor()));
-    case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipeCompositor:
-      return ApplyCreateImagePipeCompositor(session, id,
-                                            std::move(command.resource.image_pipe_compositor()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kLayerStack:
       return ApplyCreateLayerStack(session, id, std::move(command.resource.layer_stack()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kLayer:
@@ -1083,15 +1074,6 @@ bool GfxCommandApplier::ApplyCreateImage3(Session* session, ResourceId id,
   return false;
 }
 
-bool GfxCommandApplier::ApplyCreateImagePipe(Session* session, ResourceId id,
-                                             fuchsia::ui::gfx::ImagePipeArgs args,
-                                             std::shared_ptr<ImagePipeUpdater> image_pipe_updater) {
-  auto image_pipe = fxl::MakeRefCounted<ImagePipe>(session, id, std::move(args.image_pipe_request),
-                                                   std::move(image_pipe_updater),
-                                                   session->shared_error_reporter());
-  return session->resources()->AddResource(id, image_pipe);
-}
-
 bool GfxCommandApplier::ApplyCreateImagePipe2(
     Session* session, ResourceId id, fuchsia::ui::gfx::ImagePipe2Args args,
     std::shared_ptr<ImagePipeUpdater> image_pipe_updater) {
@@ -1379,12 +1361,6 @@ bool GfxCommandApplier::ApplyCreateDisplayCompositor(Session* session, CommandCo
   return compositor ? session->resources()->AddResource(id, std::move(compositor)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateImagePipeCompositor(
-    Session* session, ResourceId id, fuchsia::ui::gfx::ImagePipeCompositorArgs args) {
-  auto compositor = CreateImagePipeCompositor(session, id, std::move(args));
-  return compositor ? session->resources()->AddResource(id, std::move(compositor)) : false;
-}
-
 bool GfxCommandApplier::ApplyCreateLayerStack(Session* session, ResourceId id,
                                               fuchsia::ui::gfx::LayerStackArgs args) {
   auto layer_stack = CreateLayerStack(session, id, std::move(args));
@@ -1630,15 +1606,6 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
 
   return fxl::AdoptRef(new DisplayCompositor(
       session, session->id(), id, session->session_context().scene_graph, std::move(swapchain)));
-}
-
-ResourcePtr GfxCommandApplier::CreateImagePipeCompositor(
-    Session* session, ResourceId id, fuchsia::ui::gfx::ImagePipeCompositorArgs args) {
-  // TODO(fxbug.dev/23430)
-  session->error_reporter()->ERROR()
-      << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateImagePipeCompositor() is unimplemented "
-         "(fxbug.dev/23430)";
-  return ResourcePtr();
 }
 
 ResourcePtr GfxCommandApplier::CreateLayerStack(Session* session, ResourceId id,

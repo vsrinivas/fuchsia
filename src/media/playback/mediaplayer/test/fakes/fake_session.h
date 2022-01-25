@@ -79,9 +79,7 @@ class FakeSession : public fuchsia::ui::scenic::Session {
     Resource(fuchsia::ui::gfx::ResourceArgs args) : args_(std::move(args)) {}
 
     bool is_material() const { return args_.is_material(); }
-    bool is_texture() const {
-      return args_.is_image() || args_.is_image_pipe() || args_.is_image_pipe2();
-    }
+    bool is_texture() const { return args_.is_image() || args_.is_image_pipe2(); }
     bool is_shape() const {
       return args_.is_rectangle() || args_.is_rounded_rectangle() || args_.is_circle() ||
              args_.is_mesh();

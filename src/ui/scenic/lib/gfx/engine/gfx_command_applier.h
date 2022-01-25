@@ -33,9 +33,6 @@ using ImagePtr = fxl::RefPtr<Image>;
 class ImageBase;
 using ImageBasePtr = fxl::RefPtr<ImageBase>;
 
-class ImagePipe;
-using ImagePipePtr = fxl::RefPtr<ImagePipe>;
-
 class Session;
 class Sysmem;
 
@@ -163,9 +160,6 @@ class GfxCommandApplier {
   static bool ApplyCreateImage(Session* session, ResourceId id, fuchsia::ui::gfx::ImageArgs args);
   static bool ApplyCreateImage2(Session* session, ResourceId id, fuchsia::ui::gfx::ImageArgs2 args);
   static bool ApplyCreateImage3(Session* session, ResourceId id, fuchsia::ui::gfx::ImageArgs3 args);
-  static bool ApplyCreateImagePipe(Session* session, ResourceId id,
-                                   fuchsia::ui::gfx::ImagePipeArgs args,
-                                   std::shared_ptr<ImagePipeUpdater> image_pipe_updater);
   static bool ApplyCreateImagePipe2(Session* session, ResourceId id,
                                     fuchsia::ui::gfx::ImagePipe2Args args,
                                     std::shared_ptr<ImagePipeUpdater> image_pipe_updater);
@@ -211,8 +205,6 @@ class GfxCommandApplier {
                                     fuchsia::ui::gfx::CompositorArgs args);
   static bool ApplyCreateDisplayCompositor(Session* session, CommandContext* context, ResourceId id,
                                            fuchsia::ui::gfx::DisplayCompositorArgs args);
-  static bool ApplyCreateImagePipeCompositor(Session* session, ResourceId id,
-                                             fuchsia::ui::gfx::ImagePipeCompositorArgs args);
   static bool ApplyCreateLayerStack(Session* session, ResourceId id,
                                     fuchsia::ui::gfx::LayerStackArgs args);
   static bool ApplyCreateLayer(Session* session, ResourceId id, fuchsia::ui::gfx::LayerArgs args);
@@ -282,8 +274,6 @@ class GfxCommandApplier {
   static ResourcePtr CreateDisplayCompositor(Session* session, CommandContext* context,
                                              ResourceId id,
                                              fuchsia::ui::gfx::DisplayCompositorArgs args);
-  static ResourcePtr CreateImagePipeCompositor(Session* session, ResourceId id,
-                                               fuchsia::ui::gfx::ImagePipeCompositorArgs args);
   static ResourcePtr CreateLayerStack(Session* session, ResourceId id,
                                       fuchsia::ui::gfx::LayerStackArgs args);
   static ResourcePtr CreateLayer(Session* session, ResourceId id, fuchsia::ui::gfx::LayerArgs args);

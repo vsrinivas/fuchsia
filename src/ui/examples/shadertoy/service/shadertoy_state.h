@@ -48,7 +48,7 @@ class ShadertoyState : public escher::Resource {
 
   void SetMouse(glm::vec4 i_mouse);
 
-  void SetImage(uint32_t channel, fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
+  void SetImage(uint32_t channel, fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request);
 
  protected:
   explicit ShadertoyState(App* app);

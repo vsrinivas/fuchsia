@@ -5,7 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_IMAGE_PIPE_UNITTEST_COMMON_H_
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_IMAGE_PIPE_UNITTEST_COMMON_H_
 
-#include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
+#include "src/ui/scenic/lib/gfx/resources/image.h"
 
 namespace scenic_impl {
 namespace gfx {

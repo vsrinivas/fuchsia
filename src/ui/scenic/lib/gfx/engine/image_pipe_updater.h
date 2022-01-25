@@ -22,7 +22,7 @@ class MockImagePipeUpdater;
 }  // namespace test
 
 class ImagePipeBase;
-using PresentImageCallback = fuchsia::images::ImagePipe::PresentImageCallback;
+using PresentImageCallback = fuchsia::images::ImagePipe2::PresentImageCallback;
 
 // ImagePipeUpdater is a helper class responsible for the scheduling and application of ImagePipe
 // updates.
@@ -50,7 +50,7 @@ class ImagePipeUpdater : public scheduling::SessionUpdater,
       scheduling::SessionId scheduling_id, zx::time presentation_time,
       fxl::WeakPtr<ImagePipeBase> image_pipe, std::vector<zx::event> acquire_fences,
       std::vector<zx::event> release_fences,
-      fuchsia::images::ImagePipe::PresentImageCallback callback);
+      fuchsia::images::ImagePipe2::PresentImageCallback callback);
   // |scheduling::SessionUpdater|
   UpdateResults UpdateSessions(
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,

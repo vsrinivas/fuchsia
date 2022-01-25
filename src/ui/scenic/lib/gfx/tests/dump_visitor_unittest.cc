@@ -9,7 +9,6 @@
 #include <gtest/gtest.h>
 
 #include "src/ui/scenic/lib/gfx/resources/host_image.h"
-#include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
@@ -52,19 +51,13 @@ TEST_F(DumpVisitorTest, DynamicVisitOfBaseImageTypes) {
 
   ResourceId next_id = 1;
   MaterialPtr image_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
-  MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), session()->id(), next_id++);
   ImagePtr image = CreateImage(next_id++);
-  ImagePipePtr pipe = fxl::MakeRefCounted<ImagePipe>(session(), next_id++, nullptr,
-                                                     session()->shared_error_reporter());
 
   image_material->SetTexture(image);
-  pipe_material->SetTexture(pipe);
 
   visitor.Visit(image_material.get());
-  visitor.Visit(pipe_material.get());
 
   EXPECT_TRUE(ostream.str().find("> Image") != std::string::npos);
-  EXPECT_TRUE(ostream.str().find("> ImagePipe") != std::string::npos);
   // fxbug.dev/39484. Re-enable this by injecting an Image with an associated escher::Image,
   // or by refactoring gfx::Image itself and updating RenderVisitor.
   // EXPECT_TRUE(ostream.str().find("use_protected_memory:") != std::string::npos);

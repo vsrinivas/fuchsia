@@ -37,7 +37,7 @@ class ShadertoyImpl : public fuchsia::examples::shadertoy::Shadertoy {
 
   // |Shadertoy|
   void SetImage(uint32_t channel,
-                fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) override;
+                fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request) override;
 
   fxl::RefPtr<ShadertoyState> state_;
 
