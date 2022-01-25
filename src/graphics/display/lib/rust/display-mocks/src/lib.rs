@@ -7,12 +7,28 @@
 //! Unit test utilities for clients of the `fuchsia.hardware.display` FIDL API.
 
 use {
-    anyhow::{anyhow, Context, Result},
     fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_hardware_display::{self as display, ControllerMarker, ControllerRequestStream},
     itertools::Itertools,
     std::collections::HashMap,
+    thiserror::Error,
 };
+
+/// Errors that can be returned by `MockController`.
+#[derive(Error, Debug)]
+pub enum MockControllerError {
+    /// Duplicate IDs were given to a function that expects objects with unique IDs. For example,
+    /// MockController has been assigned multiple displays with clashing IDs.
+    #[error("duplicate IDs provided")]
+    DuplicateIds,
+
+    /// Error from the underlying FIDL bindings or channel transport.
+    #[error("FIDL error: {0}")]
+    FidlError(#[from] fidl::Error),
+}
+
+/// MockControllerError Result type alias.
+pub type Result<T> = std::result::Result<T, MockControllerError>;
 
 /// `MockController` implements the server-end of the `fuchsia.hardware.display.Controller`
 /// protocol. It minimally reproduces the display controller driver state machine to respond to
@@ -31,9 +47,7 @@ struct DisplayId(u64);
 impl MockController {
     /// Bind a new `MockController` to the server end of a FIDL channel.
     pub fn new(server_end: ServerEnd<ControllerMarker>) -> Result<MockController> {
-        let (stream, control_handle) = server_end
-            .into_stream_and_control_handle()
-            .context("failed to create FIDL stream from server end")?;
+        let (stream, control_handle) = server_end.into_stream_and_control_handle()?;
         Ok(MockController { stream, control_handle, displays: HashMap::new() })
     }
 
@@ -47,17 +61,16 @@ impl MockController {
     pub fn assign_displays(&mut self, displays: Vec<display::Info>) -> Result<()> {
         let mut added = HashMap::new();
         if !displays.into_iter().all(|info| added.insert(DisplayId(info.id), info).is_none()) {
-            return Err(anyhow!("duplicate display IDs"));
+            return Err(MockControllerError::DuplicateIds);
         }
 
         let removed: Vec<u64> = self.displays.iter().map(|(_, info)| info.id).collect();
         self.displays = added;
-        self.control_handle
-            .send_on_displays_changed(
-                &mut self.displays.iter_mut().sorted().map(|(_, info)| info),
-                &removed,
-            )
-            .context("failed to send an OnDisplaysChanged event")
+        self.control_handle.send_on_displays_changed(
+            &mut self.displays.iter_mut().sorted().map(|(_, info)| info),
+            &removed,
+        )?;
+        Ok(())
     }
 }
 
@@ -67,8 +80,7 @@ impl MockController {
 /// NOTE: This function instantiates FIDL bindings and thus requires a fuchsia-async executor to
 /// have been created beforehand.
 pub fn create_proxy_and_mock() -> Result<(display::ControllerProxy, MockController)> {
-    let (proxy, server) = fidl::endpoints::create_proxy::<ControllerMarker>()
-        .context("failed to open a Controller FIDL channel")?;
+    let (proxy, server) = fidl::endpoints::create_proxy::<ControllerMarker>()?;
     Ok((proxy, MockController::new(server)?))
 }
 
@@ -76,6 +88,7 @@ pub fn create_proxy_and_mock() -> Result<(display::ControllerProxy, MockControll
 mod tests {
     use super::*;
     use {
+        anyhow::{Context, Result},
         fidl_fuchsia_hardware_display as display,
         futures::{future, TryStreamExt},
     };
