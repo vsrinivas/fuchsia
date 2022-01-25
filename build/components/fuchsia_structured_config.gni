@@ -202,6 +202,10 @@ template("fuchsia_structured_config_values") {
 #     Name for the generated Rust library. If not specified, the target name is used.
 #     Type: string
 #
+#   fidl_library_name (optional)
+#     Name for the generated FIDL library. If not specified, the default (cf.sc.internal) is used.
+#     Type: string
+#
 #   testonly (optional)
 #     Standard GN meaning.
 template("fuchsia_structured_config_rust_lib") {
@@ -209,6 +213,14 @@ template("fuchsia_structured_config_rust_lib") {
     rust_library_name = target_name
   } else {
     rust_library_name = invoker.name
+  }
+
+  # The library name is a string that is also used internally by configc when generating
+  # FIDL and Rust source files. It is not visible to the end user.
+  if (defined(invoker.fidl_library_name)) {
+    fidl_library_name = invoker.fidl_library_name
+  } else {
+    fidl_library_name = "cf.sc.internal"
   }
 
   rust_library_name = string_replace(rust_library_name, ".", "_")
@@ -228,7 +240,7 @@ template("fuchsia_structured_config_rust_lib") {
     # generate the client library FIDL source
     fidl_config_client_lib_source(fidl_source_target) {
       forward_variables_from(invoker, [ "testonly" ])
-      name = invoker.target_name
+      name = fidl_library_name
       compiled_manifest = compiled_manifest
       deps = [ "${invoker.cm_target}" ]
     }
@@ -236,7 +248,7 @@ template("fuchsia_structured_config_rust_lib") {
     # generate the rust source
     rust_config_client_lib_source(rust_source_target) {
       forward_variables_from(invoker, [ "testonly" ])
-      name = invoker.target_name
+      fidl_library_name = fidl_library_name
       compiled_manifest = compiled_manifest
       deps = [ "${invoker.cm_target}" ]
     }
@@ -256,15 +268,14 @@ template("fuchsia_structured_config_rust_lib") {
   # generated source files manually.
   source_gen_dir =
       get_label_info(":bogus($default_toolchain)", "target_out_dir")
-  fidl_source_file = "${source_gen_dir}/${target_name}.fidl"
-  rust_source_file = "${source_gen_dir}/${target_name}.rs"
+  fidl_source_file = "${source_gen_dir}/${fidl_source_target}.fidl"
+  rust_source_file = "${source_gen_dir}/${rust_source_target}.rs"
 
   # generate the FIDL library
   fidl_library_target = "${target_name}_fidl_internal"
+
   fidl(fidl_library_target) {
-    # The library name is a hard coded string that is also used internally by
-    # configc when generating FIDL and Rust source files. It is not visible to the end user.
-    name = "cf.sc.internal"
+    name = fidl_library_name
     forward_variables_from(invoker, [ "testonly" ])
     sources = [ fidl_source_file ]
     non_fidl_deps = [ ":${fidl_source_target}($default_toolchain)" ]

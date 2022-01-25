@@ -48,35 +48,35 @@ cm("config_manifest") {
   config_values_package_path = "goldens/config_values.json5"
 }
 
-fidl_config_client_lib_source("fidl_config_lib_golden_gen") {
+fidl_config_client_lib_source("fidl_config_lib") {
   manifest_outputs = get_target_outputs(":config_manifest")
   compiled_manifest = manifest_outputs[0]
-  name = "goldenconfig"
+  name = "my.config.lib"
   deps = [ ":config_manifest" ]
   testonly = true
 }
 
-rust_config_client_lib_source("rust_config_lib_golden_gen") {
+rust_config_client_lib_source("rust_config_lib") {
   manifest_outputs = get_target_outputs(":config_manifest")
   compiled_manifest = manifest_outputs[0]
-  name = "goldenconfig"
+  fidl_library_name = "my.config.lib"
   deps = [ ":config_manifest" ]
   testonly = true
 }
 
 golden_file("fidl_config_lib_golden_test") {
   golden = "goldens/config.fidl.golden"
-  lib_outputs = get_target_outputs(":fidl_config_lib_golden_gen")
+  lib_outputs = get_target_outputs(":fidl_config_lib")
   current = lib_outputs[0]
-  deps = [ ":fidl_config_lib_golden_gen" ]
+  deps = [ ":fidl_config_lib" ]
   testonly = true
 }
 
 golden_file("rust_config_lib_golden_test") {
   golden = "goldens/config.rs.golden"
-  lib_outputs = get_target_outputs(":rust_config_lib_golden_gen")
+  lib_outputs = get_target_outputs(":rust_config_lib")
   current = lib_outputs[0]
-  deps = [ ":rust_config_lib_golden_gen" ]
+  deps = [ ":rust_config_lib" ]
   testonly = true
 }
 

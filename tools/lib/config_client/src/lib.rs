@@ -101,11 +101,8 @@ const RESERVED_WORDS: [&str; 73] = [
     "WaitForEvent",
 ];
 
-const FIDL_LIBRARY_NAME: &str = "cf.sc.internal";
-const RUST_FIDL_LIBRARY_NAME: &str = "fidl_cf_sc_internal";
-
 /// Create a custom FIDL library source file containing all the fields of a config declaration
-pub fn create_fidl_source(config_decl: &ConfigDecl) -> String {
+pub fn create_fidl_source(config_decl: &ConfigDecl, library_name: String) -> String {
     let mut fidl_struct_fields = vec![];
     for ConfigField { key, value_type } in &config_decl.fields {
         let fidl_type = config_value_type_to_fidl_type(&value_type);
@@ -121,16 +118,21 @@ pub fn create_fidl_source(config_decl: &ConfigDecl) -> String {
 type Config = struct {{
 {}
 }};",
-        FIDL_LIBRARY_NAME,
+        library_name,
         fidl_struct_fields.join("\n")
     );
     output
 }
 
 /// Create a Rust wrapper file containing all the fields of a config declaration
-pub fn create_rust_wrapper(config_decl: &ConfigDecl) -> Result<String, SourceGenError> {
-    let library_name = parse_str::<Ident>(RUST_FIDL_LIBRARY_NAME)
-        .expect("rust library name must always be a valid identifier.");
+pub fn create_rust_wrapper(
+    config_decl: &ConfigDecl,
+    fidl_library_name: String,
+) -> Result<String, SourceGenError> {
+    let fidl_library_name =
+        format!("fidl_{}", fidl_library_name.replace('.', "_").to_ascii_lowercase());
+    let fidl_library_name = parse_str::<Ident>(&fidl_library_name)
+        .map_err(|source| SourceGenError::InvalidIdentifier { input: fidl_library_name, source })?;
     let expected_checksum = &config_decl.declaration_checksum;
 
     let expected_checksum =
@@ -147,7 +149,7 @@ pub fn create_rust_wrapper(config_decl: &ConfigDecl) -> Result<String, SourceGen
     }
 
     let stream = quote! {
-        use #library_name::Config as FidlConfig;
+        use #fidl_library_name::Config as FidlConfig;
         use fidl::encoding::decode_persistent;
         use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
         use fuchsia_zircon as zx;
@@ -350,147 +352,6 @@ mod tests {
     }
 
     #[test]
-    fn basic_success() {
-        let decl = config_decl! {
-            ck@ test_checksum(),
-            my_flag: { bool },
-            my_uint8: { uint8 },
-            my_uint16: { uint16 },
-            my_uint32: { uint32 },
-            my_uint64: { uint64 },
-            my_int8: { int8 },
-            my_int16: { int16 },
-            my_int32: { int32 },
-            my_int64: { int64 },
-            my_string: { string, max_size: 100 },
-            my_vector_of_flag: { vector, element: bool, max_count: 100 },
-            my_vector_of_uint8: { vector, element: uint8, max_count: 100 },
-            my_vector_of_uint16: { vector, element: uint16, max_count: 100 },
-            my_vector_of_uint32: { vector, element: uint32, max_count: 100 },
-            my_vector_of_uint64: { vector, element: uint64, max_count: 100 },
-            my_vector_of_int8: { vector, element: int8, max_count: 100 },
-            my_vector_of_int16: { vector, element: int16, max_count: 100 },
-            my_vector_of_int32: { vector, element: int32, max_count: 100 },
-            my_vector_of_int64: { vector, element: int64, max_count: 100 },
-            my_vector_of_string: {
-                vector,
-                element: { string, max_size: 100 },
-                max_count: 100
-            },
-        };
-
-        let observed_fidl_src = create_fidl_source(&decl);
-        let expected_fidl_src = "library cf.sc.internal;
-type Config = struct {
-my_flag bool;
-my_uint8 uint8;
-my_uint16 uint16;
-my_uint32 uint32;
-my_uint64 uint64;
-my_int8 int8;
-my_int16 int16;
-my_int32 int32;
-my_int64 int64;
-my_string string:100;
-my_vector_of_flag vector<bool>:100;
-my_vector_of_uint8 vector<uint8>:100;
-my_vector_of_uint16 vector<uint16>:100;
-my_vector_of_uint32 vector<uint32>:100;
-my_vector_of_uint64 vector<uint64>:100;
-my_vector_of_int8 vector<int8>:100;
-my_vector_of_int16 vector<int16>:100;
-my_vector_of_int32 vector<int32>:100;
-my_vector_of_int64 vector<int64>:100;
-my_vector_of_string vector<string:100>:100;
-};";
-        assert_eq!(observed_fidl_src, expected_fidl_src);
-
-        let actual_rust_src = create_rust_wrapper(&decl).unwrap();
-
-        let expected_rust_src = quote! {
-            use fidl_cf_sc_internal::Config as FidlConfig;
-            use fidl::encoding::decode_persistent;
-            use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
-            use fuchsia_zircon as zx;
-
-            pub struct Config {
-                pub my_flag: bool,
-                pub my_uint8: u8,
-                pub my_uint16: u16,
-                pub my_uint32: u32,
-                pub my_uint64: u64,
-                pub my_int8: i8,
-                pub my_int16: i16,
-                pub my_int32: i32,
-                pub my_int64: i64,
-                pub my_string: String,
-                pub my_vector_of_flag: Vec<bool>,
-                pub my_vector_of_uint8: Vec<u8>,
-                pub my_vector_of_uint16: Vec<u16>,
-                pub my_vector_of_uint32: Vec<u32>,
-                pub my_vector_of_uint64: Vec<u64>,
-                pub my_vector_of_int8: Vec<i8>,
-                pub my_vector_of_int16: Vec<i16>,
-                pub my_vector_of_int32: Vec<i32>,
-                pub my_vector_of_int64: Vec<i64>,
-                pub my_vector_of_string: Vec<String>
-            }
-
-            impl Config {
-                pub fn from_args() -> Self {
-                    let config_vmo: zx::Vmo = take_startup_handle(HandleInfo::new(HandleType::ConfigVmo, 0))
-                        .expect("must have been provided with a config vmo")
-                        .into();
-                    let config_size = config_vmo.get_content_size().expect("must be able to read config vmo content size");
-                    assert_ne!(config_size, 0, "config vmo must be non-empty");
-
-                    let mut config_bytes = Vec::new();
-                    config_bytes.resize(config_size as usize, 0);
-                    config_vmo.read(&mut config_bytes, 0).expect("must be able to read config vmo");
-
-                    let checksum_length = u16::from_le_bytes([config_bytes[0], config_bytes[1]]) as usize;
-                    let fidl_start = 2 + checksum_length;
-                    let observed_checksum = &config_bytes[2..fidl_start];
-                    let expected_checksum = vec![
-                        0xb5, 0xf9, 0x33, 0xe8, 0x94, 0x56, 0x3a, 0xf9, 0x61, 0x39, 0xe5, 0x05, 0x79,
-                        0x4b, 0x88, 0xa5, 0x3e, 0xd4, 0xd1, 0x5c, 0x32, 0xe2, 0xb4, 0x49, 0x9e, 0x42,
-                        0xeb, 0xa3, 0x32, 0xb1, 0xf5, 0xbb
-                    ];
-
-                    assert_eq!(observed_checksum, expected_checksum, "checksum from config VMO does not match expected checksum");
-
-                    let fidl_config: FidlConfig = decode_persistent(&config_bytes[fidl_start..]).expect("must be able to parse bytes as config FIDL");
-
-                    Self {
-                        my_flag: fidl_config.my_flag,
-                        my_uint8: fidl_config.my_uint8,
-                        my_uint16: fidl_config.my_uint16,
-                        my_uint32: fidl_config.my_uint32,
-                        my_uint64: fidl_config.my_uint64,
-                        my_int8: fidl_config.my_int8,
-                        my_int16: fidl_config.my_int16,
-                        my_int32: fidl_config.my_int32,
-                        my_int64: fidl_config.my_int64,
-                        my_string: fidl_config.my_string,
-                        my_vector_of_flag: fidl_config.my_vector_of_flag,
-                        my_vector_of_uint8: fidl_config.my_vector_of_uint8,
-                        my_vector_of_uint16: fidl_config.my_vector_of_uint16,
-                        my_vector_of_uint32: fidl_config.my_vector_of_uint32,
-                        my_vector_of_uint64: fidl_config.my_vector_of_uint64,
-                        my_vector_of_int8: fidl_config.my_vector_of_int8,
-                        my_vector_of_int16: fidl_config.my_vector_of_int16,
-                        my_vector_of_int32: fidl_config.my_vector_of_int32,
-                        my_vector_of_int64: fidl_config.my_vector_of_int64,
-                        my_vector_of_string: fidl_config.my_vector_of_string
-                    }
-                }
-            }
-        }.to_string();
-
-        assert_eq!(actual_rust_src, expected_rust_src);
-    }
-
-    #[test]
     fn bad_field_names() {
         let decl = config_decl! {
             ck@ test_checksum(),
@@ -506,7 +367,7 @@ my_vector_of_string vector<string:100>:100;
             ServerMode: { bool },
         };
 
-        let observed_fidl_src = create_fidl_source(&decl);
+        let observed_fidl_src = create_fidl_source(&decl, "cf.sc.internal".to_string());
         let expected_fidl_src = "library cf.sc.internal;
 type Config = struct {
 snake_case_string bool;
@@ -522,7 +383,7 @@ server_mode_ bool;
 };";
         assert_eq!(observed_fidl_src, expected_fidl_src);
 
-        let actual_rust_src = create_rust_wrapper(&decl).unwrap();
+        let actual_rust_src = create_rust_wrapper(&decl, "cf.sc.internal".to_string()).unwrap();
 
         let expected_rust_src = quote! {
             use fidl_cf_sc_internal::Config as FidlConfig;

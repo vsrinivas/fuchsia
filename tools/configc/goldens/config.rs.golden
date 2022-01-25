@@ -1,5 +1,5 @@
 use fidl::encoding::decode_persistent;
-use fidl_cf_sc_internal::Config as FidlConfig;
+use fidl_my_config_lib::Config as FidlConfig;
 use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
 use fuchsia_zircon as zx;
 pub struct Config {
