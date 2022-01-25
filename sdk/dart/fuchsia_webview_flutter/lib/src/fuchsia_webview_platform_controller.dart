@@ -20,7 +20,11 @@ import 'utils.dart' as utils;
 class _ChannelSubscription {
   StreamSubscription<String>? subscription;
   final int id;
-  _ChannelSubscription(this.id, {this.subscription});
+  _ChannelSubscription(this.id);
+
+  void dispose() {
+    subscription?.cancel();
+  }
 }
 
 /// Fuchsia [WebViewPlatformController] implementation that serves as the entry

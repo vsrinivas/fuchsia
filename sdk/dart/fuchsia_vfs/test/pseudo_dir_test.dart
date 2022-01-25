@@ -1165,8 +1165,8 @@ class _Dirent {
 }
 
 class _TestVnode extends Vnode {
-  final String _val;
-  _TestVnode([this._val = '']);
+  final String _val = '';
+  _TestVnode();
 
   @override
   int connect(int flags, int mode, InterfaceRequest<Node> request,

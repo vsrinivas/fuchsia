@@ -42,8 +42,9 @@ class InspectFlutter {
       // and assign its value. The value of the property can be null
       // but the property itself cannot be null.
       if (diagNode.name != null) {
-        childNode!.stringProperty(diagNode.name!)!.setValue(diagNode
-            .toDescription()!); // ignore: unnecessary_non_null_assertion
+        childNode!
+            .stringProperty(diagNode.name!)!
+            .setValue(diagNode.toDescription());
       }
     }
 
