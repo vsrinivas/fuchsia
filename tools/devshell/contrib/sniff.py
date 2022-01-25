@@ -202,7 +202,7 @@ def do_sniff(cmd):
         user_key = get_keystroke_unblocking()
         if user_key in ["q", "c", "Q", "C"]:
             print(" ... forced stop by user ({})".format(user_key))
-            run_cmd("fx shell killall netdump")
+            run_cmd("fx shell killall tcpdump")
             p.terminate()
 
 
@@ -231,10 +231,10 @@ def is_target_ready():
     if not can_run_cmd("fx shell exit"):
         print("failed to run: the target device unreachable by 'fx shell'")
         return False
-    if not can_run_cmd("fx shell which netdump"):
+    if not can_run_cmd("fx shell which tcpdump"):
         msg = (
-            "failed to run: the target does not have 'netdump'. "
-            "Build with '--with-base //src/connectivity/network/netdump' "
+            "failed to run: the target does not have 'tcpdump'. "
+            "Build with '--with-base //third_party/tcpdump' "
             "and reload the target")
         print(msg)
         return False
