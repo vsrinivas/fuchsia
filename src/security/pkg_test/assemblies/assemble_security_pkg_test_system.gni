@@ -172,7 +172,8 @@ template("assemble_security_pkg_test_system") {
     testonly = true
     board_name = invoker.board_name
     bootfs_labels = []
-    base_packages = [ ":${labels.empty_pkgfs}" ] + invoker.base_packages
+    base_packages = invoker.base_packages
+    pkgfs_package_label = ":${labels.empty_pkgfs}"
   }
 
   # Construct an update package for the system assembly.

@@ -129,6 +129,10 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #     should be "system_image_prime", so that the package does not override the
 #     non-prime package during publishing.
 #
+#   pkgfs_package_label (optional; default: //src/sys/pkg/bin/pkgfs/pkgfs)
+#     [GN label] The pkgfs implementation to use, for those assemblies that
+#     require one.
+#
 # Board parameters:
 #
 #   assembly_compress_blobs (default: true)
@@ -433,7 +437,13 @@ template("assemble_system") {
     if (generate_fvm) {
       base_packages = _base_packages
       base_packages += _meta_packages
-      base_packages += [ labels.pkgfs_package_label ]
+
+      if (defined(invoker.pkgfs_package_label)) {
+        base_packages += [ invoker.pkgfs_package_label ]
+      } else {
+        base_packages += [ labels.pkgfs_package_label ]
+      }
+
       cache_packages = _cache_packages
     }
 
