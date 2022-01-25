@@ -4,7 +4,7 @@
 
 //! A networking stack.
 
-#![no_std]
+#![cfg_attr(not(fuzz), no_std)]
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]
@@ -15,12 +15,18 @@
 // benchmarks, edit your Cargo.toml file to add a "benchmark" feature, and then
 // run with that feature enabled.
 #![cfg_attr(feature = "benchmark", feature(test))]
+// Turn off checks for dead code, but only when building for fuzzing. This
+// allows fuzzers to be written as part of the crate, with access to test
+// utilities, without a bunch of build errors due to unused code. These checks
+// are turned back on specifically for the `fuzz` module below.
+#![cfg_attr(fuzz, allow(dead_code, unused_imports, unused_macros))]
 
 // TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove
 // this module.
 extern crate fakealloc as alloc;
 
 // TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
+#[cfg(not(fuzz))]
 extern crate fakestd as std;
 
 #[cfg(all(test, feature = "benchmark"))]
@@ -36,6 +42,8 @@ pub mod context;
 mod data_structures;
 mod device;
 pub mod error;
+#[cfg(fuzz)]
+mod fuzz;
 mod ip;
 mod socket;
 #[cfg(test)]
