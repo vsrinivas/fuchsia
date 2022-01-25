@@ -576,15 +576,6 @@ config("Wno-strict-prototypes") {
 config("Wno-conversion") {
   cflags = [ "-Wno-conversion" ]
 
-  # NOTE: //build/config/zircon:default_warnings's `cflags` appear after this
-  # config's for some reason; add ours to cflags_c{,c} so that they also appear
-  # at the end.
-  #
-  # TODO(https://fxbug.dev/60410): After build unification completes, remove
-  # these.
-  cflags_cc = cflags
-  cflags_c = cflags
-
   # To trim this list:
   # $ scripts/gn/trim_visibility.py --target="//build/config:Wno-conversion"
   visibility = [
