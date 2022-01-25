@@ -13,6 +13,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
 	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
+	ffxutilconstants "go.fuchsia.dev/fuchsia/tools/lib/ffxutil/constants"
 	serialconstants "go.fuchsia.dev/fuchsia/tools/lib/serial/constants"
 	syslogconstants "go.fuchsia.dev/fuchsia/tools/lib/syslog/constants"
 	netutilconstants "go.fuchsia.dev/fuchsia/tools/net/netutil/constants"
@@ -384,6 +385,12 @@ func infraToolLogChecks() []FailureModeCheck {
 		&stringInLogCheck{
 			String: testrunnerconstants.FailedToStartSerialTestMsg,
 			Type:   swarmingOutputType,
+		},
+		// For fxbug.dev/92141.
+		&stringInLogCheck{
+			String:         ffxutilconstants.TimeoutReachingTargetMsg,
+			Type:           swarmingOutputType,
+			SkipPassedTask: true,
 		},
 		// For fxbug.dev/56651.
 		// This error usually happens due to an SSH failure, so that error should take precedence.
