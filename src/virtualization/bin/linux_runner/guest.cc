@@ -52,8 +52,6 @@ constexpr const char kVshTerminalComponent[] =
     "fuchsia-pkg://fuchsia.com/terminal#meta/vsh-terminal.cmx";
 constexpr const char kWaylandBridgePackage[] =
     "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
-constexpr const char kLegacyWaylandBridgePackage[] =
-    "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/legacy_wayland_bridge.cmx";
 
 #if defined(USE_VOLATILE_BLOCK)
 constexpr bool kForceVolatileWrites = true;
@@ -234,17 +232,6 @@ zx::status<fuchsia::io::FileHandle> GetPartition(const DiskImage& image) {
   return zx::ok(std::move(file));
 }
 
-const char* GetBridgePackage(sys::ComponentContext* context) {
-  TRACE_DURATION("linux_runner", "GetBridgePackage");
-  fuchsia::ui::scenic::ScenicSyncPtr scenic;
-  zx_status_t status = context->svc()->Connect(scenic.NewRequest());
-  FX_CHECK(status == ZX_OK) << "Failed to connect to Scenic: " << status;
-  bool scenic_uses_flatland = false;
-  scenic->UsesFlatland(&scenic_uses_flatland);
-  FX_LOGS(INFO) << "scenic_uses_flatland: " << scenic_uses_flatland;
-  return scenic_uses_flatland ? kWaylandBridgePackage : kLegacyWaylandBridgePackage;
-}
-
 // Return the given IPv4 address as a packed uint32_t in network byte
 // order (i.e., big endian).
 //
@@ -342,8 +329,7 @@ Guest::Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallba
       config_(config),
       callback_(std::move(callback)),
       guest_env_(std::move(env)),
-      wayland_dispatcher_(context, GetBridgePackage(context),
-                          fit::bind_member(this, &Guest::OnNewView),
+      wayland_dispatcher_(context, kWaylandBridgePackage, fit::bind_member(this, &Guest::OnNewView),
                           fit::bind_member(this, &Guest::OnShutdownView)) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   executor_.schedule_task(Start());

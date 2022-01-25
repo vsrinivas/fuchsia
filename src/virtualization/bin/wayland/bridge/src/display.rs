@@ -25,12 +25,6 @@ use {
     wayland::*,
 };
 
-#[cfg(not(feature = "flatland"))]
-use {
-    crate::scenic::ScenicSession, fidl::endpoints::create_proxy,
-    fidl_fuchsia_ui_scenic::SessionListenerMarker, fuchsia_scenic as scenic,
-};
-
 /// When the connection is created it is initialized with a 'wl_display' object
 /// that the client can immediately interact with.
 pub const DISPLAY_SINGLETON_OBJECT_ID: u32 = 1;
@@ -254,18 +248,6 @@ impl Display {
     /// Set the current display info.
     pub fn set_display_info(&mut self, display_info: &DisplayInfo) {
         self.display_info = *display_info;
-    }
-}
-
-#[cfg(not(feature = "flatland"))]
-impl Display {
-    pub fn create_session(
-        &self,
-        listener: Option<ClientEnd<SessionListenerMarker>>,
-    ) -> Result<ScenicSession, Error> {
-        let (session_proxy, session_request) = create_proxy().unwrap();
-        self.scenic.create_session(session_request, listener).unwrap();
-        Ok(ScenicSession::new(scenic::Session::new(session_proxy)))
     }
 }
 

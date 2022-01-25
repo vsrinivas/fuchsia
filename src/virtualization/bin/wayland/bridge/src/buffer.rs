@@ -5,30 +5,22 @@
 use {
     crate::client::Client,
     crate::object::{ObjectRef, RequestReceiver},
+    crate::scenic::{FlatlandInstanceId, FlatlandPtr},
     anyhow::Error,
+    fidl_fuchsia_math as fmath,
     fidl_fuchsia_math::Size,
-    fidl_fuchsia_ui_composition as composition, fuchsia_trace as ftrace,
+    fidl_fuchsia_ui_composition as composition,
+    fidl_fuchsia_ui_composition::{BufferCollectionImportToken, ContentId, ImageProperties},
+    fuchsia_trace as ftrace,
     fuchsia_zircon::{self as zx, HandleBased},
     std::{cell::Cell, rc::Rc},
     wayland::*,
 };
 
-#[cfg(feature = "flatland")]
-use {
-    crate::scenic::{FlatlandInstanceId, FlatlandPtr},
-    fidl_fuchsia_math as fmath,
-    fidl_fuchsia_ui_composition::{BufferCollectionImportToken, ContentId, ImageProperties},
-};
-
-#[cfg(not(feature = "flatland"))]
-use {fuchsia_scenic as scenic, std::sync::Arc};
-
-#[cfg(feature = "flatland")]
 pub type ImageInstanceId = usize;
 
 /// Wrapper around a content ID that provides automatic release of image by
 /// implementing the Drop trait and calling release_image.
-#[cfg(feature = "flatland")]
 pub struct Content {
     /// The Flatland content ID.
     pub id: ContentId,
@@ -36,7 +28,6 @@ pub struct Content {
     flatland: FlatlandPtr,
 }
 
-#[cfg(feature = "flatland")]
 impl Drop for Content {
     fn drop(&mut self) {
         self.flatland.borrow().proxy().release_image(&mut self.id.clone()).expect("fidl error");
@@ -57,32 +48,14 @@ struct Image {
     /// with a single wl_surface (and therefore only a single Flatland instance)
     /// and the current implementation re-import the wl_buffer if it is attached
     /// to more than a single wl_surface over the course of it's lifetime.
-    #[cfg(feature = "flatland")]
     id: Cell<Option<(Rc<Content>, ImageInstanceId, FlatlandInstanceId)>>,
-    /// The scenic 'Image' resource associated with this buffer.
-    ///
-    /// We need to create this resource in the session associated with the
-    /// surface that the buffers created from this buffer will be attached to.
-    ///
-    /// Note we currently assume that this object will only ever be associated
-    /// with a single wl_surface (and therefore only a single scenic Session)
-    /// and the current implementation will panic if a wl_buffer is attached to
-    /// more than a single wl_surface over the course of it's lifetime.
-    ///
-    /// TODO(fxb/78911): We'll want to lift this limitation as the protocol
-    /// allows for the free movement of wl_buffer objects across surfaces.
-    #[cfg(not(feature = "flatland"))]
-    resource: Cell<Option<(Rc<scenic::Image3>, scenic::SessionPtr)>>,
 }
 
 impl Image {
     fn size(&self) -> Size {
         self.size
     }
-}
 
-#[cfg(feature = "flatland")]
-impl Image {
     pub fn new(import_token: Rc<composition::BufferCollectionImportToken>, size: Size) -> Self {
         Self { import_token, size, id: Cell::new(None) }
     }
@@ -120,43 +93,6 @@ impl Image {
     }
 }
 
-#[cfg(not(feature = "flatland"))]
-impl Image {
-    pub fn new(import_token: Rc<composition::BufferCollectionImportToken>, size: Size) -> Self {
-        Self { import_token, size, resource: Cell::new(None) }
-    }
-
-    pub fn scenic_resource(&self, session: &scenic::SessionPtr) -> Rc<scenic::Image3> {
-        ftrace::duration!("wayland", "Image::scenic_resource");
-        let resource = match self.resource.take() {
-            Some(resource) => {
-                // We already have an image resource. Verify the session that
-                // owns this resource matches our current session.
-                assert!(
-                    Arc::ptr_eq(session, &resource.1),
-                    "Migrating image resources across sessions is not implemented"
-                );
-                resource
-            }
-            None => {
-                let raw_import_token =
-                    self.import_token.value.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap();
-                let image = scenic::Image3::new(
-                    session,
-                    self.size.width as u32,
-                    self.size.height as u32,
-                    composition::BufferCollectionImportToken { value: raw_import_token },
-                    0,
-                );
-                (Rc::new(image), session.clone())
-            }
-        };
-        let result = resource.0.clone();
-        self.resource.set(Some(resource));
-        result
-    }
-}
-
 /// An implementation of 'wl_buffer'.
 #[derive(Clone)]
 pub struct Buffer {
@@ -183,10 +119,7 @@ impl Buffer {
     pub fn has_alpha(&self) -> bool {
         self.has_alpha
     }
-}
 
-#[cfg(feature = "flatland")]
-impl Buffer {
     pub fn image_content(
         &self,
         instance_id: ImageInstanceId,
@@ -194,14 +127,6 @@ impl Buffer {
     ) -> Rc<Content> {
         ftrace::duration!("wayland", "Buffer::image_content");
         self.image.scenic_content(instance_id, flatland)
-    }
-}
-
-#[cfg(not(feature = "flatland"))]
-impl Buffer {
-    pub fn image_resource(&self, session: &scenic::SessionPtr) -> Rc<scenic::Image3> {
-        ftrace::duration!("wayland", "Buffer::image_resource");
-        self.image.scenic_resource(session)
     }
 }
 

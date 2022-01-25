@@ -4,18 +4,15 @@
 
 use {
     crate::client::Client,
+    crate::client::EventQueue,
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
     anyhow::Error,
+    fuchsia_wayland_core as wl,
+    zwp_relative_pointer_v1::zwp_relative_pointer_v1::Event,
     zwp_relative_pointer_v1::{
         ZwpRelativePointerManagerV1, ZwpRelativePointerManagerV1Request, ZwpRelativePointerV1,
         ZwpRelativePointerV1Request,
     },
-};
-
-#[cfg(feature = "flatland")]
-use {
-    crate::client::EventQueue, fuchsia_wayland_core as wl,
-    zwp_relative_pointer_v1::zwp_relative_pointer_v1::Event,
 };
 
 /// An implementation of the zwp_relative_pointer_v1 global.
@@ -47,7 +44,6 @@ impl RequestReceiver<ZwpRelativePointerManagerV1> for RelativePointerManager {
 pub struct RelativePointer;
 
 impl RelativePointer {
-    #[cfg(feature = "flatland")]
     pub fn post_relative_motion(
         this: ObjectRef<Self>,
         event_queue: &EventQueue,

@@ -4,38 +4,30 @@
 
 use {
     crate::buffer::Buffer,
+    crate::buffer::ImageInstanceId,
     crate::client::{Client, TaskQueue},
     crate::display::Callback,
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
+    crate::scenic::FlatlandPtr,
     crate::subcompositor::Subsurface,
     crate::xdg_shell::XdgSurface,
     anyhow::{format_err, Error},
     fidl_fuchsia_math::{Rect, Size},
+    fidl_fuchsia_math::{RectF, SizeU, Vec_},
+    fidl_fuchsia_ui_composition::{BlendMode, TransformId},
     fuchsia_async as fasync, fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
     fuchsia_zircon::{self as zx, HandleBased},
     std::mem,
+    std::{
+        collections::VecDeque,
+        sync::atomic::{AtomicUsize, Ordering},
+    },
     wayland::{
         WlBufferEvent, WlCompositor, WlCompositorRequest, WlRegion, WlRegionRequest, WlSurface,
         WlSurfaceRequest,
     },
 };
 
-#[cfg(feature = "flatland")]
-use {
-    crate::buffer::ImageInstanceId,
-    crate::scenic::FlatlandPtr,
-    fidl_fuchsia_math::{RectF, SizeU, Vec_},
-    fidl_fuchsia_ui_composition::{BlendMode, TransformId},
-    std::{
-        collections::VecDeque,
-        sync::atomic::{AtomicUsize, Ordering},
-    },
-};
-
-#[cfg(not(feature = "flatland"))]
-use {crate::scenic::ScenicSession, fuchsia_scenic as scenic, futures::prelude::*};
-
-#[cfg(feature = "flatland")]
 static NEXT_IMAGE_INSTANCE_ID: AtomicUsize = AtomicUsize::new(1);
 
 /// An implementation of the wl_compositor global.
@@ -69,7 +61,6 @@ impl RequestReceiver<WlCompositor> for Compositor {
 
 /// A `SurfaceNode` manages the set of flatland resources associated with a
 /// surface.
-#[cfg(feature = "flatland")]
 struct SurfaceNode {
     /// The flatland instance that can be used to create flatland entities.
     pub flatland: FlatlandPtr,
@@ -78,53 +69,11 @@ struct SurfaceNode {
     pub transform_id: TransformId,
 }
 
-#[cfg(feature = "flatland")]
 impl SurfaceNode {
     pub fn new(flatland: FlatlandPtr) -> Self {
         let transform_id = flatland.borrow_mut().alloc_transform_id();
         flatland.borrow().proxy().create_transform(&mut transform_id.clone()).expect("fidl error");
         Self { flatland, transform_id }
-    }
-}
-
-/// A `SurfaceNode` manages the set of scenic resources associated with a
-/// surface.
-#[cfg(not(feature = "flatland"))]
-struct SurfaceNode {
-    /// The scenic session that can be used to create scenic entities.
-    pub scenic: ScenicSession,
-    /// The scenic node that represents this surface. Views can present this
-    /// surface by placeing this node in their view hierarchy.
-    pub surface_node: scenic::ShapeNode,
-    /// The clip node allows us to clip buffer contents to the surface bounds.
-    pub clip_node: scenic::ShapeNode,
-    /// The entity node is simply a parent node to hold both the clip and
-    /// surface nodes.
-    pub entity_node: scenic::EntityNode,
-}
-
-#[cfg(not(feature = "flatland"))]
-impl SurfaceNode {
-    pub fn new(session: ScenicSession) -> Self {
-        // To support wp_viewport, we'll build an entity node that contains a
-        // shape node for the surface texture, and a clip node to clip the
-        // viewport.
-        //
-        // TODO(fxbug.dev/23396): it would be simpler if we could instead just crop
-        // the source image instead of using a clip node.
-        let inner = session.as_inner().clone();
-        let surface_node = scenic::ShapeNode::new(inner.clone());
-        let clip_node = scenic::ShapeNode::new(inner.clone());
-        let entity_node = scenic::EntityNode::new(inner.clone());
-        // TODO(64996): This is now illegal, we need to instead use the SetClipPlanes command.
-        //let clip_material = scenic::Material::new(inner);
-        //clip_material.set_texture(None);
-        //clip_node.set_material(&clip_material);
-        //clip_node.set_translation(0.0, 0.0, std::f32::INFINITY);
-        //entity_node.add_part(&clip_node);
-        entity_node.add_child(&surface_node);
-        entity_node.set_clip(0, true);
-        Self { scenic: session, surface_node, clip_node, entity_node }
     }
 }
 
@@ -219,7 +168,6 @@ pub struct Surface {
     /// The opaque region for this surface.
     ///
     /// This determines what blend mode to use for surface.
-    #[cfg(feature = "flatland")]
     opaque_region: Region,
 
     /// The crop parameters are set by a wp_viweport::set_source request.
@@ -253,11 +201,6 @@ pub struct Surface {
     /// geometry.
     window_geometry: Option<Rect>,
 
-    /// The scaling factor between the logical pixel space used by Scenic, and
-    /// the physical pixels we expose to the client.
-    #[cfg(not(feature = "flatland"))]
-    pixel_scale: (f32, f32),
-
     /// The set of commands that have been queued up, pending the next commit.
     pending_commands: Vec<SurfaceCommand>,
 
@@ -279,25 +222,20 @@ pub struct Surface {
     /// The client can request multiple frame callbacks for each frame. The inner
     /// vector is the callbacks requested for a frame. The outer deque is the
     /// queue of frames.
-    #[cfg(feature = "flatland")]
     callbacks: VecDeque<Vec<ObjectRef<Callback>>>,
 
     /// Present credits that determine if we are allowed to present.
-    #[cfg(feature = "flatland")]
     present_credits: u32,
 
     /// Set after we tried to Present but had no remaining credits. This is used
     /// to trigger a present as soon as we a credit.
-    #[cfg(feature = "flatland")]
     present_needed: bool,
 
     /// Global identifier for image instances used by this surface.
-    #[cfg(feature = "flatland")]
     image_instance_id: ImageInstanceId,
 
     /// The current content of this surface as determined by the currently attached
     /// buffer.
-    #[cfg(feature = "flatland")]
     content: Option<BufferAttachment>,
 }
 
@@ -413,10 +351,7 @@ impl Surface {
 
         None
     }
-}
 
-#[cfg(feature = "flatland")]
-impl Surface {
     /// Creates a new `Surface`.
     pub fn new(id: wl::ObjectId) -> Self {
         Surface {
@@ -744,365 +679,6 @@ impl Surface {
             }
         }
         Ok(())
-    }
-}
-
-#[cfg(not(feature = "flatland"))]
-impl Surface {
-    /// Creates a new `Surface`.
-    pub fn new(id: wl::ObjectId) -> Self {
-        Surface {
-            size: Size { width: 0, height: 0 },
-            position: (0, 0),
-            z_order: 0,
-            role: None,
-            crop_params: None,
-            scale_params: None,
-            frame_callbacks: vec![],
-            node: None,
-            window_geometry: None,
-            pixel_scale: (1.0, 1.0),
-            parent: None,
-            offset: None,
-            pending_commands: Vec::new(),
-            subsurfaces: vec![(id.into(), None)],
-        }
-    }
-
-    pub fn set_pixel_scale(&mut self, scale_x: f32, scale_y: f32) {
-        self.pixel_scale = (scale_x, scale_y);
-        // Reset size to trigger a re-layout.
-        self.size = Size { width: 0, height: 0 };
-    }
-
-    pub fn pixel_scale(&self) -> (f32, f32) {
-        self.pixel_scale
-    }
-
-    /// Assigns the scenic session for this surface.
-    ///
-    /// When a surface is initially created, it has no scenic session. Since
-    /// the session is used to create the scenic resources backing the surface,
-    /// a wl_surface _must_ have an assigned session before it is committed.
-    ///
-    /// Ex: for xdg_toplevel surfaces, the a new session will be created for
-    /// each toplevel.
-    ///
-    /// It is an error to call `set_session` multiple times for the same
-    /// surface.
-    pub fn set_session(&mut self, session: ScenicSession) -> Result<(), Error> {
-        ftrace::duration!("wayland", "Surface::set_session");
-        if self.node.is_some() {
-            Err(format_err!("Chaning the scenic session for a surface is not supported"))
-        } else {
-            self.node = Some(SurfaceNode::new(session));
-            Ok(())
-        }
-    }
-
-    pub fn clear_session(&mut self) {
-        self.node = None;
-    }
-
-    pub fn session(&self) -> Option<ScenicSession> {
-        self.node.as_ref().map(|n| n.scenic.clone())
-    }
-
-    /// Returns a reference to the `scenic::ShapeNode` for this surface.
-    pub fn node(&self) -> Option<&scenic::EntityNode> {
-        self.node.as_ref().map(|n| &n.entity_node)
-    }
-
-    /// Updates the current surface state by applying a single `SurfaceCommand`.
-    ///
-    /// Returns `true` if the application of the command requires relayout of
-    /// the surfaces view hierarchy. Ex: changing the size of the attached
-    /// buffer or the associated viewport parameters requires updates to the
-    /// scenic nodes, while just replacing the attached buffer requires no such
-    /// update.
-    fn apply(&mut self, command: SurfaceCommand, task_queue: &TaskQueue) -> Result<bool, Error> {
-        let node = match self.node.as_ref() {
-            Some(node) => node,
-            None => {
-                // This is expected for some surfaces that aren't implemented
-                // yet, like wl_pointer cursor surfaces.
-                println!(
-                    "No scenic session associated with surface role {:?}; skipping commit",
-                    self.role
-                );
-                return Ok(false);
-            }
-        };
-        let needs_relayout = match command {
-            SurfaceCommand::AttachBuffer(attachment) => {
-                let buffer = attachment.buffer.clone();
-                let material = scenic::Material::new(node.scenic.as_inner().clone());
-                let image3 = buffer.image_resource(&node.scenic.as_inner());
-                // Set translucent color to enable alpha blending if the buffer has
-                // an alpha channel.
-                let alpha = if buffer.has_alpha() { 254 } else { 255 };
-                let color =
-                    fidl_fuchsia_ui_gfx::ColorRgba { red: 255, green: 255, blue: 255, alpha };
-                material.set_color(color);
-                material.set_texture_resource(Some(&image3));
-                node.surface_node.set_material(&material);
-                let previous_size = mem::replace(&mut self.size, buffer.image_size());
-
-                // Create and register a release fence to release this buffer when
-                // scenic is done with it.
-                let release_fence = zx::Event::create().unwrap();
-                node.scenic.as_inner().lock().add_release_fence(
-                    release_fence.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap(),
-                );
-                let task_queue = task_queue.clone();
-                fasync::Task::local(async move {
-                    let _signals =
-                        fasync::OnSignals::new(&release_fence, zx::Signals::EVENT_SIGNALED)
-                            .await
-                            .unwrap();
-                    // Safe to ignore result as EVENT_SIGNALED must have
-                    // been observed if we reached this.
-                    task_queue.post(move |client| {
-                        client.event_queue().post(attachment.id(), WlBufferEvent::Release)
-                    });
-                })
-                .detach();
-                previous_size != self.size
-            }
-            SurfaceCommand::ClearBuffer => {
-                let material = scenic::Material::new(node.scenic.as_inner().clone());
-                material.set_texture(None);
-                node.surface_node.set_material(&material);
-                self.size = Size { width: 0, height: 0 };
-                true
-            }
-            SurfaceCommand::Frame(callback) => {
-                self.frame_callbacks.push(callback);
-                false
-            }
-            SurfaceCommand::SetOpaqueRegion(_) => false,
-            SurfaceCommand::SetViewportCropParams(params) => {
-                if self.crop_params != Some(params) {
-                    self.crop_params = Some(params);
-                    true
-                } else {
-                    false
-                }
-            }
-            SurfaceCommand::ClearViewportCropParams => {
-                if self.crop_params != None {
-                    self.crop_params = None;
-                    true
-                } else {
-                    false
-                }
-            }
-            SurfaceCommand::SetViewportScaleParams(params) => {
-                if self.scale_params != Some(params) {
-                    self.scale_params = Some(params);
-                    true
-                } else {
-                    false
-                }
-            }
-            SurfaceCommand::ClearViewportScaleParams => {
-                if self.scale_params != None {
-                    self.scale_params = None;
-                    true
-                } else {
-                    false
-                }
-            }
-            SurfaceCommand::SetWindowGeometry(geometry) => {
-                if self.window_geometry.as_ref() != Some(&geometry) {
-                    self.window_geometry = Some(geometry);
-                    true
-                } else {
-                    false
-                }
-            }
-            SurfaceCommand::SetPosition(x, y) => {
-                self.position = (x, y);
-                true
-            }
-            SurfaceCommand::AddSubsurface(surface_ref, subsurface_ref) => {
-                self.subsurfaces.push((surface_ref, Some(subsurface_ref)));
-                false
-            }
-            SurfaceCommand::PlaceSubsurface(params) => {
-                let sibling_index = if let Some(index) =
-                    self.subsurfaces.iter().position(|x| x.0 == params.sibling)
-                {
-                    index
-                } else {
-                    return Err(format_err!("Invalid sibling id {}", params.sibling.id()));
-                };
-                let sibling_entry = self.subsurfaces.remove(sibling_index);
-                let anchor_index = if let Some(index) =
-                    self.subsurfaces.iter().position(|x| x.1 == Some(params.subsurface))
-                {
-                    index
-                } else {
-                    return Err(format_err!("Invalid subsurface id {}", params.subsurface.id()));
-                };
-
-                let new_index = match params.relation {
-                    SurfaceRelation::Below => anchor_index,
-                    SurfaceRelation::Above => anchor_index + 1,
-                };
-                self.subsurfaces.insert(new_index, sibling_entry);
-                true
-            }
-        };
-        Ok(needs_relayout)
-    }
-
-    /// Performs the logic to commit the local state of this surface.
-    ///
-    /// This will update the scenic Node for this surface.
-    fn commit_self(
-        &mut self,
-        task_queue: TaskQueue,
-        callbacks: &mut Vec<ObjectRef<Callback>>,
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "Surface::commit_self");
-        let mut needs_relayout = false;
-        let commands = mem::replace(&mut self.pending_commands, Vec::new());
-        for command in commands {
-            needs_relayout = self.apply(command, &task_queue)? || needs_relayout;
-        }
-
-        if needs_relayout {
-            let node = self.node.as_ref().unwrap();
-            let (image_width, image_height) = (self.size.width as f32, self.size.height as f32);
-
-            // The size of the clip node. This defaults to the entire surface
-            // unless the surface has a wp_viewport set.
-            let (mut crop_w, mut crop_h) = (image_width, image_height);
-
-            // The size and position of the surface.
-            let (mut surface_x, mut surface_y) = (image_width * 0.5, image_height * 0.5);
-            let (mut surface_w, mut surface_h) = (image_width, image_height);
-
-            // Apply any crop parameters if they've been set by the viewport.
-            if let Some(crop) = self.crop_params.as_ref() {
-                surface_x -= crop.x;
-                surface_y -= crop.y;
-                crop_w = crop.width;
-                crop_h = crop.height;
-            }
-
-            // Apply any scale parameters if they've been set by the viewport.
-            if let Some(scale) = self.scale_params.as_ref() {
-                let scale_x = scale.width as f32 / crop_w;
-                let scale_y = scale.height as f32 / crop_h;
-                surface_x *= scale_x;
-                surface_y *= scale_y;
-                surface_w *= scale_x;
-                surface_h *= scale_y;
-                crop_w = scale.width as f32;
-                crop_h = scale.height as f32;
-            }
-
-            if let Some(window_geometry) = self.window_geometry.as_ref() {
-                let (x, y, w, h) = (
-                    window_geometry.x as f32,
-                    window_geometry.y as f32,
-                    window_geometry.width as f32,
-                    window_geometry.height as f32,
-                );
-                surface_x -= x;
-                surface_y -= y;
-                if crop_w > w {
-                    crop_w = w;
-                }
-                if crop_h > h {
-                    crop_h = h;
-                }
-            }
-
-            // The clip_node will be the viewport though which we'll view the
-            // backing surface.
-            node.clip_node.set_shape(&scenic::Rectangle::new(
-                node.scenic.as_inner().clone(),
-                crop_w,
-                crop_h,
-            ));
-            // TODO(64996): This is now illegal, we need to instead use the SetClipPlanes command.
-            //node.clip_node.set_translation(crop_w * 0.5, crop_h * 0.5, std::f32::INFINITY);
-
-            // Position & scale the surface so that the viewport src rect aligns
-            // with the clip node.
-            node.surface_node.set_shape(&scenic::Rectangle::new(
-                node.scenic.as_inner().clone(),
-                surface_w,
-                surface_h,
-            ));
-            node.surface_node.set_translation(surface_x, surface_y, 0.0);
-
-            // We scale our z such that all our subsurfaces will be within the
-            // range 0.0 - 1.0, which prevents our subsurfaces from being
-            // ordered incorrectly WRT other surfaces subsurfaces.
-            node.entity_node.set_scale(
-                1.0 / self.pixel_scale.0,
-                1.0 / self.pixel_scale.1,
-                1.0 / self.subsurfaces.len() as f32,
-            );
-            node.entity_node.set_translation(
-                self.position.0 as f32 / self.pixel_scale.0,
-                self.position.1 as f32 / self.pixel_scale.1,
-                -(self.z_order as f32),
-            );
-        }
-        callbacks.append(&mut self.frame_callbacks);
-        Ok(())
-    }
-
-    pub fn present(
-        this: ObjectRef<Self>,
-        client: &mut Client,
-        callbacks: Vec<ObjectRef<Callback>>,
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "Surface::present");
-        if let Some(surface) = this.try_get(client) {
-            let task_queue = client.task_queue();
-            let session = surface
-                .session()
-                .ok_or(format_err!("Unable to present surface without a session."))?;
-            fasync::Task::local(
-                session
-                    .present(0)
-                    .map_ok(move |info| {
-                        ftrace::duration!("wayland", "XdgToplevelView::present_callback");
-                        ftrace::flow_end!("gfx", "present_callback", info.presentation_time);
-                        if !callbacks.is_empty() {
-                            // If we have a frame callback, invoke it and provide
-                            // the presentation time received in the present
-                            // callback.
-                            task_queue.post(move |client| {
-                                // If the underlying surface has been destroyed then
-                                // skip sending the done event.
-                                if this.try_get(client).is_some() {
-                                    callbacks.iter().try_for_each(|callback| {
-                                        let time_ms = (info.presentation_time / 1_000_000) as u32;
-                                        Callback::done(*callback, client, time_ms)
-                                    })?;
-                                }
-                                callbacks
-                                    .iter()
-                                    .try_for_each(|callback| client.delete_id(callback.id()))
-                            });
-                        }
-                    })
-                    .unwrap_or_else(|e| eprintln!("present error: {:?}", e)),
-            )
-            .detach();
-        }
-        Ok(())
-    }
-
-    pub fn present_internal(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
-        Self::present(this, client, vec![])
     }
 }
 

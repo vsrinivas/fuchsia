@@ -9,20 +9,16 @@ use {
     crate::relative_pointer::RelativePointer,
     anyhow::Error,
     fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType},
+    fidl_fuchsia_ui_pointer::EventPhase,
     fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
     fuchsia_zircon::{self as zx, HandleBased},
+    std::collections::BTreeSet,
     std::collections::HashSet,
     wayland::{
         wl_keyboard, wl_pointer, wl_seat, wl_touch, WlKeyboard, WlKeyboardEvent, WlKeyboardRequest,
         WlPointer, WlPointerRequest, WlSeat, WlSeatEvent, WlSeatRequest, WlTouch, WlTouchRequest,
     },
 };
-
-#[cfg(feature = "flatland")]
-use {fidl_fuchsia_ui_pointer::EventPhase, std::collections::BTreeSet};
-
-#[cfg(not(feature = "flatland"))]
-use fidl_fuchsia_ui_input::{InputEvent, PointerEvent, PointerEventPhase, PointerEventType};
 
 pub fn usb_to_linux_keycode(usb_keycode: u32) -> u16 {
     match usb_keycode {
@@ -175,7 +171,6 @@ pub struct InputDispatcher {
     event_queue: EventQueue,
     pressed_keys: HashSet<fidl_fuchsia_input::Key>,
     modifiers: u32,
-    #[cfg(feature = "flatland")]
     pressed_buttons: BTreeSet<u8>,
     pointer_position: [f32; 2],
     /// The set of bound wl_pointer objects for this client.
@@ -240,13 +235,6 @@ fn modifiers_from_pressed_keys(pressed_keys: &HashSet<fidl_fuchsia_input::Key>) 
     modifiers
 }
 
-#[cfg(not(feature = "flatland"))]
-fn pointer_trace_hack(fa: f32, fb: f32) -> u64 {
-    let ia: u64 = fa.to_bits().into();
-    let ib: u64 = fb.to_bits().into();
-    ia << 32 | ib
-}
-
 impl InputDispatcher {
     /// Returns true iff the given surface currently has keyboard focus.
     pub fn has_focus(&self, surface_ref: ObjectRef<Surface>) -> bool {
@@ -280,7 +268,6 @@ impl InputDispatcher {
             event_queue,
             pressed_keys: HashSet::new(),
             modifiers: 0,
-            #[cfg(feature = "flatland")]
             pressed_buttons: BTreeSet::new(),
             pointer_position: [-1.0, -1.0],
             pointers: ObjectRefSet::new(),
@@ -520,10 +507,7 @@ impl InputDispatcher {
         ftrace::duration!("wayland", "InputDispatcher::send_touch_frame");
         self.touches.iter().try_for_each(|p| self.event_queue.post(p.id(), wl_touch::Event::Frame))
     }
-}
 
-#[cfg(feature = "flatland")]
-impl InputDispatcher {
     pub fn handle_pointer_event(
         &mut self,
         surface: ObjectRef<Surface>,
@@ -719,181 +703,6 @@ impl InputDispatcher {
             self.send_touch_frame()?;
         }
 
-        Ok(())
-    }
-}
-
-#[cfg(not(feature = "flatland"))]
-impl InputDispatcher {
-    fn handle_pointer_event(
-        &self,
-        pointer: &PointerEvent,
-        translation: (f32, f32),
-        pixel_scale: (f32, f32),
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::handle_pointer_event");
-        match pointer.phase {
-            PointerEventPhase::Move => {
-                self.pointers.iter().try_for_each(|p| {
-                    self.event_queue.post(
-                        p.id(),
-                        wl_pointer::Event::Motion {
-                            time: (pointer.event_time / 1_000_000) as u32,
-                            surface_x: ((pointer.x + translation.0) * pixel_scale.0).into(),
-                            surface_y: ((pointer.y + translation.1) * pixel_scale.1).into(),
-                        },
-                    )
-                })?;
-            }
-            PointerEventPhase::Up | PointerEventPhase::Down => {
-                let state = if pointer.phase == PointerEventPhase::Up {
-                    wl_pointer::ButtonState::Released
-                } else {
-                    wl_pointer::ButtonState::Pressed
-                };
-                const BUTTON_MAP: &[(u32, u32)] = &[
-                    (fidl_fuchsia_ui_input::MOUSE_BUTTON_PRIMARY, 0x110),
-                    (fidl_fuchsia_ui_input::MOUSE_BUTTON_SECONDARY, 0x111),
-                    (fidl_fuchsia_ui_input::MOUSE_BUTTON_TERTIARY, 0x112),
-                ];
-                for button in BUTTON_MAP {
-                    if pointer.buttons & button.0 != 0 {
-                        let serial = self.event_queue.next_serial();
-                        self.pointers.iter().try_for_each(|p| {
-                            self.event_queue.post(
-                                p.id(),
-                                wl_pointer::Event::Button {
-                                    serial,
-                                    time: (pointer.event_time / 1_000_000) as u32,
-                                    button: button.1,
-                                    state,
-                                },
-                            )
-                        })?;
-                    }
-                }
-            }
-            _ => (),
-        }
-        Ok(())
-    }
-
-    fn handle_touch_event(
-        &self,
-        surface: ObjectRef<Surface>,
-        touch: &PointerEvent,
-        translation: (f32, f32),
-        pixel_scale: (f32, f32),
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::handle_touch_event");
-        match touch.phase {
-            PointerEventPhase::Move => {
-                self.touches.iter().try_for_each(|p| {
-                    self.event_queue.post(
-                        p.id(),
-                        wl_touch::Event::Motion {
-                            time: (touch.event_time / 1_000_000) as u32,
-                            id: touch.pointer_id as i32,
-                            x: ((touch.x + translation.0) * pixel_scale.0).into(),
-                            y: ((touch.y + translation.1) * pixel_scale.1).into(),
-                        },
-                    )
-                })?;
-            }
-            PointerEventPhase::Down => {
-                let serial = self.event_queue.next_serial();
-                self.touches.iter().try_for_each(|p| {
-                    self.event_queue.post(
-                        p.id(),
-                        wl_touch::Event::Down {
-                            serial,
-                            time: (touch.event_time / 1_000_000) as u32,
-                            surface: surface.id(),
-                            id: touch.pointer_id as i32,
-                            x: ((touch.x + translation.0) * pixel_scale.0).into(),
-                            y: ((touch.y + translation.1) * pixel_scale.1).into(),
-                        },
-                    )
-                })?;
-            }
-            PointerEventPhase::Up => {
-                let serial = self.event_queue.next_serial();
-                self.touches.iter().try_for_each(|p| {
-                    self.event_queue.post(
-                        p.id(),
-                        wl_touch::Event::Up {
-                            serial,
-                            time: (touch.event_time / 1_000_000) as u32,
-                            id: touch.pointer_id as i32,
-                        },
-                    )
-                })?;
-            }
-            _ => (),
-        }
-        Ok(())
-    }
-
-    /// Returns the location of pointer events.
-    pub fn get_input_event_location(event: &InputEvent) -> Option<(f32, f32)> {
-        match event {
-            InputEvent::Pointer(pointer) => Some((pointer.x, pointer.y)),
-            _ => None,
-        }
-    }
-
-    /// Reads a Scenic `event` sent to a surface, converts it into 0 or more
-    /// wayland events, and sends those messages to the client.
-    ///
-    /// If a `pointer_translation` is provided, this value will be added to the
-    /// pointer event. This can be used if the Scenic coordinates do not match
-    /// the client coordinates (as is the case with xdg_surface's
-    /// set_window_geometry request).
-    ///
-    /// The `pixel_scale` is also applied to transform the Scenic coordinate
-    /// space into the pixel space exposed to the client.
-    pub fn handle_input_event(
-        &mut self,
-        source_surface: ObjectRef<Surface>,
-        target_surface: ObjectRef<Surface>,
-        event: &InputEvent,
-        pointer_translation: (f32, f32),
-        pixel_scale: (f32, f32),
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::handle_input_event");
-        match event {
-            InputEvent::Pointer(pointer) if pointer.type_ == PointerEventType::Mouse => {
-                ftrace::flow_end!(
-                    "input",
-                    "dispatch_event_to_client",
-                    pointer_trace_hack(pointer.radius_major, pointer.radius_minor)
-                );
-                let x = (pointer.x + pointer_translation.0) * pixel_scale.0;
-                let y = (pointer.y + pointer_translation.1) * pixel_scale.1;
-                // We send pointer focus here since pointer events will be
-                // delivered to whatever view the mouse cursor is over
-                // regardless of if a scenic Focus event has been sent.
-                self.update_pointer_focus(Some(target_surface), &[x, y])?;
-                self.handle_pointer_event(pointer, pointer_translation, pixel_scale)?;
-                self.send_pointer_frame()?;
-            }
-            InputEvent::Pointer(pointer) if pointer.type_ == PointerEventType::Touch => {
-                ftrace::flow_end!(
-                    "input",
-                    "dispatch_event_to_client",
-                    pointer_trace_hack(pointer.radius_major, pointer.radius_minor)
-                );
-                self.handle_touch_event(target_surface, pointer, pointer_translation, pixel_scale)?;
-                self.send_touch_frame()?;
-            }
-            InputEvent::Focus(focus) => {
-                self.handle_keyboard_focus(source_surface, target_surface, focus.focused)?;
-            }
-            // TODO: Implement these.
-            InputEvent::Pointer(_pointer) => {}
-            // Deprecated, keyboard used fuchsia.ui.input3 instead.
-            InputEvent::Keyboard(_) => {}
-        }
         Ok(())
     }
 }

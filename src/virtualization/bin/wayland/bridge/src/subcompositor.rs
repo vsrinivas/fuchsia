@@ -155,10 +155,7 @@ impl Subsurface {
             true
         }
     }
-}
 
-#[cfg(feature = "flatland")]
-impl Subsurface {
     fn attach_to_parent(&self, client: &mut Client) -> Result<(), Error> {
         let flatland = match self.parent_ref.get(client)?.flatland() {
             Some(s) => s.clone(),
@@ -192,35 +189,6 @@ impl Subsurface {
                     .remove_child(&mut parent_transform.clone(), &mut child_transform.clone())
                     .expect("fidl error");
             }
-        }
-        Ok(())
-    }
-}
-
-#[cfg(not(feature = "flatland"))]
-impl Subsurface {
-    fn attach_to_parent(&self, client: &mut Client) -> Result<(), Error> {
-        let session = match self.parent_ref.get(client)?.session() {
-            Some(s) => s.clone(),
-            None => return Err(format_err!("Parent surface has no session!")),
-        };
-        self.surface_ref.get_mut(client)?.set_session(session)?;
-
-        let pixel_scale = self.parent_ref.get(client)?.pixel_scale();
-        self.parent_ref.get_mut(client)?.set_pixel_scale(pixel_scale.0, pixel_scale.1);
-
-        // Unwrap here since we have just determined both surfaces have a
-        // session, which is the only prerequisite for having a node.
-        let parent_node = self.parent_ref.get(client)?.node().unwrap();
-        let child_node = self.surface_ref.get(client)?.node().unwrap();
-        parent_node.add_child(child_node);
-
-        Ok(())
-    }
-
-    fn detach_from_parent(&self, client: &Client) -> Result<(), Error> {
-        if let Some(child_node) = self.surface_ref.get(client)?.node() {
-            child_node.detach();
         }
         Ok(())
     }

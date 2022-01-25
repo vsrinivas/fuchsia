@@ -5,8 +5,11 @@
 use {
     crate::client::{Client, TaskQueue},
     crate::compositor::{Surface, SurfaceCommand, SurfaceRole},
+    crate::display::Callback,
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
+    crate::scenic::{Flatland, FlatlandPtr},
     anyhow::{format_err, Error},
+    async_utils::hanging_get::client::HangingGetStream,
     fidl::endpoints::{create_endpoints, create_proxy, create_request_stream, ServerEnd},
     fidl::prelude::*,
     fidl_fuchsia_element::{
@@ -14,10 +17,24 @@ use {
         ViewSpec,
     },
     fidl_fuchsia_math::{Rect, Size, SizeF},
+    fidl_fuchsia_math::{SizeU, Vec_},
     fidl_fuchsia_ui_app::{ViewProviderControlHandle, ViewProviderMarker, ViewProviderRequest},
+    fidl_fuchsia_ui_composition::{
+        ChildViewWatcherMarker, ChildViewWatcherProxy, ContentId, FlatlandEvent,
+        FlatlandEventStream, FlatlandMarker, ParentViewportWatcherMarker,
+        ParentViewportWatcherProxy, TransformId, ViewportProperties,
+    },
+    fidl_fuchsia_ui_pointer::{
+        MousePointerSample, MouseSourceMarker, MouseSourceProxy, TouchPointerSample,
+        TouchSourceMarker, TouchSourceProxy,
+    },
     fidl_fuchsia_ui_views::ViewRef,
+    fidl_fuchsia_ui_views::{
+        ViewIdentityOnCreation, ViewRefFocusedMarker, ViewRefFocusedProxy, ViewportCreationToken,
+    },
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
+    fuchsia_scenic::flatland::{LinkTokenPair, ViewBoundProtocols},
     fuchsia_scenic::ViewRefPair,
     fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
     fuchsia_wayland_core::Enum,
@@ -28,46 +45,12 @@ use {
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
+    std::{collections::BTreeSet, convert::TryInto},
     xdg_shell::{
         xdg_positioner::{Anchor, Gravity},
         xdg_toplevel, XdgPopupEvent, XdgPopupRequest, XdgPositionerRequest, XdgSurfaceEvent,
         XdgSurfaceRequest, XdgToplevelEvent, XdgToplevelRequest, XdgWmBase, XdgWmBaseRequest,
     },
-};
-
-#[cfg(feature = "flatland")]
-use {
-    crate::scenic::{Flatland, FlatlandPtr},
-    crate::Callback,
-    async_utils::hanging_get::client::HangingGetStream,
-    fidl_fuchsia_math::{SizeU, Vec_},
-    fidl_fuchsia_ui_composition::{
-        ChildViewWatcherMarker, ChildViewWatcherProxy, ContentId, FlatlandEvent,
-        FlatlandEventStream, FlatlandMarker, ParentViewportWatcherMarker,
-        ParentViewportWatcherProxy, TransformId, ViewportProperties,
-    },
-    fidl_fuchsia_ui_pointer::{
-        MousePointerSample, MouseSourceMarker, MouseSourceProxy, TouchPointerSample,
-        TouchSourceMarker, TouchSourceProxy,
-    },
-    fidl_fuchsia_ui_views::{
-        ViewIdentityOnCreation, ViewRefFocusedMarker, ViewRefFocusedProxy, ViewportCreationToken,
-    },
-    fuchsia_scenic::flatland::{LinkTokenPair, ViewBoundProtocols},
-    std::{collections::BTreeSet, convert::TryInto},
-};
-
-#[cfg(not(feature = "flatland"))]
-use {
-    crate::scenic::ScenicSession,
-    crate::seat::InputDispatcher,
-    fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba},
-    fidl_fuchsia_ui_scenic::{
-        SessionListenerControlHandle, SessionListenerMarker, SessionListenerRequest,
-    },
-    fidl_fuchsia_ui_views::{ViewHolderToken, ViewToken},
-    fuchsia_scenic::{EntityNode, Material, Rectangle, ShapeNode, View, ViewHolder, ViewTokenPair},
-    std::collections::BTreeMap,
 };
 
 // This must start at 1 to satisfy the ViewProducer protocol.
@@ -508,10 +491,7 @@ impl XdgSurface {
             _ => Ok(()),
         }
     }
-}
 
-#[cfg(feature = "flatland")]
-impl XdgSurface {
     /// Adds a child view to this `XdgSurface`.
     fn add_child_view(
         this: ObjectRef<Self>,
@@ -958,7 +938,6 @@ impl XdgSurface {
     }
 }
 
-#[cfg(feature = "flatland")]
 impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
     fn receive(
         this: ObjectRef<Self>,
@@ -1020,310 +999,6 @@ impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
     }
 }
 
-#[cfg(not(feature = "flatland"))]
-impl XdgSurface {
-    /// Adds a child view to this `XdgSurface`.
-    fn add_child_view(
-        this: ObjectRef<Self>,
-        client: &mut Client,
-        view_holder_token: ViewHolderToken,
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "XdgSurface::add_child_view");
-        let xdg_surface = this.get(client)?;
-        let surface = xdg_surface.surface_ref().get(client)?;
-        let session =
-            surface.session().ok_or(format_err!("Unable to present surface without a session."))?;
-        let view_holder = ViewHolder::new(
-            session.as_inner().clone(),
-            view_holder_token,
-            Some(String::from("Wayland Popup View Holder")),
-        );
-        if let Some(view) = this.get_mut(client)?.view.clone() {
-            view.lock().add_child_view(view_holder);
-        }
-        Ok(())
-    }
-
-    fn spawn_child_view(
-        this: ObjectRef<Self>,
-        client: &mut Client,
-        session: ScenicSession,
-        parent_ref: ObjectRef<Self>,
-        local_offset: Option<(i32, i32)>,
-        geometry: Rect,
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "XdgSurface::spawn_child_view");
-        let view_tokens = ViewTokenPair::new().expect("failed to create token pair");
-        let ViewRefPair { control_ref, view_ref } =
-            ViewRefPair::new().expect("unable to create view ref pair");
-        let view = View::new3(
-            session.as_inner().clone(),
-            view_tokens.view_token,
-            control_ref,
-            fuchsia_scenic::duplicate_view_ref(&view_ref)?,
-            Some(String::from("Wayland Popup View")),
-        );
-        let parent = parent_ref.get(client)?;
-        let parent_view = parent.view.clone();
-        let root_surface_ref = parent.root_surface_ref();
-        Self::add_child_view(parent_ref, client, view_tokens.view_holder_token)?;
-        let xdg_surface = this.get(client)?;
-        let surface_ref = xdg_surface.surface_ref();
-        let task_queue = client.task_queue();
-        let view_ptr = XdgSurfaceView::new(
-            view,
-            session,
-            task_queue.clone(),
-            this,
-            surface_ref,
-            parent_view,
-            local_offset,
-            geometry,
-        )?;
-        XdgSurfaceView::finish_setup_scene(&view_ptr, client)?;
-        let xdg_surface = this.get_mut(client)?;
-        xdg_surface.set_view(view_ptr.clone());
-        xdg_surface.set_root_surface(root_surface_ref);
-        Ok(())
-    }
-
-    fn handle_gfx_event(
-        this: ObjectRef<Self>,
-        event: fidl_fuchsia_ui_gfx::Event,
-        task_queue: &TaskQueue,
-    ) {
-        ftrace::duration!("wayland", "XdgSurface::handle_gfx_event");
-        match event {
-            fidl_fuchsia_ui_gfx::Event::Metrics(fidl_fuchsia_ui_gfx::MetricsEvent {
-                metrics: e,
-                node_id: _,
-            }) => task_queue.post(move |client| {
-                if let Some(view) = this.get_mut(client)?.view.clone() {
-                    view.lock().set_pixel_scale(client, e.scale_x, e.scale_y);
-                }
-                Ok(())
-            }),
-            fidl_fuchsia_ui_gfx::Event::ViewPropertiesChanged(
-                fidl_fuchsia_ui_gfx::ViewPropertiesChangedEvent { properties, .. },
-            ) => task_queue.post(move |client| {
-                if let Some(view) = this.get_mut(client)?.view.clone() {
-                    view.lock().handle_properies_changed(&properties);
-                }
-                Ok(())
-            }),
-            fidl_fuchsia_ui_gfx::Event::ViewDisconnected(
-                fidl_fuchsia_ui_gfx::ViewDisconnectedEvent { view_holder_id },
-            ) => task_queue.post(move |client| {
-                if let Some(view) = this.get_mut(client)?.view.clone() {
-                    view.lock().handle_view_disconnected(view_holder_id);
-                }
-                Ok(())
-            }),
-
-            e => println!("Got unhandled gfx event: {:?}", e),
-        }
-    }
-
-    fn hit_test(
-        this: ObjectRef<Self>,
-        location_x: f32,
-        location_y: f32,
-        client: &Client,
-    ) -> Option<(ObjectRef<Self>, ObjectRef<Surface>, (i32, i32))> {
-        let mut maybe_xdg_surface_ref = Some(this);
-        while let Some(xdg_surface_ref) = maybe_xdg_surface_ref.take() {
-            if let Some(xdg_surface) = xdg_surface_ref.try_get(client) {
-                if let Some((parent_view, view_offset)) = xdg_surface.view.as_ref().map(|v| {
-                    let view = v.lock();
-                    (view.parent(), view.absolute_offset())
-                }) {
-                    let surface_ref = xdg_surface.surface_ref;
-                    if let Some(surface) = surface_ref.try_get(client) {
-                        let pixel_scale = surface.pixel_scale();
-                        let x = location_x * pixel_scale.0 - view_offset.0 as f32;
-                        let y = location_y * pixel_scale.1 - view_offset.1 as f32;
-                        if let Some((surface_ref, offset)) = surface.hit_test(x, y, client) {
-                            let offset_x = offset.0 + view_offset.0;
-                            let offset_y = offset.1 + view_offset.1;
-                            return Some((xdg_surface_ref, surface_ref, (offset_x, offset_y)));
-                        }
-                    }
-                    maybe_xdg_surface_ref = parent_view.as_ref().map(|v| v.lock().xdg_surface());
-                }
-            }
-        }
-        None
-    }
-
-    fn handle_input_events(
-        this: ObjectRef<Self>,
-        events: Vec<fidl_fuchsia_ui_input::InputEvent>,
-        task_queue: &TaskQueue,
-    ) {
-        task_queue.post(move |client| {
-            ftrace::duration!("wayland", "XdgSurface::handle_input_events");
-            let source_xdg_surface = this.get(client)?;
-            let source_surface_ref = source_xdg_surface.surface_ref;
-            let pixel_scale = source_surface_ref.get(client)?.pixel_scale();
-            for event in &events {
-                // Hit-testing is used to determine the target for events with a location. Last
-                // XDG surface is used for all other events.
-                let target = if let Some((x, y)) = InputDispatcher::get_input_event_location(event)
-                {
-                    Self::hit_test(this, x, y, client)
-                } else {
-                    let xdg_surface_ref =
-                        XdgSurface::get_event_target(source_surface_ref, client).unwrap_or(this);
-                    Some((xdg_surface_ref, xdg_surface_ref.get(client)?.surface_ref, (0, 0)))
-                };
-                if let Some((xdg_surface_ref, surface_ref, offset)) = target {
-                    if let Some(surface) = surface_ref.try_get(client) {
-                        let had_focus = client.input_dispatcher.has_focus(surface_ref);
-                        // If the client has set window geometry we'll place the scenic
-                        // surface at the (x,y) location specified in the window geometry.
-                        //
-                        // To compensate for this, we need to apply a translation to the
-                        // pointer events received by scenic to adjust for this.
-                        let (pointer_translation, pixel_scale) = {
-                            let offset = {
-                                (offset.0 as f32 / pixel_scale.0, offset.1 as f32 / pixel_scale.1)
-                            };
-                            let geometry = surface.window_geometry();
-                            let translation =
-                                (geometry.x as f32 - offset.0, geometry.y as f32 - offset.1);
-                            (translation, pixel_scale)
-                        };
-                        client.input_dispatcher.handle_input_event(
-                            source_surface_ref,
-                            surface_ref,
-                            &event,
-                            pointer_translation,
-                            pixel_scale,
-                        )?;
-                        let has_focus = client.input_dispatcher.has_focus(surface_ref);
-                        if had_focus != has_focus {
-                            // If our focus has changed we need to reconfigure so that the
-                            // Activated flag can be set or cleared.
-                            Self::configure(xdg_surface_ref, client)?;
-                        }
-                    }
-                }
-            }
-            Ok(())
-        });
-    }
-
-    fn handle_session_events(
-        this: ObjectRef<Self>,
-        events: Vec<fidl_fuchsia_ui_scenic::Event>,
-        task_queue: TaskQueue,
-    ) {
-        ftrace::duration!("wayland", "XdgSurface::handle_session_events");
-        let mut input_events = Vec::new();
-        for event in events.into_iter() {
-            match event {
-                fidl_fuchsia_ui_scenic::Event::Input(e) => input_events.push(e),
-                fidl_fuchsia_ui_scenic::Event::Gfx(e) => {
-                    Self::handle_gfx_event(this, e, &task_queue)
-                }
-                fidl_fuchsia_ui_scenic::Event::Unhandled(c) => {
-                    assert!(false, "Unhandled command {:?}", c)
-                }
-            }
-        }
-
-        if !input_events.is_empty() {
-            Self::handle_input_events(this, input_events, &task_queue);
-        }
-    }
-
-    fn spawn_session_listener(
-        this: ObjectRef<Self>,
-        client: &mut Client,
-        server_end: ServerEnd<SessionListenerMarker>,
-    ) -> Result<SessionListenerControlHandle, Error> {
-        let task_queue = client.task_queue();
-        let mut stream = server_end.into_stream().unwrap();
-        let control_handle = stream.control_handle();
-        fasync::Task::local(
-            async move {
-                while let Some(request) = stream.try_next().await.unwrap() {
-                    match request {
-                        SessionListenerRequest::OnScenicError { error, .. } => {
-                            println!("Scenic error! {}", error);
-                        }
-                        SessionListenerRequest::OnScenicEvent { events, .. } => {
-                            Self::handle_session_events(this, events, task_queue.clone());
-                        }
-                    }
-                }
-                Ok(())
-            }
-            .unwrap_or_else(|e: Error| println!("{:?}", e)),
-        )
-        .detach();
-        Ok(control_handle)
-    }
-}
-
-#[cfg(not(feature = "flatland"))]
-impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
-    fn receive(
-        this: ObjectRef<Self>,
-        request: XdgSurfaceRequest,
-        client: &mut Client,
-    ) -> Result<(), Error> {
-        match request {
-            XdgSurfaceRequest::Destroy => {
-                client.delete_id(this.id())?;
-            }
-            XdgSurfaceRequest::GetToplevel { id } => {
-                let (client_end, server_end) = create_endpoints::<SessionListenerMarker>().unwrap();
-                let session = client.display().create_session(Some(client_end))?;
-                let toplevel = XdgToplevel::new(this, client, session.clone())?;
-                let toplevel_ref = id.implement(client, toplevel)?;
-                this.get_mut(client)?.set_xdg_role(XdgSurfaceRole::Toplevel(toplevel_ref))?;
-                let session_listener_control_handle =
-                    XdgSurface::spawn_session_listener(this, client, server_end)?;
-                let toplevel = toplevel_ref.get_mut(client)?;
-                toplevel.session_listener_controller = Some(session_listener_control_handle);
-            }
-            XdgSurfaceRequest::GetPopup { id, parent, positioner } => {
-                let (client_end, server_end) = create_endpoints::<SessionListenerMarker>().unwrap();
-                let session = client.display().create_session(Some(client_end))?;
-                let popup = XdgPopup::new(this, client, session.clone(), positioner.into())?;
-                let geometry = popup.geometry();
-                let popup_ref = id.implement(client, popup)?;
-                let xdg_surface = this.get_mut(client)?;
-                xdg_surface.set_xdg_role(XdgSurfaceRole::Popup(popup_ref))?;
-                XdgSurface::spawn_child_view(
-                    this,
-                    client,
-                    session,
-                    parent.into(),
-                    Some((geometry.x, geometry.y)),
-                    geometry,
-                )?;
-                let session_listener_control_handle =
-                    XdgSurface::spawn_session_listener(this, client, server_end)?;
-                let popup = popup_ref.get_mut(client)?;
-                popup.session_listener_controller = Some(session_listener_control_handle);
-            }
-            XdgSurfaceRequest::SetWindowGeometry { x, y, width, height } => {
-                let surface_ref = this.get(client)?.surface_ref;
-                surface_ref.get_mut(client)?.enqueue(SurfaceCommand::SetWindowGeometry(Rect {
-                    x,
-                    y,
-                    width,
-                    height,
-                }));
-            }
-            XdgSurfaceRequest::AckConfigure { .. } => {}
-        }
-        Ok(())
-    }
-}
-
 /// Models the different roles that can be assigned to an `XdgSurface`.
 #[derive(Copy, Clone, Debug)]
 pub enum XdgSurfaceRole {
@@ -1341,10 +1016,6 @@ pub struct XdgPopup {
     positioner_ref: ObjectRef<XdgPositioner>,
     /// Popup geometry.
     geometry: Rect,
-    /// This handle can be used to terminate the |SessionListener| FIDL service
-    /// associated with this toplevel.
-    #[cfg(not(feature = "flatland"))]
-    session_listener_controller: Option<SessionListenerControlHandle>,
 }
 
 impl XdgPopup {
@@ -1373,10 +1044,7 @@ impl XdgPopup {
         ftrace::duration!("wayland", "XdgPopup::close");
         client.event_queue().post(this.id(), XdgPopupEvent::PopupDone)
     }
-}
 
-#[cfg(feature = "flatland")]
-impl XdgPopup {
     /// Creates a new `XdgPopup` surface.
     pub fn new(
         xdg_surface_ref: ObjectRef<XdgSurface>,
@@ -1391,32 +1059,6 @@ impl XdgPopup {
     }
 
     pub fn shutdown(&self) {}
-}
-
-#[cfg(not(feature = "flatland"))]
-impl XdgPopup {
-    /// Creates a new `XdgPopup` surface.
-    pub fn new(
-        xdg_surface_ref: ObjectRef<XdgSurface>,
-        client: &mut Client,
-        session: ScenicSession,
-        positioner_ref: ObjectRef<XdgPositioner>,
-    ) -> Result<Self, Error> {
-        let geometry = positioner_ref.get(client)?.get_geometry()?;
-        let surface_ref = xdg_surface_ref.get(client)?.surface_ref();
-        surface_ref.get_mut(client)?.set_session(session)?;
-        Ok(XdgPopup {
-            surface_ref,
-            xdg_surface_ref,
-            session_listener_controller: None,
-            positioner_ref,
-            geometry,
-        })
-    }
-
-    pub fn shutdown(&self) {
-        self.session_listener_controller.as_ref().map(|h| h.shutdown());
-    }
 }
 
 impl RequestReceiver<xdg_shell::XdgPopup> for XdgPopup {
@@ -1437,10 +1079,7 @@ impl RequestReceiver<xdg_shell::XdgPopup> for XdgPopup {
                 // been destroyed.
                 Surface::present_internal(surface_ref, client)?;
 
-                #[cfg(feature = "flatland")]
                 surface_ref.get_mut(client)?.clear_flatland();
-                #[cfg(not(feature = "flatland"))]
-                surface_ref.get_mut(client)?.clear_session();
                 client.delete_id(this.id())?;
             }
             XdgPopupRequest::Grab { .. } => {}
@@ -1477,10 +1116,6 @@ pub struct XdgToplevel {
     /// Maximum size for `XdgToplevel`. A value of zero means no maximum
     /// size in the given dimension.
     max_size: Size,
-    /// This handle can be used to terminate the |SessionListener| FIDL service
-    /// associated with this toplevel.
-    #[cfg(not(feature = "flatland"))]
-    session_listener_controller: Option<SessionListenerControlHandle>,
 }
 
 impl XdgToplevel {
@@ -1575,10 +1210,7 @@ impl XdgToplevel {
         ftrace::duration!("wayland", "XdgToplevel::close");
         client.event_queue().post(this.id(), XdgToplevelEvent::Close)
     }
-}
 
-#[cfg(feature = "flatland")]
-impl XdgToplevel {
     /// Creates a new `XdgToplevel` surface.
     pub fn new(
         xdg_surface_ref: ObjectRef<XdgSurface>,
@@ -1909,268 +1541,6 @@ impl XdgToplevel {
     }
 }
 
-#[cfg(not(feature = "flatland"))]
-impl XdgToplevel {
-    /// Creates a new `XdgToplevel` surface.
-    pub fn new(
-        xdg_surface_ref: ObjectRef<XdgSurface>,
-        client: &mut Client,
-        session: ScenicSession,
-    ) -> Result<Self, Error> {
-        let surface_ref = xdg_surface_ref.get(client)?.surface_ref();
-        surface_ref.get_mut(client)?.set_session(session)?;
-        Ok(XdgToplevel {
-            surface_ref,
-            xdg_surface_ref,
-            view_provider_controller: None,
-            view_controller_proxy: None,
-            view_id: NEXT_VIEW_ID.fetch_add(1, Ordering::SeqCst) as u32,
-            waiting_for_initial_commit: true,
-            parent_ref: None,
-            title: None,
-            max_size: Size { width: 0, height: 0 },
-            session_listener_controller: None,
-        })
-    }
-
-    fn spawn_view_provider(
-        this: ObjectRef<Self>,
-        client: &mut Client,
-        session: ScenicSession,
-    ) -> Result<ViewProviderControlHandle, Error> {
-        ftrace::duration!("wayland", "XdgToplevel::spawn_view_provider");
-        // Create a new ViewProvider service, hand off the client endpoint to
-        // our ViewSink to be presented.
-        let (client_end, server_end) = create_endpoints::<ViewProviderMarker>().unwrap();
-        let view_id = this.get(client)?.view_id;
-        client.display().new_view_provider(client_end, view_id);
-
-        // Spawn the view provider server for this surface.
-        let surface_ref = this.get(client)?.surface_ref;
-        let xdg_surface_ref = this.get(client)?.xdg_surface_ref;
-        let task_queue = client.task_queue();
-        let mut stream = server_end.into_stream().unwrap();
-        let control_handle = stream.control_handle();
-        fasync::Task::local(
-            async move {
-                while let Some(request) = stream.try_next().await.unwrap() {
-                    match request {
-                        ViewProviderRequest::CreateViewWithViewRef {
-                            token,
-                            view_ref_control,
-                            view_ref,
-                            ..
-                        } => {
-                            let view_token = ViewToken { value: token };
-                            let view = View::new3(
-                                session.as_inner().clone(),
-                                view_token,
-                                view_ref_control,
-                                fuchsia_scenic::duplicate_view_ref(&view_ref)?,
-                                Some(String::from("Wayland View")),
-                            );
-                            XdgSurface::spawn_keyboard_listener(
-                                surface_ref,
-                                view_ref,
-                                task_queue.clone(),
-                            )?;
-                            let view_ptr = XdgSurfaceView::new(
-                                view,
-                                session.clone(),
-                                task_queue.clone(),
-                                xdg_surface_ref,
-                                surface_ref,
-                                None,
-                                Some((0, 0)),
-                                Rect { x: 0, y: 0, width: 0, height: 0 },
-                            )?;
-                            task_queue.post(move |client| {
-                                XdgSurfaceView::finish_setup_scene(&view_ptr, client)?;
-                                xdg_surface_ref.get_mut(client)?.set_view(view_ptr.clone());
-                                Ok(())
-                            });
-                        }
-                        _ => {
-                            panic!("unsupported view provider request: {:?}", request)
-                        }
-                    }
-                    // We only support a single view, so we'll stop handling
-                    // CreateView requests after we create the first view.
-                    while let Some(request) = stream.try_next().await.unwrap() {
-                        panic!("unsupported view provider request: {:?}", request)
-                    }
-                    break;
-                }
-                task_queue.post(|_client| {
-                    // Returning an error causes the client connection to be
-                    // closed (and that typically closes the application).
-                    Err(format_err!("View provider channel closed "))
-                });
-                Ok(())
-            }
-            .unwrap_or_else(|e: Error| println!("{:?}", e)),
-        )
-        .detach();
-        Ok(control_handle)
-    }
-
-    fn spawn_view(
-        this: ObjectRef<Self>,
-        client: &mut Client,
-        session: ScenicSession,
-    ) -> Result<ViewControllerProxy, Error> {
-        ftrace::duration!("wayland", "XdgToplevel::spawn_view");
-        let (proxy, server_end) = create_proxy::<ViewControllerMarker>()?;
-        let stream = proxy.take_event_stream();
-        let view_tokens = ViewTokenPair::new().expect("failed to create token pair");
-        let ViewRefPair { control_ref, view_ref } =
-            ViewRefPair::new().expect("unable to create view ref pair");
-        let view_ref_dup = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
-        let toplevel = this.get(client)?;
-        let annotations = toplevel.title.as_ref().map(|title| {
-            let title_key = AnnotationKey {
-                namespace: TITLE_ANNOTATION_NS.to_string(),
-                value: TITLE_ANNOTATION_VALUE.to_string(),
-            };
-            vec![Annotation { key: title_key, value: AnnotationValue::Text(title.clone()) }]
-        });
-        let view_spec = ViewSpec {
-            view_holder_token: Some(view_tokens.view_holder_token),
-            view_ref: Some(view_ref_dup),
-            annotations,
-            ..ViewSpec::EMPTY
-        };
-        let view = View::new3(
-            session.as_inner().clone(),
-            view_tokens.view_token,
-            control_ref,
-            fuchsia_scenic::duplicate_view_ref(&view_ref)?,
-            Some(String::from("Wayland View")),
-        );
-        let xdg_surface_ref = toplevel.xdg_surface_ref;
-        let surface_ref = toplevel.surface_ref;
-        let max_size = toplevel.max_size;
-        let task_queue = client.task_queue();
-        XdgSurface::spawn_keyboard_listener(surface_ref, view_ref, task_queue.clone())?;
-        let view_ptr = XdgSurfaceView::new(
-            view,
-            session,
-            task_queue.clone(),
-            xdg_surface_ref,
-            surface_ref,
-            None,
-            Some((0, 0)),
-            Rect { x: 0, y: 0, width: max_size.width, height: max_size.height },
-        )?;
-        XdgSurfaceView::finish_setup_scene(&view_ptr, client)?;
-        xdg_surface_ref.get_mut(client)?.set_view(view_ptr.clone());
-        let graphical_presenter = client.display().graphical_presenter().clone();
-        fasync::Task::local(
-            async move {
-                graphical_presenter
-                    .present_view(view_spec, None, Some(server_end))
-                    .await
-                    .expect("failed to present view")
-                    .unwrap_or_else(|e| println!("{:?}", e));
-
-                // Wait for stream to close.
-                let _ = stream.collect::<Vec<_>>().await;
-                task_queue.post(move |client| {
-                    XdgToplevel::close(this, client)?;
-                    Ok(())
-                });
-                Ok(())
-            }
-            .unwrap_or_else(|e: Error| println!("{:?}", e)),
-        )
-        .detach();
-        Ok(proxy)
-    }
-
-    pub fn finalize_commit(this: ObjectRef<Self>, client: &mut Client) -> Result<bool, Error> {
-        ftrace::duration!("wayland", "XdgToplevel::finalize_commit");
-        let top_level = this.get(client)?;
-        // Initial commit requires that we spawn a view and send a configure event.
-        if top_level.waiting_for_initial_commit {
-            let xdg_surface_ref = top_level.xdg_surface_ref;
-            let xdg_surface = xdg_surface_ref.get(client)?;
-            let surface_ref = xdg_surface.surface_ref();
-            let surface = surface_ref.get(client)?;
-            let session =
-                surface.session().ok_or(format_err!("Unable to spawn view without a session."))?;
-
-            // Spawn a child view if `XdgToplevel` has a parent or there's an existing
-            // `XdgSurface` that can be used as parent.
-            let maybe_parent_ref = if let Some(parent_ref) = top_level.parent_ref {
-                let parent = parent_ref.get(client)?;
-                Some(parent.xdg_surface_ref)
-            } else {
-                None
-            };
-
-            let (maybe_view_provider_control_handle, maybe_view_controller_proxy) = {
-                if let Some(parent_ref) = maybe_parent_ref {
-                    let offset = surface.offset();
-                    let geometry = surface.window_geometry();
-                    XdgSurface::spawn_child_view(
-                        xdg_surface_ref,
-                        client,
-                        session.clone(),
-                        parent_ref,
-                        offset,
-                        geometry,
-                    )?;
-                    (None, None)
-                } else if client.take_view_provider_request() {
-                    let control_handle =
-                        XdgToplevel::spawn_view_provider(this, client, session.clone())?;
-                    (Some(control_handle), None)
-                } else {
-                    let view_controller_proxy =
-                        XdgToplevel::spawn_view(this, client, session.clone())?;
-                    (None, Some(view_controller_proxy))
-                }
-            };
-
-            // Initial commit requires that we send a configure event.
-            let top_level = this.get_mut(client)?;
-            top_level.waiting_for_initial_commit = false;
-            top_level.view_provider_controller = maybe_view_provider_control_handle;
-            top_level.view_controller_proxy = maybe_view_controller_proxy;
-            // Maybe move keyboard focus to this XDG surface.
-            if let Some(parent_ref) = maybe_parent_ref {
-                let root_surface_ref = parent_ref.get(client)?.root_surface_ref();
-                client
-                    .input_dispatcher
-                    .maybe_update_keyboard_focus(root_surface_ref, surface_ref)?;
-            }
-            XdgSurface::configure(xdg_surface_ref, client)?;
-            client.xdg_surfaces.push(xdg_surface_ref);
-        } else {
-            let xdg_surface_ref = top_level.xdg_surface_ref;
-            let xdg_surface = xdg_surface_ref.get(client)?;
-            let surface = xdg_surface.surface_ref().get(client)?;
-            let geometry = surface.window_geometry();
-            let local_offset = surface.offset();
-            if let Some(view) = xdg_surface.view.clone() {
-                view.lock().set_geometry_and_local_offset(&geometry, &local_offset);
-            }
-        }
-        Ok(true)
-    }
-
-    pub fn shutdown(&self, client: &Client) {
-        if let Some(view_provider_controller) = self.view_provider_controller.as_ref() {
-            view_provider_controller.shutdown();
-            client.display().delete_view_provider(self.view_id);
-        }
-        if let Some(view_controller_proxy) = self.view_controller_proxy.as_ref() {
-            view_controller_proxy.dismiss().unwrap_or_else(|e| println!("{:?}", e));
-        }
-        self.session_listener_controller.as_ref().map(|h| h.shutdown());
-    }
-}
-
 impl RequestReceiver<xdg_shell::XdgToplevel> for XdgToplevel {
     fn receive(
         this: ObjectRef<Self>,
@@ -2202,10 +1572,7 @@ impl RequestReceiver<xdg_shell::XdgToplevel> for XdgToplevel {
                 // been destroyed.
                 Surface::present_internal(surface_ref, client)?;
 
-                #[cfg(feature = "flatland")]
                 surface_ref.get_mut(client)?.clear_flatland();
-                #[cfg(not(feature = "flatland"))]
-                surface_ref.get_mut(client)?.clear_session();
                 client.delete_id(this.id())?;
             }
             XdgToplevelRequest::SetParent { parent } => {
@@ -2241,23 +1608,10 @@ impl RequestReceiver<xdg_shell::XdgToplevel> for XdgToplevel {
 /// An `XdgSurfaceView` will be created by the `ViewProvider` for an
 /// `XdgSurface`.
 struct XdgSurfaceView {
-    #[cfg(feature = "flatland")]
     flatland: FlatlandPtr,
-    #[cfg(feature = "flatland")]
     root_transform: Option<TransformId>,
-    #[cfg(feature = "flatland")]
     container_transform: TransformId,
-    #[cfg(not(feature = "flatland"))]
-    view: Option<View>,
-    #[cfg(not(feature = "flatland"))]
-    session: ScenicSession,
-    #[cfg(not(feature = "flatland"))]
-    background_node: ShapeNode,
-    #[cfg(not(feature = "flatland"))]
-    container_node: EntityNode,
     logical_size: SizeF,
-    #[cfg(not(feature = "flatland"))]
-    pixel_scale: (f32, f32),
     local_offset: Option<(i32, i32)>,
     absolute_offset: (i32, i32),
     task_queue: TaskQueue,
@@ -2265,10 +1619,7 @@ struct XdgSurfaceView {
     surface: ObjectRef<Surface>,
     geometry: Rect,
     parent: Option<XdgSurfaceViewPtr>,
-    #[cfg(feature = "flatland")]
     children: BTreeSet<u64>,
-    #[cfg(not(feature = "flatland"))]
-    children: BTreeMap<u32, (ViewHolder, EntityNode)>,
 }
 
 type XdgSurfaceViewPtr = Arc<Mutex<XdgSurfaceView>>;
@@ -2363,7 +1714,6 @@ impl XdgSurfaceView {
     }
 }
 
-#[cfg(feature = "flatland")]
 impl XdgSurfaceView {
     pub fn new(
         flatland: FlatlandPtr,
@@ -2597,223 +1947,6 @@ impl XdgSurfaceView {
             .proxy()
             .set_viewport_properties(&mut link, viewport_properties)
             .expect("fidl error");
-    }
-}
-
-#[cfg(not(feature = "flatland"))]
-impl XdgSurfaceView {
-    pub fn new(
-        view: View,
-        session: ScenicSession,
-        task_queue: TaskQueue,
-        xdg_surface: ObjectRef<XdgSurface>,
-        surface: ObjectRef<Surface>,
-        parent: Option<XdgSurfaceViewPtr>,
-        local_offset: Option<(i32, i32)>,
-        geometry: Rect,
-    ) -> Result<XdgSurfaceViewPtr, Error> {
-        // Get initial size and pixel scale from parent if available.
-        let (logical_size, pixel_scale) =
-            parent.as_ref().map_or((SizeF { width: 0.0, height: 0.0 }, (1.0, 1.0)), |parent| {
-                let parent = parent.lock();
-                (parent.logical_size, parent.pixel_scale)
-            });
-        let physical_size = Self::physical_size_internal(&logical_size, &pixel_scale);
-        let absolute_offset =
-            Self::compute_absolute_offset(&parent, &physical_size, &local_offset, &geometry);
-        let view_controller = XdgSurfaceView {
-            view: Some(view),
-            session: session.clone(),
-            background_node: ShapeNode::new(session.as_inner().clone()),
-            container_node: EntityNode::new(session.as_inner().clone()),
-            logical_size,
-            pixel_scale,
-            local_offset,
-            absolute_offset,
-            task_queue,
-            xdg_surface,
-            surface,
-            geometry,
-            parent,
-            children: BTreeMap::new(),
-        };
-        let view_controller = Arc::new(Mutex::new(view_controller));
-        Ok(view_controller)
-    }
-
-    pub fn finish_setup_scene(
-        view_controller: &XdgSurfaceViewPtr,
-        client: &mut Client,
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "XdgSurfaceView::finish_setup_scene");
-        let mut vc = view_controller.lock();
-        vc.setup_scene();
-        vc.attach(vc.surface, client)?;
-
-        vc.surface.get_mut(client)?.set_pixel_scale(vc.pixel_scale.0, vc.pixel_scale.1);
-
-        // Perform an update if we have an initial size.
-        if vc.logical_size.width != 0.0 && vc.logical_size.height != 0.0 {
-            vc.update();
-            vc.reconfigure();
-        }
-        vc.present_internal();
-        Ok(())
-    }
-
-    pub fn shutdown(&mut self) {
-        self.view = None;
-    }
-
-    fn physical_size_internal(logical_size: &SizeF, pixel_scale: &(f32, f32)) -> Size {
-        Size {
-            width: (logical_size.width * pixel_scale.0).round() as i32,
-            height: (logical_size.height * pixel_scale.1).round() as i32,
-        }
-    }
-
-    pub fn physical_size(&self) -> Size {
-        Self::physical_size_internal(&self.logical_size, &self.pixel_scale)
-    }
-
-    fn attach(&self, surface: ObjectRef<Surface>, client: &Client) -> Result<(), Error> {
-        ftrace::duration!("wayland", "XdgSurfaceView::attach");
-        let surface = surface.get(client)?;
-        let node = surface.node().expect("surface is missing a node");
-        self.container_node.add_child(node);
-        Ok(())
-    }
-
-    fn setup_scene(&self) {
-        ftrace::duration!("wayland", "XdgSurfaceView::setup_scene");
-        self.view.as_ref().map(|v| {
-            v.add_child(&self.background_node);
-            v.add_child(&self.container_node);
-        });
-
-        self.container_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
-
-        let material = Material::new(self.session.as_inner().clone());
-        // Transparent background if we have a parent, otherwise gray.
-        if self.parent.is_some() {
-            material.set_color(ColorRgba { red: 0x0, green: 0x0, blue: 0x0, alpha: 0x0 });
-        } else {
-            material.set_color(ColorRgba { red: 0x29, green: 0x29, blue: 0x29, alpha: 0xff });
-        }
-        // To debug child views:
-        // material.set_color(ColorRgba { red: 0x0, green: 0xff, blue: 0x0, alpha: 0x40 });
-        self.background_node.set_material(&material);
-    }
-
-    fn update(&mut self) {
-        ftrace::duration!("wayland", "XdgSurfaceView::update");
-        let center_x = self.logical_size.width * 0.5;
-        let center_y = self.logical_size.height * 0.5;
-        self.background_node.set_shape(&Rectangle::new(
-            self.session.as_inner().clone(),
-            self.logical_size.width,
-            self.logical_size.height,
-        ));
-        // Place the container node above the background.
-        self.background_node.set_translation(center_x, center_y, 0.0);
-        self.container_node.set_translation(
-            self.absolute_offset.0 as f32 / self.pixel_scale.0,
-            self.absolute_offset.1 as f32 / self.pixel_scale.1,
-            -1.0,
-        );
-        // Update all child views.
-        let child_z_delta = 1.0 / self.children.len() as f32;
-        let mut child_z = -2.0;
-        for (_, node) in self.children.values() {
-            node.set_translation(0.0, 0.0, child_z);
-            child_z -= child_z_delta;
-        }
-    }
-
-    pub fn set_pixel_scale(&mut self, client: &mut Client, scale_x: f32, scale_y: f32) {
-        ftrace::duration!("wayland", "XdgSurfaceView::set_pixel_scale");
-        let pixel_scale = (scale_x, scale_y);
-        if pixel_scale != self.pixel_scale {
-            self.pixel_scale = pixel_scale;
-            if let Some(surface) = self.surface.try_get_mut(client) {
-                surface.set_pixel_scale(scale_x, scale_y);
-            }
-            self.update_and_present();
-            self.reconfigure();
-        }
-    }
-
-    pub fn set_geometry_and_local_offset(
-        &mut self,
-        geometry: &Rect,
-        local_offset: &Option<(i32, i32)>,
-    ) {
-        ftrace::duration!("wayland", "XdgSurfaceView::set_geometry_and_local_offset");
-        self.geometry = *geometry;
-        self.local_offset = *local_offset;
-        let absolute_offset = Self::compute_absolute_offset(
-            &self.parent,
-            &self.physical_size(),
-            &self.local_offset,
-            &self.geometry,
-        );
-        if absolute_offset != self.absolute_offset {
-            self.absolute_offset = absolute_offset;
-            self.update_and_present();
-        }
-    }
-
-    pub fn handle_properies_changed(&mut self, properties: &fidl_fuchsia_ui_gfx::ViewProperties) {
-        ftrace::duration!("wayland", "XdgSurfaceView::handle_properies_changed");
-        let width = properties.bounding_box.max.x - properties.bounding_box.min.x;
-        let height = properties.bounding_box.max.y - properties.bounding_box.min.y;
-        let logical_size = SizeF { width, height };
-        if logical_size != self.logical_size {
-            self.logical_size = logical_size;
-            for (view_holder, _) in self.children.values() {
-                self.set_view_properties(view_holder);
-            }
-            self.update_absolute_offset();
-            self.update_and_present();
-            self.reconfigure();
-        }
-    }
-
-    pub fn add_child_view(&mut self, view_holder: ViewHolder) {
-        ftrace::duration!("wayland", "XdgSurfaceView::add_child_view");
-        self.set_view_properties(&view_holder);
-        let node = EntityNode::new(self.session.as_inner().clone());
-        node.attach(&view_holder);
-        self.view.as_ref().map(|v| {
-            v.add_child(&node);
-        });
-        let id = view_holder.id();
-        self.children.insert(id, (view_holder, node));
-        self.update_and_present();
-    }
-
-    pub fn handle_view_disconnected(&mut self, view_holder_id: u32) {
-        ftrace::duration!("wayland", "XdgSurfaceView::handle_view_disconnected");
-        if let Some(value) = self.children.remove(&view_holder_id) {
-            self.view.as_ref().map(|v| {
-                v.detach_child(&value.1);
-            });
-        }
-        self.update_and_present();
-    }
-
-    fn set_view_properties(&self, view_holder: &ViewHolder) {
-        let view_properties = gfx::ViewProperties {
-            bounding_box: gfx::BoundingBox {
-                min: gfx::Vec3 { x: 0.0, y: 0.0, z: -5.0 },
-                max: gfx::Vec3 { x: self.logical_size.width, y: self.logical_size.height, z: 0.0 },
-            },
-            downward_input: true,
-            focus_change: false,
-            inset_from_min: gfx::Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-            inset_from_max: gfx::Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-        };
-        view_holder.set_view_properties(view_properties);
     }
 }
 
