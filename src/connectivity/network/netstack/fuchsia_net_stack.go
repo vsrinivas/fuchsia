@@ -40,75 +40,6 @@ type stackImpl struct {
 	dnsWatchers *dnsServerWatcherCollection
 }
 
-func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
-	ifs := nicInfo.Context.(*ifState)
-	ifs.mu.Lock()
-	defer ifs.mu.Unlock()
-
-	administrativeStatus := stack.AdministrativeStatusDisabled
-	if ifs.mu.adminUp {
-		administrativeStatus = stack.AdministrativeStatusEnabled
-	}
-	physicalStatus := stack.PhysicalStatusDown
-	if ifs.LinkOnlineLocked() {
-		physicalStatus = stack.PhysicalStatusUp
-	}
-
-	addrs := make([]net.Subnet, 0, len(nicInfo.ProtocolAddresses))
-	for _, a := range nicInfo.ProtocolAddresses {
-		if a.Protocol != ipv4.ProtocolNumber && a.Protocol != ipv6.ProtocolNumber {
-			continue
-		}
-		addrs = append(addrs, net.Subnet{
-			Addr:      fidlconv.ToNetIpAddress(a.AddressWithPrefix.Address),
-			PrefixLen: uint8(a.AddressWithPrefix.PrefixLen),
-		})
-	}
-
-	var features fidlethernet.Features
-	if ifs.endpoint.Capabilities()&tcpipstack.CapabilityLoopback != 0 {
-		features |= fidlethernet.FeaturesLoopback
-	}
-
-	var topopath, filepath string
-	if client, ok := ifs.controller.(*eth.Client); ok {
-		topopath = client.Topopath()
-		filepath = client.Filepath()
-		features |= client.Info.Features
-	}
-
-	mac := &fidlethernet.MacAddress{}
-	copy(mac.Octets[:], ifs.endpoint.LinkAddress())
-
-	return stack.InterfaceInfo{
-		Id: uint64(ifs.nicid),
-		Properties: stack.InterfaceProperties{
-			Name:                 nicInfo.Name,
-			Topopath:             topopath,
-			Filepath:             filepath,
-			Mac:                  mac,
-			Mtu:                  ifs.endpoint.MTU(),
-			AdministrativeStatus: administrativeStatus,
-			PhysicalStatus:       physicalStatus,
-			Features:             features,
-			Addresses:            addrs,
-		},
-	}
-}
-
-func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
-	nicInfos := ns.stack.NICInfo()
-	out := make([]stack.InterfaceInfo, 0, len(nicInfos))
-	for _, nicInfo := range nicInfos {
-		out = append(out, getInterfaceInfo(nicInfo))
-	}
-
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].Id < out[j].Id
-	})
-	return out
-}
-
 func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResult {
 	var result stack.StackDelEthernetInterfaceResult
 
@@ -307,7 +238,70 @@ func (ni *stackImpl) DelEthernetInterface(_ fidl.Context, id uint64) (stack.Stac
 }
 
 func (ni *stackImpl) ListInterfaces(fidl.Context) ([]stack.InterfaceInfo, error) {
-	return ni.ns.getNetInterfaces(), nil
+	nicInfos := ni.ns.stack.NICInfo()
+	out := make([]stack.InterfaceInfo, 0, len(nicInfos))
+	for _, nicInfo := range nicInfos {
+		out = append(out, func() stack.InterfaceInfo {
+			ifs := nicInfo.Context.(*ifState)
+			ifs.mu.Lock()
+			defer ifs.mu.Unlock()
+
+			administrativeStatus := stack.AdministrativeStatusDisabled
+			if ifs.mu.adminUp {
+				administrativeStatus = stack.AdministrativeStatusEnabled
+			}
+			physicalStatus := stack.PhysicalStatusDown
+			if ifs.LinkOnlineLocked() {
+				physicalStatus = stack.PhysicalStatusUp
+			}
+
+			addrs := make([]net.Subnet, 0, len(nicInfo.ProtocolAddresses))
+			for _, a := range nicInfo.ProtocolAddresses {
+				if a.Protocol != ipv4.ProtocolNumber && a.Protocol != ipv6.ProtocolNumber {
+					continue
+				}
+				addrs = append(addrs, net.Subnet{
+					Addr:      fidlconv.ToNetIpAddress(a.AddressWithPrefix.Address),
+					PrefixLen: uint8(a.AddressWithPrefix.PrefixLen),
+				})
+			}
+
+			var features fidlethernet.Features
+			if ifs.endpoint.Capabilities()&tcpipstack.CapabilityLoopback != 0 {
+				features |= fidlethernet.FeaturesLoopback
+			}
+
+			var topopath, filepath string
+			if client, ok := ifs.controller.(*eth.Client); ok {
+				topopath = client.Topopath()
+				filepath = client.Filepath()
+				features |= client.Info.Features
+			}
+
+			mac := &fidlethernet.MacAddress{}
+			copy(mac.Octets[:], ifs.endpoint.LinkAddress())
+
+			return stack.InterfaceInfo{
+				Id: uint64(ifs.nicid),
+				Properties: stack.InterfaceProperties{
+					Name:                 nicInfo.Name,
+					Topopath:             topopath,
+					Filepath:             filepath,
+					Mac:                  mac,
+					Mtu:                  ifs.endpoint.MTU(),
+					AdministrativeStatus: administrativeStatus,
+					PhysicalStatus:       physicalStatus,
+					Features:             features,
+					Addresses:            addrs,
+				},
+			}
+		}())
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].Id < out[j].Id
+	})
+	return out, nil
 }
 
 func (ni *stackImpl) EnableInterface(_ fidl.Context, id uint64) (stack.StackEnableInterfaceResult, error) {
