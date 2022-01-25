@@ -213,7 +213,7 @@ to your `~/.bashrc` or equivalent. This change results in the following:
 
 * `pm` (and by consequence `fx serve`) watches for packages before they are
   created. When a package is created or modified, `pm` auto-publishes that package,
-  so you can keep 'fx serve' running from an empty tree and it will publish
+  so you can keep `fx serve` running from an empty tree and it will publish
   incrementally as you go.
 
 * `fx test` only builds the minimal targets required for running. For component tests,
@@ -240,6 +240,32 @@ example, an executable target with the label
 
 See the [build system overview][build-overview] for a more detailed discussion
 of build targets.
+
+### Generating a build archive {#generating-a-build-archive}
+
+In addition to executing a build, you can use the `fx build` command
+to generate a build archive file (that is, `.tar`, `.tgz`, or`.zip`). This build
+archive file comprises a specific blend of the build artifacts produced by `fx build`,
+making your build output portable for various purposes. For instance, you can provide
+this build archive file as input to the [`ffx target flash`][ffx-target-flash] command
+for flashing the build to a Fuchsia device.
+
+To generate a build archive file, run `fx build` with the following special target:
+
+```posix-terminal
+fx build build-archive.<FORMAT>
+```
+
+Replace `FORMAT` with `tar`, `tgz`, or `zip`, for example:
+
+```posix-terminal
+fx build build-archive.zip
+```
+
+Once the build is finished, this command creates the build archive file
+(`build-archive.zip` in the example above) in your Fuchsia build directory, which is
+`out/default` by default. (To view the exact location of your build directory,
+run `fx get-build-dir`.)
 
 ## Flash a board and prepare Zedboot {#flash-a-board-and-prepare-zedboot}
 
@@ -569,5 +595,8 @@ in `fx`, as well as documentation for `fx` global flags.
 
 To view Fuchsia's integration dashboard, see [Builders](https://luci-milo.appspot.com/p/fuchsia).
 
+<!-- Reference links -->
+
 [build-overview]: /docs/development/build/concepts/build_system/fuchsia_build_system_overview.md
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md
+[ffx-target-flash]: https://fuchsia.dev/reference/tools/sdk/ffx#flash
