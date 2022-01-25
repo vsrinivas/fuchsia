@@ -236,22 +236,38 @@ impl Hub {
         component_url: String,
         mut instance_map: &'a mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<(), ModelError> {
-        if let Some(controlled) = Hub::add_instance_if_necessary(
+        let controlled = match Hub::add_instance_if_necessary(
             lifecycle_controller,
             &abs_moniker,
             component_url,
             &mut instance_map,
         )? {
-            if let (Some(leaf), Some(parent_moniker)) = (abs_moniker.leaf(), abs_moniker.parent()) {
-                // In the children directory, the child's instance id is not used
-                trace::duration!("component_manager", "hub:add_instance_to_parent");
-                let partial_moniker = leaf.to_partial();
-                instance_map
-                    .get_mut(&parent_moniker)
-                    .ok_or(ModelError::instance_not_found(parent_moniker.to_partial()))?
-                    .children_directory
-                    .add_node(partial_moniker.as_str(), controlled.clone(), &abs_moniker)?;
-            }
+            Some(c) => c,
+            None => return Ok(()),
+        };
+
+        if let (Some(leaf), Some(parent_moniker)) = (abs_moniker.leaf(), abs_moniker.parent()) {
+            trace::duration!("component_manager", "hub:add_instance_to_parent");
+            match instance_map.get_mut(&parent_moniker) {
+                Some(instance) => {
+                    let partial_moniker = leaf.to_partial();
+                    instance.children_directory.add_node(
+                        partial_moniker.as_str(),
+                        controlled.clone(),
+                        &abs_moniker,
+                    )?;
+                }
+                None => {
+                    // TODO(fxbug.dev/89503): Investigate event ordering between
+                    // parent and child, so that we can guarantee the parent is
+                    // in the instance_map.
+                    log::warn!(
+                        "Parent {} not found: could not add {} to children directory.",
+                        parent_moniker,
+                        abs_moniker
+                    );
+                }
+            };
         }
         Ok(())
     }
