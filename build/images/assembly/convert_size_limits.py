@@ -89,6 +89,7 @@ def main():
     parser.add_argument(
         '--product_config', type=argparse.FileType('r'), required=True)
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
+    parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
     # Read all input configurations.
@@ -105,7 +106,7 @@ def main():
     # Verify bipartite mapping between manifests and components.
     more_than_once, zero = count_packages(component_budgets, all_manifests)
 
-    if zero:
+    if zero and args.verbose:
         print("WARNING: Package(s) not matched by any size budget:")
         for package in zero:
             print(f" - {package}")
