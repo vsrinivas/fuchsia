@@ -14,45 +14,12 @@ import("//build/toolchain/variant.gni")
 # NOTE: This file provides the GN configs used by Zircon toolchains
 # exclusively. See //build/toolchain/zircon/zircon_toolchain.gni.
 #
-# They come from a rewrite of the configs from the old Zircon build.
 # Major differences in the rewrite:
 #
 #  - Uses |zircon_toolchain| global variable, instead of |toolchain|.
 #
 #  - All code paths related to |is_host| has been removed (the Zircon toolchain
 #    are never used to build host binaries).
-#
-#  - There are many configs here that redirect to an equivalent config
-#    defined in //build/config/BUILD.gn. These are necessary to ensure
-#    that build commands between the Zircon and Fuchsia builds are equivalent,
-#    as verified by //zircon/public/canaries/compare_toolchains.py, because
-#    the order of entries in `configs` list must be the same, even after
-#    a `gn format` pass.
-#
-#    I.e. compare:
-#
-#      configs = [
-#        "//build/config/zircon:default_include_dirs",
-#        "//build/config/zircon:relative_paths",
-#      ]
-#
-#    Which corresponds to the original configs list as it appeared in the
-#    Zircon build, with:
-#
-#      configs = [
-#        "//build/config:relative_paths",
-#        "//build/config/zircon:default_include_dirs",
-#      ]
-#
-#    Which is the properly formatted equivalent, when not using intermediate
-#    configs here. Because the entries appear in different order, the build
-#    commands will place tool flags in different position, making comparison
-#    much more difficult.
-#
-#    Once the build is unified, these intermediate configs will be removed
-#    since the order of build tool parameters is only important to minimize
-#    surprises during unification.
-#
 
 # These flags are enabled by default in Fuchsia's Clang toolchain, but we set
 # them explicitly to support other Clang toolchains and Clang-based tools.

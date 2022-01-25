@@ -12,22 +12,6 @@ import("//zircon/vdso/vdso.gni")
 # `gn gen` phase of the Fuchsia build, i.e. it is not possible to write
 # it to a generated_file() target and later process it with a build-time
 # script.
-#
-# This implies two very different ways to handle this data in the Zircon
-# and the Fuchsia build:
-#
-# - Before build unification, the Zircon build adds this content to the
-#   C library's metadata, which is later collected into the
-#   legacy_sysroot-$cpu.json file.
-#
-#   The Fuchsia build then uses read_file() to read it, then later
-#   parses it (see //zircon/public/sysroot/BUILD.gn).
-#
-# - After build unification, this file will be imported directly by the
-#   Fuchsia build, and its content parsed from there instead
-#   (it might be written to a generated_file() target though to
-#   populate the sysroot directory properly though).
-#
 
 import("//zircon/system/ulib/c/libc_toolchain.gni")
 

@@ -61,9 +61,6 @@ source_set("memory-snapshot-test") {
   deps += [ "//build/config/sanitizers:suppress-asan-stack-use-after-return" ]
 }
 
-# These should be just shared_library(), but must be zx_library() for
-# the //build/unification magic to work.
-
 shared_library("sanitizer-memory-snapshot-test-needed-dso") {
   visibility = [ ":*" ]
   sources = [ "sanitizer-memory-snapshot-test-needed-dso.cc" ]

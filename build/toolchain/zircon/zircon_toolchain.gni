@@ -51,12 +51,6 @@ _buildidtool =
 #      GN: {{output_dir}}/exe.unstripped/{{target_output_name}}{{output_extension}}
 #      ZN: {{output_dir}}/{{target_output_name}}{{output_extension}}.debug
 #
-# For build unification, it is critical to ensure that the Fuchsia and
-# Zircon builds generate the same set of commands, so the template defined
-# here replicated the original Zircon commands. After unification completes,
-# it might be worthwhile to refactor clang_toolchain() and zircon_toolchain()
-# to use a common set of definitions instead.
-#
 # IMPORTANT: The zircon_toolchain global variable is defined as a scope for
 # Zircon-specific toolchains, otherwise it is just 'false'. See below for the
 # detailed schema for this scope.

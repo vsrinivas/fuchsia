@@ -21,9 +21,6 @@ group("tests") {
 }
 
 zbi_input("bin-input") {
-  # Using a prefix to install bootsvc in the same spot on zbi's
-  # as back when it was built by the ZN build.
-  # Note that this may be removed post-unification.
   prefix = "pkg/bootsvc"
   deps = [ ":bin" ]
 }

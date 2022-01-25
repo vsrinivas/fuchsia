@@ -453,16 +453,6 @@ if (zircon_toolchain == false) {
   }
 } else {
   # Zircon-specific toolchain use a different list of default configs.
-  #
-  # IMPORTANT: Some of the configs below are simple redirections to equivalent
-  # configs in //build/config/BUILD.gn, but are used to ensure that the order
-  # in the list below matches exactly that of the Zircon build. This ensures
-  # that build commands are identical between the Fuchsia and Zircon builds,
-  # as verified by //zircon/public/canaries/compare_toolchains.py.
-  #
-  # TODO(fxbug.dev/60410): After build unification completes, emove the
-  # intermediate configs.
-  #
   default_common_binary_configs += [
     "//build/config:default_debuginfo",
     "//build/config:default_frame_pointers",

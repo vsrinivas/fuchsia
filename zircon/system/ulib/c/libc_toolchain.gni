@@ -171,7 +171,6 @@ sysroot_crt1_target = "//zircon/system/ulib/c:crt1($sysroot_crt1_toolchain)"
 
 sysroot_crt1_obj =
     get_label_info(sysroot_crt1_target, "target_out_dir") + "/crt1.Scrt1.cc.o"
-
 # TECHNICAL NOTE
 #
 # This file exists because the C library, while technically not part of the
@@ -271,9 +270,5 @@ sysroot_crt1_obj =
 #   module against a non-instrumented C library at build time, as long
 #   as the proper instrumented binary is installed into the corresponding
 #   Fuchsia package.
-#
-#   That is the way the build worked before unification, and continues to
-#   do so for now. In the future, it might be possible to use the right
-#   instrumented C library at link time instead.
-#
-
+#   It may be possible to use the right instrumented C library at link time
+#   instead.

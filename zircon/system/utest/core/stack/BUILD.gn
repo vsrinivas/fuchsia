@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 source_set("stack") {
-  # configs += [ "//build/unification/config:zircon-migrated" ]
   testonly = true
   sources = [ "stack-test.cc" ]
   deps = [
