@@ -2,67 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/tracing/provider/cpp/fidl.h>
-#include <lib/sys/component/cpp/testing/realm_builder.h>
-#include <lib/sys/component/cpp/testing/realm_builder_types.h>
-
 #include <virtio/input.h>
 
-#include "fuchsia/logger/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/input.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
-namespace {
+static constexpr char kVirtioInputUrl[] =
+    "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cmx";
+static constexpr uint16_t kNumQueues = 1;
+static constexpr uint16_t kQueueSize = 16;
 
-constexpr uint16_t kNumQueues = 1;
-constexpr uint16_t kQueueSize = 16;
-
-using sys::testing::ChildRef;
-using sys::testing::ParentRef;
-using sys::testing::Protocol;
-using sys::testing::Route;
-using sys::testing::experimental::RealmRoot;
-using RealmBuilder = sys::testing::experimental::RealmBuilder;
-
-class VirtioInputTest : public TestWithDeviceV2 {
+class VirtioInputTest : public TestWithDevice {
  protected:
   VirtioInputTest() : event_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize) {}
 
   void SetUp() override {
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cm";
-    constexpr auto kComponentName = "virtio_input";
-
-    auto realm_builder = RealmBuilder::Create();
-    realm_builder.AddChild(kComponentName, kComponentUrl);
-
-    realm_builder
-        .AddRoute(Route{.capabilities =
-                            {
-                                Protocol{fuchsia::logger::LogSink::Name_},
-                                Protocol{fuchsia::tracing::provider::Registry::Name_},
-                            },
-                        .source = ParentRef(),
-                        .targets = {ChildRef{kComponentName}}})
-        .AddRoute(
-            Route{.capabilities =
-                      {
-                          Protocol{fuchsia::virtualization::hardware::KeyboardListener::Name_},
-                          Protocol{fuchsia::virtualization::hardware::PointerListener::Name_},
-                          Protocol{fuchsia::virtualization::hardware::VirtioInput::Name_},
-                      },
-                  .source = ChildRef{kComponentName},
-                  .targets = {ParentRef()}});
-
-    realm_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
-
+    // Launch device process.
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status = MakeStartInfo(event_queue_.end(), &start_info);
+    zx_status_t status = LaunchDevice(kVirtioInputUrl, event_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
-    keyboard_listener_ = realm_->ConnectSync<fuchsia::virtualization::hardware::KeyboardListener>();
-    pointer_listener_ = realm_->ConnectSync<fuchsia::virtualization::hardware::PointerListener>();
-    input_ = realm_->ConnectSync<fuchsia::virtualization::hardware::VirtioInput>();
+    // Start device execution.
+    services_->Connect(keyboard_listener_.NewRequest());
+    services_->Connect(pointer_listener_.NewRequest());
+    services_->Connect(input_.NewRequest());
+    RunLoopUntilIdle();
 
     status = input_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
@@ -87,7 +52,6 @@ class VirtioInputTest : public TestWithDeviceV2 {
   fuchsia::virtualization::hardware::KeyboardListenerSyncPtr keyboard_listener_;
   fuchsia::virtualization::hardware::PointerListenerSyncPtr pointer_listener_;
   VirtioQueueFake event_queue_;
-  std::unique_ptr<sys::testing::experimental::RealmRoot> realm_;
 };
 
 TEST_F(VirtioInputTest, Keyboard) {
@@ -186,5 +150,3 @@ TEST_F(VirtioInputTest, PointerUp) {
   EXPECT_EQ(VIRTIO_INPUT_EV_KEY_RELEASED, event_3->value);
   EXPECT_EQ(VIRTIO_INPUT_EV_SYN, event_4->type);
 }
-
-}  // namespace

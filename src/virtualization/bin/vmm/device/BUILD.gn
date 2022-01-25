@@ -181,26 +181,9 @@ executable("virtio_input_bin") {
   deps = [ ":virtio" ]
 }
 
-# CFv2 migration in progress
-# v2 component is being used in device tests
-# v1 component is being used in prod code
-fuchsia_package("virtio_input") {
-  deps = [
-    ":virtio_input_v1",
-    ":virtio_input_v2",
-  ]
-}
-
-fuchsia_component("virtio_input_v2") {
-  manifest = "../meta/virtio_input.cml"
-  deps = [ ":virtio_input_bin" ]
-  component_name = "virtio_input"
-}
-
-fuchsia_component("virtio_input_v1") {
+fuchsia_package_with_single_component("virtio_input") {
   manifest = "../meta/virtio_input.cmx"
   deps = [ ":virtio_input_bin" ]
-  component_name = "virtio_input"
 }
 
 executable("virtio_gpu_bin") {
