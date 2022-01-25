@@ -96,12 +96,15 @@ void BtTransportUart::SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, siz
   }
 
   // We tack on a flags byte to the beginning of the payload.
-  uint8_t snoop_buffer[length + 1];
-  snoop_buffer[0] = flags;
-  memcpy(snoop_buffer + 1, bytes, length);
+  // Use an iovec to avoid a large allocation + copy.
+  zx_channel_iovec_t iovs[2];
+  iovs[0] = {.buffer = &flags, .capacity = sizeof(flags), .reserved = 0};
+  iovs[1] = {.buffer = bytes, .capacity = static_cast<uint32_t>(length), .reserved = 0};
 
-  zx_status_t status = zx_channel_write(snoop_channel_.get(), 0, snoop_buffer,
-                                        static_cast<uint32_t>(length + 1), nullptr, 0);
+  zx_status_t status =
+      snoop_channel_.write(/*flags=*/ZX_CHANNEL_WRITE_USE_IOVEC, /*bytes=*/iovs,
+                           /*num_bytes=*/countof(iovs), /*handles=*/nullptr, /*num_handles=*/0);
+
   if (status != ZX_OK) {
     if (status != ZX_ERR_PEER_CLOSED) {
       zxlogf(ERROR, "bt-transport-uart: failed to write to snoop channel: %s",
@@ -121,8 +124,7 @@ void BtTransportUart::HciBeginShutdown() {
   }
 }
 
-// Takes ownership of buffer.
-void BtTransportUart::SerialWrite(void* buffer, size_t length) {
+void BtTransportUart::SerialWrite(uint8_t* buffer, size_t length) {
   {
     std::lock_guard guard(mutex_);
     ZX_DEBUG_ASSERT(can_write_);
@@ -131,20 +133,10 @@ void BtTransportUart::SerialWrite(void* buffer, size_t length) {
     can_write_ = false;
   }
 
-  HciWriteCtx* cookie = static_cast<HciWriteCtx*>(malloc(sizeof(HciWriteCtx)));
-  cookie->ctx = this;
-  cookie->buffer = static_cast<uint8_t*>(buffer);
-
-  // write_cb takes ownership of cookie & buffer when called.
   serial_impl_async_write_async_callback write_cb = [](void* cookie, zx_status_t status) {
-    HciWriteCtx* write_ctx = static_cast<HciWriteCtx*>(cookie);
-    write_ctx->ctx->HciWriteComplete(status);
-    free(write_ctx->buffer);
-    free(write_ctx);
+    static_cast<BtTransportUart*>(cookie)->HciWriteComplete(status);
   };
-
-  // Takes ownership of buffer & cookie.
-  serial_impl_async_write_async(&serial_, static_cast<uint8_t*>(buffer), length, write_cb, cookie);
+  serial_impl_async_write_async(&serial_, buffer, length, write_cb, this);
 }
 
 // Returns false if there's an error while sending the packet to the hardware or
@@ -181,7 +173,6 @@ void BtTransportUart::HciHandleClientChannel(zx::channel* chan, zx_signals_t pen
     zxlogf(TRACE, "received readable signal for %s channel",
            chan == &cmd_channel_ ? "command" : "ACL");
     uint32_t length = max_buf_size - 1;
-    uint8_t* buf;
     {
       std::lock_guard guard(mutex_);
 
@@ -192,24 +183,23 @@ void BtTransportUart::HciHandleClientChannel(zx::channel* chan, zx_signals_t pen
       }
 
       zx_status_t status;
-      buf = static_cast<uint8_t*>(malloc(length + 1));
 
-      status = zx_channel_read(chan->get(), 0, buf + 1, nullptr, length, 0, &length, nullptr);
+      status =
+          zx_channel_read(chan->get(), 0, write_buffer_ + 1, nullptr, length, 0, &length, nullptr);
       if (status != ZX_OK) {
         zxlogf(ERROR, "hci_read_thread: failed to read from %s channel %s",
                (packet_type == kHciCommand) ? "CMD" : "ACL", zx_status_get_string(status));
-        free(buf);
         ChannelCleanupLocked(chan);
         return;
       }
 
-      buf[0] = packet_type;
+      write_buffer_[0] = packet_type;
       length++;
 
-      SnoopChannelWriteLocked(bt_hci_snoop_flags(snoop_type, false), buf + 1, length - 1);
+      SnoopChannelWriteLocked(bt_hci_snoop_flags(snoop_type, false), write_buffer_ + 1, length - 1);
     }
 
-    SerialWrite(buf, length);
+    SerialWrite(write_buffer_, length);
   }
 
   if (pending & ZX_CHANNEL_PEER_CLOSED) {

@@ -90,7 +90,7 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
 
   void HciBeginShutdown() __TA_EXCLUDES(mutex_);
 
-  void SerialWrite(void* buffer, size_t length) __TA_EXCLUDES(mutex_);
+  void SerialWrite(uint8_t* buffer, size_t length) __TA_EXCLUDES(mutex_);
 
   void HciHandleClientChannel(zx::channel* chan, zx_signals_t pending) __TA_EXCLUDES(mutex_);
 
@@ -159,6 +159,9 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
   uint8_t acl_buffer_[kAclMaxFrameSize];
   // Must only be used in the UART read callback (HciHandleUartReadEvents).
   size_t acl_buffer_offset_ = 0;
+
+  // for sending outbound packets to the UART
+  uint8_t write_buffer_[std::max(kEventBufSize, kAclMaxFrameSize)] __TA_GUARDED(mutex_);
 
   std::mutex mutex_;
 
