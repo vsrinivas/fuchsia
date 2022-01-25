@@ -110,7 +110,7 @@ create_cros_tree() {
   popd
 }
 
-build_debian_32bit_icd() {
+build_debian_drivers() {
   local -r debian_dir="$1"
   local -r arch="$2"
 
@@ -157,11 +157,11 @@ build_debian_32bit_icd() {
       -Dlibdir=lib/i386-linux-gnu"
 
     sudo chroot ${debian_dir} bash -c 'git clone https://fuchsia.googlesource.com/third_party/mesa -b sandbox/zink-magma zink'
-    sudo chroot ${debian_dir} bash -c 'mkdir -p zink/build'
-    sudo chroot ${debian_dir} bash -c "echo \"${meson_cross_file}\" > zink/build/crossfile"
+    sudo chroot ${debian_dir} bash -c 'mkdir -p zink/build32'
+    sudo chroot ${debian_dir} bash -c "echo \"${meson_cross_file}\" > zink/build32/crossfile"
 
     sudo chroot ${debian_dir} bash -c "PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig \
-      meson --cross-file zink/build/crossfile --buildtype release zink/build zink \
+      meson --cross-file zink/build32/crossfile --buildtype release zink/build32 zink \
       -Ddri-drivers= \
       -Dgallium-drivers=zink \
       -Dvulkan-drivers= \
@@ -174,10 +174,27 @@ build_debian_32bit_icd() {
       -Dlibdir=lib/i386-linux-gnu \
       -Ddri-search-path=/opt/google/cros-containers/drivers/lib32/dri \
       -Dsysconfdir=/opt/google/cros-containers/etc"
+
+    sudo chroot ${debian_dir} bash -c 'mkdir -p zink/build64'
+    sudo chroot ${debian_dir} bash -c "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig \
+      meson --buildtype release zink/build64 zink \
+      -Ddri-drivers= \
+      -Dgallium-drivers=zink \
+      -Dvulkan-drivers= \
+      -Dgles1=disabled \
+      -Dgles2=disabled \
+      -Dopengl=true \
+      -Dgbm=disabled \
+      -Degl=disabled \
+      -Dprefix=/usr \
+      -Dlibdir=lib/x86_64-linux-gnu \
+      -Ddri-search-path=/opt/google/cros-containers/drivers/lib64/dri \
+      -Dsysconfdir=/opt/google/cros-containers/etc"
   fi
 
   sudo chroot ${debian_dir} bash -c 'ninja -C mesa/build'
-  sudo chroot ${debian_dir} bash -c 'ninja -C zink/build'
+  sudo chroot ${debian_dir} bash -c 'ninja -C zink/build32'
+  sudo chroot ${debian_dir} bash -c 'ninja -C zink/build64'
 }
 
 build_angle() {
@@ -321,14 +338,17 @@ main() {
 
   if [ "${arch}" == "x64" ]; then
     echo "*** Prepare debian and build"
-    build_debian_32bit_icd "${work_dir}/debian" "${arch}"
+    build_debian_drivers "${work_dir}/debian" "${arch}"
 
-    echo "*** Copy 32bit drivers to chromeos tree"
+    echo "*** Copy debian drivers to chromeos tree"
+    cp -fv "${work_dir}/debian/zink/build64/src/gallium/targets/dri/libgallium_dri.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/zink_dri.so"
+    cp -fv "${work_dir}/debian/zink/build64/src/glx/libGL.so.1.2.0" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+
     mkdir -p "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32"
-    cp -f "${work_dir}/debian/mesa/build/src/intel/vulkan/libvulkan_intel.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32"
+    cp -fv "${work_dir}/debian/mesa/build/src/intel/vulkan/libvulkan_intel.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32"
 
-    cp -f "${work_dir}/debian/zink/build/src/gallium/targets/dri/libgallium_dri.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32/zink_dri.so"
-    cp -f "${work_dir}/debian/zink/build/src/glx/libGL.so.1.2.0" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32"
+    cp -fv "${work_dir}/debian/zink/build32/src/gallium/targets/dri/libgallium_dri.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32/zink_dri.so"
+    cp -fv "${work_dir}/debian/zink/build32/src/glx/libGL.so.1.2.0" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/lib32"
   fi
 
   echo "*** Prepare ANGLE and build"
@@ -337,8 +357,8 @@ main() {
   # Tael board is 32bit userspace so we can't link in our 64bit libraries
   if [ "${arch}" == "x64" ]; then
     echo "*** Copy ANGLE outputs to chromeos tree"
-    cp -f "${work_dir}/angle/out/libEGL.so.1" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
-    cp -f "${work_dir}/angle/out/libGLESv2.so.2" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+    cp -fv "${work_dir}/angle/out/libEGL.so.1" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+    cp -fv "${work_dir}/angle/out/libGLESv2.so.2" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
   fi
 
   echo "*** Build Termina image"
