@@ -90,31 +90,13 @@ zx_status_t SyBuck::Create(void* ctx, zx_device_t* parent) {
   zxlogf(DEBUG, "%s: Binding SyBuck", __func__);
 
   // Determine which i2c Bus/Address this device is attached to.
-  size_t metadata_size = 0;
-  st = device_get_metadata_size(parent, DEVICE_METADATA_I2C_CHANNELS, &metadata_size);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __func__, st);
-    return ZX_ERR_INTERNAL;
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_i2c::wire::I2CBusMetadata>(
+      parent, DEVICE_METADATA_I2C_CHANNELS);
+  if (!decoded.is_ok()) {
+    return decoded.error_value();
   }
 
-  auto buffer_deleter = std::make_unique<uint8_t[]>(metadata_size);
-  auto buffer = buffer_deleter.get();
-
-  size_t actual;
-  st = device_get_metadata(parent, DEVICE_METADATA_I2C_CHANNELS, buffer, metadata_size, &actual);
-  if (st != ZX_OK || actual != metadata_size) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d", __func__, st);
-    return ZX_ERR_INTERNAL;
-  }
-
-  fidl::DecodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> decoded(
-      fidl::internal::kLLCPPEncodedWireFormatVersion, buffer, metadata_size);
-  if (!decoded.ok()) {
-    zxlogf(ERROR, "%s: Failed to deserialize metadata.", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
-  fuchsia_hardware_i2c::wire::I2CBusMetadata* metadata = decoded.PrimaryObject();
+  fuchsia_hardware_i2c::wire::I2CBusMetadata* metadata = decoded->PrimaryObject();
   if (!metadata->has_channels() || metadata->channels().count() != 1) {
     zxlogf(ERROR, "%s: sybuck expects exactly one i2c channel passed as metadata. ", __func__);
     return ZX_ERR_INTERNAL;

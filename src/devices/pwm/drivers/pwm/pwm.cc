@@ -23,34 +23,12 @@ zx_status_t PwmDevice::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  size_t metadata_size;
-  status = device_get_metadata_size(parent, DEVICE_METADATA_PWM_IDS, &metadata_size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __FILE__, status);
-    return status;
-  }
-  auto pwm_count = metadata_size / sizeof(pwm_id_t);
-
-  fbl::AllocChecker ac;
-  std::unique_ptr<pwm_id_t[]> pwm_ids(new (&ac) pwm_id_t[pwm_count]);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+  auto pwm_ids = ddk::GetMetadataArray<pwm_id_t>(parent, DEVICE_METADATA_PWM_IDS);
+  if (!pwm_ids.is_ok()) {
+    return pwm_ids.error_value();
   }
 
-  size_t actual;
-  status =
-      device_get_metadata(parent, DEVICE_METADATA_PWM_IDS, pwm_ids.get(), metadata_size, &actual);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d", __FILE__, status);
-    return status;
-  }
-  if (actual != metadata_size) {
-    zxlogf(ERROR, "%s: device_get_metadata size error %d", __FILE__, status);
-    return ZX_ERR_INTERNAL;
-  }
-
-  for (uint32_t i = 0; i < pwm_count; i++) {
-    auto pwm_id = pwm_ids[i];
+  for (auto pwm_id : *pwm_ids) {
     fbl::AllocChecker ac;
     std::unique_ptr<PwmDevice> dev(new (&ac) PwmDevice(parent, &pwm_proto, pwm_id));
     if (!ac.check()) {

@@ -278,35 +278,12 @@ zx_status_t PowerDevice::DdkCloseProtocolSessionMultibindable(void* child_ctx) {
 void PowerDevice::DdkRelease() { delete this; }
 
 zx_status_t PowerDevice::Create(void* ctx, zx_device_t* parent) {
-  size_t metadata_size;
-
-  zx_status_t status =
-      device_get_metadata_size(parent, DEVICE_METADATA_POWER_DOMAINS, &metadata_size);
-  if (status != ZX_OK) {
-    return status;
-  }
-  auto count = metadata_size / sizeof(power_domain_t);
-  if (count != 1) {
-    return ZX_ERR_INTERNAL;
+  auto power_domain = ddk::GetMetadata<power_domain_t>(parent, DEVICE_METADATA_POWER_DOMAINS);
+  if (!power_domain.is_ok()) {
+    return power_domain.error_value();
   }
 
-  fbl::AllocChecker ac;
-  std::unique_ptr<power_domain_t[]> power_domains(new (&ac) power_domain_t[count]);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  size_t actual;
-  status = device_get_metadata(parent, DEVICE_METADATA_POWER_DOMAINS, power_domains.get(),
-                               metadata_size, &actual);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (actual != metadata_size) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  auto index = power_domains[0].index;
+  auto index = power_domain->index;
   char name[20];
   snprintf(name, sizeof(name), "power-%u", index);
   ddk::PowerImplProtocolClient power_impl(parent, "power-impl");
@@ -320,13 +297,14 @@ zx_status_t PowerDevice::Create(void* ctx, zx_device_t* parent) {
 
   uint32_t min_voltage = 0, max_voltage = 0;
   bool fixed = false;
-  status = power_impl.GetSupportedVoltageRange(index, &min_voltage, &max_voltage);
+  zx_status_t status = power_impl.GetSupportedVoltageRange(index, &min_voltage, &max_voltage);
   if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED) {
     return status;
   }
   if (status == ZX_ERR_NOT_SUPPORTED) {
     fixed = true;
   }
+  fbl::AllocChecker ac;
   std::unique_ptr<PowerDevice> dev(new (&ac) PowerDevice(parent, index, power_impl, parent_power,
                                                          min_voltage, max_voltage, fixed));
   if (!ac.check()) {

@@ -259,34 +259,14 @@ zx_status_t RegistersDevice<T>::Create(zx_device_t* parent, Metadata metadata) {
 }
 
 zx_status_t Bind(void* ctx, zx_device_t* parent) {
+  zx_status_t status = ZX_OK;
   // Get metadata
-  size_t size;
-  auto status = device_get_metadata_size(parent, DEVICE_METADATA_REGISTERS, &size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "device_get_metadata_size failed %d", status);
-    return status;
+  auto decoded = ddk::GetEncodedMetadata<Metadata>(parent, DEVICE_METADATA_REGISTERS);
+  if (!decoded.is_ok()) {
+    return decoded.error_value();
   }
 
-  size_t actual;
-  auto bytes = std::make_unique<uint8_t[]>(size);
-  status = device_get_metadata(parent, DEVICE_METADATA_REGISTERS, bytes.get(), size, &actual);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "device_get_metadata failed %d", status);
-    return status;
-  }
-  if (actual != size) {
-    zxlogf(ERROR, "device_get_metadata size error %d", status);
-    return ZX_ERR_INTERNAL;
-  }
-
-  // Parse
-  fidl::DecodedMessage<Metadata> decoded(fidl::internal::kLLCPPEncodedWireFormatVersion,
-                                         bytes.get(), static_cast<uint32_t>(size), nullptr, 0);
-  if (!decoded.ok()) {
-    zxlogf(ERROR, "Unable to parse metadata %s", decoded.FormatDescription().c_str());
-    return ZX_ERR_INTERNAL;
-  }
-  const auto& metadata = decoded.PrimaryObject();
+  const auto& metadata = decoded->PrimaryObject();
 
   // Validate
   if (!metadata->has_mmio() || !metadata->has_registers()) {

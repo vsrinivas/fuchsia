@@ -112,17 +112,9 @@ TEST_F(I2cMetadataTest, ProvidesMetadataToChildren) {
       }
     }
 
-    size_t size;
-    ASSERT_OK(device_get_metadata_size(child.get(), DEVICE_METADATA_I2C_DEVICE, &size));
-    std::vector<uint8_t> buf(size);
-    size_t actual;
-    ASSERT_OK(
-        device_get_metadata(child.get(), DEVICE_METADATA_I2C_DEVICE, buf.data(), size, &actual));
-    ASSERT_EQ(actual, size);
-
-    fidl::DecodedMessage<fi2c::I2CChannel> decoded(fidl::internal::kLLCPPEncodedWireFormatVersion,
-                                                   buf.data(), static_cast<uint32_t>(size));
-    ASSERT_TRUE(decoded.ok());
-    ASSERT_EQ(decoded.PrimaryObject()->address(), expected_addr);
+    auto decoded =
+        ddk::GetEncodedMetadata<fi2c::I2CChannel>(child.get(), DEVICE_METADATA_I2C_DEVICE);
+    ASSERT_TRUE(decoded.is_ok());
+    ASSERT_EQ(decoded->PrimaryObject()->address(), expected_addr);
   }
 }

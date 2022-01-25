@@ -51,34 +51,13 @@ zx_status_t ClockDevice::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  size_t metadata_size;
-  status = device_get_metadata_size(parent, DEVICE_METADATA_CLOCK_IDS, &metadata_size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __FILE__, status);
-    return status;
-  }
-  auto clock_count = metadata_size / sizeof(clock_id_t);
-
-  fbl::AllocChecker ac;
-  std::unique_ptr<clock_id_t[]> clock_ids(new (&ac) clock_id_t[clock_count]);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+  auto clock_ids = ddk::GetMetadataArray<clock_id_t>(parent, DEVICE_METADATA_CLOCK_IDS);
+  if (!clock_ids.is_ok()) {
+    return clock_ids.error_value();
   }
 
-  size_t actual;
-  status = device_get_metadata(parent, DEVICE_METADATA_CLOCK_IDS, clock_ids.get(), metadata_size,
-                               &actual);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d", __FILE__, status);
-    return status;
-  }
-  if (actual != metadata_size) {
-    zxlogf(ERROR, "%s: device_get_metadata size error %d", __FILE__, status);
-    return ZX_ERR_INTERNAL;
-  }
-
-  for (uint32_t i = 0; i < clock_count; i++) {
-    auto clock_id = clock_ids[i].clock_id;
+  for (auto clock : *clock_ids) {
+    auto clock_id = clock.clock_id;
     fbl::AllocChecker ac;
     std::unique_ptr<ClockDevice> dev(new (&ac) ClockDevice(parent, &clock_proto, clock_id));
     if (!ac.check()) {

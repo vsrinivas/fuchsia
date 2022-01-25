@@ -89,41 +89,22 @@ zx_status_t GpioDevice::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  size_t metadata_size;
-  status = device_get_metadata_size(parent, DEVICE_METADATA_GPIO_PINS, &metadata_size);
-  if (status != ZX_OK) {
-    return status;
-  }
-  auto pin_count = metadata_size / sizeof(gpio_pin_t);
-
-  fbl::AllocChecker ac;
-  std::unique_ptr<gpio_pin_t[]> pins(new (&ac) gpio_pin_t[pin_count]);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+  auto pins = ddk::GetMetadataArray<gpio_pin_t>(parent, DEVICE_METADATA_GPIO_PINS);
+  if (!pins.is_ok()) {
+    return pins.error_value();
   }
 
-  size_t actual;
-  status =
-      device_get_metadata(parent, DEVICE_METADATA_GPIO_PINS, pins.get(), metadata_size, &actual);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (actual != metadata_size) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  for (uint32_t i = 0; i < pin_count; i++) {
-    auto pin = pins[i].pin;
+  for (auto pin : pins.value()) {
     fbl::AllocChecker ac;
-    std::unique_ptr<GpioDevice> dev(new (&ac) GpioDevice(parent, &gpio, pin));
+    std::unique_ptr<GpioDevice> dev(new (&ac) GpioDevice(parent, &gpio, pin.pin));
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
 
     char name[20];
-    snprintf(name, sizeof(name), "gpio-%u", pin);
+    snprintf(name, sizeof(name), "gpio-%u", pin.pin);
     zx_device_prop_t props[] = {
-        {BIND_GPIO_PIN, 0, pin},
+        {BIND_GPIO_PIN, 0, pin.pin},
     };
 
     status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));

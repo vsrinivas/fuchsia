@@ -96,40 +96,15 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   }
 
   // Determine the cluster size of each cluster.
-  size_t cluster_count_size = 0;
-  status =
-      device_get_metadata_size(parent, DEVICE_METADATA_CLUSTER_SIZE_LEGACY, &cluster_count_size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get metadata DEVICE_METADATA_CLUSTER_SIZE size. st = %d", __func__,
-           status);
-    return status;
-  }
-
-  if (cluster_count_size % sizeof(legacy_cluster_size_t) != 0) {
-    zxlogf(ERROR, "%s: Cluster size metadata from board driver is malformed", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
-  size_t actual;
-  const size_t num_cluster_count_entries = cluster_count_size / sizeof(legacy_cluster_size_t);
-  std::unique_ptr<legacy_cluster_size_t[]> cluster_sizes =
-      std::make_unique<legacy_cluster_size_t[]>(num_cluster_count_entries);
-  status = device_get_metadata(parent, DEVICE_METADATA_CLUSTER_SIZE_LEGACY, cluster_sizes.get(),
-                               cluster_count_size, &actual);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get cluster size metadata from board driver, st = %d", __func__,
-           status);
-    return status;
-  }
-  if (actual != cluster_count_size) {
-    zxlogf(ERROR, "%s: Expected %lu bytes in cluster size metadata, got %lu", __func__,
-           cluster_count_size, actual);
-    return ZX_ERR_INTERNAL;
+  auto cluster_sizes =
+      ddk::GetMetadataArray<legacy_cluster_size_t>(parent, DEVICE_METADATA_CLUSTER_SIZE_LEGACY);
+  if (!cluster_sizes.is_ok()) {
+    return cluster_sizes.error_value();
   }
 
   std::map<PerfDomainId, uint32_t> cluster_core_counts;
-  for (size_t i = 0; i < num_cluster_count_entries; i++) {
-    cluster_core_counts[cluster_sizes[i].pd_id] = cluster_sizes[i].core_count;
+  for (auto cluster_size : cluster_sizes.value()) {
+    cluster_core_counts[cluster_size.pd_id] = cluster_size.core_count;
   }
 
   // The Thermal Driver is our parent and it exports an interface with one

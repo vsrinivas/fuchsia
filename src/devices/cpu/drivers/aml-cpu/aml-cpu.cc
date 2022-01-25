@@ -36,86 +36,31 @@ constexpr zx_off_t kCpuVersionOffset = 0x220;
 
 zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   zx_status_t st;
-  size_t actual;
 
   // Get the metadata for the performance domains.
-  size_t perf_domain_size = 0;
-  st = device_get_metadata_size(parent, DEVICE_METADATA_AML_PERF_DOMAINS, &perf_domain_size);
-  zxlogf(DEBUG, "%s: Got AML_PERF_DOMAINS metadata size, st = %d, size = %lu", __func__, st,
-         perf_domain_size);
-
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get performance domain count from board driver, st = %d", __func__,
-           st);
-    return st;
+  auto perf_doms = ddk::GetMetadataArray<perf_domain_t>(parent, DEVICE_METADATA_AML_PERF_DOMAINS);
+  if (!perf_doms.is_ok()) {
+    zxlogf(ERROR, "%s: Failed to get performance domains from board driver, st = %d", __func__,
+           perf_doms.error_value());
+    return perf_doms.error_value();
   }
 
-  // Make sure that the board driver gave us an exact integer number of performance domains.
-  if (perf_domain_size % sizeof(perf_domain_t) != 0) {
-    zxlogf(ERROR,
-           "%s: Performance domain metadata from board driver is malformed. perf_domain_size = "
-           "%lu, sizeof(perf_domain_t) = %lu",
-           __func__, perf_domain_size, sizeof(perf_domain_t));
-    return ZX_ERR_INTERNAL;
+  auto op_points = ddk::GetMetadataArray<operating_point_t>(parent, DEVICE_METADATA_AML_OP_POINTS);
+  if (!op_points.is_ok()) {
+    zxlogf(ERROR, "%s: Failed to get operating point from board driver, st = %d", __func__,
+           op_points.error_value());
+    return op_points.error_value();
   }
 
-  const size_t num_perf_domains = perf_domain_size / sizeof(perf_domain_t);
-  std::unique_ptr<perf_domain_t[]> perf_domains =
-      std::make_unique<perf_domain_t[]>(num_perf_domains);
-  st = device_get_metadata(parent, DEVICE_METADATA_AML_PERF_DOMAINS, perf_domains.get(),
-                           perf_domain_size, &actual);
-  zxlogf(DEBUG, "%s: Got AML_PERF_DOMAINS metadata, st = %d, actual = %lu", __func__, st, actual);
-
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get performance domain metadata from board driver, st = %d",
-           __func__, st);
-    return st;
-  }
-  if (actual != perf_domain_size) {
-    zxlogf(ERROR, "%s: Expected %lu bytes in perf domain metadata, got %lu", __func__,
-           perf_domain_size, actual);
-    return ZX_ERR_INTERNAL;
-  }
-
-  size_t op_point_size;
-  st = device_get_metadata_size(parent, DEVICE_METADATA_AML_OP_POINTS, &op_point_size);
-  zxlogf(DEBUG, "%s: Got AML_OP_POINTS metadata size, st = %d, size = %lu", __func__, st,
-         op_point_size);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get opp count metadata size from board driver, st = %d", __func__,
-           st);
-    return st;
-  }
-
-  if (op_point_size % sizeof(operating_point_t) != 0) {
-    zxlogf(ERROR, "%s: Operating point metadata from board driver is malformed", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
-  const size_t num_op_points = op_point_size / sizeof(operating_point_t);
-  std::unique_ptr<operating_point_t[]> operating_points =
-      std::make_unique<operating_point_t[]>(num_op_points);
-  st = device_get_metadata(parent, DEVICE_METADATA_AML_OP_POINTS, operating_points.get(),
-                           op_point_size, &actual);
-  zxlogf(DEBUG, "%s: Got AML_OP_POINTS metadata, st = %d, actual = %lu", __func__, st, actual);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get operating points from board driver, st = %d", __func__, st);
-    return st;
-  }
-  if (actual != op_point_size) {
-    zxlogf(ERROR, "%s: Expected %lu bytes in operating point metadata, got %lu", __func__,
-           op_point_size, actual);
-    return ZX_ERR_INTERNAL;
-  }
   // Make sure we have the right number of fragments.
   const uint32_t fragment_count = device_get_fragment_count(parent);
   zxlogf(DEBUG, "%s: GetFragmentCount = %u", __func__, fragment_count);
-  if ((num_perf_domains * kFragmentsPerPfDomain) + 1 != fragment_count) {
+  if ((perf_doms->size() * kFragmentsPerPfDomain) + 1 != fragment_count) {
     zxlogf(ERROR,
            "%s: Expected %lu fragments for each %lu performance domains for a total of %lu "
            "fragments but got %u instead",
-           __func__, kFragmentsPerPfDomain, perf_domain_size,
-           perf_domain_size * kFragmentsPerPfDomain, fragment_count);
+           __func__, kFragmentsPerPfDomain, perf_doms->size(),
+           perf_doms->size() * kFragmentsPerPfDomain, fragment_count);
     return ZX_ERR_INTERNAL;
   }
 
@@ -133,9 +78,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   const uint32_t cpu_version_packed = mmio_buffer->Read32(kCpuVersionOffset);
 
   // Build and publish each performance domain.
-  for (size_t i = 0; i < num_perf_domains; i++) {
-    const perf_domain_t& perf_domain = perf_domains[i];
-
+  for (const perf_domain_t& perf_domain : perf_doms.value()) {
     fbl::StringBuffer<32> fragment_name;
     fragment_name.AppendPrintf("clock-pll-div16-%02d", perf_domain.id);
     ddk::ClockProtocolClient pll_div16_client;
@@ -174,10 +117,9 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
     // Vector of operating points that belong to this power domain.
     std::vector<operating_point_t> pd_op_points;
-    std::copy_if(operating_points.get(), operating_points.get() + num_op_points,
-                 std::back_inserter(pd_op_points), [&perf_domain](const operating_point_t& op) {
-                   return op.pd_id == perf_domain.id;
-                 });
+    std::copy_if(
+        op_points->begin(), op_points->end(), std::back_inserter(pd_op_points),
+        [&perf_domain](const operating_point_t& op) { return op.pd_id == perf_domain.id; });
 
     // Order operating points from highest frequency to lowest because Operating Point 0 is the
     // fastest.

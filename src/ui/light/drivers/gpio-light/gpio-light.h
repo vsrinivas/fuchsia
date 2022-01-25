@@ -82,9 +82,12 @@ class GpioLight : public GpioLightType, public ddk::EmptyProtocol<ZX_PROTOCOL_LI
   zx_status_t Init();
 
   static constexpr size_t kNameLength = ZX_MAX_NAME_LEN;
+  struct name_t {
+    char name[kNameLength];
+  };
 
   fbl::Array<ddk::GpioProtocolClient> gpios_;
-  fbl::Array<char> names_;
+  std::vector<name_t> names_;
   uint32_t gpio_count_;
 };
 

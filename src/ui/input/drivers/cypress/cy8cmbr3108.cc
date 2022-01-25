@@ -6,10 +6,10 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <unistd.h>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <hid/visalia-touch.h>
@@ -250,28 +250,17 @@ zx_status_t Cy8cmbr3108::InitializeProtocols() {
   }
 
   // Get buttons metadata.
-  size_t actual = 0;
-  zx_status_t status = device_get_metadata_size(parent(), DEVICE_METADATA_PRIVATE, &actual);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s device_get_metadata_size failed %d", __FILE__, status);
-    return ZX_OK;
+  auto buttons = ddk::GetMetadataArray<touch_button_config_t>(parent(), DEVICE_METADATA_PRIVATE);
+  if (!buttons.is_ok()) {
+    return buttons.error_value();
   }
 
-  size_t n_buttons = actual / sizeof(touch_button_config_t);
   fbl::AllocChecker ac;
-  buttons_ = fbl::Array(new (&ac) touch_button_config_t[n_buttons], n_buttons);
+  buttons_ = fbl::Array(new (&ac) touch_button_config_t[buttons->size()], buttons->size());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-
-  actual = 0;
-  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, buttons_.get(),
-                               buttons_.size() * sizeof(touch_button_config_t), &actual);
-  if (status != ZX_OK || actual != buttons_.size() * sizeof(touch_button_config_t)) {
-    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
-    return status;
-  }
-
+  std::copy(buttons->begin(), buttons->end(), buttons_.begin());
   return ZX_OK;
 }
 

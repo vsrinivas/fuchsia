@@ -43,9 +43,9 @@ void GpioLight::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& comp
     return;
   }
 
-  char name[20];
-  if (names_.size() > 0) {
-    snprintf(name, sizeof(name), "%s\n", names_.data() + request->index * kNameLength);
+  char name[kNameLength + 2];
+  if (names_.size() > request->index) {
+    snprintf(name, sizeof(kNameLength), "%s\n", names_[request->index].name);
   } else {
     // Return "gpio-X" if no metadata was provided.
     snprintf(name, sizeof(name), "gpio-%u\n", request->index);
@@ -131,29 +131,16 @@ zx_status_t GpioLight::Init() {
   }
   // fragment 0 is platform device, only used for passing metadata.
   gpio_count_ = fragment_count - 1;
-
-  size_t metadata_size;
-  size_t expected = gpio_count_ * kNameLength;
-  auto status = device_get_metadata_size(parent(), DEVICE_METADATA_NAME, &metadata_size);
-  if (status == ZX_OK) {
-    if (expected != metadata_size) {
-      zxlogf(ERROR, "%s: expected metadata size %zu, got %zu", __func__, expected, metadata_size);
-      status = ZX_ERR_INTERNAL;
-    }
+  auto names = ddk::GetMetadataArray<name_t>(parent(), DEVICE_METADATA_NAME);
+  if (!names.is_ok()) {
+    return names.error_value();
   }
-  if (status == ZX_OK) {
-    fbl::AllocChecker ac;
-    names_.reset(new (&ac) char[metadata_size], metadata_size);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-
-    status = device_get_metadata(parent(), DEVICE_METADATA_NAME, names_.data(), metadata_size,
-                                 &expected);
-    if (status != ZX_OK) {
-      return status;
-    }
+  if (gpio_count_ != names->size()) {
+    zxlogf(ERROR, "%s: expected %u gpio names, got %zu", __func__, gpio_count_, names->size());
+    return ZX_ERR_INTERNAL;
   }
+
+  names_ = names.value();
 
   composite_device_fragment_t fragments[fragment_count];
   size_t actual;

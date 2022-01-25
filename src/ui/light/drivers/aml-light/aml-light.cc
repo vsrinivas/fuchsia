@@ -184,47 +184,24 @@ zx_status_t AmlLight::Init() {
   if (fragment_count <= 0) {
     return ZX_ERR_INTERNAL;
   }
-
-  fbl::AllocChecker ac;
-  size_t metadata_size, actual;
-  if ((status = device_get_metadata_size(parent(), DEVICE_METADATA_NAME, &metadata_size)) !=
-      ZX_OK) {
-    zxlogf(ERROR, "%s: couldn't get metadata size", __func__);
-    return status;
+  struct name_t {
+    char name[kNameLength];
+  };
+  auto names = ddk::GetMetadataArray<name_t>(parent(), DEVICE_METADATA_NAME);
+  if (!names.is_ok()) {
+    return names.error_value();
   }
-  auto names = fbl::Array<char>(new (&ac) char[metadata_size], metadata_size);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+  auto configs = ddk::GetMetadataArray<lights_config_t>(parent(), DEVICE_METADATA_LIGHTS);
+  if (!configs.is_ok()) {
+    return configs.error_value();
   }
-  if ((status = device_get_metadata(parent(), DEVICE_METADATA_NAME, names.data(), metadata_size,
-                                    &actual)) != ZX_OK) {
-    return status;
-  }
-  if ((actual != metadata_size) || (actual % kNameLength != 0)) {
-    zxlogf(ERROR, "%s: wrong metadata size", __func__);
-    return ZX_ERR_INVALID_ARGS;
-  }
-  uint32_t led_count = static_cast<uint32_t>(metadata_size / kNameLength);
-
-  if (((status = device_get_metadata_size(parent(), DEVICE_METADATA_LIGHTS, &metadata_size)) !=
-       ZX_OK) ||
-      (metadata_size != led_count * sizeof(lights_config_t))) {
-    zxlogf(ERROR, "%s: get metdata size failed", __func__);
-    return status;
-  }
-  auto configs = fbl::Array<lights_config_t>(new (&ac) lights_config_t[led_count], led_count);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  if ((status = device_get_metadata(parent(), DEVICE_METADATA_LIGHTS, configs.data(),
-                                    configs.size() * sizeof(lights_config_t), &actual)) != ZX_OK) {
-    return status;
-  }
-  if ((actual != metadata_size) || (actual % sizeof(lights_config_t) != 0)) {
-    zxlogf(ERROR, "%s: wrong metadata size", __func__);
-    return ZX_ERR_INVALID_ARGS;
+  if (names->size() != configs->size()) {
+    zxlogf(ERROR, "%s: number of names [%lu] does not match number of configs [%lu]", __func__,
+           names->size(), configs->size());
+    return ZX_ERR_INTERNAL;
   }
 
+  size_t actual;
   composite_device_fragment_t fragments[fragment_count];
   DdkGetFragments(fragments, fragment_count, &actual);
   if (actual != fragment_count) {
@@ -232,8 +209,9 @@ zx_status_t AmlLight::Init() {
   }
 
   uint32_t count = 1;
-  for (uint32_t i = 0; i < led_count; i++) {
-    auto* config = &configs[i];
+  for (uint32_t i = 0; i < configs->size(); i++) {
+    auto* config = &configs.value()[i];
+    char* name = names.value()[i].name;
 
     ddk::GpioProtocolClient gpio(fragments[count].device);
     if (!gpio.is_valid()) {
@@ -249,17 +227,9 @@ zx_status_t AmlLight::Init() {
         return status;
       }
       count++;
-      if (i * kNameLength >= names.size()) {
-        zxlogf(ERROR, "%s: name buffer overflow!", __func__);
-        return ZX_ERR_BUFFER_TOO_SMALL;
-      }
-      lights_.emplace_back(&names[i * kNameLength], gpio, pwm);
+      lights_.emplace_back(name, gpio, pwm);
     } else {
-      if (i * kNameLength >= names.size()) {
-        zxlogf(ERROR, "%s: name buffer overflow!", __func__);
-        return ZX_ERR_BUFFER_TOO_SMALL;
-      }
-      lights_.emplace_back(&names[i * kNameLength], gpio, std::nullopt);
+      lights_.emplace_back(name, gpio, std::nullopt);
     }
 
     if ((status = lights_.back().Init(config->init_on)) != ZX_OK) {

@@ -51,98 +51,6 @@ bool IsSortedDescending(const std::vector<aml_voltage_table_t>& vt) {
   return true;
 }
 
-zx_status_t GetAmlVoltageTable(zx_device_t* parent,
-                               std::vector<aml_voltage_table_t>* voltage_table) {
-  if (!voltage_table) {
-    zxlogf(ERROR, "Need voltage table pointer");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  size_t metadata_size;
-  zx_status_t st =
-      device_get_metadata_size(parent, DEVICE_METADATA_AML_VOLTAGE_TABLE, &metadata_size);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get Voltage Table size, st = %d", __func__, st);
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  // The metadata is an array of aml_voltage_table_t so the metadata size must be an
-  // integer multiple of sizeof(aml_voltage_table_t).
-  if (metadata_size % (sizeof(aml_voltage_table_t)) != 0) {
-    zxlogf(
-        ERROR,
-        "%s: Metadata size [%lu] was not an integer multiple of sizeof(aml_voltage_table_t) [%lu]",
-        __func__, metadata_size, sizeof(aml_voltage_table_t));
-    return ZX_ERR_INTERNAL;
-  }
-
-  const size_t voltage_table_count = metadata_size / sizeof(aml_voltage_table_t);
-
-  auto voltage_table_metadata = std::make_unique<aml_voltage_table_t[]>(voltage_table_count);
-
-  size_t actual;
-  st = device_get_metadata(parent, DEVICE_METADATA_AML_VOLTAGE_TABLE, voltage_table_metadata.get(),
-                           metadata_size, &actual);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get Voltage Table, st = %d", __func__, st);
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (actual != metadata_size) {
-    zxlogf(ERROR, "%s: device_get_metadata expected to read %lu bytes, actual read %lu", __func__,
-           metadata_size, actual);
-    return ZX_ERR_INTERNAL;
-  }
-
-  voltage_table->reserve(voltage_table_count);
-  std::copy(&voltage_table_metadata[0], &voltage_table_metadata[0] + voltage_table_count,
-            std::back_inserter(*voltage_table));
-
-  if (!IsSortedDescending(*voltage_table)) {
-    zxlogf(ERROR, "%s: Voltage table was not sorted in strictly descending order", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t GetAmlPwmPeriod(zx_device_t* parent, voltage_pwm_period_ns_t* result) {
-  if (!result) {
-    zxlogf(ERROR, "Need result pointer");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  voltage_pwm_period_ns_t period;
-  size_t metadata_size;
-  zx_status_t st =
-      device_get_metadata_size(parent, DEVICE_METADATA_AML_PWM_PERIOD_NS, &metadata_size);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get PWM Period Metadata size, st = %d", __func__, st);
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  if (metadata_size != sizeof(period)) {
-    zxlogf(ERROR, "%s: Expected PWM Period metadata to be %lu bytes, got %lu", __func__,
-           sizeof(period), metadata_size);
-    return ZX_ERR_INTERNAL;
-  }
-
-  size_t actual;
-  st = device_get_metadata(parent, DEVICE_METADATA_AML_PWM_PERIOD_NS, &period, sizeof(period),
-                           &actual);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get PWM Period Metadata, st = %d", __func__, st);
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (actual != sizeof(period)) {
-    zxlogf(ERROR, "%s: Expected PWM metadata size = %lu, got %lu", __func__, sizeof(period),
-           actual);
-    return ZX_ERR_INTERNAL;
-  }
-  *result = period;
-
-  return ZX_OK;
-}
-
 uint32_t CalculateVregVoltage(const vreg_params_t params, const uint32_t idx) {
   return params.min_uv + idx * params.step_size_uv;
 }
@@ -482,24 +390,24 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
   // to get and initialize all metadata and fragments possible. Then, before creating AmlPower,
   // Create checks whether the metadata and fragments needed by the board are available and fails if
   // they aren't.
-  std::vector<aml_voltage_table_t> tmp_voltage_table;
-  st = GetAmlVoltageTable(parent, &tmp_voltage_table);
-  std::optional<std::vector<aml_voltage_table_t>> voltage_table = std::nullopt;
-  if (st == ZX_OK) {
-    voltage_table.emplace(tmp_voltage_table);
-  } else if (st != ZX_ERR_NOT_FOUND) {
-    zxlogf(ERROR, "%s: Failed to get aml voltage table, st = %d", __func__, st);
-    return st;
+  auto voltage_table =
+      ddk::GetMetadataArray<aml_voltage_table_t>(parent, DEVICE_METADATA_AML_VOLTAGE_TABLE);
+  if (voltage_table.is_ok()) {
+    if (!IsSortedDescending(*voltage_table)) {
+      zxlogf(ERROR, "%s: Voltage table was not sorted in strictly descending order", __func__);
+      return ZX_ERR_INTERNAL;
+    }
+  } else if (voltage_table.error_value() != ZX_ERR_NOT_FOUND) {
+    zxlogf(ERROR, "%s: Failed to get aml voltage table, st = %d", __func__,
+           voltage_table.error_value());
+    return voltage_table.error_value();
   }
 
-  voltage_pwm_period_ns_t tmp_pwm_period;
-  st = GetAmlPwmPeriod(parent, &tmp_pwm_period);
-  std::optional<voltage_pwm_period_ns_t> pwm_period = std::nullopt;
-  if (st == ZX_OK) {
-    pwm_period.emplace(tmp_pwm_period);
-  } else if (st != ZX_ERR_NOT_FOUND) {
-    zxlogf(ERROR, "%s: Failed to get aml pwm period, st = %d", __func__, st);
-    return st;
+  zx::status<std::unique_ptr<voltage_pwm_period_ns_t>> pwm_period =
+      ddk::GetMetadata<voltage_pwm_period_ns_t>(parent, DEVICE_METADATA_AML_PWM_PERIOD_NS);
+  if (!pwm_period.is_ok() && pwm_period.error_value() != ZX_ERR_NOT_FOUND) {
+    zxlogf(ERROR, "%s: Failed to get aml pwm period, st = %d", __func__, pwm_period.error_value());
+    return pwm_period.error_value();
   }
 
   ddk::PwmProtocolClient first_cluster_pwm;
@@ -526,35 +434,37 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
 
   switch (device_info.pid) {
     case PDEV_PID_ASTRO:
-      if (!first_cluster_pwm.is_valid() || !voltage_table.has_value() || !pwm_period.has_value()) {
+      if (!first_cluster_pwm.is_valid() || !voltage_table.is_ok() || !pwm_period.is_ok()) {
         zxlogf(ERROR,
                "Invalid args. Astro requires first cluster pwm, voltage table, and pwm period");
         return ZX_ERR_INTERNAL;
       }
-      power_impl_device = std::make_unique<AmlPower>(parent, first_cluster_pwm,
-                                                     std::move(*voltage_table), *pwm_period);
+      power_impl_device = std::make_unique<AmlPower>(
+          parent, first_cluster_pwm, std::move(*voltage_table), *(pwm_period.value().get()));
       break;
     case PDEV_PID_LUIS:
-      if (!first_cluster_pwm.is_valid() || !voltage_table.has_value() || !pwm_period.has_value() ||
+      if (!first_cluster_pwm.is_valid() || !voltage_table.is_ok() || !pwm_period.is_ok() ||
           !second_cluster_vreg.is_valid()) {
         zxlogf(ERROR,
                "Invalid args. Luis requires first cluster pwm, voltage table, pwm period, and "
                "second cluster vreg");
         return ZX_ERR_INTERNAL;
       }
-      power_impl_device = std::make_unique<AmlPower>(parent, second_cluster_vreg, first_cluster_pwm,
-                                                     std::move(*voltage_table), *pwm_period);
+      power_impl_device =
+          std::make_unique<AmlPower>(parent, second_cluster_vreg, first_cluster_pwm,
+                                     std::move(*voltage_table), *(pwm_period.value().get()));
       break;
     case PDEV_PID_SHERLOCK:
-      if (!first_cluster_pwm.is_valid() || !voltage_table.has_value() || !pwm_period.has_value() ||
+      if (!first_cluster_pwm.is_valid() || !voltage_table.is_ok() || !pwm_period.is_ok() ||
           !second_cluster_pwm.is_valid()) {
         zxlogf(ERROR,
                "Invalid args. Sherlock requires first cluster pwm, voltage table, pwm period, and "
                "second cluster pwm");
         return ZX_ERR_INTERNAL;
       }
-      power_impl_device = std::make_unique<AmlPower>(parent, first_cluster_pwm, second_cluster_pwm,
-                                                     std::move(*voltage_table), *pwm_period);
+      power_impl_device =
+          std::make_unique<AmlPower>(parent, first_cluster_pwm, second_cluster_pwm,
+                                     std::move(*voltage_table), *(pwm_period.value().get()));
       break;
     case PDEV_PID_AMLOGIC_A311D:
       if (!first_cluster_vreg.is_valid() || !second_cluster_vreg.is_valid()) {

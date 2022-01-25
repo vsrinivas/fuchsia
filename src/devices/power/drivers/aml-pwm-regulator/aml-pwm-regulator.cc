@@ -50,34 +50,13 @@ void AmlPwmRegulator::VregGetRegulatorParams(vreg_params_t* out_params) {
 
 zx_status_t AmlPwmRegulator::Create(void* ctx, zx_device_t* parent) {
   // Get Metadata
-  size_t metadata_size;
-  auto status = device_get_metadata_size(parent, DEVICE_METADATA_VREG, &metadata_size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get Vreg Range %d", status);
-    return status;
+  auto decoded =
+      ddk::GetEncodedMetadata<fuchsia_hardware_vreg::wire::Metadata>(parent, DEVICE_METADATA_VREG);
+  if (!decoded.is_ok()) {
+    return decoded.error_value();
   }
 
-  size_t actual;
-  auto bytes = std::make_unique<uint8_t[]>(metadata_size);
-  status = device_get_metadata(parent, DEVICE_METADATA_VREG, bytes.get(), metadata_size, &actual);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get Vreg Range %d", status);
-    return status;
-  }
-  if (actual != metadata_size) {
-    zxlogf(ERROR, "Expected Vreg Range size = %lu, got %lu", metadata_size, actual);
-    return ZX_ERR_INTERNAL;
-  }
-
-  // Parse
-  fidl::DecodedMessage<fuchsia_hardware_vreg::wire::Metadata> decoded(
-      fidl::internal::kLLCPPEncodedWireFormatVersion, bytes.get(),
-      static_cast<uint32_t>(metadata_size), nullptr, 0);
-  if (!decoded.ok()) {
-    zxlogf(ERROR, "Unable to parse metadata %s", decoded.FormatDescription().c_str());
-    return ZX_ERR_INTERNAL;
-  }
-  const auto& metadata = decoded.PrimaryObject();
+  const auto& metadata = decoded->PrimaryObject();
 
   // Validate
   if (!metadata->has_pwm_vreg()) {
@@ -102,7 +81,7 @@ zx_status_t AmlPwmRegulator::Create(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "Invalid PWM %u", idx);
       return ZX_ERR_INTERNAL;
     }
-    status = pwm.Enable();
+    auto status = pwm.Enable();
     if (status != ZX_OK) {
       zxlogf(ERROR, "Unable to enable PWM %u, %d", idx, status);
       return status;

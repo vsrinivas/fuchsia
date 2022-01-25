@@ -98,37 +98,13 @@ zx_status_t I2cDevice::Init(ddk::I2cImplProtocolClient i2c) {
 }
 
 void I2cDevice::AddChildren() {
-  size_t metadata_size;
-  auto status = device_get_metadata_size(zxdev(), DEVICE_METADATA_I2C_CHANNELS, &metadata_size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __func__, status);
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_i2c::wire::I2CBusMetadata>(
+      zxdev(), DEVICE_METADATA_I2C_CHANNELS);
+  if (!decoded.is_ok()) {
     return;
   }
 
-  auto buffer_deleter = std::make_unique<uint8_t[]>(metadata_size);
-  auto buffer = buffer_deleter.get();
-
-  size_t actual;
-  status =
-      device_get_metadata(zxdev(), DEVICE_METADATA_I2C_CHANNELS, buffer, metadata_size, &actual);
-  if (status != ZX_OK || actual != metadata_size) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d", __func__, status);
-    return;
-  }
-
-  if (metadata_size > UINT32_MAX) {
-    zxlogf(ERROR, "metadata too big");
-    return;
-  }
-
-  fidl::DecodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> decoded(
-      fidl::internal::kLLCPPEncodedWireFormatVersion, buffer, static_cast<uint32_t>(metadata_size));
-  if (!decoded.ok()) {
-    zxlogf(ERROR, "%s: Failed to deserialize metadata.", __func__);
-    return;
-  }
-
-  fuchsia_hardware_i2c::wire::I2CBusMetadata* metadata = decoded.PrimaryObject();
+  fuchsia_hardware_i2c::wire::I2CBusMetadata* metadata = decoded->PrimaryObject();
   if (!metadata->has_channels()) {
     zxlogf(INFO, "%s: no channels supplied.", __func__);
     return;
@@ -166,6 +142,7 @@ void I2cDevice::AddChildren() {
       zxlogf(ERROR, "failed to fidl-encode channel: %s", metadata.FormatDescription().data());
       return;
     }
+    zx_status_t status;
     if (vid || pid || did) {
       zx_device_prop_t props[] = {
           {BIND_I2C_BUS_ID, 0, bus_id},    {BIND_I2C_ADDRESS, 0, address},

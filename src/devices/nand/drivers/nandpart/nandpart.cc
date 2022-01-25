@@ -81,32 +81,24 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
   parent_op_size = fbl::round_up(parent_op_size, 8u);
 
   // Query parent for nand configuration info.
-  size_t actual;
-  nand_config_t nand_config;
-  zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &nand_config,
-                                           sizeof(nand_config), &actual);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "nandpart: parent device has no device metadata");
-    return status;
-  }
-  if (actual < sizeof(nand_config_t)) {
-    zxlogf(ERROR, "nandpart: Expected metadata is of size %zu, needs to at least be %zu", actual,
-           sizeof(nand_config_t));
-    return ZX_ERR_INTERNAL;
+  auto nand_config = ddk::GetMetadata<nand_config_t>(parent, DEVICE_METADATA_PRIVATE);
+  if (!nand_config.is_ok()) {
+    return nand_config.error_value();
   }
   // Create a bad block instance.
   BadBlock::Config config = {
-      .bad_block_config = nand_config.bad_block_config,
+      .bad_block_config = nand_config->bad_block_config,
       .nand_proto = nand_proto,
   };
   fbl::RefPtr<BadBlock> bad_block;
-  status = BadBlock::Create(config, &bad_block);
+  auto status = BadBlock::Create(config, &bad_block);
   if (status != ZX_OK) {
     zxlogf(ERROR, "nandpart: Failed to create BadBlock object");
     return status;
   }
 
   // Query parent for partition map.
+  size_t actual;
   uint8_t buffer[METADATA_PARTITION_MAP_MAX];
   status =
       device_get_metadata(parent, DEVICE_METADATA_PARTITION_MAP, buffer, sizeof(buffer), &actual);
@@ -160,11 +152,11 @@ zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
     }
     // Find optional partition_config information.
     uint32_t copy_count = 1;
-    for (uint32_t i = 0; i < nand_config.extra_partition_config_count; i++) {
-      if (memcmp(nand_config.extra_partition_config[i].type_guid, part->type_guid,
+    for (uint32_t i = 0; i < nand_config->extra_partition_config_count; i++) {
+      if (memcmp(nand_config->extra_partition_config[i].type_guid, part->type_guid,
                  sizeof(part->type_guid)) == 0 &&
-          nand_config.extra_partition_config[i].copy_count > 0) {
-        copy_count = nand_config.extra_partition_config[i].copy_count;
+          nand_config->extra_partition_config[i].copy_count > 0) {
+        copy_count = nand_config->extra_partition_config[i].copy_count;
         break;
       }
     }

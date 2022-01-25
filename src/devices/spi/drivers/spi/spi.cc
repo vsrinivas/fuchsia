@@ -66,32 +66,13 @@ zx_status_t SpiDevice::Create(void* ctx, zx_device_t* parent) {
 }
 
 void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi) {
-  size_t metadata_size;
-  auto status = device_get_metadata_size(zxdev(), DEVICE_METADATA_SPI_CHANNELS, &metadata_size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "device_get_metadata_size failed %d", status);
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi::wire::SpiBusMetadata>(
+      zxdev(), DEVICE_METADATA_SPI_CHANNELS);
+  if (!decoded.is_ok()) {
     return;
   }
 
-  auto buffer_deleter = std::make_unique<uint8_t[]>(metadata_size);
-  auto buffer = buffer_deleter.get();
-
-  size_t actual;
-  status =
-      device_get_metadata(zxdev(), DEVICE_METADATA_SPI_CHANNELS, buffer, metadata_size, &actual);
-  if (status != ZX_OK || actual != metadata_size) {
-    zxlogf(ERROR, "device_get_metadata failed %d", status);
-    return;
-  }
-
-  fidl::DecodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> decoded(
-      fidl::internal::kLLCPPEncodedWireFormatVersion, buffer, metadata_size);
-  if (!decoded.ok()) {
-    zxlogf(ERROR, "Failed to deserialize metadata.");
-    return;
-  }
-
-  fuchsia_hardware_spi::wire::SpiBusMetadata* metadata = decoded.PrimaryObject();
+  fuchsia_hardware_spi::wire::SpiBusMetadata* metadata = decoded->PrimaryObject();
   if (!metadata->has_channels()) {
     zxlogf(INFO, "No channels supplied.");
     return;
@@ -122,7 +103,7 @@ void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi) {
 
     char name[20];
     snprintf(name, sizeof(name), "spi-%u-%u", bus_id, cs);
-
+    zx_status_t status;
     if (vid || pid || did) {
       zx_device_prop_t props[] = {
           {BIND_SPI_BUS_ID, 0, bus_id},    {BIND_SPI_CHIP_SELECT, 0, cs},

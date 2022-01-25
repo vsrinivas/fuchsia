@@ -361,27 +361,13 @@ void GspiDevice::DeassertChipSelect() {
 }
 
 zx_status_t GspiDevice::ValidateChildConfig(Con1Reg& con1) {
-  size_t metadata_size;
-  auto status = device_get_metadata_size(zxdev(), DEVICE_METADATA_SPI_CHANNELS, &metadata_size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __func__, status);
-    return status;
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi::wire::SpiBusMetadata>(
+      zxdev(), DEVICE_METADATA_SPI_CHANNELS);
+  if (!decoded.is_ok()) {
+    return decoded.error_value();
   }
 
-  auto buffer_deleter = std::make_unique<uint8_t[]>(metadata_size);
-  auto buffer = buffer_deleter.get();
-
-  size_t actual;
-  status =
-      device_get_metadata(zxdev(), DEVICE_METADATA_SPI_CHANNELS, buffer, metadata_size, &actual);
-  if (status != ZX_OK || actual != metadata_size) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d", __func__, status);
-    return (status == ZX_OK ? ZX_ERR_INVALID_ARGS : status);
-  }
-
-  fidl::DecodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> decoded(
-      fidl::internal::kLLCPPEncodedWireFormatVersion, buffer, metadata_size);
-  fuchsia_hardware_spi::wire::SpiBusMetadata* metadata = decoded.PrimaryObject();
+  fuchsia_hardware_spi::wire::SpiBusMetadata* metadata = decoded->PrimaryObject();
   if (!metadata->has_channels()) {
     zxlogf(INFO, "%s: no channels supplied.", __func__);
     return ZX_OK;
