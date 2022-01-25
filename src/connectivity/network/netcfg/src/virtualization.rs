@@ -796,6 +796,12 @@ impl BridgeHandler for BridgeHandlerImpl {
                 .collect::<Result<Vec<_>, _>>()
                 .context("convert NIC IDs to u32")
                 .map_err(errors::Error::Fatal)?;
+
+            info!(
+                "building bridge with upstream={}, interfaces={:?}",
+                upstream_interface, interfaces
+            );
+
             let (fnetstack::NetErr { status, message }, bridge) = self
                 .netstack
                 .bridge_interfaces(&interfaces)
