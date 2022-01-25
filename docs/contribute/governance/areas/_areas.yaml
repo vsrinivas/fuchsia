@@ -78,7 +78,7 @@
 
 - name: 'Software Delivery'
   api_primary: 'kevinwells@google.com'
-  api_secondary: ''
+  api_secondary: 'jsankey@google.com'
 
 - name: 'Storage'
   api_primary: 'csuter@google.com'
