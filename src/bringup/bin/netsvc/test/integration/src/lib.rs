@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async_utils::stream::FlattenUnorderedExt as _;
 use fidl::endpoints::ProtocolMarker as _;
 use fixture::fixture;
 use fuchsia_zircon as zx;
 use futures::{Future, FutureExt as _, StreamExt as _, TryStreamExt as _};
+use itertools::Itertools as _;
 use net_types::Witness as _;
 use netemul::{Endpoint as _, RealmUdpSocket as _};
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
@@ -31,6 +33,11 @@ const MOCK_BOARD_NAME: &str = "mock-board";
 const MOCK_BOOTLOADER_VENDOR: &str = "mock-bootloader-vendor";
 const MOCK_BOARD_REVISION: u32 = 0xDEADBEEF;
 
+// Use a number that is not an exact power of two to make sure we're not hitting
+// only happy paths of full blocks.
+const PAVE_IMAGE_LEN: u64 = (50 << 10) + 20;
+const PAVE_IMAGE_LEN_USIZE: usize = PAVE_IMAGE_LEN as usize;
+
 fn create_netsvc_realm<'a>(
     sandbox: &'a netemul::TestSandbox,
     name: impl Into<Cow<'a, str>>,
@@ -42,11 +49,15 @@ fn create_netsvc_realm<'a>(
     enum Services {
         ReadOnlyLog(fidl_fuchsia_boot::ReadOnlyLogRequestStream),
         SysInfo(fidl_fuchsia_sysinfo::SysInfoRequestStream),
+        Paver(fidl_fuchsia_paver::PaverRequestStream),
     }
 
     let mut fs = ServiceFs::new();
-    let _: &mut ServiceFsDir<'_, _> =
-        fs.dir("svc").add_fidl_service(Services::ReadOnlyLog).add_fidl_service(Services::SysInfo);
+    let _: &mut ServiceFsDir<'_, _> = fs
+        .dir("svc")
+        .add_fidl_service(Services::ReadOnlyLog)
+        .add_fidl_service(Services::SysInfo)
+        .add_fidl_service(Services::Paver);
     let _: &mut ServiceFs<_> =
         fs.serve_connection(server_end.into_channel()).expect("serve connection");
 
@@ -93,8 +104,91 @@ fn create_netsvc_realm<'a>(
                     .await
                     .expect("handling request stream");
             }
+            Services::Paver(rs) => {
+                let () = rs
+                    // NB: Extracted into separate function because rustfmt was
+                    // getting confused by deep indentation.
+                    .map(|r| process_paver_request(r.expect("paver request stream error")))
+                    .flatten_unordered()
+                    .collect()
+                    .await;
+            }
         }
     });
+
+    fn process_paver_request(
+        req: fidl_fuchsia_paver::PaverRequest,
+    ) -> impl futures::Stream<Item = ()> {
+        match req {
+            fidl_fuchsia_paver::PaverRequest::FindDataSink { data_sink, control_handle: _ } => {
+                data_sink
+                    .into_stream()
+                    .expect("failed to get request stream")
+                    .map(|r| {
+                        match r.expect("data sink request error") {
+                            fidl_fuchsia_paver::DataSinkRequest::WriteAsset {
+                                responder,
+                                asset,
+                                configuration,
+                                payload: fidl_fuchsia_mem::Buffer { vmo, size },
+                            } => {
+                                assert_eq!(asset, fidl_fuchsia_paver::Asset::Kernel);
+                                assert_eq!(
+                                    configuration,
+                                    fidl_fuchsia_paver::Configuration::Recovery
+                                );
+                                assert_eq!(size, PAVE_IMAGE_LEN);
+                                let mut payload = [0u8; PAVE_IMAGE_LEN_USIZE];
+                                vmo.read(&mut payload[..], 0).expect("failed to read payload");
+                                let bytes = IntoIterator::into_iter(payload)
+                                    .tuples()
+                                    .enumerate()
+                                    .fold(0, |bytes, (index, (a, b, c, d))| {
+                                        let value = u32::from_ne_bytes([a, b, c, d]);
+                                        let index =
+                                            u32::try_from(index).expect("index doesn't fit u32");
+                                        assert_eq!(value, index);
+                                        bytes + std::mem::size_of::<u32>()
+                                    });
+                                // Ensure we consumed all bytes. This fails if
+                                // the image length is not a multiple of
+                                // `size_of::<u32>()`.
+                                assert_eq!(bytes, PAVE_IMAGE_LEN_USIZE);
+
+                                responder.send(zx::Status::OK.into_raw())
+                            }
+                            r => panic!("unexpected request {:?}", r),
+                        }
+                        .expect("failed to send response")
+                    })
+                    .left_stream()
+            }
+            fidl_fuchsia_paver::PaverRequest::FindBootManager {
+                boot_manager,
+                control_handle: _,
+            } => boot_manager
+                .into_stream()
+                .expect("failed to get request stream")
+                .map(|r| {
+                    match r.expect("boot manager request error") {
+                        fidl_fuchsia_paver::BootManagerRequest::QueryActiveConfiguration {
+                            responder,
+                        } => {
+                            // Return an error so netsvc thinks there's no
+                            // active configuration.
+                            responder.send(&mut Err(zx::Status::NOT_FOUND.into_raw()))
+                        }
+                        fidl_fuchsia_paver::BootManagerRequest::Flush { responder } => {
+                            responder.send(zx::Status::OK.into_raw())
+                        }
+                        r => panic!("unexpected request {:?}", r),
+                    }
+                    .expect("failed to send response")
+                })
+                .right_stream(),
+            r => panic!("unexpected request {:?}", r),
+        }
+    }
 
     let realm = sandbox
         .create_realm(
@@ -142,6 +236,17 @@ fn create_netsvc_realm<'a>(
                                 capability: Some(
                                     fidl_fuchsia_netemul::ExposedCapability::Protocol(
                                         fidl_fuchsia_sysinfo::SysInfoMarker::NAME.to_string(),
+                                    ),
+                                ),
+                                ..fidl_fuchsia_netemul::ChildDep::EMPTY
+                            },
+                        ),
+                        fidl_fuchsia_netemul::Capability::ChildDep(
+                            fidl_fuchsia_netemul::ChildDep {
+                                name: Some(MOCK_SERVICES_NAME.to_string()),
+                                capability: Some(
+                                    fidl_fuchsia_netemul::ExposedCapability::Protocol(
+                                        fidl_fuchsia_paver::PaverMarker::NAME.to_string(),
                                     ),
                                 ),
                                 ..fidl_fuchsia_netemul::ChildDep::EMPTY
@@ -592,5 +697,153 @@ async fn get_board_info(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
             MOCK_BOARD_NAME
         };
         assert_eq!(board_name, expected_board_name);
+    }
+}
+
+#[fixture(with_netsvc_and_netstack)]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn pave(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
+    const IMAGE_FILE: &str = "<<image>>zirconr.img";
+    let device = discover(&sock, scope_id).await;
+
+    const TIMEOUT_OPTION_SECS: u8 = std::u8::MAX;
+    const BLOCK_SIZE: u16 = 1024;
+    const WINDOW_SIZE: u16 = 4;
+
+    async fn start_transfer(
+        sock: &fuchsia_async::net::UdpSocket,
+        addr: std::net::Ipv6Addr,
+        scope_id: u32,
+    ) {
+        let () = send_message(
+            tftp::TransferRequestBuilder::new_with_options(
+                tftp::TransferDirection::Write,
+                IMAGE_FILE,
+                tftp::TftpMode::OCTET,
+                [
+                    tftp::TftpOption::TransferSize(PAVE_IMAGE_LEN).not_forced(),
+                    // Request a very large timeout to make sure we don't get flakes.
+                    tftp::TftpOption::Timeout(TIMEOUT_OPTION_SECS).not_forced(),
+                    tftp::TftpOption::BlockSize(BLOCK_SIZE).not_forced(),
+                    tftp::TftpOption::WindowSize(WINDOW_SIZE).not_forced(),
+                ],
+            )
+            .into_serializer(),
+            sock,
+            // The first message must always go to the INCOMING port. That's
+            // what's used to establish a new "session". See
+            // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/bringup/bin/netsvc/tftp.cc;l=165;drc=3c621e98789592de213e9899e7056400d29e3b1c.
+            std::net::SocketAddrV6::new(
+                addr,
+                tftp::INCOMING_PORT.get(),
+                /* flowinfo */ 0,
+                scope_id,
+            )
+            .into(),
+        )
+        .await;
+    }
+
+    let () = start_transfer(&sock, device, scope_id).await;
+
+    let socket_addr = std::net::SocketAddrV6::new(
+        device,
+        tftp::OUTGOING_PORT.get(),
+        /* flowinfo */ 0,
+        scope_id,
+    )
+    .into();
+
+    let mut buffer = [0u8; BUFFER_SIZE];
+    {
+        let mut pb = &mut buffer[..];
+        let oack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
+            .await
+            .into_oack()
+            .expect("unexpected response");
+
+        let all_options = oack.options().collect();
+        assert_eq!(
+            all_options,
+            tftp::AllOptions {
+                window_size: Some(tftp::Forceable { value: WINDOW_SIZE, forced: false }),
+                block_size: Some(tftp::Forceable { value: BLOCK_SIZE, forced: false }),
+                timeout: Some(tftp::Forceable { value: TIMEOUT_OPTION_SECS, forced: false }),
+                transfer_size: Some(tftp::Forceable { value: PAVE_IMAGE_LEN, forced: false }),
+            }
+        );
+    }
+
+    let mut buffer = [0u8; BUFFER_SIZE];
+
+    // Start sending blocks in.
+    let contents = (0u32..)
+        .map(u32::to_ne_bytes)
+        .flatten()
+        .take(PAVE_IMAGE_LEN_USIZE)
+        .chunks(BLOCK_SIZE.into());
+    let (unacked, sock) =
+        futures::stream::iter(contents.into_iter().enumerate().map(|(i, b)| (i + 1, b)))
+            .fold((None, sock), |(_, sock), (index, block)| async move {
+                // NB: Need a different constant here to use as const param in arrayvec.
+                const BLOCK_SIZE_USIZE: usize = BLOCK_SIZE as usize;
+                // NB: Collecting into ArrayVec panics if iterator doesn't fit
+                // in capacity. See
+                // https://docs.rs/arrayvec/latest/arrayvec/struct.ArrayVec.html#impl-FromIterator%3CT%3E.
+                let block = block.collect::<arrayvec::ArrayVec<u8, BLOCK_SIZE_USIZE>>();
+
+                let index = index.try_into().expect("index doesn't fit wire representation");
+
+                let () = send_message(
+                    (&block[..]).into_serializer().encapsulate(tftp::DataPacketBuilder::new(index)),
+                    &sock,
+                    socket_addr,
+                )
+                .await;
+                // Every WINDOW_SIZE blocks must be acknowledged.
+                // See https://datatracker.ietf.org/doc/html/rfc7440#section-4.
+                if index % WINDOW_SIZE != 0 {
+                    return (Some(index), sock);
+                }
+                // Wait for an acknowledgement.
+                let mut pb = &mut buffer[..];
+                let ack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
+                    .await
+                    .into_ack()
+                    .expect("unexpected response");
+                assert_eq!(ack.block(), index);
+                (None, sock)
+            })
+            .await;
+    if let Some(index) = unacked {
+        // Wait for final acknowledgement.
+        let mut pb = &mut buffer[..];
+        let ack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
+            .await
+            .into_ack()
+            .expect("unexpected response");
+        assert_eq!(ack.block(), index);
+    }
+
+    // The best way to observe the paver terminating is to attempt to start a
+    // new transfer.
+    loop {
+        let () = start_transfer(&sock, device, scope_id).await;
+        let mut pb = &mut buffer[..];
+        let pkt = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr).await;
+        match pkt {
+            tftp::TftpPacket::OptionAck(_) => {
+                break;
+            }
+            tftp::TftpPacket::Error(e) => {
+                assert_eq!(e.error(), tftp::TftpError::Busy, "unexpected error {:?}", e);
+                println!("paver is busy...");
+                let () = fuchsia_async::Timer::new(fuchsia_async::Time::after(
+                    zx::Duration::from_millis(10),
+                ))
+                .await;
+            }
+            p => panic!("unexpected packet {:?}", p),
+        }
     }
 }

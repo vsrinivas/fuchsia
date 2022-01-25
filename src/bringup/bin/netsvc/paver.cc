@@ -220,7 +220,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
     auto result = data_sink->WriteAsset(configuration_, asset_, std::move(buffer));
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
-      fprintf(stderr, "netsvc: Unable to write asset.\n");
+      fprintf(stderr, "netsvc: Unable to write asset. %s\n", zx_status_get_string(status));
       return status;
     }
   } else if (command_ == Command::kFirmware) {
