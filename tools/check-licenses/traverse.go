@@ -77,7 +77,7 @@ func Run(ctx context.Context, config *Config) error {
 		// iterating on it here, which might trigger a concurrent map iteration and write error, first
 		// create a list of filenames to iterate on. The map writes never add new paths so this is safe.
 		tree.RLock()
-		licenseFilePaths := make([]string, len(tree.SingleLicenseFiles))
+		licenseFilePaths := make([]string, 0, len(tree.SingleLicenseFiles))
 		for licenseFile := range tree.SingleLicenseFiles {
 			licenseFilePaths = append(licenseFilePaths, licenseFile)
 		}
