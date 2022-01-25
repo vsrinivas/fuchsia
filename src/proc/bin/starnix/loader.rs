@@ -275,7 +275,7 @@ fn parse_debug_addr(elf: &LoadedElf) -> Option<UserAddress> {
 
                 if dyn_entry.tag() == Ok(elf_parse::Elf64DynTag::Debug) {
                     return Some(UserAddress::from(
-                        (dynamic_header.offset + offset + elf.file_base) as u64,
+                        elf.vaddr_bias.wrapping_add(dynamic_header.vaddr + offset) as u64,
                     ));
                 }
             }
