@@ -249,6 +249,12 @@ impl Default for AllowedDeviceClasses {
     }
 }
 
+// TODO(https://github.com/serde-rs/serde/issues/368): use an inline literal for the default value
+// rather than defining a one-off function.
+fn dhcpv6_enabled_default() -> bool {
+    true
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Config {
@@ -259,6 +265,9 @@ struct Config {
     pub interface_metrics: InterfaceMetrics,
     #[serde(default)]
     pub allowed_upstream_device_classes: AllowedDeviceClasses,
+    // TODO(https://fxbug.dev/92096): default to false.
+    #[serde(default = "dhcpv6_enabled_default")]
+    pub enable_dhcpv6: bool,
 }
 
 impl Config {
@@ -540,6 +549,7 @@ impl<'a> NetCfg<'a> {
         allow_virtual_devices: bool,
         filter_enabled_interface_types: HashSet<InterfaceType>,
         interface_metrics: InterfaceMetrics,
+        enable_dhcpv6: bool,
     ) -> Result<NetCfg<'a>, anyhow::Error> {
         let svc_dir = clone_namespace_svc().context("error cloning svc directory handle")?;
         let stack = svc_connect::<fnet_stack::StackMarker>(&svc_dir)
@@ -560,10 +570,14 @@ impl<'a> NetCfg<'a> {
         let dhcp_server = optional_svc_connect::<fnet_dhcp::Server_Marker>(&svc_dir)
             .await
             .context("could not connect to DHCP Server")?;
-        let dhcpv6_client_provider =
-            optional_svc_connect::<fnet_dhcpv6::ClientProviderMarker>(&svc_dir)
+        let dhcpv6_client_provider = if enable_dhcpv6 {
+            let dhcpv6_client_provider = svc_connect::<fnet_dhcpv6::ClientProviderMarker>(&svc_dir)
                 .await
                 .context("could not connect to DHCPv6 client provider")?;
+            Some(dhcpv6_client_provider)
+        } else {
+            None
+        };
         let installer = svc_connect::<fnet_interfaces_admin::InstallerMarker>(&svc_dir)
             .await
             .context("could not connect to installer")?;
@@ -1656,12 +1670,17 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
         filter_enabled_interface_types,
         interface_metrics,
         allowed_upstream_device_classes: AllowedDeviceClasses(allowed_upstream_device_classes),
+        enable_dhcpv6,
     } = Config::load(config_data)?;
 
-    let mut netcfg =
-        NetCfg::new(*allow_virtual_devices, filter_enabled_interface_types, interface_metrics)
-            .await
-            .context("error creating new netcfg instance")?;
+    let mut netcfg = NetCfg::new(
+        *allow_virtual_devices,
+        filter_enabled_interface_types,
+        interface_metrics,
+        enable_dhcpv6,
+    )
+    .await
+    .context("error creating new netcfg instance")?;
 
     let () =
         netcfg.update_filters(filter_config).await.context("update filters based on config")?;
@@ -2339,7 +2358,8 @@ mod tests {
     "wlan_metric": 100,
     "eth_metric": 10
   },
-  "allowed_upstream_device_classes": ["ethernet", "wlan"]
+  "allowed_upstream_device_classes": ["ethernet", "wlan"],
+  "enable_dhcpv6": true
 }
 "#;
 
@@ -2349,6 +2369,7 @@ mod tests {
             filter_enabled_interface_types,
             interface_metrics,
             allowed_upstream_device_classes,
+            enable_dhcpv6,
         } = Config::load_str(config_str).unwrap();
 
         assert_eq!(vec!["8.8.8.8".parse::<std::net::IpAddr>().unwrap()], servers);
@@ -2367,6 +2388,8 @@ mod tests {
             AllowedDeviceClasses(HashSet::from([DeviceClass::Ethernet, DeviceClass::Wlan])),
             allowed_upstream_device_classes
         );
+
+        assert_eq!(enable_dhcpv6, true);
     }
 
     #[test]
@@ -2389,10 +2412,12 @@ mod tests {
             filter_enabled_interface_types: _,
             allowed_upstream_device_classes,
             interface_metrics,
+            enable_dhcpv6,
         } = Config::load_str(config_str).unwrap();
 
         assert_eq!(allowed_upstream_device_classes, Default::default());
         assert_eq!(interface_metrics, Default::default());
+        assert_eq!(enable_dhcpv6, true);
     }
 
     #[test_case(
@@ -2427,6 +2452,7 @@ mod tests {
             filter_config: _,
             filter_enabled_interface_types: _,
             allowed_upstream_device_classes: _,
+            enable_dhcpv6: _,
             interface_metrics,
         } = Config::load_str(&config_str).unwrap();
 

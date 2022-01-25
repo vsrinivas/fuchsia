@@ -27,5 +27,6 @@
     "allowed_upstream_device_classes": [
         "ethernet",
         "wlan"
-    ]
+    ],
+    "enable_dhcpv6": true
 }

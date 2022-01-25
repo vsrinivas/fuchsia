@@ -43,9 +43,9 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
                 KnownServiceProvider::Manager {
                     agent: M::MANAGEMENT_AGENT,
                     use_dhcp_server: false,
+                    enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
-                KnownServiceProvider::Dhcpv6Client,
             ],
         )
         .expect("create netstack realm");
@@ -74,11 +74,6 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
     )
     .await
     .expect("wait for non loopback interface");
-
-    // Block on destruction of the test realm before we allow test interfaces to
-    // be cleaned up.  This avoids test interfaces being removed out from under
-    // components still using them, which can cause spurious errors.
-    realm.shutdown().await.expect("failed to shutdown realm");
 }
 
 /// Tests that stable interface name conflicts are handled gracefully.
@@ -92,9 +87,9 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
                 KnownServiceProvider::Manager {
                     agent: M::MANAGEMENT_AGENT,
                     use_dhcp_server: false,
+                    enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
-                KnownServiceProvider::Dhcpv6Client,
             ],
         )
         .expect("create netstack realm");
@@ -220,9 +215,11 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         "second interface from network manager should use a temporary name"
     );
 
-    // Block on destruction of the test realm before we allow test interfaces to be cleaned up.
-    // This avoids test interfaces being removed out from under components still using them, which
-    // can cause spurious errors.
+    // TODO(https://fxbug.dev/92164): make orderly shutdown automatic or unnecessary.
+    //
+    // In the meantime, block on destruction of the test realm before we allow test interfaces to be
+    // cleaned up. This prevents test interfaces from being removed while NetCfg is still in the
+    // process of configuring them after adding them to the Netstack, which causes spurious errors.
     let () = realm.shutdown().await.expect("failed to shutdown realm");
 }
 
@@ -467,10 +464,13 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         .create_netstack_realm_with::<Netstack2, _, _>(
             name,
             &[
-                KnownServiceProvider::Manager { agent: M::MANAGEMENT_AGENT, use_dhcp_server: true },
+                KnownServiceProvider::Manager {
+                    agent: M::MANAGEMENT_AGENT,
+                    use_dhcp_server: true,
+                    enable_dhcpv6: false,
+                },
                 KnownServiceProvider::DnsResolver,
                 KnownServiceProvider::DhcpServer { persistent: false },
-                KnownServiceProvider::Dhcpv6Client,
                 KnownServiceProvider::SecureStash,
             ],
         )
@@ -510,9 +510,9 @@ async fn observes_stop_events<M: Manager>(name: &str) {
                 KnownServiceProvider::Manager {
                     agent: M::MANAGEMENT_AGENT,
                     use_dhcp_server: false,
+                    enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
-                KnownServiceProvider::Dhcpv6Client,
             ],
         )
         .expect("create netstack realm");

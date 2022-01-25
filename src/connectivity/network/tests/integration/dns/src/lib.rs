@@ -127,9 +127,9 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
                 KnownServiceProvider::Manager {
                     agent: M::MANAGEMENT_AGENT,
                     use_dhcp_server: false,
+                    enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
-                KnownServiceProvider::Dhcpv6Client,
             ],
         )
         .expect("failed to create client realm");
@@ -275,6 +275,7 @@ async fn discovered_dhcpv6_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
                 KnownServiceProvider::Manager {
                     agent: M::MANAGEMENT_AGENT,
                     use_dhcp_server: false,
+                    enable_dhcpv6: true,
                 },
                 KnownServiceProvider::Dhcpv6Client,
                 KnownServiceProvider::DnsResolver,

@@ -3,10 +3,11 @@
         "servers": []
     },
     "filter_config": {
-        "rules": [],
         "nat_rules": [],
-        "rdr_rules": []
+        "rdr_rules": [],
+        "rules": []
     },
     "filter_enabled_interface_types": [],
-    "interface_metrics": {}
+    "interface_metrics": {},
+    "enable_dhcpv6": true
 }

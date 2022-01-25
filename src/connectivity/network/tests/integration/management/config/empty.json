@@ -1,0 +1,13 @@
+{
+    "dns_config": {
+        "servers": []
+    },
+    "filter_config": {
+        "nat_rules": [],
+        "rdr_rules": [],
+        "rules": []
+    },
+    "filter_enabled_interface_types": [],
+    "interface_metrics": {},
+    "enable_dhcpv6": false
+}

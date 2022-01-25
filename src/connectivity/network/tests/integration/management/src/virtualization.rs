@@ -293,9 +293,9 @@ async fn virtualization<E: netemul::Endpoint>(name: &str, sub_name: &str, steps:
                 KnownServiceProvider::Manager {
                     agent: ManagementAgent::NetCfg(NetCfgVersion::Advanced),
                     use_dhcp_server: false,
+                    enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
-                KnownServiceProvider::Dhcpv6Client,
             ],
         )
         .expect("failed to create host netstack realm");
@@ -521,9 +521,9 @@ async fn dhcpv4_client_started<E: netemul::Endpoint>(name: &str) {
                 KnownServiceProvider::Manager {
                     agent: ManagementAgent::NetCfg(NetCfgVersion::Advanced),
                     use_dhcp_server: false,
+                    enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
-                KnownServiceProvider::Dhcpv6Client,
             ],
         )
         .expect("failed to create host netstack realm");
