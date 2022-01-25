@@ -108,17 +108,33 @@ Currently, test coverage is collected only if:
     Kernel coverage is not yet supported
     ([tracking bug](https://fxbug.dev/34196)).
 *   The test runs on qemu. Testing on hardware is not yet supported.
-*   The test runs as part of the `core` configuration. Specifically,
-    [absolute coverage](#absolute_test_coverage) is collected from `core.x64`
-    and `core.arm64` configurations, and
-    [incremental coverage](#incremental_test_coverage) is only collected in
-    `core.x64` ([tracking bug](https://fxbug.dev/91893)).
+*   The test runs as part of the `core` product configuration.
 *   End-to-end (e2e) tests are [not supported](#end-to-end_e2e_tests_exclusion).
 
 On that last note, e2e tests exercise a lot of code throughout the system, but
 they do so in a manner that's inconsistent between runs (or "flaky"). To achieve
 higher test coverage for code, it is possible and in fact recommended to do so
 using unit tests and integration tests.
+
+### Experimental features
+
+By default, [incremental coverage](#incremental_test_coverage) is only collected in
+`core.x64`. To collect combined coverage for your change in both `core.x64` and
+`core.arm64`, follow these steps:
+
+1.  In Gerrit, go to the Checks tab.
+1.  Press Choose Tryjobs.
+1.  Add `fuchsia-coverage-x64-arm64`.
+
+![Manually choosing x64-arm64 coverage in Gerrit](gerrit_x64_arm64.png)
+
+A check will appear. Once it turns from pending to done, refresh Gerrit to see the
+coverage results.
+
+See also:
+[Issue 91893: Incremental coverage in Gerrit only collected for x64](https://fxbug.dev/91893)
+
+### Upcoming features
 
 Support for the following additional use cases is currently under development:
 
