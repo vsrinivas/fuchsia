@@ -158,15 +158,15 @@ struct NaturalTableCodingTraits {
   // Returns the largest ordinal of a present table member.
   template <size_t I = std::tuple_size_v<decltype(T::kMembers)> - 1>
   static size_t MaxOrdinal(T* value) {
-    auto T::Storage_::*member_ptr = std::get<I>(T::kMembers).member_ptr;
-    const auto& member = value->storage_.*member_ptr;
-    if (member.has_value()) {
-      return I + 1;
-    }
-    if constexpr (I > 0) {
-      return MaxOrdinal<I - 1>(value);
-    } else {
+    if constexpr (I == -1) {
       return 0;
+    } else {
+      auto T::Storage_::*member_ptr = std::get<I>(T::kMembers).member_ptr;
+      const auto& member = value->storage_.*member_ptr;
+      if (member.has_value()) {
+        return I + 1;
+      }
+      return MaxOrdinal<I - 1>(value);
     }
   }
 
@@ -275,6 +275,18 @@ struct NaturalCloneHelper<std::vector<T>> {
     std::transform(value.begin(), value.end(), std::back_inserter(clone),
                    [](const T& v) { return NaturalCloneHelper<T>::Clone(v); });
     return clone;
+  }
+};
+
+template <typename T, size_t N, std::size_t... Indexes>
+std::array<T, N> ArrayCloneHelper(const std::array<T, N>& value, std::index_sequence<Indexes...>) {
+  return std::array<T, N>{NaturalCloneHelper<T>::Clone(std::get<Indexes>(value))...};
+}
+
+template <typename T, size_t N>
+struct NaturalCloneHelper<std::array<T, N>> {
+  static std::array<T, N> Clone(const std::array<T, N>& value) {
+    return ArrayCloneHelper(value, std::make_index_sequence<N>());
   }
 };
 
