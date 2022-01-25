@@ -14,7 +14,9 @@ rust_library("multiple_crate_types-v1_0_25") {
   output_name = "multiple_crate_types-8be5e59704cbf5a4"
 
   deps = []
-  deps += [ ":sub-crate-v1_0_25" ]
+  deps += [ ":sub-crate-with-cdylib-v1_0_25" ]
+  deps += [ ":sub-crate-with-dylib-v1_0_25" ]
+  deps += [ ":sub-crate-with-rlib-v1_0_25" ]
 
   rustenv = []
 
@@ -28,10 +30,10 @@ rust_library("multiple_crate_types-v1_0_25") {
   visibility = [ ":*" ]
 }
 
-rust_library("sub-crate-v1_0_25") {
-  crate_name = "sub_crate"
-  crate_root = "//multiple_crate_types/sub-crate/src/lib.rs"
-  output_name = "sub_crate-c933a0443c39195"
+rust_library("sub-crate-with-cdylib-v1_0_25") {
+  crate_name = "sub_crate_with_cdylib"
+  crate_root = "//multiple_crate_types/sub-crate-with-cdylib/src/lib.rs"
+  output_name = "sub_crate_with_cdylib-2c19a9098651391d"
 
   deps = []
 
@@ -40,8 +42,29 @@ rust_library("sub-crate-v1_0_25") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=c933a0443c39195",
-    "-Cextra-filename=-c933a0443c39195",
+    "-Cmetadata=2c19a9098651391d",
+    "-Cextra-filename=-2c19a9098651391d",
+  ]
+
+  visibility = []
+  visibility += [ ":*" ]
+  visibility += [ "//foo/bar/*" ]
+}
+
+rust_library("sub-crate-with-dylib-v1_0_25") {
+  crate_name = "sub_crate_with_dylib"
+  crate_root = "//multiple_crate_types/sub-crate-with-dylib/src/lib.rs"
+  output_name = "sub_crate_with_dylib-cba782ed0389a004"
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=cba782ed0389a004",
+    "-Cextra-filename=-cba782ed0389a004",
   ]
 
   visibility = []

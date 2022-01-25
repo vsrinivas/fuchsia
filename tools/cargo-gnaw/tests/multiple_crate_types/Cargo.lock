@@ -6,9 +6,19 @@ version = 3
 name = "multiple_crate_types"
 version = "1.0.25"
 dependencies = [
- "sub-crate",
+ "sub-crate-with-cdylib",
+ "sub-crate-with-dylib",
+ "sub-crate-with-rlib",
 ]
 
 [[package]]
-name = "sub-crate"
+name = "sub-crate-with-cdylib"
+version = "1.0.25"
+
+[[package]]
+name = "sub-crate-with-dylib"
+version = "1.0.25"
+
+[[package]]
+name = "sub-crate-with-rlib"
 version = "1.0.25"

@@ -5,7 +5,12 @@ authors = ["Erick Tryzelaar <etryzelaar@google.com>"]
 edition = "2018"
 
 [dependencies]
-sub-crate = { version = "1.0.25", path = "sub-crate" }
+sub-crate-with-cdylib = { version = "1.0.25", path = "sub-crate-with-cdylib" }
+sub-crate-with-dylib = { version = "1.0.25", path = "sub-crate-with-dylib" }
+sub-crate-with-rlib = { version = "1.0.25", path = "sub-crate-with-rlib" }
 
-[gn.package.sub-crate."1.0.25"]
+[gn.package.sub-crate-with-cdylib."1.0.25"]
+visibility = [":*", "//foo/bar/*"]
+
+[gn.package.sub-crate-with-dylib."1.0.25"]
 visibility = [":*", "//foo/bar/*"]
