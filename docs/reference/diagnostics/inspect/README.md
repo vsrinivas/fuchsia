@@ -3,7 +3,6 @@
 <!-- * [Accessing Inspect data](/docs/reference/diagnostics/inspect/access.md) -->
 
 * Inspect VMOs
-  * [VMO format](/docs/reference/diagnostics/inspect/vmo-format.md)
   * [Extending the VMO format](/docs/reference/diagnostics/inspect/updating-vmo-format.md)
   <!-- * [VMO Lifecycle](/docs/reference/diagnostics/inspect/lifecycle.md) -->
   * [Hosting VMOs](/docs/reference/diagnostics/inspect/tree.md)

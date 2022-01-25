@@ -364,7 +364,7 @@ See also:
 [inspect]: /docs/development/diagnostics/inspect/README.md
 [inspect-codelab]: /docs/development/diagnostics/inspect/codelab/codelab.md
 [inspect-validator]: /docs/reference/diagnostics/inspect/validator/README.md
-[inspect-vmo-format]: /docs/reference/diagnostics/inspect/vmo-format.md
+[inspect-vmo-format]: /docs/reference/platform-spec/diagnostics/inspect-vmo-format.md
 [inspect-vmo-format-update]: /docs/reference/diagnostics/inspect/updating-vmo-format.md
 [minfs]: /docs/concepts/filesystems/minfs.md
 [minfs-stress]: /src/storage/stress-tests/minfs/

@@ -21,9 +21,6 @@ toc:
 # - title: "Access"
 #   path: /docs/reference/diagnostics/access.md
 
-- title: "Schema"
-  path: /docs/reference/diagnostics/schema.md
-
 - title: "Selectors"
   path: /docs/reference/diagnostics/selectors.md
 
@@ -44,8 +41,6 @@ toc:
   # - title: "Access"
   #   path: /docs/reference/diagnostics/inspect/access.md
 
-  - title: "Inspect VMO file format"
-    path: /docs/reference/diagnostics/inspect/vmo-format.md
   - title: "Extending the VMO file format"
     path: /docs/reference/diagnostics/inspect/updating-vmo-format.md
 
@@ -66,15 +61,8 @@ toc:
   - title: "Overview"
     path: /docs/reference/diagnostics/logs
 
-  - title: "Message encoding"
-    path: /docs/reference/diagnostics/logs/encoding.md
-
   - title: "Access"
     path: /docs/reference/diagnostics/logs/access.md
-- title: "Others"
-  section:
-  - title: "Bitfield diagrams"
-    path: /docs/reference/diagnostics/bitfield-diagram.md
 
 # TODO(fxbug.dev/60813)
 # - title: "Producers"

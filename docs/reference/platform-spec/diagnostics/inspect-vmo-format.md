@@ -666,7 +666,7 @@ a new even number. Release ordering ensures that writes to the file are
 visible before the generation count update is visible.
 
 <!-- xrefs -->
-[bitfield-diagram]: /docs/reference/diagnostics/bitfield-diagram.md
+[bitfield-diagram]: /docs/reference/platform-spec/diagnostics/bitfield-diagram.md
 [block.h]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/block.h
 [buddy]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
 [rfc2119]: https://www.ietf.org/rfc/rfc2119.txt

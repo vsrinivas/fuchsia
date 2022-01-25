@@ -254,7 +254,7 @@ ffx target snapshot
 [dart-2]: https://fuchsia-docs.firebaseapp.com/dart/package-fuchsia_inspect_inspect/package-fuchsia_inspect_inspect-library.html
 [dart-3]: https://fuchsia-docs.firebaseapp.com/dart/package-fuchsia_inspect_inspect/Node/delete.html
 [iquery]: /docs/reference/diagnostics/consumers/iquery.md
-[Inspect File Format]: /docs/reference/diagnostics/inspect/vmo-format.md
+[Inspect File Format]: /docs/reference/platform-spec/diagnostics/inspect-vmo-format.md
 [Validator Architecture]: /docs/reference/diagnostics/inspect/validator/README.md
 [Health checks]: /docs/concepts/diagnostics/inspect/health.md
 [ffx-inspect]: https://fuchsia.dev/reference/tools/sdk/ffx.md#inspect

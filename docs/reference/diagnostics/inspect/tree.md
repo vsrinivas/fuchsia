@@ -250,4 +250,4 @@ running components.
 [inspect]: /docs/development/diagnostics/inspect/README.md
 [iquery]: /docs/reference/diagnostics/consumers/iquery.md
 [tree-fidl]: /sdk/fidl/fuchsia.inspect/tree.fidl
-[vmo-format]: vmo-format.md
+[vmo-format]: /docs/reference/platform-spec/diagnostics/inspect-vmo-format.md

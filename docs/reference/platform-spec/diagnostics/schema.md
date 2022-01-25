@@ -11,7 +11,7 @@ some requirements for what we can now call diagnostics data; diagnostics data mu
 
 - Be associated with a specific moniker corresponding to a unit of execution on the system.
 - Be timestamped.
-- Arbitrarily structured data payloads, including hierarchical data.
+- Contain arbitrarily structured data payloads, including hierarchical data.
 
 Diagnostics schemas can be thought of as containing three distinct sections: a namespacing section,
 a metadata section, and a payload section.
