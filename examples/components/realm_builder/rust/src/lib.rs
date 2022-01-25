@@ -13,8 +13,8 @@ use {
     },
     fuchsia_component::server as fserver,
     // [END_EXCLUDE]
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
 };
 // [END import_statement_rust]
@@ -26,22 +26,21 @@ async fn make_echo_call() -> Result<(), Error> {
     // [END init_realm_builder_rust]
 
     // [START add_component_rust]
-    builder
-        // Add component `a` to the realm, which is fetched using a URL.
+    // Add component `a` to the realm, which is fetched using a URL.
+    let a = builder
         .add_child(
             "a",
             "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_client.cm",
             ChildOptions::new(),
         )
-        .await?
-        // Add component `b` to the realm, which is fetched using a relative URL.
-        .add_child("b", "#meta/echo_client.cm", ChildOptions::new())
         .await?;
+    // Add component `b` to the realm, which is fetched using a relative URL.
+    let b = builder.add_child("b", "#meta/echo_client.cm", ChildOptions::new()).await?;
     // [END add_component_rust]
 
     // [START add_legacy_component_rust]
-    builder
-        // Add component `c` to the realm, which is fetched using a legacy URL.
+    // Add component `c` to the realm, which is fetched using a legacy URL.
+    let c = builder
         .add_legacy_child(
             "c",
             "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_client.cmx",
@@ -51,10 +50,10 @@ async fn make_echo_call() -> Result<(), Error> {
     // [END add_legacy_component_rust]
 
     // [START add_mock_component_rust]
-    builder
-        .add_mock_child(
+    let d = builder
+        .add_local_child(
             "d",
-            move |mock_handles: MockHandles| Box::pin(echo_server_mock(mock_handles)),
+            move |handles: LocalComponentHandles| Box::pin(echo_server_mock(handles)),
             ChildOptions::new(),
         )
         .await?;
@@ -63,13 +62,12 @@ async fn make_echo_call() -> Result<(), Error> {
     // [START route_between_children_rust]
     builder
         .add_route(
-            RouteBuilder::protocol("fidl.examples.routing.echo.Echo")
-                .source(RouteEndpoint::component("d"))
-                .targets(vec![
-                    RouteEndpoint::component("a"),
-                    RouteEndpoint::component("b"),
-                    RouteEndpoint::component("c"),
-                ]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fidl.examples.routing.echo.Echo"))
+                .from(&d)
+                .to(&a)
+                .to(&b)
+                .to(&c),
         )
         .await?;
     // [END route_between_children_rust]
@@ -77,9 +75,10 @@ async fn make_echo_call() -> Result<(), Error> {
     // [START route_to_test_rust]
     builder
         .add_route(
-            RouteBuilder::protocol("fidl.examples.routing.echo.Echo")
-                .source(RouteEndpoint::component("d"))
-                .targets(vec![RouteEndpoint::above_root()]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fidl.examples.routing.echo.Echo"))
+                .from(&d)
+                .to(Ref::parent()),
         )
         .await?;
     // [END route_to_test_rust]
@@ -87,14 +86,13 @@ async fn make_echo_call() -> Result<(), Error> {
     // [START route_from_test_rust]
     builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![
-                    RouteEndpoint::component("a"),
-                    RouteEndpoint::component("b"),
-                    RouteEndpoint::component("c"),
-                    RouteEndpoint::component("d"),
-                ]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&a)
+                .to(&b)
+                .to(&c)
+                .to(&d),
         )
         .await?;
     // [END route_from_test_rust]
@@ -102,9 +100,10 @@ async fn make_echo_call() -> Result<(), Error> {
     // [START route_from_test_sibling_rust]
     builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.example.Foo")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component("a")]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.example.Foo"))
+                .from(Ref::parent())
+                .to(&a),
         )
         .await?;
     // [END route_from_test_sibling_rust]
@@ -126,7 +125,7 @@ async fn make_echo_call() -> Result<(), Error> {
 }
 
 // [START mock_component_impl_rust]
-async fn echo_server_mock(mock_handles: MockHandles) -> Result<(), Error> {
+async fn echo_server_mock(handles: LocalComponentHandles) -> Result<(), Error> {
     // Create a new ServiceFs to host FIDL protocols from
     let mut fs = fserver::ServiceFs::new();
     let mut tasks = vec![];
@@ -143,7 +142,7 @@ async fn echo_server_mock(mock_handles: MockHandles) -> Result<(), Error> {
     });
 
     // Run the ServiceFs on the outgoing directory handle from the mock handles
-    fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
 
     Ok(())
