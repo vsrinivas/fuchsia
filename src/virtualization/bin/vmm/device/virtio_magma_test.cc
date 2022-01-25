@@ -5,15 +5,21 @@
 #include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 
 #include <drm_fourcc.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
+#include <fuchsia/vulkan/loader/cpp/fidl.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/socket.h>
 #include <string.h>
 
 #include <fbl/algorithm.h>
 
+#include "fuchsia/logger/cpp/fidl.h"
+#include "lib/sys/component/cpp/testing/realm_builder_types.h"
 #include "src/graphics/drivers/msd-intel-gen/include/magma_intel_gen_defs.h"
 #include "src/graphics/lib/magma/include/magma/magma.h"
 #include "src/lib/fsl/handles/object_info.h"
@@ -22,14 +28,22 @@
 
 namespace {
 
-static constexpr char kVirtioMagmaUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_magma#meta/virtio_magma.cmx";
 static constexpr uint16_t kQueueSize = 32;
 static constexpr size_t kDescriptorSize = PAGE_SIZE;
 static constexpr uint32_t kVirtioMagmaVmarSize = 1 << 16;
 static constexpr uint32_t kAllocateFlags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE;
 static const size_t kBufferSize = kVirtioMagmaVmarSize / 4;
 static const uint32_t kMockVfdId = 42;
+
+using sys::testing::ChildRef;
+using sys::testing::Directory;
+using sys::testing::LocalComponent;
+using sys::testing::LocalComponentHandles;
+using sys::testing::ParentRef;
+using sys::testing::Protocol;
+using sys::testing::Route;
+using sys::testing::experimental::RealmBuilder;
+using sys::testing::experimental::RealmRoot;
 
 class WaylandImporterMock : public fuchsia::virtualization::hardware::VirtioWaylandImporter {
  public:
@@ -61,8 +75,9 @@ class WaylandImporterMock : public fuchsia::virtualization::hardware::VirtioWayl
   std::unique_ptr<VirtioImage> image_;
 };
 
-class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator {
+class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator, public LocalComponent {
  public:
+  explicit ScenicAllocatorFake(async::Loop& loop) : loop_(loop) {}
   // Must set constraints on the given buffer collection token to allow the constraints
   // negotiation to complete.
   void RegisterBufferCollection(fuchsia::ui::composition::RegisterBufferCollectionArgs args,
@@ -131,43 +146,87 @@ class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator {
 
     callback(fpromise::ok());
   }
+
+  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+    // This class contains handles to the component's incoming and outgoing capabilities.
+    handles_ = std::move(handles);
+
+    ASSERT_EQ(
+        handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, loop_.dispatcher())),
+        ZX_OK);
+  }
+
+ private:
+  async::Loop& loop_;
+  fidl::BindingSet<fuchsia::ui::composition::Allocator> bindings_;
+  std::unique_ptr<LocalComponentHandles> handles_;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-class VirtioMagmaTest : public TestWithDevice {
+class VirtioMagmaTest : public TestWithDeviceV2 {
  public:
   VirtioMagmaTest()
       : out_queue_(phys_mem_, kDescriptorSize, kQueueSize),
         wayland_importer_mock_binding_(&wayland_importer_mock_),
         wayland_importer_mock_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        scenic_allocator_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+        scenic_allocator_fake_(loop()) {}
 
   void SetUp() override {
     uintptr_t vmar_addr;
     zx::vmar vmar;
+    constexpr auto kComponentName = "virtio_magma";
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_magma#meta/virtio_magma.cm";
+    constexpr auto kFakeScenic = "fake_scenic";
+
     ASSERT_EQ(zx::vmar::root_self()->allocate(kAllocateFlags, 0u, kVirtioMagmaVmarSize, &vmar,
                                               &vmar_addr),
               ZX_OK);
 
-    fuchsia::virtualization::hardware::StartInfo start_info;
-    {
-      std::unique_ptr<sys::testing::EnvironmentServices> env_services = CreateServices();
-      env_services->AllowParentService("fuchsia.vulkan.loader.Loader");
-      env_services->AllowParentService("fuchsia.sysmem.Allocator");
-
-      ASSERT_EQ(ZX_OK, env_services->AddService(scenic_allocator_binding_set_.GetHandler(
-                           &scenic_allocator_fake_, scenic_allocator_loop_.dispatcher())));
-
-      ASSERT_EQ(ZX_OK, LaunchDevice(kVirtioMagmaUrl, out_queue_.end(), &start_info,
-                                    std::move(env_services)));
-    }
-
-    // Start device execution.
     ASSERT_EQ(wayland_importer_mock_loop_.StartThread(), ZX_OK);
-    ASSERT_EQ(scenic_allocator_loop_.StartThread(), ZX_OK);
 
-    services_->Connect(magma_.NewRequest());
+    auto realm_builder = RealmBuilder::Create();
+
+    realm_builder.AddChild(kComponentName, kComponentUrl);
+    realm_builder.AddLocalChild(kFakeScenic, &scenic_allocator_fake_);
+
+    realm_builder
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::logger::LogSink::Name_},
+                                Protocol{fuchsia::tracing::provider::Registry::Name_},
+                                Protocol{fuchsia::sysmem::Allocator::Name_},
+                                Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                                Directory{"dev-gpu", "dev-gpu", fuchsia::io2::R_STAR_DIR},
+                            },
+                        .source = ParentRef(),
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::ui::composition::Allocator::Name_},
+                            },
+                        .source = {ChildRef{kFakeScenic}},
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::ui::composition::Allocator::Name_},
+                            },
+                        .source = {ChildRef{kFakeScenic}},
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::virtualization::hardware::VirtioMagma::Name_},
+                            },
+                        .source = ChildRef{kComponentName},
+                        .targets = {ParentRef()}});
+
+    realm_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
+
+    fuchsia::virtualization::hardware::StartInfo start_info;
+    zx_status_t status = MakeStartInfo(out_queue_.end(), &start_info);
+    ASSERT_EQ(ZX_OK, status);
+
+    magma_ = realm_->Connect<fuchsia::virtualization::hardware::VirtioMagma>();
 
     {
       zx_status_t status;
@@ -427,8 +486,7 @@ class VirtioMagmaTest : public TestWithDevice {
       wayland_importer_mock_binding_;
   async::Loop wayland_importer_mock_loop_;
   ScenicAllocatorFake scenic_allocator_fake_;
-  async::Loop scenic_allocator_loop_;
-  fidl::BindingSet<fuchsia::ui::composition::Allocator> scenic_allocator_binding_set_;
+  std::unique_ptr<sys::testing::experimental::RealmRoot> realm_;
 };
 
 TEST_F(VirtioMagmaTest, HandleQuery) {

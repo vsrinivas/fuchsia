@@ -1,0 +1,112 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/device_tests",
+    },
+    children: [
+        {
+            name: "mock_cobalt",
+            url: "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cm",
+        },
+        {
+            name: "fake_hdcp",
+            url: "fuchsia-pkg://fuchsia.com/device_tests#meta/hdcp.cm",
+        },
+        {
+            name: "wrapped_scenic",
+            url: "#meta/wrapped_scenic.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.ui.composition.Allocator" ],
+            from: "#wrapped_scenic",
+        },
+        {
+            directory: "dev-gpu",
+            rights: [ "r*" ],
+            path: "/dev/class/gpu",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#mock_cobalt",
+        },
+        {
+            directory: "dev-display-controller",
+            from: "parent",
+            to: "#wrapped_scenic",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: [ "#wrapped_scenic" ],
+        },
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#mock_cobalt",
+            to: "#wrapped_scenic",
+        },
+        {
+            protocol: [ "fuchsia.hardware.display.Provider" ],
+            from: "#fake_hdcp",
+            to: "#wrapped_scenic",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#fake_hdcp",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#wrapped_scenic",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sys.Environment",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#realm_builder",
+        },
+        {
+            directory: "dev-gpu",
+            from: "parent",
+            to: "#realm_builder",
+        },
+    ],
+}
