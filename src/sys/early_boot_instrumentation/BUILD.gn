@@ -22,6 +22,19 @@ source_set("coverage-source") {
   deps = [ "//sdk/lib/fdio" ]
 }
 
+executable("app") {
+  sources = [ "main.cc" ]
+  deps = [
+    ":coverage-source",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
 test("coverage-source-test") {
   testonly = true
   sources = [ "coverage_source_test.cc" ]
@@ -42,4 +55,14 @@ fuchsia_unittest_component("coverage-source-tests") {
 
 fuchsia_test_package("early-boot-instrumentation-tests") {
   test_components = [ ":coverage-source-tests" ]
+}
+
+fuchsia_component("early-boot-instrumentation") {
+  manifest = "meta/early_boot_instrumentation.cml"
+  deps = [ ":app" ]
+}
+
+fuchsia_package("early-boot-instrumentation-pkg") {
+  package_name = "early-boot-instrumentation"
+  deps = [ ":early-boot-instrumentation" ]
 }

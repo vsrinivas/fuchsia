@@ -24,4 +24,4 @@ are continuously running. For example a boot loader might expose static profile 
 the kernel exposes dynamic profile data.
 
 Data is exposed in the form of VMO Files in two directories offered to this component's parent,
-'static' and 'dynamic'.
+'prof-data/static' and 'prof-data/dynamic'.

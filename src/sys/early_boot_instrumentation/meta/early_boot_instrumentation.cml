@@ -1,0 +1,27 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/app",
+    },
+    capabilities: [
+        {
+            directory: "prof-data",
+            rights: [ "r*" ],
+            path: "/prof-data",
+        },
+    ],
+    use: [
+        {
+            directory: "boot",
+            rights: [ "r*" ],
+            path: "/boot",
+        },
+    ],
+    expose: [
+        {
+            directory: "prof-data",
+            from: "self",
+        },
+    ],
+}
