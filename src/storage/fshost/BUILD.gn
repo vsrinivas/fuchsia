@@ -400,6 +400,7 @@ cmc_merge("test-fshost.cml") {
   sources = [
     "meta/base_fshost.cml",
     "meta/core_fshost.cml",
+    "meta/cpp_fshost.cml",
   ]
   if (bundle_fxfs || data_filesystem_format == "fxfs") {
     sources += [ "meta/fxfs_fshost.cml" ]
@@ -423,6 +424,7 @@ cmc_merge("test-fshost-no-watcher.cml") {
   sources = [
     "meta/base_fshost.cml",
     "meta/core_fshost.cml",
+    "meta/cpp_fshost.cml",
     "meta/no_watcher.cml",
   ]
   if (bundle_fxfs || data_filesystem_format == "fxfs") {
@@ -499,6 +501,7 @@ fuchsia_test_package("fshost-tests") {
 cmc_merge("fshost.cml") {
   sources = [
     "meta/base_fshost.cml",
+    "meta/cpp_fshost.cml",
     "meta/real_fshost.cml",
   ]
   if (!bootfs_only) {
