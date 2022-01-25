@@ -23,7 +23,7 @@ use {
         select,
         stream::FuturesUnordered,
     },
-    log::{error, info},
+    log::{error, info, warn},
     std::{convert::TryFrom, sync::Arc},
 };
 
@@ -174,25 +174,14 @@ async fn handle_client_requests(
                 }
             }
             fidl_policy::ClientControllerRequest::StartClientConnections { responder } => {
-                let mut iface_manager = iface_manager.lock().await;
-                let status = match iface_manager.start_client_connections().await {
-                    Ok(()) => fidl_common::RequestStatus::Acknowledged,
-                    Err(_) => fidl_common::RequestStatus::RejectedIncompatibleMode,
-                };
-                responder.send(status)?;
+                let response =
+                    handle_client_request_start_client_connections(iface_manager.clone()).await;
+                responder.send(response)?
             }
             fidl_policy::ClientControllerRequest::StopClientConnections { responder } => {
-                let mut iface_manager = iface_manager.lock().await;
-                let status = match iface_manager
-                    .stop_client_connections(
-                        client_types::DisconnectReason::FidlStopClientConnectionsRequest,
-                    )
-                    .await
-                {
-                    Ok(()) => fidl_common::RequestStatus::Acknowledged,
-                    Err(_) => fidl_common::RequestStatus::RejectedIncompatibleMode,
-                };
-                responder.send(status)?;
+                let response =
+                    handle_client_request_stop_client_connections(iface_manager.clone()).await;
+                responder.send(response)?
             }
             fidl_policy::ClientControllerRequest::ScanForNetworks { iterator, .. } => {
                 let fut = handle_client_request_scan(
@@ -467,6 +456,31 @@ fn reject_provider_request(req: fidl_policy::ClientProviderRequest) -> Result<()
     }
 }
 
+/// Allows client operations to be performed.
+async fn handle_client_request_start_client_connections(
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+) -> fidl_common::RequestStatus {
+    let mut iface_manager = iface_manager.lock().await;
+    if let Err(e) = iface_manager.start_client_connections().await {
+        warn!("encountered an error while starting client connections: {:?}", e);
+    }
+    fidl_common::RequestStatus::Acknowledged
+}
+
+/// Stops all active client connections and disallows future client operations.
+async fn handle_client_request_stop_client_connections(
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+) -> fidl_common::RequestStatus {
+    let mut iface_manager = iface_manager.lock().await;
+    if let Err(e) = iface_manager
+        .stop_client_connections(client_types::DisconnectReason::FidlStopClientConnectionsRequest)
+        .await
+    {
+        warn!("encountered an error while stopping client connections: {:?}", e);
+    }
+    fidl_common::RequestStatus::Acknowledged
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -490,6 +504,7 @@ mod tests {
         },
         pin_utils::pin_mut,
         std::convert::TryFrom,
+        test_case::test_case,
         wlan_common::{assert_variant, random_fidl_bss_description},
     };
 
@@ -509,6 +524,8 @@ mod tests {
         pub disconnected_ifaces: Vec<u16>,
         command_sender: mpsc::Sender<IfaceManagerRequest>,
         pub wpa3_capable: bool,
+        start_client_connections_succeeds: bool,
+        stop_client_connections_succeeds: bool,
     }
 
     impl FakeIfaceManager {
@@ -523,6 +540,8 @@ mod tests {
                 disconnected_ifaces: Vec::new(),
                 command_sender: command_sender,
                 wpa3_capable: true,
+                start_client_connections_succeeds: true,
+                stop_client_connections_succeeds: true,
             }
         }
 
@@ -537,6 +556,8 @@ mod tests {
                 disconnected_ifaces: Vec::new(),
                 command_sender: command_sender,
                 wpa3_capable: false,
+                start_client_connections_succeeds: true,
+                stop_client_connections_succeeds: true,
             }
         }
     }
@@ -633,13 +654,21 @@ mod tests {
             &mut self,
             _reason: client_types::DisconnectReason,
         ) -> Result<(), Error> {
-            self.client_connections_enabled = false;
-            Ok(())
+            if self.stop_client_connections_succeeds {
+                self.client_connections_enabled = false;
+                Ok(())
+            } else {
+                Err(format_err!("stop client connections failed"))
+            }
         }
 
         async fn start_client_connections(&mut self) -> Result<(), Error> {
-            self.client_connections_enabled = true;
-            Ok(())
+            if self.start_client_connections_succeeds {
+                self.client_connections_enabled = true;
+                Ok(())
+            } else {
+                Err(format_err!("start client connections failed"))
+            }
         }
 
         async fn start_ap(
@@ -2206,6 +2235,58 @@ mod tests {
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
+        );
+    }
+
+    #[test_case(true)]
+    #[test_case(false)]
+    #[fuchsia::test(add_test_attr = false)]
+    fn test_start_client_connections(start_client_connections_succeeds: bool) {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (proxy, _server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
+            .expect("failed to create ClientSmeProxy");
+        let (req_sender, _req_recvr) = mpsc::channel(1);
+        let mut iface_manager = FakeIfaceManager::new(proxy.clone(), req_sender);
+
+        // Setup the IfaceManager to succeed or fail depending on the test configuration.
+        iface_manager.start_client_connections_succeeds = start_client_connections_succeeds;
+
+        let iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>> =
+            Arc::new(Mutex::new(iface_manager));
+
+        // Regardless of what the IfaceManager is actually able to do, we expect the response to
+        // simply ack the caller.
+        let fut = handle_client_request_start_client_connections(iface_manager);
+        pin_mut!(fut);
+        assert_variant!(
+            exec.run_until_stalled(&mut fut),
+            Poll::Ready(fidl_common::RequestStatus::Acknowledged)
+        );
+    }
+
+    #[test_case(true)]
+    #[test_case(false)]
+    #[fuchsia::test(add_test_attr = false)]
+    fn test_stop_client_connections(stop_client_connections_succeeds: bool) {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (proxy, _server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
+            .expect("failed to create ClientSmeProxy");
+        let (req_sender, _req_recvr) = mpsc::channel(1);
+        let mut iface_manager = FakeIfaceManager::new(proxy.clone(), req_sender);
+
+        // Setup the IfaceManager to succeed or fail depending on the test configuration.
+        iface_manager.stop_client_connections_succeeds = stop_client_connections_succeeds;
+
+        let iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>> =
+            Arc::new(Mutex::new(iface_manager));
+
+        // Regardless of what the IfaceManager is actually able to do, we expect the response to
+        // simply ack the caller.
+        let fut = handle_client_request_stop_client_connections(iface_manager);
+        pin_mut!(fut);
+        assert_variant!(
+            exec.run_until_stalled(&mut fut),
+            Poll::Ready(fidl_common::RequestStatus::Acknowledged)
         );
     }
 }
