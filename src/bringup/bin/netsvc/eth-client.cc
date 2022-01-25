@@ -17,7 +17,9 @@
 #endif
 
 zx::status<std::unique_ptr<EthClient>> EthClient::Create(
-    fidl::ClientEnd<fuchsia_hardware_ethernet::Device> client_end, zx::vmo io_vmo, void* io_mem) {
+    async_dispatcher_t* dispatcher, fidl::ClientEnd<fuchsia_hardware_ethernet::Device> client_end,
+    zx::vmo io_vmo, void* io_mem, fit::closure on_rx, fit::closure on_status,
+    fit::closure on_closed) {
   fidl::WireSyncClient eth = fidl::BindSyncClient(std::move(client_end));
 
   fidl::WireResult r = eth->GetFifos();
@@ -68,9 +70,9 @@ zx::status<std::unique_ptr<EthClient>> EthClient::Create(
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<EthClient> cli(new (&ac)
-                                     EthClient(std::move(eth), std::move(fifos.tx), fifos.tx_depth,
-                                               std::move(fifos.rx), fifos.rx_depth, io_mem));
+  std::unique_ptr<EthClient> cli(new (&ac) EthClient(
+      dispatcher, std::move(eth), std::move(fifos.tx), fifos.tx_depth, std::move(fifos.rx),
+      fifos.rx_depth, io_mem, std::move(on_rx), std::move(on_status), std::move(on_closed)));
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
@@ -127,41 +129,45 @@ zx_status_t EthClient::CompleteTx(void* ctx, void (*func)(void* ctx, void* cooki
   });
 }
 
-zx_status_t EthClient::CompleteRx(void* ctx, void (*func)(void* ctx, void* cookie, size_t len)) {
-  return CompleteFifo(rx_fifo_, rx_size_, [ctx, func](const eth_fifo_entry_t& e) {
+zx_status_t EthClient::CompleteRx(void* ctx, void (*func)(async_dispatcher_t* dispatcher, void* ctx,
+                                                          void* cookie, size_t len)) {
+  return CompleteFifo(rx_fifo_, rx_size_, [ctx, func, this](const eth_fifo_entry_t& e) {
     IORING_TRACE("eth:rx- c=0x%08lx o=%u l=%u f=%u\n", e.cookie, e.offset, e.length, e.flags);
-    func(ctx, reinterpret_cast<void*>(e.cookie), e.length);
+    func(dispatcher_, ctx, reinterpret_cast<void*>(e.cookie), e.length);
   });
 }
 
-namespace {
-
-zx::status<zx_signals_t> WaitFifo(zx::fifo& fifo, zx::time deadline,
-                                  zx_signals_t extra_signals = 0) {
-  zx_signals_t signals;
-  if (zx_status_t status =
-          fifo.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED | extra_signals, deadline, &signals);
-      status != ZX_OK) {
-    return zx::error(status);
+void EthClient::OnRxSignal(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                           zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status == ZX_ERR_CANCELED) {
+    return;
   }
-  if (signals & ZX_FIFO_PEER_CLOSED) {
-    return zx::error(ZX_ERR_PEER_CLOSED);
+  ZX_ASSERT_MSG(status == ZX_OK, "dispatch error %s", zx_status_get_string(status));
+  if (signal->observed & ZX_FIFO_PEER_CLOSED) {
+    on_closed_();
+    return;
   }
-  return zx::ok(signals);
-}
-
-}  // namespace
-
-zx::status<bool> EthClient::WaitRx(zx::time deadline) {
-  zx::status status = WaitFifo(rx_fifo_, deadline, fuchsia_hardware_ethernet::wire::kSignalStatus);
-  if (status.is_error()) {
-    return status.take_error();
+  if (signal->observed & ZX_FIFO_READABLE) {
+    on_rx_();
   }
-  return zx::ok((status.value() & fuchsia_hardware_ethernet::wire::kSignalStatus) != 0);
+  if (signal->observed & fuchsia_hardware_ethernet::wire::kSignalStatus) {
+    on_signal_();
+  }
+  status = wait->Begin(dispatcher);
+  ZX_ASSERT_MSG(status == ZX_OK, "failed to reinstall wait %s", zx_status_get_string(status));
 }
 
 zx_status_t EthClient::WaitTx(zx::time deadline) {
-  return WaitFifo(tx_fifo_, deadline).status_value();
+  zx_signals_t signals;
+  if (zx_status_t status =
+          tx_fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, deadline, &signals);
+      status != ZX_OK) {
+    return status;
+  }
+  if (signals & ZX_FIFO_PEER_CLOSED) {
+    return ZX_ERR_PEER_CLOSED;
+  }
+  return ZX_OK;
 }
 
 zx::status<fuchsia_hardware_ethernet::wire::DeviceStatus> EthClient::GetStatus() {

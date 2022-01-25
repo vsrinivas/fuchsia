@@ -6,6 +6,7 @@
 #define SRC_BRINGUP_BIN_NETSVC_INET6_H_
 
 #include <endian.h>
+#include <lib/async/dispatcher.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -121,7 +122,7 @@ struct ndp_n_hdr {
 
 // provided by inet6.c
 void ip6_init(mac_addr_t macaddr, bool quiet);
-void eth_recv(void* data, size_t len);
+void eth_recv(async_dispatcher_t* dispatcher, void* data, size_t len);
 
 using eth_buffer_t = struct eth_buffer;
 
@@ -137,9 +138,9 @@ int eth_add_mcast_filter(const mac_addr_t* addr);
 zx_status_t udp6_send(const void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                       uint16_t sport, bool block);
 
-// implement to recive UDP packets
-void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
-               const ip6_addr_t* saddr, uint16_t sport);
+// implement to receive UDP packets
+void udp6_recv(async_dispatcher_t* dispatcher, void* data, size_t len, const ip6_addr_t* daddr,
+               uint16_t dport, const ip6_addr_t* saddr, uint16_t sport);
 
 uint16_t ip6_checksum(const ip6_hdr_t& ip, uint8_t type);
 

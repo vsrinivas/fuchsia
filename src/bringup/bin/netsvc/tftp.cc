@@ -4,6 +4,7 @@
 
 #include "src/bringup/bin/netsvc/tftp.h"
 
+#include <lib/async/cpp/task.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
@@ -26,10 +27,14 @@ netsvc::FileApiInterface* g_file_api = nullptr;
 
 namespace {
 
+tftp_status transport_send(void* data, size_t len, void* transport_cookie);
+void end_connection();
+
 struct transport_info_t {
   ip6_addr_t dest_addr;
   uint16_t dest_port;
   uint32_t timeout_ms;
+  async_dispatcher_t* dispatcher;
 };
 
 char tftp_session_scratch[SCRATCHSZ];
@@ -38,8 +43,32 @@ char tftp_out_scratch[SCRATCHSZ];
 size_t last_msg_size = 0;
 tftp_session* session = nullptr;
 transport_info_t transport_info;
+async::Task timeout_task([](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+  if (status == ZX_ERR_CANCELED) {
+    return;
+  }
+  ZX_ASSERT_MSG(status == ZX_OK, "bad status in timeout task %s", zx_status_get_string(status));
 
-zx_time_t g_tftp_next_timeout = ZX_TIME_INFINITE;
+  tftp_status result =
+      tftp_timeout(session, tftp_out_scratch, &last_msg_size, sizeof(tftp_out_scratch),
+                   &transport_info.timeout_ms, g_file_api);
+  if (result == TFTP_ERR_TIMED_OUT) {
+    printf("netsvc: excessive timeouts, dropping tftp connection\n");
+    g_file_api->Abort();
+    end_connection();
+  } else if (result < 0) {
+    printf("netsvc: failed to generate timeout response, dropping tftp connection\n");
+    g_file_api->Abort();
+    end_connection();
+  } else {
+    if (last_msg_size > 0) {
+      tftp_status send_result = transport_send(tftp_out_scratch, last_msg_size, &transport_info);
+      if (send_result != TFTP_NO_ERROR) {
+        printf("netsvc: failed to send tftp timeout response (err = %d)\n", send_result);
+      }
+    }
+  }
+});
 
 ssize_t file_open_read(const char* filename, void* cookie) {
   auto* file_api = reinterpret_cast<netsvc::FileApiInterface*>(cookie);
@@ -77,7 +106,12 @@ tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
   // The timeout is relative to sending instead of receiving a packet, since there are some
   // received packets we want to ignore (duplicate ACKs).
   if (transport_info->timeout_ms != 0) {
-    g_tftp_next_timeout = zx_deadline_after(ZX_MSEC(transport_info->timeout_ms));
+    status = timeout_task.Cancel();
+    ZX_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_NOT_FOUND, "failed to cancel timeout task %s",
+                  zx_status_get_string(status));
+    status =
+        timeout_task.PostDelayed(transport_info->dispatcher, zx::msec(transport_info->timeout_ms));
+    ZX_ASSERT_MSG(status == ZX_OK, "failed to schedule timeout %s", zx_status_get_string(status));
   }
   return TFTP_NO_ERROR;
 }
@@ -88,7 +122,8 @@ int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
   return 0;
 }
 
-void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
+void initialize_connection(async_dispatcher_t* dispatcher, const ip6_addr_t* saddr,
+                           uint16_t sport) {
   int ret = tftp_init(&session, tftp_session_scratch, sizeof(tftp_session_scratch));
   if (ret != TFTP_NO_ERROR) {
     printf("netsvc: failed to initiate tftp session\n");
@@ -109,6 +144,7 @@ void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
   memcpy(&transport_info.dest_addr, saddr, sizeof(ip6_addr_t));
   transport_info.dest_port = sport;
   transport_info.timeout_ms = TFTP_TIMEOUT_SECS * 1000;
+  transport_info.dispatcher = dispatcher;
   tftp_transport_interface transport_ifc = {transport_send, NULL, transport_timeout_set};
   tftp_session_set_transport_interface(session, &transport_ifc);
 
@@ -117,7 +153,9 @@ void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
 
 void end_connection() {
   session = nullptr;
-  g_tftp_next_timeout = ZX_TIME_INFINITE;
+  zx_status_t status = timeout_task.Cancel();
+  ZX_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_NOT_FOUND, "failed to cancel timeout task %s",
+                zx_status_get_string(status));
   xfer_active = false;
 }
 
@@ -128,41 +166,31 @@ void report_metrics() {
   }
 }
 
-}  // namespace
-
-zx_time_t tftp_next_timeout() { return g_tftp_next_timeout; }
-
-void tftp_timeout_expired() {
-  tftp_status result =
-      tftp_timeout(session, tftp_out_scratch, &last_msg_size, sizeof(tftp_out_scratch),
-                   &transport_info.timeout_ms, g_file_api);
-  if (result == TFTP_ERR_TIMED_OUT) {
-    printf("netsvc: excessive timeouts, dropping tftp connection\n");
-    g_file_api->Abort();
-    end_connection();
-  } else if (result < 0) {
-    printf("netsvc: failed to generate timeout response, dropping tftp connection\n");
-    g_file_api->Abort();
-    end_connection();
-  } else {
-    if (last_msg_size > 0) {
-      tftp_status send_result = transport_send(tftp_out_scratch, last_msg_size, &transport_info);
-      if (send_result != TFTP_NO_ERROR) {
-        printf("netsvc: failed to send tftp timeout response (err = %d)\n", send_result);
-      }
-    }
+void tftp_send_next() {
+  if (session == nullptr || !tftp_session_has_pending(session)) {
+    return;
   }
+  last_msg_size = sizeof(tftp_out_scratch);
+  tftp_prepare_data(session, tftp_out_scratch, &last_msg_size, &transport_info.timeout_ms,
+                    g_file_api);
+  if (last_msg_size) {
+    transport_send(tftp_out_scratch, last_msg_size, &transport_info);
+  }
+  zx_status_t status = async::PostTask(transport_info.dispatcher, tftp_send_next);
+  ZX_ASSERT_MSG(status == ZX_OK, "failed to post send next task %s", zx_status_get_string(status));
 }
 
-void tftp_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
-               const ip6_addr_t* saddr, uint16_t sport) {
+}  // namespace
+
+void tftp_recv(async_dispatcher_t* dispatcher, void* data, size_t len, const ip6_addr_t* daddr,
+               uint16_t dport, const ip6_addr_t* saddr, uint16_t sport) {
   if (dport == NB_TFTP_INCOMING_PORT) {
     if (session != NULL) {
       printf("netsvc: only one simultaneous tftp session allowed\n");
       // ignore attempts to connect when a session is in progress
       return;
     }
-    initialize_connection(saddr, sport);
+    initialize_connection(dispatcher, saddr, sport);
   } else if (!session) {
     // Ignore anything sent to the outgoing port unless we've already
     // established a connection.
@@ -181,6 +209,8 @@ void tftp_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
   tftp_status status = tftp_handle_msg(session, &transport_info, g_file_api, &handler_opts);
   switch (status) {
     case TFTP_NO_ERROR:
+      // Schedule any pending data that needs to be sent.
+      tftp_send_next();
       return;
     case TFTP_TRANSFER_COMPLETED:
       printf("netsvc: tftp %s of file %s completed\n", g_file_api->is_write() ? "write" : "read",
@@ -196,15 +226,4 @@ void tftp_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
       break;
   }
   end_connection();
-}
-
-bool tftp_has_pending() { return session && tftp_session_has_pending(session); }
-
-void tftp_send_next() {
-  last_msg_size = sizeof(tftp_out_scratch);
-  tftp_prepare_data(session, tftp_out_scratch, &last_msg_size, &transport_info.timeout_ms,
-                    g_file_api);
-  if (last_msg_size) {
-    transport_send(tftp_out_scratch, last_msg_size, &transport_info);
-  }
 }

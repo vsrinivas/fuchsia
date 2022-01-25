@@ -402,7 +402,7 @@ void send_router_advertisement() {
   }
 }
 
-void udp6_recv_internal(ip6_hdr_t* ip, void* _data, size_t len) {
+void udp6_recv_internal(async_dispatcher_t* dispatcher, ip6_hdr_t* ip, void* _data, size_t len) {
   udp_hdr_t* udp = static_cast<udp_hdr_t*>(_data);
   uint16_t sum, n;
 
@@ -434,8 +434,8 @@ void udp6_recv_internal(ip6_hdr_t* ip, void* _data, size_t len) {
   }
   len = n - UDP_HDR_LEN;
 
-  udp6_recv(static_cast<uint8_t*>(_data) + UDP_HDR_LEN, len, &ip->dst, ntohs(udp->dst_port),
-            &ip->src, ntohs(udp->src_port));
+  udp6_recv(dispatcher, static_cast<uint8_t*>(_data) + UDP_HDR_LEN, len, &ip->dst,
+            ntohs(udp->dst_port), &ip->src, ntohs(udp->src_port));
 }
 
 void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
@@ -514,7 +514,7 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
   }
 }
 
-void eth_recv(void* _data, size_t len) {
+void eth_recv(async_dispatcher_t* dispatcher, void* _data, size_t len) {
   uint8_t* data = static_cast<uint8_t*>(_data);
   uint32_t n;
 
@@ -566,7 +566,7 @@ void eth_recv(void* _data, size_t len) {
       icmp6_recv(&ip, data, len);
       break;
     case HDR_UDP:
-      udp6_recv_internal(&ip, data, len);
+      udp6_recv_internal(dispatcher, &ip, data, len);
       break;
     default:
       // do nothing

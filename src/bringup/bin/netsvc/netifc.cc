@@ -74,6 +74,7 @@ struct Netifc {
   std::unique_ptr<EthClient> eth;
   mac_addr_t netmac;
   fuchsia_hardware_ethernet::wire::DeviceStatus last_dev_status;
+  fit::callback<void(zx_status_t)> on_error;
 
   fzl::VmoMapper iobuf;
   std::array<eth_buffer_t, kBufferCount> eth_buffer_base;
@@ -155,6 +156,45 @@ struct Netifc {
     *out = buf;
     return ZX_OK;
   }
+
+  void HandleRx() {
+    // Handle any completed rx packets
+    zx_status_t status = eth->CompleteRx(
+        this, [](async_dispatcher_t* dispatcher, void* ctx, void* cookie, size_t len) {
+          Netifc& netifc = *static_cast<Netifc*>(ctx);
+          eth_buffer_t* ethbuf = static_cast<eth_buffer_t*>(cookie);
+          netifc.CheckEthBuf(ethbuf, ETH_BUFFER_RX);
+          netifc_recv(dispatcher, ethbuf->data, len);
+          netifc.eth->QueueRx(ethbuf, ethbuf->data, NET_BUFFERSZ);
+        });
+    if (status != ZX_OK) {
+      printf("netifc: eth rx failed: %s\n", zx_status_get_string(status));
+      on_error(status);
+    }
+  }
+
+  void HandleSignal() {
+    // Device status was signaled, fetch new status.
+    zx::status status = eth->GetStatus();
+    if (status.is_error()) {
+      printf("netifc: error fetching device status %s\n", status.status_string());
+      on_error(status.status_value());
+    }
+    fuchsia_hardware_ethernet::wire::DeviceStatus& device_status = status.value();
+    if (device_status != last_dev_status) {
+      if (device_status & fuchsia_hardware_ethernet::wire::DeviceStatus::kOnline) {
+        printf("netifc: Interface up.\n");
+      } else {
+        printf("netifc: Interface down.\n");
+      }
+      last_dev_status = device_status;
+    }
+  }
+
+  void HandleClosed() {
+    printf("netfic: device closed\n");
+    on_error(ZX_ERR_PEER_CLOSED);
+  }
 };
 
 Netifc g_state;
@@ -205,8 +245,11 @@ zx_status_t eth_send(eth_buffer_t* ethbuf, size_t len) {
 
 int eth_add_mcast_filter(const mac_addr_t* addr) { return 0; }
 
-int netifc_open(cpp17::string_view interface) {
+zx::status<> netifc_open(async_dispatcher_t* dispatcher, cpp17::string_view interface,
+                         fit::callback<void(zx_status_t)> on_error) {
   std::lock_guard lock(g_state.eth_lock);
+
+  g_state.on_error = std::move(on_error);
 
   fidl::ClientEnd<fuchsia_hardware_ethernet::Device> device;
   // TODO: parameterize netsvc ethdir as well?
@@ -214,7 +257,7 @@ int netifc_open(cpp17::string_view interface) {
     zx::status status = netifc_discover("/dev/class/ethernet", interface);
     if (status.is_error()) {
       printf("netifc: failed to discover interface %s\n", status.status_string());
-      return -1;
+      return status.take_error();
     }
     auto& [dev, mac] = status.value();
     device.channel() = std::move(dev);
@@ -226,21 +269,21 @@ int netifc_open(cpp17::string_view interface) {
   zx::vmo vmo;
   if (zx_status_t status = zx::vmo::create(iosize, 0, &vmo); status != ZX_OK) {
     printf("netifc: create VMO failed: %s\n", zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
 
   constexpr char kVmoName[] = "eth-buffers";
   if (zx_status_t status = vmo.set_property(ZX_PROP_NAME, kVmoName, sizeof(kVmoName));
       status != ZX_OK) {
     printf("netifc: set_property failed: %s\n", zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
 
   fzl::VmoMapper mapper;
   if (zx_status_t status = mapper.Map(vmo, 0, iosize, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
       status != ZX_OK) {
     printf("netifc: map VMO failed: %s\n", zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
   printf("netifc: create %zu eth buffers\n", g_state.eth_buffer_base.size());
   // Assign data chunks to ethbufs.
@@ -254,9 +297,14 @@ int netifc_open(cpp17::string_view interface) {
     g_state.PutBuffer(&buffer, ETH_BUFFER_FREE);
   }
 
-  zx::status eth_status = EthClient::Create(std::move(device), std::move(vmo), mapper.start());
+  zx::status eth_status =
+      EthClient::Create(dispatcher, std::move(device), std::move(vmo), mapper.start(),
+                        fit::bind_member<&Netifc::HandleRx>(&g_state),
+                        fit::bind_member<&Netifc::HandleSignal>(&g_state),
+                        fit::bind_member<&Netifc::HandleClosed>(&g_state));
   if (eth_status.is_error()) {
     printf("EthClient::create() failed: %s\n", eth_status.status_string());
+    return eth_status.take_error();
   }
   std::unique_ptr<EthClient> eth = std::move(eth_status.value());
 
@@ -276,7 +324,7 @@ int netifc_open(cpp17::string_view interface) {
   g_state.iobuf = std::move(mapper);
   g_state.eth = std::move(eth);
 
-  return ZX_OK;
+  return zx::ok();
 }
 
 void netifc_close() {
@@ -303,61 +351,4 @@ void netifc_close() {
     }
   }
   printf("netifc: recovered %u buffers\n", count);
-}
-
-int netifc_poll(zx_time_t deadline) {
-  // Handle any completed rx packets
-  if (zx_status_t status =
-          g_state.eth->CompleteRx(&g_state,
-                                  [](void* ctx, void* cookie, size_t len) {
-                                    Netifc& netifc = *static_cast<Netifc*>(ctx);
-                                    eth_buffer_t* ethbuf = static_cast<eth_buffer_t*>(cookie);
-                                    netifc.CheckEthBuf(ethbuf, ETH_BUFFER_RX);
-                                    netifc_recv(ethbuf->data, len);
-                                    netifc.eth->QueueRx(ethbuf, ethbuf->data, NET_BUFFERSZ);
-                                  });
-      status != ZX_OK) {
-    printf("netifc: eth rx failed: %s\n", zx_status_get_string(status));
-    return -1;
-  }
-
-  if (netifc_send_pending()) {
-    return 0;
-  }
-
-  {
-    zx::status status = g_state.eth->WaitRx(zx::time(deadline));
-    if (status.is_error()) {
-      if (status.error_value() == ZX_ERR_TIMED_OUT) {
-        // Deadline exceeded.
-        return 0;
-      }
-      printf("netifc: eth rx wait failed: %s\n", status.status_string());
-      return -1;
-    }
-    // No changes to device status.
-    if (!status.value()) {
-      return 0;
-    }
-  }
-
-  // Device status was signaled, fetch new status.
-  {
-    zx::status status = g_state.eth->GetStatus();
-    if (status.is_error()) {
-      printf("netifc: error fetching device status %s\n", status.status_string());
-      return -1;
-    }
-    fuchsia_hardware_ethernet::wire::DeviceStatus& device_status = status.value();
-    if (device_status != g_state.last_dev_status) {
-      if (device_status & fuchsia_hardware_ethernet::wire::DeviceStatus::kOnline) {
-        printf("netifc: Interface up.\n");
-      } else {
-        printf("netifc: Interface down.\n");
-      }
-      g_state.last_dev_status = device_status;
-    }
-  }
-
-  return 0;
 }

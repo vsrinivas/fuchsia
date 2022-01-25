@@ -5,6 +5,8 @@
 #include "src/bringup/bin/netsvc/netsvc.h"
 
 #include <fcntl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/zx/clock.h>
 #include <unistd.h>
@@ -47,8 +49,8 @@ bool netbootloader() { return g_netbootloader; }
 bool all_features() { return g_all_features; }
 const char* nodename() { return g_nodename; }
 
-void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
-               const ip6_addr_t* saddr, uint16_t sport) {
+void udp6_recv(async_dispatcher_t* dispatcher, void* data, size_t len, const ip6_addr_t* daddr,
+               uint16_t dport, const ip6_addr_t* saddr, uint16_t sport) {
   bool mcast = (memcmp(daddr, &ip6_ll_all_nodes, sizeof(ip6_addr_t)) == 0);
 
   if (!all_features()) {
@@ -63,23 +65,17 @@ void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
       netboot_recv(data, len, mcast, daddr, dport, saddr, sport);
       break;
     case DEBUGLOG_ACK_PORT:
-      debuglog_recv(data, len, mcast);
+      debuglog_recv(dispatcher, data, len, mcast);
       break;
     case NB_TFTP_INCOMING_PORT:
     case NB_TFTP_OUTGOING_PORT:
-      tftp_recv(data, len, daddr, dport, saddr, sport);
+      tftp_recv(dispatcher, data, len, daddr, dport, saddr, sport);
       break;
   }
 }
 
-void netifc_recv(void* data, size_t len) { eth_recv(data, len); }
-
-bool netifc_send_pending() {
-  if (!tftp_has_pending()) {
-    return false;
-  }
-  tftp_send_next();
-  return tftp_has_pending();
+void netifc_recv(async_dispatcher_t* dispatcher, void* data, size_t len) {
+  eth_recv(dispatcher, data, len);
 }
 
 static const char* zedboot_banner =
@@ -125,8 +121,10 @@ int main(int argc, char** argv) {
     return -1;
   }
 
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
   if (g_all_features) {
-    if (zx_status_t status = debuglog_init(); status != ZX_OK) {
+    if (zx_status_t status = debuglog_init(loop.dispatcher()); status != ZX_OK) {
       printf("netsvc: fatal: error initializing debuglog: %s\n", zx_status_get_string(status));
       return -1;
     }
@@ -153,45 +151,54 @@ int main(int argc, char** argv) {
     printf("netsvc: will not advertise\n");
   }
 
-  for (;;) {
-    if (netifc_open(interface) != 0) {
-      printf("netsvc: fatal error initializing network\n");
-      return -1;
-    }
+  if (g_netbootloader) {
+    printf("%szedboot: version: %s\n\n", zedboot_banner, BOOTLOADER_VERSION);
+  }
 
-    if (g_netbootloader) {
-      printf("%szedboot: version: %s\n\n", zedboot_banner, BOOTLOADER_VERSION);
+  for (;;) {
+    if (zx::status status = netifc_open(loop.dispatcher(), interface,
+                                        [&loop](zx_status_t error) {
+                                          printf("netsvc: interface error: %s\n",
+                                                 zx_status_get_string(error));
+                                          loop.Quit();
+                                        });
+        status.is_error()) {
+      printf("netsvc: fatal: failed to open interface: %s\n", status.status_string());
+      return -1;
     }
 
     printf("netsvc: start\n");
 
-    zx_time_t advertise_next_timeout = ZX_TIME_INFINITE;
-    if (g_netbootloader && should_advertise) {
-      advertise_next_timeout = zx::clock::get_monotonic().get();
-    }
-
-    for (;;) {
-      if (netifc_poll(
-              std::min({advertise_next_timeout, debuglog_next_timeout(), tftp_next_timeout()}))) {
-        printf("netsvc: netifc_poll() failed - terminating\n");
-        break;
-      }
-
-      zx_time_t now = zx::clock::get_monotonic().get();
-      if (now > advertise_next_timeout) {
+    async::Task advertise_task(
+        [](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+          if (status == ZX_ERR_CANCELED) {
+            return;
+          }
+          ZX_ASSERT_MSG(status == ZX_OK, "advertise task dispatch failed %s",
+                        zx_status_get_string(status));
 #if ENABLE_SLAAC
-        send_router_advertisement();
+          send_router_advertisement();
 #endif
-        netboot_advertise(g_nodename);
-        advertise_next_timeout = zx_deadline_after(ZX_SEC(1));
-      }
-      if (now > debuglog_next_timeout()) {
-        debuglog_timeout_expired();
-      }
-      if (now > tftp_next_timeout()) {
-        tftp_timeout_expired();
+          netboot_advertise(g_nodename);
+
+          status = task->PostDelayed(dispatcher, zx::sec(1));
+          ZX_ASSERT_MSG(status == ZX_OK, "failed to post advertise task %s",
+                        zx_status_get_string(status));
+        });
+
+    if (g_netbootloader && should_advertise) {
+      if (zx_status_t status = advertise_task.Post(loop.dispatcher()); status != ZX_OK) {
+        printf("netsvc: fatal: failed to post advertise task: %s", zx_status_get_string(status));
+        return -1;
       }
     }
+
+    loop.Run();
     netifc_close();
+    if (zx_status_t status = advertise_task.Cancel();
+        status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
+      printf("netsvc: fatal: failed to cancel advertise task: %s", zx_status_get_string(status));
+      return -1;
+    }
   }
 }

@@ -5,7 +5,10 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_NETIFC_H_
 #define SRC_BRINGUP_BIN_NETSVC_NETIFC_H_
 
+#include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <lib/stdcompat/string_view.h>
+#include <lib/zx/status.h>
 #include <stdbool.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -14,10 +17,8 @@
 //
 // If non-empty, `interface` holds the topological path of the interface
 // intended to use for networking.
-int netifc_open(cpp17::string_view interface);
-
-// Process inbound packet(s).
-int netifc_poll(zx_time_t deadline);
+zx::status<> netifc_open(async_dispatcher_t* dispatcher, cpp17::string_view interface,
+                         fit::callback<void(zx_status_t)> on_error);
 
 // Return nonzero if interface exists.
 int netifc_active();
@@ -25,10 +26,6 @@ int netifc_active();
 // Shut down networking.
 void netifc_close();
 
-void netifc_recv(void* data, size_t len);
-
-// Send out next pending packet, and return value indicating if more are
-// available to send.
-bool netifc_send_pending();
+void netifc_recv(async_dispatcher_t* dispatcher, void* data, size_t len);
 
 #endif  // SRC_BRINGUP_BIN_NETSVC_NETIFC_H_

@@ -5,18 +5,13 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_TFTP_H_
 #define SRC_BRINGUP_BIN_NETSVC_TFTP_H_
 
+#include <lib/async/dispatcher.h>
+
 #include "src/bringup/bin/netsvc/inet6.h"
 
 #define TFTP_TIMEOUT_SECS 1
 
-zx_time_t tftp_next_timeout();
-
-void tftp_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
-               const ip6_addr_t* saddr, uint16_t sport);
-
-void tftp_timeout_expired();
-
-bool tftp_has_pending();
-void tftp_send_next();
+void tftp_recv(async_dispatcher_t* dispatcher, void* data, size_t len, const ip6_addr_t* daddr,
+               uint16_t dport, const ip6_addr_t* saddr, uint16_t sport);
 
 #endif  // SRC_BRINGUP_BIN_NETSVC_TFTP_H_

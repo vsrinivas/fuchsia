@@ -6,11 +6,14 @@
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <inttypes.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/debuglog.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
@@ -27,12 +30,8 @@ static size_t pkt_len;
 static volatile uint32_t seqno = 1;
 static volatile uint32_t pending = 0;
 
-static zx_time_t g_debuglog_next_timeout = ZX_TIME_INFINITE;
-
-zx_time_t debuglog_next_timeout() { return g_debuglog_next_timeout; }
-
-#define SEND_DELAY_SHORT ZX_MSEC(100)
-#define SEND_DELAY_LONG ZX_SEC(4)
+constexpr zx::duration kSendDelayShort = zx::msec(100);
+constexpr zx::duration kSendDelayLong = zx::sec(4);
 
 // Number of consecutive unacknowledged packets we will send before reducing send rate.
 static const unsigned kUnackedThreshold = 5;
@@ -41,7 +40,23 @@ static const unsigned kUnackedThreshold = 5;
 static unsigned num_unacked = 0;
 
 // How long to wait between sending.
-static zx_duration_t send_delay = SEND_DELAY_SHORT;
+static zx::duration send_delay = kSendDelayShort;
+
+static void debuglog_send(async_dispatcher_t* dispatcher);
+
+async::Task timeout_task([](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+  if (status == ZX_ERR_CANCELED) {
+    return;
+  }
+  ZX_ASSERT_MSG(status == ZX_OK, "unexpected task status %s", zx_status_get_string(status));
+  if (pending) {
+    // No reply. If no one is listening, reduce send rate.
+    if (++num_unacked >= kUnackedThreshold) {
+      send_delay = kSendDelayLong;
+    }
+  }
+  debuglog_send(dispatcher);
+});
 
 static size_t get_log_line(char* out) {
   char buf[ZX_LOG_RECORD_MAX + 1];
@@ -67,7 +82,7 @@ static size_t get_log_line(char* out) {
   }
 }
 
-zx_status_t debuglog_init() {
+zx_status_t debuglog_init(async_dispatcher_t* dispatcher) {
   zx::status client_end = service::Connect<fuchsia_boot::ReadOnlyLog>();
   if (client_end.is_error()) {
     return client_end.status_value();
@@ -78,8 +93,11 @@ zx_status_t debuglog_init() {
   }
   debuglog = std::move(result->log);
 
-  // Set up our timeout to expire immediately, so that we check for pending log messages
-  g_debuglog_next_timeout = zx::clock::get_monotonic().get();
+  // Set up our timeout to expire immediately, so that we check for pending log
+  // messages.
+  if (zx_status_t status = timeout_task.Post(dispatcher); status != ZX_OK) {
+    return status;
+  }
 
   seqno = 1;
   pending = 0;
@@ -89,7 +107,16 @@ zx_status_t debuglog_init() {
 
 // If we have an outstanding (unacknowledged) log, resend it. Otherwise, send new logs, if we
 // have any.
-static void debuglog_send() {
+static void debuglog_send(async_dispatcher_t* dispatcher) {
+  auto reschedule = fit::defer([dispatcher]() {
+    zx_status_t status = timeout_task.Cancel();
+    ZX_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_NOT_FOUND, "failed to cancel task %s",
+                  zx_status_get_string(status));
+    status = timeout_task.PostDelayed(dispatcher, send_delay);
+    ZX_ASSERT_MSG(status == ZX_OK, "failed to schedule timeout task %s",
+                  zx_status_get_string(status));
+  });
+
   if (pending == 0) {
     pkt.magic = NB_DEBUGLOG_MAGIC;
     pkt.seqno = seqno;
@@ -108,15 +135,13 @@ static void debuglog_send() {
       pkt_len += MAX_NODENAME_LENGTH + sizeof(uint32_t) * 2;
       pending = 1;
     } else {
-      goto done;
+      return;
     }
   }
   udp6_send(&pkt, pkt_len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT, false);
-done:
-  g_debuglog_next_timeout = zx_deadline_after(send_delay);
 }
 
-void debuglog_recv(void* data, size_t len, bool is_mcast) {
+void debuglog_recv(async_dispatcher_t* dispatcher, void* data, size_t len, bool is_mcast) {
   // The only message we should be receiving is acknowledgement of our last transmission
   if (!pending) {
     return;
@@ -134,19 +159,9 @@ void debuglog_recv(void* data, size_t len, bool is_mcast) {
 
   // Received an ack. We have an active listener. Don't delay.
   num_unacked = 0;
-  send_delay = SEND_DELAY_SHORT;
+  send_delay = kSendDelayShort;
 
   seqno = seqno + 1;
   pending = 0;
-  debuglog_send();
-}
-
-void debuglog_timeout_expired() {
-  if (pending) {
-    // No reply. If noone is listening, reduce send rate.
-    if (++num_unacked >= kUnackedThreshold) {
-      send_delay = SEND_DELAY_LONG;
-    }
-  }
-  debuglog_send();
+  debuglog_send(dispatcher);
 }
