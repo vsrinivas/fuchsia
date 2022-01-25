@@ -17,6 +17,7 @@ use {
                 Transaction, TransactionHandler, TransactionLocks, WriteGuard,
                 TRANSACTION_METADATA_MAX_AMOUNT,
             },
+            volume::root_volume,
             ObjectStore,
         },
     },
@@ -235,6 +236,10 @@ impl FxFilesystem {
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await.context("Journal replay failed")?;
         if !options.read_only {
+            filesystem
+                .initialize_metadata_reservation()
+                .await
+                .context("Failed to initialize reservation")?;
             if let Some(graveyard) = filesystem.objects.graveyard() {
                 // Purge the graveyard of old entries in a background task; once that's done the
                 // reaper will continue to run and purge newly received entries.
@@ -332,6 +337,25 @@ impl FxFilesystem {
             }
         };
         Ok((metadata_reservation, options.allocator_reservation, hold))
+    }
+
+    // Determines how much metadata reservation is needed based on the filesystem's initial state,
+    // and claims that amount.
+    async fn initialize_metadata_reservation(self: &Arc<Self>) -> Result<(), Error> {
+        // If the filesystem was only half-initialized, there might not be a root volume, which is
+        // OK.
+        // TODO(jfsulliv): We might consider moving the root volume into FxFilesystem, since the
+        // filesystem can't really be used without it.
+        if let Some(root_volume) = root_volume(self).await? {
+            for object_id in root_volume.list_volumes().await? {
+                self.objects.update_reservation(
+                    object_id,
+                    ObjectStore::compute_size(&self.root_store(), object_id).await?,
+                );
+            }
+        }
+        self.objects.init_metadata_reservation();
+        Ok(())
     }
 }
 

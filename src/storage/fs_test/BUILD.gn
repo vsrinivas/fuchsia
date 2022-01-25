@@ -166,6 +166,15 @@ test("filename_tests") {
   ]
 }
 
+test("full_tests") {
+  sources = [ "full.cc" ]
+  deps = [
+    ":fs_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
 test("inspect_tests") {
   sources = [ "inspect.cc" ]
   deps = [

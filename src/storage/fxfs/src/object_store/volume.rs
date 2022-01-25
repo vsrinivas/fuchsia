@@ -56,6 +56,18 @@ impl RootVolume {
         Ok(store)
     }
 
+    pub async fn list_volumes(&self) -> Result<Vec<u64>, Error> {
+        let layer_set = self.volume_directory.store().tree().layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = self.volume_directory.iter(&mut merger).await?;
+        let mut object_ids = vec![];
+        while let Some((_, id, _)) = iter.get() {
+            object_ids.push(id);
+            iter.advance().await?;
+        }
+        Ok(object_ids)
+    }
+
     /// Returns the volume with the given name.  This is not thread-safe.
     pub async fn volume(&self, volume_name: &str) -> Result<Arc<ObjectStore>, Error> {
         let object_id =

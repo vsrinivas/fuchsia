@@ -541,14 +541,23 @@ impl ObjectManager {
         }
     }
 
+    pub fn init_metadata_reservation(&self) {
+        let inner = self.inner.read().unwrap();
+        self.metadata_reservation
+            .set(
+                inner
+                    .allocator
+                    .as_ref()
+                    .cloned()
+                    .unwrap()
+                    .reserve(inner.required_reservation() - inner.borrowed_metadata_space)
+                    .unwrap(),
+            )
+            .unwrap();
+    }
+
     pub fn metadata_reservation(&self) -> &Reservation {
-        self.metadata_reservation.get_or_init(|| {
-            let inner = self.inner.read().unwrap();
-            // TODO(csuter): Find a way to gracefully recover here.
-            self.allocator()
-                .reserve(inner.required_reservation() - inner.borrowed_metadata_space)
-                .unwrap()
-        })
+        self.metadata_reservation.get().unwrap()
     }
 
     pub fn update_reservation(&self, object_id: u64, amount: u64) {

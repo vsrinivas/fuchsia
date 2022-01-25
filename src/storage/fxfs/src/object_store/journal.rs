@@ -586,6 +586,7 @@ impl Journal {
         let allocator =
             Arc::new(SimpleAllocator::new(filesystem.clone(), INIT_ALLOCATOR_OBJECT_ID));
         self.objects.set_allocator(allocator.clone());
+        self.objects.init_metadata_reservation();
 
         let journal_handle;
         let super_block_a_handle;

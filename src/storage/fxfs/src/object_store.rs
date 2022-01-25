@@ -740,6 +740,45 @@ impl ObjectStore {
         Ok(())
     }
 
+    /// Computes the size of child store |store_object_id|.
+    // TODO(jfsulliv): This is redundant with ObjectStore::open, should we just eagerly open stores
+    // and get rid of this?
+    pub async fn compute_size(self: &Arc<Self>, store_object_id: u64) -> Result<u64, Error> {
+        assert!(self.is_root());
+        let fs = self.filesystem();
+        let _guard =
+            fs.read_lock(&[LockKey::object(self.store_object_id(), store_object_id)]).await;
+
+        let handle =
+            ObjectStore::open_object(self, store_object_id, HandleOptions::default()).await?;
+        let (object_tree_layer_object_ids, extent_tree_layer_object_ids) = {
+            if handle.get_size() > 0 {
+                let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
+                let mut cursor = std::io::Cursor::new(&serialized_info[..]);
+                let (store_info, _version) = StoreInfo::deserialize_with_version(&mut cursor)
+                    .context("Failed to deserialize StoreInfo")?;
+                (store_info.object_tree_layers, store_info.extent_tree_layers)
+            } else {
+                (vec![], vec![])
+            }
+        };
+
+        let mut total_size = 0;
+        for object_id in object_tree_layer_object_ids {
+            let handle = ObjectStore::open_object(self, object_id, HandleOptions::default())
+                .await
+                .context(format!("Failed to open object tree layer file {}", object_id))?;
+            total_size += handle.get_size();
+        }
+        for object_id in extent_tree_layer_object_ids {
+            let handle = ObjectStore::open_object(self, object_id, HandleOptions::default())
+                .await
+                .context(format!("Failed to open extent tree layer file {}", object_id))?;
+            total_size += handle.get_size();
+        }
+        Ok(tree::reservation_amount_from_layer_size(total_size))
+    }
+
     fn get_next_object_id(&self) -> u64 {
         let mut store_info = self.store_info.lock().unwrap();
         let last_object_id = store_info.last_object_id();

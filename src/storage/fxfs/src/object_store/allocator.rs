@@ -1284,6 +1284,7 @@ mod tests {
         fs.object_manager().set_allocator(allocator.clone());
         let store = ObjectStore::new_empty(None, 2, fs.clone());
         fs.object_manager().set_root_store(store.clone());
+        fs.object_manager().init_metadata_reservation();
         allocator.create().await.expect("create failed");
         (fs, allocator, store)
     }

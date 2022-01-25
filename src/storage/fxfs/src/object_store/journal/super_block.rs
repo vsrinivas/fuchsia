@@ -379,6 +379,7 @@ mod tests {
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(FakeAllocator::new());
         fs.object_manager().set_allocator(allocator.clone());
+        fs.object_manager().init_metadata_reservation();
         let root_parent_store = ObjectStore::new_empty(None, 3, fs.clone());
         fs.object_manager().set_root_parent_store(root_parent_store.clone());
         let mut transaction = fs
