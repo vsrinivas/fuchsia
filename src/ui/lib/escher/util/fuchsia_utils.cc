@@ -141,10 +141,19 @@ const vk::Format kPreferredImageFormats[] = {vk::Format::eR8G8B8A8Srgb, vk::Form
                                              vk::Format::eG8B8R82Plane420Unorm};
 
 // Color spaces supported by Escher / Scenic.
+// TODO(fxbug.dev/91778): Currently Escher converts all YUV images to RGBA using
+// BT709 color conversion matrix; however, the images may use other color
+// spaces, which will cause inaccurate color presentation when using non-BT709
+// images. Escher should support sampling such images as well.
 const vk::SysmemColorSpaceFUCHSIA kPreferredRgbColorSpace = {
     static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::SRGB)};
-const vk::SysmemColorSpaceFUCHSIA kPreferredYuvColorSpace = {
-    static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::REC709)};
+const vk::SysmemColorSpaceFUCHSIA kPreferredYuvColorSpaces[] = {
+    {static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::REC709)},
+    {static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::REC601_NTSC)},
+    {static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::REC601_NTSC_FULL_RANGE)},
+    {static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::REC601_PAL)},
+    {static_cast<uint32_t>(fuchsia::sysmem::ColorSpaceType::REC601_PAL_FULL_RANGE)},
+};
 
 }  // namespace
 
@@ -152,13 +161,14 @@ vk::ImageFormatConstraintsInfoFUCHSIA GetDefaultImageFormatConstraintsInfo(
     const vk::ImageCreateInfo& create_info) {
   FX_DCHECK(create_info.format != vk::Format::eUndefined);
   FX_DCHECK(create_info.usage != vk::ImageUsageFlags{});
+  bool is_yuv = image_utils::IsYuvFormat(create_info.format);
   vk::ImageFormatConstraintsInfoFUCHSIA format_info;
   format_info.setImageCreateInfo(create_info)
       .setRequiredFormatFeatures(image_utils::GetFormatFeatureFlagsFromUsage(create_info.usage))
       .setSysmemPixelFormat({})
-      .setColorSpaceCount(1u)
-      .setPColorSpaces(image_utils::IsYuvFormat(create_info.format) ? &kPreferredYuvColorSpace
-                                                                    : &kPreferredRgbColorSpace);
+      .setColorSpaceCount(
+          is_yuv ? sizeof(kPreferredYuvColorSpaces) / sizeof(kPreferredYuvColorSpaces[0]) : 1u)
+      .setPColorSpaces(is_yuv ? kPreferredYuvColorSpaces : &kPreferredRgbColorSpace);
   return format_info;
 }
 
