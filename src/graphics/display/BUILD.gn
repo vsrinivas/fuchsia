@@ -25,9 +25,16 @@ group("drivers") {
   ]
 }
 
+group("tools") {
+  # Most bundle groupings in the Fuchsia build system are specified as testonly. As the build system
+  # does not provide a way to specify "tools not intended for shipping to end users", we mark this
+  # as `testonly` to achieve that purpose.
+  testonly = true
+  deps = [ "bin/display-tool" ]
+}
+
 group("tests") {
   testonly = true
-
   deps = [
     ":display-fuzzers",
     "bin/display-factory-test",
