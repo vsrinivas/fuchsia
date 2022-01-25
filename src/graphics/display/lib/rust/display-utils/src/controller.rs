@@ -4,21 +4,23 @@
 
 use {
     fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_hardware_display as display,
+    fidl_fuchsia_hardware_display::{self as display, ControllerEvent},
     fuchsia_async::{self as fasync, futures::TryStreamExt, DurationExt, TimeoutExt},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon as zx,
-    futures::future,
+    futures::{channel::mpsc, future},
+    parking_lot::RwLock,
     std::{
         ffi::OsStr,
         fmt,
         fs::File,
         path::{Path, PathBuf},
+        sync::Arc,
     },
     thiserror::Error,
 };
 
-use crate::types::DisplayInfo;
+use crate::types::{DisplayId, DisplayInfo};
 
 const DEV_DIR_PATH: &str = "/dev/class/display-controller";
 const TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
@@ -34,6 +36,9 @@ pub enum ControllerError {
     #[error("failed to watch files in device directory")]
     VfsWatcherError,
 
+    #[error("a singleton task was already initiated")]
+    AlreadyRequested,
+
     #[error("FIDL error: {0}")]
     FidlError(#[from] fidl::Error),
 
@@ -42,23 +47,45 @@ pub enum ControllerError {
 
     #[error("zircon error: {0}")]
     ZxError(#[from] zx::Status),
+
+    #[error("failed to notify vsync: {0}")]
+    VsyncEventError(#[from] mpsc::TrySendError<VsyncEvent>),
 }
 
 pub type Result<T> = std::result::Result<T, ControllerError>;
 
-/// Client abstraction for the `fuchsia.hardware.display.Controller` protocol.
+/// Client abstraction for the `fuchsia.hardware.display.Controller` protocol. Instances can be
+/// safely cloned and passed across threads.
+#[derive(Clone)]
 pub struct Controller {
-    displays: Vec<DisplayInfo>,
+    inner: Arc<RwLock<ControllerInner>>,
+}
 
-    #[allow(unused)]
+struct ControllerInner {
+    displays: Vec<DisplayInfo>,
     proxy: display::ControllerProxy,
-    #[allow(unused)]
-    events: display::ControllerEventStream,
+    events: Option<display::ControllerEventStream>,
 
     // TODO(fxbug.dev/33675): This channel is currently necessary to maintain a FIDL client
     // connection to the display-controller device. It doesn't have any other meaningful purpose
     // and we should remove it.
     _redundant_device_channel: zx::Channel,
+
+    // All subscribed vsync listeners and their optional ID filters.
+    vsync_listeners: Vec<(mpsc::UnboundedSender<VsyncEvent>, Option<DisplayId>)>,
+}
+
+/// A vsync event payload.
+#[derive(Debug)]
+pub struct VsyncEvent {
+    /// The ID of the display that generated the vsync event.
+    pub id: DisplayId,
+
+    /// The monotonic timestamp of the vsync event.
+    pub timestamp: zx::Time,
+
+    /// The stamp of the latest fully applied display configuration.
+    pub config: display::ConfigStamp,
 }
 
 impl Controller {
@@ -106,23 +133,124 @@ impl Controller {
             .into_iter()
             .map(DisplayInfo)
             .collect::<Vec<_>>();
-        Ok(Controller { proxy, events, displays, _redundant_device_channel })
+        Ok(Controller {
+            inner: Arc::new(RwLock::new(ControllerInner {
+                proxy,
+                events: Some(events),
+                displays,
+                _redundant_device_channel,
+                vsync_listeners: Vec::new(),
+            })),
+        })
     }
 
-    /// Returns the list of displays that are currently known to be present on the system.
-    pub fn displays(&self) -> &Vec<DisplayInfo> {
-        &self.displays
+    /// Returns a copy of the list of displays that are currently known to be present on the system.
+    pub fn displays(&self) -> Vec<DisplayInfo> {
+        self.inner.read().displays.clone()
     }
 
-    // TODO(armansito): Add a mechanism for clients to observe individual events over the same
-    // underlying `display::ControllerEventStream`.
+    /// Tell the driver to enable vsync notifications and register a channel to listen to vsync events.
+    pub fn add_vsync_listener(
+        &self,
+        id: Option<DisplayId>,
+    ) -> Result<mpsc::UnboundedReceiver<VsyncEvent>> {
+        self.inner.read().proxy.enable_vsync(true)?;
+
+        // TODO(armansito): Switch to a bounded channel instead.
+        let (sender, receiver) = mpsc::unbounded::<VsyncEvent>();
+        self.inner.write().vsync_listeners.push((sender, id));
+        Ok(receiver)
+    }
+
+    /// Apply a display configuration. The client is expected to receive a vsync event once the
+    /// configuration is successfully applied. Returns an error if the FIDL message cannot be sent.
+    // TODO(armansito): Parameterize this function with the contents of the display configuration.
+    pub fn apply_config(&self) -> Result<()> {
+        self.inner.read().proxy.apply_config().map_err(ControllerError::from)
+    }
+
+    /// Returns a Future that represents the FIDL event handling task. Once scheduled on an
+    /// executor, this task will continuously handle incoming FIDL events from the display stack
+    /// and the returned Future will not terminate until the FIDL channel is closed.
+    ///
+    /// This task can be scheduled safely on any thread.
+    pub async fn handle_events(&self) -> Result<()> {
+        let inner = self.inner.clone();
+        let mut events = inner.write().events.take().ok_or(ControllerError::AlreadyRequested)?;
+        while let Some(msg) = events.try_next().await? {
+            match msg {
+                ControllerEvent::OnDisplaysChanged { added, removed } => {
+                    inner.read().handle_displays_changed(added, removed);
+                }
+                ControllerEvent::OnVsync {
+                    display_id,
+                    timestamp,
+                    applied_config_stamp,
+                    cookie,
+                } => {
+                    inner.write().handle_vsync(
+                        display_id,
+                        timestamp,
+                        applied_config_stamp,
+                        cookie,
+                    )?;
+                }
+                _ => continue,
+            }
+        }
+        Ok(())
+    }
 }
 
 // fmt::Debug implementation to allow a `Controller` instance to be used with a debug format
 // specifier. We use a custom implementation as not all `Controller` members derive fmt::Debug.
 impl fmt::Debug for Controller {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Controller").field("displays", &self.displays).finish()
+        f.debug_struct("Controller").field("displays", &self.displays()).finish()
+    }
+}
+
+impl ControllerInner {
+    fn handle_displays_changed(&self, _added: Vec<display::Info>, _removed: Vec<u64>) {
+        // TODO(armansito): update the displays list and notify clients. Terminate vsync listeners
+        // that are attached to a removed display.
+    }
+
+    fn handle_vsync(
+        &mut self,
+        display_id: u64,
+        timestamp: u64,
+        applied_config_stamp: display::ConfigStamp,
+        cookie: u64,
+    ) -> Result<()> {
+        self.proxy.acknowledge_vsync(cookie)?;
+
+        let mut listeners_to_remove = Vec::new();
+        for (pos, (sender, filter)) in self.vsync_listeners.iter().enumerate() {
+            // Skip the listener if it has a filter that does not match `display_id`.
+            if filter.as_ref().map_or(false, |id| id.0 != display_id) {
+                continue;
+            }
+            let payload = VsyncEvent {
+                id: DisplayId(display_id),
+                timestamp: zx::Time::from_nanos(timestamp as i64),
+                config: applied_config_stamp,
+            };
+            if let Err(e) = sender.unbounded_send(payload) {
+                if e.is_disconnected() {
+                    listeners_to_remove.push(pos);
+                } else {
+                    return Err(e.into());
+                }
+            }
+        }
+
+        // Clean up disconnected listeners.
+        listeners_to_remove.into_iter().for_each(|pos| {
+            self.vsync_listeners.swap_remove(pos);
+        });
+
+        Ok(())
     }
 }
 
@@ -180,9 +308,7 @@ async fn wait_for_initial_displays(
     events: &mut display::ControllerEventStream,
 ) -> Result<Vec<display::Info>> {
     let mut stream = events.try_filter_map(|event| match event {
-        display::ControllerEvent::OnDisplaysChanged { added, removed: _ } => {
-            future::ok(Some(added))
-        }
+        ControllerEvent::OnDisplaysChanged { added, removed: _ } => future::ok(Some(added)),
         _ => future::ok(None),
     });
     stream.try_next().await?.ok_or(ControllerError::NoDisplays)
@@ -190,17 +316,32 @@ async fn wait_for_initial_displays(
 
 #[cfg(test)]
 mod tests {
-    use super::Controller;
+    use super::{Controller, DisplayId, VsyncEvent};
     use {
-        anyhow::{Context, Result},
-        display_mocks::create_proxy_and_mock,
-        fidl_fuchsia_hardware_display as display, fuchsia_zircon as zx,
+        anyhow::{format_err, Context, Result},
+        display_mocks::{create_proxy_and_mock, MockController},
+        fidl_fuchsia_hardware_display as display,
+        fuchsia_async::TestExecutor,
+        fuchsia_zircon as zx,
+        futures::{pin_mut, select, task::Poll, FutureExt, StreamExt},
         matches::assert_matches,
     };
 
     async fn init_with_proxy(proxy: display::ControllerProxy) -> Result<Controller> {
         let (_, remote) = zx::Channel::create()?;
         Controller::init_with_proxy(proxy, remote).await.context("failed to initialize Controller")
+    }
+
+    // Returns a Controller and a connected mock FIDL server. This function sets up the initial
+    // "OnDisplaysChanged" event with the given list of `displays`, which `Controller` requires
+    // before it can resolve its initialization Future.
+    async fn init_with_displays(
+        displays: &[display::Info],
+    ) -> Result<(Controller, MockController)> {
+        let (proxy, mut mock) = create_proxy_and_mock()?;
+        mock.assign_displays(displays.to_vec())?;
+
+        Ok((init_with_proxy(proxy).await?, mock))
     }
 
     #[fuchsia::test]
@@ -215,7 +356,7 @@ mod tests {
         mock.assign_displays([].to_vec())?;
 
         let controller = init_with_proxy(proxy).await?;
-        assert!(controller.displays.is_empty());
+        assert!(controller.displays().is_empty());
 
         Ok(())
     }
@@ -256,6 +397,125 @@ mod tests {
         assert_eq!(controller.displays().len(), 2);
         assert_eq!(controller.displays()[0].0, displays[0]);
         assert_eq!(controller.displays()[1].0, displays[1]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_vsync_listener_single() -> Result<()> {
+        // Drive an executor directly for this test to avoid having to rely on timeouts for cases
+        // in which no events are received.
+        let mut executor = TestExecutor::new()?;
+        let (controller, mock) = executor.run_singlethreaded(init_with_displays(&[]))?;
+        let mut vsync = controller.add_vsync_listener(None)?;
+
+        const ID: DisplayId = DisplayId(1);
+        const STAMP: display::ConfigStamp = display::ConfigStamp { value: 1 };
+        let event_handlers = async {
+            select! {
+                event = vsync.next().fuse() => event.ok_or(format_err!("did not receive vsync event")),
+                result = controller.handle_events().fuse() => {
+                    result.context("FIDL event handler failed")?;
+                    Err(format_err!("FIDL event handler completed before client vsync event"))
+                },
+            }
+        };
+        pin_mut!(event_handlers);
+
+        // Send a single event.
+        mock.emit_vsync_event(ID.0, STAMP)?;
+        let vsync_event = executor.run_until_stalled(&mut event_handlers);
+        assert_matches!(
+            vsync_event,
+            Poll::Ready(Ok(VsyncEvent { id: ID, timestamp: _, config: STAMP }))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_vsync_listener_multiple() -> Result<()> {
+        // Drive an executor directly for this test to avoid having to rely on timeouts for cases
+        // in which no events are received.
+        let mut executor = TestExecutor::new()?;
+        let (controller, mock) = executor.run_singlethreaded(init_with_displays(&[]))?;
+        let mut vsync = controller.add_vsync_listener(None)?;
+
+        let fidl_server = controller.handle_events().fuse();
+        pin_mut!(fidl_server);
+
+        const ID1: DisplayId = DisplayId(1);
+        const ID2: DisplayId = DisplayId(2);
+        const STAMP: display::ConfigStamp = display::ConfigStamp { value: 1 };
+
+        // Queue multiple events.
+        mock.emit_vsync_event(ID1.0, STAMP)?;
+        mock.emit_vsync_event(ID2.0, STAMP)?;
+        mock.emit_vsync_event(ID1.0, STAMP)?;
+
+        // Process the FIDL events. The FIDL server Future should not complete as it runs
+        // indefinitely.
+        let fidl_server_result = executor.run_until_stalled(&mut fidl_server);
+        assert_matches!(fidl_server_result, Poll::Pending);
+
+        // Process the vsync listener.
+        let vsync_event = executor.run_until_stalled(&mut Box::pin(async { vsync.next().await }));
+        assert_matches!(
+            vsync_event,
+            Poll::Ready(Some(VsyncEvent { id: ID1, timestamp: _, config: STAMP }))
+        );
+
+        let vsync_event = executor.run_until_stalled(&mut Box::pin(async { vsync.next().await }));
+        assert_matches!(
+            vsync_event,
+            Poll::Ready(Some(VsyncEvent { id: ID2, timestamp: _, config: STAMP }))
+        );
+
+        let vsync_event = executor.run_until_stalled(&mut Box::pin(async { vsync.next().await }));
+        assert_matches!(
+            vsync_event,
+            Poll::Ready(Some(VsyncEvent { id: ID1, timestamp: _, config: STAMP }))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_vsync_listener_display_id_filter() -> Result<()> {
+        // Drive an executor directly for this test to avoid having to rely on timeouts for cases
+        // in which no events are received.
+        let mut executor = TestExecutor::new()?;
+        let (controller, mock) = executor.run_singlethreaded(init_with_displays(&[]))?;
+
+        const ID1: DisplayId = DisplayId(1);
+        const ID2: DisplayId = DisplayId(2);
+        const STAMP: display::ConfigStamp = display::ConfigStamp { value: 1 };
+
+        // Listen to events from ID2.
+        let mut vsync = controller.add_vsync_listener(Some(ID2))?;
+        let event_handlers = async {
+            select! {
+                event = vsync.next().fuse() => event.ok_or(format_err!("did not receive vsync event")),
+                result = controller.handle_events().fuse() => {
+                    result.context("FIDL event handler failed")?;
+                    Err(format_err!("FIDL event handler completed before client vsync event"))
+                },
+            }
+        };
+        pin_mut!(event_handlers);
+
+        // Event from ID1 should get filtered out and the client should not receive any events.
+        mock.emit_vsync_event(ID1.0, STAMP)?;
+        let vsync_event = executor.run_until_stalled(&mut event_handlers);
+        assert_matches!(vsync_event, Poll::Pending);
+
+        // Event from ID2 should be received.
+        mock.emit_vsync_event(ID2.0, STAMP)?;
+        let vsync_event = executor.run_until_stalled(&mut event_handlers);
+        assert_matches!(
+            vsync_event,
+            Poll::Ready(Ok(VsyncEvent { id: ID2, timestamp: _, config: STAMP }))
+        );
 
         Ok(())
     }

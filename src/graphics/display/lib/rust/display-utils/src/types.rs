@@ -5,8 +5,12 @@
 use {fidl_fuchsia_hardware_display::Info, std::fmt};
 
 /// Enhances the `fuchsia.hardware.display.Info` FIDL struct.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DisplayInfo(pub Info);
+
+/// Strongly typed wrapper around a display ID.
+#[derive(Debug, Eq, Hash, Ord, PartialOrd, PartialEq)]
+pub struct DisplayId(pub u64);
 
 /// Custom user-friendly format representation.
 impl fmt::Display for DisplayInfo {

@@ -13,4 +13,4 @@ pub mod types;
 /// The `Controller` type is a client-side abstraction for the `fuchsia.hardware.display.Controller`
 /// protocol.
 mod controller;
-pub use controller::Controller;
+pub use controller::{Controller, VsyncEvent};
