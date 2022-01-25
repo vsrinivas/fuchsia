@@ -11,9 +11,10 @@ import subprocess
 import sys
 
 
-def extract(pm, far_path, workdir):
+def extract(pm, far_path, workdir, _repository):
     if not os.path.exists(workdir):
         os.makedirs(workdir)
+    # TODO(fxb/88886): pass repository field to pm
     args = [pm, '-o', workdir, 'expand', far_path]
     subprocess.check_output(args, stderr=subprocess.STDOUT)
 
@@ -25,10 +26,11 @@ def main():
     parser.add_argument(
         '--archive', help='Path to archive containing prebuilt package')
     parser.add_argument('--workdir', help='Path to working directory')
+    parser.add_argument('--repository', help='Repository host name')
 
     args = parser.parse_args()
 
-    extract(args.pm_tool, args.archive, args.workdir)
+    extract(args.pm_tool, args.archive, args.workdir, args.repository)
 
     with open(os.path.join(args.workdir, 'package_manifest.json')) as f:
         manifest = json.load(f)

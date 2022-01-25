@@ -66,17 +66,31 @@ import("//tools/cmc/build/cmc.gni")
 #     Type: boolean
 #     Default: false
 #
-#    system_image_package_allowed_in_extra_deps (optional)
+#   system_image_package_allowed_in_extra_deps (optional)
 #     Used internally to implement fuchsia_system_package(), do not use!
 #     If defined, this is a fuchsia_system_package(), and the argument value
 #     determines whether it is allowed in extra dependency trees beside
 #     the one from //build/input:system_image.
 #     Type: boolean
 #
+#   repository (optional)
+#     The repository host name part of the package URL. Defaults to "fuchsia.com".
+#     See https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#repository
+#     for more details.
+#     Type: string
+#     Default: fuchsia.com
+#
 #   deps
 #   testonly
 #   visibility
 template("fuchsia_package") {
+  repository = "fuchsia.com"
+  if (defined(invoker.repository)) {
+    repository = invoker.repository
+  }
+
+  # TODO(fxb/88886): pass repository field to pm
+  not_needed([ "repository" ])
   if (current_toolchain == target_toolchain) {
     package_name = target_name
     if (defined(invoker.package_name)) {

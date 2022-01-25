@@ -14,6 +14,13 @@ import("//build/packages/package_metadata.gni")
 #     Name of the package.
 #     Defaults to the target's name.
 #
+#   repository (optional)
+#     The repository host name part of the package URL. Defaults to "fuchsia.com".
+#     See https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#repository
+#     for more details.
+#     Type: string
+#     Default: fuchsia.com
+#
 #   deps (optional)
 #   testonly (optional)
 #   visibility (optional)
@@ -24,6 +31,10 @@ template("prebuilt_package") {
   pkg_name = target_name
   if (defined(invoker.package_name)) {
     pkg_name = invoker.package_name
+  }
+  repository = "fuchsia.com"
+  if (defined(invoker.repository)) {
+    repository = invoker.repository
   }
   pkg_version = 0
   manifest_target_name = target_name + ".manifest"
@@ -88,6 +99,8 @@ template("prebuilt_package") {
       rebase_path(archive, root_build_dir),
       "--workdir",
       rebase_path(pkg_out_dir, root_build_dir),
+      "--repository",
+      repository,
     ]
 
     inputs = [
