@@ -104,7 +104,7 @@ magma_status_t LinuxPlatformConnectionClient::ReadNotificationChannel(void* buff
 void LinuxPlatformConnectionClient::ExecuteCommandBufferWithResources(
     uint32_t context_id, magma_command_buffer* command_buffer, magma_exec_resource* resources,
     uint64_t* semaphores) {
-  std::vector<magma_system_exec_resource> resource_array;
+  std::vector<magma_exec_resource> resource_array;
   resource_array.reserve(command_buffer->resource_count);
 
   for (uint32_t i = 0; i < command_buffer->resource_count; i++) {

@@ -214,23 +214,6 @@ typedef struct magma_poll_item {
   uint32_t unused;
 } magma_poll_item_t;
 
-// Deprecated: a buffer plus its associated relocations referenced by a command buffer
-struct magma_system_exec_resource {
-  uint64_t buffer_id;
-  uint64_t offset;
-  uint64_t length;
-};
-
-// Deprecated: a batch buffer to be executed plus the resources required to execute it
-// Ensure 8 byte alignment for semaphores and resources that may follow in a stream.
-struct magma_system_command_buffer {
-  uint32_t resource_count;
-  uint32_t batch_buffer_resource_index;  // resource index of the batch buffer to execute
-  uint64_t batch_start_offset;           // relative to the starting offset of the buffer
-  uint32_t wait_semaphore_count;
-  uint32_t signal_semaphore_count;
-} __attribute__((__aligned__(8)));
-
 // A buffer plus its associated relocations referenced by a command buffer
 struct magma_exec_resource {
   uint64_t buffer_id;

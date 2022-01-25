@@ -103,8 +103,7 @@ magma_status_t magma_execute_command_buffer_with_resources2(
   virtmagma_command_buffer virt_command_buffer;
   virt_command_buffer.command_buffer_size = sizeof(magma_command_buffer);
   virt_command_buffer.command_buffer = reinterpret_cast<uintptr_t>(command_buffer);
-  virt_command_buffer.resource_size =
-      sizeof(magma_system_exec_resource) * command_buffer->resource_count;
+  virt_command_buffer.resource_size = sizeof(magma_exec_resource) * command_buffer->resource_count;
   virt_command_buffer.resources = reinterpret_cast<uintptr_t>(resources);
   virt_command_buffer.semaphore_size = sizeof(uint64_t) * (command_buffer->wait_semaphore_count +
                                                            command_buffer->signal_semaphore_count);
