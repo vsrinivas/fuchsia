@@ -656,7 +656,7 @@ impl IfaceManagerService {
         // listeners a notification indicating that client connections are disabled.
         if self.clients.is_empty() {
             let update = listener::ClientStateUpdate {
-                state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled),
+                state: fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled,
                 networks: vec![],
             };
             if let Err(e) =
@@ -739,7 +739,7 @@ impl IfaceManagerService {
 
             // Signal to the update listener that client connections have been disabled.
             let update = listener::ClientStateUpdate {
-                state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled),
+                state: fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled,
                 networks: vec![],
             };
             if let Err(e) = update_sender.unbounded_send(listener::Message::NotifyListeners(update))
@@ -2591,7 +2591,7 @@ mod tests {
 
         // Ensure an update was sent
         let client_state_update = listener::ClientStateUpdate {
-            state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled),
+            state: fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled,
             networks: vec![],
         };
         assert_variant!(
@@ -3550,7 +3550,7 @@ mod tests {
         // Verify that a ConnectionsDisabled notification was sent.
         // Ensure an update was sent
         let expected_update = listener::ClientStateUpdate {
-            state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled),
+            state: fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled,
             networks: vec![],
         };
         assert_variant!(

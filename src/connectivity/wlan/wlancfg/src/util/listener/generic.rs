@@ -248,7 +248,7 @@ mod tests {
 
         // Send an update to both listeners.
         let update = ClientStateUpdate {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![],
         };
         let expected_summary = fidl_policy::ClientStateSummary {
@@ -299,7 +299,10 @@ mod tests {
         let _ = test_utils::ack_next_status_update(&mut exec, &mut l2_stream, &mut serve_listeners);
 
         // Send an update to both listeners.
-        let update = ClientStateUpdate { state: None, networks: vec![] };
+        let update = ClientStateUpdate {
+            state: fidl_policy::WlanClientState::ConnectionsDisabled,
+            networks: vec![],
+        };
         test_utils::broadcast_update(
             &mut exec,
             &mut update_sender,
@@ -316,7 +319,7 @@ mod tests {
 
         // Send another update.
         let update = ClientStateUpdate {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![],
         };
         test_utils::broadcast_update(
@@ -354,7 +357,7 @@ mod tests {
 
         // Send another update.
         let update = ClientStateUpdate {
-            state: Some(fidl_policy::WlanClientState::ConnectionsDisabled),
+            state: fidl_policy::WlanClientState::ConnectionsDisabled,
             networks: vec![],
         };
         test_utils::broadcast_update(

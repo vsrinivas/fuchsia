@@ -29,14 +29,14 @@ impl Into<fidl_policy::NetworkState> for ClientNetworkState {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ClientStateUpdate {
-    pub state: Option<fidl_policy::WlanClientState>,
+    pub state: fidl_policy::WlanClientState,
     pub networks: Vec<ClientNetworkState>,
 }
 
 impl Into<fidl_policy::ClientStateSummary> for ClientStateUpdate {
     fn into(self) -> fidl_policy::ClientStateSummary {
         fidl_policy::ClientStateSummary {
-            state: self.state,
+            state: Some(self.state),
             networks: Some(self.networks.iter().map(|n| n.clone().into()).collect()),
             ..fidl_policy::ClientStateSummary::EMPTY
         }
@@ -48,13 +48,13 @@ impl CurrentStateCache for ClientStateUpdate {
         // The default client state is disabled until a later update explicitly sets the state to
         // enabled.
         ClientStateUpdate {
-            state: Some(fidl_policy::WlanClientState::ConnectionsDisabled),
+            state: fidl_policy::WlanClientState::ConnectionsDisabled,
             networks: vec![],
         }
     }
 
     fn merge_in_update(&mut self, update: Self) {
-        self.state = update.state.or(self.state);
+        self.state = update.state;
         // Keep a cache of "active" networks
         self.networks = self
             .networks
@@ -106,14 +106,14 @@ mod tests {
         assert_eq!(
             current_state_cache,
             ClientStateUpdate {
-                state: Some(fidl_policy::WlanClientState::ConnectionsDisabled),
+                state: fidl_policy::WlanClientState::ConnectionsDisabled,
                 networks: vec![]
             }
         );
 
         // Merge an update with one connected network.
         let update = ClientStateUpdate {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![ClientNetworkState {
                 id: client_types::NetworkIdentifier {
                     ssid: Ssid::try_from("ssid 1").unwrap(),
@@ -128,7 +128,7 @@ mod tests {
         assert_eq!(
             current_state_cache,
             ClientStateUpdate {
-                state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+                state: fidl_policy::WlanClientState::ConnectionsEnabled,
                 networks: vec![ClientNetworkState {
                     id: client_types::NetworkIdentifier {
                         ssid: Ssid::try_from("ssid 1").unwrap(),
@@ -145,7 +145,7 @@ mod tests {
     fn merge_update_one_to_two_active() {
         // Start with a connected network
         let mut current_state_cache = ClientStateUpdate {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![ClientNetworkState {
                 id: client_types::NetworkIdentifier {
                     ssid: Ssid::try_from("ssid 1").unwrap(),
@@ -158,7 +158,7 @@ mod tests {
 
         // Merge an update with a different connecting network.
         let update = ClientStateUpdate {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![ClientNetworkState {
                 id: client_types::NetworkIdentifier {
                     ssid: Ssid::try_from("ssid 2").unwrap(),
@@ -174,7 +174,7 @@ mod tests {
         assert_eq!(
             current_state_cache,
             ClientStateUpdate {
-                state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+                state: fidl_policy::WlanClientState::ConnectionsEnabled,
                 networks: vec![
                     ClientNetworkState {
                         id: client_types::NetworkIdentifier {
@@ -201,7 +201,7 @@ mod tests {
     fn merge_update_two_to_one_active() {
         // Start with two active networks
         let mut current_state_cache = ClientStateUpdate {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![
                 ClientNetworkState {
                     id: client_types::NetworkIdentifier {
@@ -224,7 +224,7 @@ mod tests {
 
         // Merge an update with one network becoming inactive.
         let update = ClientStateUpdate {
-            state: None,
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![ClientNetworkState {
                 id: client_types::NetworkIdentifier {
                     ssid: Ssid::try_from("ssid 1").unwrap(),
@@ -241,7 +241,7 @@ mod tests {
         assert_eq!(
             current_state_cache,
             ClientStateUpdate {
-                state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+                state: fidl_policy::WlanClientState::ConnectionsEnabled,
                 networks: vec![
                     ClientNetworkState {
                         id: client_types::NetworkIdentifier {
@@ -265,7 +265,7 @@ mod tests {
 
         // Send another update about the second still-active network
         let update = ClientStateUpdate {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![ClientNetworkState {
                 id: client_types::NetworkIdentifier {
                     ssid: Ssid::try_from("ssid 2").unwrap(),
@@ -281,7 +281,7 @@ mod tests {
         assert_eq!(
             current_state_cache,
             ClientStateUpdate {
-                state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+                state: fidl_policy::WlanClientState::ConnectionsEnabled,
                 networks: vec![ClientNetworkState {
                     id: client_types::NetworkIdentifier {
                         ssid: Ssid::try_from("ssid 2").unwrap(),
@@ -297,7 +297,7 @@ mod tests {
     #[fuchsia::test]
     fn into_fidl() {
         let single_network_state = ClientStateUpdate {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![ClientNetworkState {
                 id: client_types::NetworkIdentifier {
                     ssid: Ssid::try_from("ssid 1").unwrap(),
@@ -326,7 +326,7 @@ mod tests {
         );
 
         let multi_network_state = ClientStateUpdate {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![
                 ClientNetworkState {
                     id: client_types::NetworkIdentifier {
