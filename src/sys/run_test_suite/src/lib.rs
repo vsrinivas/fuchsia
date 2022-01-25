@@ -569,6 +569,8 @@ impl RunningSuite {
 }
 
 /// Schedule and run the tests specified in |test_params|, and collect the results.
+/// Note this currently doesn't record the result or call finished() on run_reporter,
+/// the caller should do this instead.
 async fn run_tests<'a, F: 'a + Future<Output = ()>>(
     builder_proxy: RunBuilderProxy,
     test_params: Vec<TestParams>,
@@ -1107,16 +1109,14 @@ mod test {
         join(suite_drain_fut, run_fut).await;
     }
 
-    struct ParamsForRunTests<'a> {
+    struct ParamsForRunTests {
         builder_proxy: ftest_manager::RunBuilderProxy,
         test_params: Vec<TestParams>,
-        run_reporter: &'a RunReporter,
+        run_reporter: RunReporter,
     }
 
-    async fn call_run_tests<'a>(
-        params: ParamsForRunTests<'a>,
-    ) -> Result<Outcome, RunTestSuiteError> {
-        run_tests(
+    async fn call_run_tests(params: ParamsForRunTests) -> Outcome {
+        run_tests_and_get_outcome(
             params.builder_proxy,
             params.test_params,
             RunParams { timeout_behavior: TimeoutBehavior::Continue, stop_after_failures: None },
@@ -1135,17 +1135,15 @@ mod test {
 
         let reporter = InMemoryReporter::new();
         let run_reporter = RunReporter::new(reporter.clone());
-        let run_fut = call_run_tests(ParamsForRunTests {
-            builder_proxy,
-            test_params: vec![],
-            run_reporter: &run_reporter,
-        });
+        let run_fut =
+            call_run_tests(ParamsForRunTests { builder_proxy, test_params: vec![], run_reporter });
         let fake_fut = fake_running_all_suites_and_return_run_events(run_builder_stream, vec![]);
 
-        join(run_fut, fake_fut).await.0.expect("future succeeded");
+        assert_eq!(join(run_fut, fake_fut).await.0, Outcome::Passed,);
 
         let reports = reporter.get_reports();
-        assert_eq!(0usize, reports.len());
+        assert_eq!(1usize, reports.len());
+        assert_eq!(reports[0].id, EntityId::TestRun);
     }
 
     #[fuchsia::test]
@@ -1162,16 +1160,18 @@ mod test {
                 test_url: "fuchsia-pkg://fuchsia.com/nothing#meta/nothing.cm".to_string(),
                 ..TestParams::default()
             }],
-            run_reporter: &run_reporter,
+            run_reporter,
         });
         let fake_fut = fake_running_all_suites_and_return_run_events(run_builder_stream, vec![]);
 
-        join(run_fut, fake_fut).await.0.expect("future succeeded");
+        assert_eq!(join(run_fut, fake_fut).await.0, Outcome::Passed,);
 
         let reports = reporter.get_reports();
-        assert_eq!(1usize, reports.len());
+        assert_eq!(2usize, reports.len());
         assert!(reports[0].report.artifacts.is_empty());
         assert!(reports[0].report.directories.is_empty());
+        assert!(reports[1].report.artifacts.is_empty());
+        assert!(reports[1].report.directories.is_empty());
     }
 
     #[fuchsia::test]
@@ -1188,7 +1188,7 @@ mod test {
                 test_url: "fuchsia-pkg://fuchsia.com/nothing#meta/nothing.cm".to_string(),
                 ..TestParams::default()
             }],
-            run_reporter: &run_reporter,
+            run_reporter,
         });
 
         let dir = pseudo_directory! {
@@ -1223,7 +1223,7 @@ mod test {
 
         let fake_fut = fake_running_all_suites_and_return_run_events(run_builder_stream, events);
 
-        join(run_fut, fake_fut).await.0.expect("future succeeded");
+        assert_eq!(join(run_fut, fake_fut).await.0, Outcome::Passed,);
 
         let reports = reporter.get_reports();
         assert_eq!(2usize, reports.len());
