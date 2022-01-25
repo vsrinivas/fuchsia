@@ -35,7 +35,7 @@ OtStackApp::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtStackApp& a
 void OtStackApp::ClientAllowanceInit() {
   client_outbound_allowance_ = kOutboundAllowanceInit;
   client_inbound_allowance_ = 0;
-  (*binding_)->OnReadyForSendFrames(kOutboundAllowanceInit);
+  fidl::WireSendEvent(*binding_)->OnReadyForSendFrames(kOutboundAllowanceInit);
 }
 
 void OtStackApp::RadioAllowanceInit() {
@@ -109,7 +109,7 @@ void OtStackApp::UpdateClientOutboundAllowance() {
   client_outbound_cnt++;
   if (((client_outbound_allowance_ & 1) == 0) && device_client_ptr_) {
     FX_LOGS(DEBUG) << "ot-stack: OnReadyForSendFrames: " << client_outbound_allowance_;
-    (*binding_)->OnReadyForSendFrames(kOutboundAllowanceInc);
+    fidl::WireSendEvent(*binding_)->OnReadyForSendFrames(kOutboundAllowanceInc);
     client_outbound_allowance_ += kOutboundAllowanceInc;
   }
   FX_LOGS(DEBUG) << "ot-stack: updated client_outbound_allowance_:" << client_outbound_allowance_;
@@ -384,7 +384,7 @@ void OtStackApp::SendOneFrameToClient() {
   }
   if (!client_inbound_queue_.empty() && client_inbound_allowance_ > 0) {
     auto data = fidl::VectorView<uint8_t>::FromExternal(client_inbound_queue_.front());
-    (*binding_)->OnReceiveFrame(std::move(data));
+    fidl::WireSendEvent(*binding_)->OnReceiveFrame(std::move(data));
     UpdateClientInboundAllowance();
     client_inbound_queue_.pop_front();
     if (!client_inbound_queue_.empty() && client_inbound_allowance_ > 0) {
@@ -572,11 +572,12 @@ void OtStackApp::OnReceiveFrame(fidl::WireResponse<fidl_spinel::Device::OnReceiv
 }
 
 void OtStackApp::OnError(fidl::WireResponse<fidl_spinel::Device::OnError>* event) {
-  handler_status_ = (*binding_)->OnError(event->error, event->did_close).status();
+  handler_status_ =
+      fidl::WireSendEvent(*binding_)->OnError(event->error, event->did_close).status();
 }
 
 zx_status_t OtStackApp::Unknown() {
-  (*binding_)->OnError(fidl_spinel::wire::Error::kIoError, true);
+  fidl::WireSendEvent(*binding_)->OnError(fidl_spinel::wire::Error::kIoError, true);
   DisconnectDevice();
   return ZX_ERR_IO;
 }

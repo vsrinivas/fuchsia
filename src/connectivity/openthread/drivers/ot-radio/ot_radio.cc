@@ -72,7 +72,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
   if (res == ZX_OK) {
     zxlogf(DEBUG, "open succeed, returning");
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
-    (*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kOutboundAllowanceInit);
+    fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kOutboundAllowanceInit);
     ot_radio_obj_.inbound_allowance_ = 0;
     ot_radio_obj_.outbound_allowance_ = kOutboundAllowanceInit;
     ot_radio_obj_.inbound_cnt_ = 0;
@@ -106,9 +106,10 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestView request,
                                                           SendFrameCompleter::Sync& completer) {
   if (ot_radio_obj_.power_status_ == OT_SPINEL_DEVICE_OFF) {
-    (*ot_radio_obj_.fidl_binding_)->OnError(lowpan_spinel_fidl::wire::Error::kClosed, false);
+    fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
+        ->OnError(lowpan_spinel_fidl::wire::Error::kClosed, false);
   } else if (request->data.count() > kMaxFrameSize) {
-    (*ot_radio_obj_.fidl_binding_)
+    fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
         ->OnError(lowpan_spinel_fidl::wire::Error::kOutboundFrameTooLarge, false);
   } else if (ot_radio_obj_.outbound_allowance_ == 0) {
     // Client violates the protocol, close FIDL channel and device. Will not send OnError event.
@@ -126,7 +127,8 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestView r
       ot_radio_obj_.outbound_cnt_++;
       zxlogf(DEBUG, "Successfully Txed pkt, total tx pkt %lu", ot_radio_obj_.outbound_cnt_);
       if ((ot_radio_obj_.outbound_cnt_ & 1) == 0) {
-        (*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kOutboundAllowanceInc);
+        fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
+            ->OnReadyForSendFrames(kOutboundAllowanceInc);
         ot_radio_obj_.outbound_allowance_ += kOutboundAllowanceInc;
       }
     }
@@ -286,7 +288,7 @@ zx_status_t OtRadioDevice::HandleRadioRxFrame(uint8_t* frameBuffer, uint16_t len
   zxlogf(DEBUG, "ot-radio: received frame of len:%d", length);
   if (power_status_ == OT_SPINEL_DEVICE_ON) {
     auto data = fidl::VectorView<uint8_t>::FromExternal(frameBuffer, length);
-    fidl::Result result = (*fidl_binding_)->OnReceiveFrame(std::move(data));
+    fidl::Result result = fidl::WireSendEvent(*fidl_binding_)->OnReceiveFrame(std::move(data));
     InspectInboundFrame(frameBuffer, length);
     if (!result.ok()) {
       zxlogf(ERROR, "ot-radio: failed to send OnReceive() event due to %s",
