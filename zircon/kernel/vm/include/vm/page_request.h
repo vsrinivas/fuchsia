@@ -31,6 +31,8 @@ using drop_ref_cb_t = void (*)(void *);
 // Struct used for making delayed page requests to a page provider.
 //
 // Currently, the two types of page providers are the pmm and PagerProxy.
+// Note: This struct is on the path to deprecation and removal and PageRequest should be used
+// instead.
 struct page_request {
   // Offset and length of the request. These should be initialized before being
   // passed to the provider, and should not be accessed after being passed to the provider.
@@ -50,7 +52,7 @@ struct page_request {
   // ctx to use when invoking the above callbacks. The pmm may temporarily retain a
   // reference to cb_ctx even after the request is completed or cancelled, so the caller
   // needs to ensure that cb_ctx remains valid until drop_ref_cb is invoked.
-  void* cb_ctx;
+  void *cb_ctx;
 
   // List node used by the page provider.
   list_node_t provider_node;

@@ -50,9 +50,9 @@ class PagerProxy : public PageProvider,
     // Pagers cannot synchronusly fulfill requests.
     return false;
   }
-  void SendAsyncRequest(page_request_t* request) final;
-  void ClearAsyncRequest(page_request_t* request) final;
-  void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) final;
+  void SendAsyncRequest(PageRequest* request) final;
+  void ClearAsyncRequest(PageRequest* request) final;
+  void SwapAsyncRequest(PageRequest* old, PageRequest* new_req) final;
   bool DebugIsPageOk(vm_page_t* page, uint64_t offset) final;
   void OnClose() final;
   void OnDetach() final;
@@ -97,22 +97,15 @@ class PagerProxy : public PageProvider,
   bool packet_busy_ TA_GUARDED(mtx_) = false;
   // The page_request_t which corresponds to the current packet_. Can be set to nullptr if the
   // PageSource calls ClearAsyncRequest to take back the request while the packet is still busy -
+  PageRequest* active_request_ TA_GUARDED(mtx_) = nullptr;
   // this can happen if ClearAsyncRequest races with a PagerProxy::Free coming from port dequeue.
   // More details about this race can be found in fxbug.dev/91935.
-  page_request_t* active_request_ TA_GUARDED(mtx_) = nullptr;
   // Queue of page_request_t's that have come in while packet_ is busy. The
   // head of this queue is sent to the port when packet_ is freed.
-  list_node_t pending_requests_ TA_GUARDED(mtx_) = LIST_INITIAL_VALUE(pending_requests_);
+  fbl::TaggedDoublyLinkedList<PageRequest*, PageProviderTag> pending_requests_ TA_GUARDED(mtx_);
 
-  // page_request_t struct used for the complete message.
-  page_request_t complete_request_ TA_GUARDED(mtx_) = {
-      .offset = 0,
-      .length = 0,
-      .pages_available_cb = nullptr,
-      .drop_ref_cb = nullptr,
-      .cb_ctx = nullptr,
-      .provider_node = LIST_INITIAL_CLEARED_VALUE,
-  };
+  // PageRequest used for the complete message.
+  PageRequest complete_request_ TA_GUARDED(mtx_);
 
   // Back pointer to the PageSource that owns this instance.
   // The PageSource also has a RefPtr to this object, and so with this being a RefPtr there exists
@@ -122,7 +115,7 @@ class PagerProxy : public PageProvider,
   fbl::RefPtr<PageSource> page_source_ TA_GUARDED(mtx_);
 
   // Queues the page request, either sending it to the port or putting it in pending_requests_.
-  void QueuePacketLocked(page_request_t* request) TA_REQ(mtx_);
+  void QueuePacketLocked(PageRequest* request) TA_REQ(mtx_);
 
   // Called when the packet becomes free. If pending_requests_ is non-empty, queues the
   // next request.

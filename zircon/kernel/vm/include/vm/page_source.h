@@ -66,6 +66,12 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
  public:
   virtual ~PageProvider() = default;
 
+ protected:
+  // Methods a PageProvider implementation can use to retrieve fields from a PageRequest.
+  static page_request_type GetRequestType(const PageRequest* request);
+  static uint64_t GetRequestOffset(const PageRequest* request);
+  static uint64_t GetRequestLen(const PageRequest* request);
+
  private:
   // The returned properties will last at least as long as PageProvider.
   virtual const PageSourceProperties& properties() const = 0;
@@ -75,13 +81,13 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
                            paddr_t* const pa_out) = 0;
   // Informs the backing source of a page request. The provider has ownership
   // of |request| until the async request is cancelled.
-  virtual void SendAsyncRequest(page_request_t* request) = 0;
+  virtual void SendAsyncRequest(PageRequest* request) = 0;
   // Informs the backing source that a page request has been fulfilled. This
   // must be called for all requests that are raised.
-  virtual void ClearAsyncRequest(page_request_t* request) = 0;
+  virtual void ClearAsyncRequest(PageRequest* request) = 0;
   // Swaps the backing memory for a request. Assumes that |old|
   // and |new_request| have the same type, offset, and length.
-  virtual void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) = 0;
+  virtual void SwapAsyncRequest(PageRequest* old, PageRequest* new_req) = 0;
   // This will assert unless is_handling_free is true, in which case this will make the pages FREE.
   virtual void FreePages(list_node* pages) {
     // If is_handling_free true, must implement FreePages().
@@ -314,9 +320,16 @@ class PageSource : public fbl::RefCounted<PageSource> {
   friend PageRequest;
 };
 
+// The PageRequest provides the ability to be in two difference linked list. One owned by the page
+// source (for overlapping requests), and one owned by the page provider (for tracking outstanding
+// requests). These tags provide a way to distinguish between the two containers.
+struct PageSourceTag;
+struct PageProviderTag;
 // Object which is used to make delayed page requests to a PageSource
 class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
-                    public fbl::DoublyLinkedListable<PageRequest*> {
+                    public fbl::ContainableBaseClasses<
+                        fbl::TaggedDoublyLinkedListable<PageRequest*, PageSourceTag>,
+                        fbl::TaggedDoublyLinkedListable<PageRequest*, PageProviderTag>> {
  public:
   // If |allow_batching| is true, then a single request can be used to service
   // multiple consecutive pages.
@@ -343,7 +356,12 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   // Event signaled when the request is fulfilled.
   AutounsignalEvent event_;
   // PageRequests are active if offset_ is not UINT64_MAX. In an inactive request, the
-  // only other valid field is src_.
+  // only other valid field is src_. Whilst a request is with a PageProvider (i.e. SendAsyncRequest
+  // has been called), these fields must be kept constant so the PageProvider can read them. Once
+  // the request has been cleared either by SwapAsyncRequest or ClearAsyncRequest they can be
+  // modified again. The provider_owned_ bool is used for assertions to validate this flow, but
+  // otherwise has no functional affect.
+  bool provider_owned_ = false;
   uint64_t offset_ = UINT64_MAX;
   // The total length of the request.
   uint64_t len_ = 0;
@@ -361,11 +379,8 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   // worth the complexity of tracking it.
   uint64_t pending_size_ = 0;
 
-  // List node for overlapping requests.
-  fbl::DoublyLinkedList<PageRequest*> overlap_;
-
-  // Request struct for the PageProvider.
-  page_request_t provider_request_;
+  // Linked list for overlapping requests.
+  fbl::TaggedDoublyLinkedList<PageRequest*, PageSourceTag> overlap_;
 
   uint64_t GetEnd() const {
     // Assert on overflow, since it means vmobject made an out-of-bounds request.
@@ -378,8 +393,23 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   uint64_t GetKey() const { return GetEnd(); }
 
   friend PageSource;
+  friend PageProvider;
   friend fbl::DefaultKeyedObjectTraits<uint64_t, PageRequest>;
 };
+
+// Declare page provider helpers inline now that PageRequest has been defined.
+inline page_request_type PageProvider::GetRequestType(const PageRequest* request) {
+  DEBUG_ASSERT(request->provider_owned_);
+  return request->type_;
+}
+inline uint64_t PageProvider::GetRequestOffset(const PageRequest* request) {
+  DEBUG_ASSERT(request->provider_owned_);
+  return request->offset_;
+}
+inline uint64_t PageProvider::GetRequestLen(const PageRequest* request) {
+  DEBUG_ASSERT(request->provider_owned_);
+  return request->len_;
+}
 
 // Wrapper around PageRequest that performs construction on first access. This is useful when a
 // PageRequest needs to be allocated eagerly in case it is used, even if the common case is that it
