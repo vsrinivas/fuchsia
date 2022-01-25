@@ -135,6 +135,20 @@ func getQemuInvocation(config qemuConfig) ([]string, error) {
 	qemuCmd.SetFlag("-nographic")
 	qemuCmd.SetFlag("-monitor", "none")
 
+	// Disable kernel lockup detector in emulated environments to prevent false alarms from
+	// potentially oversubscribed hosts. (fxbug.dev/92109)
+	qemuCmd.AddKernelArg("kernel.lockup-detector.critical-section-threshold-ms=0")
+	qemuCmd.AddKernelArg("kernel.lockup-detector.critical-section-fatal-threshold-ms=0")
+	qemuCmd.AddKernelArg("kernel.lockup-detector.heartbeat-period-ms=0")
+	qemuCmd.AddKernelArg("kernel.lockup-detector.heartbeat-age-threshold-ms=0")
+	qemuCmd.AddKernelArg("kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=0")
+
+	// Disable the virtcon.
+	qemuCmd.AddKernelArg("virtcon.disable=true")
+
+	// Unbuffer log output.
+	qemuCmd.AddKernelArg("kernel.bypass-debuglog=true")
+
 	// Override the SeaBIOS serial port to keep it from outputting a terminal
 	// reset on start.
 	qemuCmd.SetFlag("-fw_cfg", "name=etc/sercon-port,string=0")

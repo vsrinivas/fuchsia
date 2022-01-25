@@ -72,8 +72,8 @@ type SSHConnector struct {
 	reconnectInterval time.Duration
 }
 
-const sshReconnectCount = 3
-const defaultSSHReconnectInterval = 3 * time.Second
+const sshReconnectCount = 6
+const defaultSSHReconnectInterval = 15 * time.Second
 
 func NewSSHConnector(host string, port int, key string) *SSHConnector {
 	return &SSHConnector{Host: host, Port: port, Key: key,
