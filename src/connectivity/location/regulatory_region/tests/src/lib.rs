@@ -4,7 +4,6 @@
 
 use {
     anyhow::{Context as _, Error},
-    cm_rust,
     fidl::endpoints::DiscoverableProtocolMarker as _,
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_location_namedplace::{
@@ -13,8 +12,8 @@ use {
     },
     fidl_fuchsia_sys2 as fsys2,
     fuchsia_component::client::connect_to_named_protocol_at_dir_root,
-    fuchsia_component_test::{
-        ChildOptions, Moniker, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
     },
 };
 
@@ -196,56 +195,45 @@ async fn stop_component(realm_ref: &RealmInstance, child_name: &str) {
 async fn new_test_context() -> Result<TestContext, Error> {
     // Create a new RealmBuilder instance, which we will use to define a new realm
     let builder = RealmBuilder::new().await?;
-    builder
+    let region = builder
         // Add regulatory_region to the realm, which will be fetched with a URL
         .add_child(
             REGION_COMPONENT_NAME,
             "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cm",
             ChildOptions::new(),
         )
-        .await?
-        // Route the logsink to `regulatory_region`, so it can inform us of any issues
+        .await?;
+    builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component(REGION_COMPONENT_NAME)]),
-        )
-        .await?
-        // Route the cache
-        .add_route(
-            RouteBuilder::storage("cache", "/cache")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component(REGION_COMPONENT_NAME)]),
-        )
-        .await?
-        // Route the two regulatory fidl services to the realm parent
-        .add_route(
-            RouteBuilder::protocol_marker::<RegulatoryRegionConfiguratorMarker>()
-                .source(RouteEndpoint::component(REGION_COMPONENT_NAME))
-                .targets(vec![RouteEndpoint::above_root()]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol_marker::<RegulatoryRegionWatcherMarker>()
-                .source(RouteEndpoint::component(REGION_COMPONENT_NAME))
-                .targets(vec![RouteEndpoint::above_root()]),
+            Route::new()
+                // Route the logsink to `regulatory_region`, so it can inform us of any issues
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                // Route the cache
+                .capability(Capability::storage("cache"))
+                .from(Ref::parent())
+                .to(&region),
         )
         .await?;
 
-    // Expose to the hub to the test, for controlling lifecycle
-    // TODO(fxbug.dev/82074): Once realmbuilder supports "framework" as a source, this can be moved
-    // up above with the other `add_route`s.
-    let mut decl = builder.get_decl(Moniker::root()).await?;
-    let cm_rust::ComponentDecl { offers: _offers, exposes, .. } = &mut decl;
-    let () = exposes.push(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
-        source: cm_rust::ExposeSource::Framework,
-        source_name: cm_rust::CapabilityName("hub".to_string()),
-        target: cm_rust::ExposeTarget::Parent,
-        target_name: cm_rust::CapabilityName("hub".to_string()),
-        rights: Some(fio2::R_STAR_DIR),
-        subdir: None,
-    }));
-    let () = builder.set_decl(Moniker::root(), decl).await?;
+    // Route the two regulatory fidl services to the realm parent
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<RegulatoryRegionConfiguratorMarker>())
+                .capability(Capability::protocol::<RegulatoryRegionWatcherMarker>())
+                .from(&region)
+                .to(Ref::parent()),
+        )
+        .await?;
+
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::directory("hub").rights(fio2::R_STAR_DIR))
+                .from(Ref::framework())
+                .to(Ref::parent()),
+        )
+        .await?;
 
     // Creates the realm, and add it to the collection to start its execution
     let realm_instance = builder.build().await?;
