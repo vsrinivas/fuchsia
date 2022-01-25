@@ -433,6 +433,26 @@ impl FileOps for MagmaFile {
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_ERROR as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_IMPORT_SEMAPHORE => {
+                let (control, mut response): (
+                    virtio_magma_import_semaphore_ctrl_t,
+                    virtio_magma_import_semaphore_resp_t,
+                ) = read_control_and_response(current_task, &command)?;
+
+                let mut semaphore_out = 0;
+                response.result_return = unsafe {
+                    magma_import_semaphore(
+                        control.connection as magma_connection_t,
+                        control.semaphore_handle,
+                        &mut semaphore_out,
+                    ) as u64
+                };
+                response.semaphore_out = semaphore_out;
+
+                response.hdr.type_ =
+                    virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_IMPORT_SEMAPHORE as u32;
+                current_task.mm.write_object(UserRef::new(response_address), &response)
+            }
             t => {
                 log::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)
