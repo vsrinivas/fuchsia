@@ -93,7 +93,6 @@ test("blobfs_unittest") {
   ]
   deps = [
     ":test_utils",
-    "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/chunked-compression",
     "//src/lib/fxl/test:gtest_main",

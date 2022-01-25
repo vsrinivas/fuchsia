@@ -4,7 +4,6 @@
 
 #include "src/storage/blobfs/blob_verifier.h"
 
-#include <fuchsia/blobfs/c/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
