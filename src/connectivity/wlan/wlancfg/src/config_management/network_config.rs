@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    super::connection_quality::SignalData,
     crate::client::types as client_types,
     arbitrary::Arbitrary,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon as zx,
@@ -66,7 +67,7 @@ pub struct PerformanceStats {
     /// List of recent disconnects where the connect duration was short.
     pub disconnect_list: DisconnectList,
     /// Maps from bssid to RSSI and velocity measurements
-    pub rssi_data_by_bssid: HashMap<client_types::Bssid, RssiData>,
+    pub rssi_data_by_bssid: HashMap<client_types::Bssid, SignalData>,
 }
 
 impl PerformanceStats {
@@ -74,7 +75,7 @@ impl PerformanceStats {
         Self {
             failure_list: ConnectFailureList::new(),
             disconnect_list: DisconnectList::new(),
-            rssi_data_by_bssid: HashMap::<client_types::Bssid, RssiData>::new(),
+            rssi_data_by_bssid: HashMap::<client_types::Bssid, SignalData>::new(),
         }
     }
 }
@@ -154,12 +155,6 @@ impl DisconnectList {
     }
 }
 
-/// Connection quality data related to RSSI
-#[derive(Clone, Debug, PartialEq)]
-pub struct RssiData {
-    pub ewma_rssi: f32,
-    pub velocity: f32,
-}
 /// Used to allow hidden probability calculations to make use of what happened most recently
 #[derive(Clone, Copy)]
 pub enum HiddenProbEvent {

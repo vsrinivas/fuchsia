@@ -7,8 +7,8 @@ use {
     crate::{
         client::types as client_types,
         config_management::{
-            Credential, NetworkConfig, NetworkConfigError, NetworkIdentifier, RssiData,
-            SavedNetworksManagerApi, ScanResultType,
+            connection_quality::SignalData, Credential, NetworkConfig, NetworkConfigError,
+            NetworkIdentifier, SavedNetworksManagerApi, ScanResultType,
         },
     },
     async_trait::async_trait,
@@ -27,7 +27,7 @@ pub struct FakeSavedNetworksManager {
     pub fail_all_stores: bool,
     pub active_scan_result_recorded: Arc<Mutex<bool>>,
     pub passive_scan_result_recorded: Arc<Mutex<bool>>,
-    record_connection_quality_channel: Mutex<mpsc::UnboundedReceiver<Option<RssiData>>>,
+    record_connection_quality_channel: Mutex<mpsc::UnboundedReceiver<Option<SignalData>>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -75,7 +75,7 @@ impl FakeSavedNetworksManager {
     /// FakeSavedNetworksManager with a channel to tell the fake how the function should return.
     /// The desired return values must be sent to the channel before the SavedNetworksManager
     /// function is called.
-    pub fn new_with_channel() -> (Self, mpsc::UnboundedSender<Option<RssiData>>) {
+    pub fn new_with_channel() -> (Self, mpsc::UnboundedSender<Option<SignalData>>) {
         let (sender, receiver) = mpsc::unbounded();
         (
             Self {
@@ -233,7 +233,7 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
         _credential: &Credential,
         _bssid: client_types::Bssid,
         _connection_data: f32,
-    ) -> Option<RssiData> {
+    ) -> Option<SignalData> {
         // The mutex allows us to use the receiver mutably even though self is borrowed immutably.
         self.record_connection_quality_channel
             .lock()

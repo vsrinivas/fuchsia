@@ -4,9 +4,10 @@
 
 use {
     super::{
+        connection_quality::SignalData,
         network_config::{
             Credential, FailureReason, HiddenProbEvent, NetworkConfig, NetworkConfigError,
-            NetworkIdentifier, RssiData, SecurityType,
+            NetworkIdentifier, SecurityType,
         },
         stash_conversion::*,
     },
@@ -173,7 +174,7 @@ pub trait SavedNetworksManagerApi: Send + Sync {
         credential: &Credential,
         bssid: types::Bssid,
         connection_data: f32,
-    ) -> Option<RssiData>;
+    ) -> Option<SignalData>;
 }
 
 impl SavedNetworksManager {
@@ -549,7 +550,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         credential: &Credential,
         bssid: types::Bssid,
         connection_data: f32,
-    ) -> Option<RssiData> {
+    ) -> Option<SignalData> {
         // Find saved networks matching network id.
         let mut saved_networks = self.saved_networks.lock().await;
         let networks = match saved_networks.get_mut(&id) {
@@ -562,23 +563,22 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         // Find network matching credential
         for network in networks.iter_mut() {
             if &network.credential == credential {
-                let rssi_data = match network.perf_stats.rssi_data_by_bssid.get(&bssid) {
-                    Some(rssi_data) => {
+                let signal_data = match network.perf_stats.rssi_data_by_bssid.get(&bssid) {
+                    Some(signal_data) => {
                         let ewma_rssi = calculate_ewma_rssi(
-                            rssi_data.ewma_rssi,
+                            signal_data.rssi,
                             connection_data,
                             EWMA_SMOOTHING_FACTOR,
                         );
                         // TODO(fxbug.dev/84872): Use historical RSSI values to calculate smoothed
                         // velocity.
-                        let velocity =
-                            calculate_rssi_velocity(vec![rssi_data.ewma_rssi, ewma_rssi]);
-                        RssiData { ewma_rssi, velocity: velocity }
+                        let velocity = calculate_rssi_velocity(vec![signal_data.rssi, ewma_rssi]);
+                        SignalData { rssi: ewma_rssi, rssi_velocity: velocity }
                     }
-                    None => RssiData { ewma_rssi: connection_data, velocity: 0.0 },
+                    None => SignalData { rssi: connection_data, rssi_velocity: 0.0 },
                 };
-                let _ = network.perf_stats.rssi_data_by_bssid.insert(bssid, rssi_data.clone());
-                return Some(rssi_data);
+                let _ = network.perf_stats.rssi_data_by_bssid.insert(bssid, signal_data.clone());
+                return Some(signal_data);
             }
         }
         error!("Failed to find matching network to record connection quality data.");
@@ -1507,6 +1507,7 @@ mod tests {
     async fn test_record_directed_scan_no_ssid_match() {
         // Test that recording directed active scan results does not mistakenly match a config with
         // a network with a different SSID.
+
         let saved_networks = SavedNetworksManager::new_for_test()
             .await
             .expect("Failed to create SavedNetworksManager");
@@ -2068,14 +2069,14 @@ mod tests {
             .await
             .pop()
             .expect("Failed to get saved network config");
-        let rssi_data = saved_config
+        let signal_data = saved_config
             .perf_stats
             .rssi_data_by_bssid
             .get(&bssid)
             .expect("failed to get rssi data.");
-        assert_eq!(response, *rssi_data);
-        assert_eq!(rssi_data.ewma_rssi, -50.0);
-        assert_eq!(rssi_data.velocity, 0.0);
+        assert_eq!(response, *signal_data);
+        assert_eq!(signal_data.rssi, -50.0);
+        assert_eq!(signal_data.rssi_velocity, 0.0);
 
         // Record second quality connection data
         let response = saved_networks
@@ -2088,15 +2089,15 @@ mod tests {
         // velocity should be negative.
         let saved_config =
             saved_networks.lookup(net_id).await.pop().expect("Failed to get saved network config");
-        let rssi_data = saved_config
+        let signal_data = saved_config
             .perf_stats
             .rssi_data_by_bssid
             .get(&bssid)
             .expect("failed to get rssi data.");
-        assert_eq!(response, *rssi_data);
-        assert_lt!(rssi_data.ewma_rssi, -50.0);
-        assert_gt!(rssi_data.ewma_rssi, -51.0);
-        assert_lt!(rssi_data.velocity, 0.0);
+        assert_eq!(response, *signal_data);
+        assert_lt!(signal_data.rssi, -50.0);
+        assert_gt!(signal_data.rssi, -51.0);
+        assert_lt!(signal_data.rssi_velocity, 0.0);
     }
 
     fn fake_successful_connect_result() -> fidl_sme::ConnectResult {

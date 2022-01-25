@@ -4,6 +4,7 @@
 
 mod config_manager;
 pub use config_manager::*;
+pub mod connection_quality;
 pub mod network_config;
 pub use network_config::*;
 mod stash_conversion;

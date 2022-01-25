@@ -88,6 +88,7 @@ rustc_library("lib") {
     "src/client/state_machine.rs",
     "src/client/types.rs",
     "src/config_management/config_manager.rs",
+    "src/config_management/connection_quality.rs",
     "src/config_management/mod.rs",
     "src/config_management/network_config.rs",
     "src/config_management/stash_conversion.rs",

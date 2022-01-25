@@ -852,17 +852,17 @@ async fn handle_connection_stats(
     iface_id: u16,
     ind: fidl_internal::SignalReportIndication,
 ) {
-    let rssi_data = saved_network_manager
+    let signal_data = saved_network_manager
         .record_connection_quality_data(&id.clone().into(), &credential, bssid, ind.rssi_dbm.into())
         .await;
     // Send RSSI and RSSI velocity metrics
-    let rssi_velocity = rssi_data.map(|data| {
+    let rssi_velocity = signal_data.map(|data| {
         // Send periodic connection quality data to IfaceManager
-        let connection_stats = PeriodicConnectionStats { id, ewma_rssi: data.ewma_rssi, iface_id };
+        let connection_stats = PeriodicConnectionStats { id, ewma_rssi: data.rssi, iface_id };
         stats_sender.unbounded_send(connection_stats).unwrap_or_else(|e| {
             error!("Failed to send periodic connection stats from the connected state: {}", e);
         });
-        data.velocity
+        data.rssi_velocity
     });
     telemetry_sender.send(TelemetryEvent::OnSignalReport { ind, rssi_velocity });
 }
@@ -873,6 +873,7 @@ mod tests {
         super::*,
         crate::{
             config_management::{
+                connection_quality::SignalData,
                 network_config::{self, Credential, FailureReason},
                 SavedNetworksManager,
             },
@@ -909,8 +910,7 @@ mod tests {
         common_options: CommonStateOptions,
         sme_req_stream: fidl_sme::ClientSmeRequestStream,
         saved_networks_manager: Arc<FakeSavedNetworksManager>,
-        record_connection_quality_channel:
-            mpsc::UnboundedSender<Option<config_management::RssiData>>,
+        record_connection_quality_channel: mpsc::UnboundedSender<Option<SignalData>>,
         client_req_sender: mpsc::Sender<ManualRequest>,
         update_receiver: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
         cobalt_events: mpsc::Receiver<CobaltEvent>,
@@ -3724,10 +3724,10 @@ mod tests {
         let rssi = -40;
         let velocity = -1.2;
         // Tell the FakeSavedNetworksManager what to respond to record_connection_quality_data
-        let rssi_data = config_management::RssiData { ewma_rssi: rssi.into(), velocity };
+        let signal_data = SignalData { rssi: rssi.into(), rssi_velocity: velocity };
         test_values
             .record_connection_quality_channel
-            .unbounded_send(Some(rssi_data))
+            .unbounded_send(Some(signal_data))
             .expect("failed to send expected connection quality data");
         // Send the signal report from SME
         let mut fidl_signal_report =
