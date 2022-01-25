@@ -6,7 +6,7 @@ use {
     crate::{
         lsm_tree::merge,
         object_handle::ReadObjectHandle,
-        serialized_types::{Version, VersionLatest},
+        serialized_types::{Versioned, VersionedLatest},
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -18,7 +18,15 @@ use {
 /// Keys and values need to implement the following traits.  For merging, they need to implement
 /// MergeableKey.  TODO: Use trait_alias when available.
 pub trait Key:
-    Clone + OrdUpperBound + Send + Sync + Version + VersionLatest + Debug + std::marker::Unpin + 'static
+    Clone
+    + OrdUpperBound
+    + Send
+    + Sync
+    + Versioned
+    + VersionedLatest
+    + Debug
+    + std::marker::Unpin
+    + 'static
 {
 }
 
@@ -32,8 +40,8 @@ impl<K> Key for K where
         + OrdUpperBound
         + Send
         + Sync
-        + Version
-        + VersionLatest
+        + Versioned
+        + VersionedLatest
         + Debug
         + std::marker::Unpin
         + 'static
@@ -44,11 +52,11 @@ pub trait MergeableKey: Key + Eq + NextKey + OrdLowerBound {}
 impl<K> MergeableKey for K where K: Key + Eq + NextKey + OrdLowerBound {}
 
 pub trait Value:
-    Clone + Send + Sync + Version + VersionLatest + Debug + std::marker::Unpin + 'static
+    Clone + Send + Sync + Versioned + VersionedLatest + Debug + std::marker::Unpin + 'static
 {
 }
 impl<V> Value for V where
-    V: Clone + Send + Sync + Version + VersionLatest + Debug + std::marker::Unpin + 'static
+    V: Clone + Send + Sync + Versioned + VersionedLatest + Debug + std::marker::Unpin + 'static
 {
 }
 
@@ -279,8 +287,8 @@ pub(super) trait LayerIteratorMut<K, V>: LayerIterator<K, V> {
 #[async_trait]
 pub trait LayerWriter<K, V>
 where
-    K: Debug + Send + Version + Sync,
-    V: Debug + Send + Version + Sync,
+    K: Debug + Send + Versioned + Sync,
+    V: Debug + Send + Versioned + Sync,
 {
     /// Writes the given item to this layer.
     async fn write(&mut self, item: ItemRef<'_, K, V>) -> Result<(), Error>;

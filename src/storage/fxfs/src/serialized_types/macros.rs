@@ -41,8 +41,8 @@ impl Parse for Input {
 
 /// Implements traits for versioned structures.
 /// Namely:
-///   * [Version] for all versions.
-///   * [VersionLatest] for the most recent version.
+///   * [Versioned] for all versions.
+///   * [VersionedLatest] for the most recent version.
 ///   * Transitive [From] for any version to a newer version.
 ///
 /// TODO(ripper): We should look at making maintenance easier somehow. Perhaps by supporting ranges here.
@@ -92,10 +92,10 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
         let count = versions.len();
         out = quote! {
             #out
-            impl Version for #ident {
-                fn version() -> VersionNumber {
+            impl Versioned for #ident {
+                fn version() -> Version {
                     let versions : [u16; #count] = [ #(#versions),* ];
-                    VersionNumber {
+                    Version {
                         major: *versions.iter().max().unwrap(),
                         minor: 0
                     }
@@ -113,10 +113,10 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
         }
         out = quote! {
             #out
-            impl VersionLatest for #ident {
+            impl VersionedLatest for #ident {
                 fn deserialize_from_version<R>(
                     reader: &mut R,
-                    version: VersionNumber) -> anyhow::Result<Self>
+                    version: Version) -> anyhow::Result<Self>
                 where R: std::io::Read, Self: Sized {
                     match version.major {
                         #body

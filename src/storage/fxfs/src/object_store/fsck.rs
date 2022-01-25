@@ -26,7 +26,7 @@ use {
             volume::root_volume,
             HandleOptions, ObjectStore, StoreInfo, MAX_STORE_INFO_SERIALIZED_SIZE,
         },
-        serialized_types::VersionLatest,
+        serialized_types::VersionedLatest,
     },
     anyhow::{anyhow, Context, Error},
     futures::try_join,

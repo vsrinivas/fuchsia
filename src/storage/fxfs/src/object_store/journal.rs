@@ -46,7 +46,7 @@ use {
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
         round::round_down,
-        serialized_types::{Version, VersionNumber},
+        serialized_types::{Version, Versioned},
         trace_duration,
     },
     anyhow::{anyhow, bail, Context, Error},
@@ -106,7 +106,7 @@ pub struct JournalCheckpoint {
     // If versioned, the version of elements stored in the journal. e.g. JournalRecord version.
     // This can change across reset events so we store it along with the offset and checksum to
     // know which version to deserialize.
-    pub version: VersionNumber,
+    pub version: Version,
 }
 
 // All journal blocks are covered by a fletcher64 checksum as the last 8 bytes in a block.
@@ -366,7 +366,7 @@ impl Journal {
                     let version;
                     reader.consume({
                         let mut cursor = std::io::Cursor::new(reader.buffer());
-                        version = VersionNumber::deserialize_from(&mut cursor)?;
+                        version = Version::deserialize_from(&mut cursor)?;
                         cursor.position() as usize
                     });
                     reader.set_version(version);

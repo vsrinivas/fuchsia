@@ -9,7 +9,7 @@ use {
         },
         object_handle::{ReadObjectHandle, WriteBytes},
         round::{round_down, round_up},
-        serialized_types::{Version, VersionLatest, VersionNumber},
+        serialized_types::{Version, Versioned, VersionedLatest},
     },
     anyhow::{bail, Context, Error},
     async_trait::async_trait,
@@ -31,7 +31,7 @@ use {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LayerInfo {
     /// The version of the key and value structs serialized in this layer.
-    pub key_value_version: VersionNumber,
+    pub key_value_version: Version,
     /// The block size used within this layer file. Each block starts with a 2 byte item count so
     /// there is a 64k item limit per block.
     pub block_size: u64,

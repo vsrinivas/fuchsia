@@ -6,7 +6,7 @@ use {
     crate::{
         object_handle::ObjectHandle,
         object_store::journal::{fletcher64, Checksum, JournalCheckpoint, JournalRecord},
-        serialized_types::Version,
+        serialized_types::Versioned,
     },
     byteorder::{LittleEndian, WriteBytesExt},
     std::{cmp::min, io::Write},
@@ -40,7 +40,7 @@ impl JournalWriter {
     }
 
     /// Serializes a new journal record to the journal stream.
-    pub fn write_record<T: Version + std::fmt::Debug>(&mut self, record: &T) {
+    pub fn write_record<T: Versioned + std::fmt::Debug>(&mut self, record: &T) {
         let buf_len = self.buf.len();
         record.serialize_into(&mut *self).unwrap(); // Our write implementation cannot fail at the
                                                     // moment.

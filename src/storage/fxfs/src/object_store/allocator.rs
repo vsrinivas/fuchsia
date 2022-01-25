@@ -28,7 +28,7 @@ use {
         },
         range::RangeExt,
         round::round_down,
-        serialized_types::{Version, VersionLatest},
+        serialized_types::{Versioned, VersionedLatest},
         trace_duration,
     },
     anyhow::{anyhow, bail, ensure, Error},

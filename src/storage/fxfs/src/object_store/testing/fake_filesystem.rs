@@ -16,7 +16,7 @@ use {
             },
             ObjectStore,
         },
-        serialized_types::VersionNumber,
+        serialized_types::Version,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -125,7 +125,7 @@ impl TransactionHandler for FakeFilesystem {
             file_offset: self.num_syncs.load(Ordering::Relaxed),
             checksum: 0,
             // note: intentionally bad version number here to ensure it's never used.
-            version: VersionNumber { major: 0xffff, minor: 0 },
+            version: Version { major: 0xffff, minor: 0 },
         };
         self.lock_manager.commit_prepare(transaction).await;
         self.object_manager.apply_transaction(transaction, &checkpoint).await;

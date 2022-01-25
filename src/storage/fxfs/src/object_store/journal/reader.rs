@@ -6,7 +6,7 @@ use {
     crate::{
         object_handle::{ObjectHandle, ReadObjectHandle},
         object_store::journal::{fletcher64, Checksum, JournalCheckpoint, RESET_XOR},
-        serialized_types::{Version, VersionLatest, VersionNumber},
+        serialized_types::{Version, Versioned, VersionedLatest},
     },
     anyhow::{bail, Error},
     byteorder::{ByteOrder, LittleEndian},
@@ -41,7 +41,7 @@ pub struct JournalReader<OH: ObjectHandle> {
     checksums: Vec<Checksum>,
 
     // The version of types to deserialize.
-    version: VersionNumber,
+    version: Version,
 
     // Indicates a bad checksum has been detected and no more data can be read.
     bad_checksum: bool,
@@ -85,7 +85,7 @@ impl<OH: ReadObjectHandle> JournalReader<OH> {
     /// Sets the version of Key and Value to deserialize.
     /// This can change across Journal RESET boundaries when the tail of the journal is written to
     /// by newer versions of the code.
-    pub fn set_version(&mut self, version: VersionNumber) {
+    pub fn set_version(&mut self, version: Version) {
         self.version = version
     }
 
@@ -107,9 +107,9 @@ impl<OH: ReadObjectHandle> JournalReader<OH> {
     /// Tries to deserialize a record of type T from the journal stream.  It might return
     /// ReadResult::Reset if a reset marker is encountered, or ReadResult::ChecksumMismatch (which
     /// is expected at the end of the journal stream).
-    pub async fn deserialize<T: VersionLatest>(&mut self) -> Result<ReadResult<T>, Error>
+    pub async fn deserialize<T: VersionedLatest>(&mut self) -> Result<ReadResult<T>, Error>
     where
-        T: Version,
+        T: Versioned,
     {
         self.fill_buf().await?;
         let mut cursor = std::io::Cursor::new(self.buffer());
@@ -253,7 +253,7 @@ mod tests {
             object_store::journal::{
                 writer::JournalWriter, Checksum, JournalCheckpoint, RESET_XOR,
             },
-            serialized_types::Version,
+            serialized_types::Versioned,
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
@@ -262,7 +262,7 @@ mod tests {
 
     const TEST_BLOCK_SIZE: u64 = 512;
 
-    async fn write_items<T: Version + std::fmt::Debug>(handle: FakeObjectHandle, items: &[T]) {
+    async fn write_items<T: Versioned + std::fmt::Debug>(handle: FakeObjectHandle, items: &[T]) {
         let mut writer = JournalWriter::new(TEST_BLOCK_SIZE as usize, 0);
         for item in items {
             writer.write_record(item);

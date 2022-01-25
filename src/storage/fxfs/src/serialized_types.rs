@@ -21,8 +21,8 @@
 //! All serialization is done with serde so [Serialize] and [Deserialize] traits must be derived
 //! for all types and sub-types.
 //!
-//! All versioned, serializable struct/enum type should have the [Version] trait.
-//! The most recent version of a type should also have the [VersionLatest] trait.
+//! All versioned, serializable struct/enum type should have the [Versioned] trait.
+//! The most recent version of a type should also have the [VersionedLatest] trait.
 //! These traits are largely implemented for you via the `versioned_struct!` macro as follows:
 //!
 //! ```ignore
@@ -42,7 +42,7 @@
 //!
 //! The user is required to implement [From] to migrate from one version to the next.
 //! The above macros will implement further [From] traits allowing direct upgrade from any version
-//! to the latest. [VersionLatest] provides a `deserialize_from_version` method that can be
+//! to the latest. [VersionedLatest] provides a `deserialize_from_version` method that can be
 //! used to deserialize any supported version and then upgrade it to the latest format.
 //!
 //! ## Conventions
@@ -63,7 +63,7 @@ pub use traits::*;
 #[cfg(test)]
 mod test_traits;
 
-// For test use, we add [Version] and [VersionLatest] to primitive integer types (i32, ...).
+// For test use, we add [Versioned] and [VersionedLatest] to primitive integer types (i32, ...).
 #[cfg(test)]
 pub use test_traits::*;
 

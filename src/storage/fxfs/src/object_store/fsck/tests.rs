@@ -30,7 +30,7 @@ use {
             HandleOptions, Mutation, ObjectStore,
         },
         round::round_down,
-        serialized_types::Version,
+        serialized_types::Versioned,
     },
     anyhow::{Context, Error},
     fuchsia_async as fasync,

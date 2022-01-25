@@ -304,7 +304,7 @@ mod tests {
                 merge::{MergeLayerIterator, MergeResult},
                 types::{Item, ItemRef, LayerIterator, NextKey, OrdLowerBound, OrdUpperBound},
             },
-            serialized_types::{versioned_type, Version, VersionLatest, VersionNumber},
+            serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,

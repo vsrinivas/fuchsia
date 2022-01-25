@@ -56,7 +56,7 @@ use {
             },
         },
         range::RangeExt,
-        serialized_types::{Version, VersionLatest},
+        serialized_types::{Versioned, VersionedLatest},
         trace_duration,
     },
     allocator::Allocator,
