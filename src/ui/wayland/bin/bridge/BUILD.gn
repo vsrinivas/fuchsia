@@ -11,7 +11,6 @@ rustc_binary("bin") {
   output_name = "wayland_bridge"
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
     "//sdk/fidl/fuchsia.wayland:fuchsia.wayland-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -38,7 +37,7 @@ rustc_test("integration_test") {
   output_name = "wayland_bridge_integration_test"
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
+    "//sdk/fidl/fuchsia.wayland:fuchsia.wayland-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

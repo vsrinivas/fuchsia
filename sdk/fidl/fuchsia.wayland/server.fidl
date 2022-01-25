@@ -1,0 +1,39 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.wayland;
+
+using zx;
+
+/// Protocol that provides a mechanism to connect to a Wayland server
+/// and communicate with that server using Wayland protocol messages.
+///
+/// The server has to implement the minimal set of interfaces in the
+/// core protocol require by the Wayland standard. Anything beyond that
+/// is optional. Clients can discover available Wayland interfaces using
+/// Wayland messsages that are part of the core protocol. The wire format
+/// and the core protocol is described in detail here:
+///
+/// https://wayland.freedesktop.org/docs/html/ch04.html
+///
+/// The Wayland protocol makes use of file descriptors for data transfer.
+/// Each file descriptor should be replaced with a zx::handle when
+/// communicating with a server. The exact handle type depends on the
+/// interface definition. File descriptors that can be memory-mapped
+/// typically need to be replaced with zx:vmos.
+///
+/// The client can be a Fuchsia component, or a Linux program (running
+/// in a VM, or using some other type of compatibility layer).
+@discoverable
+protocol Server {
+    /// Establishes a new connection to the server.
+    ///
+    /// For a client to open a new connection, a zx::channel must be created for
+    /// that connection. The client should retain one endpoint of that channel
+    /// and the other endpoint will be provided to this method. The messages on
+    /// the channel will be Wayland protocol messages. Each channel datagram will
+    /// contain 1 or more complete Wayland messages.
+    Connect(resource struct {
+        channel zx.handle:CHANNEL;
+    });
+};

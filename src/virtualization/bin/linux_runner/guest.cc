@@ -445,7 +445,7 @@ void Guest::StartGuest() {
   fuchsia::virtualization::GuestConfig cfg;
   cfg.set_virtio_gpu(false);
   cfg.set_block_devices(std::move(block_devices));
-  cfg.mutable_wayland_device()->dispatcher = wayland_dispatcher_.NewBinding();
+  cfg.mutable_wayland_device()->server = wayland_dispatcher_.NewBinding();
   cfg.set_magma_device(fuchsia::virtualization::MagmaDevice());
 
   auto vm_create_nonce = TRACE_NONCE();

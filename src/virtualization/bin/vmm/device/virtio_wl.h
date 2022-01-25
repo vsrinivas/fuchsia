@@ -104,7 +104,7 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
 
   // |fuchsia::virtualization::hardware::VirtioWayland|
   void Start(fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
-             fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatcher,
+             fidl::InterfaceHandle<fuchsia::wayland::Server> wayland_server,
              fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator,
              fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> scenic_allocator,
              StartCallback callback) override;
@@ -138,7 +138,7 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
 
   std::array<VirtioQueue, VIRTWL_QUEUE_COUNT> queues_;
   zx::vmar vmar_;
-  fuchsia::virtualization::WaylandDispatcherPtr dispatcher_;
+  fuchsia::wayland::ServerPtr wayland_server_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   fuchsia::ui::composition::AllocatorPtr scenic_allocator_;
   VirtioChain out_chain_;

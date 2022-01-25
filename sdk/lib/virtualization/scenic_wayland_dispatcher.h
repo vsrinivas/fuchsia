@@ -5,7 +5,6 @@
 #ifndef LIB_VIRTUALIZATION_SCENIC_WAYLAND_DISPATCHER_H_
 #define LIB_VIRTUALIZATION_SCENIC_WAYLAND_DISPATCHER_H_
 
-#include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/wayland/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/component_context.h>
@@ -17,7 +16,7 @@ namespace guest {
 // wayland shell surface.
 //
 // This class is not thread-safe.
-class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatcher {
+class ScenicWaylandDispatcher : public fuchsia::wayland::Server {
  public:
   using ViewListener =
       fit::function<void(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>, uint32_t)>;
@@ -36,12 +35,10 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
   void RequestView(fuchsia::wayland::ViewSpec view_spec,
                    fuchsia::wayland::ViewProducer::RequestViewCallback callback);
 
-  // |fuchsia::virtualization::WaylandDispatcher|
-  void OnNewConnection(zx::channel channel);
+  // |fuchsia::wayland::Server|
+  void Connect(zx::channel channel);
 
-  fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> NewBinding() {
-    return binding_.NewBinding();
-  }
+  fidl::InterfaceHandle<fuchsia::wayland::Server> NewBinding() { return binding_.NewBinding(); }
 
  private:
   fuchsia::sys::LauncherPtr ConnectToLauncher() const;
@@ -50,7 +47,7 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
   void OnShutdownView(uint32_t id);
   void Reset(zx_status_t status);
 
-  fuchsia::virtualization::WaylandDispatcher* GetOrStartBridge();
+  fuchsia::wayland::Server* GetOrStartBridge();
 
   sys::ComponentContext* context_ = nullptr;
   const char* const bridge_package_url_;
@@ -60,12 +57,12 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
   ShutdownViewListener shutdown_listener_;
 
   // Receive a new Wayland channel to the virtio_wl device.
-  fidl::Binding<fuchsia::virtualization::WaylandDispatcher> binding_{this};
+  fidl::Binding<fuchsia::wayland::Server> binding_{this};
 
   // Management of the `wayland_bridge` component.
   fuchsia::sys::ComponentControllerPtr bridge_;
   // Client endpoint to `wayland_bridge`; for forwarding the Wayland channel.
-  fuchsia::virtualization::WaylandDispatcherPtr dispatcher_;
+  fuchsia::wayland::ServerPtr wayland_server_;
   // Client endpoint to `wayland_bridge`; receive Scenic view lifecycle events.
   fuchsia::wayland::ViewProducerPtr view_producer_;
 };

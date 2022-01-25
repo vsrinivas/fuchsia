@@ -167,7 +167,7 @@ class Memory : public VirtioWl::Vfd {
   const fuchsia::sysmem::CoherencyDomain coherency_domain_;
 };
 
-// Vfd type that holds a wayland dispatcher connection.
+// Vfd type that holds a wayland server connection.
 class Connection : public VirtioWl::Vfd {
  public:
   Connection(zx::channel channel, async::Wait::Handler handler)
@@ -287,14 +287,14 @@ class Pipe : public VirtioWl::Vfd {
 VirtioWl::VirtioWl(sys::ComponentContext* context) : DeviceBase(context) {}
 
 void VirtioWl::Start(fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
-                     fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatcher,
+                     fidl::InterfaceHandle<fuchsia::wayland::Server> wayland_server,
                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator,
                      fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> scenic_allocator,
                      StartCallback callback) {
   auto deferred = fit::defer(std::move(callback));
   PrepStart(std::move(start_info));
   vmar_ = std::move(vmar);
-  dispatcher_ = dispatcher.Bind();
+  wayland_server_ = wayland_server.Bind();
   sysmem_allocator_ = sysmem_allocator.BindSync();
   sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
   scenic_allocator_ = scenic_allocator.Bind();
@@ -672,7 +672,7 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  dispatcher_->OnNewConnection(std::move(remote_channel));
+  wayland_server_->Connect(std::move(remote_channel));
 
   response->hdr.type = VIRTIO_WL_RESP_VFD_NEW;
   response->hdr.flags = 0;

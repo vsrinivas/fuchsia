@@ -17,7 +17,7 @@ VirtioWl::VirtioWl(const PhysMem& phys_mem)
 
 zx_status_t VirtioWl::Start(
     const zx::guest& guest, zx::vmar vmar,
-    fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatch_handle,
+    fidl::InterfaceHandle<fuchsia::wayland::Server> wayland_server,
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> scenic_allocator,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
@@ -31,7 +31,7 @@ zx_status_t VirtioWl::Start(
   if (status != ZX_OK) {
     return status;
   }
-  status = wayland_->Start(std::move(start_info), std::move(vmar), std::move(dispatch_handle),
+  status = wayland_->Start(std::move(start_info), std::move(vmar), std::move(wayland_server),
                            std::move(sysmem_allocator), std::move(scenic_allocator));
   return status;
 }

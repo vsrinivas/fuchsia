@@ -8,7 +8,7 @@
 mod test {
     use {
         anyhow::Error,
-        fidl_fuchsia_virtualization::WaylandDispatcherMarker,
+        fidl_fuchsia_wayland::Server_Marker,
         fuchsia_async::{self as fasync},
         fuchsia_wayland_core::{self as wl, Interface},
         fuchsia_zircon as zx,
@@ -57,9 +57,9 @@ mod test {
             "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx".to_string(),
             None,
         )?;
-        let bridge_proxy = app.connect_to_protocol::<WaylandDispatcherMarker>()?;
+        let bridge_proxy = app.connect_to_protocol::<Server_Marker>()?;
         let (h1, h2) = zx::Channel::create()?;
-        bridge_proxy.on_new_connection(h1)?;
+        bridge_proxy.connect(h1)?;
         let client_channel = fasync::Channel::from_channel(h2)?;
 
         // Send get_registry(0x10000)

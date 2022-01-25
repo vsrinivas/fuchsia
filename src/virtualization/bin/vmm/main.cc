@@ -348,10 +348,9 @@ int main(int argc, char** argv) {
       FX_LOGS(INFO) << "Could not connect to scenic allocator service";
       return status;
     }
-    status =
-        wl.Start(guest.object(), std::move(wl_vmar),
-                 std::move(cfg.mutable_wayland_device()->dispatcher), std::move(sysmem_allocator),
-                 std::move(scenic_allocator), launcher.get(), device_loop.dispatcher());
+    status = wl.Start(guest.object(), std::move(wl_vmar),
+                      std::move(cfg.mutable_wayland_device()->server), std::move(sysmem_allocator),
+                      std::move(scenic_allocator), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_LOGS(INFO) << "Could not start wayland device";
       return status;

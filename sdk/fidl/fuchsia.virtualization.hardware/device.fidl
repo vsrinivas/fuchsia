@@ -9,6 +9,7 @@ using fuchsia.ui.composition;
 using fuchsia.ui.gfx;
 using fuchsia.ui.input;
 using fuchsia.virtualization;
+using fuchsia.wayland;
 using zx;
 
 // The following EVENT_* constants indicate which user signal is associated with an event.
@@ -266,7 +267,7 @@ protocol VirtioWayland {
     Start(resource struct {
         start_info StartInfo;
         vmar zx.handle:VMAR;
-        dispatcher client_end:fuchsia.virtualization.WaylandDispatcher;
+        wayland_server client_end:fuchsia.wayland.Server;
         sysmem_allocator client_end:fuchsia.sysmem.Allocator;
         scenic_allocator client_end:fuchsia.ui.composition.Allocator;
     }) -> ();

@@ -5,8 +5,8 @@
 #include <drm_fourcc.h>
 #include <fuchsia/sysmem/cpp/fidl_test_base.h>
 #include <fuchsia/ui/composition/cpp/fidl_test_base.h>
-#include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
+#include <fuchsia/wayland/cpp/fidl.h>
 #include <lib/zx/socket.h>
 #include <string.h>
 
@@ -36,20 +36,18 @@ static constexpr uint32_t kDmabufDrmFormat = DRM_FORMAT_ARGB8888;
 static constexpr fuchsia::sysmem::PixelFormatType kDmabufSysmemFormat =
     fuchsia::sysmem::PixelFormatType::BGRA32;
 
-class TestWaylandDispatcher : public fuchsia::virtualization::WaylandDispatcher {
+class TestWaylandDispatcher : public fuchsia::wayland::Server {
  public:
   TestWaylandDispatcher(fit::function<void(zx::channel)> callback)
       : callback_(std::move(callback)) {}
 
-  fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> Bind() {
-    return binding_.NewBinding();
-  }
+  fidl::InterfaceHandle<fuchsia::wayland::Server> Bind() { return binding_.NewBinding(); }
 
  private:
-  void OnNewConnection(zx::channel channel) { callback_(std::move(channel)); }
+  void Connect(zx::channel channel) { callback_(std::move(channel)); }
 
   fit::function<void(zx::channel)> callback_;
-  fidl::Binding<fuchsia::virtualization::WaylandDispatcher> binding_{this};
+  fidl::Binding<fuchsia::wayland::Server> binding_{this};
 };
 
 class TestBufferCollectionToken : public fuchsia::sysmem::testing::BufferCollectionToken_TestBase {

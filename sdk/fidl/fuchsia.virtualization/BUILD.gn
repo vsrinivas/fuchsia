@@ -25,5 +25,6 @@ fidl("fuchsia.virtualization") {
     "//sdk/fidl/fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.wayland",
   ]
 }

@@ -4,7 +4,7 @@
 
 #include "sdk/lib/virtualization/scenic_wayland_dispatcher.h"
 
-#include <fuchsia/virtualization/cpp/fidl.h>
+#include <fuchsia/wayland/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -17,8 +17,7 @@ namespace guest {
 static constexpr const char* kWaylandBridgeUrl =
     "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
 
-class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
-                       public fuchsia::wayland::ViewProducer {
+class FakeDispatcher : public fuchsia::wayland::Server, public fuchsia::wayland::ViewProducer {
  public:
   FakeDispatcher() {
     component_.AddPublicService(bindings_.GetHandler(this));
@@ -59,8 +58,8 @@ class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
   }
 
  private:
-  // |fuchsia::virtualization::WaylandDispatcher|
-  void OnNewConnection(zx::channel channel) override { connections_.push_back(std::move(channel)); }
+  // |fuchsia::wayland::Server|
+  void Connect(zx::channel channel) override { connections_.push_back(std::move(channel)); }
 
   // |fuchsia::wayland::ViewProducer|
   void RequestView(fuchsia::wayland::ViewSpec view_spec, RequestViewCallback callback) override {
@@ -68,7 +67,7 @@ class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
   }
 
   sys::testing::FakeComponent component_;
-  fidl::BindingSet<fuchsia::virtualization::WaylandDispatcher> bindings_;
+  fidl::BindingSet<fuchsia::wayland::Server> bindings_;
   fidl::BindingSet<fuchsia::wayland::ViewProducer> view_producer_bindings_;
   std::vector<zx::channel> connections_;
   std::vector<zx::channel> new_view_channels_;
@@ -118,12 +117,12 @@ class ScenicWaylandDispatcherTest : public gtest::TestLoopFixture {
 TEST_F(ScenicWaylandDispatcherTest, LaunchBridgeOnce) {
   zx::channel c1, c2;
   zx::channel::create(0, &c1, &c2);
-  dispatcher()->OnNewConnection(std::move(c1));
+  dispatcher()->Connect(std::move(c1));
   RunLoopUntilIdle();
   ASSERT_EQ(1u, remote_dispatcher()->BindingCount());
   ASSERT_EQ(1u, remote_dispatcher()->ConnectionCount());
 
-  dispatcher()->OnNewConnection(std::move(c2));
+  dispatcher()->Connect(std::move(c2));
   RunLoopUntilIdle();
   ASSERT_EQ(1u, remote_dispatcher()->BindingCount());
   ASSERT_EQ(2u, remote_dispatcher()->ConnectionCount());
@@ -134,7 +133,7 @@ TEST_F(ScenicWaylandDispatcherTest, LaunchBridgeOnce) {
 TEST_F(ScenicWaylandDispatcherTest, RelaunchBridgeWhenLost) {
   zx::channel c1, c2;
   zx::channel::create(0, &c1, &c2);
-  dispatcher()->OnNewConnection(std::move(c1));
+  dispatcher()->Connect(std::move(c1));
   RunLoopUntilIdle();
   ASSERT_EQ(1u, remote_dispatcher()->BindingCount());
   ASSERT_EQ(1u, remote_dispatcher()->ConnectionCount());
@@ -144,7 +143,7 @@ TEST_F(ScenicWaylandDispatcherTest, RelaunchBridgeWhenLost) {
   ASSERT_EQ(0u, remote_dispatcher()->BindingCount());
   ASSERT_EQ(0u, remote_dispatcher()->ConnectionCount());
 
-  dispatcher()->OnNewConnection(std::move(c2));
+  dispatcher()->Connect(std::move(c2));
   RunLoopUntilIdle();
   ASSERT_EQ(1u, remote_dispatcher()->BindingCount());
   ASSERT_EQ(1u, remote_dispatcher()->ConnectionCount());
@@ -155,7 +154,7 @@ TEST_F(ScenicWaylandDispatcherTest, RelaunchBridgeWhenLost) {
 TEST_F(ScenicWaylandDispatcherTest, ReceiveViewEvents) {
   zx::channel c1, c2;
   zx::channel::create(0, &c1, &c2);
-  dispatcher()->OnNewConnection(std::move(c1));
+  dispatcher()->Connect(std::move(c1));
   RunLoopUntilIdle();
   ASSERT_EQ(1u, remote_dispatcher()->BindingCount());
   ASSERT_EQ(1u, remote_dispatcher()->ConnectionCount());
