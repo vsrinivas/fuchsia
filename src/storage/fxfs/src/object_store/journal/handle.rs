@@ -12,7 +12,14 @@ use {
     },
     anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
-    std::{cmp::min, ops::Range, sync::Arc},
+    std::{
+        cmp::min,
+        ops::Range,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+    },
     storage_device::{
         buffer::{Buffer, MutableBufferRef},
         Device,
@@ -25,24 +32,33 @@ pub struct Handle {
     object_id: u64,
     device: Arc<dyn Device>,
     start_offset: u64,
-    extents: Vec<(Range<u64>, u64)>,
+    // A list of extents we know of for the handle.  The extents are all logically contiguous and
+    // start from |start_offset|, so we don't bother storing the logical offsets.
+    extents: Vec<Range<u64>>,
     size: u64,
+    trace: AtomicBool,
 }
 
 impl Handle {
     pub fn new(object_id: u64, device: Arc<dyn Device>) -> Self {
-        Self { object_id, device, start_offset: 0, extents: Vec::new(), size: 0 }
+        Self {
+            object_id,
+            device,
+            start_offset: 0,
+            extents: Vec::new(),
+            size: 0,
+            trace: AtomicBool::new(false),
+        }
     }
 
     pub fn push_extent(&mut self, r: Range<u64>) {
         self.size += r.length().unwrap();
-        self.extents.push((r, 0));
+        self.extents.push(r);
     }
 
     pub fn try_push_extent(
         &mut self,
         item: ItemRef<'_, ExtentKey, ExtentValue>,
-        journal_offset: u64,
     ) -> Result<bool, Error> {
         match item {
             ItemRef {
@@ -52,29 +68,35 @@ impl Handle {
             } if *object_id == self.object_id => {
                 if self.extents.is_empty() {
                     self.start_offset = range.start;
-                } else if range.start != self.size {
+                } else if range.start != self.start_offset + self.size {
                     bail!(anyhow!(FxfsError::Inconsistent).context(format!(
-                        "Unexpected journal extent @{} {:?}, expected start: {}",
-                        journal_offset, item, self.size
+                        "Unexpected journal extent {:?}, expected start: {}",
+                        item, self.size
                     )));
                 }
-                self.extents
-                    .push((*device_offset..*device_offset + range.length()?, journal_offset));
-                self.size = range.end;
+                self.push_extent(*device_offset..*device_offset + range.length()?);
                 Ok(true)
             }
             _ => Ok(false),
         }
     }
 
-    // Discard any extents that succeed offset.
+    // Discard any extents whose logical offset succeeds |offset|.
     pub fn discard_extents(&mut self, discard_offset: u64) {
-        while let Some((range, offset)) = self.extents.last() {
-            if *offset < discard_offset {
+        let mut offset = self.start_offset + self.size;
+        let mut num = 0;
+        while let Some(extent) = self.extents.last() {
+            let length = extent.length().unwrap();
+            offset = offset.checked_sub(length).unwrap();
+            if offset < discard_offset {
                 break;
             }
-            self.size -= range.length().unwrap();
+            self.size -= length;
             self.extents.pop();
+            num += 1;
+        }
+        if self.trace.load(Ordering::Relaxed) {
+            log::info!("JH: Discarded {} extents from offset {}", num, discard_offset);
         }
     }
 }
@@ -97,20 +119,30 @@ impl ObjectHandle for Handle {
     fn get_size(&self) -> u64 {
         self.size
     }
+    fn set_trace(&self, value: bool) {
+        self.trace.store(value, Ordering::Relaxed);
+    }
 }
 
 #[async_trait]
 impl ReadObjectHandle for Handle {
     async fn read(&self, mut offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
         assert!(offset >= self.start_offset);
+        let trace = self.trace.load(Ordering::Relaxed);
+        if trace {
+            log::info!("JH: read {}@{}", buf.len(), offset);
+        }
         let len = buf.len();
         let mut buf_offset = 0;
         let mut file_offset = self.start_offset;
         for extent in &self.extents {
-            let extent_len = extent.0.end - extent.0.start;
+            let extent_len = extent.end - extent.start;
             if offset < file_offset + extent_len {
-                let device_offset = extent.0.start + offset - file_offset;
-                let to_read = min(extent.0.end - device_offset, (len - buf_offset) as u64) as usize;
+                if trace {
+                    log::info!("JH: matching extent {:?}", extent);
+                }
+                let device_offset = extent.start + offset - file_offset;
+                let to_read = min(extent.end - device_offset, (len - buf_offset) as u64) as usize;
                 assert!(buf_offset % self.device.block_size() as usize == 0);
                 self.device
                     .read(

@@ -348,7 +348,7 @@ impl Journal {
                 .await?;
             handle = Handle::new(super_block.journal_object_id, device.clone());
             while let Some(item) = iter.get() {
-                if !handle.try_push_extent(item, 0)? {
+                if !handle.try_push_extent(item)? {
                     break;
                 }
                 iter.advance().await?;
@@ -404,7 +404,7 @@ impl Journal {
                             }
                         }
                         JournalRecord::Commit => {
-                            if let Some((checkpoint, mutations, ref mut end_offset)) =
+                            if let Some((_checkpoint, mutations, ref mut end_offset)) =
                                 current_transaction.take()
                             {
                                 for (object_id, mutation) in mutations {
@@ -415,10 +415,11 @@ impl Journal {
                                         if let Mutation::Extent(ExtentMutation(key, value)) =
                                             mutation
                                         {
-                                            reader.handle().try_push_extent(
-                                                ItemRef { key, value, sequence: 0 },
-                                                checkpoint.file_offset,
-                                            )?;
+                                            reader.handle().try_push_extent(ItemRef {
+                                                key,
+                                                value,
+                                                sequence: 0,
+                                            })?;
                                         }
                                     }
                                 }
