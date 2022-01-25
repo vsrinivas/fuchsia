@@ -459,18 +459,6 @@ void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked) {
   }
 }
 
-zx_status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor) {
-  InterruptDisableGuard irqd;
-
-  zx_status_t status = apic_timer_set_divide_value(divisor);
-  if (status != ZX_OK) {
-    return status;
-  }
-  lapic_reg_write(LAPIC_REG_LVT_TIMER, LVT_VECTOR(X86_INT_APIC_TIMER) | LVT_TIMER_MODE_PERIODIC);
-  lapic_reg_write(LAPIC_REG_INIT_COUNT, count);
-  return ZX_OK;
-}
-
 void apic_timer_interrupt_handler(void) { platform_handle_apic_timer_tick(); }
 
 static void apic_error_init(void) {
