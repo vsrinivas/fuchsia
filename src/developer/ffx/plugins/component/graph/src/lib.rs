@@ -8,7 +8,7 @@ use {
         io::Directory,
         list::{Component, ListFilter},
     },
-    ffx_component_graph_args::ComponentGraphCommand,
+    ffx_component_graph_args::{ComponentGraphCommand, GraphOrientation},
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
@@ -25,7 +25,6 @@ static GRAPHVIZ_START: &str = r##"digraph {
     node [ shape = "box" color = "#2a5b4f" penwidth = 2.25 fontname = "prompt medium" fontsize = 10 target = "_parent" margin = 0.22, ordering = out ];
     edge [ color = "#37474f" penwidth = 1 arrowhead = none target = "_parent" fontname = "roboto mono" fontsize = 10 ]
 
-    rankdir = "LR"
     splines = "ortho"
 "##;
 
@@ -67,19 +66,28 @@ pub async fn graph(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentGraphCommand
     let hub_dir = Directory::from_proxy(root);
     let component = try_get_component_list(hub_dir).await?;
 
-    graph_impl(component, cmd.only, &mut std::io::stdout()).await
+    graph_impl(component, cmd.only, cmd.orientation, &mut std::io::stdout()).await
 }
 
 async fn graph_impl<W: std::io::Write>(
     component: Component,
     list_filter: Option<ListFilter>,
+    orientation: Option<GraphOrientation>,
     writer: &mut W,
 ) -> Result<()> {
     // TODO(fxb/90084): Use `dot` crate for printing this graph.
     writeln!(writer, "{}", GRAPHVIZ_START)?;
-    print_graph_helper(component, &list_filter.unwrap_or(ListFilter::None), writer, None)?;
-    writeln!(writer, "{}", GRAPHVIZ_END)?;
 
+    // Switch the orientation of the graph.
+    match orientation.unwrap_or(GraphOrientation::Default) {
+        GraphOrientation::TopToBottom => writeln!(writer, r#"    rankdir = "TB""#),
+        GraphOrientation::LeftToRight => writeln!(writer, r#"    rankdir = "LR""#),
+        GraphOrientation::Default => Ok({}),
+    }?;
+
+    print_graph_helper(component, &list_filter.unwrap_or(ListFilter::None), writer, None)?;
+
+    writeln!(writer, "{}", GRAPHVIZ_END)?;
     Ok(())
 }
 
@@ -247,13 +255,19 @@ mod test {
         let component = component_for_test();
 
         let mut output = Vec::new();
-        graph_impl(component, None, &mut output).await.unwrap();
+        graph_impl(
+            component,
+            /* list_filter */ None,
+            /* orientation */ None,
+            &mut output,
+        )
+        .await
+        .unwrap();
         pretty_assertions::assert_eq!(String::from_utf8(output).unwrap(), r##"digraph {
     graph [ pad = 0.2 ]
     node [ shape = "box" color = "#2a5b4f" penwidth = 2.25 fontname = "prompt medium" fontsize = 10 target = "_parent" margin = 0.22, ordering = out ];
     edge [ color = "#37474f" penwidth = 1 arrowhead = none target = "_parent" fontname = "roboto mono" fontsize = 10 ]
 
-    rankdir = "LR"
     splines = "ortho"
 
     "/" [ label = "/"    ]
@@ -280,13 +294,14 @@ mod test {
         let component = component_for_test();
 
         let mut output = Vec::new();
-        graph_impl(component, Some(ListFilter::CMX), &mut output).await.unwrap();
+        graph_impl(component, Some(ListFilter::CMX), /* orientation */ None, &mut output)
+            .await
+            .unwrap();
         pretty_assertions::assert_eq!(String::from_utf8(output).unwrap(), r##"digraph {
     graph [ pad = 0.2 ]
     node [ shape = "box" color = "#2a5b4f" penwidth = 2.25 fontname = "prompt medium" fontsize = 10 target = "_parent" margin = 0.22, ordering = out ];
     edge [ color = "#37474f" penwidth = 1 arrowhead = none target = "_parent" fontname = "roboto mono" fontsize = 10 ]
 
-    rankdir = "LR"
     splines = "ortho"
 
     "foo.cmx" [ label = "foo.cmx" color = "#8f3024" style = "filled" fontcolor = "#ffffff" href = "https://cs.opensource.google/search?q=f%3Afoo.cmx%7Cfoo.cmx&ss=fuchsia%2Ffuchsia" ]
@@ -300,13 +315,14 @@ mod test {
         let component = component_for_test();
 
         let mut output = Vec::new();
-        graph_impl(component, Some(ListFilter::CML), &mut output).await.unwrap();
+        graph_impl(component, Some(ListFilter::CML), /* orientation */ None, &mut output)
+            .await
+            .unwrap();
         pretty_assertions::assert_eq!(String::from_utf8(output).unwrap(), r##"digraph {
     graph [ pad = 0.2 ]
     node [ shape = "box" color = "#2a5b4f" penwidth = 2.25 fontname = "prompt medium" fontsize = 10 target = "_parent" margin = 0.22, ordering = out ];
     edge [ color = "#37474f" penwidth = 1 arrowhead = none target = "_parent" fontname = "roboto mono" fontsize = 10 ]
 
-    rankdir = "LR"
     splines = "ortho"
 
     "/" [ label = "/"    ]
@@ -329,13 +345,14 @@ mod test {
         let component = component_for_test();
 
         let mut output = Vec::new();
-        graph_impl(component, Some(ListFilter::Running), &mut output).await.unwrap();
+        graph_impl(component, Some(ListFilter::Running), /* orientation */ None, &mut output)
+            .await
+            .unwrap();
         pretty_assertions::assert_eq!(String::from_utf8(output).unwrap(), r##"digraph {
     graph [ pad = 0.2 ]
     node [ shape = "box" color = "#2a5b4f" penwidth = 2.25 fontname = "prompt medium" fontsize = 10 target = "_parent" margin = 0.22, ordering = out ];
     edge [ color = "#37474f" penwidth = 1 arrowhead = none target = "_parent" fontname = "roboto mono" fontsize = 10 ]
 
-    rankdir = "LR"
     splines = "ortho"
 
     "appmgr" [ label = "appmgr"  style = "filled" fontcolor = "#ffffff" href = "https://cs.opensource.google/search?q=f%3Aappmgr.cml%7Cappmgr.cml&ss=fuchsia%2Ffuchsia" ]
@@ -353,13 +370,14 @@ mod test {
         let component = component_for_test();
 
         let mut output = Vec::new();
-        graph_impl(component, Some(ListFilter::Stopped), &mut output).await.unwrap();
+        graph_impl(component, Some(ListFilter::Stopped), /* orientation */ None, &mut output)
+            .await
+            .unwrap();
         pretty_assertions::assert_eq!(String::from_utf8(output).unwrap(), r##"digraph {
     graph [ pad = 0.2 ]
     node [ shape = "box" color = "#2a5b4f" penwidth = 2.25 fontname = "prompt medium" fontsize = 10 target = "_parent" margin = 0.22, ordering = out ];
     edge [ color = "#37474f" penwidth = 1 arrowhead = none target = "_parent" fontname = "roboto mono" fontsize = 10 ]
 
-    rankdir = "LR"
     splines = "ortho"
 
     "/" [ label = "/"    ]
@@ -371,5 +389,55 @@ mod test {
     "/sys/fuzz" -> "/sys/fuzz/hello"
 }
 "##.to_string());
+    }
+
+    async fn test_graph_orientation(orientation: GraphOrientation, expected_rankdir: &str) {
+        let component = component_for_test();
+
+        let mut output = Vec::new();
+        graph_impl(component, /* list_filter */ None, Some(orientation), &mut output)
+            .await
+            .unwrap();
+        pretty_assertions::assert_eq!(
+            String::from_utf8(output).unwrap(),
+            format!(
+                r##"digraph {{
+    graph [ pad = 0.2 ]
+    node [ shape = "box" color = "#2a5b4f" penwidth = 2.25 fontname = "prompt medium" fontsize = 10 target = "_parent" margin = 0.22, ordering = out ];
+    edge [ color = "#37474f" penwidth = 1 arrowhead = none target = "_parent" fontname = "roboto mono" fontsize = 10 ]
+
+    splines = "ortho"
+
+    rankdir = "{}"
+    "/" [ label = "/"    ]
+    "/appmgr" [ label = "appmgr"  style = "filled" fontcolor = "#ffffff" href = "https://cs.opensource.google/search?q=f%3Aappmgr.cml%7Cappmgr.cml&ss=fuchsia%2Ffuchsia" ]
+    "/" -> "/appmgr"
+    "/appmgr/foo.cmx" [ label = "foo.cmx" color = "#8f3024" style = "filled" fontcolor = "#ffffff" href = "https://cs.opensource.google/search?q=f%3Afoo.cmx%7Cfoo.cmx&ss=fuchsia%2Ffuchsia" ]
+    "/appmgr" -> "/appmgr/foo.cmx"
+    "/appmgr/bar.cmx" [ label = "bar.cmx" color = "#8f3024" style = "filled" fontcolor = "#ffffff" href = "https://cs.opensource.google/search?q=f%3Abar.cmx%7Cbar.cmx&ss=fuchsia%2Ffuchsia" ]
+    "/appmgr" -> "/appmgr/bar.cmx"
+    "/sys" [ label = "sys"   href = "https://cs.opensource.google/search?q=f%3Asys.cml%7Csys.cml&ss=fuchsia%2Ffuchsia" ]
+    "/" -> "/sys"
+    "/sys/baz" [ label = "baz"  style = "filled" fontcolor = "#ffffff" href = "https://cs.opensource.google/search?q=f%3Abaz.cml%7Cbaz.cml&ss=fuchsia%2Ffuchsia" ]
+    "/sys" -> "/sys/baz"
+    "/sys/fuzz" [ label = "fuzz"   href = "https://cs.opensource.google/search?q=f%3Afuzz.cml%7Cfuzz.cml&ss=fuchsia%2Ffuchsia" ]
+    "/sys" -> "/sys/fuzz"
+    "/sys/fuzz/hello" [ label = "hello"   href = "https://cs.opensource.google/search?q=f%3Ahello.cml%7Chello.cml&ss=fuchsia%2Ffuchsia" ]
+    "/sys/fuzz" -> "/sys/fuzz/hello"
+}}
+"##,
+                expected_rankdir
+            )
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_graph_top_to_bottom_orientation() {
+        test_graph_orientation(GraphOrientation::TopToBottom, "TB").await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_graph_left_to_right_orientation() {
+        test_graph_orientation(GraphOrientation::LeftToRight, "LR").await;
     }
 }
