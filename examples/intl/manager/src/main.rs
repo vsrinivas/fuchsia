@@ -306,7 +306,7 @@ mod test {
             PropertyProviderProxy, TemperatureUnit, TimeZoneId,
         },
         fuchsia_async as fasync,
-        fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
+        fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
         futures::{self, prelude::*},
         lazy_static::lazy_static,
     };
@@ -354,29 +354,30 @@ mod test {
     async fn test_get_set_profile() -> Result<(), Error> {
         // Create the test realm,
         let builder = RealmBuilder::new().await?;
-        builder
+        let intl_property_manager = builder
             .add_child(
                 "intl_property_manager",
                 "#meta/intl_property_manager_without_flags.cm",
                 ChildOptions::new(),
             )
-            .await?
+            .await?;
+        builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.intl.PropertyProvider")
-                    .source(RouteEndpoint::component("intl_property_manager"))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.intl.PropertyProvider"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.examples.intl.manager.PropertyManager",
+                    ))
+                    .from(&intl_property_manager)
+                    .to(Ref::parent()),
             )
-            .await?
+            .await?;
+        builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.examples.intl.manager.PropertyManager")
-                    .source(RouteEndpoint::component("intl_property_manager"))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.logger.LogSink")
-                    .source(RouteEndpoint::above_root())
-                    .targets(vec![RouteEndpoint::component("intl_property_manager")]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(Ref::parent())
+                    .to(&intl_property_manager),
             )
             .await?;
         // Create the realm instance
@@ -424,23 +425,27 @@ mod test {
     async fn test_set_initial_profile() -> Result<(), Error> {
         // Create the test realm,
         let builder = RealmBuilder::new().await?;
-        builder
+        let intl_property_manager = builder
             .add_child(
                 "intl_property_manager",
                 "#meta/intl_property_manager.cm",
                 ChildOptions::new(),
             )
-            .await?
+            .await?;
+        builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.intl.PropertyProvider")
-                    .source(RouteEndpoint::component("intl_property_manager"))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.intl.PropertyProvider"))
+                    .from(&intl_property_manager)
+                    .to(Ref::parent()),
             )
-            .await?
+            .await?;
+        builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.logger.LogSink")
-                    .source(RouteEndpoint::above_root())
-                    .targets(vec![RouteEndpoint::component("intl_property_manager")]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(Ref::parent())
+                    .to(&intl_property_manager),
             )
             .await?;
         // Create the realm instance

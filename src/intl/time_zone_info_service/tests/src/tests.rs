@@ -13,8 +13,8 @@ mod tests {
             TimeZonesProxy,
         },
         fuchsia_async as fasync,
-        fuchsia_component_test::{
-            ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+        fuchsia_component_test::new::{
+            Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
         },
         fuchsia_zircon as zx,
     };
@@ -30,13 +30,14 @@ mod tests {
         const MONIKER: &str = "tzinfo";
 
         let builder = RealmBuilder::new().await?;
+        let tzinfo =
+            builder.add_legacy_child(MONIKER, SVC_URL.to_string(), ChildOptions::new()).await?;
         builder
-            .add_legacy_child(MONIKER, SVC_URL.to_string(), ChildOptions::new())
-            .await?
             .add_route(
-                RouteBuilder::protocol_marker::<fintl::TimeZonesMarker>()
-                    .source(RouteEndpoint::component(MONIKER))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
+                Route::new()
+                    .capability(Capability::protocol::<fintl::TimeZonesMarker>())
+                    .from(&tzinfo)
+                    .to(Ref::parent()),
             )
             .await?;
 
