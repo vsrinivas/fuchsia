@@ -224,8 +224,9 @@ group("package_deps_for_infra_only") {
     "//src/experiences/benchmarks/bin/clockface_flutter:clockface-flutter",
     "//src/experiences/benchmarks/bin/scroll_flutter:scroll-flutter",
 
-    # This is used by storage_benchmarks_test
+    # These are used by storage_benchmarks_test
     "//src/storage/bin/odu:odu",
+    "//src/storage/bin/start-storage-benchmark:start-storage-benchmark",
   ]
 }
 

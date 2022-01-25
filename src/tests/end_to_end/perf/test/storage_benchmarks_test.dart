@@ -10,7 +10,9 @@ import 'package:test/test.dart';
 
 import 'helpers.dart';
 
-const _appPath = 'fuchsia-pkg://fuchsia.com/odu#meta/odu.cmx';
+const _launcherUrl =
+    'fuchsia-pkg://fuchsia.com/start-storage-benchmark#meta/start-storage-benchmark.cmx';
+const _oduUrl = 'fuchsia-pkg://fuchsia.com/odu#meta/odu.cmx';
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
 const _trace2jsonPath = 'runtime_deps/trace2json';
 
@@ -37,15 +39,26 @@ List<TestCaseResults> _storageBenchmarksMetricsProcessor(
   return results.values.toList();
 }
 
-Future<void> runOdu(PerfTestHelper helper, int fileSize, int ioSize,
-    String operation, String cleanup, String target) async {
+Future<void> runOdu(
+    PerfTestHelper helper,
+    String filesystem,
+    List<String> extraLauncherArgs,
+    int fileSize,
+    int ioSize,
+    String operation) async {
   // Only read/write the entire file once. Most filesystems cache reads and
   // writes in memory so quickly hitting the same block multiple times would
   // be entirely served from memory and water down the results.
   expect(fileSize % ioSize, equals(0));
   final operationCount = fileSize ~/ ioSize;
-  final result = await helper.component.launch(_appPath, [
-    '--target=$target',
+  const mountPath = '/benchmark';
+  final result = await helper.component.launch(_launcherUrl, [
+    '--filesystem=$filesystem',
+    '--mount-path=$mountPath',
+    '--benchmark-url=$_oduUrl',
+    ...extraLauncherArgs,
+    '--',
+    '--target=$mountPath/file',
     '--target_length=$fileSize',
     '--operations=$operation',
     '--max_io_count=$operationCount',
@@ -54,17 +67,15 @@ Future<void> runOdu(PerfTestHelper helper, int fileSize, int ioSize,
     '--sequential=true',
     '--log_ftrace=true',
     '--align=true',
-    '--thread_count=1',
-    '--cleanup=$cleanup'
+    '--thread_count=1'
   ]);
   if (result != 'Success') {
-    throw Exception('Failed to launch $_appPath.');
+    throw Exception('Failed to launch $_launcherUrl.');
   }
 }
 
-void _addTest(String filesystem, String directory) {
+void _addOduTest(String filesystem, List<String> extraLauncherArgs) {
   final testName = 'fuchsia.storage.benchmarks.$filesystem';
-  final filename = '$directory/odu-sequential-block-aligned';
   const fileSize = 10 * 1024 * 1024;
   const ioSize = 8192;
 
@@ -76,10 +87,12 @@ void _addTest(String filesystem, String directory) {
     await traceSession.start();
 
     // Run sequential write perf tests.
-    await runOdu(helper, fileSize, ioSize, 'write', 'false', filename);
+    await runOdu(
+        helper, filesystem, extraLauncherArgs, fileSize, ioSize, 'write');
 
-    // Run sequential read perf tests on the same set of files created by write tests above.
-    await runOdu(helper, fileSize, ioSize, 'read', 'true', filename);
+    // Run sequential read perf tests.
+    await runOdu(
+        helper, filesystem, extraLauncherArgs, fileSize, ioSize, 'read');
 
     // TODO(fxbug.dev/54931): Explicitly stop tracing.
     // await traceSession.stop();
@@ -104,6 +117,10 @@ void _addTest(String filesystem, String directory) {
 
 void main() {
   enableLoggingOutput();
-  _addTest('minfs', '/data');
-  _addTest('memfs', '/tmp');
+  _addOduTest('memfs', []);
+  _addOduTest('minfs', ['--zxcrypt']);
+  _addOduTest('fxfs', ['--partition-size=${64 * 1024 * 1024}', '--zxcrypt']);
+
+  // TODO(fxbug.dev/91758): Add zxcrypt to f2fs.
+  _addOduTest('f2fs', ['--partition-size=${64 * 1024 * 1024}']);
 }
