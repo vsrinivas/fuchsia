@@ -150,7 +150,12 @@ impl Seat {
         Seat { client_version, keymap, keymap_len }
     }
 
-    pub fn post_seat_info(&self, this: wl::ObjectId, client: &mut Client) -> Result<(), Error> {
+    pub fn post_seat_info(
+        &self,
+        this: wl::ObjectId,
+        client_version: u32,
+        client: &mut Client,
+    ) -> Result<(), Error> {
         // TODO(tjdetwiler): Ideally we can source capabilities from scenic.
         // For now we'll report we can support all input types that scenic
         // supports.
@@ -162,7 +167,9 @@ impl Seat {
                     | wl_seat::Capability::Touch,
             },
         )?;
-        client.event_queue().post(this, WlSeatEvent::Name { name: "unknown".to_string() })?;
+        if client_version >= 2 {
+            client.event_queue().post(this, WlSeatEvent::Name { name: "unknown".to_string() })?;
+        }
         Ok(())
     }
 }

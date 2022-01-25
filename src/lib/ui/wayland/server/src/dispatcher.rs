@@ -77,7 +77,7 @@ impl WaylandDispatcher {
                     keymap_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?,
                     keymap_len as u32,
                 );
-                seat.post_seat_info(id, client)?;
+                seat.post_seat_info(id, version, client)?;
                 Ok(Box::new(RequestDispatcher::new(seat)))
             });
         }
