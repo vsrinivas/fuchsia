@@ -96,7 +96,3 @@ group("tests") {
   testonly = true
   deps = [ ":network-tun-test" ]
 }
-
-# TODO(https://fxbug.dev/90436): Remove once no longer used OOT
-group("config") {
-}

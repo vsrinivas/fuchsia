@@ -14,8 +14,3 @@ group("tests") {
     "network-tun:tests",
   ]
 }
-
-# TODO(https://fxbug.dev/90436): Remove once no longer used OOT
-group("config") {
-  deps = [ "network-tun" ]
-}
