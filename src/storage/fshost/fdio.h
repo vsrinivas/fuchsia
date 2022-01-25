@@ -21,10 +21,8 @@ namespace fshost {
 #define FS_SVC        0x0001
 #define FS_DATA       0x0010
 #define FS_BLOB_EXEC  0x2000
-#define FS_SVC_BLOBFS 0x4000
 // Intended to include everything except for:
 //   - FS_BLOB_EXEC, which is a RWX blobfs connection and should only be provided to pkgfs
-//   - FS_SVC_BLOBFS, which includes extra services only provided to blobfs
 #define FS_ALL        0x9FFF
 
 // clang-format on

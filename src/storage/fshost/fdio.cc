@@ -52,8 +52,7 @@ static struct {
 } FSTAB[] = {
     { "/svc",         "svc",         FS_SVC,        FdioAction::CloneDir },
     { "/data",        "data",        FS_DATA,       FdioAction::AddNsEntry },
-    { "/blob",        "blobexec",    FS_BLOB_EXEC,  FdioAction::AddNsEntry },
-    { "/svc_blobfs",  "svc_blobfs",  FS_SVC_BLOBFS, FdioAction::CloneDir },
+    { "/blob",        "blobexec",    FS_BLOB_EXEC,  FdioAction::CloneDir },
 };
 
 // clang-format on

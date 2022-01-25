@@ -5,21 +5,13 @@
 use {
     anyhow::{format_err, Error},
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_device_manager as fdevicemanager, fidl_fuchsia_fshost as fshost,
-    fidl_fuchsia_io as fio,
-    fuchsia_component::client::connect_to_protocol,
+    fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
     fuchsia_runtime::{take_startup_handle, HandleType},
     futures::{channel::mpsc, StreamExt},
     vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
 };
 
 mod service;
-
-async fn shutdown_device_admin() -> Result<(), Error> {
-    let device_admin_client = connect_to_protocol::<fdevicemanager::AdministratorMarker>()?;
-    let _ = device_admin_client.unregister_system_storage_for_shutdown().await?;
-    Ok(())
-}
 
 #[fuchsia::component]
 async fn main() -> Result<(), Error> {
@@ -62,20 +54,13 @@ async fn main() -> Result<(), Error> {
     // 0. Before fshost is told to shut down, almost everything that is running out of the
     //    filesystems is shut down by component manager.
 
-    // 1. Shut down drivers that are running out of the system partition. These are hosted out of
-    //    blobfs, and are the last thing in the system with a dependency on the filesystems.
-    let device_admin_res = shutdown_device_admin().await;
-    if device_admin_res.is_err() {
-        log::warn!("failed to call shutdown on device admin protocol: {:?}", device_admin_res);
-    }
-
-    // 2. Shut down the scope for the export directory. This hosts the fshost services. This
+    // 1. Shut down the scope for the export directory. This hosts the fshost services. This
     //    prevents additional connections to fshost services from being created.
     scope.shutdown();
 
-    // 3. Shut down all the filesystems we started.
+    // 2. Shut down all the filesystems we started.
 
-    // 4. Notify whoever asked for a shutdown that it's complete. After this point, it's possible
+    // 3. Notify whoever asked for a shutdown that it's complete. After this point, it's possible
     //    the fshost process will be terminated externally.
     shutdown_responder.close()?;
 

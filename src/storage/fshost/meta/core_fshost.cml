@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    children: [
+        {
+            name: "blobfs",
+            url: "fuchsia-boot:///#meta/blobfs.cm",
+            startup: "eager",
+        },
+    ],
     capabilities: [
         {
             directory: "pkgfs-delayed",
@@ -22,11 +29,6 @@
             directory: "bin",
             rights: [ "rx*" ],
             path: "/fs/bin",
-        },
-        {
-            directory: "blob",
-            rights: [ "rw*" ],
-            path: "/fs/blob",
         },
         {
             directory: "minfs",
@@ -61,10 +63,6 @@
             rights: [ "rx*" ],
             path: "/fs/system",
         },
-        {
-            // This service is forwarded from blobfs when blobfs is present.
-            protocol: "fuchsia.update.verify.BlobfsVerifier",
-        },
     ],
     use: [
         {
@@ -72,6 +70,41 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.feedback.CrashReporter",
             ],
+        },
+        {
+            protocol: "fuchsia.fs.startup.Startup",
+            from: "#blobfs",
+            path: "/blobfs/fuchsia.fs.startup.Startup",
+        },
+        {
+            directory: "blob-exec",
+            from: "#blobfs",
+            rights: [
+                "execute",
+                "rw*",
+            ],
+            path: "/blob",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.blobfs.internal.DecompressorCreator",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#blobfs",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            to: "#blobfs",
         },
     ],
     expose: [
@@ -93,7 +126,7 @@
         },
         {
             directory: "blob",
-            from: "self",
+            from: "#blobfs",
         },
         {
             directory: "minfs",
@@ -121,7 +154,7 @@
         },
         {
             protocol: "fuchsia.update.verify.BlobfsVerifier",
-            from: "self",
+            from: "#blobfs",
         },
     ],
 }

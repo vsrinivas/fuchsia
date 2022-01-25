@@ -42,8 +42,8 @@ class FilesystemMounterHarness : public testing::Test {
     if (!watcher_) {
       watcher_.emplace(manager_, &config_);
       zx::channel dir_request, lifecycle_request;
-      EXPECT_OK(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                                    zx::channel(), nullptr, *watcher_));
+      EXPECT_OK(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr,
+                                    *watcher_));
     }
     return manager_;
   }
@@ -80,8 +80,6 @@ class TestMounter : public FilesystemMounter {
  public:
   class FakeDirectoryImpl : public fuchsia_io::testing::Directory_TestBase {
    public:
-    FakeDirectoryImpl() = default;
-
     void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
       ADD_FAILURE() << "Unexpected call to " << name;
       completer.Close(ZX_ERR_NOT_SUPPORTED);
@@ -104,6 +102,20 @@ class TestMounter : public FilesystemMounter {
 
   void ExpectFilesystem(FilesystemType fs) { expected_filesystem_ = fs; }
 
+  zx::status<> LaunchFsComponent(zx::channel block_device,
+                                 fuchsia_fs_startup::wire::StartOptions options,
+                                 const std::string& fs_name) final {
+    switch (expected_filesystem_) {
+      case FilesystemType::kBlobfs:
+        EXPECT_EQ(fs_name, "blobfs");
+        break;
+      default:
+        ADD_FAILURE() << "Unexpected filesystem type";
+    }
+
+    return zx::ok();
+  }
+
   zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids, size_t len,
                        uint32_t fs_flags) final {
     if (argc != 2) {
@@ -111,11 +123,6 @@ class TestMounter : public FilesystemMounter {
     }
 
     switch (expected_filesystem_) {
-      case FilesystemType::kBlobfs:
-        EXPECT_EQ(std::string_view(argv[0]), "/pkg/bin/blobfs");
-        EXPECT_EQ(fs_flags, unsigned{FS_SVC | FS_SVC_BLOBFS});
-        EXPECT_EQ(len, 2ul);
-        break;
       case FilesystemType::kMinfs:
         EXPECT_EQ(std::string_view(argv[0]), "/pkg/bin/minfs");
         EXPECT_EQ(fs_flags, unsigned{FS_SVC});
@@ -174,7 +181,7 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), fs_management::MountOptions()));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_FALSE(mounter.DataMounted());
@@ -186,7 +193,7 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), fs_management::MountOptions()));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_FALSE(mounter.DataMounted());
@@ -212,7 +219,7 @@ TEST_F(MounterTest, PkgfsMountsWithBlobAndData) {
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), fs_management::MountOptions()));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
   ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions()));
 

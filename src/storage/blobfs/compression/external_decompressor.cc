@@ -15,7 +15,7 @@ namespace blobfs {
 
 zx_status_t DecompressorCreatorConnectorImpl::ConnectToDecompressorCreator(
     zx::channel remote_channel) {
-  return fdio_service_connect("/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator",
+  return fdio_service_connect("/svc/fuchsia.blobfs.internal.DecompressorCreator",
                               remote_channel.release());
 }
 

@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_BLOCK_DEVICE_H_
 #define SRC_STORAGE_FSHOST_BLOCK_DEVICE_H_
 
+#include <fidl/fuchsia.fs.startup/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>
@@ -25,6 +26,10 @@ namespace fshost {
 
 // Get the topological path of the device backing |fd|.
 std::string GetTopologicalPath(int fd);
+
+// Collect and synthesize the blobfs startup options.
+fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
+    const fshost::Config* config, std::shared_ptr<FshostBootArgs> boot_args);
 
 // A concrete implementation of the block device interface.
 //

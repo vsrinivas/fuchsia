@@ -5,7 +5,6 @@
 #ifndef SRC_STORAGE_FSHOST_FS_MANAGER_H_
 #define SRC_STORAGE_FSHOST_FS_MANAGER_H_
 
-#include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -44,7 +43,6 @@ class FsManager {
 
   zx_status_t Initialize(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
                          fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request,
-                         fidl::ClientEnd<fuchsia_device_manager::Administrator> driver_admin,
                          std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher);
 
   // TODO(fxbug.dev/39588): delete this
@@ -60,7 +58,6 @@ class FsManager {
     kVolume,
     kSystem,
     kInstall,
-    kBlob,
     kPkgfs,
     kFactory,
     kDurable,
@@ -70,10 +67,10 @@ class FsManager {
   // Returns the fully qualified for the given mount point.
   static const char* MountPointPath(MountPoint);
 
-  constexpr static std::array<MountPoint, 10> kAllMountPoints{
-      MountPoint::kBin,     MountPoint::kData, MountPoint::kVolume, MountPoint::kSystem,
-      MountPoint::kInstall, MountPoint::kBlob, MountPoint::kPkgfs,  MountPoint::kFactory,
-      MountPoint::kDurable, MountPoint::kMnt,
+  constexpr static std::array<MountPoint, 9> kAllMountPoints{
+      MountPoint::kBin,     MountPoint::kData,    MountPoint::kVolume,
+      MountPoint::kSystem,  MountPoint::kInstall, MountPoint::kPkgfs,
+      MountPoint::kFactory, MountPoint::kDurable, MountPoint::kMnt,
   };
 
   // Installs the filesystem with |root_directory| at |mount_point| (which must not already have an
@@ -183,11 +180,6 @@ class FsManager {
   };
   std::map<MountPoint, MountNode> mount_nodes_;
 
-  // Tell driver_manager to remove all drivers living in storage. This must be called before
-  // shutting down. `callback` will be called once all drivers living in storage have been
-  // unbound and removed.
-  void RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback);
-
   // The Root VFS manages the following filesystems:
   // - The global root filesystem (including the mount points)
   // - "/tmp"
@@ -224,7 +216,6 @@ class FsManager {
   std::mutex lock_;
   bool shutdown_called_ TA_GUARDED(lock_) = false;
   sync_completion_t shutdown_;
-  fidl::WireSharedClient<fuchsia_device_manager::Administrator> driver_admin_;
 
   bool file_crash_report_ = true;
 

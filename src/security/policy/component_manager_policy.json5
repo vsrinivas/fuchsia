@@ -178,7 +178,7 @@
                 capability: "protocol",
                 target_monikers: [
                     "/bootstrap",
-                    "/bootstrap/fshost",
+                    "/bootstrap/fshost/blobfs",
                     "/core",
                     "/core/starnix_manager/starnix_runner",
                     "/core/test_manager/starnix_test_runner/starnix_runner",
@@ -298,6 +298,16 @@
                     "/bootstrap/fshost",
                     "/core/system-updater",
                     "/core/system-update-checker",
+                ],
+            },
+            {
+                source_moniker: "/bootstrap/fshost/blobfs",
+                source: "component",
+                source_name: "blob-exec",
+                capability: "directory",
+                target_monikers: [
+                    "/bootstrap/fshost",
+                    "/bootstrap/fshost/blobfs",
                 ],
             },
             {

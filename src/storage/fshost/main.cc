@@ -256,21 +256,8 @@ int Main(bool disable_block_watcher) {
 
   BlockWatcher watcher(fs_manager, &config);
 
-  zx::channel driver_admin, remote;
-  zx_status_t status = zx::channel::create(0, &driver_admin, &remote);
-  if (status) {
-    FX_LOGS(ERROR) << "error creating channel: " << zx_status_get_string(status);
-    return EXIT_FAILURE;
-  }
-
-  status = fdio_service_connect("/svc/fuchsia.device.manager.Administrator", remote.release());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "error connecting to device_manager: " << zx_status_get_string(status);
-    return EXIT_FAILURE;
-  }
-
-  status = fs_manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                                 std::move(driver_admin), std::move(loader), watcher);
+  zx_status_t status = fs_manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                                             std::move(loader), watcher);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Cannot initialize FsManager: " << zx_status_get_string(status);
     return EXIT_FAILURE;

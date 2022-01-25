@@ -16,7 +16,7 @@ zx::channel FshostFsProvider::CloneFs(const char* path) {
   if (strcmp(path, "data") == 0) {
     path = "/fs/data";
   } else if (strcmp(path, "blobexec") == 0) {
-    path = "/fs/blob";
+    path = "/blob";
     flags = FS_READ_WRITE_EXEC_DIR_FLAGS;
   } else {
     FX_LOGS(ERROR) << "" << __FUNCTION__ << ": Cannot clone: " << path;

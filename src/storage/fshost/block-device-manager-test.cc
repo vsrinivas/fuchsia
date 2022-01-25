@@ -6,7 +6,10 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/service/llcpp/service.h>
 #include <sys/statfs.h>
 
 #include <cobalt-client/cpp/collector.h>
@@ -14,6 +17,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
+#include "src/storage/blobfs/fsck.h"
+#include "src/storage/blobfs/mkfs.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
@@ -24,6 +30,8 @@
 
 namespace fshost {
 namespace {
+
+namespace volume = fuchsia_hardware_block_volume;
 
 using ::testing::ContainerEq;
 
@@ -160,14 +168,14 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
 
   // Query the minfs partition instance guid. This is needed to query the limit later on.
   fdio_cpp::UnownedFdioCaller partition_caller(partition_fd.get());
-  namespace volume = fuchsia_hardware_block_volume;
-  auto guid_result = fidl::WireCall<volume::Volume>(partition_caller.channel())->GetInstanceGuid();
+  auto guid_result =
+      fidl::WireCall(partition_caller.borrow_as<volume::Volume>())->GetInstanceGuid();
   ASSERT_EQ(ZX_OK, guid_result.status());
   ASSERT_EQ(ZX_OK, guid_result->status);
 
   // Query the partition limit for the minfs partition.
   fdio_cpp::UnownedFdioCaller fvm_caller(fvm_fd.get());
-  auto limit_result = fidl::WireCall<volume::VolumeManager>(fvm_caller.channel())
+  auto limit_result = fidl::WireCall(fvm_caller.borrow_as<volume::VolumeManager>())
                           ->GetPartitionLimit(*guid_result->guid);
   ASSERT_EQ(ZX_OK, limit_result.status());
   ASSERT_EQ(ZX_OK, limit_result->status);
@@ -227,14 +235,88 @@ TEST_F(BlockDeviceManagerIntegration, SetPartitionName) {
 
   // Query the partition name.
   fdio_cpp::UnownedFdioCaller partition_caller(partition_fd.get());
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume>(
-                                   partition_caller.borrow_channel()))
-                    ->GetName();
+  auto result = fidl::WireCall(partition_caller.borrow_as<volume::Volume>())->GetName();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->status, ZX_OK);
 
   // It should be the preferred name.
   ASSERT_EQ(result->name.get(), kDataPartitionLabel);
+}
+
+TEST_F(BlockDeviceManagerIntegration, StartBlobfsComponent) {
+  constexpr uint32_t kBlockCount = 9 * 1024 * 256;
+  constexpr uint32_t kBlockSize = 512;
+  constexpr uint32_t kSliceSize = 32'768;
+  constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread("blobfs test caller thread"), ZX_OK);
+
+  // Call query on the blob directory. We expect that the request will be queued, but not responed
+  // to until blobfs is mounted by fshost later.
+  auto node_client_end = service::ConnectAt<fuchsia_io::Node>(exposed_dir().client_end(), "blob");
+  ASSERT_EQ(node_client_end.status_value(), ZX_OK);
+  fidl::WireSharedClient<fuchsia_io::Node> node(std::move(*node_client_end), loop.dispatcher());
+  sync_completion_t query_completion;
+  node->QueryFilesystem([query_completion = &query_completion](
+                            fidl::WireUnownedResult<fuchsia_io::Node::QueryFilesystem>& res) {
+    EXPECT_EQ(res.status(), ZX_OK);
+    EXPECT_EQ(res->s, ZX_OK);
+    EXPECT_EQ(res->info->fs_type, VFS_TYPE_BLOBFS);
+    sync_completion_signal(query_completion);
+  });
+
+  ASSERT_FALSE(sync_completion_signaled(&query_completion));
+  PauseWatcher();  // Pause whilst we create a ramdisk.
+
+  // Create a ramdisk with an unformatted blobfs partitition.
+  zx::vmo vmo;
+  ASSERT_EQ(zx::vmo::create(kDeviceSize, 0, &vmo), ZX_OK);
+
+  // Create a child VMO so that we can keep hold of the original.
+  zx::vmo child_vmo;
+  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_SLICE, 0, kDeviceSize, &child_vmo), ZX_OK);
+
+  // Now create the ram-disk with a single FVM partition.
+  {
+    auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(child_vmo), kBlockSize);
+    ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
+    storage::FvmOptions options{
+        .name = "blobfs",
+        .type = std::array<uint8_t, BLOCK_GUID_LEN>{GUID_BLOB_VALUE},
+    };
+    auto fvm_partition_or = storage::CreateFvmPartition(ramdisk_or->path(), kSliceSize, options);
+    ASSERT_EQ(fvm_partition_or.status_value(), ZX_OK);
+
+    // Format the new fvm partition with blobfs.
+    fbl::unique_fd fvm_fd(open(fvm_partition_or->c_str(), O_RDONLY));
+    ASSERT_TRUE(fvm_fd);
+    zx::channel blobfs_device_chan;
+    ASSERT_EQ(fdio_fd_transfer(fvm_fd.release(), blobfs_device_chan.reset_and_get_address()),
+              ZX_OK);
+
+    std::unique_ptr<block_client::RemoteBlockDevice> blobfs_device;
+    ASSERT_EQ(
+        block_client::RemoteBlockDevice::Create(std::move(blobfs_device_chan), &blobfs_device),
+        ZX_OK);
+    ASSERT_EQ(blobfs::FormatFilesystem(blobfs_device.get(), blobfs::FilesystemOptions{}), ZX_OK);
+
+    // Check the newly formatted blobfs for good measure.
+    ASSERT_EQ(blobfs::Fsck(std::move(blobfs_device), blobfs::MountOptions{}), ZX_OK);
+  }
+
+  ResumeWatcher();
+
+  // At this point, the query request should still be pending.
+  ASSERT_FALSE(sync_completion_signaled(&query_completion));
+
+  // Now reattach the ram-disk and fshost should find it and start blobfs.
+  auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
+  ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
+
+  // Now the query request should be responded to.
+  // Query should get a response now.
+  ASSERT_EQ(sync_completion_wait(&query_completion, ZX_TIME_INFINITE), ZX_OK);
 }
 
 }  // namespace

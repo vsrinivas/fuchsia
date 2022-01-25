@@ -32,13 +32,13 @@
     {
         "event_code": 29,
         "name": "BlobfsInactive",
-        "process": "/pkg/bin/blobfs",
+        "process": "blobfs\\.cm",
         "vmo": "inactive-blob-.*"
     },
     {
         "event_code": 5,
         "name": "Blobfs",
-        "process": "/pkg/bin/blobfs",
+        "process": "blobfs\\.cm",
         "vmo": ""
     },
     {

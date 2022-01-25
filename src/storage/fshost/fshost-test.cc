@@ -42,44 +42,19 @@ std::unique_ptr<cobalt_client::Collector> MakeCollector() {
       std::make_unique<cobalt_client::InMemoryLogger>());
 }
 
-class FakeDriverManagerAdmin final
-    : public fidl::WireServer<fuchsia_device_manager::Administrator> {
- public:
-  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) override {
-    completer.Reply(ZX_OK);
-  }
-
-  void UnregisterSystemStorageForShutdown(
-      UnregisterSystemStorageForShutdownRequestView request,
-      UnregisterSystemStorageForShutdownCompleter::Sync& completer) override {
-    unregister_was_called_ = true;
-    completer.Reply(ZX_OK);
-  }
-
-  bool UnregisterWasCalled() { return unregister_was_called_; }
-
- private:
-  std::atomic<bool> unregister_was_called_ = false;
-};
-
 // Test that the manager performs the shutdown procedure correctly with respect to externally
 // observable behaviors.
 TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  FakeDriverManagerAdmin driver_admin;
-  auto admin_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
-  ASSERT_TRUE(admin_endpoints.is_ok());
-  fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
-
   zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                               std::move(admin_endpoints->client), nullptr, watcher),
-            ZX_OK);
+  ASSERT_EQ(
+      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
+      ZX_OK);
 
   // The manager should not have exited yet: No one has asked for the shutdown.
   EXPECT_FALSE(manager.IsShutdown());
@@ -92,7 +67,6 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   });
   manager.WaitForShutdown();
   EXPECT_EQ(sync_completion_wait(&callback_called, ZX_TIME_INFINITE), ZX_OK);
-  EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 
   // It's an error if shutdown gets called twice, but we expect the callback to still get called
   // with the appropriate error message since the shutdown function has no return value.
@@ -113,17 +87,12 @@ TEST(FsManagerTestCase, LifecycleStop) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  FakeDriverManagerAdmin driver_admin;
-  auto admin_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
-  ASSERT_TRUE(admin_endpoints.is_ok());
-  fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
-
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                               std::move(admin_endpoints->client), nullptr, watcher),
-            ZX_OK);
+  ASSERT_EQ(
+      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
+      ZX_OK);
 
   // The manager should not have exited yet: No one has asked for an unmount.
   EXPECT_FALSE(manager.IsShutdown());
@@ -142,7 +111,6 @@ TEST(FsManagerTestCase, LifecycleStop) {
 
   // Now we expect a shutdown signal.
   manager.WaitForShutdown();
-  EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 }
 
 class MockDirectoryOpener : public fuchsia_io::testing::Directory_TestBase {
@@ -169,61 +137,17 @@ class MockDirectoryOpener : public fuchsia_io::testing::Directory_TestBase {
   std::string saved_path_;
 };
 
-// Test that asking FshostFsProvider for blobexec opens /fs/blob from the
-// current installed namespace with the EXEC right
-TEST(FshostFsProviderTestCase, CloneBlobExec) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-  fdio_ns_t* ns;
-  ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
-
-  // Mock out an object that implements DirectoryOpen and records some state;
-  // bind it to the server handle.  Install it at /fs.
-  auto admin = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_EQ(admin.status_value(), ZX_OK);
-
-  auto server = std::make_shared<MockDirectoryOpener>();
-  fidl::BindServer(loop.dispatcher(), std::move(admin->server), server);
-
-  fdio_ns_bind(ns, "/fs", admin->client.channel().release());
-
-  // Verify that requesting blobexec gets you the handle at /fs/blob, with the
-  // permissions expected.
-  FshostFsProvider provider;
-  zx::channel blobexec = provider.CloneFs("blobexec");
-
-  // Force a describe call on the target of the Open, to resolve the Open.  We
-  // expect this to fail because our mock just closes the channel after Open.
-  int fd;
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, fdio_fd_create(blobexec.release(), &fd));
-
-  EXPECT_EQ(server->saved_open_count(), 1u);
-  uint32_t expected_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE |
-                            ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
-  EXPECT_EQ(expected_flags, server->saved_open_flags());
-  EXPECT_EQ("blob", server->saved_path());
-
-  // Tear down.
-  ASSERT_EQ(fdio_ns_unbind(ns, "/fs"), ZX_OK);
-}
-
 TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-  FakeDriverManagerAdmin driver_admin;
-  auto admin_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
-  ASSERT_TRUE(admin_endpoints.is_ok());
-  fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
 
   zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                               std::move(admin_endpoints->client), nullptr, watcher),
-            ZX_OK);
+  ASSERT_EQ(
+      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
+      ZX_OK);
 
   manager.Shutdown([](zx_status_t status) { EXPECT_EQ(status, ZX_OK); });
   manager.WaitForShutdown();
@@ -251,18 +175,13 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  FakeDriverManagerAdmin driver_admin;
-  auto admin_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
-  ASSERT_TRUE(admin_endpoints.is_ok());
-  fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
-
   zx::channel dir_request, lifecycle_request;
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
-  ASSERT_EQ(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                               std::move(admin_endpoints->client), nullptr, watcher),
-            ZX_OK);
+  ASSERT_EQ(
+      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher),
+      ZX_OK);
 
   auto export_root = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(export_root.status_value(), ZX_OK);

@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_FILESYSTEM_MOUNTER_H_
 #define SRC_STORAGE_FSHOST_FILESYSTEM_MOUNTER_H_
 
+#include <fidl/fuchsia.fs.startup/cpp/wire.h>
 #include <fidl/fuchsia.fxfs/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
@@ -67,7 +68,7 @@ class FilesystemMounter {
   // Attempts to mount a block device to "/blob".
   // Fails if already mounted.
   zx_status_t MountBlob(zx::channel block_device_client,
-                        const fs_management::MountOptions& options);
+                        fuchsia_fs_startup::wire::StartOptions options);
 
   // Attempts to mount a block device to "/factory".
   // Fails if already mounted.
@@ -111,6 +112,16 @@ class FilesystemMounter {
   // Virtualized to enable testing.
   virtual zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                                size_t len, uint32_t fs_flags);
+
+  // Actually launches the filesystem component.
+  //
+  // TODO(fxbug.dev/91577): All filesystems should be launched as components. Once they are, remove
+  // LaunchFs.
+  //
+  // Virtualized to enable testing.
+  virtual zx::status<> LaunchFsComponent(zx::channel block_device,
+                                         fuchsia_fs_startup::wire::StartOptions options,
+                                         const std::string& fs_name);
 
   FsManager& fshost_;
   const Config& config_;

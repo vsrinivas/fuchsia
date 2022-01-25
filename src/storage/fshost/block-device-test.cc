@@ -73,8 +73,8 @@ class BlockDeviceTest : public testing::Test {
     // Initialize FilesystemMounter.
     fidl::ServerEnd<fuchsia_io::Directory> dir_request;
     fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request;
-    ASSERT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                                  zx::channel(), nullptr, watcher_),
+    ASSERT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr,
+                                  watcher_),
               ZX_OK);
     manager_.DisableCrashReporting();
 

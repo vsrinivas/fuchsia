@@ -55,27 +55,9 @@
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
-                "fuchsia.device.manager.Administrator",
                 "fuchsia.process.Launcher",
                 "fuchsia.tracing.provider.Registry",
             ],
-        },
-
-        // Use fuchsia.kernel.VmexResource but locate it under a separate directory in fshost's
-        // namespace. This enables providing the service only to the blobfs process but not other
-        // filesystems. fshost should not use this itself, only provide to blobfs.
-        // TODO: Once blobfs is a component this can be routed directly to it.
-        {
-            protocol: "fuchsia.kernel.VmexResource",
-            path: "/svc_blobfs/fuchsia.kernel.VmexResource",
-        },
-        {
-            protocol: "fuchsia.scheduler.ProfileProvider",
-            path: "/svc_blobfs/fuchsia.scheduler.ProfileProvider",
-        },
-        {
-            protocol: "fuchsia.blobfs.internal.DecompressorCreator",
-            path: "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator",
         },
     ],
     expose: [

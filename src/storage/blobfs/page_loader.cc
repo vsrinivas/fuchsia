@@ -100,7 +100,7 @@ void SetDeadlineProfile(const std::vector<zx::unowned_thread>& threads) {
 
   // Connect to the scheduler profile provider service.
   status = fdio_service_connect(
-      (std::string("/svc_blobfs/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(),
+      (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(),
       channel0.release());
   if (status != ZX_OK) {
     FX_LOGS(WARNING) << "Could not connect to scheduler profile provider: "

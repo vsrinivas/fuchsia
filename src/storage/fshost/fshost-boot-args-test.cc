@@ -19,8 +19,13 @@
 #include <gtest/gtest.h>
 #include <mock-boot-arguments/server.h>
 
+#include "src/storage/fshost/block-device.h"
+#include "src/storage/fshost/config.h"
+
 namespace fshost {
 namespace {
+
+namespace startup = fuchsia_fs_startup;
 
 // Create a subclass to access the test-only constructor on FshostBootArgs.
 class FshostBootArgsForTest : public FshostBootArgs {
@@ -39,15 +44,16 @@ class FshostBootArgsTest : public testing::Test {
     boot_args_server_.CreateClient(loop_.dispatcher(), &client);
 
     ASSERT_EQ(loop_.StartThread(), ZX_OK);
-    boot_args_ = std::make_unique<FshostBootArgsForTest>(std::move(client));
+    boot_args_ = std::make_shared<FshostBootArgsForTest>(std::move(client));
   }
 
   FshostBootArgsForTest& boot_args() { return *boot_args_; }
+  std::shared_ptr<FshostBootArgs> boot_args_shared() { return boot_args_; }
 
  private:
   async::Loop loop_;
   mock_boot_arguments::Server boot_args_server_;
-  std::unique_ptr<FshostBootArgsForTest> boot_args_;
+  std::shared_ptr<FshostBootArgsForTest> boot_args_;
 };
 
 TEST_F(FshostBootArgsTest, GetDefaultBools) {
@@ -126,6 +132,66 @@ TEST_F(FshostBootArgsTest, GetBlobfsEvictionPolicy_Unspecified) {
   ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs({}));
 
   EXPECT_EQ(std::nullopt, boot_args().blobfs_eviction_policy());
+}
+
+TEST_F(FshostBootArgsTest, BlobfsStartOptionsDefaults) {
+  std::map<std::string, std::string> boot_config = {};
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(boot_config));
+
+  Config fshost_config(Config::DefaultOptions());
+
+  startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared());
+  ASSERT_EQ(options.write_compression_algorithm, startup::wire::CompressionAlgorithm::kZstdChunked);
+  ASSERT_EQ(options.cache_eviction_policy_override, startup::wire::EvictionPolicyOverride::kNone);
+  ASSERT_FALSE(options.sandbox_decompression);
+}
+
+TEST_F(FshostBootArgsTest, BlobfsStartOptionsUncompressedNoEvictNoSandbox) {
+  std::map<std::string, std::string> boot_config = {
+      {"blobfs.write-compression-algorithm", "UNCOMPRESSED"},
+      {"blobfs.cache-eviction-policy", "NEVER_EVICT"}};
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(boot_config));
+
+  Config fshost_config(Config::DefaultOptions());
+
+  startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared());
+  ASSERT_EQ(options.write_compression_algorithm,
+            startup::wire::CompressionAlgorithm::kUncompressed);
+  ASSERT_EQ(options.cache_eviction_policy_override,
+            startup::wire::EvictionPolicyOverride::kNeverEvict);
+  ASSERT_FALSE(options.sandbox_decompression);
+}
+
+TEST_F(FshostBootArgsTest, BlobfsStartOptionsChunkedEvictSandbox) {
+  std::map<std::string, std::string> boot_config = {
+      {"blobfs.write-compression-algorithm", "ZSTD_CHUNKED"},
+      {"blobfs.cache-eviction-policy", "EVICT_IMMEDIATELY"}};
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(boot_config));
+
+  Config fshost_config({{Config::kSandboxDecompression, ""}});
+
+  startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared());
+  ASSERT_EQ(options.write_compression_algorithm, startup::wire::CompressionAlgorithm::kZstdChunked);
+  ASSERT_EQ(options.cache_eviction_policy_override,
+            startup::wire::EvictionPolicyOverride::kEvictImmediately);
+  ASSERT_TRUE(options.sandbox_decompression);
+}
+
+TEST_F(FshostBootArgsTest, BlobfsStartOptionsGarbage) {
+  std::map<std::string, std::string> boot_config = {
+      {"blobfs.write-compression-algorithm", "NOT_AN_ALGORITHM"},
+      {"blobfs.cache-eviction-policy", "NOT_A_POLICY"}};
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(boot_config));
+
+  // The fshost config implementation should pick up on this as "set" even if there is a value we
+  // don't care about. This is the equivalent of putting "sandbox-decompression=GARBAGE_VALUE" in
+  // the fshost config file.
+  Config fshost_config({{Config::kSandboxDecompression, "GARBAGE_VALUE"}});
+
+  startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared());
+  ASSERT_EQ(options.write_compression_algorithm, startup::wire::CompressionAlgorithm::kZstdChunked);
+  ASSERT_EQ(options.cache_eviction_policy_override, startup::wire::EvictionPolicyOverride::kNone);
+  ASSERT_TRUE(options.sandbox_decompression);
 }
 
 }  // namespace

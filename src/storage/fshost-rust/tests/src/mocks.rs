@@ -5,51 +5,27 @@
 use {
     anyhow::Error,
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_boot as fboot, fidl_fuchsia_device_manager as fdevicemanager,
-    fidl_fuchsia_io as fio,
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_io as fio,
     fuchsia_component_test::mock::MockHandles,
-    fuchsia_zircon as zx,
-    futures::{channel::mpsc, future::BoxFuture, FutureExt, StreamExt},
+    futures::{future::BoxFuture, FutureExt, StreamExt},
     vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path, service},
 };
 
 /// Identifier for ramdisk storage. Defined in zircon/system/public/zircon/boot/image.h.
 const ZBI_TYPE_STORAGE_RAMDISK: u32 = 0x4b534452;
 
-/// For now there is just one signal. As we include more calls we want to keep track of for
-/// testing, we will add more signals, and may want to organize this better.
-#[derive(Debug, PartialEq, Eq)]
-pub enum Signal {
-    UnregisterSystemStorageForShutdown,
+pub async fn new_mocks(
+) -> impl Fn(MockHandles) -> BoxFuture<'static, Result<(), Error>> + Sync + Send + 'static {
+    let mock = move |mock_handles: MockHandles| run_mocks(mock_handles).boxed();
+
+    mock
 }
 
-pub async fn new_mocks() -> (
-    impl Fn(MockHandles) -> BoxFuture<'static, Result<(), Error>> + Sync + Send + 'static,
-    mpsc::UnboundedReceiver<Signal>,
-) {
-    let (tx, rx) = mpsc::unbounded();
-
-    let mock = move |mock_handles: MockHandles| run_mocks(tx.clone(), mock_handles).boxed();
-
-    (mock, rx)
-}
-
-async fn run_mocks(
-    tx: mpsc::UnboundedSender<Signal>,
-    mock_handles: MockHandles,
-) -> Result<(), Error> {
-    let driver_admin_tx = tx.clone();
-
+async fn run_mocks(mock_handles: MockHandles) -> Result<(), Error> {
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
             fboot::ArgumentsMarker::NAME => service::host(run_boot_args),
             fboot::ItemsMarker::NAME => service::host(run_boot_items),
-            fdevicemanager::AdministratorMarker::NAME => service::host(move |stream| {
-                let driver_admin_tx = driver_admin_tx.clone();
-                async move {
-                    run_driver_admin(stream, driver_admin_tx).await;
-                }
-            }),
         },
         "dev" => vfs::pseudo_directory! {
             "class" => vfs::pseudo_directory! {
@@ -70,29 +46,6 @@ async fn run_mocks(
     scope.wait().await;
 
     Ok(())
-}
-
-/// fshost calls UnregisterSystemStorageForShutdown during shutdown.
-async fn run_driver_admin(
-    mut stream: fdevicemanager::AdministratorRequestStream,
-    mut tx: mpsc::UnboundedSender<Signal>,
-) {
-    while let Some(request) = stream.next().await {
-        match request.unwrap() {
-            fdevicemanager::AdministratorRequest::Suspend { .. } => {
-                panic!(
-                    "unexpectedly called Suspend on {}",
-                    fdevicemanager::AdministratorMarker::NAME
-                );
-            }
-            fdevicemanager::AdministratorRequest::UnregisterSystemStorageForShutdown {
-                responder,
-            } => {
-                tx.start_send(Signal::UnregisterSystemStorageForShutdown).unwrap();
-                responder.send(zx::Status::OK.into_raw()).unwrap();
-            }
-        }
-    }
 }
 
 /// fshost uses exactly one boot item - it checks to see if there is an item of type

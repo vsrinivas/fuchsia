@@ -180,7 +180,6 @@ zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Direct
 zx_status_t FsManager::Initialize(
     fidl::ServerEnd<fuchsia_io::Directory> dir_request,
     fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request,
-    fidl::ClientEnd<fuchsia_device_manager::Administrator> driver_admin,
     std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher) {
   global_loop_->StartThread("root-dispatcher");
 
@@ -230,10 +229,6 @@ zx_status_t FsManager::Initialize(
       return status;
     }
   }
-  if (driver_admin.is_valid()) {
-    driver_admin_ = fidl::WireSharedClient<fuchsia_device_manager::Administrator>(
-        std::move(driver_admin), global_loop_->dispatcher());
-  }
   return ZX_OK;
 }
 
@@ -274,28 +269,6 @@ zx_status_t FsManager::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> server) 
   return root_vfs_->ServeDirectory(global_root_, std::move(server), rights);
 }
 
-void FsManager::RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback) {
-  // If we don't have a connection to Driver Manager, just return ZX_OK.
-  if (!driver_admin_.is_valid()) {
-    callback(ZX_OK);
-    return;
-  }
-
-  using Unregister = fuchsia_device_manager::Administrator::UnregisterSystemStorageForShutdown;
-  driver_admin_->UnregisterSystemStorageForShutdown(
-      [callback = std::move(callback)](fidl::WireUnownedResult<Unregister>& result) mutable {
-        if (!result.ok()) {
-          callback(result.status());
-          return;
-        }
-        if (result->status != ZX_OK) {
-          FX_LOGS(ERROR) << "RemoveSystemDevices returned error: "
-                         << zx_status_get_string(result->status);
-        }
-        callback(result->status);
-      });
-}
-
 void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
   std::lock_guard guard(lock_);
   if (shutdown_called_) {
@@ -309,77 +282,71 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
   // Shutting down fshost involves sending asynchronous shutdown signals to several different
   // systems in order with continuation passing.
   // 0. Before fshost is told to shut down, almost everything that is running out of the
-  //    filesystems is shut down by component manager.
-  // 1. Shut down drivers that are running out of the system partition. These are hosted out of
-  //    blobfs, and are the last thing in the system with a dependency on the filesystems.
-  // 2. Shut down the outgoing vfs. This hosts the fshost services. The outgoing vfs also has
+  //    filesystems is shut down by component manager. Also before this, blobfs is told to shut
+  //    down by component manager. Blobfs, as part of it's shutdown, notifies driver manager that
+  //    drivers running out of /system should be shut down.
+  // 1. Shut down the outgoing vfs. This hosts the fshost services. The outgoing vfs also has
   //    handles to the filesystems, but it doesn't own them so it doesn't shut them down.
-  // 3. Shut down the root vfs. This hosts the filesystems, and recursively shuts all of them down.
+  // 2. Shut down the root vfs. This hosts the filesystems, and recursively shuts all of them down.
   // If at any point we hit an error, we log loudly, but continue with the shutdown procedure.
-  RemoveSystemDrivers([this, callback = std::move(callback)](zx_status_t status) mutable {
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "RemoveSystemDrivers failed: " << zx_status_get_string(status);
-    }
+  std::vector<std::pair<MountPoint, zx::channel>> filesystems_to_shut_down;
+  for (auto& [point, node] : mount_nodes_) {
+    if (node.export_root)
+      filesystems_to_shut_down.push_back(std::make_pair(point, std::move(node.export_root)));
+  }
 
-    std::vector<std::pair<MountPoint, zx::channel>> filesystems_to_shut_down;
-    for (auto& [point, node] : mount_nodes_) {
-      if (node.export_root)
-        filesystems_to_shut_down.push_back(std::make_pair(point, std::move(node.export_root)));
-    }
+  // fs_management::Shutdown is synchronous, so we spawn a thread to shut down
+  // the mounted filesystems.
+  std::thread shutdown_thread([this, callback = std::move(callback),
+                               filesystems_to_shutdown =
+                                   std::move(filesystems_to_shut_down)]() mutable {
+    auto merge_status = [first_status = ZX_OK](zx_status_t status) mutable {
+      if (first_status == ZX_OK)
+        first_status = status;
+      return first_status;
+    };
 
-    // fs_management::Shutdown is synchronous, so we spawn a thread to shut down
-    // the mounted filesystems.
-    std::thread shutdown_thread([this, callback = std::move(callback),
-                                 filesystems_to_shutdown =
-                                     std::move(filesystems_to_shut_down)]() mutable {
-      auto merge_status = [first_status = ZX_OK](zx_status_t status) mutable {
-        if (first_status == ZX_OK)
-          first_status = status;
-        return first_status;
-      };
-
-      for (auto& [point, fs] : filesystems_to_shutdown) {
-        FX_LOGS(INFO) << "Shutting down " << MountPointPath(point);
-        if (auto result = fs_management::Shutdown({fs.borrow()}); result.is_error()) {
-          FX_LOGS(WARNING) << "Failed to shut down " << MountPointPath(point) << ": "
-                           << result.status_string();
-          merge_status(result.error_value());
-        }
+    for (auto& [point, fs] : filesystems_to_shutdown) {
+      FX_LOGS(INFO) << "Shutting down " << MountPointPath(point);
+      if (auto result = fs_management::Shutdown({fs.borrow()}); result.is_error()) {
+        FX_LOGS(WARNING) << "Failed to shut down " << MountPointPath(point) << ": "
+                         << result.status_string();
+        merge_status(result.error_value());
       }
+    }
 
-      // Continue on the async loop...
-      zx_status_t status = async::PostTask(
-          global_loop_->dispatcher(),
-          [this, callback = std::move(callback), merge_status = std::move(merge_status)]() mutable {
-            outgoing_vfs_.Shutdown([this, callback = std::move(callback),
-                                    merge_status =
-                                        std::move(merge_status)](zx_status_t status) mutable {
-              if (status != ZX_OK) {
-                FX_LOGS(ERROR) << "outgoing_vfs shutdown failed: " << zx_status_get_string(status);
-                merge_status(status);
-              }
-              root_vfs_->Shutdown([this, callback = std::move(callback),
-                                   merge_status =
-                                       std::move(merge_status)](zx_status_t status) mutable {
-                if (status != ZX_OK) {
-                  FX_LOGS(ERROR) << "root_vfs shutdown failed: " << zx_status_get_string(status);
-                  merge_status(status);
-                }
-                callback(merge_status(ZX_OK));
-                sync_completion_signal(&shutdown_);
-                // after this signal, FsManager can be destroyed.
-              });
-            });
+    // Continue on the async loop...
+    zx_status_t status = async::PostTask(
+        global_loop_->dispatcher(),
+        [this, callback = std::move(callback), merge_status = std::move(merge_status)]() mutable {
+          outgoing_vfs_.Shutdown([this, callback = std::move(callback),
+                                  merge_status =
+                                      std::move(merge_status)](zx_status_t status) mutable {
+            if (status != ZX_OK) {
+              FX_LOGS(ERROR) << "outgoing_vfs shutdown failed: " << zx_status_get_string(status);
+              merge_status(status);
+            }
+            root_vfs_->Shutdown(
+                [this, callback = std::move(callback),
+                 merge_status = std::move(merge_status)](zx_status_t status) mutable {
+                  if (status != ZX_OK) {
+                    FX_LOGS(ERROR) << "root_vfs shutdown failed: " << zx_status_get_string(status);
+                    merge_status(status);
+                  }
+                  callback(merge_status(ZX_OK));
+                  sync_completion_signal(&shutdown_);
+                  // after this signal, FsManager can be destroyed.
+                });
           });
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Unable to finish shut down: " << zx_status_get_string(status);
-        // We can't call the callback here because we moved it, but we don't expect posting the task
-        // to fail, so let's not worry about it.
-      }
-    });
-
-    shutdown_thread.detach();
+        });
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Unable to finish shut down: " << zx_status_get_string(status);
+      // We can't call the callback here because we moved it, but we don't expect posting the task
+      // to fail, so let's not worry about it.
+    }
   });
+
+  shutdown_thread.detach();
 }
 
 bool FsManager::IsShutdown() { return sync_completion_signaled(&shutdown_); }
@@ -400,8 +367,6 @@ const char* FsManager::MountPointPath(FsManager::MountPoint point) {
       return "/system";
     case MountPoint::kInstall:
       return "/install";
-    case MountPoint::kBlob:
-      return "/blob";
     case MountPoint::kPkgfs:
       return "/pkgfs";
     case MountPoint::kFactory:

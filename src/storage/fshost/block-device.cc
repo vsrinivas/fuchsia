@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.fs.startup/cpp/wire.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
@@ -243,6 +244,41 @@ std::string GetTopologicalPath(int fd) {
   }
   const auto& path = resp->result.response().path;
   return {path.data(), path.size()};
+}
+
+fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
+    const fshost::Config* config, std::shared_ptr<FshostBootArgs> boot_args) {
+  fuchsia_fs_startup::wire::StartOptions options;
+  options.collect_metrics = true;
+  options.write_compression_level = -1;
+  if (config->is_set(Config::kSandboxDecompression)) {
+    options.sandbox_decompression = true;
+  }
+  if (boot_args) {
+    std::optional<std::string> algorithm = boot_args->blobfs_write_compression_algorithm();
+    if (algorithm == "UNCOMPRESSED") {
+      options.write_compression_algorithm =
+          fuchsia_fs_startup::wire::CompressionAlgorithm::kUncompressed;
+    } else if (algorithm == "ZSTD_CHUNKED") {
+      options.write_compression_algorithm =
+          fuchsia_fs_startup::wire::CompressionAlgorithm::kZstdChunked;
+    } else if (algorithm.has_value()) {
+      // An unrecognized compression algorithm was requested. Ignore it and continue.
+      FX_LOGS(WARNING) << "Ignoring " << *algorithm << " algorithm";
+    }
+    std::optional<std::string> eviction_policy = boot_args->blobfs_eviction_policy();
+    if (eviction_policy == "NEVER_EVICT") {
+      options.cache_eviction_policy_override =
+          fuchsia_fs_startup::wire::EvictionPolicyOverride::kNeverEvict;
+    } else if (eviction_policy == "EVICT_IMMEDIATELY") {
+      options.cache_eviction_policy_override =
+          fuchsia_fs_startup::wire::EvictionPolicyOverride::kEvictImmediately;
+    } else if (eviction_policy.has_value()) {
+      // An unrecognized eviction policy override was requested. Ignore it and continue.
+      FX_LOGS(WARNING) << "Ignoring " << *eviction_policy << " policy";
+    }
+  }
+  return options;
 }
 
 BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd, const Config* device_config)
@@ -679,25 +715,8 @@ zx_status_t BlockDevice::MountFilesystem() {
     }
     case fs_management::kDiskFormatBlobfs: {
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(blobfs)";
-      fs_management::MountOptions options;
-      options.collect_metrics = true;
-      std::optional<std::string> algorithm = std::nullopt;
-      std::optional<std::string> eviction_policy = std::nullopt;
-      if (mounter_->boot_args()) {
-        algorithm = mounter_->boot_args()->blobfs_write_compression_algorithm();
-        if (algorithm == "ZSTD" || algorithm == "ZSTD_SEEKABLE") {
-          // These two algorithms are deprecated.
-          FX_LOGS(INFO) << "Ignoring " << *algorithm << " algorithm";
-          algorithm = std::nullopt;
-        }
-        eviction_policy = mounter_->boot_args()->blobfs_eviction_policy();
-      }
-      options.write_compression_algorithm = algorithm ? algorithm->c_str() : nullptr;
-      options.cache_eviction_policy = eviction_policy ? eviction_policy->c_str() : nullptr;
-      if (device_config_->is_set(Config::kSandboxDecompression)) {
-        options.sandbox_decompression = true;
-      }
-      zx_status_t status = mounter_->MountBlob(std::move(block_device), options);
+      zx_status_t status = mounter_->MountBlob(
+          std::move(block_device), GetBlobfsStartOptions(device_config_, mounter_->boot_args()));
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount blobfs partition: " << zx_status_get_string(status)
                        << ".";

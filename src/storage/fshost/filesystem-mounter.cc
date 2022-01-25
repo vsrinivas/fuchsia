@@ -11,6 +11,7 @@
 #include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/inspect/service/cpp/service.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
 #include <sys/stat.h>
@@ -27,6 +28,29 @@
 namespace fshost {
 
 namespace fio = fuchsia_io;
+
+zx::status<> FilesystemMounter::LaunchFsComponent(zx::channel block_device,
+                                                  fuchsia_fs_startup::wire::StartOptions options,
+                                                  const std::string& fs_name) {
+  std::string startup_service_path = std::string("/") + fs_name + "/fuchsia.fs.startup.Startup";
+  auto startup_client_end =
+      service::Connect<fuchsia_fs_startup::Startup>(startup_service_path.c_str());
+  if (startup_client_end.is_error()) {
+    FX_LOGS(ERROR) << "failed to connect to startup service at " << startup_service_path << ": "
+                   << startup_client_end.status_string();
+    return startup_client_end.take_error();
+  }
+  auto startup_client = fidl::BindSyncClient(std::move(*startup_client_end));
+  fidl::ClientEnd<fuchsia_hardware_block::Block> block_client_end(std::move(block_device));
+  auto startup_res = startup_client->Start(std::move(block_client_end), std::move(options));
+  if (!startup_res.ok()) {
+    FX_LOGS(ERROR) << "failed to start through startup service at " << startup_service_path << ": "
+                   << startup_res.status_string();
+    return zx::make_status(startup_res.status());
+  }
+  FX_LOGS(INFO) << "successfully mounted " << fs_name;
+  return zx::ok();
+}
 
 zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t* hnd,
                                         uint32_t* ids, size_t len, uint32_t fs_flags) {
@@ -198,29 +222,14 @@ zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
 }
 
 zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
-                                         const fs_management::MountOptions& options) {
+                                         fuchsia_fs_startup::wire::StartOptions options) {
   if (blob_mounted_) {
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  if (auto result = MountFilesystem(FsManager::MountPoint::kBlob, "/pkg/bin/blobfs", options,
-                                    std::move(block_device), FS_SVC | FS_SVC_BLOBFS);
-      result.is_error()) {
-    return result.error_value();
-  }
-
-  if (zx_status_t status =
-          fshost_.ForwardFsDiagnosticsDirectory(FsManager::MountPoint::kBlob, "blobfs");
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to add diagnostic directory for blobfs: "
-                   << zx_status_get_string(status);
-  }
-  if (zx_status_t status = fshost_.ForwardFsService(
-          FsManager::MountPoint::kBlob,
-          fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>);
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to forward BlobfsVerifier service for blobfs: "
-                   << zx_status_get_string(status);
+  zx::status ret = LaunchFsComponent(std::move(block_device), options, "blobfs");
+  if (ret.is_error()) {
+    return ret.error_value();
   }
 
   blob_mounted_ = true;
