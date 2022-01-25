@@ -58,11 +58,11 @@ The following example shows the command output for the `pkg-resolver` component:
 
 ```none {:.devsite-disable-click-to-copy}
 $ ffx component show pkg-resolver
-{{ '<strong>' }}Moniker: /core/pkg-resolver{{ '</strong>' }}
-{{ '<strong>' }}URL: fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cm{{ '</strong>' }}
-Type: CML static component
-Component State: Resolved
-Execution State: Running
+               {{ '<strong>' }}Moniker: /core/pkg-resolver{{ '</strong>' }}
+                   {{ '<strong>' }}URL: fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cm{{ '</strong>' }}
+                  Type: CML static component
+       Component State: Resolved
+       Execution State: Running
 ...
 ```
 

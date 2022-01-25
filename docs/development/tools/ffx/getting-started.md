@@ -274,12 +274,12 @@ Moniker: /core/ffx-laboratory:hello-world-rust
 Creating component instance...
 ...
 $ fx ffx component show hello-world-rust
-Moniker: /core/ffx-laboratory:hello-world-rust
-URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
-Type: v2 dynamic component
-Execution State: Running
-Job ID: 50775
-Process ID: 50819
+               Moniker: /core/ffx-laboratory:hello-world-rust
+                   URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
+                  Type: v2 dynamic component
+       Execution State: Running
+                Job ID: 50775
+            Process ID: 50819
 ...
 ```
 

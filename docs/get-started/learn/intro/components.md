@@ -241,55 +241,54 @@ The command outputs the following report:
 
 
 ```none {:.devsite-disable-click-to-copy}
-Moniker: /bootstrap/fshost
-URL: fuchsia-boot:///#meta/fshost.cm
-Type: CML static component
-Component State: Resolved
-Execution State: Running
-Job ID: 2641
-Process ID: 2670
-Incoming Capabilities (11):
-  boot
-  dev
-  fuchsia.boot.Arguments
-  fuchsia.boot.Items
-  fuchsia.cobalt.LoggerFactory
-  fuchsia.device.manager.Administrator
-  fuchsia.feedback.CrashReporter
-  fuchsia.logger.LogSink
-  fuchsia.process.Launcher
-  fuchsia.tracing.provider.Registry
-  svc_blobfs
-Exposed Capabilities (21):
-  bin
-  blob
-  build-info
-  config-data
-  diagnostics
-  durable
-  factory
-  fuchsia.fshost.Admin
-  fuchsia.fshost.BlockWatcher
-  fuchsia.fshost.Loader
-  fuchsia.update.verify.BlobfsVerifier
-  install
-  minfs
-  pkgfs
-  pkgfs-delayed
-  pkgfs-packages-delayed
-  root-ssl-certificates
-  system
-  system-delayed
-  tmp
-  volume
-Outgoing Capabilities (7):
-  delayed
-  diagnostics
-  fs
-  fuchsia.fshost.Admin
-  fuchsia.fshost.BlockWatcher
-  fuchsia.fshost.Loader
-  fuchsia.update.verify.BlobfsVerifier
+               Moniker: /bootstrap/fshost
+                   URL: fuchsia-boot:///#meta/fshost.cm
+                  Type: CML static component
+       Component State: Resolved
+ Incoming Capabilities: boot
+                        dev
+                        fuchsia.boot.Arguments
+                        fuchsia.boot.Items
+                        fuchsia.cobalt.LoggerFactory
+                        fuchsia.device.manager.Administrator
+                        fuchsia.feedback.CrashReporter
+                        fuchsia.logger.LogSink
+                        fuchsia.process.Launcher
+                        fuchsia.tracing.provider.Registry
+                        svc_blobfs
+  Exposed Capabilities: bin
+                        blob
+                        build-info
+                        config-data
+                        diagnostics
+                        durable
+                        factory
+                        fuchsia.fshost.Admin
+                        fuchsia.fshost.BlockWatcher
+                        fuchsia.fshost.Loader
+                        fuchsia.update.verify.BlobfsVerifier
+                        install
+                        minfs
+                        mnt
+                        pkgfs
+                        pkgfs-delayed
+                        pkgfs-packages-delayed
+                        root-ssl-certificates
+                        system
+                        system-delayed
+                        tmp
+       Execution State: Running
+          Start reason: '/bootstrap/base_resolver' requested capability 'pkgfs-packages-delayed'
+           Running for: 1807734933 ticks
+                Job ID: 2546
+            Process ID: 2716
+ Outgoing Capabilities: delayed
+                        diagnostics
+                        fs
+                        fuchsia.fshost.Admin
+                        fuchsia.fshost.BlockWatcher
+                        fuchsia.fshost.Loader
+                        fuchsia.update.verify.BlobfsVerifier
 ```
 
 Notice a few of the details reported here:

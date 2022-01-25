@@ -319,11 +319,11 @@ ffx component show echo-args
 You should see the following output:
 
 ```none {:.devsite-disable-click-to-copy}
-Moniker: /core/ffx-laboratory:echo-args
-URL: fuchsia-pkg://fuchsia.com/echo-args#meta/echo_args.cm
-Type: CML dynamic component
-Component State: Unresolved
-Execution State: Stopped
+               Moniker: /core/ffx-laboratory:echo-args
+                   URL: fuchsia-pkg://fuchsia.com/echo-args#meta/echo_args.cm
+                  Type: CML dynamic component
+       Component State: Unresolved
+       Execution State: Stopped
 ```
 
 Notice that the instance has been created, but the component URL has not been
@@ -367,15 +367,13 @@ ffx component show echo-args
 You should now see the following output:
 
 ```none {:.devsite-disable-click-to-copy}
-Moniker: /core/ffx-laboratory:echo-args
-URL: fuchsia-pkg://fuchsia.com/echo-args#meta/echo_args.cm
-Type: CML dynamic component
-Component State: Resolved
-Incoming Capabilities (1):
-  fuchsia.logger.LogSink
-Exposed Capabilities (1):
-  diagnostics
-Execution State: Stopped
+               Moniker: /core/ffx-laboratory:echo-args
+                   URL: fuchsia-pkg://fuchsia.com/echo-args#meta/echo_args.cm
+                  Type: CML dynamic component
+       Component State: Resolved
+ Incoming Capabilities: fuchsia.logger.LogSink
+  Exposed Capabilities: diagnostics
+       Execution State: Stopped
 ```
 
 The component state has changed to `Resolved` and you can see more details

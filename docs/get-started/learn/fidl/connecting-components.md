@@ -355,26 +355,24 @@ components using `ffx component show`:
 ```
 
 ```none {:.devsite-disable-click-to-copy}
-Moniker: /core/ffx-laboratory:echo-realm/echo_client
-URL: #meta/echo_client.cm
-Type: CML static component
-Component State: Unresolved
-Execution State: Stopped
+               Moniker: /core/ffx-laboratory:echo-realm/echo_client
+                   URL: #meta/echo_client.cm
+                  Type: CML static component
+       Component State: Unresolved
+       Execution State: Stopped
 
-Moniker: /core/ffx-laboratory:echo-realm/echo_server
-URL: #meta/echo_server.cm
-Type: CML static component
-Component State: Unresolved
-Execution State: Stopped
+               Moniker: /core/ffx-laboratory:echo-realm/echo_server
+                   URL: #meta/echo_server.cm
+                  Type: CML static component
+       Component State: Unresolved
+       Execution State: Stopped
 
-Moniker: /core/ffx-laboratory:echo-realm
-URL: fuchsia-pkg://fuchsia.com/echo-realm#meta/echo_realm.cm
-Type: CML dynamic component
-Component State: Resolved
-Incoming Capabilities (0):
-Exposed Capabilities (0):
-Execution State: Running
-Merkle root: 666c40477785f89b0ace22b30d65f1338f1d308ecceacb0f65f5140baa889e1b
+               Moniker: /core/ffx-laboratory:echo-realm
+                   URL: fuchsia-pkg://fuchsia.com/echo-realm#meta/echo_realm.cm
+                  Type: CML dynamic component
+       Component State: Resolved
+       Execution State: Running
+           Merkle root: 666c40477785f89b0ace22b30d65f1338f1d308ecceacb0f65f5140baa889e1b
 ```
 
 ### Verify the component interactions
@@ -408,22 +406,18 @@ ffx component show echo_server
 ```
 
 ```none {:.devsite-disable-click-to-copy}
-Moniker: /core/ffx-laboratory:echo-realm/echo_server
-URL: #meta/echo_server.cm
-Type: CML static component
-Component State: Resolved
-Incoming Capabilities (1):
-  fuchsia.logger.LogSink
-Exposed Capabilities (2):
-  diagnostics
-  fidl.examples.routing.echo.Echo
-Execution State: Running
-Job ID: 474691
-Process ID: 474712
-Process Start Time (ticks): 2026280474361
-Process Start Time (UTC estimate): (not available)
-Merkle root: 666c40477785f89b0ace22b30d65f1338f1d308ecceacb0f65f5140baa889e1b
-Outgoing Capabilities (2):
-  diagnostics
-  fidl.examples.routing.echo.Echo
+               Moniker: /core/ffx-laboratory:echo-realm/echo_server
+                   URL: #meta/echo_server.cm
+                  Type: CML static component
+       Component State: Resolved
+ Incoming Capabilities: fuchsia.logger.LogSink
+  Exposed Capabilities: diagnostics
+                        fidl.examples.routing.echo.Echo
+       Execution State: Running
+                Job ID: 474691
+            Process ID: 474712
+           Running for: 2026280474361 ticks
+           Merkle root: 666c40477785f89b0ace22b30d65f1338f1d308ecceacb0f65f5140baa889e1b
+ Outgoing Capabilities: diagnostics
+                        fidl.examples.routing.echo.Echo
 ```
