@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_test.gni")
 
 group("tests") {
   testonly = true
@@ -428,6 +429,31 @@ fuchsia_unittest_component("annotations-test") {
   deps = [ ":annotations_test" ]
 }
 
+rustc_test("basemgr_v2_test_bin") {
+  name = "basemgr_v2_test"
+  source_root = "basemgr_v2_test.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+  sources = [ "basemgr_v2_test.rs" ]
+}
+
+fuchsia_component("basemgr-v2-test") {
+  testonly = true
+  manifest = "meta/basemgr_v2_test.cml"
+  deps = [ ":basemgr_v2_test_bin" ]
+}
+
 fuchsia_package_with_single_component("module_with_fake_runner") {
   testonly = true
   manifest = "meta/module_with_fake_runner.cmx"
@@ -449,6 +475,7 @@ fuchsia_test_package("modular_integration_tests") {
     ":agent-session-restart-test",
     ":annotations-test",
     ":basemgr-test",
+    ":basemgr-v2-test",
     ":component-context-test",
     ":element-manager-test",
     ":inspect-basemgr-test",
@@ -462,4 +489,15 @@ fuchsia_test_package("modular_integration_tests") {
     ":story-shell-factory-test",
     ":story-shell-test",
   ]
+  deps = [
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/modular/bin/basemgr:component_v2",
+  ]
+
+  # TODO(fxbug.dev/72349): Ensure basemgr v2 test tears down sessionmgr without errors
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

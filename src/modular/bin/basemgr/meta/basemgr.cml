@@ -43,6 +43,7 @@
             from: "parent",
             rights: [ "r*" ],
             path: "/config/data",
+            subdir: "basemgr",
         },
     ],
     expose: [

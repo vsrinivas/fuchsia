@@ -1,0 +1,28 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/basemgr_v2_test",
+    },
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#realm_builder",
+        },
+        {
+            storage: "cache",
+            from: "parent",
+            to: [ "#realm_builder" ],
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#realm_builder" ],
+        },
+    ],
+}
