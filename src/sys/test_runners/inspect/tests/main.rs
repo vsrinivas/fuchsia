@@ -6,12 +6,11 @@ use {
     anyhow::{Context as _, Error},
     diagnostics_data::{hierarchy, Data, DiagnosticsHierarchy, Property},
     fake_archive_accessor::FakeArchiveAccessor,
-    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{CaseStatus, RunOptions, SuiteStatus},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
+    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     futures::prelude::*,
     paste::paste,
     pretty_assertions::assert_eq,
@@ -35,16 +34,17 @@ async fn run_test(
 
     let fake = FakeArchiveAccessor::new(&fake_archive_output, None);
     let fake_clone = fake.clone();
-    builder
+    let test_manager = builder
         .add_child(
             "test_manager",
             "fuchsia-pkg://fuchsia.com/inspect-runner-integration-test#meta/test_manager_for_tests.cm",
             ChildOptions::new(),
         )
-        .await?
-        .add_mock_child(
+        .await?;
+    let fake_archivist = builder
+        .add_local_child(
             "fake_archivist",
-            move |mock_handles| {
+            move |handles| {
                 let fake = fake_clone.clone();
                 async move {
                     let mut fs = ServiceFs::new();
@@ -58,7 +58,7 @@ async fn run_test(
                         })
                         .detach();
                     });
-                    fs.serve_connection(mock_handles.outgoing_dir.into_channel())
+                    fs.serve_connection(handles.outgoing_dir.into_channel())
                         .expect("serve fake archivist");
                     fs.collect::<()>().await;
                     Ok(())
@@ -67,47 +67,37 @@ async fn run_test(
             },
             ChildOptions::new(),
         )
-        .await?
+        .await?;
+    builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component("test_manager")]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.ComponentResolver"))
+                .from(Ref::parent())
+                .to(&test_manager),
         )
-        .await?
+        .await?;
+    builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.sys2.EventSource")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component("test_manager")]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.diagnostics.ArchiveAccessor"))
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                ))
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                ))
+                .from(&fake_archivist)
+                .to(&test_manager),
         )
-        .await?
+        .await?;
+    builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.diagnostics.ArchiveAccessor")
-                .source(RouteEndpoint::component("fake_archivist"))
-                .targets(vec![RouteEndpoint::component("test_manager")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.diagnostics.FeedbackArchiveAccessor")
-                .source(RouteEndpoint::component("fake_archivist"))
-                .targets(vec![RouteEndpoint::component("test_manager")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.diagnostics.LegacyMetricsArchiveAccessor")
-                .source(RouteEndpoint::component("fake_archivist"))
-                .targets(vec![RouteEndpoint::component("test_manager")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.sys2.ComponentResolver")
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component("test_manager")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol(ftest_manager::RunBuilderMarker::DEBUG_NAME)
-                .source(RouteEndpoint::component("test_manager"))
-                .targets(vec![RouteEndpoint::above_root()]),
+            Route::new()
+                .capability(Capability::protocol::<ftest_manager::RunBuilderMarker>())
+                .from(&test_manager)
+                .to(Ref::parent()),
         )
         .await?;
 
