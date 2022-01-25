@@ -9,6 +9,7 @@
 
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/structures.h>
+#include <lib/fit/function.h>
 #include <zircon/types.h>
 
 namespace acpi_lite {
@@ -24,7 +25,7 @@ namespace acpi_lite {
 // tables.
 zx_status_t EnumerateProcessorLocalApics(
     const AcpiParserInterface& parser,
-    const fbl::Function<zx_status_t(const AcpiMadtLocalApicEntry&)>& callback);
+    const fit::inline_function<zx_status_t(const AcpiMadtLocalApicEntry&)>& callback);
 
 // Enumerate all IO APICs in the system, calling |callback| once for each.
 //
@@ -33,7 +34,7 @@ zx_status_t EnumerateProcessorLocalApics(
 // found attempting to parse the tables.
 zx_status_t EnumerateIoApics(
     const AcpiParserInterface& parser,
-    const fbl::Function<zx_status_t(const AcpiMadtIoApicEntry&)>& callback);
+    const fit::inline_function<zx_status_t(const AcpiMadtIoApicEntry&)>& callback);
 
 // Enumerate all ISA interrupt source override entries in the system MADT
 // table.
@@ -47,7 +48,7 @@ zx_status_t EnumerateIoApics(
 // found attempting to parse the tables.
 zx_status_t EnumerateIoApicIsaOverrides(
     const AcpiParserInterface& parser,
-    const fbl::Function<zx_status_t(const AcpiMadtIntSourceOverrideEntry&)>& callback);
+    const fit::inline_function<zx_status_t(const AcpiMadtIntSourceOverrideEntry&)>& callback);
 
 }  // namespace acpi_lite
 

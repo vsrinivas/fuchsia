@@ -10,6 +10,7 @@
 
 #include <debug.h>
 #include <lib/backtrace.h>
+#include <lib/fit/function.h>
 #include <lib/relaxed_atomic.h>
 #include <platform.h>
 #include <sys/types.h>
@@ -24,7 +25,6 @@
 #include <arch/ops.h>
 #include <arch/thread.h>
 #include <fbl/canary.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <kernel/cpu.h>
@@ -726,7 +726,8 @@ struct Thread {
   // CPUs. Firstly when the thread is removed from the old CPUs scheduler,
   // secondly when the thread is rescheduled on the new CPU. When the migrate
   // function is called, |thread_lock| is held.
-  using MigrateFn = fbl::Function<void(Thread* thread, MigrateStage stage)> TA_REQ(thread_lock);
+  using MigrateFn = fit::inline_function<void(Thread* thread, MigrateStage stage), sizeof(void*)>
+      TA_REQ(thread_lock);
 
   void SetMigrateFn(MigrateFn migrate_fn) TA_EXCL(thread_lock);
   void SetMigrateFnLocked(MigrateFn migrate_fn) TA_REQ(thread_lock);

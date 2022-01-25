@@ -76,7 +76,7 @@ static unsigned get_num_cpus_online() {
                                 DEFAULT_PRIORITY);
     ASSERT_NE(nullptr, nt, "Thread create failed");
     nt->SetCpuAffinity(cpu_num_to_mask(i));
-    nt->SetMigrateFn([](...) {});
+    nt->SetMigrateFn([](auto...) {});
     nt->Resume();
     ASSERT_EQ(nt->Join(nullptr, ZX_TIME_INFINITE), ZX_OK, "thread join failed");
     ASSERT_EQ(i, running_core, "Thread not running on hotplugged core");

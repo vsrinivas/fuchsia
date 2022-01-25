@@ -12,8 +12,6 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <fbl/function.h>
-
 namespace acpi_lite {
 
 class PhysMemReader;

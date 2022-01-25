@@ -9,12 +9,12 @@
 
 #include <assert.h>
 #include <lib/crypto/prng.h>
+#include <lib/fit/function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
 #include <fbl/canary.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
@@ -693,8 +693,8 @@ class MappingProtectionRanges {
   // value of this method.
   zx_status_t EnumerateProtectionRanges(
       vaddr_t mapping_base, size_t mapping_size, vaddr_t base, size_t size,
-      fbl::Function<zx_status_t(vaddr_t region_base, size_t region_size, uint mmu_flags)>&& func)
-      const;
+      fit::inline_function<zx_status_t(vaddr_t region_base, size_t region_size, uint mmu_flags)>&&
+          func) const;
 
   // Merges protection ranges such that |right| is left cleared, and |this| contains the information
   // of both ranges. It is an error to call this if |this| and |right| are not virtually contiguous.
@@ -892,8 +892,8 @@ class VmMapping final : public VmAddressRegionOrMapping,
   // value of this method.
   zx_status_t EnumerateProtectionRangesLocked(
       vaddr_t base, size_t size,
-      fbl::Function<zx_status_t(vaddr_t region_base, size_t region_len, uint mmu_flags)>&& func)
-      const TA_REQ(aspace_->lock()) __TA_NO_THREAD_SAFETY_ANALYSIS {
+      fit::inline_function<zx_status_t(vaddr_t region_base, size_t region_len, uint mmu_flags)>&&
+          func) const TA_REQ(aspace_->lock()) __TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(is_in_range(base, size));
     return ProtectRangesLocked().EnumerateProtectionRanges(base_, size_, base, size,
                                                            ktl::move(func));

@@ -16,7 +16,7 @@ namespace acpi_lite {
 
 zx_status_t EnumerateCpuNumaPairs(
     const AcpiSratTable* const srat,
-    const fbl::Function<void(const AcpiNumaDomain&, uint32_t)>& callback) {
+    const fit::inline_function<void(const AcpiNumaDomain&, uint32_t)>& callback) {
   // Initialise the domains.
   static constexpr size_t kMaxNumaDomains = 10;
   AcpiNumaDomain domains[kMaxNumaDomains];
@@ -121,8 +121,9 @@ zx_status_t EnumerateCpuNumaPairs(
   return ZX_OK;
 }
 
-zx_status_t EnumerateCpuNumaPairs(const AcpiParserInterface& parser,
-                                  fbl::Function<void(const AcpiNumaDomain&, uint32_t)> callback) {
+zx_status_t EnumerateCpuNumaPairs(
+    const AcpiParserInterface& parser,
+    fit::inline_function<void(const AcpiNumaDomain&, uint32_t)> callback) {
   // Get the SRAT table.
   const AcpiSratTable* srat = GetTableByType<AcpiSratTable>(parser);
   if (srat == nullptr) {

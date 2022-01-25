@@ -70,7 +70,8 @@ static void suspend_resume_fiq(bool resume_gicc, bool resume_gicd) {}
 
 static uint32_t read_gicd_targetsr(int target_reg) { return GICREG(0, GICD_ITARGETSR(target_reg)); }
 
-uint8_t gic_determine_local_mask(fbl::Function<uint32_t(int)> fetch_gicd_targetsr_reg) {
+uint8_t gic_determine_local_mask(
+    fit::inline_function<uint32_t(int), sizeof(void*)> fetch_gicd_targetsr_reg) {
   union {
     char bytes[4];
     uint32_t value;

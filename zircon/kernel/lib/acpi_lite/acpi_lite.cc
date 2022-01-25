@@ -7,6 +7,7 @@
 #include "lib/acpi_lite.h"
 
 #include <inttypes.h>
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 
 #include <pretty/hexdump.h>

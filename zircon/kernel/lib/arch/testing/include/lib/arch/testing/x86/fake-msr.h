@@ -8,10 +8,10 @@
 #define ZIRCON_KERNEL_LIB_ARCH_TESTING_INCLUDE_LIB_ARCH_TESTING_X86_FAKE_MSR_H_
 
 #include <lib/arch/x86/msr.h>
+#include <lib/fit/function.h>
 
 #include <memory>
 
-#include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
 #include <hwreg/internal.h>
 
@@ -28,7 +28,7 @@ class FakeMsrIo {
   // write, the callback is passed the accessed MSR's address and a reference
   // to its value. Example usages include resetting an MSR back to its default
   // value on write or incrementing a fake timestamp counter on RDTSC read.
-  using IoCallback = fbl::Function<void(X86Msr, uint64_t&)>;
+  using IoCallback = fit::inline_function<void(X86Msr, uint64_t&)>;
 
   // A canonical no-op IoCallback.
   static constexpr auto kNoSideEffects = [](X86Msr msr, uint64_t& value) {};

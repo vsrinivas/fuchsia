@@ -7,10 +7,10 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_ARCH_VM_ASPACE_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_ARCH_VM_ASPACE_H_
 
+#include <lib/fit/function.h>
 #include <sys/types.h>
 #include <zircon/types.h>
 
-#include <fbl/function.h>
 #include <fbl/macros.h>
 #include <vm/page.h>
 

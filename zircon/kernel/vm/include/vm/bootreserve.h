@@ -7,10 +7,9 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_BOOTRESERVE_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_BOOTRESERVE_H_
 
+#include <lib/fit/function.h>
 #include <sys/types.h>
 #include <zircon/types.h>
-
-#include <fbl/function.h>
 
 // The boot memory reservation system is a one-use early boot mechanism for
 // a platform to mark certain ranges of physical space as occupied by something
@@ -45,7 +44,7 @@ zx_status_t boot_reserve_range_search(paddr_t range_pa, size_t range_len, size_t
 // function does not lock the region structure.
 //
 // Returns the same value the callback |cb| returns.
-bool boot_reserve_foreach(const fbl::Function<bool(reserve_range_t)>& cb);
+bool boot_reserve_foreach(const fit::inline_function<bool(reserve_range_t)>& cb);
 
 // Unwires |page| and leaves it in an ALLOC state.
 void boot_reserve_unwire_page(struct vm_page* page);

@@ -6,6 +6,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_H_
 
+#include <lib/fit/function.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/relaxed_atomic.h>
 #include <platform.h>
@@ -14,7 +15,6 @@
 #include <zircon/syscalls/system.h>
 #include <zircon/types.h>
 
-#include <fbl/function.h>
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/wavl_tree_best_node_observer.h>
@@ -278,7 +278,7 @@ class Scheduler {
                                    cpu_mask_t* cpus_to_reschedule_mask, PropagatePI propagate)
       TA_REQ(thread_lock);
 
-  using EndTraceCallback = fbl::InlineFunction<void(), sizeof(void*)>;
+  using EndTraceCallback = fit::inline_function<void(), sizeof(void*)>;
 
   // Common logic for reschedule API.
   void RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace = nullptr)

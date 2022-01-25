@@ -8,13 +8,13 @@
 #define ZIRCON_KERNEL_LIB_KTRACE_INCLUDE_LIB_KTRACE_KTRACE_INTERNAL_H_
 
 #include <assert.h>
+#include <lib/fit/function.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <stdint.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <arch/user_copy.h>
-#include <fbl/function.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>

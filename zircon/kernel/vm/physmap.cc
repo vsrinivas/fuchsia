@@ -6,10 +6,10 @@
 
 #include "vm/physmap.h"
 
+#include <lib/fit/function.h>
 #include <trace.h>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/function.h>
 #include <ktl/unique_ptr.h>
 #include <vm/pmm.h>
 
@@ -50,7 +50,7 @@ void physmap_protect_gap(vaddr_t base, size_t size) {
 
 }  // namespace
 
-void physmap_for_each_gap(fbl::Function<void(vaddr_t base, size_t size)> func,
+void physmap_for_each_gap(fit::inline_function<void(vaddr_t base, size_t size)> func,
                           pmm_arena_info_t* arenas, size_t num_arenas) {
   // Iterate over the arenas and invoke |func| for the gaps between them.
   //

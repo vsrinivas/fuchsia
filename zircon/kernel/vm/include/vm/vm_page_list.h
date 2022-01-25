@@ -8,11 +8,11 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_PAGE_LIST_H_
 
 #include <align.h>
+#include <lib/fit/function.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <fbl/canary.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <ktl/algorithm.h>
@@ -370,9 +370,10 @@ class VmPageList final {
   // in |other|, not the adapted offsets in |this|.
   //
   // **NOTE** unlike MergeOnto, |other| will be empty at the end of this method.
-  void MergeFrom(VmPageList& other, uint64_t offset, uint64_t end_offset,
-                 fbl::Function<void(vm_page*, uint64_t offset)> release_fn,
-                 fbl::Function<void(VmPageOrMarker*, uint64_t offset)> migrate_fn);
+  void MergeFrom(
+      VmPageList& other, uint64_t offset, uint64_t end_offset,
+      fit::inline_function<void(vm_page*, uint64_t offset), 3 * sizeof(void*)> release_fn,
+      fit::inline_function<void(VmPageOrMarker*, uint64_t offset)> migrate_fn);
 
   // Merges this pages in |this| onto |other|.
   //
@@ -381,7 +382,7 @@ class VmPageList final {
   // gives ownership to |release_fn|.
   //
   // **NOTE** unlike MergeFrom, |this| will be empty at the end of this method.
-  void MergeOnto(VmPageList& other, fbl::Function<void(vm_page*)> release_fn);
+  void MergeOnto(VmPageList& other, fit::inline_function<void(vm_page*)> release_fn);
 
   // Takes the pages and markers in the range [offset, length) out of this page list.
   VmPageSpliceList TakePages(uint64_t offset, uint64_t length);

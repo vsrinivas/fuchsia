@@ -173,9 +173,10 @@ bool VmPageList::HasNoPages() const {
   return no_pages;
 }
 
-void VmPageList::MergeFrom(VmPageList& other, const uint64_t offset, const uint64_t end_offset,
-                           fbl::Function<void(vm_page*, uint64_t offset)> release_fn,
-                           fbl::Function<void(VmPageOrMarker*, uint64_t offset)> migrate_fn) {
+void VmPageList::MergeFrom(
+    VmPageList& other, const uint64_t offset, const uint64_t end_offset,
+    fit::inline_function<void(vm_page*, uint64_t offset), 3 * sizeof(void*)> release_fn,
+    fit::inline_function<void(VmPageOrMarker*, uint64_t offset)> migrate_fn) {
   constexpr uint64_t kNodeSize = PAGE_SIZE * VmPageListNode::kPageFanOut;
   // The skewed |offset| in |other| must be equal to 0 skewed in |this|. This allows
   // nodes to moved directly between the lists, without having to worry about allocations.
@@ -252,7 +253,7 @@ void VmPageList::MergeFrom(VmPageList& other, const uint64_t offset, const uint6
   }
 }
 
-void VmPageList::MergeOnto(VmPageList& other, fbl::Function<void(vm_page*)> release_fn) {
+void VmPageList::MergeOnto(VmPageList& other, fit::inline_function<void(vm_page*)> release_fn) {
   DEBUG_ASSERT(other.list_skew_ == list_skew_);
 
   auto iter = list_.begin();

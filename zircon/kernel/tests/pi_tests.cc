@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/fit/defer.h>
+#include <lib/fit/function.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
@@ -13,7 +14,6 @@
 #include <new>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/function.h>
 #include <fbl/macros.h>
 #include <kernel/owned_wait_queue.h>
 #include <kernel/scheduler.h>
@@ -345,7 +345,7 @@ class TestThread {
   // context from their local scope, but not need to use the heap in order to
   // allocate the storage for the scope, we need to know the worst case
   // capture storage requirements across all of these tests.  Armed with this
-  // knowledge, we can use a fbl::InlineFunction to pre-allocate storage in
+  // knowledge, we can use a fit::inline_function to pre-allocate storage in
   // the TestThread object for the worst case lambda we will encounter in the
   // test suite.
   //
@@ -362,7 +362,7 @@ class TestThread {
 
   Thread* thread_ = nullptr;
   ktl::atomic<State> state_{State::INITIAL};
-  fbl::InlineFunction<void(void), kMaxOpLambdaCaptureStorageBytes> op_;
+  fit::inline_function<void(void), kMaxOpLambdaCaptureStorageBytes> op_;
 };
 
 Barrier TestThread::allow_shutdown_;

@@ -7,7 +7,8 @@
 #ifndef ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_ROOT_JOB_OBSERVER_H_
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_ROOT_JOB_OBSERVER_H_
 
-#include <fbl/function.h>
+#include <lib/fit/function.h>
+
 #include <object/job_dispatcher.h>
 #include <object/signal_observer.h>
 
@@ -27,8 +28,8 @@ class RootJobObserver final : public SignalObserver {
   // lock again, introduce a lock cycle, etc.
   //
   // Exposed for testing.
-  RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* root_job_handle,
-                  fbl::Closure callback);
+  using Callback = fit::inline_function<void(), 3 * sizeof(void*)>;
+  RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* root_job_handle, Callback callback);
 
  private:
   // |SignalObserver| implementation.
@@ -36,7 +37,7 @@ class RootJobObserver final : public SignalObserver {
   void OnCancel(zx_signals_t signals) final;
 
   fbl::RefPtr<JobDispatcher> root_job_;
-  fbl::Closure callback_;
+  Callback callback_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_ROOT_JOB_OBSERVER_H_

@@ -7,7 +7,8 @@
 #ifndef ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_ARM_GICV2_H_
 #define ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_ARM_GICV2_H_
 
-#include <fbl/function.h>
+#include <lib/fit/function.h>
+
 #include <kernel/cpu.h>
 
 namespace arm_gicv2 {
@@ -59,6 +60,7 @@ class CpuMaskTranslator {
 }  // namespace arm_gicv2
 
 // Exposed for testing.
-uint8_t gic_determine_local_mask(fbl::Function<uint32_t(int)> fetch_gicd_targetsr_reg);
+uint8_t gic_determine_local_mask(
+    fit::inline_function<uint32_t(int), sizeof(void*)> fetch_gicd_targetsr_reg);
 
 #endif  // ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_ARM_GICV2_H_

@@ -7,10 +7,9 @@
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/apic.h>
 #include <lib/acpi_lite/structures.h>
+#include <lib/fit/function.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>
-
-#include <fbl/function.h>
 
 #include "binary_reader.h"
 #include "debug.h"
@@ -62,7 +61,7 @@ zx_status_t ForEachMadtEntryOfType(const AcpiParserInterface& parser, uint8_t ty
 
 zx_status_t EnumerateProcessorLocalApics(
     const AcpiParserInterface& parser,
-    const fbl::Function<zx_status_t(const AcpiMadtLocalApicEntry&)>& callback) {
+    const fit::inline_function<zx_status_t(const AcpiMadtLocalApicEntry&)>& callback) {
   return ForEachMadtEntryOfType<AcpiMadtLocalApicEntry>(
       parser, ACPI_MADT_TYPE_LOCAL_APIC,
       [&callback](const AcpiMadtLocalApicEntry& record) -> zx_status_t {
@@ -75,14 +74,14 @@ zx_status_t EnumerateProcessorLocalApics(
 
 zx_status_t EnumerateIoApics(
     const AcpiParserInterface& parser,
-    const fbl::Function<zx_status_t(const AcpiMadtIoApicEntry&)>& callback) {
+    const fit::inline_function<zx_status_t(const AcpiMadtIoApicEntry&)>& callback) {
   return ForEachMadtEntryOfType<AcpiMadtIoApicEntry, decltype(callback)>(
       parser, ACPI_MADT_TYPE_IO_APIC, callback);
 }
 
 zx_status_t EnumerateIoApicIsaOverrides(
     const AcpiParserInterface& parser,
-    const fbl::Function<zx_status_t(const AcpiMadtIntSourceOverrideEntry&)>& callback) {
+    const fit::inline_function<zx_status_t(const AcpiMadtIntSourceOverrideEntry&)>& callback) {
   return ForEachMadtEntryOfType<AcpiMadtIntSourceOverrideEntry, decltype(callback)>(
       parser, ACPI_MADT_TYPE_INT_SOURCE_OVERRIDE, callback);
 }

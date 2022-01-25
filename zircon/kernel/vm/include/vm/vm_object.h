@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_OBJECT_H_
 
 #include <align.h>
+#include <lib/fit/function.h>
 #include <lib/user_copy/user_iovec.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -18,7 +19,6 @@
 
 #include <fbl/array.h>
 #include <fbl/canary.h>
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
@@ -341,7 +341,7 @@ class VmObject : public VmHierarchyBase,
   // Ranges of length zero are considered invalid and will return ZX_ERR_INVALID_ARGS. The lookup_fn
   // can terminate iteration early by returning ZX_ERR_STOP.
   using LookupFunction =
-      fbl::SizedFunction<zx_status_t(uint64_t offset, paddr_t pa), 4 * sizeof(void*)>;
+      fit::inline_function<zx_status_t(uint64_t offset, paddr_t pa), 4 * sizeof(void*)>;
   virtual zx_status_t Lookup(uint64_t offset, uint64_t len, LookupFunction lookup_fn) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -392,7 +392,7 @@ class VmObject : public VmHierarchyBase,
   virtual zx_status_t DirtyPages(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
 
   using DirtyRangeEnumerateFunction =
-      fbl::Function<zx_status_t(uint64_t range_offset, uint64_t range_len)>;
+      fit::inline_function<zx_status_t(uint64_t range_offset, uint64_t range_len)>;
   // Enumerates dirty ranges in the range [offset, offset + len) in ascending order, and calls
   // |dirty_range_fn| on each range (spanning [range_offset, range_offset + range_len)).
   // |dirty_range_fn| can return ZX_ERR_NEXT to continue with the enumeration, ZX_ERR_STOP to

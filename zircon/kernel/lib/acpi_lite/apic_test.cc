@@ -37,7 +37,7 @@ template <typename T>
 struct Collector {
  public:
   // Return a callback that, when called, collects the given item into |items|.
-  fbl::Function<zx_status_t(const T&)> callback() {
+  fit::inline_function<zx_status_t(const T&)> callback() {
     return [this](const T& item) {
       fbl::AllocChecker ac;
       items.push_back(item, &ac);

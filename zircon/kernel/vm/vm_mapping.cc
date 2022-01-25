@@ -1125,8 +1125,8 @@ void VmMapping::MarkMergeable(fbl::RefPtr<VmMapping>&& mapping) {
 
 zx_status_t MappingProtectionRanges::EnumerateProtectionRanges(
     vaddr_t mapping_base, size_t mapping_size, vaddr_t base, size_t size,
-    fbl::Function<zx_status_t(vaddr_t region_base, size_t region_len, uint mmu_flags)>&& func)
-    const {
+    fit::inline_function<zx_status_t(vaddr_t region_base, size_t region_len, uint mmu_flags)>&&
+        func) const {
   DEBUG_ASSERT(size > 0);
 
   // Have a short circuit for the single protect region case to avoid wavl tree processing in the

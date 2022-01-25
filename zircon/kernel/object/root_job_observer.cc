@@ -69,7 +69,7 @@ RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* ro
     : RootJobObserver(ktl::move(root_job), root_job_handle_, Halt) {}
 
 RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* root_job_handle,
-                                 fbl::Closure callback)
+                                 RootJobObserver::Callback callback)
     : root_job_(ktl::move(root_job)), callback_(std::move(callback)) {
   root_job_->AddObserver(this, root_job_handle, ZX_JOB_NO_CHILDREN);
 }

@@ -9,9 +9,8 @@
 
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/structures.h>
+#include <lib/fit/function.h>
 #include <zircon/types.h>
-
-#include <fbl/function.h>
 
 namespace acpi_lite {
 
@@ -33,9 +32,10 @@ struct AcpiNumaDomain {
 // Calls the given callback on all pairs of CPU APIC ID and NumaRegion.
 zx_status_t EnumerateCpuNumaPairs(
     const AcpiSratTable* srat,
-    const fbl::Function<void(const AcpiNumaDomain&, uint32_t)>& callback);
-zx_status_t EnumerateCpuNumaPairs(const AcpiParserInterface& parser,
-                                  fbl::Function<void(const AcpiNumaDomain&, uint32_t)> callback);
+    const fit::inline_function<void(const AcpiNumaDomain&, uint32_t)>& callback);
+zx_status_t EnumerateCpuNumaPairs(
+    const AcpiParserInterface& parser,
+    fit::inline_function<void(const AcpiNumaDomain&, uint32_t)> callback);
 
 }  // namespace acpi_lite
 

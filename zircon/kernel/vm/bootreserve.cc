@@ -6,11 +6,11 @@
 #include "vm/bootreserve.h"
 
 #include <inttypes.h>
+#include <lib/fit/function.h>
 #include <sys/types.h>
 #include <trace.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/function.h>
 #include <vm/pmm.h>
 
 #include "vm_priv.h"
@@ -139,7 +139,7 @@ retry:
 }
 
 // Returns false and exits early if the callback returns false, true otherwise.
-bool boot_reserve_foreach(const fbl::Function<bool(const reserve_range_t)>& cb) {
+bool boot_reserve_foreach(const fit::inline_function<bool(const reserve_range_t)>& cb) {
   for (size_t i = 0; i < res_idx; i++) {
     if (!cb(res[i])) {
       return false;
