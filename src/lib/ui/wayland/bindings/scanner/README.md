@@ -7,7 +7,7 @@ In a `BUILD.gn` file:
 
 ```
 import("//build/rust/rustc_library.gni")
-import("//garnet/bin/wayland/protocol.gni")
+import("//src/lib/ui/wayland/bindings/protocol.gni")
 
 wayland_protocol("my_protocol") {
   protocol = "my_protocol.xml"

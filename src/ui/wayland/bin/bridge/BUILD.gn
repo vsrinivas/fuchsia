@@ -1,0 +1,77 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/resource.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_binary("bin") {
+  output_name = "wayland_bridge"
+  edition = "2018"
+  deps = [
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
+    "//sdk/fidl/fuchsia.wayland:fuchsia.wayland-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/trace/rust:trace-provider",
+    "//src/lib/ui/wayland/server",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("wayland_bridge") {
+  manifest = "meta/wayland_bridge.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("bridge") {
+  package_name = "wayland_bridge"
+  deps = [ ":wayland_bridge" ]
+}
+
+rustc_test("integration_test") {
+  output_name = "wayland_bridge_integration_test"
+  edition = "2018"
+  deps = [
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/ui/wayland/bindings/protocols:wayland",
+    "//src/lib/ui/wayland/bindings/protocols:wp_viewporter",
+    "//src/lib/ui/wayland/bindings/protocols:xdg_shell",
+    "//src/lib/ui/wayland/bindings/protocols:zaura_shell",
+    "//src/lib/ui/wayland/bindings/protocols:zcr_alpha_compositing_v1",
+    "//src/lib/ui/wayland/bindings/protocols:zcr_secure_output_v1",
+    "//src/lib/ui/wayland/bindings/protocols:zwp_linux_dmabuf_v1",
+    "//src/lib/ui/wayland/bindings/protocols:zwp_pointer_constraints_v1",
+    "//src/lib/ui/wayland/bindings/protocols:zwp_relative_pointer_v1",
+    "//src/lib/ui/wayland/core",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+  source_root = "tests/integration_test.rs"
+  sources = [ "tests/integration_test.rs" ]
+}
+
+fuchsia_unittest_component("wayland_bridge_integration_tests") {
+  manifest = "meta/wayland_bridge_integration_tests.cmx"
+  deps = [ ":integration_test" ]
+}
+
+fuchsia_test_package("wayland_bridge_tests") {
+  package_deps_for_infra_only = [ ":bridge" ]
+  test_components = [ ":wayland_bridge_integration_tests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":wayland_bridge_tests" ]
+}

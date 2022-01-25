@@ -5,7 +5,6 @@
 #![recursion_limit = "128"]
 
 use {
-    crate::dispatcher::*,
     anyhow::Error,
     fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization::{WaylandDispatcherRequest, WaylandDispatcherRequestStream},
@@ -14,33 +13,9 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_trace_provider::trace_provider_create_with_fdio,
     futures::prelude::*,
+    wayland_bridge::dispatcher::WaylandDispatcher,
+    wayland_bridge::display::Display,
 };
-
-#[cfg(test)]
-mod test_protocol;
-
-mod alpha_compositing;
-mod aura_shell;
-mod client;
-mod compositor;
-mod data_device_manager;
-pub mod dispatcher;
-pub mod display;
-mod object;
-mod pointer_constraints;
-mod registry;
-mod relative_pointer;
-use crate::display::*;
-mod buffer;
-mod linux_dmabuf;
-mod output;
-mod scenic;
-mod seat;
-mod secure_output;
-mod shm;
-mod subcompositor;
-mod viewporter;
-mod xdg_shell;
 
 fn spawn_wayland_dispatcher_service(mut stream: WaylandDispatcherRequestStream, display: Display) {
     fasync::Task::local(

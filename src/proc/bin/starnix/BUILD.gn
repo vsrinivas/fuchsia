@@ -10,7 +10,7 @@ import("//build/rust/rustc_test.gni")
 group("starnix") {
   deps = [
     ":pkg",
-    "//src/virtualization/bin/wayland/bridge",
+    "//src/lib/ui/wayland/server",
   ]
 }
 
@@ -48,6 +48,7 @@ if (target_cpu == "x64") {
       "//src/lib/process_builder",
       "//src/lib/ui/fuchsia-scenic",
       "//src/lib/ui/fuchsia-vulkan",
+      "//src/lib/ui/wayland/server",
       "//src/lib/vulkan",
       "//src/lib/zerocopy",
       "//src/lib/zircon/rust:fuchsia-zircon",
@@ -57,7 +58,6 @@ if (target_cpu == "x64") {
       "//src/storage/ext4/read-only:ext4-read-only",
       "//src/sys/lib/library_loader",
       "//src/sys/lib/runner",
-      "//src/virtualization/bin/wayland/bridge:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:bitflags",
       "//third_party/rust_crates:futures",

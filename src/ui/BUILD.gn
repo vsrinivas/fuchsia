@@ -10,6 +10,7 @@ group("ui") {
     "input",
     "scenic",
     "tools",
+    "wayland",
   ]
 }
 
@@ -28,5 +29,6 @@ group("tests") {
     "testing:tests",
     "tests",
     "tools:tests",
+    "wayland:tests",
   ]
 }

@@ -5,23 +5,28 @@
 import("//build/components.gni")
 
 group("wayland") {
-  deps = [ "bridge" ]
+  deps = [
+    "bindings",
+    "core",
+    "server",
+  ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":wayland_tests",
-    "bridge:tests",
+    "bindings:tests",
+    "core:tests",
+    "server:tests",
   ]
 }
 
 fuchsia_unittest_component("wayland_scanner_front_end_test") {
-  deps = [ "scanner:wayland_scanner_front_end_test" ]
+  deps = [ "bindings/scanner:wayland_scanner_front_end_test" ]
 }
 
 fuchsia_unittest_component("wayland_scanner_back_end_test") {
-  deps = [ "scanner:wayland_scanner_back_end_test" ]
+  deps = [ "bindings/scanner:wayland_scanner_back_end_test" ]
 }
 
 fuchsia_unittest_component("fuchsia_wayland_core_lib_test") {

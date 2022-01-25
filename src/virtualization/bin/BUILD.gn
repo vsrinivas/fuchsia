@@ -14,7 +14,6 @@ group("bin") {
     "linux_runner",
     "vmm",
     "vmm/device:packages",
-    "wayland",
   ]
 }
 
@@ -25,6 +24,5 @@ group("tests") {
     "guest_manager:tests",
     "linux_runner:tests",
     "vmm:tests",
-    "wayland:tests",
   ]
 }
