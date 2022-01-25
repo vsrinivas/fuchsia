@@ -121,12 +121,18 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         let iface = ep.into_interface_in_realm(&realm).await.expect("add device to stack");
         let id = iface.id();
 
-        // Netstack3 doesn't allow addresses to be added while link is down.
+        // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=20989#c5): netstack3 doesn't
+        // allow addresses to be added while link is down.
         let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
         let () = iface.set_link_up(true).await.expect("bring device up");
         loop {
-            // TODO(https://fxbug.dev/75553): Remove usage of get_interface_info.
-            let info = stack.get_interface_info(id).await.squash_result().expect("get interface");
+            let info = stack
+                .list_interfaces()
+                .await
+                .expect("list interfaces")
+                .into_iter()
+                .find(|interface| interface.id == id)
+                .expect("find added ethernet interface");
             if info.properties.physical_status == net_stack::PhysicalStatus::Up {
                 break;
             }

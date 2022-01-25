@@ -115,15 +115,6 @@ protocol Stack {
         ifs vector<InterfaceInfo>:255;
     });
 
-    // TODO(https://fxbug.dev/75554): Migrate callers and remove this.
-    /// Retrieve info about a specific interface.
-    @deprecated("Use fuchsia.net.interfaces/Watcher")
-    GetInterfaceInfo(struct {
-        id fuchsia.net.interface_id;
-    }) -> (struct {
-        info InterfaceInfo;
-    }) error Error;
-
     /// Enable the interface. Packets may be processed by the stack after this
     /// call is processed.
     EnableInterface(struct {

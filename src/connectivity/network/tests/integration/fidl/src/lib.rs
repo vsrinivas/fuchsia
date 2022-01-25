@@ -229,12 +229,18 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
     let iface = device.into_interface_in_realm(&realm).await.expect("add device");
     let id = iface.id();
 
-    // Netstack3 doesn't allow addresses to be added while link is down.
+    // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=20989#c5): netstack3 doesn't
+    // allow addresses to be added while link is down.
     let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
     let () = iface.set_link_up(true).await.expect("bring device up");
     loop {
-        // TODO(https://fxbug.dev/75553): Remove usage of get_interface_info.
-        let info = exec_fidl!(stack.get_interface_info(id), "get interface").unwrap();
+        let info = stack
+            .list_interfaces()
+            .await
+            .expect("list interfaces")
+            .into_iter()
+            .find(|interface| interface.id == id)
+            .expect("find added ethernet interface");
         if info.properties.physical_status == net_stack::PhysicalStatus::Up {
             break;
         }
@@ -521,21 +527,6 @@ async fn test_log_packets() {
     .unwrap_or_else(|patterns| {
         panic!("log stream ended while still waiting for patterns {:?}", patterns)
     });
-}
-
-// TODO(https://fxbug.dev/75554): Remove when {list_interfaces,get_interface_info} are removed.
-#[variants_test]
-async fn get_interface_info_not_found<N: Netstack>(name: &str) {
-    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-        .expect("connect to protocol");
-
-    let interfaces = stack.list_interfaces().await.expect("list interfaces");
-    let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
-    let res = stack.get_interface_info(max_id + 1).await.expect("get_interface_info");
-    assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::NotFound));
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

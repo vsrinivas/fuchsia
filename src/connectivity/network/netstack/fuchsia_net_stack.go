@@ -122,21 +122,6 @@ func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResul
 	return result
 }
 
-func (ns *Netstack) getInterface(id uint64) stack.StackGetInterfaceInfoResult {
-	var result stack.StackGetInterfaceInfoResult
-
-	nicInfo, ok := ns.stack.NICInfo()[tcpip.NICID(id)]
-	if !ok {
-		result.SetErr(stack.ErrorNotFound)
-		return result
-	}
-
-	result.SetResponse(stack.StackGetInterfaceInfoResponse{
-		Info: getInterfaceInfo(nicInfo),
-	})
-	return result
-}
-
 func (ns *Netstack) enableInterface(id uint64) stack.StackEnableInterfaceResult {
 	var result stack.StackEnableInterfaceResult
 
@@ -323,10 +308,6 @@ func (ni *stackImpl) DelEthernetInterface(_ fidl.Context, id uint64) (stack.Stac
 
 func (ni *stackImpl) ListInterfaces(fidl.Context) ([]stack.InterfaceInfo, error) {
 	return ni.ns.getNetInterfaces(), nil
-}
-
-func (ni *stackImpl) GetInterfaceInfo(_ fidl.Context, id uint64) (stack.StackGetInterfaceInfoResult, error) {
-	return ni.ns.getInterface(id), nil
 }
 
 func (ni *stackImpl) EnableInterface(_ fidl.Context, id uint64) (stack.StackEnableInterfaceResult, error) {

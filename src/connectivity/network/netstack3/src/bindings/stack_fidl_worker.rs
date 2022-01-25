@@ -76,12 +76,6 @@ where
                             &mut worker.lock_worker().await.fidl_list_interfaces().iter_mut()
                         );
                     }
-                    StackRequest::GetInterfaceInfo { id, responder } => {
-                        responder_send!(
-                            responder,
-                            &mut worker.lock_worker().await.fidl_get_interface_info(id)
-                        );
-                    }
                     StackRequest::EnableInterface { id, responder } => {
                         responder_send!(
                             responder,
@@ -295,47 +289,6 @@ where
             });
         }
         devices
-    }
-
-    fn fidl_get_interface_info(
-        self,
-        id: u64,
-    ) -> Result<fidl_net_stack::InterfaceInfo, fidl_net_stack::Error> {
-        let device =
-            self.ctx.dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
-        let mut addresses = Vec::new();
-        if let Some(core_id) = device.core_id() {
-            for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
-                match addr.try_into_fidl() {
-                    Ok(addr) => addresses.push(addr),
-                    Err(e) => error!("failed to map interface address/subnet into FIDL: {:?}", e),
-                }
-            }
-        };
-        return Ok(InterfaceInfo {
-            id: device.id(),
-            properties: InterfaceProperties {
-                name: "[TBD]".to_owned(), // TODO(porce): Follow up to populate the name
-                topopath: device.path().clone(),
-                filepath: "[TBD]".to_owned(), // TODO(porce): Follow up to populate
-                mac: Some(Box::new(fidl_fuchsia_hardware_ethernet::MacAddress {
-                    octets: device.mac().get().bytes(),
-                })),
-                mtu: device.mtu(),
-                features: device.features(),
-                administrative_status: if device.admin_enabled() {
-                    AdministrativeStatus::Enabled
-                } else {
-                    AdministrativeStatus::Disabled
-                },
-                physical_status: if device.phy_up() {
-                    PhysicalStatus::Up
-                } else {
-                    PhysicalStatus::Down
-                },
-                addresses, // TODO(gongt) Handle tentative IPv6 addresses
-            },
-        });
     }
 
     fn fidl_add_interface_address(

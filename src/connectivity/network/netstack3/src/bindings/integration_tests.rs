@@ -38,7 +38,7 @@ use crate::bindings::{
     context::Lockable,
     devices::{DeviceInfo, Devices},
     socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
-    util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
+    util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _},
     BindingsDispatcher, DeviceStatusNotifier, LockableContext, RequestStreamExt as _,
 };
 
@@ -723,6 +723,19 @@ async fn test_add_remove_interface() {
     assert_eq!(res, fidl_net_stack::Error::NotFound);
 }
 
+async fn get_interface_info(
+    stack: &fidl_fuchsia_net_stack::StackProxy,
+    if_id: u64,
+) -> fidl_fuchsia_net_stack::InterfaceInfo {
+    stack
+        .list_interfaces()
+        .await
+        .expect("list interfaces")
+        .into_iter()
+        .find(|interface| interface.id == if_id)
+        .expect("interface exists")
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn test_ethernet_link_up_down() {
     let mut t = TestSetupBuilder::new()
@@ -739,7 +752,7 @@ async fn test_ethernet_link_up_down() {
     let () = t.get(0).wait_for_interface_online(if_id).await;
 
     // Get the interface info to confirm status indicators are correct.
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
@@ -752,7 +765,7 @@ async fn test_ethernet_link_up_down() {
     t.get(0).wait_for_interface_offline(if_id).await;
 
     // Get the interface info to confirm that it is disabled.
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
@@ -764,7 +777,7 @@ async fn test_ethernet_link_up_down() {
     assert!(t.set_endpoint_link_up(&ep_name, false).await.is_ok());
 
     // Get the interface info to confirm that it is disabled.
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
@@ -777,7 +790,7 @@ async fn test_ethernet_link_up_down() {
     t.get(0).wait_for_interface_online(if_id).await;
 
     // Get the interface info to confirm that it is reenabled.
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
@@ -789,7 +802,7 @@ async fn test_ethernet_link_up_down() {
     assert!(t.set_endpoint_link_up(&ep_name, true).await.is_ok());
 
     // Get the interface info to confirm that there have been no changes.
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
@@ -872,43 +885,6 @@ async fn test_list_interfaces() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_get_interface_info() {
-    let ip = new_ipv4_addr_subnet([192, 168, 0, 1], 24);
-    let mut t = TestSetupBuilder::new()
-        .add_endpoint()
-        .add_stack(StackSetupBuilder::new().add_endpoint(1, Some(ip.clone())))
-        .build()
-        .await
-        .unwrap();
-    let ep_name = test_ep_name(1);
-    let ep = t.get_endpoint(&ep_name).await.unwrap();
-    // get the device info from the ethernet driver:
-    let ep_info = ep.into_proxy().unwrap().get_info().await.unwrap();
-    let test_stack = t.get(0);
-    let stack = test_stack.connect_stack().unwrap();
-    let if_id = test_stack.get_endpoint_id(1);
-
-    test_stack.wait_for_interface_online(1).await;
-
-    let if_ipv6_ll = Mac::new(ep_info.mac.octets).to_ipv6_link_local().addr().ipv6_bytes();
-    let if_ipv6_ll = new_ipv6_addr_subnet(if_ipv6_ll, 64).into_fidl();
-
-    // get the interface info:
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
-    assert_eq!(&if_info.properties.topopath, "fake_topo_path");
-    assert_eq!(if_info.properties.mac.as_ref().unwrap().as_ref(), &ep_info.mac);
-    assert_eq!(if_info.properties.mtu, ep_info.mtu);
-    assert_eq!(if_info.properties.features, ep_info.features);
-    assert_eq!(if_info.properties.addresses, vec![ip.try_into_fidl().unwrap(), if_ipv6_ll]);
-    assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
-    assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
-
-    // check that we get the correct error for a non-existing interface id:
-    let err = stack.get_interface_info(12345).await.unwrap().expect_err("Get interface info fails");
-    assert_eq!(err, fidl_net_stack::Error::NotFound);
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn test_disable_enable_interface() {
     let mut t = TestSetupBuilder::new()
         .add_endpoint()
@@ -921,7 +897,7 @@ async fn test_disable_enable_interface() {
     let if_id = test_stack.get_endpoint_id(1);
 
     // Get the interface info to confirm that it is enabled.
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
@@ -930,7 +906,7 @@ async fn test_disable_enable_interface() {
     let () =
         stack.disable_interface(if_id).await.squash_result().expect("Disable interface succeeds");
 
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
@@ -941,7 +917,7 @@ async fn test_disable_enable_interface() {
     let () =
         stack.enable_interface(if_id).await.squash_result().expect("Enable interface succeeds");
 
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
@@ -977,7 +953,7 @@ async fn test_phy_admin_interface_state_interaction() {
     t.get(0).wait_for_interface_online(if_id).await;
 
     // Get the interface info to confirm that it is enabled.
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
@@ -986,7 +962,7 @@ async fn test_phy_admin_interface_state_interaction() {
     let () =
         stack.disable_interface(if_id).await.squash_result().expect("Disable interface succeeds");
 
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
@@ -999,7 +975,7 @@ async fn test_phy_admin_interface_state_interaction() {
     t.get(0).wait_for_interface_offline(if_id).await;
 
     // Get the interface info to confirm that it is disabled.
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
 
@@ -1011,7 +987,7 @@ async fn test_phy_admin_interface_state_interaction() {
     let () =
         stack.enable_interface(if_id).await.squash_result().expect("Enable interface succeeds");
 
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
 
@@ -1022,7 +998,7 @@ async fn test_phy_admin_interface_state_interaction() {
     let () =
         stack.disable_interface(if_id).await.squash_result().expect("Disable interface succeeds");
 
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
 
@@ -1034,7 +1010,7 @@ async fn test_phy_admin_interface_state_interaction() {
     t.get(0).wait_for_interface_online(if_id).await;
 
     // Get the interface info to confirm that it is reenabled.
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
@@ -1047,7 +1023,7 @@ async fn test_phy_admin_interface_state_interaction() {
         stack.enable_interface(if_id).await.squash_result().expect("Enable interface succeeds");
 
     // Get the interface info to confirm that it is reenabled.
-    let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
@@ -1074,11 +1050,7 @@ async fn test_add_del_interface_address() {
         .await
         .squash_result()
         .expect("Add interface address should succeed");
-    let if_info = stack
-        .get_interface_info(if_id)
-        .await
-        .squash_result()
-        .expect("Get interface info should succeed");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert!(if_info.properties.addresses.contains(&addr));
 
     // Adding the same IP address again should fail with already exists.
@@ -1095,11 +1067,7 @@ async fn test_add_del_interface_address() {
         .await
         .squash_result()
         .expect("Delete interface address succeeds");
-    let if_info = stack
-        .get_interface_info(if_id)
-        .await
-        .squash_result()
-        .expect("Get interface info should succeed");
+    let if_info = get_interface_info(&stack, if_id).await;
     assert!(!if_info.properties.addresses.contains(&addr));
 
     // Deleting an IP address that doesn't exist should fail with not found.
