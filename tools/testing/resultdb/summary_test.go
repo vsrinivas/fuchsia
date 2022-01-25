@@ -6,6 +6,8 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -41,11 +43,12 @@ func TestParseSummary(t *testing.T) {
 }
 
 func TestSetTestDetailsToResultSink(t *testing.T) {
-	detail := createTestDetailWithTestCase(5)
+	outputRoot := t.TempDir()
+	detail := createTestDetailWithTestCase(5, outputRoot)
 	extraTags := []*resultpb.StringPair{
 		{Key: "key1", Value: "value1"},
 	}
-	result, _, err := testDetailsToResultSink(extraTags, detail, "")
+	result, _, err := testDetailsToResultSink(extraTags, detail, outputRoot)
 	if err != nil {
 		t.Fatalf("Cannot parse test detail. got %s", err)
 	}
@@ -82,6 +85,23 @@ func TestSetTestDetailsToResultSink(t *testing.T) {
 	} else if gnLabel != detail.GNLabel {
 		t.Errorf("Found incorrect gn_label tab, got %s, want %s", gnLabel, detail.GNLabel)
 	}
+	if len(result.Artifacts) != 2 {
+		t.Errorf("Got %d artifacts, want 2", len(result.Artifacts))
+	}
+}
+
+func TestSetTestCaseToResultSink(t *testing.T) {
+	outputRoot := t.TempDir()
+	detail := createTestDetailWithTestCase(5, outputRoot)
+	results, _ := testCaseToResultSink(detail.Cases, []*resultpb.StringPair{}, detail, outputRoot)
+	if len(results) != 5 {
+		t.Errorf("Got %d test case results, want 5", len(results))
+	}
+	for i, result := range results {
+		if len(result.Artifacts) != 2 {
+			t.Errorf("Got %d artifacts for test case %d, want 2", len(result.Artifacts), i+1)
+		}
+	}
 }
 
 func createTestSummary(testCount int) *runtests.TestSummary {
@@ -100,8 +120,15 @@ func createTestSummary(testCount int) *runtests.TestSummary {
 	return &runtests.TestSummary{Tests: t}
 }
 
-func createTestDetailWithTestCase(testCase int) *runtests.TestDetails {
+func createTestDetailWithTestCase(testCase int, outputRoot string) *runtests.TestDetails {
 	t := []runtests.TestCaseResult{}
+	if outputRoot != "" {
+		for _, f := range []string{"outputfile1", "outputfile2", "case/outputfile1", "case/outputfile2"} {
+			outputfile := filepath.Join(outputRoot, f)
+			os.MkdirAll(filepath.Dir(outputfile), os.ModePerm)
+			ioutil.WriteFile(outputfile, []byte("output"), os.ModePerm)
+		}
+	}
 	for i := 0; i < testCase; i++ {
 		t = append(t, runtests.TestCaseResult{
 			DisplayName: fmt.Sprintf("foo/bar_%d", i),
@@ -109,12 +136,13 @@ func createTestDetailWithTestCase(testCase int) *runtests.TestDetails {
 			CaseName:    fmt.Sprintf("bar_%d", i),
 			Status:      runtests.TestSuccess,
 			Format:      "Rust",
+			OutputFiles: []string{"case/outputfile1", "case/outputfile2"},
 		})
 	}
 	return &runtests.TestDetails{
 		Name:                 "foo",
 		GNLabel:              "some label",
-		OutputFiles:          []string{"some file path"},
+		OutputFiles:          []string{"outputfile1", "outputfile2"},
 		Result:               runtests.TestSuccess,
 		StartTime:            time.Now(),
 		DurationMillis:       39797,

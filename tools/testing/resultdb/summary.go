@@ -52,7 +52,7 @@ func SummaryToResultSink(s *runtests.TestSummary, tags []*resultpb.StringPair, o
 	var ts []string
 	for _, test := range s.Tests {
 		if len(test.Cases) > 0 {
-			testCases, testsSkipped := testCaseToResultSink(test.Cases, tags, &test)
+			testCases, testsSkipped := testCaseToResultSink(test.Cases, tags, &test, rootPath)
 			r = append(r, testCases...)
 			ts = append(ts, testsSkipped...)
 		}
@@ -94,7 +94,7 @@ func invocationLevelArtifacts(outputRoot string) map[string]*sinkpb.Artifact {
 // testCaseToResultSink converts TestCaseResult defined in //tools/testing/testparser/result.go
 // to ResultSink's TestResult. A testcase will not be converted if test result cannot be
 // mapped to result_sink.Status.
-func testCaseToResultSink(testCases []runtests.TestCaseResult, tags []*resultpb.StringPair, testDetail *runtests.TestDetails) ([]*sinkpb.TestResult, []string) {
+func testCaseToResultSink(testCases []runtests.TestCaseResult, tags []*resultpb.StringPair, testDetail *runtests.TestDetails, outputRoot string) ([]*sinkpb.TestResult, []string) {
 	var testResult []*sinkpb.TestResult
 	var testsSkipped []string
 
@@ -127,6 +127,18 @@ func testCaseToResultSink(testCases []runtests.TestCaseResult, tags []*resultpb.
 			r.Duration = durationpb.New(testCase.Duration)
 		}
 		r.Expected = determineExpected(testStatus, testCaseStatus)
+		r.Artifacts = make(map[string]*sinkpb.Artifact)
+		for _, of := range testCase.OutputFiles {
+			outputFile := filepath.Join(outputRoot, of)
+			if isReadable(outputFile) {
+				r.Artifacts[filepath.Base(outputFile)] = &sinkpb.Artifact{
+					Body: &sinkpb.Artifact_FilePath{FilePath: outputFile},
+				}
+			} else {
+				log.Printf("[Warn] outputFile: %s is not readable, skip.", outputFile)
+			}
+		}
+
 		testResult = append(testResult, &r)
 	}
 	return testResult, testsSkipped
@@ -160,14 +172,12 @@ func testDetailsToResultSink(tags []*resultpb.StringPair, testDetail *runtests.T
 	if testDetail.DurationMillis > 0 {
 		r.Duration = durationpb.New(time.Duration(testDetail.DurationMillis) * time.Millisecond)
 	}
+	r.Artifacts = make(map[string]*sinkpb.Artifact)
 	for _, of := range testDetail.OutputFiles {
 		outputFile := filepath.Join(outputRoot, of)
 		if isReadable(outputFile) {
-			r.Artifacts = map[string]*sinkpb.Artifact{
-				filepath.Base(outputFile): {
-					Body:        &sinkpb.Artifact_FilePath{FilePath: outputFile},
-					ContentType: "text/plain",
-				},
+			r.Artifacts[filepath.Base(outputFile)] = &sinkpb.Artifact{
+				Body: &sinkpb.Artifact_FilePath{FilePath: outputFile},
 			}
 		} else {
 			log.Printf("[Warn] outputFile: %s is not readable, skip.", outputFile)
