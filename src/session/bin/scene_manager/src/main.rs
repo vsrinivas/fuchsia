@@ -177,9 +177,12 @@ pub async fn handle_scene_manager_request_stream(
                 if let Ok(proxy) = view_provider.into_proxy() {
                     let mut scene_manager = scene_manager.lock().await;
                     match scene_manager.set_root_view(proxy).await {
-                        Ok(mut view_ref) => {
-                            let _ = responder.send(&mut view_ref);
-                        }
+                        Ok(mut view_ref) => match responder.send(&mut view_ref) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                fx_log_err!("Error responding to SetRootView(): {}", e);
+                            }
+                        },
                         Err(e) => {
                             // Log an error and close the connection.  This can be a consequence of
                             // the child View not connecting to the scene graph (hence we don't

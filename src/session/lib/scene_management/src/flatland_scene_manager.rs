@@ -276,10 +276,22 @@ impl SceneManager for FlatlandSceneManager {
         // scene graph topology, and the awaited ViewRef will never come.
         self.scene_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
 
-        // TODO(fxbug.dev/87657): somewhere around here, set focus on the newly-attached view.
-        let view_ref = child_view_watcher.get_view_ref().await?;
+        let mut view_ref = child_view_watcher.get_view_ref().await?;
+        let view_ref_copy = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
 
-        Ok(view_ref)
+        let child_status = child_view_watcher.get_status().await?;
+        match child_status {
+            ui_comp::ChildViewStatus::ContentHasPresented => {}
+        }
+        let request_focus_result = self.root_flatland.focuser.request_focus(&mut view_ref).await;
+        match request_focus_result {
+            Err(e) => fx_log_warn!("Request focus failed with err: {}", e),
+            Ok(Err(value)) => fx_log_warn!("Request focus failed with err: {:?}", value),
+            Ok(_) => {}
+        }
+        self.root_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
+
+        Ok(view_ref_copy)
     }
 
     fn request_focus(
