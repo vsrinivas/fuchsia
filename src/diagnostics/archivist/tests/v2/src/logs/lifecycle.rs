@@ -21,14 +21,14 @@ use fidl_fuchsia_sys2::EventSourceMarker;
 use fidl_fuchsia_sys_internal::{LogConnectorRequest, LogConnectorRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::{client, server::ServiceFs};
-use fuchsia_component_test::{mock::MockHandles, ChildOptions, RouteBuilder, RouteEndpoint};
+use fuchsia_component_test::new::{Capability, ChildOptions, LocalComponentHandles, Ref, Route};
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, lock::Mutex, SinkExt, StreamExt};
 use std::sync::Arc;
 use zx::DurationNum;
 
 async fn serve_mocks(
-    mock_handles: MockHandles,
+    handles: LocalComponentHandles,
     before_response_recv: Arc<Mutex<mpsc::UnboundedReceiver<()>>>,
     after_response_snd: mpsc::UnboundedSender<()>,
 ) -> Result<(), anyhow::Error> {
@@ -48,7 +48,7 @@ async fn serve_mocks(
         })
         .detach()
     });
-    fs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
+    fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
     fs.collect::<()>().await;
     Ok(())
 }
@@ -60,30 +60,29 @@ async fn test_logs_with_hanging_log_connector() {
     let (mut before_response_snd, before_response_recv) = mpsc::unbounded();
     let (after_response_snd, mut after_response_recv) = mpsc::unbounded();
     let recv = Arc::new(Mutex::new(before_response_recv));
-    let builder = test_topology::create(test_topology::Options {
+    let (builder, test_realm) = test_topology::create(test_topology::Options {
         archivist_url:
             "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/archivist_with_log_connector.cm",
     })
     .await
     .expect("create base topology");
-    builder
-        .add_mock_child(
+    let mocks_server = builder
+        .add_local_child(
             "mocks-server",
-            move |mock_handles| {
-                Box::pin(serve_mocks(mock_handles, recv.clone(), after_response_snd.clone()))
-            },
+            move |handles| Box::pin(serve_mocks(handles, recv.clone(), after_response_snd.clone())),
             ChildOptions::new(),
         )
         .await
-        .unwrap()
-        .add_route(
-            RouteBuilder::protocol("fuchsia.sys.internal.LogConnector")
-                .source(RouteEndpoint::component("mocks-server"))
-                .targets(vec![RouteEndpoint::component("test/archivist")]),
-        )
+        .unwrap();
+    let incomplete_route =
+        Route::new().capability(Capability::protocol_by_name("fuchsia.sys.internal.LogConnector"));
+    builder.add_route(incomplete_route.clone().from(&mocks_server).to(&test_realm)).await.unwrap();
+    test_realm
+        .add_route(incomplete_route.from(Ref::parent()).to(Ref::child("archivist")))
         .await
         .unwrap();
-    test_topology::add_eager_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
+
+    test_topology::add_eager_child(&test_realm, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
 
@@ -136,10 +135,10 @@ async fn wait_for_log_sink_connected_event(reader: &mut ArchiveReader) {
 
 #[fuchsia::test]
 async fn log_sink_connected_event_test() {
-    let builder = test_topology::create(test_topology::Options::default())
+    let (builder, test_realm) = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_eager_child(&test_realm, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
 
@@ -158,16 +157,16 @@ async fn log_sink_connected_event_test() {
 
 #[fuchsia::test]
 async fn test_logs_lifecycle() {
-    let builder = test_topology::create(test_topology::Options::default())
+    let (builder, test_realm) = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_lazy_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_lazy_child(&test_realm, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
 
     // Currently RealmBuilder doesn't support to expose a capability from framework, therefore we
     // manually update the decl that the builder creates.
-    expose_test_realm_protocol(&builder).await;
+    expose_test_realm_protocol(&builder, &test_realm).await;
 
     let instance = builder.build().await.expect("create instance");
     let accessor =

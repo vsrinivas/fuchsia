@@ -8,7 +8,7 @@ use diagnostics_message::{fx_log_metadata_t, fx_log_packet_t};
 use diagnostics_reader::{ArchiveReader, Data, Logs};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_logger::{LogLevelFilter, LogSinkMarker, LogSinkProxy};
-use fuchsia_component_test::RealmInstance;
+use fuchsia_component_test::new::RealmInstance;
 use fuchsia_zircon as zx;
 use tracing::debug;
 
@@ -35,9 +35,10 @@ struct RedactionTest {
 
 impl RedactionTest {
     async fn new(archivist_url: &'static str) -> Self {
-        let builder = test_topology::create(test_topology::Options { archivist_url })
-            .await
-            .expect("create base topology");
+        let (builder, _test_realm) =
+            test_topology::create(test_topology::Options { archivist_url })
+                .await
+                .expect("create base topology");
 
         let instance = builder.build().await.expect("create instance");
         let mut packet = fx_log_packet_t {

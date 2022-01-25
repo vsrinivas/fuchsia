@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 
 use crate::constants;
-use cm_rust;
-use cm_rust::{ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget};
-use fidl_fuchsia_io2 as fio2;
 use fuchsia_component_test::{
-    error::Error, ChildOptions, Event, Moniker, RealmBuilder, RouteBuilder, RouteEndpoint,
+    error::Error,
+    new::{Capability, ChildOptions, ChildRef, Event, RealmBuilder, Ref, Route, SubRealmBuilder},
 };
 
 /// Options for creating a test topology.
@@ -23,156 +21,106 @@ impl Default for Options {
 }
 
 /// Creates a new topology for tests with an archivist inside.
-pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
+pub async fn create(opts: Options) -> Result<(RealmBuilder, SubRealmBuilder), Error> {
     let builder = RealmBuilder::new().await?;
-    builder
-        .add_child("test/archivist", opts.archivist_url, ChildOptions::new().eager())
-        .await?
+    let test_realm = builder.add_child_realm("test", ChildOptions::new().eager()).await?;
+    let archivist =
+        test_realm.add_child("archivist", opts.archivist_url, ChildOptions::new().eager()).await?;
+
+    let parent_to_archivist = Route::new()
+        .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+        .capability(Capability::directory("config-data"))
+        .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
+        .capability(Capability::protocol_by_name("fuchsia.boot.ReadOnlyLog"))
+        .capability(Capability::protocol_by_name("fuchsia.boot.WriteOnlyLog"))
+        .capability(Capability::event(Event::Started, cm_rust::EventMode::Async))
+        .capability(Capability::event(Event::Stopped, cm_rust::EventMode::Async))
+        .capability(Capability::event(Event::Running, cm_rust::EventMode::Async))
+        .capability(Capability::event(
+            Event::capability_requested("fuchsia.logger.LogSink"),
+            cm_rust::EventMode::Async,
+        ));
+    builder.add_route(parent_to_archivist.clone().from(Ref::parent()).to(&test_realm)).await?;
+    test_realm.add_route(parent_to_archivist.from(Ref::parent()).to(&archivist)).await?;
+
+    let archivist_to_parent = Route::new()
+        .capability(Capability::protocol_by_name("fuchsia.diagnostics.ArchiveAccessor"))
+        .capability(Capability::protocol_by_name("fuchsia.diagnostics.FeedbackArchiveAccessor"))
+        .capability(Capability::protocol_by_name(
+            "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+        ))
+        .capability(Capability::protocol_by_name("fuchsia.diagnostics.LogSettings"))
+        .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+        .capability(Capability::protocol_by_name("fuchsia.logger.Log"));
+    test_realm.add_route(archivist_to_parent.clone().from(&archivist).to(Ref::parent())).await?;
+    builder.add_route(archivist_to_parent.from(&test_realm).to(Ref::parent())).await?;
+
+    test_realm
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("test/archivist")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::directory("config-data", "", fio2::R_STAR_DIR)
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("test/archivist")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.sys2.EventSource")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("test/archivist")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.boot.ReadOnlyLog")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("test/archivist")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.boot.WriteOnlyLog")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("test/archivist")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.diagnostics.ArchiveAccessor")
-                .source(RouteEndpoint::component("test/archivist"))
-                .targets(vec![RouteEndpoint::AboveRoot]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.diagnostics.FeedbackArchiveAccessor")
-                .source(RouteEndpoint::component("test/archivist"))
-                .targets(vec![RouteEndpoint::AboveRoot]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.diagnostics.LegacyMetricsArchiveAccessor")
-                .source(RouteEndpoint::component("test/archivist"))
-                .targets(vec![RouteEndpoint::AboveRoot]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.diagnostics.LogSettings")
-                .source(RouteEndpoint::component("test/archivist"))
-                .targets(vec![RouteEndpoint::AboveRoot]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::component("test/archivist"))
-                .targets(vec![RouteEndpoint::AboveRoot]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.logger.Log")
-                .source(RouteEndpoint::component("test/archivist"))
-                .targets(vec![RouteEndpoint::AboveRoot]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::event(Event::Started, cm_rust::EventMode::Async)
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("test/archivist")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::event(Event::Stopped, cm_rust::EventMode::Async)
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("test/archivist")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::event(Event::Running, cm_rust::EventMode::Async)
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("test/archivist")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::event(Event::directory_ready("diagnostics"), cm_rust::EventMode::Async)
-                .source(RouteEndpoint::component("test"))
-                .targets(vec![RouteEndpoint::component("test/archivist")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::event(
-                Event::capability_requested("fuchsia.logger.LogSink"),
-                cm_rust::EventMode::Async,
-            )
-            .source(RouteEndpoint::AboveRoot)
-            .targets(vec![RouteEndpoint::component("test/archivist")]),
+            Route::new()
+                .capability(Capability::event(
+                    Event::directory_ready("diagnostics"),
+                    cm_rust::EventMode::Async,
+                ))
+                .from(Ref::framework())
+                .to(&archivist),
         )
         .await?;
-    Ok(builder)
+
+    Ok((builder, test_realm))
 }
 
-pub async fn add_eager_child(builder: &RealmBuilder, name: &str, url: &str) -> Result<(), Error> {
-    let path = format!("test/{}", name);
-    builder
-        .add_child(path.as_ref(), url, ChildOptions::new().eager())
-        .await?
+pub async fn add_eager_child(
+    test_realm: &SubRealmBuilder,
+    name: &str,
+    url: &str,
+) -> Result<ChildRef, Error> {
+    let child_ref = test_realm.add_child(name, url, ChildOptions::new().eager()).await?;
+    test_realm
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::component("test/archivist"))
-                .targets(vec![RouteEndpoint::component(path)]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::child("archivist"))
+                .to(&child_ref),
         )
         .await?;
-    Ok(())
+    Ok(child_ref)
 }
 
-pub async fn add_lazy_child(builder: &RealmBuilder, name: &str, url: &str) -> Result<(), Error> {
-    let path = format!("test/{}", name);
-    builder
-        .add_child(path.as_ref(), url, ChildOptions::new())
-        .await?
+pub async fn add_lazy_child(
+    test_realm: &SubRealmBuilder,
+    name: &str,
+    url: &str,
+) -> Result<ChildRef, Error> {
+    let child_ref = test_realm.add_child(name, url, ChildOptions::new()).await?;
+    test_realm
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::component("test/archivist"))
-                .targets(vec![RouteEndpoint::component(path)]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::child("archivist"))
+                .to(&child_ref),
         )
         .await?;
-    Ok(())
+    Ok(child_ref)
 }
 
-pub async fn expose_test_realm_protocol(builder: &RealmBuilder) {
-    let mut test_decl = builder.get_decl("test").await.unwrap();
-    test_decl.exposes.push(ExposeDecl::Protocol(ExposeProtocolDecl {
-        source: ExposeSource::Framework,
-        source_name: "fuchsia.component.Realm".into(),
-        target: ExposeTarget::Parent,
-        target_name: "fuchsia.component.Realm".into(),
-    }));
-    builder.set_decl("test", test_decl).await.unwrap();
-    let mut root_decl = builder.get_decl(Moniker::root()).await.unwrap();
-    root_decl.exposes.push(ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
-        source: ExposeSource::Child("test".to_string()),
-        source_name: "fuchsia.component.Realm".into(),
-        target: ExposeTarget::Parent,
-        target_name: "fuchsia.component.Realm".into(),
-    }));
-    builder.set_decl(Moniker::root(), root_decl).await.unwrap();
+pub async fn expose_test_realm_protocol(builder: &RealmBuilder, test_realm: &SubRealmBuilder) {
+    test_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.component.Realm"))
+                .from(Ref::framework())
+                .to(Ref::parent()),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.component.Realm"))
+                .from(Ref::child("test"))
+                .to(Ref::parent()),
+        )
+        .await
+        .unwrap();
 }

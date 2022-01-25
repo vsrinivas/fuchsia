@@ -22,8 +22,8 @@ use fidl_fuchsia_io::DirectoryMarker;
 use fidl_fuchsia_sys2::EventSourceMarker;
 use fuchsia_async::{Task, Timer};
 use fuchsia_component::{client, server::ServiceFs};
-use fuchsia_component_test::{
-    mock::MockHandles, ChildOptions, RealmInstance, RouteBuilder, RouteEndpoint,
+use fuchsia_component_test::new::{
+    Capability, ChildOptions, LocalComponentHandles, RealmInstance, Ref, Route,
 };
 use fuchsia_zircon as zx;
 use futures::{
@@ -80,44 +80,62 @@ struct PuppetEnv {
 impl PuppetEnv {
     async fn create(max_puppets: usize) -> Self {
         let (sender, controllers) = mpsc::channel(1);
-        let builder = test_topology::create(test_topology::Options {
+        let (builder, test_realm) = test_topology::create(test_topology::Options {
             archivist_url: ARCHIVIST_WITH_SMALL_CACHES,
         })
         .await
         .expect("create base topology");
-        builder
-            .add_mock_child(
+        let mocks_server = builder
+            .add_local_child(
                 "mocks-server",
-                move |mock_handles: MockHandles| Box::pin(run_mocks(mock_handles, sender.clone())),
+                move |handles: LocalComponentHandles| Box::pin(run_mocks(handles, sender.clone())),
                 ChildOptions::new(),
             )
             .await
             .unwrap();
 
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.archivist.tests.SocketPuppetController",
+                    ))
+                    .from(&mocks_server)
+                    .to(&test_realm),
+            )
+            .await
+            .unwrap();
+
         for i in 0..max_puppets {
-            let name = format!("test/puppet-{}", i);
-            builder
+            let name = format!("puppet-{}", i);
+            let puppet = test_realm
                 .add_child(name.clone(), SOCKET_PUPPET_COMPONENT_URL, ChildOptions::new())
                 .await
-                .unwrap()
+                .unwrap();
+            test_realm
                 .add_route(
-                    RouteBuilder::protocol("fuchsia.archivist.tests.SocketPuppetController")
-                        .source(RouteEndpoint::component("mocks-server"))
-                        .targets(vec![RouteEndpoint::component(name.clone())]),
+                    Route::new()
+                        .capability(Capability::protocol_by_name(
+                            "fuchsia.archivist.tests.SocketPuppetController",
+                        ))
+                        .from(Ref::parent())
+                        .to(&puppet),
                 )
                 .await
-                .unwrap()
+                .unwrap();
+            test_realm
                 .add_route(
-                    RouteBuilder::protocol("fuchsia.logger.LogSink")
-                        .source(RouteEndpoint::component("test/archivist"))
-                        .targets(vec![RouteEndpoint::component(name)]),
+                    Route::new()
+                        .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                        .from(Ref::child("archivist"))
+                        .to(&puppet),
                 )
                 .await
                 .unwrap();
         }
 
         info!("starting our instance");
-        test_topology::expose_test_realm_protocol(&builder).await;
+        test_topology::expose_test_realm_protocol(&builder, &test_realm).await;
         let instance = builder.build().await.expect("create instance");
 
         let config = parse_config("/pkg/data/config/small-caches-config.json").unwrap();
@@ -395,14 +413,14 @@ impl Deref for Puppet {
 }
 
 async fn run_mocks(
-    mock_handles: MockHandles,
+    handles: LocalComponentHandles,
     mut sender: mpsc::Sender<SocketPuppetControllerRequestStream>,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream: SocketPuppetControllerRequestStream| {
         sender.start_send(stream).unwrap();
     });
-    fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }

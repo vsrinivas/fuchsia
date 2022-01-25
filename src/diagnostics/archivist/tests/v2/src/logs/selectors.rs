@@ -13,22 +13,22 @@ use fidl_fuchsia_io::DirectoryMarker;
 use fidl_fuchsia_sys2::EventSourceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use fuchsia_component_test::RealmInstance;
+use fuchsia_component_test::new::RealmInstance;
 use futures::{FutureExt, StreamExt};
 
 #[fuchsia::test]
 async fn component_selectors_filter_logs() {
-    let builder = test_topology::create(test_topology::Options::default())
+    let (builder, test_realm) = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_lazy_child(&builder, "a", constants::LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_lazy_child(&test_realm, "a", constants::LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit a");
-    test_topology::add_lazy_child(&builder, "b", constants::LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_lazy_child(&test_realm, "b", constants::LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit b");
 
-    test_topology::expose_test_realm_protocol(&builder).await;
+    test_topology::expose_test_realm_protocol(&builder, &test_realm).await;
     let instance = builder.build().await.expect("create instance");
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();

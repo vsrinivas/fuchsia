@@ -32,8 +32,8 @@ use {
     fidl_fuchsia_diagnostics as diagnostics, fidl_fuchsia_feedback as fcrash,
     fidl_fuchsia_io2 as fio2,
     fuchsia_component::server::*,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::BoxFuture, FutureExt, SinkExt, StreamExt},
@@ -190,7 +190,10 @@ fn create_mock_component(
     crash_reporter: Arc<FakeCrashReporter>,
     crash_reporting_product_register: Arc<FakeCrashReportingProductRegister>,
     archive_accessor: Arc<FakeArchiveAccessor>,
-) -> impl Fn(MockHandles) -> BoxFuture<'static, Result<(), anyhow::Error>> + Sync + Send + 'static {
+) -> impl Fn(LocalComponentHandles) -> BoxFuture<'static, Result<(), anyhow::Error>>
+       + Sync
+       + Send
+       + 'static {
     move |mock_handles| {
         let test_data = test_data.clone();
         let crash_reporter = crash_reporter.clone();
@@ -249,7 +252,8 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     let archive_accessor = FakeArchiveAccessor::new(&test_data.inspect_data, Some(event_signaler));
 
     let builder = RealmBuilder::new().await.unwrap();
-    builder.add_child("detect", DETECT_PROGRAM_URL, ChildOptions::new().eager()).await.unwrap();
+    let detect =
+        builder.add_child("detect", DETECT_PROGRAM_URL, ChildOptions::new().eager()).await.unwrap();
 
     let mock_component = create_mock_component(
         test_data.clone(),
@@ -258,52 +262,37 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
         archive_accessor.clone(),
     );
 
-    builder.add_mock_child("mocks", mock_component, ChildOptions::new()).await.unwrap();
+    let mocks =
+        builder.add_local_child("mocks", mock_component, ChildOptions::new()).await.unwrap();
 
     // Forward logging to debug test breakages.
     builder
         .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("detect")]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&detect),
         )
         .await
         .unwrap();
 
     // Forward mocks to detect
-    builder
-        .add_route(
-            RouteBuilder::protocol("fuchsia.feedback.CrashReporter")
-                .source(RouteEndpoint::component("mocks"))
-                .targets(vec![RouteEndpoint::component("detect")]),
-        )
-        .await
-        .unwrap();
-
-    builder
-        .add_route(
-            RouteBuilder::protocol("fuchsia.feedback.CrashReportingProductRegister")
-                .source(RouteEndpoint::component("mocks"))
-                .targets(vec![RouteEndpoint::component("detect")]),
-        )
-        .await
-        .unwrap();
-
-    builder
-        .add_route(
-            RouteBuilder::protocol("fuchsia.diagnostics.FeedbackArchiveAccessor")
-                .source(RouteEndpoint::component("mocks"))
-                .targets(vec![RouteEndpoint::component("detect")]),
-        )
-        .await
-        .unwrap();
-
     let rights = fio2::R_STAR_DIR;
     builder
         .add_route(
-            RouteBuilder::directory("config-data", "/config/data", rights)
-                .source(RouteEndpoint::component("mocks"))
-                .targets(vec![RouteEndpoint::component("detect")]),
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.feedback.CrashReporter"))
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.feedback.CrashReportingProductRegister",
+                ))
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                ))
+                .capability(
+                    Capability::directory("config-data").path("/config/data").rights(rights),
+                )
+                .from(&mocks)
+                .to(&detect),
         )
         .await
         .unwrap();

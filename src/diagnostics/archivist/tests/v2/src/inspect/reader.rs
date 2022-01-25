@@ -7,7 +7,8 @@ use anyhow::Error;
 use diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect};
 use difference::assert_diff;
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
-use fuchsia_component_test::RealmInstance;
+use fuchsia_component_test::new::RealmInstance;
+use fuchsia_component_test::new::{Capability, ChildOptions, Ref, Route};
 use lazy_static::lazy_static;
 use serde_json;
 
@@ -40,10 +41,10 @@ lazy_static! {
 
 #[fuchsia::test]
 async fn read_components_inspect() {
-    let builder = test_topology::create(test_topology::Options::default())
+    let (builder, test_realm) = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_child(&builder, "child", STUB_INSPECT_COMPONENT_URL)
+    test_topology::add_eager_child(&test_realm, "child", STUB_INSPECT_COMPONENT_URL)
         .await
         .expect("add child");
 
@@ -70,13 +71,13 @@ async fn read_components_inspect() {
 
 #[fuchsia::test]
 async fn read_components_single_selector() {
-    let builder = test_topology::create(test_topology::Options::default())
+    let (builder, test_realm) = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_child(&builder, "child_a", STUB_INSPECT_COMPONENT_URL)
+    test_topology::add_eager_child(&test_realm, "child_a", STUB_INSPECT_COMPONENT_URL)
         .await
         .expect("add child a");
-    test_topology::add_eager_child(&builder, "child_b", STUB_INSPECT_COMPONENT_URL)
+    test_topology::add_eager_child(&test_realm, "child_b", STUB_INSPECT_COMPONENT_URL)
         .await
         .expect("add child b");
     let instance = builder.build().await.expect("create instance");
@@ -103,10 +104,10 @@ async fn read_components_single_selector() {
 
 #[fuchsia::test]
 async fn unified_reader() -> Result<(), Error> {
-    let builder = test_topology::create(test_topology::Options::default())
+    let (builder, test_realm) = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_child(&builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_child(&test_realm, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 
@@ -152,14 +153,31 @@ async fn unified_reader() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn memory_monitor_moniker_rewrite() -> Result<(), Error> {
-    let builder = test_topology::create(test_topology::Options {
+    let (builder, test_realm) = test_topology::create(test_topology::Options {
         archivist_url: ARCHIVIST_WITH_LEGACY_METRICS,
     })
     .await
     .expect("create base topology");
-    test_topology::add_eager_child(&builder, "core/memory_monitor", IQUERY_TEST_COMPONENT_URL)
-        .await
-        .expect("add child a");
+    let core_realm = test_realm.add_child_realm("core", ChildOptions::new().eager()).await?;
+    let memory_monitor = core_realm
+        .add_child("memory_monitor", IQUERY_TEST_COMPONENT_URL, ChildOptions::new().eager())
+        .await?;
+    test_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::child("archivist"))
+                .to(&core_realm),
+        )
+        .await?;
+    core_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&memory_monitor),
+        )
+        .await?;
     let instance = builder.build().await.expect("create instance");
 
     // Verify that fetching "core/memory_monitor" from ArchiveAccessor produces results with
@@ -212,12 +230,12 @@ async fn memory_monitor_moniker_rewrite() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn feedback_canonical_reader_test() -> Result<(), Error> {
-    let builder = test_topology::create(test_topology::Options {
+    let (builder, test_realm) = test_topology::create(test_topology::Options {
         archivist_url: ARCHIVIST_WITH_FEEDBACK_FILTERING,
     })
     .await
     .expect("create base topology");
-    test_topology::add_eager_child(&builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_child(&test_realm, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 
@@ -261,12 +279,12 @@ async fn feedback_canonical_reader_test() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn feedback_disabled_pipeline() -> Result<(), Error> {
-    let builder = test_topology::create(test_topology::Options {
+    let (builder, test_realm) = test_topology::create(test_topology::Options {
         archivist_url: ARCHIVIST_WITH_FEEDBACK_FILTERING_DISABLED,
     })
     .await
     .expect("create base topology");
-    test_topology::add_eager_child(&builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_child(&test_realm, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 
@@ -278,10 +296,10 @@ async fn feedback_disabled_pipeline() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn feedback_pipeline_missing_selectors() -> Result<(), Error> {
-    let builder = test_topology::create(test_topology::Options::default())
+    let (builder, test_realm) = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_child(&builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_child(&test_realm, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 

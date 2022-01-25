@@ -12,7 +12,7 @@ use std::path::Path;
 
 #[fuchsia::test]
 async fn out_can_be_read() {
-    let builder = test_topology::create(test_topology::Options::default())
+    let (builder, _test_realm) = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
     let instance = builder.build().await.expect("create instance");

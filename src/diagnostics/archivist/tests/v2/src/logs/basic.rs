@@ -9,7 +9,7 @@ use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy};
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use fuchsia_component_test::{RouteBuilder, RouteEndpoint};
+use fuchsia_component_test::new::{Capability, Ref, Route};
 use fuchsia_syslog_listener as syslog_listener;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, Stream, StreamExt};
@@ -70,7 +70,7 @@ async fn listen_for_syslog() {
 
 #[fuchsia::test]
 async fn listen_for_klog() {
-    let builder = test_topology::create(test_topology::Options {
+    let (builder, _test_realm) = test_topology::create(test_topology::Options {
         archivist_url: constants::ARCHIVIST_WITH_KLOG_URL,
     })
     .await
@@ -90,20 +90,20 @@ async fn listen_for_klog() {
 
 #[fuchsia::test]
 async fn listen_for_syslog_routed_stdio() {
-    let builder = test_topology::create(test_topology::Options::default())
+    let (builder, test_realm) = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_child(&builder, "stdio-puppet", constants::STDIO_PUPPET_URL)
-        .await
-        .expect("add child");
-    builder
-        .add_route(
-            RouteBuilder::protocol("fuchsia.archivist.tests.StdioPuppet")
-                .source(RouteEndpoint::component("test/stdio-puppet"))
-                .targets(vec![RouteEndpoint::AboveRoot]),
-        )
+    let stdio_puppet =
+        test_topology::add_eager_child(&test_realm, "stdio-puppet", constants::STDIO_PUPPET_URL)
+            .await
+            .expect("add child");
+    let incomplete_route = Route::new()
+        .capability(Capability::protocol_by_name("fuchsia.archivist.tests.StdioPuppet"));
+    test_realm
+        .add_route(incomplete_route.clone().from(&stdio_puppet).to(Ref::parent()))
         .await
         .unwrap();
+    builder.add_route(incomplete_route.from(&test_realm).to(Ref::parent())).await.unwrap();
     let instance = builder.build().await.expect("create instance");
 
     let accessor =

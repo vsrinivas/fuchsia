@@ -7,8 +7,8 @@
 use argh::FromArgs;
 use difference::{Changeset, Difference};
 use fuchsia_async as fasync;
-use fuchsia_component_test::{
-    ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+use fuchsia_component_test::new::{
+    Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
 };
 use fuchsia_zircon::{self as zx, DurationNum};
 use iquery::{command_line::CommandLine, commands::*, types::Error};
@@ -54,14 +54,14 @@ impl TestBuilder {
     }
 
     async fn add_child(&mut self, name: &str, url: &str) -> &mut Self {
+        let child_ref =
+            self.builder.add_child(name, url, ChildOptions::new().eager()).await.unwrap();
         self.builder
-            .add_child(name, url, ChildOptions::new().eager())
-            .await
-            .unwrap()
             .add_route(
-                RouteBuilder::protocol("fuchsia.logger.LogSink")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component(name)]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(Ref::parent())
+                    .to(&child_ref),
             )
             .await
             .unwrap();

@@ -6,7 +6,7 @@ use crate::test_topology;
 use diagnostics_message::fx_log_packet_t;
 use fidl_fuchsia_logger::{LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fuchsia_async as fasync;
-use fuchsia_component_test::RealmInstance;
+use fuchsia_component_test::new::RealmInstance;
 use fuchsia_syslog::levels::INFO;
 use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use fuchsia_zircon as zx;
@@ -15,7 +15,7 @@ use futures::{channel::mpsc, StreamExt};
 #[fuchsia::test]
 async fn timestamp_sorting_for_batches() {
     // launch archivist
-    let builder = test_topology::create(test_topology::Options::default())
+    let (builder, _test_realm) = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
 

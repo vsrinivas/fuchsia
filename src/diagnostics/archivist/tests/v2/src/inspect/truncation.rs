@@ -8,13 +8,13 @@ use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 
 #[fuchsia::test]
 async fn accessor_truncation_test() {
-    let builder = test_topology::create(test_topology::Options::default())
+    let (builder, test_realm) = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_eager_child(&builder, "child_a", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_child(&test_realm, "child_a", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
-    test_topology::add_eager_child(&builder, "child_b", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_child(&test_realm, "child_b", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child b");
 
