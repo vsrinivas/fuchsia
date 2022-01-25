@@ -19,7 +19,6 @@
 #include <memory>
 
 #include "src/virtualization/bin/linux_runner/crash_listener.h"
-#include "src/virtualization/bin/linux_runner/linux_component.h"
 #include "src/virtualization/bin/linux_runner/log_collector.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/third_party/vm_tools/container_guest.grpc.pb.h"
@@ -30,26 +29,6 @@
 #include <grpc++/grpc++.h>
 
 namespace linux_runner {
-
-struct AppLaunchRequest {
- public:
-  AppLaunchRequest(
-      fuchsia::sys::Package&& application_arg, fuchsia::sys::StartupInfo&& startup_info_arg,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController>&& controller_request_arg)
-      : application(std::move(application_arg)),
-        startup_info(std::move(startup_info_arg)),
-        controller_request(std::move(controller_request_arg)) {}
-
-  AppLaunchRequest(const AppLaunchRequest&) = delete;
-  AppLaunchRequest& operator=(const AppLaunchRequest&) = delete;
-
-  AppLaunchRequest(AppLaunchRequest&&) = default;
-  AppLaunchRequest& operator=(AppLaunchRequest&&) = default;
-
-  fuchsia::sys::Package application;
-  fuchsia::sys::StartupInfo startup_info;
-  fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller_request;
-};
 
 struct GuestConfig {
   std::string_view env_label;
@@ -76,8 +55,6 @@ class Guest : public vm_tools::StartupListener::Service,
   Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallback callback,
         fuchsia::virtualization::RealmPtr env);
   ~Guest();
-
-  void Launch(AppLaunchRequest request);
 
  private:
   fpromise::promise<> Start();
@@ -152,13 +129,6 @@ class Guest : public vm_tools::StartupListener::Service,
                                const vm_tools::container::UpdateMimeTypesRequest* request,
                                vm_tools::EmptyMessage* response) override;
 
-  void LaunchApplication(AppLaunchRequest request);
-  void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view, uint32_t id);
-  void OnShutdownView(uint32_t id);
-  void CreateComponent(AppLaunchRequest request,
-                       fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view, uint32_t id);
-  void OnComponentTerminated(uint32_t id);
-  void CreateTerminalComponent(AppLaunchRequest app, std::vector<std::string> args);
   void PostContainerStatus(fuchsia::virtualization::ContainerStatus container_status);
   void PostContainerDownloadProgress(int32_t download_progress);
   void PostContainerFailure(std::string failure_reason);
@@ -178,18 +148,6 @@ class Guest : public vm_tools::StartupListener::Service,
   CrashListener crash_listener_;
   LogCollector log_collector_;
   guest::ScenicWaylandDispatcher wayland_dispatcher_;
-  // Requests queued up waiting for the guest to fully boot.
-  std::deque<AppLaunchRequest> pending_requests_;
-  // Requests that have been dispatched to the container, but have not yet been
-  // associated with a wayland ViewProvider.
-  std::deque<AppLaunchRequest> dispatched_requests_;
-  // Views launched in the background (ex: not using garcon). These can be
-  // returned by requesting a null app URI (linux://).
-  using BackgroundView = std::pair<uint32_t, fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>>;
-  std::deque<BackgroundView> background_views_;
-  std::deque<vm_tools::container::OpenTerminalRequest> background_terms_;
-  std::unordered_map<uint32_t, std::unique_ptr<LinuxComponent>> components_;
-  std::unordered_map<uint32_t, std::unique_ptr<LinuxComponent>> terminals_;
   fuchsia::sys::LauncherPtr launcher_;
 
   // A flow ID used to track the time from the time the VM is created until

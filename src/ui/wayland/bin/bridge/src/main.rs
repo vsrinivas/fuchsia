@@ -6,10 +6,7 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::RequestStream,
-    fidl_fuchsia_wayland::{
-        Server_Request, Server_RequestStream, ViewProducerRequest, ViewProducerRequestStream,
-    },
+    fidl_fuchsia_wayland::{Server_Request, Server_RequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_trace_provider::trace_provider_create_with_fdio,
@@ -33,26 +30,6 @@ fn spawn_wayland_server_service(mut stream: Server_RequestStream, display: Displ
     .detach();
 }
 
-fn spawn_view_producer_service(mut stream: ViewProducerRequestStream, display: Display) {
-    let control_handle = stream.control_handle();
-    let mut display_clone = display.clone();
-    fasync::Task::local(
-        async move {
-            while let Some(ViewProducerRequest::RequestView { responder, view_spec }) =
-                stream.try_next().await.unwrap()
-            {
-                display_clone.request_view_provider(view_spec);
-                responder.send().expect("fidl error");
-            }
-            Ok(())
-        }
-        .unwrap_or_else(|e: anyhow::Error| println!("{:?}", e)),
-    )
-    .detach();
-
-    display.bind_view_producer(control_handle);
-}
-
 fn main() -> Result<(), Error> {
     trace_provider_create_with_fdio();
     let mut executor = fasync::LocalExecutor::new()?;
@@ -67,9 +44,7 @@ fn main() -> Result<(), Error> {
 
     let display = &dispatcher.display;
     let mut fs = ServiceFs::new();
-    fs.dir("svc")
-        .add_fidl_service(|stream| spawn_wayland_server_service(stream, display.clone()))
-        .add_fidl_service(|stream| spawn_view_producer_service(stream, display.clone()));
+    fs.dir("svc").add_fidl_service(|stream| spawn_wayland_server_service(stream, display.clone()));
     fs.take_and_serve_directory_handle().unwrap();
     executor.run_singlethreaded(fs.collect::<()>());
     Ok(())

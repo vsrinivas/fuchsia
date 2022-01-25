@@ -9,13 +9,6 @@
 
 namespace guest {
 
-void ScenicWaylandDispatcher::RequestView(
-    fuchsia::wayland::ViewSpec view_spec,
-    fuchsia::wayland::ViewProducer::RequestViewCallback callback) {
-  GetOrStartBridge();
-  view_producer_->RequestView(std::move(view_spec), std::move(callback));
-}
-
 void ScenicWaylandDispatcher::Connect(zx::channel channel) {
   GetOrStartBridge()->Connect(std::move(channel));
 }
@@ -38,10 +31,6 @@ fuchsia::wayland::Server* ScenicWaylandDispatcher::GetOrStartBridge() {
     // Connect to the |WaylandDispatcher| FIDL interface and forward the
     // channel along.
     services->Connect(wayland_server_.NewRequest());
-    services->Connect(view_producer_.NewRequest());
-    view_producer_.events().OnNewView = fit::bind_member(this, &ScenicWaylandDispatcher::OnNewView);
-    view_producer_.events().OnShutdownView =
-        fit::bind_member(this, &ScenicWaylandDispatcher::OnShutdownView);
   }
 
   return wayland_server_.get();
@@ -56,13 +45,6 @@ void ScenicWaylandDispatcher::Reset(zx_status_t status) {
     wayland_server_.Unbind();
   }
 }
-
-void ScenicWaylandDispatcher::OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view,
-                                        uint32_t id) {
-  listener_(std::move(view), id);
-}
-
-void ScenicWaylandDispatcher::OnShutdownView(uint32_t id) { shutdown_listener_(id); }
 
 fuchsia::sys::LauncherPtr ScenicWaylandDispatcher::ConnectToLauncher() const {
   fuchsia::sys::LauncherPtr launcher;

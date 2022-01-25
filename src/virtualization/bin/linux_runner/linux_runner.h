@@ -13,7 +13,7 @@
 
 namespace linux_runner {
 
-class LinuxRunner : public fuchsia::sys::Runner, public fuchsia::virtualization::LinuxManager {
+class LinuxRunner : public fuchsia::virtualization::LinuxManager {
  public:
   LinuxRunner();
 
@@ -23,11 +23,6 @@ class LinuxRunner : public fuchsia::sys::Runner, public fuchsia::virtualization:
   LinuxRunner& operator=(const LinuxRunner&) = delete;
 
  private:
-  // |fuchsia::sys::Runner|
-  void StartComponent(
-      fuchsia::sys::Package application, fuchsia::sys::StartupInfo startup_info,
-      ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
-
   // |fuchsia::virtualization::LinuxManager|
   void StartAndGetLinuxGuestInfo(std::string label,
                                  StartAndGetLinuxGuestInfoCallback callback) override;
@@ -35,7 +30,6 @@ class LinuxRunner : public fuchsia::sys::Runner, public fuchsia::virtualization:
   void OnGuestInfoChanged(GuestInfo info);
 
   std::unique_ptr<sys::ComponentContext> context_;
-  fidl::BindingSet<fuchsia::sys::Runner> runner_bindings_;
   fidl::BindingSet<fuchsia::virtualization::LinuxManager> manager_bindings_;
   std::unique_ptr<linux_runner::Guest> guest_;
   std::deque<StartAndGetLinuxGuestInfoCallback> callbacks_;

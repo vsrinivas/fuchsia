@@ -12,7 +12,6 @@ use {
     fidl_fuchsia_ui_app::ViewProviderMarker,
     fidl_fuchsia_ui_gfx::DisplayInfo,
     fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy},
-    fidl_fuchsia_wayland::{ViewProducerControlHandle, ViewSpec},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
@@ -44,7 +43,7 @@ pub trait LocalViewProducerClient: Send + Sync {
 #[derive(Clone)]
 enum ViewProducerClient {
     Local(Arc<Mutex<Box<dyn LocalViewProducerClient>>>),
-    Remote(Arc<Mutex<Option<ViewProducerControlHandle>>>),
+    Invalid,
 }
 
 /// |Display| is the global object used to manage a wayland server.
@@ -79,7 +78,7 @@ impl Display {
             registry: Arc::new(Mutex::new(registry)),
             scenic: Arc::new(scenic),
             graphical_presenter: Arc::new(graphical_presenter),
-            view_producer_client: ViewProducerClient::Remote(Arc::new(Mutex::new(None))),
+            view_producer_client: ViewProducerClient::Invalid,
             view_provider_requests: Arc::new(AtomicUsize::new(0)),
             display_info: DisplayInfo { width_in_px: 0, height_in_px: 0 },
         })
@@ -117,7 +116,7 @@ impl Display {
             registry: Arc::new(Mutex::new(registry)),
             scenic: Arc::new(scenic),
             graphical_presenter: Arc::new(graphical_presenter),
-            view_producer_client: ViewProducerClient::Remote(Arc::new(Mutex::new(None))),
+            view_producer_client: ViewProducerClient::Invalid,
             view_provider_requests: Arc::new(AtomicUsize::new(0)),
             display_info: DisplayInfo { width_in_px: 0, height_in_px: 0 },
         })
@@ -138,13 +137,6 @@ impl Display {
         self.registry.clone()
     }
 
-    /// Processes view provider requests. This ignores the details of the
-    /// spec at this time but could take that into account in the future to
-    /// make sure requests are only satisfied if they match.
-    pub fn request_view_provider(&mut self, _view_spec: ViewSpec) {
-        self.view_provider_requests.fetch_add(1, Ordering::SeqCst);
-    }
-
     /// Take one view provider request off the top. Returns false if no
     /// request exists.
     pub fn take_view_provider_requests(&mut self) -> bool {
@@ -162,18 +154,8 @@ impl Display {
             ViewProducerClient::Local(view_producer_client) => {
                 view_producer_client.lock().new_view(view_provider, view_id);
             }
-            ViewProducerClient::Remote(view_producer_control_handle) => {
-                view_producer_control_handle
-                    .lock()
-                    .as_ref()
-                    .expect(
-                        "\
-                 A new view has been created without a ViewProducer connection. \
-                 The ViewProducer must be bound before issuing any new channels \
-                 into the bridge.",
-                    )
-                    .send_on_new_view(view_provider, view_id)
-                    .expect("Failed to emit OnNewView event");
+            ViewProducerClient::Invalid => {
+                panic!("new_view_provider called without a valid view producer");
             }
         }
     }
@@ -184,34 +166,8 @@ impl Display {
             ViewProducerClient::Local(view_producer_client) => {
                 view_producer_client.lock().shutdown_view(view_id);
             }
-            ViewProducerClient::Remote(view_producer_control_handle) => {
-                if let Some(view_producer_control_handle_ref) =
-                    view_producer_control_handle.lock().as_ref()
-                {
-                    let _ = view_producer_control_handle_ref.send_on_shutdown_view(view_id);
-                }
-            }
-        }
-    }
-
-    pub fn bind_view_producer(&self, control_handle: ViewProducerControlHandle) {
-        match &self.view_producer_client {
-            ViewProducerClient::Local(_view_producer_client) => {
-                panic!("Attempting to bind remote view producer when display has local view producer client.");
-            }
-            ViewProducerClient::Remote(view_producer_control_handle) => {
-                *view_producer_control_handle.lock() = Some(control_handle);
-            }
-        }
-    }
-
-    pub fn bind_local_view_producer(&self, view_producer_client: Box<dyn LocalViewProducerClient>) {
-        match &self.view_producer_client {
-            ViewProducerClient::Local(client) => {
-                *client.lock() = view_producer_client;
-            }
-            ViewProducerClient::Remote(_view_producer_control_handle) => {
-                panic!("Attempting to bind local view producer when display has remote view producer client.");
+            ViewProducerClient::Invalid => {
+                panic!("delete_view_provider called without a valid view producer");
             }
         }
     }

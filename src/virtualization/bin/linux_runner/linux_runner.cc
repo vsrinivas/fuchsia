@@ -14,7 +14,6 @@ constexpr std::string_view kLinuxEnvironmentName("termina");
 constexpr size_t kStatefulImageSize = 40ul * 1024 * 1024 * 1024;  // 40 GB
 
 LinuxRunner::LinuxRunner() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
-  context_->outgoing()->AddPublicService(runner_bindings_.GetHandler(this));
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
 }
 
@@ -27,18 +26,6 @@ zx_status_t LinuxRunner::Init() {
   return Guest::CreateAndStart(
       context_.get(), config, [this](GuestInfo info) { OnGuestInfoChanged(std::move(info)); },
       &guest_);
-}
-
-void LinuxRunner::StartComponent(
-    fuchsia::sys::Package application, fuchsia::sys::StartupInfo startup_info,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
-  TRACE_DURATION("linux_runner", "LinuxRunner::StartComponent");
-  AppLaunchRequest request = {
-      std::move(application),
-      std::move(startup_info),
-      std::move(controller),
-  };
-  guest_->Launch(std::move(request));
 }
 
 void LinuxRunner::StartAndGetLinuxGuestInfo(std::string label,

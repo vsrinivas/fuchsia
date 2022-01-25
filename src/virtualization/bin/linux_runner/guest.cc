@@ -46,10 +46,6 @@ constexpr const char kContainerName[] = "penguin";
 constexpr const char kContainerImageAlias[] = "debian/bullseye";
 constexpr const char kContainerImageServer[] = "https://storage.googleapis.com/cros-containers/96";
 constexpr const char kDefaultContainerUser[] = "machina";
-constexpr const char kLinuxUriScheme[] = "linux://";
-constexpr const char kLinuxTerminalDesktopFileId[] = "garcon-terminal";
-constexpr const char kVshTerminalComponent[] =
-    "fuchsia-pkg://fuchsia.com/terminal#meta/vsh-terminal.cmx";
 constexpr const char kWaylandBridgePackage[] =
     "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
 
@@ -329,11 +325,9 @@ Guest::Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallba
       config_(config),
       callback_(std::move(callback)),
       guest_env_(std::move(env)),
-      wayland_dispatcher_(context, kWaylandBridgePackage, fit::bind_member(this, &Guest::OnNewView),
-                          fit::bind_member(this, &Guest::OnShutdownView)) {
+      wayland_dispatcher_(context, kWaylandBridgePackage) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   executor_.schedule_task(Start());
-  context->svc()->Connect(launcher_.NewRequest());
 }
 
 Guest::~Guest() {
@@ -868,10 +862,6 @@ grpc::Status Guest::ContainerReady(grpc::ServerContext* context,
     FX_CHECK(result.is_ok()) << "Failed to connect to Garcon";
     garcon_ = std::move(result.value());
     DumpContainerDebugInfo();
-    for (auto it = pending_requests_.begin(); it != pending_requests_.end();
-         it = pending_requests_.erase(it)) {
-      LaunchApplication(std::move(*it));
-    }
     return fpromise::ok();
   };
   auto task =
@@ -944,18 +934,6 @@ grpc::Status Guest::OpenTerminal(grpc::ServerContext* context,
                                  vm_tools::EmptyMessage* response) {
   TRACE_DURATION("linux_runner", "Guest::OpenTerminal");
   FX_LOGS(INFO) << "Open Terminal";
-
-  executor_.schedule_task(fpromise::make_promise([this, request = *request]() {
-    auto it = dispatched_requests_.begin();
-    if (it == dispatched_requests_.end()) {
-      background_terms_.emplace_back(std::move(request));
-      return;
-    }
-    std::vector<std::string> args{request.params().begin(), request.params().end()};
-    CreateTerminalComponent(std::move(*it), std::move(args));
-    dispatched_requests_.erase(it);
-  }));
-
   return grpc::Status::OK;
 }
 
@@ -991,146 +969,6 @@ void Guest::DumpContainerDebugInfo() {
 
   FX_LOGS(INFO) << "Container debug information:";
   FX_LOGS(INFO) << response.debug_information();
-}
-
-void Guest::Launch(AppLaunchRequest request) {
-  TRACE_DURATION("linux_runner", "Guest::Launch");
-
-  // TODO(fxbug.dev/65874): we use the empty URI to pick up a view that wasn't associated with an
-  // app launch request. For example, if you started a GUI application from the serial console, a
-  // wayland view will have been created without a fuchsia component to associate with it.
-  //
-  // We'll need to come up with a more proper solution, but this allows us to at least do some
-  // testing of these views for the time being.
-  if (request.application.resolved_url == kLinuxUriScheme) {
-    if (!background_views_.empty()) {
-      FX_LOGS(INFO) << "Found background view";
-      auto [id, view] = std::move(background_views_.front());
-      background_views_.pop_front();
-      CreateComponent(std::move(request), view.Bind(), id);
-    } else if (!background_terms_.empty()) {
-      FX_LOGS(INFO) << "Found background term";
-      auto term = std::move(background_terms_.front());
-      background_terms_.pop_front();
-      std::vector<std::string> args{term.params().begin(), term.params().end()};
-      CreateTerminalComponent(std::move(request), std::move(args));
-    } else {
-      dispatched_requests_.push_back(std::move(request));
-    }
-    return;
-  }
-
-  // If we have a garcon connection we can request the launch immediately.
-  // Otherwise we just retain the request and forward it along once the
-  // container is started.
-  if (garcon_) {
-    LaunchApplication(std::move(request));
-    return;
-  }
-  pending_requests_.push_back(std::move(request));
-}
-
-void Guest::LaunchApplication(AppLaunchRequest app) {
-  TRACE_DURATION("linux_runner", "Guest::LaunchApplication");
-  FX_CHECK(garcon_) << "Called LaunchApplication without a garcon connection";
-  std::string desktop_file_id = app.application.resolved_url;
-  if (desktop_file_id.rfind(kLinuxUriScheme, 0) == std::string::npos) {
-    FX_LOGS(ERROR) << "Invalid URI: " << desktop_file_id;
-    return;
-  }
-  desktop_file_id.erase(0, strlen(kLinuxUriScheme));
-  auto launch = [this, desktop_file_id] {
-    grpc::ClientContext context;
-    vm_tools::container::LaunchApplicationRequest request;
-    vm_tools::container::LaunchApplicationResponse response;
-
-    request.set_desktop_file_id(std::move(desktop_file_id));
-    {
-      TRACE_DURATION("linux_runner", "LaunchApplicationRPC");
-      auto grpc_status = garcon_->LaunchApplication(&context, request, &response);
-      if (!grpc_status.ok() || !response.success()) {
-        FX_LOGS(ERROR) << "Failed to launch application: " << grpc_status.error_message() << ", "
-                       << response.failure_reason();
-        return;
-      }
-    }
-    FX_LOGS(INFO) << "Application launched successfully";
-  };
-  // TODO(fxbug.dev/90026): Avoid using a desktop file for the Linux terminal.
-  if (desktop_file_id == kLinuxTerminalDesktopFileId) {
-    launch();
-  } else {
-    fuchsia::wayland::ViewSpec view_spec;
-    view_spec.set_desktop_file_id(desktop_file_id);
-    wayland_dispatcher_.RequestView(std::move(view_spec), launch);
-  }
-  dispatched_requests_.push_back(std::move(app));
-}
-
-void Guest::OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view_provider,
-                      uint32_t id) {
-  TRACE_DURATION("linux_runner", "Guest::OnNewView");
-  // TODO: This currently just pops a component request off the queue to
-  // associate with the new view. This is obviously racy but will work until
-  // we can pipe though a startup id to provide a more accurate correlation.
-  auto it = dispatched_requests_.begin();
-  if (it == dispatched_requests_.end()) {
-    background_views_.push_back({id, std::move(view_provider)});
-    return;
-  }
-  CreateComponent(std::move(*it), std::move(view_provider), id);
-  dispatched_requests_.erase(it);
-}
-
-void Guest::OnShutdownView(uint32_t id) {
-  TRACE_DURATION("linux_runner", "Guest::OnShutdownView");
-  auto it = std::remove_if(background_views_.begin(), background_views_.end(),
-                           [id](const BackgroundView& view) { return view.first == id; });
-  if (it != background_views_.end()) {
-    background_views_.erase(it, background_views_.end());
-  } else {
-    OnComponentTerminated(id);
-  }
-}
-
-void Guest::CreateComponent(AppLaunchRequest request,
-                            fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view_provider,
-                            uint32_t id) {
-  TRACE_DURATION("linux_runner", "Guest::CreateComponent");
-  auto component = LinuxComponent::Create(
-      fit::bind_member(this, &Guest::OnComponentTerminated), std::move(request.application),
-      std::move(request.startup_info.launch_info.directory_request),
-      std::move(request.controller_request),
-      {},  // Wayland components are not managed by a ComponentController.
-      view_provider.Bind(), id);
-  components_.insert({id, std::move(component)});
-}
-
-void Guest::OnComponentTerminated(uint32_t id) { components_.erase(id); }
-
-void Guest::CreateTerminalComponent(AppLaunchRequest app, std::vector<std::string> args) {
-  TRACE_DURATION("linux_runner", "Guest::CreateTerminalComponent");
-  static uint32_t next_term_id = 1;
-  const auto term_id = next_term_id++;
-
-  fidl::InterfaceHandle<fuchsia::io::Directory> vsh_svc_dir;
-  fuchsia::sys::ComponentControllerPtr vsh_controller;
-
-  // Transfer most of the launch info except we replace the url, args and directory_request handle.
-  // The original directory_request is extracted first for use by the LinuxComponent.
-  zx::channel app_dir_request = std::move(app.startup_info.launch_info.directory_request);
-  fuchsia::sys::LaunchInfo launch_info = std::move(app.startup_info.launch_info);
-  launch_info.url = kVshTerminalComponent;
-  launch_info.arguments = std::move(args);  // appended to the existing vsh-terminal.cmx arguments.
-  launch_info.directory_request = vsh_svc_dir.NewRequest().TakeChannel();
-  launcher_->CreateComponent(std::move(launch_info), vsh_controller.NewRequest());
-
-  auto svc = sys::ServiceDirectory(std::move(vsh_svc_dir));
-  auto component = LinuxComponent::Create(
-      [this](uint32_t id) { terminals_.erase(id); }, std::move(app.application),
-      std::move(app_dir_request), std::move(app.controller_request), std::move(vsh_controller),
-      svc.Connect<fuchsia::ui::app::ViewProvider>(), term_id);
-  terminals_.insert({term_id, std::move(component)});
 }
 
 void Guest::PostContainerStatus(fuchsia::virtualization::ContainerStatus container_status) {

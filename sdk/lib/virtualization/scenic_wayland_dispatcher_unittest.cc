@@ -17,12 +17,9 @@ namespace guest {
 static constexpr const char* kWaylandBridgeUrl =
     "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
 
-class FakeDispatcher : public fuchsia::wayland::Server, public fuchsia::wayland::ViewProducer {
+class FakeDispatcher : public fuchsia::wayland::Server {
  public:
-  FakeDispatcher() {
-    component_.AddPublicService(bindings_.GetHandler(this));
-    component_.AddPublicService(view_producer_bindings_.GetHandler(this));
-  }
+  FakeDispatcher() { component_.AddPublicService(bindings_.GetHandler(this)); }
 
   // Register to be launched with a fake URL
   void Register(const char* fake_url, sys::testing::FakeLauncher& fake_launcher) {
@@ -35,52 +32,23 @@ class FakeDispatcher : public fuchsia::wayland::Server, public fuchsia::wayland:
   // Simulates the bridge dying by clearing all state and closing any bindings.
   void Terminate() {
     bindings_.CloseAll();
-    view_producer_bindings_.CloseAll();
     connections_.clear();
-  }
-
-  void SendOnNewView() {
-    for (auto& binding : view_producer_bindings_.bindings()) {
-      zx::channel c1, c2;
-      zx::channel::create(0, &c1, &c2);
-      binding->events().OnNewView(
-          fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>(std::move(c1)),
-          static_cast<uint32_t>(new_view_channels_.size()));
-      new_view_channels_.push_back(std::move(c2));
-    }
-  }
-
-  void SendOnShutdownView() {
-    for (auto& binding : view_producer_bindings_.bindings()) {
-      new_view_channels_.pop_back();
-      binding->events().OnShutdownView(static_cast<uint32_t>(new_view_channels_.size()));
-    }
   }
 
  private:
   // |fuchsia::wayland::Server|
   void Connect(zx::channel channel) override { connections_.push_back(std::move(channel)); }
 
-  // |fuchsia::wayland::ViewProducer|
-  void RequestView(fuchsia::wayland::ViewSpec view_spec, RequestViewCallback callback) override {
-    callback();
-  }
-
   sys::testing::FakeComponent component_;
   fidl::BindingSet<fuchsia::wayland::Server> bindings_;
-  fidl::BindingSet<fuchsia::wayland::ViewProducer> view_producer_bindings_;
   std::vector<zx::channel> connections_;
-  std::vector<zx::channel> new_view_channels_;
 };
 
 class ScenicWaylandDispatcherTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     TestLoopFixture::SetUp();
-    dispatcher_.reset(new ScenicWaylandDispatcher(
-        provider_.context(), kWaylandBridgeUrl,
-        fit::bind_member(this, &ScenicWaylandDispatcherTest::OnNewView),
-        fit::bind_member(this, &ScenicWaylandDispatcherTest::OnShutdownView)));
+    dispatcher_.reset(new ScenicWaylandDispatcher(provider_.context(), kWaylandBridgeUrl));
     provider_.service_directory_provider()->AddService(fake_launcher_.GetHandler());
 
     fake_dispatcher_impl_.reset(new FakeDispatcher());
@@ -92,22 +60,12 @@ class ScenicWaylandDispatcherTest : public gtest::TestLoopFixture {
  protected:
   ScenicWaylandDispatcher* dispatcher() const { return dispatcher_.get(); }
   FakeDispatcher* remote_dispatcher() const { return fake_dispatcher_impl_.get(); }
-  std::map<uint32_t, fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>>* views() {
-    return &views_;
-  }
 
  private:
-  void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view, uint32_t id) {
-    views_.insert({id, std::move(view)});
-  }
-
-  void OnShutdownView(uint32_t id) { views_.erase(id); }
-
   sys::testing::FakeLauncher fake_launcher_;
   std::unique_ptr<FakeDispatcher> fake_dispatcher_impl_;
   sys::testing::ComponentContextProvider provider_;
   std::unique_ptr<ScenicWaylandDispatcher> dispatcher_;
-  std::map<uint32_t, fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>> views_;
 };
 
 // The |ScenicWaylandDispatcher| will simply spawn a new bridge process for each
@@ -147,28 +105,6 @@ TEST_F(ScenicWaylandDispatcherTest, RelaunchBridgeWhenLost) {
   RunLoopUntilIdle();
   ASSERT_EQ(1u, remote_dispatcher()->BindingCount());
   ASSERT_EQ(1u, remote_dispatcher()->ConnectionCount());
-}
-
-// Verify we can correctly receive new ViewProviders from the remote bridge
-// process.
-TEST_F(ScenicWaylandDispatcherTest, ReceiveViewEvents) {
-  zx::channel c1, c2;
-  zx::channel::create(0, &c1, &c2);
-  dispatcher()->Connect(std::move(c1));
-  RunLoopUntilIdle();
-  ASSERT_EQ(1u, remote_dispatcher()->BindingCount());
-  ASSERT_EQ(1u, remote_dispatcher()->ConnectionCount());
-  ASSERT_EQ(0u, views()->size());
-
-  remote_dispatcher()->SendOnNewView();
-  RunLoopUntilIdle();
-  ASSERT_EQ(1u, views()->size());
-  // View IDs are `view count - 1` for testing.
-  ASSERT_EQ(1u, views()->count(0u));
-
-  remote_dispatcher()->SendOnShutdownView();
-  RunLoopUntilIdle();
-  ASSERT_EQ(0u, views()->size());
 }
 
 }  // namespace guest
