@@ -46,7 +46,7 @@ void Heap::BindWithHeapProperties(zx::channel server_request,
                                             fidl::ServerEnd<fuchsia_sysmem2::Heap> server_end) {
                                            self->OnClose(info, server_end.TakeChannel());
                                          });
-                    binding->OnRegister(std::move(heap_properties));
+                    fidl::WireSendEvent(binding)->OnRegister(std::move(heap_properties));
                   });
 }
 

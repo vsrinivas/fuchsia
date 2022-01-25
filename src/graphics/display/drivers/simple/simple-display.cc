@@ -360,7 +360,7 @@ zx_status_t SimpleDisplay::Bind(const char* name, std::unique_ptr<SimpleDisplay>
                                            fidl::ServerEnd<fuchsia_sysmem2::Heap> server_end) {
                                           OnHeapServerClose(info, server_end.TakeChannel());
                                         });
-        binding->OnRegister(std::move(heap_properties));
+        fidl::WireSendEvent(binding)->OnRegister(std::move(heap_properties));
       });
 
   // Start vsync loop.

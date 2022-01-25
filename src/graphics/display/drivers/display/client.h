@@ -117,10 +117,10 @@ class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {
   inspect::BoolProperty pending_apply_layer_change_property_;
 };
 
-// Helper class for sending events using the same API, regardless if |Client|
-// is bound to a FIDL connection. This object either holds a binding reference
-// or an |EventSender| that owns the channel, both of which allows sending
-// events without unsafe channel borrowing.
+// Helper class for sending events using the same API, regardless if |Client| is
+// bound to a FIDL connection. This object either holds a binding reference or a
+// |ServerEnd| that owns the channel, both of which allows sending events
+// without unsafe channel borrowing.
 class DisplayControllerBindingState {
   using Protocol = fuchsia_hardware_display::Controller;
 
@@ -129,24 +129,24 @@ class DisplayControllerBindingState {
   // active binding reference or event sender before events could be sent.
   DisplayControllerBindingState() = default;
 
-  explicit DisplayControllerBindingState(fidl::WireEventSender<Protocol>&& event_sender)
-      : binding_state_(std::move(event_sender)) {}
+  explicit DisplayControllerBindingState(fidl::ServerEnd<Protocol> server_end)
+      : binding_state_(std::move(server_end)) {}
 
   // Invokes |fn| with an polymorphic object that may be used to send events
   // in |Protocol|.
   //
-  // |fn| must be a templated lambda that can receive both
-  // |fidl::ServerBindingRef<Protocol>| and |fidl::WireEventSender<Protocol>|,
-  // and returns a |fidl::Result|.
+  // |fn| must be a templated lambda that calls
+  // |fidl::WireSendEvent(arg)->OnSomeEvent| to send |OnSomeEvent| event, and
+  // returns a |fidl::Result|.
   template <typename EventSenderConsumer>
   fidl::Result SendEvents(EventSenderConsumer&& fn) {
     return std::visit(
         [&](auto&& arg) -> fidl::Result {
           using T = std::decay_t<decltype(arg)>;
           if constexpr (std::is_same_v<T, fidl::ServerBindingRef<Protocol>>) {
-            return fn(*arg);
+            return fn(arg);
           }
-          if constexpr (std::is_same_v<T, fidl::WireEventSender<Protocol>>) {
+          if constexpr (std::is_same_v<T, fidl::ServerEnd<Protocol>>) {
             return fn(arg);
           }
           ZX_PANIC("Invalid display controller binding state");
@@ -170,7 +170,7 @@ class DisplayControllerBindingState {
   }
 
  private:
-  std::variant<std::monostate, fidl::ServerBindingRef<Protocol>, fidl::WireEventSender<Protocol>>
+  std::variant<std::monostate, fidl::ServerBindingRef<Protocol>, fidl::ServerEnd<Protocol>>
       binding_state_;
 };
 

@@ -12,7 +12,7 @@ namespace magma {
 class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
  public:
   ZirconPlatformPerfCountPool(uint64_t id, zx::channel channel)
-      : pool_id_(id), event_sender_(std::move(channel)) {}
+      : pool_id_(id), server_end_(std::move(channel)) {}
 
   uint64_t pool_id() override { return pool_id_; }
 
@@ -20,9 +20,11 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
   magma::Status SendPerformanceCounterCompletion(uint32_t trigger_id, uint64_t buffer_id,
                                                  uint32_t buffer_offset, uint64_t time,
                                                  uint32_t result_flags) override {
-    fidl::Result result = event_sender_.OnPerformanceCounterReadCompleted(
-        trigger_id, buffer_id, buffer_offset, time,
-        fuchsia_gpu_magma::wire::ResultFlags::TruncatingUnknown(result_flags));
+    fidl::Result result =
+        fidl::WireSendEvent(server_end_)
+            ->OnPerformanceCounterReadCompleted(
+                trigger_id, buffer_id, buffer_offset, time,
+                fuchsia_gpu_magma::wire::ResultFlags::TruncatingUnknown(result_flags));
     switch (result.status()) {
       case ZX_OK:
         return MAGMA_STATUS_OK;
@@ -37,7 +39,7 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
 
  private:
   uint64_t pool_id_;
-  fidl::WireEventSender<fuchsia_gpu_magma::PerformanceCounterEvents> event_sender_;
+  fidl::ServerEnd<fuchsia_gpu_magma::PerformanceCounterEvents> server_end_;
 };
 
 void ZirconPlatformConnection::SetError(fidl::CompleterBase* completer, magma_status_t error) {
@@ -142,7 +144,8 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
   bytes_imported_ += size;
 
   if (messages_consumed_ >= kMaxInflightMessages / 2) {
-    fidl::Result result = server_binding_.value()->OnNotifyMessagesConsumed(messages_consumed_);
+    fidl::Result result =
+        fidl::WireSendEvent(server_binding_.value())->OnNotifyMessagesConsumed(messages_consumed_);
     if (result.ok()) {
       messages_consumed_ = 0;
     } else if (!result.is_canceled() && !result.is_peer_closed()) {
@@ -151,7 +154,8 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
   }
 
   if (bytes_imported_ >= kMaxInflightBytes / 2) {
-    fidl::Result result = server_binding_.value()->OnNotifyMemoryImported(bytes_imported_);
+    fidl::Result result =
+        fidl::WireSendEvent(server_binding_.value())->OnNotifyMemoryImported(bytes_imported_);
     if (result.ok()) {
       bytes_imported_ = 0;
     } else if (!result.is_canceled() && !result.is_peer_closed()) {

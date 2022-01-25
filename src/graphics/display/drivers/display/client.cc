@@ -1192,8 +1192,9 @@ void Client::SetOwnership(bool is_owner) {
   ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
   is_owner_ = is_owner;
 
-  fidl::Result result = binding_state_.SendEvents(
-      [&](auto&& event_sender) { return event_sender.OnClientOwnershipChange(is_owner); });
+  fidl::Result result = binding_state_.SendEvents([&](auto&& endpoint) {
+    return fidl::WireSendEvent(endpoint)->OnClientOwnershipChange(is_owner);
+  });
   if (!result.ok()) {
     zxlogf(ERROR, "Error writing remove message: %s", result.FormatDescription().c_str());
   }
@@ -1368,8 +1369,8 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
   }
 
   if (!coded_configs.empty() || !removed_ids.empty()) {
-    fidl::Result result = binding_state_.SendEvents([&](auto&& event_sender) {
-      return event_sender.OnDisplaysChanged(
+    fidl::Result result = binding_state_.SendEvents([&](auto&& endpoint) {
+      return fidl::WireSendEvent(endpoint)->OnDisplaysChanged(
           fidl::VectorView<fhd::wire::Info>::FromExternal(coded_configs),
           fidl::VectorView<uint64_t>::FromExternal(removed_ids));
     });
@@ -1552,7 +1553,7 @@ Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, bool use_
       id_(client_id),
       server_handle_(server_channel.get()),
       fences_(controller->loop().dispatcher(), fit::bind_member<&Client::OnFenceFired>(this)),
-      binding_state_(fidl::WireEventSender<fhd::Controller>(std::move(server_channel))) {}
+      binding_state_(fidl::ServerEnd<fhd::Controller>(std::move(server_channel))) {}
 
 Client::~Client() { ZX_DEBUG_ASSERT(server_handle_ == ZX_HANDLE_INVALID); }
 
@@ -1729,10 +1730,10 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   while (!buffered_vsync_messages_.empty()) {
     vsync_msg_t v = buffered_vsync_messages_.front();
     buffered_vsync_messages_.pop();
-    event_sending_result = handler_.binding_state().SendEvents([&](auto&& event_sender) {
-      return event_sender.OnVsync(v.display_id, v.timestamp,
-                                  fuchsia_hardware_display::wire::ConfigStamp{v.config_stamp.value},
-                                  0);
+    event_sending_result = handler_.binding_state().SendEvents([&](auto&& endpoint) {
+      return fidl::WireSendEvent(endpoint)->OnVsync(
+          v.display_id, v.timestamp,
+          fuchsia_hardware_display::wire::ConfigStamp{v.config_stamp.value}, 0);
     });
     if (!event_sending_result.ok()) {
       zxlogf(ERROR, "Failed to send all buffered vsync messages: %s\n",
@@ -1743,10 +1744,10 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   }
 
   // Send the latest vsync event
-  event_sending_result = handler_.binding_state().SendEvents([&](auto&& event_sender) {
-    return event_sender.OnVsync(display_id, timestamp,
-                                fuchsia_hardware_display::wire::ConfigStamp{client_stamp.value},
-                                cookie);
+  event_sending_result = handler_.binding_state().SendEvents([&](auto&& endpoint) {
+    return fidl::WireSendEvent(endpoint)->OnVsync(
+        display_id, timestamp, fuchsia_hardware_display::wire::ConfigStamp{client_stamp.value},
+        cookie);
   });
   if (!event_sending_result.ok()) {
     return event_sending_result.status();
