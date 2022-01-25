@@ -55,7 +55,23 @@
             event_stream_deprecated: "EventStream",
             subscriptions: [
                 {
+                    event: "diagnostics_ready",
+                    mode: "async",
+                },
+                {
                     event: "capability_requested",
+                    mode: "async",
+                },
+                {
+                    event: "running",
+                    mode: "async",
+                },
+                {
+                    event: "started",
+                    mode: "async",
+                },
+                {
+                    event: "stopped",
                     mode: "async",
                 },
             ],

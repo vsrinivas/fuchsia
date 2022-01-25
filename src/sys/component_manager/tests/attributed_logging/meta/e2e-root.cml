@@ -32,9 +32,6 @@
             from: "#archivist",
             to: "#routing-tests",
         },
-
-        // These events are not needed for the test to pass, but including them
-        // reduces log noise.
         {
             event: [
                 "running",

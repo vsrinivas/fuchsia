@@ -106,7 +106,6 @@ rustc_library("lib") {
     "src/events/error.rs",
     "src/events/mod.rs",
     "src/events/source_registry.rs",
-    "src/events/sources/core.rs",
     "src/events/sources/legacy.rs",
     "src/events/sources/log_connector.rs",
     "src/events/sources/mod.rs",
