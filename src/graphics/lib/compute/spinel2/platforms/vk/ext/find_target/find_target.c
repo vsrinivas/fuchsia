@@ -26,10 +26,29 @@
 #ifdef SPN_VK_TARGET_INTEL_GEN8
 #include "spinel_vk_intel_gen8_linkable.h"
 #endif
-#ifdef SPN_VK_TARGET_NVIDIA_SM50
+#ifdef SPN_VK_TARGET_NVIDIA_SM35
 #include "spinel_vk_nvidia_sm35_linkable.h"
 #endif
+#ifdef SPN_VK_TARGET_NVIDIA_SM75
+#include "spinel_vk_nvidia_sm75_linkable.h"
+#endif
 
+#endif
+
+//
+// NVIDIA fp16 support appears to be in the range [0x1D81, ...]
+//
+// TODO(allanmac): Add support for identifying NVIDIA Tegra SoCs.
+//
+#define SPN_VK_TARGET_NVIDIA_GV100 0x1D81
+
+//
+//
+//
+#ifndef NDEBUG
+#define SPN_VK_TARGET_LOG(name_) fprintf(stderr, "Loading target: \"" #name_ "\"\n");
+#else
+#define SPN_VK_TARGET_LOG(name_)
 #endif
 
 //
@@ -52,16 +71,19 @@ union spinel_vk_header_target
     .header = name_##_linkable                                                                     \
   }
 
+#define SPN_VK_TARGET_ASSIGN(header_, name_)                                                       \
+  header_ = SPN_VK_TARGET_GET(name_);                                                              \
+  SPN_VK_TARGET_LOG(name_)
+
 //
 // RESOURCE?
-//
-#else
-
 //
 // Load the target binary.
 //
 // Must be freed by caller.
 //
+#else
+
 static spinel_vk_target_t *
 spinel_vk_load_target(char const * filename)
 {
@@ -112,11 +134,12 @@ spinel_vk_load_target(char const * filename)
 }
 
 // clang-format off
-#define SPN_VK_TARGET_STRINGIFY(name_) #name_
-#define SPN_VK_TARGET_RESOURCE(name_)  SPN_VK_TARGET_STRINGIFY(name_##_resource)
-#define SPN_VK_TARGET_FILENAME(name_)  "pkg/data/targets/" SPN_VK_TARGET_RESOURCE(name_)
-#define SPN_VK_TARGET_LOAD(name_)      spinel_vk_load_target(SPN_VK_TARGET_FILENAME(name_))
-#define SPN_VK_TARGET_GET(name_)       (union spinel_vk_header_target){ .target = SPN_VK_TARGET_LOAD(name_) }
+#define SPN_VK_TARGET_STRINGIFY(name_)       #name_
+#define SPN_VK_TARGET_RESOURCE(name_)        SPN_VK_TARGET_STRINGIFY(name_##_resource)
+#define SPN_VK_TARGET_FILENAME(name_)        "pkg/data/targets/" SPN_VK_TARGET_RESOURCE(name_)
+#define SPN_VK_TARGET_LOAD(name_)            spinel_vk_load_target(SPN_VK_TARGET_FILENAME(name_))
+#define SPN_VK_TARGET_GET(name_)             (union spinel_vk_header_target){ .target = SPN_VK_TARGET_LOAD(name_) }
+#define SPN_VK_TARGET_ASSIGN(header_, name_) header_ = SPN_VK_TARGET_GET(name_); SPN_VK_TARGET_LOG(name_)
 // clang-format on
 
 #endif
@@ -131,16 +154,32 @@ spinel_vk_find_target(uint32_t vendor_id, uint32_t device_id)
 
   switch (vendor_id)
     {
-#ifdef SPN_VK_TARGET_NVIDIA_SM50
+#if defined(SPN_VK_TARGET_NVIDIA_SM35) || defined(SPN_VK_TARGET_NVIDIA_SM75)
       case 0x10DE:
+        // clang-format off
         //
         // NVIDIA
         //
-        // FIXME(allanmac): The shaders in this target are targeting sm_35+
-        // devices.  You could add some rigorous rejection by device id here
-        // but we're currently not testing against pre-Kepler GPUs.
+        // For a mapping of PCI IDs to NVIDIA architectures:
         //
-        header_target = SPN_VK_TARGET_GET(spinel_vk_nvidia_sm35);
+        //  * https://pci-ids.ucw.cz/read/PC/10de
+        //  * https://github.com/envytools/envytools/
+        //
+        // For discrete NVIDIA GPUs, it appears that any PCI ID greater than or
+        // equal to "0x1D81" (GV100 [TITAN V]) has full-rate fp16 support.
+        //
+        // TODO(allanmac): Add support for NVIDIA Tegra SoCs.
+        //
+        // clang-format on
+        //
+        if (device_id >= SPN_VK_TARGET_NVIDIA_GV100)  // GV100 [TITAN V], Turing, Ampere+
+          {
+            SPN_VK_TARGET_ASSIGN(header_target, spinel_vk_nvidia_sm75);
+          }
+        else  // otherwise, assume no fp16 support
+          {
+            SPN_VK_TARGET_ASSIGN(header_target, spinel_vk_nvidia_sm35);
+          }
         break;
 #endif
 #ifdef SPN_VK_TARGET_AMD_GCN3
@@ -152,7 +191,7 @@ spinel_vk_find_target(uint32_t vendor_id, uint32_t device_id)
         // both GCN* and RDNA*.  At some point we should add an RDNA-tuned
         // target.
         //
-        header_target = SPN_VK_TARGET_GET(spinel_vk_amd_gcn3);
+        SPN_VK_TARGET_ASSIGN(header_target, spinel_vk_amd_gcn3);
         break;
 #endif
 #ifdef SPN_VK_TARGET_INTEL_GEN8
@@ -166,7 +205,7 @@ spinel_vk_find_target(uint32_t vendor_id, uint32_t device_id)
         // "shape" than GEN8 GTx.  You could add some rigorous rejection by
         // device id here...
         //
-        header_target = SPN_VK_TARGET_GET(spinel_vk_intel_gen8);
+        SPN_VK_TARGET_ASSIGN(header_target, spinel_vk_intel_gen8);
         break;
 #endif
       case 0x13B5:
@@ -180,7 +219,7 @@ spinel_vk_find_target(uint32_t vendor_id, uint32_t device_id)
               //
               // ARM BIFROST4
               //
-              header_target = SPN_VK_TARGET_GET(spinel_vk_arm_bifrost4);
+              SPN_VK_TARGET_ASSIGN(header_target, spinel_vk_arm_bifrost4);
               break;
 #endif
 #ifdef SPN_VK_TARGET_ARM_BIFROST8
@@ -188,7 +227,7 @@ spinel_vk_find_target(uint32_t vendor_id, uint32_t device_id)
               //
               // ARM BIFROST8
               //
-              header_target = SPN_VK_TARGET_GET(spinel_vk_arm_bifrost8);
+              SPN_VK_TARGET_ASSIGN(header_target, spinel_vk_arm_bifrost8);
               break;
 #endif
             default:

@@ -211,7 +211,7 @@ param const params[] = {
       },
       { 0xBFF3E840, {
           // Spinel/Bifrost clips the surface to 2048x1024
-          { param::ARM, { param::ARM_MALI_G31 } }
+          { param::ARM, { { param::ARM_MALI_G31, param::ARM_MALI_G31} } }
         }
       }
     },

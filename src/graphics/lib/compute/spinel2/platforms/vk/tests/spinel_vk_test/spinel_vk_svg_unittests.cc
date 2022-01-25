@@ -232,12 +232,16 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xF994CF80, {
-          { param::ARM,    {}                    }, // all arm
-          { param::INTEL,  {}                    }  // all intel
+          { param::ARM,    {} },                                     // all arm
+          { param::INTEL,  {} }                                      // all intel
         }
       },
       { 0x91582546, {
-          { param::NVIDIA, {}                    }  // all nvidia
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }         // nvidia fp32
+        }
+      },
+      { 0x91583746, {
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } } // nvidia fp16
         }
       },
     },
@@ -297,12 +301,16 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xC5127E22, {
-          { param::ARM,    {}                    }, // all arm
-          { param::INTEL,  {}                    }  // all intel
+          { param::ARM,    {} },                                     // all arm
+          { param::INTEL,  {} }                                      // all intel
         }
       },
       { 0x8836B7D6, {
-          { param::NVIDIA, {}                    }  // all nvidia
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }         // nvidia fp32
+        }
+      },
+      { 0x8836BAD6, {
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } } // nvidia fp16
         }
       },
     },
@@ -344,15 +352,19 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xB7841DF8, {
-          { param::ARM,    {}                    }  // all arm
+          { param::ARM,    {} }                                      // all arm
         }
       },
       { 0xB783FDD8, {
-          { param::INTEL,  {}                    }  // all intel
+          { param::INTEL,  {} }                                      // all intel
         }
       },
       { 0x7156912, {
-          { param::NVIDIA, {}                    }  // all nvidia
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }         // nvidia fp32
+        }
+      },
+      { 0x7157B12, {
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } } // nvidia fp16
         }
       },
     },
@@ -412,12 +424,16 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0x138096C0, {
-          { param::ARM,    {}                    }, // all arm
-          { param::INTEL,  {}                    }  // all intel
+          { param::ARM,    {} },                                     // all arm
+          { param::INTEL,  {} },                                     // all intel
         }
       },
       { 0xF24EB49E, {
-          { param::NVIDIA, {}                    }  // all nvidia
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }         // nvidia fp32
+        }
+      },
+      { 0xF24EB79E, {
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } } // nvidia fp16
         }
       },
     },
@@ -498,15 +514,19 @@ param const params[] = {
     .surface     = { 1024, 512 },
     .checksums = {
       { 0xC2E4C4A9, {
-          { param::ARM,    {}                    }  // all arm
+          { param::ARM,    {} }                                       // all arm
         }
       },
       { 0xC2E4C3A9, {
-          { param::INTEL,  {}                    }  // all intel
+          { param::INTEL,  {} }                                       // all intel
         }
       },
       { 0x7F1D1193, {
-          { param::NVIDIA, {}                    }  // all nvidia
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }          // nvidia fp32
+        }
+      },
+      { 0x7F1D0790, {
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }  // nvidia fp16
         }
       },
     },

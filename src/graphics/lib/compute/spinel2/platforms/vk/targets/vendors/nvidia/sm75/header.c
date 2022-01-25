@@ -26,6 +26,7 @@ static struct spinel_target_header const header __attribute__((used)) =
 
   .features.named = {
     .shaderInt64                        = 1,
+    .shaderFloat16                      = 1,
     .timelineSemaphore                  = 1,
     .bufferDeviceAddress                = 1,
   },

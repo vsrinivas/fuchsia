@@ -16,6 +16,7 @@ group("vendors_resource") {
     #    "${_spinel_vk_targets_dir}/arm/bifrost8:spinel_vk_arm_bifrost8_resource",
     #    "${_spinel_vk_targets_dir}/intel/gen8:spinel_vk_intel_gen8_resource",
     "${_spinel_vk_targets_dir}/nvidia/sm35:spinel_vk_nvidia_sm35_resource",
+    "${_spinel_vk_targets_dir}/nvidia/sm75:spinel_vk_nvidia_sm75_resource",
   ]
 }
 
@@ -26,6 +27,7 @@ group("vendors_linkable") {
     #    "${_spinel_vk_targets_dir}/arm/bifrost8:spinel_vk_arm_bifrost8_linkable",
     #    "${_spinel_vk_targets_dir}/intel/gen8:spinel_vk_intel_gen8_linkable",
     "${_spinel_vk_targets_dir}/nvidia/sm35:spinel_vk_nvidia_sm35_linkable",
+    "${_spinel_vk_targets_dir}/nvidia/sm75:spinel_vk_nvidia_sm75_linkable",
   ]
 }
 

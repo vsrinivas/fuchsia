@@ -388,12 +388,18 @@ fxt_spinel_vk_render::checksum()
               // an empty set of device ids implies all match
               if (!vendor_id->second.empty())
                 {
-                  // not empty -- search for a matching device id
-                  auto device_id = vendor_id->second.find(shared_env->instance->vk.pdp.deviceID);
+                  is_pdc_found = false;
 
-                  if (device_id == vendor_id->second.end())
+                  auto map = vendor_id->second;
+
+                  for (auto pair = map.cbegin(); pair != map.cend(); pair++)
                     {
-                      is_pdc_found = false;
+                      if ((shared_env->instance->vk.pdp.deviceID >= pair->first) &&
+                          (shared_env->instance->vk.pdp.deviceID <= pair->second))
+                        {
+                          is_pdc_found = true;
+                          break;
+                        }
                     }
                 }
             }

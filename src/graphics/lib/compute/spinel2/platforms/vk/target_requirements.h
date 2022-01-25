@@ -38,8 +38,8 @@ extern "C" {
   SPN_TARGET_EXTENSION(EXT_subgroup_size_control)                                                  \
   SPN_TARGET_EXTENSION(KHR_incremental_present)                                                    \
   SPN_TARGET_EXTENSION(KHR_pipeline_executable_properties)                                         \
-  SPN_TARGET_EXTENSION(NV_shader_subgroup_partitioned)                                             \
-  SPN_TARGET_EXTENSION(KHR_shader_non_semantic_info)
+  SPN_TARGET_EXTENSION(KHR_shader_non_semantic_info)                                               \
+  SPN_TARGET_EXTENSION(NV_shader_subgroup_partitioned)
 
 //
 //

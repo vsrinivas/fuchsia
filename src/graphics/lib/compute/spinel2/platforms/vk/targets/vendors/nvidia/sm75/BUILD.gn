@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/spinel2/platforms/vk/" +
+       "targets/gn/spinel_vk_target.gni")
+
+#
+# Target: NVIDIA / sm75
+#
+spinel_vk_target_resource("spinel_vk_nvidia_sm75_resource") {
+  radix_sort_vk_target_u64_outputs = "//src/graphics/lib/compute/radix_sort/platforms/vk/targets/vendors/nvidia/sm35/u64:radix_sort_vk_nvidia_sm35_u64_outputs"
+}
+
+spinel_vk_target_linkable("spinel_vk_nvidia_sm75_linkable") {
+  radix_sort_vk_target_u64_outputs = "//src/graphics/lib/compute/radix_sort/platforms/vk/targets/vendors/nvidia/sm35/u64:radix_sort_vk_nvidia_sm35_u64_outputs"
+}

@@ -81,12 +81,12 @@ struct param_spinel_vk_render
   uint32_t loops = 1;
 
   //
-  // The map pairs define this relationship:
+  // The `map { map { set<pair> } }` encodes this relationship:
   //
-  //   { checksum : { vendorID { deviceID }* }* }+
+  //   { checksum : { vendorID { { deviceID.LO, deviceID.HI }+ }* }* }+
   //
   //     - each checksum  has zero or more associated vendor IDs
-  //     - each vendor ID has zero or more associated device IDs
+  //     - each vendor ID has zero or more associated device ID pairs
   //
   // An empty device ID set implies the checksum applies to all physical
   // devices that match the vendor ID.
@@ -94,21 +94,23 @@ struct param_spinel_vk_render
   // An empty vendor ID map implies the checksum applies to all physical
   // devices.
   //
-  std::map<uint32_t, std::map<uint32_t, std::set<uint32_t>>> checksums;
+  std::map<uint32_t, std::map<uint32_t, std::set<std::pair<uint32_t, uint32_t>>>> checksums;
 
   enum vendors
   {
     INTEL  = 0x8086,
     NVIDIA = 0x10DE,
     AMD    = 0x1002,
-    ARM    = 0x13B5
+    ARM    = 0x13B5,
   };
 
   enum devices
   {
-    AMD_V1807B   = 0x15DD,
-    ARM_MALI_G31 = 0x70930000,
-    ARM_MALI_G52 = 0x72120000
+    AMD_V1807B    = 0x15DD,
+    ARM_MALI_G31  = 0x70930000,
+    ARM_MALI_G52  = 0x72120000,
+    NVIDIA_PASCAL = 0x1D7F,  // <= Pascal : full-rate fp32
+    NVIDIA_VOLTA  = 0x1D81,  // >= Volta  : full-rate fp16
   };
 
   //
