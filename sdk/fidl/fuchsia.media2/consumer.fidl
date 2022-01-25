@@ -211,23 +211,19 @@ protocol ActiveConsumerStream {
     /// been met.
     -> OnPrimed();
 
-    /// Returns when packet arrival lead time falls outside the
-    /// specified limits.
+    /// Returns when packet arrival lead time falls outside the specified limits or when a new
+    /// `WatchPacketLeadTime` request arrives. Packet lead time is the interval between the arrival
+    /// of a packet at the consumer and the packet's arrival deadline. A lead time of zero indicates
+    /// that a packet arrived at the consumer just in time. Underflow (late packet arrival) is
+    /// indicated by a lead time value of -1ns.
     ///
     /// + request `min` the margin below which packet arrival lead
-    ///   time must fall in order for the reply to be sent. A `min`
-    ///   value of M indicates that the reply should be sent if the
-    ///   packet arrival lead time falls below the minimum lead time
-    ///   plus M. For example, passing zero indicates that the reply
-    ///   should be sent when packet arrival lead time falls below
-    ///   the minimum lead time (when the connection has underflowed).
+    ///   time must fall in order for the reply to be sent. For example, passing zero indicates
+    ///   that the reply should be sent when packet arrives after the deadline (when the
+    ///   connection has underflowed).
     /// + request `max` the margin above which packet arrival lead
-    ///   time must rise in order for the reply to be sent. A `max`
-    ///   value of M indicates that the reply should be sent if the
-    ///   packet arrival lead time rises above the minimum lead time
-    ///   plus M.
-    /// - response `packet_lead_time` the actual packet lead time
-    ///   in excess of the minimum packet lead time measured when the
+    ///   time must rise in order for the reply to be sent.
+    /// - response `packet_lead_time` the actual packet lead time measured when the
     ///   response was generated. This value will only be within
     ///   the specified limits if the response is generated due to
     ///   the arrival of a new `WatchPacketLeadTime` request.
@@ -235,7 +231,7 @@ protocol ActiveConsumerStream {
     /// Only one `WatchPacketLeadTime` operation may be pending at any
     /// given time. If a `WatchPacketLeadTime` request is received
     /// when another such request is pending, the consumer responds
-    /// to the older request with the current packet lead time value.
+    /// to the older request with the latest packet lead time value.
     WatchPacketLeadTime(struct {
         min zx.duration;
         max zx.duration;

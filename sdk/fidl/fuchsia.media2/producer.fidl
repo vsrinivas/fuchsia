@@ -148,24 +148,19 @@ protocol PassiveProducer {
 /// multi-stream active producers should compose this protocol.
 protocol ActiveProducerStream {
     /// Returns buffer availability lead time when it falls outside
-    /// the specified limits.
+    /// the specified limits or when a new `WatchBufferLeadTime` request arrives. Buffer lead
+    /// time is the interval between the time the producer becomes aware that a buffer is no
+    /// longer is in use and the time at which the producer needs to allocate that buffer.
+    /// Overflow (when no buffer is available when one is needed) is indicated by a lead time
+    /// of -1ns.
     ///
     /// + request `min` the margin below which buffer availability
-    ///   lead time must fall in order for the reply to be sent. A
-    ///   ‘min’ value of M indicates that the reply should be sent if
-    ///   the buffer availability lead time falls below the minimum
-    ///   lead time plus M. For example, passing zero indicates that
-    ///   the reply should be sent when buffer availability lead time
-    ///   falls below the minimum lead time (when the connection has
-    ///   overflowed).
+    ///   lead time must fall in order for the reply to be sent.  For example, passing zero
+    ///   indicates that the reply should be sent when the connection has overflowed.
     /// + request `max` the margin above which buffer availability
-    ///   lead time must rise in order for the reply to be sent. A
-    ///   `max` value of M indicates that the reply should be sent if
-    ///   the buffer availability lead time rises above the minimum
-    ///   lead time plus M.
+    ///   lead time must rise in order for the reply to be sent.
     /// - response `buffer_lead_time` the actual buffer availability
-    ///   lead time in excess of the minimum lead time measured when
-    ///   the response was generated. This value will only be within
+    ///   lead time measured when the response was generated. This value will only be within
     ///   the specified limits if the response is generated due to
     ///   the arrival of a new `WatchBufferLeadTime` request.
     ///
@@ -173,6 +168,16 @@ protocol ActiveProducerStream {
     /// given time. If a `WatchBufferLeadTime` request is received
     /// when another such request is pending, the producer responds
     /// to the older request with the current buffer lead time value.
+    ///
+    /// Implementation note:
+    /// Because buffers may be allocated out of order with respect to their release, producers
+    /// generate buffer lead time values using a queue of times that are not explicitly correlated
+    /// to actual buffers. Initially, when all buffers are available by default, the queue should
+    /// contain N placeholder entries for a buffer collection containing N buffers. When a buffer
+    /// is allocated, the time value at the head of the queue is compared to the current time to
+    /// produce a lead  time value, and the queue is popped. If the time value at the head of the
+    /// queue is a placeholder, lead time is not calculated. When the producer is signaled that a
+    /// buffer is available, the current time is pushed onto the queue.
     WatchBufferLeadTime(struct {
         min zx.duration;
         max zx.duration;
