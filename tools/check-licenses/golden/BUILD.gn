@@ -80,6 +80,7 @@ if (is_host) {
     "notice/other/aac_full",
     "notice/other/flite",
     "notice/other/icu",
+    "notice/other/libva-x11",
     "notice/other/original_sslea_license",
     "notice/other/pthreads",
     "notice/other/readme_ijg",
