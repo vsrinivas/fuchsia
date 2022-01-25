@@ -61,6 +61,7 @@
                 "fuchsia.net.interfaces.State",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.power.BatteryManager",
+                "fuchsia.recovery.FactoryReset",
                 "fuchsia.settings.Intl",
 
                 // Passed to scene manager that runs inside the session.
