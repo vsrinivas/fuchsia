@@ -69,7 +69,7 @@ TEST_F(NvmTest, UpdateMcc) {
   EXPECT_EQ(ZX_OK, iwl_mvm_update_mcc(mvm, "US", MCC_SOURCE_WIFI, &resp));
   mtx_unlock(&mvm->mutex);
 
-  EXPECT_EQ(resp->mcc, 0x3030);  // default is world-side.
+  EXPECT_EQ(resp->mcc, 0x5553);  // "US"
 
   free(resp);
 }

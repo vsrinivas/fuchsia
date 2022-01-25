@@ -286,50 +286,60 @@ static void iwl_mvm_reset_phy_ctxts(struct iwl_mvm* mvm) {
   }
 }
 
-#if 0  // NEEDS_PORTING
-struct ieee80211_regdomain* iwl_mvm_get_regdomain(struct wiphy* wiphy, const char* alpha2,
-                                                  enum iwl_mcc_source src_id, bool* changed) {
-    struct ieee80211_regdomain* regd = NULL;
-    struct ieee80211_hw* hw = wiphy_to_ieee80211_hw(wiphy);
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    struct iwl_mcc_update_resp* resp;
+zx_status_t iwl_mvm_get_regdomain(struct iwl_mvm* mvm, const char* alpha2,
+                                  enum iwl_mcc_source src_id, bool* changed,
+                                  wlanphy_country_t* out_country) {
+  wlanphy_country_t country = {};
+  wlanphy_country_t* regd = &country;
+  struct iwl_mcc_update_resp* resp;
 
-    IWL_DEBUG_LAR(mvm, "Getting regdomain data for %s from FW\n", alpha2);
+  ZX_ASSERT(out_country);
 
-    iwl_assert_lock_held(&mvm->mutex);
+  IWL_DEBUG_LAR(mvm, "Getting regdomain data for %s from FW\n", alpha2);
 
-    resp = iwl_mvm_update_mcc(mvm, alpha2, src_id);
-    if (IS_ERR_OR_NULL(resp)) {
-        IWL_DEBUG_LAR(mvm, "Could not get update from FW %d\n", PTR_ERR_OR_ZERO(resp));
-        goto out;
-    }
+  iwl_assert_lock_held(&mvm->mutex);
 
-    if (changed) {
-        uint32_t status = le32_to_cpu(resp->status);
+  zx_status_t ret = iwl_mvm_update_mcc(mvm, alpha2, src_id, &resp);
+  if (ret != ZX_OK) {
+    IWL_DEBUG_LAR(mvm, "Could not get update from FW %s\n", zx_status_get_string(ret));
+    goto out;
+  }
 
-        *changed = (status == MCC_RESP_NEW_CHAN_PROFILE || status == MCC_RESP_ILLEGAL);
-    }
+  if (changed) {
+    uint32_t status = le32_to_cpu(resp->status);
 
-    regd = iwl_parse_nvm_mcc_info(mvm->trans->dev, mvm->cfg, __le32_to_cpu(resp->n_channels),
-                                  resp->channels, __le16_to_cpu(resp->mcc),
-                                  __le16_to_cpu(resp->geo_info));
-    /* Store the return source id */
-    src_id = resp->source_id;
-    kfree(resp);
-    if (IS_ERR_OR_NULL(regd)) {
-        IWL_DEBUG_LAR(mvm, "Could not get parse update from FW %d\n", PTR_ERR_OR_ZERO(regd));
-        goto out;
-    }
+    *changed = (status == MCC_RESP_NEW_CHAN_PROFILE || status == MCC_RESP_ILLEGAL);
+  }
 
-    IWL_DEBUG_LAR(mvm, "setting alpha2 from FW to %s (0x%x, 0x%x) src=%d\n", regd->alpha2,
-                  regd->alpha2[0], regd->alpha2[1], src_id);
-    mvm->lar_regdom_set = true;
-    mvm->mcc_src = src_id;
+#if 1  // NEEDS_PORTING
+  country.alpha2[0] = le16_to_cpu(resp->mcc) >> 8;
+  country.alpha2[1] = le16_to_cpu(resp->mcc) & 0xff;
+  *out_country = *regd;
+#else   // NEEDS_PORTING
+  // TODO(fxbug.dev/87321): port iwl_parse_nvm_mcc_info()
+  struct ieee80211_regdomain* regd = iwl_parse_nvm_mcc_info(
+      mvm->trans->dev, mvm->cfg, __le32_to_cpu(resp->n_channels), resp->channels,
+      __le16_to_cpu(resp->mcc), __le16_to_cpu(resp->geo_info));
+#endif  // NEEDS_PORTING
+
+  /* Store the return source id */
+  src_id = resp->source_id;
+  free(resp);
+  if (ret != ZX_OK) {
+    IWL_DEBUG_LAR(mvm, "Could not get parse update from FW: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+
+  IWL_DEBUG_LAR(mvm, "setting alpha2 from FW to %c%c (0x%x, 0x%x) src=%d\n", regd->alpha2[0],
+                regd->alpha2[1], regd->alpha2[0], regd->alpha2[1], src_id);
+  mvm->lar_regdom_set = true;
+  mvm->mcc_src = src_id;
 
 out:
-    return regd;
+  return ret;
 }
 
+#if 0  // NEEDS_PORTING
 void iwl_mvm_update_changed_regdom(struct iwl_mvm* mvm) {
     bool changed;
     struct ieee80211_regdomain* regd;

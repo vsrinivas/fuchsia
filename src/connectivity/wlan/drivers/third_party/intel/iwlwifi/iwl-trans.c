@@ -87,7 +87,8 @@ zx_status_t iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd
 
   ret = trans->ops->send_cmd(trans, cmd);
 
-  if (WARN_ON((cmd->flags & CMD_WANT_SKB) && !ret && !cmd->resp_pkt)) {
+  if ((cmd->flags & CMD_WANT_SKB) && !ret && !cmd->resp_pkt) {
+    IWL_ERR(trans, "%s(): WANT_SKB required but no resp pkt attached.\n", __func__);
     return ZX_ERR_IO;
   }
 

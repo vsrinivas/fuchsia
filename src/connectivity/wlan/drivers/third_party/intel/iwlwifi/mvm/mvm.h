@@ -37,7 +37,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
+#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/time.h>
@@ -2007,7 +2007,9 @@ int iwl_mvm_fm_register(struct iwl_mvm* mvm);
 int iwl_mvm_fm_unregister(struct iwl_mvm* mvm);
 #endif
 
-/* Location Aware Regulatory */
+//------------------------------------------------------------------------------------------------
+// Location Aware Regulatory
+
 // Send the 2-byte country code to the firmware.
 //
 // When this function returns ZX_OK, the 'out_resp_cp' will be pointed to a
@@ -2018,8 +2020,11 @@ zx_status_t iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* alpha2, enum iwl
 
 int iwl_mvm_init_mcc(struct iwl_mvm* mvm);
 void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
-struct ieee80211_regdomain* iwl_mvm_get_regdomain(struct wiphy* wiphy, const char* alpha2,
-                                                  enum iwl_mcc_source src_id, bool* changed);
+
+zx_status_t iwl_mvm_get_regdomain(struct iwl_mvm* mvm, const char* alpha2,
+                                  enum iwl_mcc_source src_id, bool* changed,
+                                  wlanphy_country_t* out_country);
+
 struct ieee80211_regdomain* iwl_mvm_get_current_regdomain(struct iwl_mvm* mvm, bool* changed);
 int iwl_mvm_init_fw_regd(struct iwl_mvm* mvm);
 void iwl_mvm_update_changed_regdom(struct iwl_mvm* mvm);

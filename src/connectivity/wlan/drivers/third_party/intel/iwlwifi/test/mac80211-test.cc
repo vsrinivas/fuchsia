@@ -15,24 +15,19 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-capa-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 
 namespace wlan::testing {
 namespace {
 
-class Mac80211Test : public SingleApTest {
+class ClientInterfaceHelper {
  public:
-  Mac80211Test() { mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans()); }
-  ~Mac80211Test() {
-    mtx_lock(&mvm_->mutex);
-    iwl_mvm_unbind_mvmvif(mvm_, mvmvif_idx_);
-    mtx_unlock(&mvm_->mutex);
-  }
+  ClientInterfaceHelper(SimTransport* sim_trans) : mvmvif_{}, ap_sta_{}, txqs_ {}
+  {
+    mvm_ = iwl_trans_get_mvm(sim_trans->iwl_trans());
 
- protected:
-  // A helper function to create a client interface to be used in the test case.
-  void ClientInterfaceHelper() {
     // First find a free slot for the interface.
     mtx_lock(&mvm_->mutex);
     EXPECT_EQ(ZX_OK, iwl_mvm_find_free_mvmvif_slot(mvm_, &mvmvif_idx_));
@@ -65,12 +60,41 @@ class Mac80211Test : public SingleApTest {
     mvmvif_.bss_conf.assoc = true;
   }
 
+  ~ClientInterfaceHelper() {
+    mtx_lock(&mvm_->mutex);
+    iwl_mvm_unbind_mvmvif(mvm_, mvmvif_idx_);
+    mtx_unlock(&mvm_->mutex);
+  }
+
+  struct iwl_mvm* mvm() {
+    return mvm_;
+  }
+  struct iwl_mvm_vif* mvmvif() {
+    return &mvmvif_;
+  }
+
+ private:
   struct iwl_mvm* mvm_;
   // for ClientInterfaceHelper().
   struct iwl_mvm_vif mvmvif_;
   int mvmvif_idx_;
   struct iwl_mvm_sta ap_sta_;
   struct iwl_mvm_txq txqs_[IEEE80211_TIDS_MAX + 1];
+};
+
+class Mac80211Test : public SingleApTest {
+ public:
+  Mac80211Test() : mvm_(iwl_trans_get_mvm(sim_trans_.iwl_trans())) {}
+  ~Mac80211Test() {}
+
+ protected:
+  struct iwl_mvm* mvm_;
+};
+
+class Mac80211UcodeTest : public FakeUcodeCapaTest {
+ public:
+  Mac80211UcodeTest() : FakeUcodeCapaTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT)) {}
+  ~Mac80211UcodeTest() {}
 };
 
 // Normal case: add an interface, then delete it.
@@ -247,10 +271,12 @@ TEST_F(Mac80211Test, MvmSlotBindUnbind) __TA_NO_THREAD_SAFETY_ANALYSIS {
   mtx_unlock(&mvm_->mutex);
 }
 
-class McastFilterTest : public Mac80211Test, public MockTrans {
+class McastFilterTestWithoutIface : public Mac80211Test, public MockTrans {
  public:
-  McastFilterTest() { BIND_TEST(mvm_->trans); }
-  ~McastFilterTest() { mock_send_cmd_.VerifyAndClear(); }
+  McastFilterTestWithoutIface() : mvm_(iwl_trans_get_mvm(sim_trans_.iwl_trans())) {
+    BIND_TEST(mvm_->trans);
+  }
+  ~McastFilterTestWithoutIface() { mock_send_cmd_.VerifyAndClear(); }
 
   // The values we expect.  We only test few arbitrary bytes in 'addr_list' .
   //
@@ -268,17 +294,27 @@ class McastFilterTest : public Mac80211Test, public MockTrans {
   static zx_status_t send_cmd_wrapper(struct iwl_trans* trans, struct iwl_host_cmd* hcmd) {
     auto mcast_cmd = reinterpret_cast<const struct iwl_mcast_filter_cmd*>(hcmd->data[0]);
 
-    auto test = GET_TEST(McastFilterTest, trans);
+    auto test = GET_TEST(McastFilterTestWithoutIface, trans);
     return test->mock_send_cmd_.Call(hcmd->id, mcast_cmd->port_id, mcast_cmd->count,
                                      mcast_cmd->bssid[0], mcast_cmd->addr_list[0 * ETH_ALEN + 0],
                                      mcast_cmd->addr_list[1 * ETH_ALEN + 5],
                                      mcast_cmd->addr_list[2 * ETH_ALEN + 2]);
   }
+
+ protected:
+  struct iwl_mvm* mvm_;
+};
+
+class McastFilterTest : public McastFilterTestWithoutIface {
+ public:
+  McastFilterTest() : helper_(ClientInterfaceHelper(&sim_trans_)) {}
+  ~McastFilterTest() {}
+
+ protected:
+  ClientInterfaceHelper helper_;
 };
 
 TEST_F(McastFilterTest, McastFilterNormal) {
-  ClientInterfaceHelper();
-
   // mock function after the testing environment had been set.
   bindSendCmd(send_cmd_wrapper);
 
@@ -298,7 +334,7 @@ TEST_F(McastFilterTest, McastFilterNormal) {
   unbindSendCmd();
 }
 
-TEST_F(McastFilterTest, McastFilterNoActiveInterface) {
+TEST_F(McastFilterTestWithoutIface, McastFilterNoActiveInterface) {
   // mock function after the testing environment had been set.
   bindSendCmd(send_cmd_wrapper);
 
@@ -310,8 +346,7 @@ TEST_F(McastFilterTest, McastFilterNoActiveInterface) {
 }
 
 TEST_F(McastFilterTest, McastFilterAp) {
-  ClientInterfaceHelper();
-  mvmvif_.mac_role = WLAN_INFO_MAC_ROLE_AP;  // overwrite to AP.
+  helper_.mvmvif()->mac_role = WLAN_INFO_MAC_ROLE_AP;  // overwrite to AP.
 
   // mock function after the testing environment had been set.
   bindSendCmd(send_cmd_wrapper);
@@ -320,6 +355,29 @@ TEST_F(McastFilterTest, McastFilterAp) {
   iwl_mvm_configure_filter(mvm_);
 
   unbindSendCmd();
+}
+
+class RegulatoryTest : public Mac80211UcodeTest {
+ public:
+  RegulatoryTest() {}
+  ~RegulatoryTest() {}
+};
+
+TEST_F(RegulatoryTest, RegulatoryTestNormal) {
+  ClientInterfaceHelper helper = ClientInterfaceHelper(&sim_trans_);
+
+  bool changed;
+  wlanphy_country_t country;
+  auto mvm = helper.mvm();
+  mtx_lock(&mvm->mutex);
+  EXPECT_EQ(ZX_OK, iwl_mvm_get_regdomain(mvm, "TW", MCC_SOURCE_WIFI, &changed, &country));
+  mtx_unlock(&mvm->mutex);
+
+  EXPECT_EQ(true, changed);
+  EXPECT_EQ(0x54, country.alpha2[0]);
+  EXPECT_EQ(0x57, country.alpha2[1]);
+  EXPECT_EQ(true, mvm->lar_regdom_set);
+  EXPECT_EQ(MCC_SOURCE_WIFI, mvm->mcc_src);
 }
 
 }  // namespace

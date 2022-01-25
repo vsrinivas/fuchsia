@@ -4,6 +4,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mvm.h"
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mcc-update.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-time-event.h"
 
 extern "C" {
@@ -89,9 +90,12 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
         case ADD_STA:  // fall-thru
         case REMOVE_STA:
         case ADD_STA_KEY:
-        case MCC_UPDATE_CMD:
           build_response_with_status(&resp, ADD_STA_SUCCESS);
           ret = ZX_OK;
+          break;
+
+        case MCC_UPDATE_CMD:
+          ret = HandleMccUpdate(cmd, &resp);
           break;
 
         case NVM_ACCESS_CMD:

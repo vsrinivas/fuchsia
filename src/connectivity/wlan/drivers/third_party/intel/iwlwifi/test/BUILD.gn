@@ -16,6 +16,7 @@ source_set("sim_library") {
     "fake-ucode-capa-test.cc",
     "inspect-host-cmd.cc",
     "inspect-host-cmd.h",
+    "sim-mcc-update.cc",
     "sim-mvm.cc",
     "sim-nvm-data.inc",
     "sim-nvm.cc",
@@ -29,6 +30,7 @@ source_set("sim_library") {
   public = [
     "fake-ucode-capa-test.h",
     "mock-trans.h",
+    "sim-mcc-update.h",
     "sim-mvm.h",
     "sim-nvm.h",
     "sim-time-event.h",
