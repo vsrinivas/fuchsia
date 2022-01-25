@@ -25,19 +25,19 @@
   of each partition on disk. By convention, the slots used for normal updates are denoted A and B,
   and the corresponding partitions are labeled with a suffix of \"_a\" or \"_b\".
   The slot used for recovery is denoted R which is chosen when neither A nor B is bootable.</p>"
-  see_also: ["<a href=\"/docs/concepts/packages/ota.md\">OTA updates</a>"]
+  see_also: ["<a href=\"/docs/development/packages/ota.md\">OTA updates</a>"]
   related_guides: [""]
   area: ["System", "Zircon"]
 
 - term: "Agent"
   short_description: "An agent is a role a component can play to execute in the background in the
   context of a session."
-  full_description: "<p>A <a href=\"/docs/concepts/modular/overview.md\">Modular</a> concept
+  full_description: "<p>A <a href=\"/docs/development/modular/overview.md#extension_points\">Modular</a> concept
   that is being deprecated.</p>
   <p>An agent is a role a <a href=\"/docs/glossary#component\">component</a> can play to execute
   in the background in the context of a <a href=\"/docs/glossary#session\">session</a>.
   Agents are always a singleton within a session, and provide services to other components.</p>"
-  see_also: ["<a href=\"/docs/concepts/modular/agent.md\">Agents</a>"]
+  see_also: ["<a href=\"/docs/development/modular/overview.md#extension_points\">Agents</a>"]
   related_guides: [""]
   area: ["Session", "Component Framework"]
 

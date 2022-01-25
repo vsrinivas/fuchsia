@@ -40,9 +40,6 @@ toc:
 - title: "Media"
   section:
   - include: /docs/concepts/media/_toc.yaml
-- title: "Modular"
-  section:
-  - include: /docs/concepts/modular/_toc.yaml
 - title: "Packages"
   section:
   - include: /docs/concepts/packages/_toc.yaml

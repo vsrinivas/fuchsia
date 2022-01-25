@@ -53,6 +53,9 @@ toc:
 - title: "Develop using the IDK"
   section:
   - include: /docs/development/idk/_toc.yaml
+- title: "Develop using the Modular framework"
+  section:
+  - include: /docs/development/modular/_toc.yaml
 - title: "Graphics"
   section:
   - include: /docs/development/graphics/_toc.yaml

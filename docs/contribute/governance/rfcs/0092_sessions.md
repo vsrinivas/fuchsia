@@ -199,6 +199,6 @@ number of offered protocols.
 [examples]: /src/session/examples
 [experiences]: /src/experiences/session_shells/ermine/session
 [documentation]: /docs/concepts/session/introduction.md
-[modular]: /docs/concepts/modular/overview.md
+[modular]: /docs/development/modular/overview.md
 [session_manager]: /src/session/bin/session_manager
 [rfc_0089]: /docs/contribute/governance/rfcs/0089_core_realm_variations.md

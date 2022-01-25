@@ -112,7 +112,7 @@ Fuchsia:
    </td>
    <td>For conversation about <a href="/docs/glossary.md#component-framework">Component Framework</a>,
      <a href="/docs/glossary/README.md#session-framework">Session Framework</a>, and
-     <a href="/docs/concepts/modular/overview.md">Modular</a>.
+     <a href="/docs/development/modular/overview.md">Modular</a>.
    </td>
   </tr>
   <tr>

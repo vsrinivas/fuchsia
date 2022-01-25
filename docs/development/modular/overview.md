@@ -23,9 +23,9 @@ standard IPC mechanism for Fuchsia.
 The framework defines several different classes of components that can be
 implemented by developers to extend the behavior of user experiences:
 
-1.  [Modules](module.md) are components that display UI and are visually
+1.  Modules are components that display UI and are visually
     composed in a Story.
-1.  [Agents](agent.md) are components that run in the background to provide
+1.  Agents are components that run in the background to provide
     services and data to Modules and other Agents.
 
 ## `basemgr` and `sessionmgr`
@@ -43,6 +43,5 @@ provide session management, component lifecycle management and state management.
 
 ## Read More
 
-* [Configuring Modular](guide/config.md)
-* [How-To: Write a Module in C++](guide/how_to_write_a_module_cc.md)
-* [How-To: Write an Agent in C++](guide/how_to_write_an_agent_cc.md)
+* [Configuring Modular](/docs/development/modular/config.md)
+
