@@ -154,8 +154,10 @@ pub async fn init_client_controller(
     provider.get_controller(controller_server_end, listener_client_end).unwrap();
     let mut client_state_update_stream = listener_server_end.into_stream().unwrap();
 
-    // ConnectionsEnabled with no network states is always the first update.
-    assert_next_client_state_update(&mut client_state_update_stream, vec![]).await;
+    // Clear the initial state notification that is sent by the policy layer.  This initial state
+    // is variable depending on whether or not the policy layer has discovered a PHY or created an
+    // interface yet.
+    let _ = get_update_from_client_state_update_stream(&mut client_state_update_stream).await;
 
     (controller_client_end, client_state_update_stream)
 }

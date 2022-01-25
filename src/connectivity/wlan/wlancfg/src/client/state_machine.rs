@@ -18,7 +18,8 @@ use {
     anyhow::format_err,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
@@ -104,7 +105,10 @@ fn send_listener_state_update(
     sender: &ClientListenerMessageSender,
     network_update: ClientNetworkState,
 ) {
-    let updates = ClientStateUpdate { state: None, networks: [network_update].to_vec() };
+    let updates = ClientStateUpdate {
+        state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+        networks: [network_update].to_vec(),
+    };
     match sender.clone().unbounded_send(NotifyListeners(updates)) {
         Ok(_) => (),
         Err(e) => error!("failed to send state update: {:?}", e),
@@ -257,12 +261,6 @@ async fn disconnecting_state(
             ExitReason(Err(format_err!("Failed to send command to wlanstack: {:?}", e)))
         })?;
 
-    // Notify the caller that disconnect was sent to the SME
-    match options.disconnect_responder {
-        Some(responder) => responder.send(()).unwrap_or_else(|_| ()),
-        None => (),
-    }
-
     // Notify listeners of disconnection
     match options.previous_network {
         Some((network_identifier, status)) => send_listener_state_update(
@@ -273,6 +271,14 @@ async fn disconnecting_state(
                 status: Some(status),
             },
         ),
+        None => (),
+    }
+
+    // Notify the caller that disconnect was sent to the SME once the final disconnected update has
+    // been sent.  This ensures that there will not be a race when the IfaceManager sends out a
+    // ConnectionsDisabled update.
+    match options.disconnect_responder {
+        Some(responder) => responder.send(()).unwrap_or_else(|_| ()),
         None => (),
     }
 
@@ -1061,7 +1067,7 @@ mod tests {
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
@@ -1087,7 +1093,7 @@ mod tests {
 
         // Check for a connect update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
@@ -1255,7 +1261,7 @@ mod tests {
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
@@ -1286,7 +1292,7 @@ mod tests {
 
         // Check for a connect update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
@@ -1512,7 +1518,7 @@ mod tests {
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
@@ -1577,7 +1583,7 @@ mod tests {
 
         // Check for a connected update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
@@ -1709,7 +1715,7 @@ mod tests {
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
@@ -1918,7 +1924,7 @@ mod tests {
 
         // Check for a connect update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
@@ -2063,7 +2069,7 @@ mod tests {
 
         // Check for a connect update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
@@ -2134,7 +2140,7 @@ mod tests {
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
@@ -2196,7 +2202,7 @@ mod tests {
 
         // Check for a connect update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
@@ -2271,7 +2277,7 @@ mod tests {
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: first_network_ssid.clone(),
@@ -2311,7 +2317,7 @@ mod tests {
 
         // Check for a disconnect update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: first_network_ssid.clone(),
@@ -2372,7 +2378,7 @@ mod tests {
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: second_network_ssid.clone(),
@@ -2389,7 +2395,7 @@ mod tests {
         });
         // Check for a connected update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: second_network_ssid.clone(),
@@ -2467,7 +2473,7 @@ mod tests {
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: first_network_ssid.clone(),
@@ -2495,7 +2501,7 @@ mod tests {
 
         // Check for a disconnect update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: first_network_ssid.clone(),
@@ -2649,7 +2655,7 @@ mod tests {
 
         // Check for a disconnect update and the responder
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: network_ssid.clone(),
@@ -3148,7 +3154,7 @@ mod tests {
 
         // Check for a disconnect update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: first_network_ssid.clone(),
@@ -3182,7 +3188,7 @@ mod tests {
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: second_network_ssid.clone(),
@@ -3199,7 +3205,7 @@ mod tests {
         });
         // Check for a connected update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: second_network_ssid.clone(),
@@ -3338,7 +3344,7 @@ mod tests {
 
         // Check for a disconnect update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: network_ssid.clone(),
@@ -3406,7 +3412,7 @@ mod tests {
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: network_ssid.clone(),
@@ -3599,7 +3605,7 @@ mod tests {
 
         // Check for a disconnect update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: network_ssid.clone(),
@@ -3667,7 +3673,7 @@ mod tests {
 
         // Check for a connecting update
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: network_ssid.clone(),
@@ -3943,7 +3949,7 @@ mod tests {
 
         // Check for a disconnect update and the disconnect responder
         let client_state_update = ClientStateUpdate {
-            state: None,
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: vec![ClientNetworkState {
                 id: types::NetworkIdentifier {
                     ssid: previous_network_ssid.clone(),

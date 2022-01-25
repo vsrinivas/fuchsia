@@ -652,6 +652,20 @@ impl IfaceManagerService {
             }
         }
 
+        // Check to see if there are any remaining client interfaces.  If there are not any, send
+        // listeners a notification indicating that client connections are disabled.
+        if self.clients.is_empty() {
+            let update = listener::ClientStateUpdate {
+                state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled),
+                networks: vec![],
+            };
+            if let Err(e) =
+                self.client_update_sender.unbounded_send(listener::Message::NotifyListeners(update))
+            {
+                error!("Failed to notify listeners of lack of client interfaces: {:?}", e)
+            };
+        }
+
         // While client behavior is automated based on saved network configs and available SSIDs
         // observed in scan results, the AP behavior is largely controlled by API clients.  The AP
         // state machine will send back a failure notification in the event that the interface was
@@ -749,22 +763,7 @@ impl IfaceManagerService {
             .create_all_client_ifaces(CreateClientIfacesReason::StartClientConnections)
             .await
         {
-            Ok(lingering_ifaces) => {
-                // Send an update to the update listener indicating that client connections are now
-                // enabled.
-                let update = listener::ClientStateUpdate {
-                    state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsEnabled),
-                    networks: vec![],
-                };
-                if let Err(e) = self
-                    .client_update_sender
-                    .unbounded_send(listener::Message::NotifyListeners(update))
-                {
-                    error!("Failed to send state update: {:?}", e)
-                }
-
-                lingering_ifaces
-            }
+            Ok(lingering_ifaces) => lingering_ifaces,
             Err((_, phy_manager_error)) => {
                 return Err(format_err!(
                     "could not start client connection {:?}",
@@ -2944,21 +2943,13 @@ mod tests {
         {
             let start_fut = iface_manager.start_client_connections();
 
-            // Ensure stop_client_connections returns immediately and is successful.
+            // Ensure start_client_connections returns immediately and is successful.
             pin_mut!(start_fut);
             assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Ready(Ok(_)));
         }
 
-        // Ensure an update was sent
-        let client_state_update = listener::ClientStateUpdate {
-            state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsEnabled),
-            networks: vec![],
-        };
-        assert_variant!(
-            test_values.client_update_receiver.try_next(),
-            Ok(Some(listener::Message::NotifyListeners(updates))) => {
-            assert_eq!(updates, client_state_update);
-        });
+        // Ensure no update is sent
+        assert_variant!(test_values.client_update_receiver.try_next(), Err(_));
 
         assert!(iface_manager.clients_enabled_time.is_some());
     }
@@ -3553,8 +3544,21 @@ mod tests {
 
         assert!(!iface_manager.aps.is_empty());
 
-        // Verify that a new client interface was created.
+        // Verify that not new client interface was created.
         assert!(iface_manager.clients.is_empty());
+
+        // Verify that a ConnectionsDisabled notification was sent.
+        // Ensure an update was sent
+        let expected_update = listener::ClientStateUpdate {
+            state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled),
+            networks: vec![],
+        };
+        assert_variant!(
+            test_values.client_update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+                assert_eq!(updates, expected_update);
+            }
+        );
     }
 
     #[fuchsia::test]

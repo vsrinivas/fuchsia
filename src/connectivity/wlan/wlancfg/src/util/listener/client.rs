@@ -45,7 +45,12 @@ impl Into<fidl_policy::ClientStateSummary> for ClientStateUpdate {
 
 impl CurrentStateCache for ClientStateUpdate {
     fn default() -> ClientStateUpdate {
-        ClientStateUpdate { state: None, networks: vec![] }
+        // The default client state is disabled until a later update explicitly sets the state to
+        // enabled.
+        ClientStateUpdate {
+            state: Some(fidl_policy::WlanClientState::ConnectionsDisabled),
+            networks: vec![],
+        }
     }
 
     fn merge_in_update(&mut self, update: Self) {
@@ -98,7 +103,13 @@ mod tests {
     #[fuchsia::test]
     fn merge_update_none_to_one_active() {
         let mut current_state_cache = ClientStateUpdate::default();
-        assert_eq!(current_state_cache, ClientStateUpdate { state: None, networks: vec![] });
+        assert_eq!(
+            current_state_cache,
+            ClientStateUpdate {
+                state: Some(fidl_policy::WlanClientState::ConnectionsDisabled),
+                networks: vec![]
+            }
+        );
 
         // Merge an update with one connected network.
         let update = ClientStateUpdate {

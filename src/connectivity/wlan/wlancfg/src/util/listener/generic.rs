@@ -214,7 +214,7 @@ mod tests {
         assert_eq!(
             summary,
             fidl_policy::ClientStateSummary {
-                state: None,
+                state: Some(fidl_policy::WlanClientState::ConnectionsDisabled),
                 networks: Some(vec![]),
                 ..fidl_policy::ClientStateSummary::EMPTY
             }
