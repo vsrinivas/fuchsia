@@ -1,3 +1,4 @@
+cpp_golden.cc.golden
 dart_golden.dart.golden
 dynfidl_golden.rs.golden
 go_golden.go.golden

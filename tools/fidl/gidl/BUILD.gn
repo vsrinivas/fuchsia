@@ -24,6 +24,8 @@ if (is_host) {
       "audit/main.go",
       "c/conformance.go",
       "config/defaults.go",
+      "cpp/builder.go",
+      "cpp/conformance.go",
       "dart/benchmarks.go",
       "dart/common.go",
       "dart/conformance.go",
@@ -61,6 +63,7 @@ if (is_host) {
       "rust/conformance.go",
       "rust/forget_handles.go",
       "transformer/conformance.go",
+      "util/pattern_match.go",
       "walker/benchmarks.go",
     ]
   }
@@ -109,6 +112,10 @@ if (is_host) {
     {
       language = "go"
       extension = "go"
+    },
+    {
+      language = "cpp"
+      extension = "cc"
     },
     {
       language = "hlcpp"

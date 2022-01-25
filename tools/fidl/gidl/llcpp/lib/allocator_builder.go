@@ -11,6 +11,7 @@ import (
 
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
+	gidlutil "go.fuchsia.dev/fuchsia/tools/fidl/gidl/util"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
@@ -217,33 +218,6 @@ func (a *allocatorBuilder) visitArray(value []gidlir.Value, decl *gidlmixer.Arra
 	return fmt.Sprintf("std::move(%s)", array)
 }
 
-// Tries to find a repeating pattern in the value bytes, e.g: 1, 2, 3, 1, 2, 3, 1.
-// This will not always succeed in finding a repeating pattern when one exists as it
-// searches greedily.
-func findRepeatingPeriod(value []uint64) (int, bool) {
-	if len(value) == 0 {
-		return 0, false
-	}
-
-	period := -1
-	for i, v := range value[1:] {
-		if v == value[0] {
-			period = i + 1
-			break
-		}
-	}
-	if period == -1 {
-		return 0, false
-	}
-
-	for i, v := range value {
-		if v != value[i%period] {
-			return 0, false
-		}
-	}
-	return period, true
-}
-
 func (a *allocatorBuilder) visitVector(value []gidlir.Value, decl *gidlmixer.VectorDecl, isPointer bool) string {
 	vector := a.assignNew(typeName(decl), isPointer, "%s, %d", a.allocatorVar, len(value))
 	if len(value) == 0 {
@@ -257,7 +231,7 @@ func (a *allocatorBuilder) visitVector(value []gidlir.Value, decl *gidlmixer.Vec
 			uintValues = append(uintValues, v.(uint64))
 		}
 		// For simplicity, only support sizes that are multiples of the period.
-		if period, ok := findRepeatingPeriod(uintValues); ok && len(value)%period == 0 {
+		if period, ok := gidlutil.FindRepeatingPeriod(uintValues); ok && len(value)%period == 0 {
 			for i := 0; i < period; i++ {
 				elem := a.visit(value[i], decl.Elem())
 				a.write("%s[%d] = %s;\n", vector, i, elem)

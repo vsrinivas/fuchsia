@@ -165,61 +165,61 @@ type Regression3 = struct {
     opt_value box<Regression2>;
 };
 
-type Table_NoFields = table {};
+type TableNoFields = table {};
 
-type Struct_Table_NoFields = struct {
-    t Table_NoFields;
+type StructTableNoFields = struct {
+    t TableNoFields;
 };
 
-type Table_TwoReservedFields = table {
+type TableTwoReservedFields = table {
     1: reserved;
     2: reserved;
 };
 
-type Struct_Table_TwoReservedFields = struct {
-    t Table_TwoReservedFields;
+type StructTableTwoReservedFields = struct {
+    t TableTwoReservedFields;
 };
 
-type Table_StructWithReservedSandwich = table {
+type TableStructWithReservedSandwich = table {
     1: reserved;
     2: s1 StructSize3Align1;
     3: s2 StructSize3Align1;
     4: reserved;
 };
 
-type Table_StructWithReservedSandwichStruct = struct {
-    table Table_StructWithReservedSandwich;
+type TableStructWithReservedSandwichStruct = struct {
+    table TableStructWithReservedSandwich;
 };
 
-type Table_StructWithUint32Sandwich = table {
+type TableStructWithUint32Sandwich = table {
     1: i uint32;
     2: s1 StructSize3Align1;
     3: s2 StructSize3Align1;
     4: i2 uint32;
 };
 
-type Table_StructWithUint32SandwichStruct = struct {
-    table Table_StructWithUint32Sandwich;
+type TableStructWithUint32SandwichStruct = struct {
+    table TableStructWithUint32Sandwich;
 };
 
-type Table_UnionWithVector_ReservedSandwich = table {
+type TableUnionWithVectorReservedSandwich = table {
     1: reserved;
     2: uv UnionWithVector;
     3: reserved;
 };
 
-type Table_UnionWithVector_ReservedSandwichStruct = struct {
-    table Table_UnionWithVector_ReservedSandwich;
+type TableUnionWithVectorReservedSandwichStruct = struct {
+    table TableUnionWithVectorReservedSandwich;
 };
 
-type Table_UnionWithVector_StructSandwich = table {
+type TableUnionWithVectorStructSandwich = table {
     1: s1 StructSize3Align1;
     2: uv UnionWithVector;
     3: s2 StructSize3Align1;
 };
 
-type Table_UnionWithVector_StructSandwichStruct = struct {
-    table Table_UnionWithVector_StructSandwich;
+type TableUnionWithVectorStructSandwichStruct = struct {
+    table TableUnionWithVectorStructSandwich;
 };
 
 type XUnionWithStruct = flexible union {

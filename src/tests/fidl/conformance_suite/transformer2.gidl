@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-success("Table_NoFields") {
-    value = Struct_Table_NoFields{
-        t: Table_NoFields{},
+success("TableNoFields") {
+    value = StructTableNoFields{
+        t: TableNoFields{},
     },
     bytes = {
         v1, v2 = [
@@ -16,9 +16,9 @@ success("Table_NoFields") {
     },
 }
 
-success("Table_TwoReservedFields") {
-    value = Struct_Table_TwoReservedFields{
-        t: Table_TwoReservedFields{},
+success("TableTwoReservedFields") {
+    value = StructTableTwoReservedFields{
+        t: TableTwoReservedFields{},
     },
     bytes = {
         v1, v2 = [
@@ -30,9 +30,9 @@ success("Table_TwoReservedFields") {
     },
 }
 
-success("Table_StructWithReservedSandwich") {
-    value = Table_StructWithReservedSandwichStruct{
-        table: Table_StructWithReservedSandwich{
+success("TableStructWithReservedSandwich") {
+    value = TableStructWithReservedSandwichStruct{
+        table: TableStructWithReservedSandwich{
             s1: StructSize3Align1{
                 three_bytes: [0x09, 0x0a, 0x0b],
             },
@@ -43,9 +43,9 @@ success("Table_StructWithReservedSandwich") {
     },
     bytes = {
         v1 = [
-            0x03, 0x00, 0x00, 0x00, // Table_StructWithReservedSandwich.vector<envelope>.size
+            0x03, 0x00, 0x00, 0x00, // TableStructWithReservedSandwich.vector<envelope>.size
             0x00, 0x00, 0x00, 0x00, // [cont.]
-            0xFF, 0xFF, 0xFF, 0xFF, // Table_StructWithReservedSandwich.vector<envelope>.presence
+            0xFF, 0xFF, 0xFF, 0xFF, // TableStructWithReservedSandwich.vector<envelope>.presence
             0xFF, 0xFF, 0xFF, 0xFF, // [cont.]
             0x00, 0x00, 0x00, 0x00, // vector<envelope>[0].num_bytes  0x10
             0x00, 0x00, 0x00, 0x00, // vector<envelope>[0].num_handles
@@ -67,7 +67,7 @@ success("Table_StructWithReservedSandwich") {
         v2 = [
             0x03, 0x00, 0x00, 0x00, // vector<envelope>.size
             0x00, 0x00, 0x00, 0x00, // [cont.]
-            0xFF, 0xFF, 0xFF, 0xFF, // Table_StructWithReservedSandwich.vector<envelope>.presence
+            0xFF, 0xFF, 0xFF, 0xFF, // TableStructWithReservedSandwich.vector<envelope>.presence
             0xFF, 0xFF, 0xFF, 0xFF, // [cont.]
             0x00, 0x00, 0x00, 0x00, // vector<envelope>[0].num_bytes
             0x00, 0x00, 0x00, 0x00, // vector<envelope>[0].num_handles
@@ -79,9 +79,9 @@ success("Table_StructWithReservedSandwich") {
     },
 }
 
-success("Table_StructWithUint32Sandwich") {
-    value = Table_StructWithUint32SandwichStruct{
-        table: Table_StructWithUint32Sandwich{
+success("TableStructWithUint32Sandwich") {
+    value = TableStructWithUint32SandwichStruct{
+        table: TableStructWithUint32Sandwich{
             i: 0x04030201,
             s1: StructSize3Align1{
                 three_bytes: [0x09, 0x0a, 0x0b],
@@ -94,9 +94,9 @@ success("Table_StructWithUint32Sandwich") {
     },
     bytes = {
         v1 = [
-            0x04, 0x00, 0x00, 0x00, // Table_StructWithUint32Sandwich.vector<envelope>.size
+            0x04, 0x00, 0x00, 0x00, // TableStructWithUint32Sandwich.vector<envelope>.size
             0x00, 0x00, 0x00, 0x00, // [cont.]
-            0xFF, 0xFF, 0xFF, 0xFF, // Table_StructWithUint32Sandwich.vector<envelope>.presence
+            0xFF, 0xFF, 0xFF, 0xFF, // TableStructWithUint32Sandwich.vector<envelope>.presence
             0xFF, 0xFF, 0xFF, 0xFF, // [cont.]
             0x08, 0x00, 0x00, 0x00, // vector<envelope>[0].num_bytes  0x10
             0x00, 0x00, 0x00, 0x00, // vector<envelope>[0].num_handles
@@ -124,9 +124,9 @@ success("Table_StructWithUint32Sandwich") {
             0x00, 0x00, 0x00, 0x00, // i2 padding
         ],
         v2 = [
-            0x04, 0x00, 0x00, 0x00, // Table_StructWithUint32Sandwich.vector<envelope>.size
+            0x04, 0x00, 0x00, 0x00, // TableStructWithUint32Sandwich.vector<envelope>.size
             0x00, 0x00, 0x00, 0x00, // [cont.]
-            0xFF, 0xFF, 0xFF, 0xFF, // Table_StructWithUint32Sandwich.vector<envelope>.presence
+            0xFF, 0xFF, 0xFF, 0xFF, // TableStructWithUint32Sandwich.vector<envelope>.presence
             0xFF, 0xFF, 0xFF, 0xFF, // [cont.]
             0x01, 0x02, 0x03, 0x04, // vector<envelope>[0].inlined_value
             0x00, 0x00, 0x01, 0x00, // vector<envelope>[0].num_handles, vector<envelope>[0].inline_flag
@@ -140,9 +140,9 @@ success("Table_StructWithUint32Sandwich") {
     },
 }
 
-success("Table_UnionWithVector_ReservedSandwich") {
-    value = Table_UnionWithVector_ReservedSandwichStruct{
-        table: Table_UnionWithVector_ReservedSandwich{
+success("TableUnionWithVectorReservedSandwich") {
+    value = TableUnionWithVectorReservedSandwichStruct{
+        table: TableUnionWithVectorReservedSandwich{
             uv: UnionWithVector{
                 s: "hello",
             },
@@ -206,9 +206,9 @@ success("Table_UnionWithVector_ReservedSandwich") {
     },
 }
 
-success("Table_UnionWithVector_StructSandwich") {
-    value = Table_UnionWithVector_StructSandwichStruct{
-        table: Table_UnionWithVector_StructSandwich{
+success("TableUnionWithVectorStructSandwich") {
+    value = TableUnionWithVectorStructSandwichStruct{
+        table: TableUnionWithVectorStructSandwich{
             s1: StructSize3Align1{
                 three_bytes: [0x01, 0x02, 0x03],
             },
