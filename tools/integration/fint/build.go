@@ -176,7 +176,7 @@ func buildImpl(
 	}
 
 	if ninjaErr != nil {
-		return artifacts, ninjaErr
+		return artifacts, fmt.Errorf("build failed, see ninja output for details: %w", ninjaErr)
 	}
 
 	gnPath, err := toolAbsPath(modules, contextSpec.BuildDir, platform, "gn")
