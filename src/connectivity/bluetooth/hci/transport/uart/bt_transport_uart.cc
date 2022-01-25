@@ -25,8 +25,15 @@
 
 namespace bt_transport_uart {
 
-zx_status_t BtTransportUart::Create(void* ctx, zx_device_t* parent) {
-  std::unique_ptr<BtTransportUart> dev = std::make_unique<BtTransportUart>(parent);
+BtTransportUart::BtTransportUart(zx_device_t* parent, async_dispatcher_t* dispatcher)
+    : BtTransportUartType(parent), dispatcher_(dispatcher) {}
+
+zx_status_t BtTransportUart::Create(void* /*ctx*/, zx_device_t* parent) {
+  return Create(parent, /*dispatcher=*/nullptr);
+}
+
+zx_status_t BtTransportUart::Create(zx_device_t* parent, async_dispatcher_t* dispatcher) {
+  std::unique_ptr<BtTransportUart> dev = std::make_unique<BtTransportUart>(parent, dispatcher);
 
   zx_status_t bind_status = dev->Bind();
   if (bind_status != ZX_OK) {
@@ -37,6 +44,23 @@ zx_status_t BtTransportUart::Create(void* ctx, zx_device_t* parent) {
   // Memory will be explicitly freed in DdkRelease().
   __UNUSED BtTransportUart* unused = dev.release();
   return ZX_OK;
+}
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+BtTransportUart::Wait::Wait(BtTransportUart* uart, zx::channel* channel) {
+  this->state = ASYNC_STATE_INIT;
+  this->handler = Handler;
+  this->object = ZX_HANDLE_INVALID;
+  this->trigger = ZX_SIGNAL_NONE;
+  this->options = 0;
+  this->uart = uart;
+  this->channel = channel;
+}
+
+void BtTransportUart::Wait::Handler(async_dispatcher_t* dispatcher, async_wait_t* async_wait,
+                                    zx_status_t status, const zx_packet_signal_t* signal) {
+  auto wait = static_cast<Wait*>(async_wait);
+  wait->uart->OnChannelSignal(wait, status, signal);
 }
 
 size_t BtTransportUart::EventPacketLength() {
@@ -51,34 +75,23 @@ size_t BtTransportUart::AclPacketLength() {
   return acl_buffer_offset_ > 4 ? (acl_buffer_[3] | (acl_buffer_[4] << 8)) + 5 : 0;
 }
 
-BtTransportUart::ClientChannel* BtTransportUart::MatchClientChannel(zx_handle_t handle) {
-  if (handle == ZX_HANDLE_INVALID) {
-    return nullptr;
+void BtTransportUart::ChannelCleanupLocked(zx::channel* channel) {
+  if (!channel->is_valid()) {
+    return;
   }
 
-  std::lock_guard guard(mutex_);
-  if (handle == cmd_channel_.handle) {
-    return &cmd_channel_;
+  if (channel == &cmd_channel_ && cmd_channel_wait_.pending) {
+    async_cancel_wait(dispatcher_, &cmd_channel_wait_);
+    cmd_channel_wait_.pending = false;
+  } else if (channel == &acl_channel_ && acl_channel_wait_.pending) {
+    async_cancel_wait(dispatcher_, &acl_channel_wait_);
+    acl_channel_wait_.pending = false;
   }
-  if (handle == acl_channel_.handle) {
-    return &acl_channel_;
-  }
-  if (handle == snoop_channel_.handle) {
-    return &snoop_channel_;
-  }
-  return nullptr;
-}
-
-void BtTransportUart::ChannelCleanupLocked(ClientChannel* channel) {
-  if (channel->handle != ZX_HANDLE_INVALID) {
-    zx_handle_close(channel->handle);
-    channel->handle = ZX_HANDLE_INVALID;
-    channel->err = ZX_OK;
-  }
+  channel->reset();
 }
 
 void BtTransportUart::SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, size_t length) {
-  if (snoop_channel_.handle == ZX_HANDLE_INVALID) {
+  if (!snoop_channel_.is_valid()) {
     return;
   }
 
@@ -87,7 +100,7 @@ void BtTransportUart::SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, siz
   snoop_buffer[0] = flags;
   memcpy(snoop_buffer + 1, bytes, length);
 
-  zx_status_t status = zx_channel_write(snoop_channel_.handle, 0, snoop_buffer,
+  zx_status_t status = zx_channel_write(snoop_channel_.get(), 0, snoop_buffer,
                                         static_cast<uint32_t>(length + 1), nullptr, 0);
   if (status != ZX_OK) {
     if (status != ZX_ERR_PEER_CLOSED) {
@@ -136,7 +149,12 @@ void BtTransportUart::SerialWrite(void* buffer, size_t length) {
 
 // Returns false if there's an error while sending the packet to the hardware or
 // if the channel peer closed its endpoint.
-void BtTransportUart::HciHandleClientChannel(ClientChannel* chan, zx_signals_t pending) {
+void BtTransportUart::HciHandleClientChannel(zx::channel* chan, zx_signals_t pending) {
+  // Channel may have been closed since signal was received.
+  if (!chan->is_valid()) {
+    return;
+  }
+
   // Figure out which channel we are dealing with and the constants which go
   // along with it.
   uint32_t max_buf_size;
@@ -160,6 +178,8 @@ void BtTransportUart::HciHandleClientChannel(ClientChannel* chan, zx_signals_t p
   // Handle the read signal first.  If we are also peer closed, we want to make
   // sure that we have processed all of the pending messages before cleaning up.
   if (pending & ZX_CHANNEL_READABLE) {
+    zxlogf(TRACE, "received readable signal for %s channel",
+           chan == &cmd_channel_ ? "command" : "ACL");
     uint32_t length = max_buf_size - 1;
     uint8_t* buf;
     {
@@ -174,13 +194,12 @@ void BtTransportUart::HciHandleClientChannel(ClientChannel* chan, zx_signals_t p
       zx_status_t status;
       buf = static_cast<uint8_t*>(malloc(length + 1));
 
-      status = zx_channel_read(chan->handle, 0, buf + 1, nullptr, length, 0, &length, nullptr);
-
+      status = zx_channel_read(chan->get(), 0, buf + 1, nullptr, length, 0, &length, nullptr);
       if (status != ZX_OK) {
         zxlogf(ERROR, "hci_read_thread: failed to read from %s channel %s",
                (packet_type == kHciCommand) ? "CMD" : "ACL", zx_status_get_string(status));
         free(buf);
-        chan->err = status;
+        ChannelCleanupLocked(chan);
         return;
       }
 
@@ -191,14 +210,13 @@ void BtTransportUart::HciHandleClientChannel(ClientChannel* chan, zx_signals_t p
     }
 
     SerialWrite(buf, length);
-  } else {
+  }
+
+  if (pending & ZX_CHANNEL_PEER_CLOSED) {
+    zxlogf(DEBUG, "received closed signal for %s channel",
+           chan == &cmd_channel_ ? "command" : "ACL");
     std::lock_guard guard(mutex_);
-
-    // IF we were not readable, then we must have been peer closed, or we should
-    // not be here.
-    ZX_DEBUG_ASSERT(pending & ZX_CHANNEL_PEER_CLOSED);
-
-    ChannelCleanupLocked(&cmd_channel_);
+    ChannelCleanupLocked(chan);
   }
 }
 
@@ -242,21 +260,18 @@ void BtTransportUart::HciHandleUartReadEvents(const uint8_t* buf, size_t length)
       if (event_buffer_offset_ == packet_length) {
         std::lock_guard guard(mutex_);
 
-        // Attempt to send this packet to our cmd channel.  We are working on
-        // the callback thread from the UART, so we need to do this inside of
-        // the lock to make sure that nothing closes the channel out from under
-        // us while we try to write.  Also, if something goes wrong here, flag
-        // the channel for close and wake up the work thread.  Do not close the
-        // channel here as the work thread may just to be about to wait on it.
-        if (cmd_channel_.handle != ZX_HANDLE_INVALID) {
+        // Attempt to send this packet to our cmd channel.  We are working on the callback thread
+        // from the UART, so we need to do this inside of the lock to make sure that nothing closes
+        // the channel out from under us while we try to write.  If something goes wrong here, close
+        // the channel.
+        if (cmd_channel_.is_valid()) {
           // send accumulated event packet, minus the packet indicator
-          zx_status_t status = zx_channel_write(cmd_channel_.handle, 0, &event_buffer_[1],
+          zx_status_t status = zx_channel_write(cmd_channel_.get(), 0, &event_buffer_[1],
                                                 packet_length - 1, nullptr, 0);
           if (status != ZX_OK) {
             zxlogf(ERROR, "bt-transport-uart: failed to write CMD packet: %s",
                    zx_status_get_string(status));
-            cmd_channel_.err = status;
-            wakeup_event_.signal(0, ZX_EVENT_SIGNALED);
+            ChannelCleanupLocked(&cmd_channel_);
           }
         }
 
@@ -316,15 +331,14 @@ void BtTransportUart::HciHandleUartReadEvents(const uint8_t* buf, size_t length)
         // Attempt to send accumulated ACL data packet, minus the packet
         // indicator.  See the notes in the cmd channel section for details
         // about error handling and why the lock is needed here
-        if (acl_channel_.handle != ZX_HANDLE_INVALID) {
-          zx_status_t status = zx_channel_write(acl_channel_.handle, 0, &acl_buffer_[1],
+        if (acl_channel_.is_valid()) {
+          zx_status_t status = zx_channel_write(acl_channel_.get(), 0, &acl_buffer_[1],
                                                 packet_length - 1, nullptr, 0);
 
           if (status != ZX_OK) {
             zxlogf(ERROR, "bt-transport-uart: failed to write ACL packet: %s",
                    zx_status_get_string(status));
-            acl_channel_.err = status;
-            wakeup_event_.signal(0, ZX_EVENT_SIGNALED);
+            ChannelCleanupLocked(&acl_channel_);
           }
         }
 
@@ -344,6 +358,8 @@ void BtTransportUart::HciHandleUartReadEvents(const uint8_t* buf, size_t length)
 }
 
 void BtTransportUart::HciReadComplete(zx_status_t status, const uint8_t* buffer, size_t length) {
+  zxlogf(TRACE, "Read complete with status: %s", zx_status_get_string(status));
+
   // If we are in the process of shutting down, we are done.
   if (atomic_load_explicit(&shutting_down_, std::memory_order_relaxed)) {
     return;
@@ -365,6 +381,8 @@ void BtTransportUart::HciReadComplete(zx_status_t status, const uint8_t* buffer,
 }
 
 void BtTransportUart::HciWriteComplete(zx_status_t status) {
+  zxlogf(TRACE, "Write complete with status: %s", zx_status_get_string(status));
+
   // If we are in the process of shutting down, we are done as soon as we
   // have freed our operation.
   if (atomic_load_explicit(&shutting_down_, std::memory_order_relaxed)) {
@@ -376,176 +394,102 @@ void BtTransportUart::HciWriteComplete(zx_status_t status) {
     return;
   }
 
-  // We can write now.  Set the flag and poke the work thread.
+  // We can write now.
   {
     std::lock_guard guard(mutex_);
     can_write_ = true;
+
+    // Resume waiting for channel signals. If a packet was queued while the write was processing, it
+    // should be immediately signaled.
+    if (cmd_channel_wait_.channel->is_valid() && !cmd_channel_wait_.pending) {
+      ZX_ASSERT(async_begin_wait(dispatcher_, &cmd_channel_wait_) == ZX_OK);
+      cmd_channel_wait_.pending = true;
+    }
+    if (acl_channel_wait_.channel->is_valid() && !acl_channel_wait_.pending) {
+      ZX_ASSERT(async_begin_wait(dispatcher_, &acl_channel_wait_) == ZX_OK);
+      acl_channel_wait_.pending = true;
+    }
   }
-  wakeup_event_.signal(0, ZX_EVENT_SIGNALED);
 }
 
-int BtTransportUart::HciThread(void* arg) {
-  BtTransportUart* uart = static_cast<BtTransportUart*>(arg);
-  zx_status_t status = ZX_OK;
-
-  while (!atomic_load_explicit(&uart->shutting_down_, std::memory_order_relaxed)) {
-    zx_wait_item_t wait_items[kNumWaitItems];
-    uint32_t wait_count;
-    {  // Explicit scope for lock
-      std::lock_guard guard(uart->mutex_);
-
-      // Make a list of our interesting handles.  The wakeup event is always
-      // interesting and always goes in slot 0.
-      wait_items[0].handle = uart->wakeup_event_.get();
-      wait_items[0].waitfor = ZX_EVENT_SIGNALED;
-      wait_items[0].pending = 0;
-      wait_count = 1;
-
-      // If we  have received any errors on our channels, clean them up now.
-      if (uart->cmd_channel_.err != ZX_OK) {
-        uart->ChannelCleanupLocked(&uart->cmd_channel_);
-      }
-
-      if (uart->acl_channel_.err != ZX_OK) {
-        uart->ChannelCleanupLocked(&uart->acl_channel_);
-      }
-
-      // Only wait on our channels if we can currently write to our UART
-      if (uart->can_write_) {
-        if (uart->cmd_channel_.handle != ZX_HANDLE_INVALID) {
-          wait_items[wait_count].handle = uart->cmd_channel_.handle;
-          wait_items[wait_count].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-          wait_items[wait_count].pending = 0;
-          wait_count++;
-        }
-
-        if (uart->acl_channel_.handle != ZX_HANDLE_INVALID) {
-          wait_items[wait_count].handle = uart->acl_channel_.handle;
-          wait_items[wait_count].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-          wait_items[wait_count].pending = 0;
-          wait_count++;
-        }
-      }
-    }
-
-    // Now go ahead and do the wait.  Note, this is only safe because there are
-    // only two places where a channel gets closed.  One is in the work thread
-    // when we discover that a channel has become peer closed.  The other is
-    // when we are shutting down, in which case the thread will have been
-    // stopped before we get around to the business of closing channels.
-    status = zx_object_wait_many(wait_items, wait_count, ZX_TIME_INFINITE);
-
-    // Did we fail to wait?  This should never happen.  If it does, begin the
-    // process of shutdown.
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "bt-transport-uart: zx_object_wait_many failed (%s) - exiting",
-             zx_status_get_string(status));
-      uart->HciBeginShutdown();
-      break;
-    }
-
-    // Were we poked?  There are 3 reasons that we may have been.
-    //
-    // 1) Our set of active channels may have a new member.
-    // 2) Our |can_write| status may have changed.
-    // 3) It is time to shut down.
-    //
-    // Simply reset the event and cycle through the loop.  This will take care
-    // of each of these possible cases.
-    if (wait_items[0].pending) {
-      ZX_DEBUG_ASSERT(wait_items[0].handle == uart->wakeup_event_);
-      uart->wakeup_event_.signal(/*clear_mask=*/ZX_EVENT_SIGNALED, /*set_mask=*/0);
-      continue;
-    }
-
-    // Process our channels now.
-    for (uint32_t i = 1; i < wait_count; ++i) {
-      // Is our channel signalled for anything we care about?
-      zx_handle_t pending = wait_items[i].pending & wait_items[i].waitfor;
-
-      if (pending) {
-        ClientChannel* chan = uart->MatchClientChannel(wait_items[i].handle);
-        if (chan) {
-          uart->HciHandleClientChannel(chan, pending);
-        } else {
-          zxlogf(INFO, "ignoring channel signal due to missing channel");
-        }
-      }
-    }
-  }
-
-  zxlogf(INFO, "bt-transport-uart: thread exiting");
+void BtTransportUart::OnChannelSignal(Wait* wait, zx_status_t status,
+                                      const zx_packet_signal_t* signal) {
   {
-    std::lock_guard guard(uart->mutex_);
-    uart->thread_running_ = false;
+    std::lock_guard guard(mutex_);
+    wait->pending = false;
   }
-  return status;
+
+  HciHandleClientChannel(wait->channel, signal->observed);
+
+  // The readable signal wait will be re-enabled in the write completion callback.
 }
 
-zx_status_t BtTransportUart::HciOpenChannel(ClientChannel* in_channel, zx_handle_t in) {
+zx_status_t BtTransportUart::HciOpenChannel(zx::channel* in_channel, zx_handle_t in) {
   std::lock_guard guard(mutex_);
   zx_status_t result = ZX_OK;
 
-  if (in_channel->handle != ZX_HANDLE_INVALID) {
+  if (in_channel->is_valid()) {
     zxlogf(ERROR, "bt-transport-uart: already bound, failing");
     result = ZX_ERR_ALREADY_BOUND;
     return result;
   }
 
-  in_channel->handle = in;
-  in_channel->err = ZX_OK;
+  in_channel->reset(in);
 
-  // Kick off the hci_thread if it's not already running.
-  if (!thread_running_) {
-    thread_running_ = true;
-    if (thrd_create_with_name(&thread_, HciThread, this, "bt_uart_read_thread") != thrd_success) {
-      thread_running_ = false;
-      result = ZX_ERR_INTERNAL;
-      return result;
-    }
-  } else {
-    // Poke the work thread to let it know that there is a new channel to
-    // service.
-    wakeup_event_.signal(0, ZX_EVENT_SIGNALED);
+  Wait* wait = nullptr;
+  if (in_channel == &cmd_channel_) {
+    zxlogf(DEBUG, "opening command channel");
+    wait = &cmd_channel_wait_;
+  } else if (in_channel == &acl_channel_) {
+    zxlogf(DEBUG, "opening ACL channel");
+    wait = &acl_channel_wait_;
+  } else if (in_channel == &snoop_channel_) {
+    zxlogf(DEBUG, "opening snoop channel");
+    // TODO(fxb/91348): Handle snoop channel closed signal.
+    return ZX_OK;
   }
-
+  ZX_ASSERT(wait);
+  wait->object = in_channel->get();
+  wait->trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+  ZX_ASSERT(async_begin_wait(dispatcher_, wait) == ZX_OK);
+  wait->pending = true;
   return result;
 }
 
 void BtTransportUart::DdkUnbind(ddk::UnbindTxn txn) {
+  zxlogf(TRACE, "Unbind");
+
   // We are now shutting down.  Make sure that any pending callbacks in
   // flight from the serial_impl are nerfed and that our thread is shut down.
   std::atomic_store_explicit(&shutting_down_, true, std::memory_order_relaxed);
-  mutex_.lock();
-  bool thread_running = thread_running_;
-  thrd_t thread = thread_;
-  mutex_.unlock();
-  // NOTE: There is a time of check to time of use race here. In the future, we should only start
-  // the thread once (on Bind).
-  if (thread_running) {
-    wakeup_event_.signal(0, ZX_EVENT_SIGNALED);
-    // mutex_ must not be held while waiting for thrd_join or else deadlock could occur.
-    thrd_join(thread, nullptr);
-  }
 
-  // Close the transport channels so that the host stack is notified of device
-  // removal.
   {
     std::lock_guard guard(mutex_);
+
+    // Close the transport channels so that the host stack is notified of device
+    // removal and tasks aren't posted to work thread.
     ChannelCleanupLocked(&cmd_channel_);
     ChannelCleanupLocked(&acl_channel_);
     ChannelCleanupLocked(&snoop_channel_);
+  }
+
+  if (loop_) {
+    loop_->Quit();
+    loop_->JoinThreads();
   }
 
   // Finish by making sure that all in flight transactions transactions have
   // been canceled.
   serial_impl_async_cancel_all(&serial_);
 
+  zxlogf(TRACE, "Unbind complete");
+
   // Tell the DDK we are done unbinding.
   txn.Reply();
 }
 
 void BtTransportUart::DdkRelease() {
+  zxlogf(TRACE, "Release");
   // Driver manager is given a raw pointer to this dynamically allocated object in Create(), so when
   // DdkRelease() is called we need to free the allocated memory.
   delete this;
@@ -576,6 +520,8 @@ zx_status_t BtTransportUart::DdkGetProtocol(uint32_t proto_id, void* out_proto) 
 }
 
 zx_status_t BtTransportUart::Bind() {
+  zxlogf(DEBUG, "Bind");
+
   serial_impl_async_protocol_t serial;
 
   zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_SERIAL_IMPL_ASYNC, &serial);
@@ -585,27 +531,16 @@ zx_status_t BtTransportUart::Bind() {
     return status;
   }
 
-  status = zx::event::create(0, &wakeup_event_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "hci_bind: zx_event_create failed: %s", zx_status_get_string(status));
-    return status;
-  }
-
   {
     std::lock_guard guard(mutex_);
 
     serial_ = serial;
-
-    cur_uart_packet_type_ = kHciNone;
 
     // pre-populate event packet indicators
     event_buffer_[0] = kHciEvent;
     event_buffer_offset_ = 1;
     acl_buffer_[0] = kHciAclData;
     acl_buffer_offset_ = 1;
-
-    // Initially we can write to the UART
-    can_write_ = true;
   }
 
   serial_port_info_t info;
@@ -627,6 +562,21 @@ zx_status_t BtTransportUart::Bind() {
     static_cast<BtTransportUart*>(ctx)->HciReadComplete(status, buffer, length);
   };
   serial_impl_async_read_async(&serial_, read_cb, this);
+
+  // Spawn a new thread in production. In tests, use the test dispatcher provided in the
+  // constructor.
+  if (!dispatcher_) {
+    loop_.emplace(&kAsyncLoopConfigNoAttachToCurrentThread);
+    status = loop_->StartThread("bt-transport-uart");
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "failed to start thread: %s", zx_status_get_string(status));
+      DdkRelease();
+      return status;
+    }
+    dispatcher_ = loop_->dispatcher();
+  }
+
+  zxlogf(DEBUG, "Bind complete, adding device");
 
   ddk::DeviceAddArgs args("bt-transport-uart");
   // Copy the PID and VID from the platform device info so it can be filtered on

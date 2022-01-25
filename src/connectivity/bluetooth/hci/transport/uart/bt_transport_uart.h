@@ -7,6 +7,10 @@
 
 #include <fuchsia/hardware/bt/hci/cpp/banjo.h>
 #include <fuchsia/hardware/serialimpl/async/c/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/fit/thread_checker.h>
 #include <lib/zx/event.h>
 #include <threads.h>
 
@@ -22,11 +26,16 @@ using BtTransportUartType = ddk::Device<BtTransportUart, ddk::GetProtocolable, d
 
 class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<BtTransportUart> {
  public:
-  explicit BtTransportUart(zx_device_t* parent) : BtTransportUartType(parent) {}
+  // If |dispatcher| is non-null, it will be used instead of a new work thread.
+  // tests.
+  explicit BtTransportUart(zx_device_t* parent, async_dispatcher_t* dispatcher);
 
   // Static bind function for the ZIRCON_DRIVER() declaration. Binds this device and passes
   // ownership to the driver manager.
   static zx_status_t Create(void* ctx, zx_device_t* parent);
+
+  // Constructor for tests to inject a dispatcher for the work thread.
+  static zx_status_t Create(zx_device_t* parent, async_dispatcher_t* dispatcher);
 
   // DDK mixins:
   void DdkUnbind(ddk::UnbindTxn txn);
@@ -48,15 +57,23 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
     kHciEvent = 4,
   };
 
-  struct ClientChannel {
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    zx_status_t err = ZX_OK;
-  };
-
   struct HciWriteCtx {
     BtTransportUart* ctx;
     // Owned.
     uint8_t* buffer;
+  };
+
+  // This wrapper around async_wait enables us to get a BtTransportUart* in the handler.
+  // We use this instead of async::WaitMethod because async::WaitBase isn't thread safe.
+  struct Wait : public async_wait {
+    explicit Wait(BtTransportUart* uart, zx::channel* channel);
+    static void Handler(async_dispatcher_t* dispatcher, async_wait_t* async_wait,
+                        zx_status_t status, const zx_packet_signal_t* signal);
+    BtTransportUart* uart;
+    // Indicates whether a wait has begun and not ended.
+    bool pending = false;
+    // The channel that this wait waits on.
+    zx::channel* channel;
   };
 
   // Returns length of current event packet being received
@@ -67,10 +84,7 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
   // Must only be called in the read callback (HciHandleUartReadEvents).
   size_t AclPacketLength();
 
-  // Returns the ClientChannel corresponding to |handle|, or nullptr if there is no such channel.
-  ClientChannel* MatchClientChannel(zx_handle_t handle) __TA_EXCLUDES(mutex_);
-
-  void ChannelCleanupLocked(ClientChannel* channel) __TA_REQUIRES(mutex_);
+  void ChannelCleanupLocked(zx::channel* channel) __TA_REQUIRES(mutex_);
 
   void SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, size_t length) __TA_REQUIRES(mutex_);
 
@@ -78,7 +92,7 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
 
   void SerialWrite(void* buffer, size_t length) __TA_EXCLUDES(mutex_);
 
-  void HciHandleClientChannel(ClientChannel* chan, zx_signals_t pending) __TA_EXCLUDES(mutex_);
+  void HciHandleClientChannel(zx::channel* chan, zx_signals_t pending) __TA_EXCLUDES(mutex_);
 
   void HciHandleUartReadEvents(const uint8_t* buf, size_t length) __TA_EXCLUDES(mutex_);
 
@@ -89,7 +103,9 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
 
   static int HciThread(void* arg) __TA_EXCLUDES(mutex_);
 
-  zx_status_t HciOpenChannel(ClientChannel* in_channel, zx_handle_t in) __TA_EXCLUDES(mutex_);
+  void OnChannelSignal(Wait* wait, zx_status_t status, const zx_packet_signal_t* signal);
+
+  zx_status_t HciOpenChannel(zx::channel* in_channel, zx_handle_t in) __TA_EXCLUDES(mutex_);
 
   // Adds the device.
   zx_status_t Bind() __TA_EXCLUDES(mutex_);
@@ -114,38 +130,41 @@ class BtTransportUart : public BtTransportUartType, public ddk::BtHciProtocol<Bt
 
   serial_impl_async_protocol_t serial_ __TA_GUARDED(mutex_);
 
-  ClientChannel cmd_channel_ __TA_GUARDED(mutex_);
-  ClientChannel acl_channel_ __TA_GUARDED(mutex_);
-  ClientChannel snoop_channel_ __TA_GUARDED(mutex_);
+  zx::channel cmd_channel_ __TA_GUARDED(mutex_);
+  Wait cmd_channel_wait_ __TA_GUARDED(mutex_){this, &cmd_channel_};
 
-  // Signaled any time something changes that the work thread needs to know about.
-  zx::event wakeup_event_;
+  zx::channel acl_channel_ __TA_GUARDED(mutex_);
+  Wait acl_channel_wait_ __TA_GUARDED(mutex_){this, &acl_channel_};
 
-  thrd_t thread_ __TA_GUARDED(mutex_);
-  std::atomic_bool shutting_down_;
-  bool thread_running_ __TA_GUARDED(mutex_);
+  zx::channel snoop_channel_ __TA_GUARDED(mutex_);
+
+  std::atomic_bool shutting_down_ = false;
 
   // True if there is not a UART write pending. Set to false when a write is initiated, and set to
   // true when the write completes.
-  bool can_write_ __TA_GUARDED(mutex_);
+  bool can_write_ __TA_GUARDED(mutex_) = true;
 
   // type of current packet being read from the UART
   // Must only be used in the UART read callback (HciHandleUartReadEvents).
-  BtHciPacketIndicator cur_uart_packet_type_;
+  BtHciPacketIndicator cur_uart_packet_type_ = kHciNone;
 
   // for accumulating HCI events
   // Must only be used in the UART read callback (HciHandleUartReadEvents).
   uint8_t event_buffer_[kEventBufSize];
   // Must only be used in the UART read callback (HciHandleUartReadEvents).
-  size_t event_buffer_offset_;
+  size_t event_buffer_offset_ = 0;
 
   // for accumulating ACL data packets
   // Must only be used in the UART read callback (HciHandleUartReadEvents).
   uint8_t acl_buffer_[kAclMaxFrameSize];
   // Must only be used in the UART read callback (HciHandleUartReadEvents).
-  size_t acl_buffer_offset_;
+  size_t acl_buffer_offset_ = 0;
 
   std::mutex mutex_;
+
+  std::optional<async::Loop> loop_;
+  // In production, this is loop_.dispatcher(). In tests, this is the test dispatcher.
+  async_dispatcher_t* dispatcher_ = nullptr;
 };
 
 }  // namespace bt_transport_uart
