@@ -1481,7 +1481,7 @@ async fn test_stdout_to_directory() {
     assert_eq!(outcome, Outcome::Passed);
 
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed)
-        .with_no_start_time()
+        .with_any_start_time()
         .with_no_run_duration();
     let expected_test_suites = vec![ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",

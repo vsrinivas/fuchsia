@@ -11,13 +11,7 @@ use {
         RunBuilderProxy, SuiteArtifact, SuiteStopped,
     },
     fuchsia_async as fasync,
-    futures::{
-        channel::mpsc,
-        future::{Either, TryFutureExt},
-        prelude::*,
-        stream::FuturesUnordered,
-        StreamExt,
-    },
+    futures::{channel::mpsc, future::Either, prelude::*, stream::FuturesUnordered, StreamExt},
     log::{error, warn},
     std::collections::{HashMap, HashSet, VecDeque},
     std::convert::TryInto,
@@ -95,12 +89,6 @@ impl fmt::Display for Outcome {
     }
 }
 
-#[derive(PartialEq, Debug)]
-struct SuiteRunResult {
-    /// Test outcome.
-    pub outcome: Outcome,
-}
-
 /// Parameters that specify how a single test suite should be executed.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct TestParams {
@@ -143,12 +131,17 @@ pub enum TimeoutBehavior {
     Continue,
 }
 
+/// Collects results and artifacts for a single suite.
+// TODO(satsukiu): There's two ways to return an error here:
+// * Err(RunTestSuiteError)
+// * Ok(Outcome::Error(RunTestSuiteError))
+// We should consider how to consolidate these.
 async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
     mut running_suite: RunningSuite,
     suite_reporter: &SuiteReporter<'_>,
     log_opts: diagnostics::LogCollectionOptions,
     cancel_fut: F,
-) -> Result<SuiteRunResult, RunTestSuiteError> {
+) -> Result<Outcome, RunTestSuiteError> {
     let mut test_cases = HashMap::new();
     let mut test_case_reporters = HashMap::new();
     let mut test_cases_in_progress = HashSet::new();
@@ -481,7 +474,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
 
     suite_reporter.stopped(&outcome.clone().into(), suite_finish_timestamp).await?;
 
-    Ok(SuiteRunResult { outcome })
+    Ok(outcome)
 }
 
 type SuiteEventStream = std::pin::Pin<
@@ -617,6 +610,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()>>(
     let (run_controller, run_server_end) = fidl::endpoints::create_proxy()?;
     let run_controller_ref = &run_controller;
     builder_proxy.build(run_server_end)?;
+    run_reporter.started(Timestamp::Unknown).await?;
     let cancel_fut = cancel_fut.shared();
 
     let handle_suite_fut = async move {
@@ -638,26 +632,35 @@ async fn run_tests<'a, F: 'a + Future<Output = ()>>(
                 cancel_fut.clone(),
             )
             .await;
+            let suite_outcome = result.unwrap_or_else(|err| Outcome::error(err));
             // We should always persist results, even if something failed.
             suite_reporter.finished().await?;
-            let result = result?;
 
-            num_failed = match result.outcome {
+            num_failed = match suite_outcome {
                 Outcome::Passed => num_failed,
                 _ => num_failed + 1,
             };
             let stop_due_to_timeout = match run_params.timeout_behavior {
-                TimeoutBehavior::TerminateRemaining => result.outcome == Outcome::Timedout,
+                TimeoutBehavior::TerminateRemaining => suite_outcome == Outcome::Timedout,
                 TimeoutBehavior::Continue => false,
             };
             let stop_due_to_failures = match run_params.stop_after_failures.as_ref() {
                 Some(threshold) => num_failed >= threshold.get(),
                 None => false,
             };
-            let stop_due_to_cancellation = matches!(&result.outcome, Outcome::Cancelled);
+            let stop_due_to_cancellation = matches!(&suite_outcome, Outcome::Cancelled);
+            let stop_due_to_internal_error = match &suite_outcome {
+                Outcome::Error { origin } => origin.is_internal_error(),
+                _ => false,
+            };
 
-            if stop_due_to_timeout || stop_due_to_failures || stop_due_to_cancellation {
-                run_controller_ref.stop()?;
+            if stop_due_to_timeout
+                || stop_due_to_failures
+                || stop_due_to_cancellation
+                || stop_due_to_internal_error
+            {
+                // Ignore errors here since we're stopping anyway.
+                let _ = run_controller_ref.stop();
                 // Drop remaining controllers, which is the same as calling kill on
                 // each controller.
                 suite_start_futs.clear();
@@ -665,7 +668,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()>>(
                     reporter.finished().await?;
                 }
             }
-            final_outcome = match (final_outcome.take(), result.outcome) {
+            final_outcome = match (final_outcome.take(), suite_outcome) {
                 (None, first_outcome) => Some(first_outcome),
                 (Some(outcome), Outcome::Passed) => Some(outcome),
                 (Some(_), failing_outcome) => Some(failing_outcome),
@@ -728,9 +731,12 @@ async fn run_tests<'a, F: 'a + Future<Output = ()>>(
         }
     };
 
-    futures::future::try_join(handle_suite_fut, handle_run_events_fut)
-        .map_ok(|(outcome, ())| outcome)
-        .await
+    // Use join instead of try_join as we want to poll the futures to completion
+    // even if one fails.
+    match futures::future::join(handle_suite_fut, handle_run_events_fut).await {
+        (Ok(outcome), Ok(())) => Ok(outcome),
+        (Err(e), _) | (_, Err(e)) => Err(e),
+    }
 }
 
 async fn read_custom_artifact_directory(
@@ -895,6 +901,7 @@ mod test {
     use fidl::endpoints::{create_proxy_and_stream, ServerEnd};
     use fuchsia_zircon as zx;
     use futures::future::join;
+    use maplit::hashmap;
     use output::EntityId;
     use vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -1014,15 +1021,19 @@ mod test {
 
     async fn fake_running_all_suites_and_return_run_events(
         mut stream: ftest_manager::RunBuilderRequestStream,
-        events: Vec<ftest_manager::RunEvent>,
+        mut suite_events: HashMap<&str, Vec<ftest_manager::SuiteEvent>>,
+        run_events: Vec<ftest_manager::RunEvent>,
     ) {
         let mut suite_streams = vec![];
 
         let mut run_controller = None;
         while let Ok(Some(req)) = stream.try_next().await {
             match req {
-                ftest_manager::RunBuilderRequest::AddSuite { controller, .. } => {
-                    suite_streams.push(controller.into_stream().expect("into stream"));
+                ftest_manager::RunBuilderRequest::AddSuite { test_url, controller, .. } => {
+                    let events = suite_events
+                        .remove(test_url.as_str())
+                        .expect("Got a request for an unexpected test URL");
+                    suite_streams.push((controller.into_stream().expect("into stream"), events));
                 }
                 ftest_manager::RunBuilderRequest::Build { controller, .. } => {
                     run_controller = Some(controller);
@@ -1034,47 +1045,23 @@ mod test {
             run_controller.is_some(),
             "Expected a RunController to be present. RunBuilder/Build() may not have been called."
         );
+        assert!(suite_events.is_empty(), "Expected AddSuite to be called for all specified suites");
         let mut run_stream =
             run_controller.expect("controller present").into_stream().expect("into stream");
 
         // Each suite just reports that it started and passed.
         let mut suite_streams = suite_streams
             .into_iter()
-            .map(|mut stream| {
+            .map(|(mut stream, events)| {
                 async move {
-                    let mut sent = false;
+                    let mut maybe_events = Some(events);
                     while let Ok(Some(req)) = stream.try_next().await {
                         match req {
                             ftest_manager::SuiteControllerRequest::GetEvents {
                                 responder, ..
                             } => {
-                                if sent {
-                                    let _ = responder.send(&mut Ok(vec![]));
-                                    continue;
-                                }
-                                sent = true;
-                                let _ = responder.send(&mut Ok(vec![
-                                    ftest_manager::SuiteEvent {
-                                        timestamp: Some(1000),
-                                        payload: Some(
-                                            ftest_manager::SuiteEventPayload::SuiteStarted(
-                                                ftest_manager::SuiteStarted,
-                                            ),
-                                        ),
-                                        ..ftest_manager::SuiteEvent::EMPTY
-                                    },
-                                    ftest_manager::SuiteEvent {
-                                        timestamp: Some(2000),
-                                        payload: Some(
-                                            ftest_manager::SuiteEventPayload::SuiteStopped(
-                                                ftest_manager::SuiteStopped {
-                                                    status: ftest_manager::SuiteStatus::Passed,
-                                                },
-                                            ),
-                                        ),
-                                        ..ftest_manager::SuiteEvent::EMPTY
-                                    },
-                                ]));
+                                let send_events = maybe_events.take().unwrap_or(vec![]);
+                                let _ = responder.send(&mut Ok(send_events));
                             }
                             _ => {
                                 // ignore all other requests
@@ -1088,7 +1075,7 @@ mod test {
         let suite_drain_fut = async move { while let Some(_) = suite_streams.next().await {} };
 
         let run_fut = async move {
-            let mut events = Some(events);
+            let mut events = Some(run_events);
             while let Ok(Some(req)) = run_stream.try_next().await {
                 match req {
                     ftest_manager::RunControllerRequest::GetEvents { responder, .. } => {
@@ -1115,6 +1102,25 @@ mod test {
         run_reporter: RunReporter,
     }
 
+    fn create_empty_suite_events() -> Vec<ftest_manager::SuiteEvent> {
+        vec![
+            ftest_manager::SuiteEvent {
+                timestamp: Some(1000),
+                payload: Some(ftest_manager::SuiteEventPayload::SuiteStarted(
+                    ftest_manager::SuiteStarted,
+                )),
+                ..ftest_manager::SuiteEvent::EMPTY
+            },
+            ftest_manager::SuiteEvent {
+                timestamp: Some(2000),
+                payload: Some(ftest_manager::SuiteEventPayload::SuiteStopped(
+                    ftest_manager::SuiteStopped { status: ftest_manager::SuiteStatus::Passed },
+                )),
+                ..ftest_manager::SuiteEvent::EMPTY
+            },
+        ]
+    }
+
     async fn call_run_tests(params: ParamsForRunTests) -> Outcome {
         run_tests_and_get_outcome(
             params.builder_proxy,
@@ -1137,7 +1143,8 @@ mod test {
         let run_reporter = RunReporter::new(reporter.clone());
         let run_fut =
             call_run_tests(ParamsForRunTests { builder_proxy, test_params: vec![], run_reporter });
-        let fake_fut = fake_running_all_suites_and_return_run_events(run_builder_stream, vec![]);
+        let fake_fut =
+            fake_running_all_suites_and_return_run_events(run_builder_stream, hashmap! {}, vec![]);
 
         assert_eq!(join(run_fut, fake_fut).await.0, Outcome::Passed,);
 
@@ -1162,7 +1169,13 @@ mod test {
             }],
             run_reporter,
         });
-        let fake_fut = fake_running_all_suites_and_return_run_events(run_builder_stream, vec![]);
+        let fake_fut = fake_running_all_suites_and_return_run_events(
+            run_builder_stream,
+            hashmap! {
+                "fuchsia-pkg://fuchsia.com/nothing#meta/nothing.cm" => create_empty_suite_events()
+            },
+            vec![],
+        );
 
         assert_eq!(join(run_fut, fake_fut).await.0, Outcome::Passed,);
 
@@ -1221,7 +1234,13 @@ mod test {
             ..ftest_manager::RunEvent::EMPTY
         }];
 
-        let fake_fut = fake_running_all_suites_and_return_run_events(run_builder_stream, events);
+        let fake_fut = fake_running_all_suites_and_return_run_events(
+            run_builder_stream,
+            hashmap! {
+                "fuchsia-pkg://fuchsia.com/nothing#meta/nothing.cm" => create_empty_suite_events()
+            },
+            events,
+        );
 
         assert_eq!(join(run_fut, fake_fut).await.0, Outcome::Passed,);
 
@@ -1235,5 +1254,82 @@ mod test {
         let (name, file) = &files[0];
         assert_eq!(name.to_string_lossy(), "test_file.txt".to_string());
         assert_eq!(file.get_contents(), b"Hello, World!");
+    }
+
+    #[fuchsia::test]
+    async fn record_output_after_internal_error() {
+        let (builder_proxy, run_builder_stream) =
+            create_proxy_and_stream::<ftest_manager::RunBuilderMarker>()
+                .expect("create builder proxy");
+
+        let reporter = InMemoryReporter::new();
+        let run_reporter = RunReporter::new(reporter.clone());
+        let run_fut = call_run_tests(ParamsForRunTests {
+            builder_proxy,
+            test_params: vec![
+                TestParams {
+                    test_url: "fuchsia-pkg://fuchsia.com/invalid#meta/invalid.cm".to_string(),
+                    ..TestParams::default()
+                },
+                TestParams {
+                    test_url: "fuchsia-pkg://fuchsia.com/nothing#meta/nothing.cm".to_string(),
+                    ..TestParams::default()
+                },
+            ],
+            run_reporter,
+        });
+
+        let fake_fut = fake_running_all_suites_and_return_run_events(
+            run_builder_stream,
+            hashmap! {
+                // return an internal error from the first test.
+                "fuchsia-pkg://fuchsia.com/invalid#meta/invalid.cm" => vec![
+                    ftest_manager::SuiteEvent {
+                        timestamp: Some(1000),
+                        payload: Some(
+                            ftest_manager::SuiteEventPayload::SuiteStarted(
+                                ftest_manager::SuiteStarted,
+                            ),
+                        ),
+                        ..ftest_manager::SuiteEvent::EMPTY
+                    },
+                    ftest_manager::SuiteEvent {
+                        timestamp: Some(2000),
+                        payload: Some(ftest_manager::SuiteEventPayload::SuiteStopped(
+                            ftest_manager::SuiteStopped { status: ftest_manager::SuiteStatus::InternalError },
+                        )),
+                        ..ftest_manager::SuiteEvent::EMPTY
+                    },
+                ],
+                "fuchsia-pkg://fuchsia.com/nothing#meta/nothing.cm" => create_empty_suite_events()
+            },
+            vec![],
+        );
+
+        assert_matches!(join(run_fut, fake_fut).await.0, Outcome::Error { .. });
+
+        let reports = reporter.get_reports();
+        assert_eq!(3usize, reports.len());
+        let invalid_suite = reports
+            .iter()
+            .find(|e| e.report.name == "fuchsia-pkg://fuchsia.com/invalid#meta/invalid.cm")
+            .expect("find run report");
+        assert_eq!(invalid_suite.report.outcome, Some(output::ReportedOutcome::Error));
+        assert!(invalid_suite.report.is_finished);
+
+        // The valid suite should not have been started, but finish should've been called so that
+        // results get persisted.
+        let not_started = reports
+            .iter()
+            .find(|e| e.report.name == "fuchsia-pkg://fuchsia.com/nothing#meta/nothing.cm")
+            .expect("find run report");
+        assert!(not_started.report.outcome.is_none());
+        assert!(not_started.report.is_finished);
+
+        // The results for the run should also be saved.
+        let run = reports.iter().find(|e| e.id == EntityId::TestRun).expect("find run report");
+        assert_eq!(run.report.outcome, Some(output::ReportedOutcome::Error));
+        assert!(run.report.is_finished);
+        assert!(run.report.started_time.is_some());
     }
 }
