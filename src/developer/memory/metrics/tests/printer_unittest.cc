@@ -67,9 +67,9 @@ TEST_F(PrinterUnitTest, PrintCapture) {
                                            {
                                                .koid = 1,
                                                .name = "v1",
+                                               .size_bytes = 300,
                                                .parent_koid = 100,
                                                .committed_bytes = 200,
-                                               .size_bytes = 300,
                                            },
                                        },
                                    .processes =
@@ -311,10 +311,10 @@ TEST_F(PrinterUnitTest, OutputSummaryKernel) {
                                        {
                                            .wired_bytes = 10,
                                            .total_heap_bytes = 20,
+                                           .vmo_bytes = 60,
                                            .mmu_overhead_bytes = 30,
                                            .ipc_bytes = 40,
                                            .other_bytes = 50,
-                                           .vmo_bytes = 60,
                                        },
                                });
   Summary s(c);
@@ -431,8 +431,8 @@ TEST_F(PrinterUnitTest, PrintDigest) {
                                    .kmem =
                                        {
                                            .total_bytes = 1000,
-                                           .wired_bytes = 10,
                                            .free_bytes = 100,
+                                           .wired_bytes = 10,
                                            .vmo_bytes = 700,
                                        },
                                    .vmos =
@@ -464,15 +464,15 @@ TEST_F(PrinterUnitTest, OutputDigest) {
                                    .kmem =
                                        {
                                            .total_bytes = 1000,
-                                           .wired_bytes = 10,
                                            .free_bytes = 100,
+                                           .wired_bytes = 10,
                                            .vmo_bytes = 700,
                                        },
                                    .kmem_extended =
                                        {
                                            .total_bytes = 1000,
-                                           .wired_bytes = 10,
                                            .free_bytes = 100,
+                                           .wired_bytes = 10,
                                            .vmo_bytes = 700,
                                            .vmo_pager_total_bytes = 300,
                                            .vmo_pager_newest_bytes = 50,

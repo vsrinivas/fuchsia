@@ -111,12 +111,12 @@ TEST_F(DigestUnitTest, Kernel) {
                                    .kmem =
                                        {
                                            .total_bytes = 1000,
+                                           .free_bytes = 100,
                                            .wired_bytes = 10,
                                            .total_heap_bytes = 20,
                                            .mmu_overhead_bytes = 30,
                                            .ipc_bytes = 40,
                                            .other_bytes = 50,
-                                           .free_bytes = 100,
                                        },
                                });
   Digester digester({});

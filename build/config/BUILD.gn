@@ -542,13 +542,9 @@ config("default_warnings") {
   }
 }
 
-# TODO(fxbug.dev/58160): clean up instances of this outside of third party code.
 config("Wno-reorder-init-list") {
   cflags = [ "-Wno-reorder-init-list" ]
-  visibility = [
-    "//src/developer/memory/metrics/tests/*",
-    "//third_party/*",
-  ]
+  visibility = [ "//third_party/*" ]
 }
 
 # TODO(fxbug.dev/58161): clean up instances of this outside of third party code.

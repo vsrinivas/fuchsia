@@ -45,9 +45,6 @@ executable("memory_metrics_unittests") {
     "//third_party/rapidjson",
     "//zircon/system/public:public",
   ]
-
-  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-reorder-init-list" ]
 }
 
 fuchsia_unittest_component("memory_metrics_unittests_component") {

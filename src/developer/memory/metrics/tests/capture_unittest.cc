@@ -99,9 +99,9 @@ TEST_F(CaptureUnitTest, Process) {
   // Process and VMO need to capture the same info.
   Capture c;
   auto ret = TestUtils::GetCapture(&c, VMO,
-                                   {.get_info = {self_info, kmem_info, vmos_info, vmos_info},
-                                    .get_processes = {{ZX_OK, {proc_cb}}},
-                                    .get_property = {proc_prop}});
+                                   {.get_processes = {{ZX_OK, {proc_cb}}},
+                                    .get_property = {proc_prop},
+                                    .get_info = {self_info, kmem_info, vmos_info, vmos_info}});
   EXPECT_EQ(ZX_OK, ret);
   EXPECT_EQ(1U, c.koid_to_process().size());
   const auto& process = c.process_for_koid(proc_koid);
@@ -118,9 +118,9 @@ TEST_F(CaptureUnitTest, Process) {
 TEST_F(CaptureUnitTest, VMO) {
   Capture c;
   auto ret = TestUtils::GetCapture(&c, VMO,
-                                   {.get_info = {self_info, kmem_info, vmos_info, vmos_info},
-                                    .get_processes = {{ZX_OK, {proc_cb}}},
-                                    .get_property = {proc_prop}});
+                                   {.get_processes = {{ZX_OK, {proc_cb}}},
+                                    .get_property = {proc_prop},
+                                    .get_info = {self_info, kmem_info, vmos_info, vmos_info}});
   EXPECT_EQ(ZX_OK, ret);
   EXPECT_EQ(1U, c.koid_to_process().size());
   const auto& process = c.process_for_koid(proc_koid);
@@ -137,17 +137,19 @@ TEST_F(CaptureUnitTest, VMO) {
 TEST_F(CaptureUnitTest, VMODouble) {
   Capture c;
   auto ret = TestUtils::GetCapture(&c, VMO,
-                                   {.get_info =
-                                        {
-                                            self_info,
-                                            kmem_info,
-                                            vmos_info,
-                                            vmos_info,
-                                            vmos2_info,
-                                            vmos2_info,
-                                        },
-                                    .get_processes = {{ZX_OK, {proc_cb, proc2_cb}}},
-                                    .get_property = {proc_prop, proc2_prop}});
+                                   {
+                                       .get_processes = {{ZX_OK, {proc_cb, proc2_cb}}},
+                                       .get_property = {proc_prop, proc2_prop},
+                                       .get_info =
+                                           {
+                                               self_info,
+                                               kmem_info,
+                                               vmos_info,
+                                               vmos_info,
+                                               vmos2_info,
+                                               vmos2_info,
+                                           },
+                                   });
   EXPECT_EQ(ZX_OK, ret);
   EXPECT_EQ(2U, c.koid_to_process().size());
   EXPECT_EQ(2U, c.koid_to_vmo().size());
@@ -175,9 +177,9 @@ TEST_F(CaptureUnitTest, VMOProcessDuplicate) {
   Capture c;
   auto ret =
       TestUtils::GetCapture(&c, VMO,
-                            {.get_info = {self_info, kmem_info, vmos_dup_info, vmos_dup_info},
-                             .get_processes = {{ZX_OK, {proc_cb}}},
-                             .get_property = {proc_prop}});
+                            {.get_processes = {{ZX_OK, {proc_cb}}},
+                             .get_property = {proc_prop},
+                             .get_info = {self_info, kmem_info, vmos_dup_info, vmos_dup_info}});
   EXPECT_EQ(ZX_OK, ret);
   EXPECT_EQ(1U, c.koid_to_process().size());
   const auto& process = c.process_for_koid(proc_koid);
@@ -196,9 +198,9 @@ TEST_F(CaptureUnitTest, ProcessPropBadState) {
   Capture c;
   auto ret = TestUtils::GetCapture(
       &c, PROCESS,
-      {.get_info = {self_info, kmem_info, vmos2_info, vmos2_info},
-       .get_processes = {{ZX_OK, {proc_cb, proc2_cb}}},
-       .get_property = {{proc_handle, ZX_PROP_NAME, nullptr, 0, ZX_ERR_BAD_STATE}, proc2_prop}});
+      {.get_processes = {{ZX_OK, {proc_cb, proc2_cb}}},
+       .get_property = {{proc_handle, ZX_PROP_NAME, nullptr, 0, ZX_ERR_BAD_STATE}, proc2_prop},
+       .get_info = {self_info, kmem_info, vmos2_info, vmos2_info}});
   EXPECT_EQ(ZX_OK, ret);
   EXPECT_EQ(1U, c.koid_to_process().size());
   const auto& process = c.process_for_koid(proc2_koid);
@@ -211,13 +213,13 @@ TEST_F(CaptureUnitTest, VMOCountBadState) {
   Capture c;
   auto ret = TestUtils::GetCapture(
       &c, VMO,
-      {.get_info = {self_info,
+      {.get_processes = {{ZX_OK, {proc_cb, proc2_cb}}},
+       .get_property = {proc_prop, proc2_prop},
+       .get_info = {self_info,
                     kmem_info,
                     {proc_handle, ZX_INFO_PROCESS_VMOS, &_vmo, sizeof(_vmo), 1, ZX_ERR_BAD_STATE},
                     vmos2_info,
-                    vmos2_info},
-       .get_processes = {{ZX_OK, {proc_cb, proc2_cb}}},
-       .get_property = {proc_prop, proc2_prop}});
+                    vmos2_info}});
   EXPECT_EQ(ZX_OK, ret);
   EXPECT_EQ(1U, c.koid_to_process().size());
   const auto& process = c.process_for_koid(proc2_koid);
@@ -236,14 +238,14 @@ TEST_F(CaptureUnitTest, VMOGetBadState) {
   Capture c;
   auto ret = TestUtils::GetCapture(
       &c, VMO,
-      {.get_info = {self_info,
+      {.get_processes = {{ZX_OK, {proc_cb, proc2_cb}}},
+       .get_property = {proc_prop, proc2_prop},
+       .get_info = {self_info,
                     kmem_info,
                     vmos_info,
                     {proc_handle, ZX_INFO_PROCESS_VMOS, &_vmo, sizeof(_vmo), 1, ZX_ERR_BAD_STATE},
                     vmos2_info,
-                    vmos2_info},
-       .get_processes = {{ZX_OK, {proc_cb, proc2_cb}}},
-       .get_property = {proc_prop, proc2_prop}});
+                    vmos2_info}});
   EXPECT_EQ(ZX_OK, ret);
   EXPECT_EQ(1U, c.koid_to_process().size());
   const auto& process = c.process_for_koid(proc2_koid);

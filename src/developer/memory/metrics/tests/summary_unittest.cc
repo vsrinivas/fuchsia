@@ -124,7 +124,7 @@ TEST_F(SummaryUnitTest, Parent) {
               .vmos =
                   {
                       {.koid = 1, .name = "v1", .committed_bytes = 100},
-                      {.koid = 2, .name = "v2", .committed_bytes = 100, .parent_koid = 1},
+                      {.koid = 2, .name = "v2", .parent_koid = 1, .committed_bytes = 100},
                   },
               .processes = {{.koid = 2, .name = "p1", .vmos = {2}}},
           });
@@ -250,7 +250,7 @@ TEST_F(SummaryUnitTest, TwoProcessesChild) {
       &c, {.vmos =
                {
                    {.koid = 1, .name = "v1", .committed_bytes = 100},
-                   {.koid = 2, .name = "v2", .committed_bytes = 100, .parent_koid = 1},
+                   {.koid = 2, .name = "v2", .parent_koid = 1, .committed_bytes = 100},
                },
            .processes = {
                {.koid = 2, .name = "p1", .vmos = {1}},
@@ -300,7 +300,7 @@ TEST_F(SummaryUnitTest, MissingParent) {
   TestUtils::CreateCapture(
       &c, {.vmos =
                {
-                   {.koid = 2, .name = "v2", .committed_bytes = 100, .parent_koid = 1},
+                   {.koid = 2, .name = "v2", .parent_koid = 1, .committed_bytes = 100},
                },
            .processes = {
                {.koid = 2, .name = "p1", .vmos = {2}},
@@ -329,10 +329,10 @@ TEST_F(SummaryUnitTest, Kernel) {
                                        {
                                            .wired_bytes = 10,
                                            .total_heap_bytes = 20,
+                                           .vmo_bytes = 60,
                                            .mmu_overhead_bytes = 30,
                                            .ipc_bytes = 40,
                                            .other_bytes = 50,
-                                           .vmo_bytes = 60,
                                        },
                                });
   Summary s(c);
