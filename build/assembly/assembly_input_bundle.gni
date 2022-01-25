@@ -160,7 +160,7 @@ template("assembly_input_bundle_archive") {
       assembly_input_archives = [
         {
           path = rebase_path(files.archive, root_build_dir)
-          label = get_label_info(target_name, "label_with_toolchain")
+          label = get_label_info(":$target_name", "label_with_toolchain")
         },
       ]
     }
