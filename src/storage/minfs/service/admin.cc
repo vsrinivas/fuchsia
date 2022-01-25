@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/minfs/admin_service.h"
+#include "src/storage/minfs/service/admin.h"
 
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/syslog/cpp/macros.h>

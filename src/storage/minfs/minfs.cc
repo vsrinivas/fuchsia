@@ -51,7 +51,7 @@
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/fvm/client.h"
-#include "src/storage/minfs/admin_service.h"
+#include "src/storage/minfs/service/admin.h"
 #endif
 
 #include <utility>

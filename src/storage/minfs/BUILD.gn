@@ -90,8 +90,6 @@ static_library("minfs") {
       "minfs_inspector.h",
     ]
     sources += [
-      "admin_service.cc",
-      "admin_service.h",
       "allocator/allocator.cc",
       "allocator/inode_manager.cc",
       "allocator/storage.cc",
@@ -117,6 +115,8 @@ static_library("minfs") {
       "minfs_inspect_tree.cc",
       "minfs_target.cc",
       "resizeable_vmo_buffer.cc",
+      "service/admin.cc",
+      "service/admin.h",
       "superblock.cc",
       "vnode_allocation.cc",
     ]
