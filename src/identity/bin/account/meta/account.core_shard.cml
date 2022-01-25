@@ -5,6 +5,12 @@
             url: "fuchsia-pkg://fuchsia.com/account#meta/account.cm",
         },
     ],
+    use: [
+        {
+            protocol: "fuchsia.identity.account.AccountManager",
+            from: "#account",
+        },
+    ],
     offer: [
         {
             directory: "dev",
