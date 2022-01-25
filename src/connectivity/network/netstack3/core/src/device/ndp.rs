@@ -591,7 +591,7 @@ pub(crate) struct NdpState<D: LinkDevice> {
     default_routers: HashSet<LinkLocalUnicastAddr<Ipv6Addr>>,
 
     /// List of on-link prefixes.
-    on_link_prefixes: HashSet<AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>>,
+    on_link_prefixes: HashSet<Subnet<Ipv6Addr>>,
 
     /// Number of remaining Router Solicitation messages to send.
     router_solicitations_remaining: u8,
@@ -703,8 +703,8 @@ impl<D: LinkDevice> NdpState<D> {
     }
 
     /// Do we already know about this prefix?
-    fn has_prefix(&self, addr_sub: &AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>) -> bool {
-        self.on_link_prefixes.contains(addr_sub)
+    fn has_prefix(&self, subnet: &Subnet<Ipv6Addr>) -> bool {
+        self.on_link_prefixes.contains(subnet)
     }
 
     /// Adds a new prefix to our list of on-link prefixes.
@@ -712,8 +712,8 @@ impl<D: LinkDevice> NdpState<D> {
     /// # Panics
     ///
     /// Panics if the prefix already exists in our list of on-link prefixes.
-    fn add_prefix(&mut self, addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>) {
-        assert!(self.on_link_prefixes.insert(addr_sub));
+    fn add_prefix(&mut self, subnet: Subnet<Ipv6Addr>) {
+        assert!(self.on_link_prefixes.insert(subnet));
     }
 
     /// Removes a prefix from our list of on-link prefixes.
@@ -721,8 +721,8 @@ impl<D: LinkDevice> NdpState<D> {
     /// # Panics
     ///
     /// Panics if the prefix doesn't exist in our list of on-link prefixes.
-    fn remove_prefix(&mut self, addr_sub: &AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>) {
-        assert!(self.on_link_prefixes.remove(addr_sub));
+    fn remove_prefix(&mut self, subnet: &Subnet<Ipv6Addr>) {
+        assert!(self.on_link_prefixes.remove(subnet));
     }
 
     /// Handle the invalidation of a prefix.
@@ -730,7 +730,7 @@ impl<D: LinkDevice> NdpState<D> {
     /// # Panics
     ///
     /// Panics if the prefix doesn't exist in our list of on-link prefixes.
-    fn invalidate_prefix(&mut self, addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>) {
+    fn invalidate_prefix(&mut self, subnet: Subnet<Ipv6Addr>) {
         // As per RFC 4861 section 6.3.5:
         // Whenever the invalidation timer expires for a Prefix List entry, that
         // entry is discarded. No existing Destination Cache entries need be
@@ -738,7 +738,7 @@ impl<D: LinkDevice> NdpState<D> {
         // existing Neighbor Cache entry, Neighbor Unreachability Detection will
         // perform any needed recovery.
 
-        self.remove_prefix(&addr_sub);
+        self.remove_prefix(&subnet);
     }
 
     // Interface parameters learned from Router Advertisements.
@@ -809,7 +809,7 @@ pub(crate) enum InnerNdpTimerId {
     /// `ip` is the identifying IP of the router.
     RouterInvalidation { ip: LinkLocalUnicastAddr<Ipv6Addr> },
     /// Timer to invalidate a prefix.
-    PrefixInvalidation { addr_subnet: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> },
+    PrefixInvalidation { subnet: Subnet<Ipv6Addr> },
     /// Timer to deprecate an address configured via SLAAC.
     DeprecateSlaacAddress { addr: UnicastAddr<Ipv6Addr> },
     /// Timer to invalidate an address configured via SLAAC.
@@ -845,9 +845,9 @@ impl<D: LinkDevice, DeviceId: Copy> NdpTimerId<D, DeviceId> {
 
     pub(crate) fn new_prefix_invalidation(
         device_id: DeviceId,
-        addr_subnet: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
+        subnet: Subnet<Ipv6Addr>,
     ) -> NdpTimerId<D, DeviceId> {
-        NdpTimerId::new(device_id, InnerNdpTimerId::PrefixInvalidation { addr_subnet })
+        NdpTimerId::new(device_id, InnerNdpTimerId::PrefixInvalidation { subnet })
     }
 
     pub(crate) fn new_deprecate_slaac_address(
@@ -914,7 +914,7 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
             // not panic.
             ctx.get_state_mut_with(id.device_id).invalidate_default_router(&ip)
         }
-        InnerNdpTimerId::PrefixInvalidation { addr_subnet } => {
+        InnerNdpTimerId::PrefixInvalidation { subnet } => {
             // Invalidate the prefix.
             //
             // The call to `invalidate_prefix` may panic if `addr_subnet` is not
@@ -923,7 +923,7 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
             // with the on-link flag set. Given this we know that `addr_subnet`
             // must exist if this timer was fired so `invalidate_prefix` will
             // not panic.
-            ctx.get_state_mut_with(id.device_id).invalidate_prefix(addr_subnet);
+            ctx.get_state_mut_with(id.device_id).invalidate_prefix(subnet);
         }
         InnerNdpTimerId::DeprecateSlaacAddress { addr } => {
             ctx.deprecate_slaac_addr(id.device_id, &addr);
@@ -1840,8 +1840,14 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             prefix_info
                         );
 
-                        let addr_sub = match prefix_info.addr_subnet() {
-                            Ok(a) => a,
+                        let subnet = match prefix_info.subnet() {
+                            Ok(subnet) => match UnicastAddr::new(subnet.network()) {
+                                Some(_) => subnet,
+                                None => {
+                                    trace!("receive_ndp_packet: invalid non-unicast prefix ({:?}), so ignoring", subnet);
+                                    continue;
+                                }
+                            },
                             Err(err) => {
                                 trace!("receive_ndp_packet: malformed prefix information ({:?}), so ignoring", err);
                                 continue;
@@ -1860,15 +1866,15 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                         if prefix_info.on_link_flag() {
                             // Timer ID for this prefix's invalidation.
                             let timer_id =
-                                NdpTimerId::new_prefix_invalidation(device_id, addr_sub).into();
+                                NdpTimerId::new_prefix_invalidation(device_id, subnet).into();
 
                             if let Some(valid_lifetime) = prefix_info.valid_lifetime() {
-                                if !ndp_state.has_prefix(&addr_sub) {
+                                if !ndp_state.has_prefix(&subnet) {
                                     // `add_prefix` may panic if the prefix
                                     // already exists in our prefix list, but we
                                     // will only reach here if it doesn't so we
                                     // know `add_prefix` will not panic.
-                                    ndp_state.add_prefix(addr_sub);
+                                    ndp_state.add_prefix(subnet);
                                 }
 
                                 // Reset invalidation timer.
@@ -1881,7 +1887,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                     let _: Option<C::Instant> =
                                         ctx.schedule_timer(valid_lifetime.get(), timer_id);
                                 }
-                            } else if ndp_state.has_prefix(&addr_sub) {
+                            } else if ndp_state.has_prefix(&subnet) {
                                 trace!("receive_ndp_packet: on-link prefix is known and has valid lifetime = 0, so invaliding");
 
                                 // If the on-link flag is set, the valid
@@ -1895,7 +1901,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                 let _: Option<C::Instant> = ctx.cancel_timer(timer_id);
 
                                 let ndp_state = ctx.get_state_mut_with(device_id);
-                                ndp_state.invalidate_prefix(addr_sub);
+                                ndp_state.invalidate_prefix(subnet);
                             } else {
                                 // If the on-link flag is set, the valid
                                 // lifetime is 0 and the prefix is not present
@@ -3767,7 +3773,7 @@ mod tests {
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]);
         let prefix_length = 120;
-        let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
+        let subnet = Subnet::new(prefix, prefix_length).unwrap();
 
         // Receive a new RA with new prefix.
 
@@ -3787,7 +3793,7 @@ mod tests {
             &mut ctx, device_id,
         );
         // Prefix should be in our list now.
-        assert!(ndp_state.has_prefix(&addr_subnet));
+        assert!(ndp_state.has_prefix(&subnet));
         // Invalidation timeout should be set.
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
@@ -3809,7 +3815,7 @@ mod tests {
             &mut ctx, device_id,
         );
         // Should remove the prefix from our list now.
-        assert!(!ndp_state.has_prefix(&addr_subnet));
+        assert!(!ndp_state.has_prefix(&subnet));
         // Invalidation timeout should be unset.
         assert_empty(ctx.dispatcher.timer_events());
 
@@ -3832,7 +3838,7 @@ mod tests {
             &mut ctx, device_id,
         );
         // Prefix should be in our list now.
-        assert!(ndp_state.has_prefix(&addr_subnet));
+        assert!(ndp_state.has_prefix(&subnet));
         // Invalidation timeout should be set.
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
@@ -3854,7 +3860,7 @@ mod tests {
             &mut ctx, device_id,
         );
         // Prefix should be in our list still.
-        assert!(ndp_state.has_prefix(&addr_subnet));
+        assert!(ndp_state.has_prefix(&subnet));
         // Invalidation timeout should still be set.
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
@@ -3862,14 +3868,14 @@ mod tests {
 
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
-            NdpTimerId::new_prefix_invalidation(device_id.into(), addr_subnet).into()
+            NdpTimerId::new_prefix_invalidation(device_id.into(), subnet).into()
         );
 
         // Prefix should no longer be in our list.
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx, device_id,
         );
-        assert!(!ndp_state.has_prefix(&addr_subnet));
+        assert!(!ndp_state.has_prefix(&subnet));
 
         // No more timers.
         assert_eq!(trigger_next_timer(&mut ctx), None);
@@ -4705,11 +4711,11 @@ mod tests {
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
-        let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
+        let subnet = Subnet::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
         let expected_addr = UnicastAddr::new(Ipv6Addr::from(expected_addr)).unwrap();
-        let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
+        let expected_subnet = Subnet::from_host(*expected_addr, prefix_length).unwrap();
 
         // Enable DAD for future IPs.
         crate::device::set_ipv6_configuration(
@@ -4744,7 +4750,7 @@ mod tests {
             device.id().into(),
         );
         // Prefix should be in our list now.
-        assert!(ndp_state.has_prefix(&addr_subnet));
+        assert!(ndp_state.has_prefix(&subnet));
         // No new address should be formed.
         assert_empty(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
@@ -4781,7 +4787,7 @@ mod tests {
             &mut ctx,
             device.id().into(),
         );
-        assert!(ndp_state.has_prefix(&addr_subnet));
+        assert!(ndp_state.has_prefix(&subnet));
 
         // Should have gotten a new IP.
         assert_eq!(
@@ -4794,7 +4800,7 @@ mod tests {
             .iter_global_ipv6_addrs()
             .last()
             .unwrap();
-        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Tentative { dad_transmits_remaining: None });
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
@@ -4839,7 +4845,7 @@ mod tests {
             .iter_global_ipv6_addrs()
             .last()
             .unwrap();
-        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
@@ -4870,7 +4876,7 @@ mod tests {
             &mut ctx,
             device.id().into(),
         );
-        assert!(ndp_state.has_prefix(&addr_subnet));
+        assert!(ndp_state.has_prefix(&subnet));
 
         // Should not have changed.
         assert_eq!(
@@ -4883,7 +4889,7 @@ mod tests {
             .iter_global_ipv6_addrs()
             .last()
             .unwrap();
-        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
@@ -4941,7 +4947,7 @@ mod tests {
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs((valid_lifetime - preferred_lifetime).into())),
             vec!(
-                NdpTimerId::new_prefix_invalidation(device.id().into(), addr_subnet).into(),
+                NdpTimerId::new_prefix_invalidation(device.id().into(), subnet).into(),
                 NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr).into()
             )
         );
@@ -4965,7 +4971,7 @@ mod tests {
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
-        let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
+        let subnet = Subnet::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
         let expected_addr = UnicastAddr::new(Ipv6Addr::from(expected_addr)).unwrap();
@@ -5006,7 +5012,7 @@ mod tests {
             &mut ctx,
             device.id().into(),
         );
-        assert!(ndp_state.has_prefix(&addr_subnet));
+        assert!(ndp_state.has_prefix(&subnet));
 
         // Should NOT have gotten a new IP.
         assert_empty(
@@ -5051,11 +5057,11 @@ mod tests {
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
-        let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
+        let subnet = Subnet::new(prefix, prefix_length).unwrap();
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
         let expected_addr = UnicastAddr::new(Ipv6Addr::from(expected_addr)).unwrap();
-        let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
+        let expected_subnet = Subnet::from_host(*expected_addr, prefix_length).unwrap();
 
         // Enable DAD for future IPs.
         crate::device::set_ipv6_configuration(
@@ -5094,7 +5100,7 @@ mod tests {
             &mut ctx,
             device.id().into(),
         );
-        assert!(ndp_state.has_prefix(&addr_subnet));
+        assert!(ndp_state.has_prefix(&subnet));
 
         // Should have gotten a new IP.
         assert_eq!(
@@ -5107,7 +5113,7 @@ mod tests {
             .iter_global_ipv6_addrs()
             .last()
             .unwrap();
-        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Tentative { dad_transmits_remaining: None });
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
@@ -5158,7 +5164,7 @@ mod tests {
             .iter_global_ipv6_addrs()
             .last()
             .unwrap();
-        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
@@ -5190,7 +5196,7 @@ mod tests {
             &mut ctx,
             device.id().into(),
         );
-        assert!(ndp_state.has_prefix(&addr_subnet));
+        assert!(ndp_state.has_prefix(&subnet));
 
         // Should not have changed.
         assert_eq!(
@@ -5203,7 +5209,7 @@ mod tests {
             .iter_global_ipv6_addrs()
             .last()
             .unwrap();
-        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Deprecated);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
@@ -5256,7 +5262,7 @@ mod tests {
             &mut ctx,
             device.id().into(),
         );
-        assert!(ndp_state.has_prefix(&addr_subnet));
+        assert!(ndp_state.has_prefix(&subnet));
 
         // Should not have changed.
         assert_eq!(
@@ -5269,7 +5275,7 @@ mod tests {
             .iter_global_ipv6_addrs()
             .last()
             .unwrap();
-        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Deprecated);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
@@ -5322,7 +5328,7 @@ mod tests {
             &mut ctx,
             device.id().into(),
         );
-        assert!(ndp_state.has_prefix(&addr_subnet));
+        assert!(ndp_state.has_prefix(&subnet));
 
         // Should not have changed.
         assert_eq!(
@@ -5335,7 +5341,7 @@ mod tests {
             .iter_global_ipv6_addrs()
             .last()
             .unwrap();
-        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
@@ -5381,7 +5387,7 @@ mod tests {
             .iter_global_ipv6_addrs()
             .last()
             .unwrap();
-        assert_eq!(*entry.addr_sub(), expected_addr_sub);
+        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
@@ -5410,7 +5416,7 @@ mod tests {
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs((valid_lifetime - preferred_lifetime).into())),
             vec!(
-                NdpTimerId::new_prefix_invalidation(device.id().into(), addr_subnet).into(),
+                NdpTimerId::new_prefix_invalidation(device.id().into(), subnet).into(),
                 NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr).into()
             )
         );

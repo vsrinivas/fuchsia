@@ -367,8 +367,8 @@ pub mod options {
     use core::convert::TryFrom;
     use core::time::Duration;
 
-    use net_types::ip::{AddrSubnet, AddrSubnetError, IpAddress as _, Ipv6Addr, Subnet};
-    use net_types::{UnicastAddr, UnicastAddress};
+    use net_types::ip::{IpAddress as _, Ipv6Addr, Subnet, SubnetError};
+    use net_types::UnicastAddress;
     use nonzero_ext::nonzero;
     use packet::records::options::{
         LengthEncoding, OptionBuilder, OptionLayout, OptionParseLayout, OptionsImpl,
@@ -697,11 +697,9 @@ pub mod options {
             &self.prefix
         }
 
-        /// Get an [`AddrSubnet`] from this prefix.
-        pub fn addr_subnet(
-            &self,
-        ) -> Result<AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>, AddrSubnetError> {
-            AddrSubnet::new(self.prefix, self.prefix_length)
+        /// Gets the prefix as a [`Subnet`].
+        pub fn subnet(&self) -> Result<Subnet<Ipv6Addr>, SubnetError> {
+            Subnet::new(self.prefix, self.prefix_length)
         }
     }
 
