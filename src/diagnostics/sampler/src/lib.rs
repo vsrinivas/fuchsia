@@ -10,6 +10,7 @@ use {
     fuchsia_inspect::{self as inspect, health::Reporter},
     futures::{StreamExt, TryStreamExt},
     sampler_config as config,
+    sampler_config_lib::Config as ManifestConfig,
     tracing::{info, warn},
 };
 
@@ -22,13 +23,9 @@ pub const PROGRAM_NAME: &str = "sampler";
 /// args used to configure sampler.
 #[derive(Debug, Default, FromArgs, PartialEq)]
 #[argh(subcommand, name = "sampler")]
-pub struct Args {
-    /// required minimal sample rate.
-    #[argh(option)]
-    minimum_sample_rate_sec: i64,
-}
+pub struct Args {}
 
-pub async fn main(opt: Args) -> Result<(), Error> {
+pub async fn main() -> Result<(), Error> {
     // Serve inspect.
     let mut service_fs = ServiceFs::new();
     service_fs.take_and_serve_directory_handle()?;
@@ -41,8 +38,10 @@ pub async fn main(opt: Args) -> Result<(), Error> {
     // Starting service.
     inspect::component::health().set_starting_up();
 
+    let ManifestConfig { minimum_sample_rate_sec } = ManifestConfig::from_args();
+
     match config::SamplerConfig::from_directories(
-        opt.minimum_sample_rate_sec,
+        minimum_sample_rate_sec,
         "/config/data/metrics", /* Sampler config */
         "/config/data/fire",    /* FIRE config */
     ) {

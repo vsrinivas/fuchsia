@@ -63,13 +63,6 @@ rustc_test("integration-bin") {
   ]
 }
 
-# Sampler component with a frequent sample rate for testing
-fuchsia_component("sampler-for-test") {
-  testonly = true
-  manifest = "meta/sampler-for-test.cml"
-  deps = [ "//src/diagnostics/launcher:bin" ]
-}
-
 fuchsia_unittest_component("sampler-integration-test") {
   manifest = "meta/integration-test.cml"
   deps = [ ":integration-bin" ]
@@ -135,7 +128,6 @@ fuchsia_test_package("sampler-integration-tests") {
   ]
   deps = [
     ":reboot-required-config",
-    ":sampler-for-test",
     ":test-fire-component-config",
     ":test-fire-project-config",
     ":test-sampler-config",
@@ -144,6 +136,8 @@ fuchsia_test_package("sampler-integration-tests") {
     ":validation-sampler-resources",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
+    "//src/diagnostics/sampler:sampler-component",
+    "//src/diagnostics/sampler:sampler-test-config",
     "//src/diagnostics/sampler/tests/test_component:single_counter_test_component",
   ]
 }

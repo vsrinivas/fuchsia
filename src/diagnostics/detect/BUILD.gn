@@ -85,6 +85,7 @@ fuchsia_structured_config_values("triage-detect-test-config") {
 fuchsia_structured_config_rust_lib("triage-detect-config-lib") {
   name = "triage_detect_config"
   cm_target = ":triage-detect-manifest"
+  fidl_library_name = "cf.sc.internal.detect"
 }
 
 fuchsia_component("triage-detect-component") {

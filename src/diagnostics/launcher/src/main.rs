@@ -41,7 +41,7 @@ async fn main() -> Result<(), Error> {
         CreateChildArgs::Detect(_args) => detect::main().await,
         CreateChildArgs::Persistence(args) => persistence::main(args).await,
         CreateChildArgs::LogStats(_args) => log_stats::main().await,
-        CreateChildArgs::Sampler(args) => sampler::main(args).await,
+        CreateChildArgs::Sampler(_args) => sampler::main().await,
         CreateChildArgs::Kcounter(_args) => kcounter::main().await,
     }
 }

@@ -27,6 +27,7 @@ group("dynamic_offers") {
 group("structured_config") {
   visibility = [
     "//src/diagnostics/detect:*",
+    "//src/diagnostics/sampler:*",
     "//src/experiences/session_shells/ermine/session:*",
     "//src/lib/component_hub/tests:*",
     "//src/lib/fuchsia-component-test/tests/echo_client_sc:*",

@@ -1,10 +1,46 @@
 {
-    include: [ "//src/diagnostics/sampler/meta/common.shard.cml" ],
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
-        args: [
-            "sampler",
-            "--minimum-sample-rate-sec",
-            "10",
-        ],
+        runner: "elf",
+        binary: "bin/launcher",
+        args: [ "sampler" ],
+    },
+    use: [
+        {
+            protocol: "fuchsia.logger.Log",
+            from: "parent",
+        },
+        {
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            from: "parent",
+        },
+        {
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            from: "parent",
+        },
+        {
+            protocol: "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+            from: "parent",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
+    config: {
+        minimum_sample_rate_sec: { type: "int64" },
     },
 }

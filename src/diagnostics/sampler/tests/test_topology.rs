@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 const MOCK_COBALT_URL: &str = "#meta/mock_cobalt.cm";
 const SINGLE_COUNTER_URL: &str = "#meta/single_counter_test_component.cm";
-const SAMPLER_URL: &str = "#meta/sampler-for-test.cm";
+const SAMPLER_URL: &str = "#meta/sampler.cm";
 const ARCHIVIST_URL: &str = "#meta/archivist-for-embedding.cm";
 
 pub async fn create() -> Result<RealmInstance, Error> {

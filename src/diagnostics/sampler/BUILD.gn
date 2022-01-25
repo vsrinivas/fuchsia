@@ -20,6 +20,7 @@ rustc_library("lib") {
   ]
 
   deps = [
+    ":sampler-config-lib",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
@@ -68,17 +69,40 @@ fuchsia_unittest_package("sampler-tests") {
 }
 
 # Rules defining the Sampler component.
-fuchsia_component("sampler-component") {
+fuchsia_component_manifest("sampler-manifest") {
   component_name = "sampler"
+  manifest = "meta/sampler.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("sampler-component") {
+  cm_target = ":sampler-manifest"
   deps = [
     "//src/diagnostics/config/sampler:sampler-config-data",
     "//src/diagnostics/launcher:bin",
   ]
-  manifest = "meta/sampler.cml"
+}
+
+fuchsia_structured_config_values("sampler-config") {
+  values = "configs/default.json5"
+  cm_target = ":sampler-manifest"
+}
+
+fuchsia_structured_config_values("sampler-test-config") {
+  values = "configs/integration-test.json5"
+  cm_target = ":sampler-manifest"
+}
+
+fuchsia_structured_config_rust_lib("sampler-config-lib") {
+  cm_target = ":sampler-manifest"
+  fidl_library_name = "cf.sc.internal.sampler"
 }
 
 fuchsia_package("sampler") {
-  deps = [ ":sampler-component" ]
+  deps = [
+    ":sampler-component",
+    ":sampler-config",
+  ]
 }
 
 group("tests") {
