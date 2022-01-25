@@ -895,7 +895,10 @@ impl Telemetry {
                         self.stats_logger
                             .log_downtime_cobalt_metrics(adjusted_downtime, &state.disconnect_info)
                             .await;
-                        self.stats_logger.log_reconnect_cobalt_metrics(total_downtime).await;
+                        let disconnect_source = state.disconnect_info.disconnect_source;
+                        self.stats_logger
+                            .log_reconnect_cobalt_metrics(total_downtime, disconnect_source)
+                            .await;
                     }
                     self.connection_state = ConnectionState::Connected(ConnectedState {
                         iface_id,
@@ -2009,7 +2012,12 @@ impl StatsLogger {
         );
     }
 
-    async fn log_reconnect_cobalt_metrics(&mut self, reconnect_duration: zx::Duration) {
+    async fn log_reconnect_cobalt_metrics(
+        &mut self,
+        reconnect_duration: zx::Duration,
+        disconnect_reason: fidl_sme::DisconnectSource,
+    ) {
+        let mut metric_events = vec![];
         let reconnect_duration_dim = {
             use metrics::ConnectivityWlanMetricDimensionReconnectDuration::*;
             match reconnect_duration {
@@ -2020,12 +2028,35 @@ impl StatsLogger {
                 _ => AtLeast30Seconds,
             }
         };
-        log_cobalt_1dot1!(
+        metric_events.push(MetricEvent {
+            metric_id: metrics::RECONNECT_BREAKDOWN_BY_DURATION_METRIC_ID,
+            event_codes: vec![reconnect_duration_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        // Log the reconnect time for roaming or for unexpected disconnects such as lost signal or
+        // connection terminated by AP.
+        if let fidl_sme::DisconnectSource::User(reason) = disconnect_reason {
+            if is_roam_disconnect(reason) {
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::ROAMING_RECONNECT_DURATION_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::IntegerValue(reconnect_duration.into_micros()),
+                });
+            }
+        } else {
+            // The other disconnect sources are AP and MLME, which are all considered unexpected.
+            metric_events.push(MetricEvent {
+                metric_id: metrics::NON_ROAMING_RECONNECT_DURATION_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(reconnect_duration.into_micros()),
+            });
+        }
+
+        log_cobalt_1dot1_batch!(
             self.cobalt_1dot1_proxy,
-            log_occurrence,
-            metrics::RECONNECT_BREAKDOWN_BY_DURATION_METRIC_ID,
-            1,
-            &[reconnect_duration_dim as u32],
+            &mut metric_events.iter_mut(),
+            "log_reconnect_cobalt_metrics",
         );
     }
 
@@ -3561,6 +3592,45 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn test_log_daily_roaming_disconnect_per_day_connected_cobalt_metric() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(12.hours(), test_fut.as_mut());
+
+        let info = DisconnectInfo {
+            disconnect_source: fidl_sme::DisconnectSource::User(
+                fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch,
+            ),
+            ..fake_disconnect_info()
+        };
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(12.hours(), test_fut.as_mut());
+
+        let dpdc_ratios =
+            test_helper.get_logged_metrics(metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID);
+        assert_eq!(dpdc_ratios.len(), 1);
+        // 1 disconnect, 0.5 day connected => 2 disconnects per day connected
+        // (which equals 20_0000 in TenThousandth unit)
+        assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(20_000));
+
+        let non_roam_dpdc_ratios = test_helper
+            .get_logged_metrics(metrics::NON_ROAMING_DISCONNECT_PER_DAY_CONNECTED_METRIC_ID);
+        assert_eq!(non_roam_dpdc_ratios.len(), 1);
+        assert_eq!(non_roam_dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(0));
+
+        let roam_dpdc_ratios =
+            test_helper.get_logged_metrics(metrics::ROAMING_DISCONNECT_PER_DAY_CONNECTED_METRIC_ID);
+        assert_eq!(roam_dpdc_ratios.len(), 1);
+        assert_eq!(roam_dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(20_000));
+    }
+
+    #[fuchsia::test]
     fn test_log_daily_disconnect_per_day_connected_cobalt_metric_device_high_disconnect() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.send_connected_event(random_bss_description!(Wpa2));
@@ -4822,6 +4892,44 @@ mod tests {
             ]
         );
         assert_eq!(metrics[0].payload, MetricEventPayload::Count(1));
+
+        // Verify the reconnect duration was logged for an unexpected disconnect and not a roam.
+        // 3 seconds would be sent as 3,000,000 microseconds.
+        let metrics =
+            test_helper.get_logged_metrics(metrics::NON_ROAMING_RECONNECT_DURATION_METRIC_ID);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].payload, MetricEventPayload::IntegerValue(3_000_000));
+        assert_eq!(
+            test_helper.get_logged_metrics(metrics::ROAMING_RECONNECT_DURATION_METRIC_ID).len(),
+            0
+        );
+
+        // Send a disconnect and reconnect for a proactive network switch.
+        test_helper.clear_cobalt_events();
+        let info = DisconnectInfo {
+            disconnect_source: fidl_sme::DisconnectSource::User(
+                fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch,
+            ),
+            ..fake_disconnect_info()
+        };
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let downtime = 5_000_000;
+        test_helper.advance_by(downtime.micros(), test_fut.as_mut());
+
+        // Reconnect and verify that a roam reconnect time is logged and a non-roam reconnect time
+        // is not logged.
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let roam_reconnect =
+            test_helper.get_logged_metrics(metrics::ROAMING_RECONNECT_DURATION_METRIC_ID);
+        assert_eq!(roam_reconnect.len(), 1);
+        assert_eq!(roam_reconnect[0].payload, MetricEventPayload::IntegerValue(downtime));
+        let non_roam_reconnect =
+            test_helper.get_logged_metrics(metrics::NON_ROAMING_RECONNECT_DURATION_METRIC_ID);
+        assert_eq!(non_roam_reconnect.len(), 0);
     }
 
     #[fuchsia::test]
