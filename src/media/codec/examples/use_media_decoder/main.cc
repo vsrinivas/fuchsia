@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/media/test/frame_sink.h>
 #include <lib/media/test/one_shot_event.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
@@ -37,28 +36,7 @@ namespace {
 constexpr uint32_t kMaxPeekBytes = 8 * 1024 * 1024;
 
 void usage(const char* prog_name) {
-  printf(
-      "usage: %s (--aac_adts|--h264) [--imagepipe [--fps=<double>]] "
-      "<input_file> [<output_file>]\n",
-      prog_name);
-}
-
-std::optional<double> GetDoubleOption(const fxl::CommandLine& command_line,
-                                      std::string option_name) {
-  std::string option_as_string;
-  if (!command_line.GetOptionValue(option_name.c_str(), &option_as_string)) {
-    return std::nullopt;
-  }
-  const char* str_begin = option_as_string.c_str();
-  char* str_end;
-  errno = 0;
-  double result = std::strtod(str_begin, &str_end);
-  if (str_end == str_begin || (result == HUGE_VAL && errno == ERANGE)) {
-    printf("error parsing comamnd line option as double: %s\n", option_name.c_str());
-    usage(command_line.argv0().c_str());
-    exit(-1);
-  }
-  return result;
+  printf("usage: %s (--aac_adts|--h264) <input_file> [<output_file>]\n", prog_name);
 }
 
 std::optional<int32_t> GetInt32Option(const fxl::CommandLine& command_line,
@@ -133,43 +111,11 @@ int main(int argc, char* argv[]) {
     output_file_name = command_line.positional_args()[1];
   }
 
-  // In case of --h264 and --imagepipe, this will be non-nullptr:
-  std::unique_ptr<FrameSink> frame_sink;
-
   uint8_t md[SHA256_DIGEST_LENGTH];
-
-  bool use_imagepipe = command_line.HasOption("imagepipe");
-
-  std::optional<double> maybe_frames_per_second = GetDoubleOption(command_line, "fps");
-  if (maybe_frames_per_second && !use_imagepipe) {
-    printf("--fps requires --imagepipe\n");
-    usage(command_line.argv0().c_str());
-    exit(-1);
-  }
-  double frames_per_second = maybe_frames_per_second.value_or(24.0);
 
   uint32_t loop_stream_count = GetInt32Option(command_line, "loop_stream_count").value_or(1);
   uint32_t frame_count =
       GetInt32Option(command_line, "frame_count").value_or(std::numeric_limits<int32_t>::max());
-
-  OneShotEvent image_pipe_ready;
-  if (use_imagepipe) {
-    // We must do this part of setup on the fidl_thread, because we want the
-    // FrameSink (or rather, code it uses) to bind to loop (whether explicitly
-    // or implicitly), and we want that setup/binding to occur on the same
-    // thread as runs that loop (the fidl_thread), as that's a typical
-    // assumption of setup/binding code.
-    to_run_on_fidl_thread.emplace_back(
-        [&fidl_loop, &component_context, frames_per_second, &frame_sink, &image_pipe_ready] {
-          frame_sink = FrameSink::Create(
-              component_context.get(), &fidl_loop, frames_per_second,
-              [&image_pipe_ready](FrameSink* frame_sink) { image_pipe_ready.Signal(); });
-        });
-  } else {
-    // Queue this up since image_pipe_ready is also relied on to ensure that
-    // previously-queued lambdas have run.
-    to_run_on_fidl_thread.emplace_back([&image_pipe_ready] { image_pipe_ready.Signal(); });
-  }
 
   // Now we can run everything we've queued in to_run_on_fidl_thread.
   PostSerial(fidl_dispatcher, [to_run_on_fidl_thread = std::move(to_run_on_fidl_thread)]() mutable {
@@ -184,11 +130,6 @@ int main(int argc, char* argv[]) {
     // ~to_run_on_fidl_thread deletes some nullptr fit::closure(s)
   });
   ZX_DEBUG_ASSERT(to_run_on_fidl_thread.empty());
-
-  // This also effectively waits until after the lambdas in
-  // to_run_on_fidl_thread have run also, since image_pipe_ready can only be
-  // signalled after the last lambda in to_run_on_fidl_thread has run.
-  image_pipe_ready.Wait(zx::deadline_after(zx::sec(15)));
 
   auto in_stream_file =
       std::make_unique<InStreamFile>(&fidl_loop, fidl_thread, component_context.get(), input_file);
@@ -222,14 +163,13 @@ int main(int argc, char* argv[]) {
   } else if (command_line.HasOption("h264")) {
     use_decoder = [&fidl_loop, fidl_thread, codec_factory = std::move(codec_factory),
                    sysmem = std::move(sysmem), in_stream_peeker = in_stream_peeker.get(),
-                   frame_sink = frame_sink.get(), &test_params]() mutable {
+                   &test_params]() mutable {
       UseVideoDecoderParams params{
           .fidl_loop = &fidl_loop,
           .fidl_thread = fidl_thread,
           .codec_factory = std::move(codec_factory),
           .sysmem = std::move(sysmem),
           .in_stream = in_stream_peeker,
-          .frame_sink = frame_sink,
           .test_params = &test_params,
       };
       use_h264_decoder(std::move(params));
@@ -237,14 +177,13 @@ int main(int argc, char* argv[]) {
   } else if (command_line.HasOption("vp9")) {
     use_decoder = [&fidl_loop, fidl_thread, codec_factory = std::move(codec_factory),
                    sysmem = std::move(sysmem), in_stream_peeker = in_stream_peeker.get(),
-                   frame_sink = frame_sink.get(), &test_params]() mutable {
+                   &test_params]() mutable {
       UseVideoDecoderParams params{
           .fidl_loop = &fidl_loop,
           .fidl_thread = fidl_thread,
           .codec_factory = std::move(codec_factory),
           .sysmem = std::move(sysmem),
           .in_stream = in_stream_peeker,
-          .frame_sink = frame_sink,
           .test_params = &test_params,
       };
       use_vp9_decoder(std::move(params));
@@ -270,7 +209,6 @@ int main(int argc, char* argv[]) {
     printf("\n");
   }
 
-  // ~frame_sink
   // ~fidl_loop
   return 0;
 }

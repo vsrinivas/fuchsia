@@ -337,9 +337,6 @@ struct UseVideoDecoderParams {
   bool is_secure_output = false;
   bool is_secure_input = false;
   bool lax_mode = false;
-  // if not nullptr, send each frame to this FrameSink, which will
-  //     call back when the frame has been released by the sink.
-  FrameSink* frame_sink;
   // if set, is called to emit each frame in i420 format + timestamp
   //     info.
   EmitFrame emit_frame;

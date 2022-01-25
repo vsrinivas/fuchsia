@@ -12,7 +12,6 @@
 #include <lib/fit/defer.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/media/test/codec_client.h>
-#include <lib/media/test/frame_sink.h>
 #include <lib/media/test/one_shot_event.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
@@ -52,9 +51,6 @@ constexpr zx::duration kInStreamDeadlineDuration = zx::sec(30);
 // TODO(dustingreen): actually re-use the Codec instance for at least one more
 // stream, even if it's just to decode the same data again.
 constexpr uint64_t kStreamLifetimeOrdinal = 1;
-
-// Scenic ImagePipe doesn't allow image_id 0, so start here.
-constexpr uint32_t kFirstValidImageId = 1;
 
 constexpr uint8_t kLongStartCodeArray[] = {0x00, 0x00, 0x00, 0x01};
 constexpr uint8_t kShortStartCodeArray[] = {0x00, 0x00, 0x01};
@@ -733,8 +729,7 @@ void VideoDecoderRunner::Run() {
 
   // Separate thread to process the output.
   //
-  // codec_client outlives the thread (and for separate reasons below, all the
-  // frame_sink activity started by out_thread).
+  // codec_client outlives the thread.
   auto out_thread = std::make_unique<std::thread>([this]() {
     VLOGF("out_thread start");
     // We allow the server to send multiple output constraint updates if it
@@ -746,20 +741,7 @@ void VideoDecoderRunner::Run() {
     const fuchsia::media::VideoUncompressedFormat* raw = nullptr;
     std::optional<zx::time> frame_zero_time;
     uint64_t frame_index = 0;
-    uint32_t image_id = kFirstValidImageId;
-    std::atomic<uint32_t> async_put_frame_count = 0;
     while (true) {
-      if (params_.frame_sink) {
-        // Control concurrency of pending Present()s to scenic - this could be an issue for very
-        // large buffer collections, or in cases where we switch buffer collections a lot - in such
-        // cases Scenic can start complaining about too many queued Present()s.  This avoids the
-        // frame_sink needing to block/delay the output thread anywhere other than here.
-        //
-        // It'd be better if this were event driven, but this works for now.
-        while (async_put_frame_count + params_.frame_sink->GetPendingCount() >= 10) {
-          zx::nanosleep(zx::deadline_after(zx::msec(10)));
-        }
-      }
       VLOGF("BlockingGetEmittedOutput()...");
       std::unique_ptr<CodecOutput> output = codec_client_->BlockingGetEmittedOutput();
       VLOGF("BlockingGetEmittedOutput() done");
@@ -805,9 +787,7 @@ void VideoDecoderRunner::Run() {
 
       const fuchsia::media::Packet& packet = output->packet();
 
-      auto increment_frame_index = fit::defer([&frame_index]{
-        ++frame_index;
-      });
+      auto increment_frame_index = fit::defer([&frame_index] { ++frame_index; });
 
       if (!packet.has_header()) {
         // The server should not generate any empty packets.
@@ -816,10 +796,9 @@ void VideoDecoderRunner::Run() {
 
       // cleanup can run on any thread, and codec_client.RecycleOutputPacket() is ok with that since
       // it switches to the dispatcher thread before sending a message.
-      auto cleanup =
-          fit::defer([this, packet_header = fidl::Clone(packet.header())]() mutable {
-            codec_client_->RecycleOutputPacket(std::move(packet_header));
-          });
+      auto cleanup = fit::defer([this, packet_header = fidl::Clone(packet.header())]() mutable {
+        codec_client_->RecycleOutputPacket(std::move(packet_header));
+      });
 
       std::shared_ptr<const fuchsia::media::StreamOutputFormat> format = output->format();
 
@@ -1036,29 +1015,6 @@ void VideoDecoderRunner::Run() {
                            i420_stride, packet.has_timestamp_ish(),
                            packet.has_timestamp_ish() ? packet.timestamp_ish() : 0);
       }
-
-      if (params_.frame_sink) {
-        async_put_frame_count++;
-        zx::vmo image_vmo;
-        ZX_ASSERT(ZX_OK == buffer.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &image_vmo));
-        async::PostTask(
-            params_.fidl_loop->dispatcher(),
-            [this, image_id = image_id++, vmo = std::move(image_vmo),
-             vmo_offset = buffer.vmo_offset() + packet.start_offset() + raw->primary_start_offset,
-             format, cleanup = std::move(cleanup), &async_put_frame_count]() mutable {
-              params_.frame_sink->PutFrame(image_id, std::move(vmo), vmo_offset, format,
-                                           [cleanup = std::move(cleanup)] {
-                                             // The ~cleanup can run on any thread (the
-                                             // current thread is main_loop's thread),
-                                             // and codec_client is ok with that
-                                             // (because it switches over to |loop|'s
-                                             // thread before sending a Codec message).
-                                             //
-                                             // ~cleanup
-                                           });
-              async_put_frame_count--;
-            });
-      }
       // If we didn't std::move(cleanup) before here, then ~cleanup runs here.
     }
   end_of_output:;
@@ -1082,35 +1038,6 @@ void VideoDecoderRunner::Run() {
   VLOGF("before out_thread->join()...");
   out_thread->join();
   VLOGF("after out_thread->join()");
-
-  // We wait for frame_sink to return all the frames for these reasons:
-  //   * As of this writing, some noisy-in-the-log things can happen in Scenic
-  //     if we don't.
-  //   * We don't want to cancel display of any frames, because we want to see
-  //     the frames on the screen.
-  //   * We don't want the |cleanup| to run after codec_client is gone since the
-  //     |cleanup| calls codec_client.
-  //   * It's easier to grok if activity started by use_h264_decoder() is done
-  //     by the time use_h264_decoder() returns, given use_h264_decoder()'s role
-  //     as an overall sequencer.
-  if (params_.frame_sink) {
-    OneShotEvent frames_done_event;
-    fit::closure on_frames_returned = [&frames_done_event] { frames_done_event.Signal(); };
-    async::PostTask(params_.fidl_loop->dispatcher(), [frame_sink = params_.frame_sink,
-                                                      on_frames_returned =
-                                                          std::move(on_frames_returned)]() mutable {
-      frame_sink->PutEndOfStreamThenWaitForFramesReturnedAsync(std::move(on_frames_returned));
-    });
-    // The just-posted wait will set frames_done using the main_loop_'s thread,
-    // which is not this thread.
-    FX_LOGS(INFO) << "waiting for all frames to be returned from Scenic...";
-    frames_done_event.Wait(zx::deadline_after(zx::sec(30)));
-    FX_LOGS(INFO) << "all frames have been returned from Scenic";
-    // Now we know that there are zero frames in frame_sink, including zero
-    // frame cleanup(s) in-flight (in the sense of a pending/running cleanup
-    // that's touching codec_client to post any new work.  Work already posted
-    // via codec_client can still be in flight.  See below.)
-  }
 
   // Close the channels explicitly (just so we can more easily print messages
   // before and after vs. ~codec_client).

@@ -8,39 +8,6 @@ config("media_test_include_config") {
   include_dirs = [ "include" ]
 }
 
-source_set("frame_sink") {
-  testonly = true
-
-  sources = [
-    "frame_sink.cc",
-    "frame_sink_view.cc",
-  ]
-
-  include_dirs = [ "include" ]
-
-  public_configs = [ ":media_test_include_config" ]
-
-  public = [
-    "include/lib/media/test/frame_sink.h",
-    "include/lib/media/test/frame_sink_view.h",
-  ]
-
-  public_deps = [
-    "//src/lib/ui/base_view",
-    "//zircon/system/ulib/async",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.mediacodec",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/media/lib/codec_impl:fourcc",
-    "//src/media/lib/raw_video_writer:raw_video_writer",
-  ]
-}
-
 source_set("codec_buffer") {
   testonly = true
 
