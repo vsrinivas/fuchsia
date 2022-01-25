@@ -581,8 +581,6 @@ config("Wno-conversion") {
   visibility = [
     "//garnet/bin/trace:*",
     "//garnet/bin/trace/tests:*",
-    "//garnet/bin/trace_manager:*",
-    "//garnet/bin/trace_manager/tests:*",
     "//garnet/bin/ui/benchmarks/image_grid_cpp:*",
     "//garnet/bin/ui/benchmarks/transparency_benchmark:*",
     "//garnet/lib/debugger_utils:*",

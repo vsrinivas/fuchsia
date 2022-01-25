@@ -40,9 +40,6 @@ source_set("lib") {
     "//zircon/system/ulib/trace-reader",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {

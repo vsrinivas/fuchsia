@@ -183,13 +183,13 @@ TEST_F(TraceManagerTest, AlertSequence) {
   ASSERT_EQ(kAlertName, received_alert_name);
 
   // Sending multiple alerts before watching alerts.
-  for (size_t i = 0; i < 4; ++i) {
+  for (uint8_t i = 0; i < 4; ++i) {
     std::string alert_name = kAlertName;
     alert_name.append(1, 'A' + i);
     provider->SendAlert(alert_name.c_str());
   }
 
-  for (size_t i = 0; i < 4; ++i) {
+  for (uint8_t i = 0; i < 4; ++i) {
     received_alert_name.clear();
     controller()->WatchAlert(
         [&received_alert_name](std::string alert_name) { received_alert_name = alert_name; });
@@ -200,14 +200,14 @@ TEST_F(TraceManagerTest, AlertSequence) {
   }
 
   // Sending more than 16 alerts before watching alerts. The oldest alerts are discarded.
-  for (size_t i = 0; i < kMaxAlertQueueDepth + 2; ++i) {
+  for (uint8_t i = 0; i < kMaxAlertQueueDepth + 2; ++i) {
     std::string alert_name = kAlertName;
     alert_name.append(1, 'A' + i);
     provider->SendAlert(alert_name.c_str());
     RunLoopUntilIdle();
   }
 
-  for (size_t i = 2; i < kMaxAlertQueueDepth + 2; ++i) {
+  for (uint8_t i = 2; i < kMaxAlertQueueDepth + 2; ++i) {
     received_alert_name.clear();
     controller()->WatchAlert(
         [&received_alert_name](std::string alert_name) { received_alert_name = alert_name; });

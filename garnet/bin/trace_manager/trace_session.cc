@@ -45,7 +45,7 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
     return;
   }
 
-  uint32_t buffer_size_megabytes = buffer_size_megabytes_;
+  size_t buffer_size_megabytes = buffer_size_megabytes_;
   auto spec_iter = provider_specs_.find(bundle->name);
   if (spec_iter != provider_specs_.end()) {
     const TraceProviderSpec* spec = &spec_iter->second;

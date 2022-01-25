@@ -72,7 +72,7 @@ bool Config::ReadFrom(const std::string& config_file) {
           return false;
         launch_info->url = array[0].GetString();
         launch_info->arguments.emplace();
-        for (size_t i = 1; i < array.Size(); ++i) {
+        for (unsigned int i = 1; i < array.Size(); ++i) {
           if (!array[i].IsString())
             return false;
           launch_info->arguments->push_back(array[i].GetString());
