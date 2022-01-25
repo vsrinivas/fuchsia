@@ -1,0 +1,21 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/elf_stdio.shard.cml" ],
+    program: {
+        binary: "bin/netemul_runner",
+    },
+    capabilities: [
+        {
+            runner: "netemul_test_runner",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
+    expose: [
+        {
+            runner: "netemul_test_runner",
+            from: "self",
+        },
+    ],
+}

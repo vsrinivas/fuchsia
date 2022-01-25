@@ -1,0 +1,31 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("bin") {
+  output_name = "test_driver"
+  sources = [ "src/lib.rs" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+fuchsia_test_component("test-driver") {
+  manifest = "meta/test-driver.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_component("test-root") {
+  manifest = "meta/test-root.cml"
+  deps = [ ":test-driver" ]
+}
+
+fuchsia_test_package("netemul-runner-tests") {
+  test_components = [ ":test-root" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":netemul-runner-tests" ]
+}

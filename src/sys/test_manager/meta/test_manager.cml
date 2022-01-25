@@ -18,6 +18,10 @@
                     from: "#gtest_runner",
                 },
                 {
+                    runner: "netemul_test_runner",
+                    from: "#netemul_test_runner",
+                },
+                {
                     runner: "rust_test_runner",
                     from: "#rust_test_runner",
                 },

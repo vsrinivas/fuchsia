@@ -28,6 +28,10 @@
             url: "fuchsia-pkg://fuchsia.com/legacy-test-runner#meta/legacy-test-runner.cm",
         },
         {
+            name: "netemul_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/netemul-test-runner#meta/netemul-test-runner.cm",
+        },
+        {
             name: "rust_test_runner",
             url: "fuchsia-pkg://fuchsia.com/rust-test-runner#meta/rust-test-runner.cm",
         },
@@ -201,6 +205,7 @@
                 "#gtest_runner",
                 "#inspect_test_runner",
                 "#legacy_test_runner",
+                "#netemul_test_runner",
                 "#runner_memfs",
                 "#rust_test_runner",
                 "#starnix_test_runner",
