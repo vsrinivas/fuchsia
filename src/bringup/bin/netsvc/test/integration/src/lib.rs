@@ -38,10 +38,16 @@ const MOCK_BOARD_REVISION: u32 = 0xDEADBEEF;
 const PAVE_IMAGE_LEN: u64 = (50 << 10) + 20;
 const PAVE_IMAGE_LEN_USIZE: usize = PAVE_IMAGE_LEN as usize;
 
-fn create_netsvc_realm<'a>(
+fn create_netsvc_realm<'a, N, T, V>(
     sandbox: &'a netemul::TestSandbox,
-    name: impl Into<Cow<'a, str>>,
-) -> (netemul::TestRealm<'a>, impl Future<Output = ()> + Unpin) {
+    name: N,
+    args: V,
+) -> (netemul::TestRealm<'a>, impl Future<Output = ()> + Unpin)
+where
+    N: Into<Cow<'a, str>>,
+    T: Into<String>,
+    V: IntoIterator<Item = T>,
+{
     use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 
     let (mock_dir, server_end) = fidl::endpoints::create_endpoints().expect("create endpoints");
@@ -199,7 +205,7 @@ fn create_netsvc_realm<'a>(
                         NETSVC_URL.to_string(),
                     )),
                     name: Some(NETSVC_NAME.to_string()),
-                    program_args: Some(vec!["--netboot".to_string(), "--all-features".to_string()]),
+                    program_args: Some(args.into_iter().map(Into::into).collect()),
                     uses: Some(fidl_fuchsia_netemul::ChildUses::Capabilities(vec![
                         fidl_fuchsia_netemul::Capability::NetemulDevfs(
                             fidl_fuchsia_netemul::DevfsDep {
@@ -287,10 +293,12 @@ fn create_netsvc_realm<'a>(
     (realm, fs)
 }
 
-async fn with_netsvc_and_netstack_bind_port<F, Fut>(port: u16, name: &str, test: F)
+async fn with_netsvc_and_netstack_bind_port<F, Fut, A, V>(port: u16, name: &str, args: V, test: F)
 where
     F: FnOnce(fuchsia_async::net::UdpSocket, u32) -> Fut,
     Fut: futures::Future<Output = ()>,
+    A: Into<String>,
+    V: IntoIterator<Item = A>,
 {
     type E = netemul::Ethernet;
     let netsvc_name = format!("{}-netsvc", name);
@@ -303,7 +311,7 @@ where
         .expect("get event stream");
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (netsvc_realm, services) = create_netsvc_realm(&sandbox, &netsvc_name);
+    let (netsvc_realm, services) = create_netsvc_realm(&sandbox, &netsvc_name, args);
 
     let netsvc_stopped_fut = netstack_testing_common::wait_for_component_stopped_with_stream(
         &mut component_event_stream,
@@ -365,12 +373,20 @@ where
     }
 }
 
+const DEFAULT_NETSVC_ARGS: [&str; 2] = ["--netboot", "--all-features"];
+
 async fn with_netsvc_and_netstack<F, Fut>(name: &str, test: F)
 where
     F: FnOnce(fuchsia_async::net::UdpSocket, u32) -> Fut,
     Fut: futures::Future<Output = ()>,
 {
-    with_netsvc_and_netstack_bind_port(/* unspecified port */ 0, name, test).await
+    with_netsvc_and_netstack_bind_port(
+        /* unspecified port */ 0,
+        name,
+        DEFAULT_NETSVC_ARGS,
+        test,
+    )
+    .await
 }
 
 async fn with_netsvc_and_netstack_debuglog_port<F, Fut>(name: &str, test: F)
@@ -378,7 +394,13 @@ where
     F: FnOnce(fuchsia_async::net::UdpSocket, u32) -> Fut,
     Fut: futures::Future<Output = ()>,
 {
-    with_netsvc_and_netstack_bind_port(debuglog::MULTICAST_PORT.get(), name, test).await
+    with_netsvc_and_netstack_bind_port(
+        debuglog::MULTICAST_PORT.get(),
+        name,
+        DEFAULT_NETSVC_ARGS,
+        test,
+    )
+    .await
 }
 
 async fn discover(sock: &fuchsia_async::net::UdpSocket, scope_id: u32) -> std::net::Ipv6Addr {
@@ -846,4 +868,57 @@ async fn pave(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
             p => panic!("unexpected packet {:?}", p),
         }
     }
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn advertises() {
+    let () = with_netsvc_and_netstack_bind_port(
+        netsvc_proto::netboot::ADVERT_PORT.get(),
+        "advertises",
+        IntoIterator::into_iter(DEFAULT_NETSVC_ARGS).chain(["--advertise"]),
+        |sock, scope| async move {
+            let mut buffer = [0u8; BUFFER_SIZE];
+            let (n, addr) = sock.recv_from(&mut buffer[..]).await.expect("recv from failed");
+            match addr {
+                std::net::SocketAddr::V6(addr) => {
+                    assert_eq!(addr.scope_id(), scope);
+                    assert!(
+                        net_types::ip::Ipv6Addr::from_bytes(addr.ip().octets())
+                            .is_unicast_link_local(),
+                        "{} is not a unicast link local address",
+                        addr
+                    );
+                }
+                std::net::SocketAddr::V4(addr) => panic!("unexpected IPv4 address {}", addr),
+            }
+
+            let mut buffer = &mut buffer[..n];
+            let pkt = buffer.parse::<netboot::NetbootPacket<_>>().expect("parse failed");
+            assert_eq!(pkt.command(), netboot::OpcodeOrErr::Op(netboot::Opcode::Advertise));
+            let payload =
+                std::str::from_utf8(pkt.payload()).expect("failed to parse advertisement");
+            let (nodename, version) =
+                payload.split(';').fold((None, None), |(nodename, version), kv| {
+                    let mut it = kv.split('=');
+                    let k = it.next().unwrap_or_else(|| panic!("missing key on {}", kv));
+                    let v = it.next().unwrap_or_else(|| panic!("missing value on {}", kv));
+                    assert_eq!(it.next(), None);
+                    match k {
+                        "nodename" => {
+                            assert_eq!(nodename, None);
+                            (Some(v), version)
+                        }
+                        "version" => {
+                            assert_eq!(version, None);
+                            (nodename, Some(v))
+                        }
+                        k => panic!("unexpected key {} = {}", k, v),
+                    }
+                });
+            // No checks on version other than presence and not empty.
+            assert_matches::assert_matches!(version, Some(v) if !v.is_empty());
+            assert_matches::assert_matches!(nodename, Some(n) if n.starts_with("fuchsia-"));
+        },
+    )
+    .await;
 }
