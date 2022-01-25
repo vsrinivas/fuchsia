@@ -82,7 +82,7 @@ export RBE_output_dir="$reproxy_tmpdir"
 
 gcloud="$(which gcloud)" || {
   cat <<EOF
-\`gcloud\` command not found.
+\`gcloud\` command not found (but is needed to authenticate).
 \`gcloud\` can be installed from the Cloud SDK:
 
   http://go/cloud-sdk#installing-and-using-the-cloud-sdk

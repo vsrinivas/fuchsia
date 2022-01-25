@@ -34,6 +34,51 @@ fi
 # by prefixing in shell.
 RBE_WRAPPER=( "$FUCHSIA_DIR"/build/rbe/fuchsia-reproxy-wrap.sh -- )
 
+# Use this to conditionally prefix a command with "${RBE_WRAPPER[@]}".
+# NOTE: this function depends on FUCHSIA_BUILD_DIR which is set only after
+# initialization.
+function fx-rbe-enabled {
+  fx-build-dir-if-present || {
+    fx-error "No build directory found."
+    fx-error "Run \"fx set\" to create a new build directory, or specify one with --dir"
+    exit 1
+  }
+  grep -q "^[ \t]*enable_rbe[ ]*=[ ]*true" "${FUCHSIA_BUILD_DIR}/args.gn"
+}
+
+# At the moment, direct use of RBE uses gcloud to authenticate.
+# TODO(fxbug.dev/91579): simplify this process with an auth script
+#   without depending on a locally installed gcloud.
+function fx-check-rbe-setup {
+  if ! fx-rbe-enabled ; then return ; fi
+
+  gcloud="$(which gcloud)" || {
+    cat <<EOF
+
+\`gcloud\` command not found (but is needed to authenticate).
+\`gcloud\` can be installed from the Cloud SDK:
+
+  http://go/cloud-sdk#installing-and-using-the-cloud-sdk
+
+EOF
+  return
+  }
+
+# Check authentication first.
+# Instruct user to authenticate if needed.
+  "$gcloud" auth list 2>&1 | grep -q "$USER@google.com" || {
+    cat <<EOF
+Did not find credentialed account (\`gcloud auth list\`): $USER@google.com.
+
+To authenticate, run:
+
+  gcloud auth login --update-adc --no-launch-browser
+
+EOF
+}
+
+}
+
 # fx-is-stderr-tty exits with success if stderr is a tty.
 function fx-is-stderr-tty {
   [[ -t 2 ]]
@@ -548,13 +593,6 @@ function fx-standard-switches {
     fi
     shift
   done
-}
-
-# Use this to conditionally prefix a command with "${RBE_WRAPPER[@]}".
-# NOTE: this function depends on FUCHSIA_BUILD_DIR which is set only after
-# initialization.
-function fx-rbe-enabled {
-  grep -q "^[ \t]*enable_rbe[ ]*=[ ]*true" "${FUCHSIA_BUILD_DIR}/args.gn"
 }
 
 function fx-choose-build-concurrency {

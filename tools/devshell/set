@@ -192,7 +192,13 @@ function main {
     echo "$current_revision" > "$revision_file"
   fi
 
-  exec "$exe_path" "$@"
+  "$exe_path" "$@"
+  status="$?"
+
+  # Check for RBE requirements if enabled.
+  fx-check-rbe-setup
+
+  return "$status"
 }
 
 main "$@"
