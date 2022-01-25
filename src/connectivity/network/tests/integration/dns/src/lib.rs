@@ -488,28 +488,25 @@ async fn fallback_on_error_response_code() {
         ipv4_lookup: bool,
         ipv6_lookup: bool,
         error_response_code: trust_dns_proto::op::ResponseCode,
-        resolved_addr: fnet::IpAddress,
     }
 
-    for test_case in IntoIterator::into_iter([
-        (true, true, EXAMPLE_IPV4_ADDR),
-        (true, false, EXAMPLE_IPV4_ADDR),
-        (false, true, EXAMPLE_IPV6_ADDR),
-    ])
-    .cartesian_product([
-        ResponseCode::Refused,
-        ResponseCode::NXDomain,
-        ResponseCode::FormErr,
-        ResponseCode::ServFail,
-        ResponseCode::NotAuth,
-        ResponseCode::BADMODE,
-    ])
-    .map(|((ipv4_lookup, ipv6_lookup, resolved_addr), error_response_code)| {
-        FallbackTestCase { ipv4_lookup, ipv6_lookup, error_response_code, resolved_addr }
-    }) {
+    for test_case in IntoIterator::into_iter([(true, true), (true, false), (false, true)])
+        .cartesian_product([
+            ResponseCode::Refused,
+            ResponseCode::NXDomain,
+            ResponseCode::FormErr,
+            ResponseCode::ServFail,
+            ResponseCode::NotAuth,
+            ResponseCode::BADMODE,
+        ])
+        .map(|((ipv4_lookup, ipv6_lookup), error_response_code)| FallbackTestCase {
+            ipv4_lookup,
+            ipv6_lookup,
+            error_response_code,
+        })
+    {
         eprintln!("Entering test case: {:?}", test_case);
-        let FallbackTestCase { ipv4_lookup, ipv6_lookup, error_response_code, resolved_addr } =
-            test_case;
+        let FallbackTestCase { ipv4_lookup, ipv6_lookup, error_response_code } = test_case;
 
         let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
         let realm = sandbox
@@ -550,21 +547,36 @@ async fn fallback_on_error_response_code() {
             .connect_to_protocol::<net_name::LookupMarker>()
             .expect("failed to connect to Lookup");
         let lookup_fut = async {
-            let ips = name_lookup
-                .lookup_ip(
-                    EXAMPLE_HOSTNAME,
-                    net_name::LookupIpOptions {
-                        ipv4_lookup: Some(ipv4_lookup),
-                        ipv6_lookup: Some(ipv6_lookup),
-                        sort_addresses: Some(true),
-                        ..net_name::LookupIpOptions::EMPTY
-                    },
-                )
-                .await
-                .expect("FIDL error")
-                .expect("lookup_ip error");
+            let ips = {
+                let mut ips = name_lookup
+                    .lookup_ip(
+                        EXAMPLE_HOSTNAME,
+                        net_name::LookupIpOptions {
+                            ipv4_lookup: Some(ipv4_lookup),
+                            ipv6_lookup: Some(ipv6_lookup),
+                            sort_addresses: Some(true),
+                            ..net_name::LookupIpOptions::EMPTY
+                        },
+                    )
+                    .await
+                    .expect("FIDL error")
+                    .expect("lookup_ip error");
+                if let Some(ref mut addresses) = ips.addresses {
+                    // Sort the returned addresses because we don't care about their order when
+                    // asserting on the contents of the response.
+                    addresses.sort();
+                }
+                ips
+            };
+            let want_addresses = std::iter::empty()
+                .chain(ipv4_lookup.then(|| EXAMPLE_IPV4_ADDR))
+                .chain(ipv6_lookup.then(|| EXAMPLE_IPV6_ADDR))
+                // Sort the expected addresses because we don't care about their order when
+                // asserting on the contents of the response.
+                .sorted()
+                .collect::<Vec<_>>();
             let want = net_name::LookupResult {
-                addresses: Some(vec![resolved_addr]),
+                addresses: Some(want_addresses),
                 ..net_name::LookupResult::EMPTY
             };
             assert_eq!(ips, want, "test case: {:?}", test_case);
@@ -579,18 +591,50 @@ async fn fallback_on_error_response_code() {
             response
         })
         .fuse();
+        let expected_record_types = std::iter::empty()
+            .chain(ipv4_lookup.then(|| RecordType::A))
+            .chain(ipv6_lookup.then(|| RecordType::AAAA))
+            .collect::<std::collections::HashSet<_>>();
         // The fallback name server expects fallback queries from dns-resolver, and replies with a
         // non-error response, unless it gets a query for a different record type than it expects.
         let fallback_fut = {
-            let expected_record_type = if ipv4_lookup { RecordType::A } else { RecordType::AAAA };
-            mock_udp_name_server(&fallback_sock, move |query| {
-                if query.queries().iter().any(|q| q.query_type() != expected_record_type) {
+            mock_udp_name_server(&fallback_sock, move |message| {
+                let query = {
+                    let mut queries = message.queries().into_iter();
+                    let query = queries.next().unwrap_or_else(|| {
+                        panic!(
+                            "message {:?} should have exactly one query, got zero instead",
+                            message
+                        )
+                    });
+                    assert_eq!(
+                        queries.count(),
+                        0,
+                        "message {:?} should have exactly one query, got multiple instead",
+                        message
+                    );
+                    query
+                };
+                let requested_record_type = query.query_type();
+
+                if !expected_record_types.contains(&requested_record_type) {
                     // Reply with a `SERVFAIL` response since we want to ignore this query.
                     let mut response = Message::new();
                     let _: &mut Message = response.set_response_code(ResponseCode::ServFail);
                     response
                 } else {
-                    let answer = answer_for_hostname(EXAMPLE_HOSTNAME, resolved_addr);
+                    let answer = answer_for_hostname(
+                        EXAMPLE_HOSTNAME,
+                        match requested_record_type {
+                            RecordType::A => EXAMPLE_IPV4_ADDR,
+                            RecordType::AAAA => EXAMPLE_IPV6_ADDR,
+                            _ => panic!(
+                                "DNS resolver should only request A or AAAA records, \
+                                 got {:?} with type {:?} instead",
+                                query, requested_record_type,
+                            ),
+                        },
+                    );
                     let mut response = Message::new();
                     let _: &mut Message =
                         response.set_response_code(ResponseCode::NoError).add_answer(answer);
