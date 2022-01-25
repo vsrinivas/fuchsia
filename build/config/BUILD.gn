@@ -547,7 +547,6 @@ config("Wno-reorder-init-list") {
   cflags = [ "-Wno-reorder-init-list" ]
   visibility = [
     "//src/developer/memory/metrics/tests/*",
-    "//src/lib/elflib/*",
     "//third_party/*",
   ]
 }

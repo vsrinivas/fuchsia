@@ -31,9 +31,6 @@ test("elflib_unittest") {
     "//third_party/googletest:gtest",
   ]
 
-  # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-reorder-init-list" ]
-
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }

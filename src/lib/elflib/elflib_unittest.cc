@@ -43,10 +43,10 @@ class TestData {
         .e_version = EV_CURRENT,
         .e_shoff = sizeof(Elf64_Ehdr),
         .e_ehsize = sizeof(Elf64_Ehdr),
-        .e_shentsize = sizeof(Elf64_Shdr),
         .e_phentsize = sizeof(Elf64_Phdr),
-        .e_shnum = 6,
         .e_phnum = 2,
+        .e_shentsize = sizeof(Elf64_Shdr),
+        .e_shnum = 6,
         .e_shstrndx = 0,
     });
 
@@ -58,38 +58,38 @@ class TestData {
     size_t shstrtab_hdr = PushData(Elf64_Shdr{
         .sh_name = 1,
         .sh_type = SHT_STRTAB,
-        .sh_size = 34,
         .sh_addr = kAddrPoison,
+        .sh_size = 34,
     });
     size_t stuff_hdr = PushData(Elf64_Shdr{
         .sh_name = 11,
         .sh_type = SHT_LOUSER,
-        .sh_size = 15,
         .sh_addr = kAddrPoison,
+        .sh_size = 15,
     });
     size_t strtab_hdr = PushData(Elf64_Shdr{
         .sh_name = 18,
         .sh_type = SHT_STRTAB,
-        .sh_size = 16,
         .sh_addr = kAddrPoison,
+        .sh_size = 16,
     });
     size_t symtab_hdr = PushData(Elf64_Shdr{
         .sh_name = 26,
         .sh_type = SHT_SYMTAB,
-        .sh_size = sizeof(Elf64_Sym),
         .sh_addr = kAddrPoison,
+        .sh_size = sizeof(Elf64_Sym),
     });
     PushData(Elf64_Shdr{
         .sh_name = 34,
         .sh_type = SHT_NULL,
-        .sh_size = 0,
         .sh_addr = kAddrPoison,
+        .sh_size = 0,
     });
     PushData(Elf64_Shdr{
         .sh_name = 40,
         .sh_type = SHT_NOBITS,
-        .sh_size = 0,
         .sh_addr = kAddrPoison,
+        .sh_size = 0,
     });
 
     size_t phnote_hdr = PushData(Elf64_Phdr{
