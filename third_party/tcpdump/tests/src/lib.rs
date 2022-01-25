@@ -47,6 +47,10 @@ async fn wait_for_pattern<SO: AsyncBufReadExt + Unpin, SE: AsyncReadExt + Unpin>
                 patterns, buf
             )
         }
+
+        // TODO(https://fxbug.dev/90764): Remove this once the flake is resolved.
+        println!("GOT LINE FROM READER: {}", line);
+
         // Trim the trailing new line.
         let line = &line[..line.len() - 1];
         let () = patterns.retain(|pattern| !pattern.is_match(&line));
