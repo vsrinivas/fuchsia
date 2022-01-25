@@ -24,11 +24,11 @@ Snapshot contents:
 - Inspect data"
 )]
 pub struct SnapshotCommand {
-    /// valid directory where the snapshot will be stored.
+    /// valid directory where the snapshot will be stored
     #[argh(option, long = "dir", short = 'd')]
     pub output_file: Option<String>,
 
     #[argh(switch, long = "dump-annotations")]
-    /// print annotations
+    /// print annotations without capturing the snapshot, ignores `dir` flag
     pub dump_annotations: bool,
 }

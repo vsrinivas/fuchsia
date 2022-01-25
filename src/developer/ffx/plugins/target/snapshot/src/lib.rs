@@ -157,25 +157,25 @@ pub async fn snapshot_impl<W: Write>(
     cmd: SnapshotCommand,
     writer: &mut W,
 ) -> Result<()> {
-    // Parse CLI args.
-    let output_dir = match cmd.output_file {
-        None => {
-            let dir = default_output_dir();
-            fs::create_dir_all(&dir)?;
-            dir
-        }
-        Some(file_dir) => {
-            let dir = Path::new(&file_dir);
-            if !dir.is_dir() {
-                bail!("ERROR: Path provided is not a directory");
-            }
-            dir.to_path_buf()
-        }
-    };
-
+    // Dump annotations doesn't capture the snapshot.
     if cmd.dump_annotations {
         dump_annotations(writer, data_provider_proxy).await?;
     } else {
+        let output_dir = match cmd.output_file {
+            None => {
+                let dir = default_output_dir();
+                fs::create_dir_all(&dir)?;
+                dir
+            }
+            Some(file_dir) => {
+                let dir = Path::new(&file_dir);
+                if !dir.is_dir() {
+                    bail!("ERROR: Path provided is not a directory");
+                }
+                dir.to_path_buf()
+            }
+        };
+
         // Make file proxy and channel for snapshot
         let (file_proxy, file_server_end) = fidl::endpoints::create_proxy::<FileMarker>()?;
 
