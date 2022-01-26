@@ -3,15 +3,20 @@
 
 #include <fidl/test.conformance/cpp/natural_types.h>
 
+#include "src/lib/fidl/cpp/tests/conformance/conformance_utils.h"
+
 
 TEST(Conformance, GoldenBoolStruct_V2_Encode) {
 	const std::vector<zx_handle_t> handle_defs;
 	auto var1 = test_conformance::GoldenBoolStruct{};
 var1.v() = bool(true);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenIntStruct_V2_Encode) {
@@ -19,9 +24,12 @@ TEST(Conformance, GoldenIntStruct_V2_Encode) {
 	auto var1 = test_conformance::GoldenIntStruct{};
 var1.v() = int16_t(1ull);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenUintStruct_V2_Encode) {
@@ -29,9 +37,12 @@ TEST(Conformance, GoldenUintStruct_V2_Encode) {
 	auto var1 = test_conformance::GoldenUintStruct{};
 var1.v() = uint16_t(1ull);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenFloatStruct_V2_Encode) {
@@ -39,9 +50,12 @@ TEST(Conformance, GoldenFloatStruct_V2_Encode) {
 	auto var1 = test_conformance::GoldenFloatStruct{};
 var1.v() = float(0);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenDoubleStruct_V2_Encode) {
@@ -49,9 +63,12 @@ TEST(Conformance, GoldenDoubleStruct_V2_Encode) {
 	auto var1 = test_conformance::GoldenDoubleStruct{};
 var1.v() = double(0);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenStringStruct_V2_Encode) {
@@ -59,19 +76,14 @@ TEST(Conformance, GoldenStringStruct_V2_Encode) {
 	auto var1 = test_conformance::GoldenStringStruct{};
 var1.v() = "abcd";
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
-}
-
-TEST(Conformance, GoldenNullableStringStructNonNull_V2_Encode) {
-	const std::vector<zx_handle_t> handle_defs;
-	auto var1 = test_conformance::GoldenNullableStringStruct{};
-var1.v() = "abcd";
-
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenNullableStringStructNull_V2_Encode) {
@@ -79,29 +91,13 @@ TEST(Conformance, GoldenNullableStringStructNull_V2_Encode) {
 	auto var1 = test_conformance::GoldenNullableStringStruct{};
 var1.v() = std::optional<std::string>();
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
-}
-
-TEST(Conformance, GoldenEnumStruct_V2_Encode) {
-	const std::vector<zx_handle_t> handle_defs;
-	auto var1 = test_conformance::GoldenEnumStruct{};
-var1.v() = test_conformance::GoldenEnum(1ull);
-
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
-}
-
-TEST(Conformance, GoldenBitsStruct_V2_Encode) {
-	const std::vector<zx_handle_t> handle_defs;
-	auto var1 = test_conformance::GoldenBitsStruct{};
-var1.v() = static_cast<test_conformance::GoldenBits>(1ull);
-
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenTableStruct_V2_Encode) {
@@ -111,9 +107,14 @@ auto var2 = test_conformance::GoldenTable{};
 var2.v() = int16_t(1ull);
 var1.v() = std::move(var2);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenUnionStruct_V2_Encode) {
@@ -122,20 +123,13 @@ TEST(Conformance, GoldenUnionStruct_V2_Encode) {
 auto var2 = test_conformance::GoldenUnion(test_conformance::GoldenUnion::WithV(int16_t(1ull)));
 var1.v() = std::move(var2);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
-}
-
-TEST(Conformance, GoldenNullableUnionStructNonNull_V2_Encode) {
-	const std::vector<zx_handle_t> handle_defs;
-	auto var1 = test_conformance::GoldenNullableUnionStruct{};
-auto var2 = std::make_unique<test_conformance::GoldenUnion>(test_conformance::GoldenUnion::WithV(int16_t(1ull)));
-var1.v() = std::move(var2);
-
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenNullableUnionStructNull_V2_Encode) {
@@ -143,9 +137,13 @@ TEST(Conformance, GoldenNullableUnionStructNull_V2_Encode) {
 	auto var1 = test_conformance::GoldenNullableUnionStruct{};
 var1.v() = std::unique_ptr<test_conformance::GoldenUnion>();
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenByteArrayStruct_V2_Encode) {
@@ -158,9 +156,12 @@ var2[2] = uint8_t(3ull);
 var2[3] = uint8_t(4ull);
 var1.v() = std::move(var2);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenStructArrayStruct_V2_Encode) {
@@ -175,9 +176,12 @@ var4.v() = int16_t(2ull);
 var2[1] = std::move(var4);
 var1.v() = std::move(var2);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenByteVectorStruct_V2_Encode) {
@@ -193,24 +197,15 @@ memcpy(var2.data() + offset, var2.data(), 4);
 }
 var1.v() = std::move(var2);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
-}
-
-TEST(Conformance, GoldenByteNullableVectorStructNonNull_V2_Encode) {
-	const std::vector<zx_handle_t> handle_defs;
-	auto var1 = test_conformance::GoldenNullableByteVectorStruct{};
-auto var2 = std::vector<uint8_t>(4);
-var2[0] = uint8_t(1ull);
-var2[1] = uint8_t(2ull);
-var2[2] = uint8_t(3ull);
-var2[3] = uint8_t(4ull);
-var1.v() = std::move(var2);
-
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x0c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x01,0x02,0x03,0x04,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenNullableByteVectorStructNull_V2_Encode) {
@@ -218,9 +213,13 @@ TEST(Conformance, GoldenNullableByteVectorStructNull_V2_Encode) {
 	auto var1 = test_conformance::GoldenNullableByteVectorStruct{};
 var1.v() = std::vector<uint8_t>();
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenStructVectorStruct_V2_Encode) {
@@ -235,9 +234,14 @@ var4.v() = int16_t(2ull);
 var2[1] = std::move(var4);
 var1.v() = std::move(var2);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenNullableStructNonNull_V2_Encode) {
@@ -247,9 +251,13 @@ auto var2 = std::make_unique<test_conformance::GoldenBoolStruct>(test_conformanc
 var2->v() = bool(true);
 var1.v() = std::move(var2);
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 TEST(Conformance, GoldenNullableStructNull_V2_Encode) {
@@ -257,9 +265,12 @@ TEST(Conformance, GoldenNullableStructNull_V2_Encode) {
 	auto var1 = test_conformance::GoldenNullableStruct{};
 var1.v() = std::unique_ptr<test_conformance::GoldenBoolStruct>();
 
-	[[maybe_unused]] auto result = std::move(var1);
-
-	// TODO - compare the values.
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes);
 }
 
 

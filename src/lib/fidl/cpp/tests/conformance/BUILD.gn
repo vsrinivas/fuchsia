@@ -24,7 +24,10 @@ foreach(gidl_file, conformance_suite_gidl_files) {
     testonly = true
     inputs = [ gidl_file ]
     fidl = conformance_suite_fidl_target
-    deps = [ "//zircon/system/ulib/zxtest" ]
+    deps = [
+      ":conformance_utils",
+      "//zircon/system/ulib/zxtest",
+    ]
   }
 }
 
@@ -36,4 +39,15 @@ test("fidl_cpp_conformance_tests_bin") {
 
 fuchsia_unittest_package("fidl_cpp_conformance_tests") {
   deps = [ ":fidl_cpp_conformance_tests_bin" ]
+}
+
+source_set("conformance_utils") {
+  testonly = true
+  public = [ "conformance_utils.h" ]
+  public_deps = [
+    "//zircon/system/public",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/fidl:fidl_base",
+    "//zircon/system/ulib/zx",
+  ]
 }

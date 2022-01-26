@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 success("StrictEnumInt8Struct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictEnumInt8Struct{
         e: 0x01,
     },
@@ -14,6 +16,8 @@ success("StrictEnumInt8Struct") {
 }
 
 success("StrictEnumInt16Struct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictEnumInt16Struct{
         e: 0x0102,
     },
@@ -25,6 +29,8 @@ success("StrictEnumInt16Struct") {
 }
 
 success("StrictEnumInt32Struct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictEnumInt32Struct{
         e: 0x01020304,
     },
@@ -36,6 +42,8 @@ success("StrictEnumInt32Struct") {
 }
 
 success("StrictEnumInt64Struct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictEnumInt64Struct{
         e: 0x0102030405060708,
     },
@@ -47,6 +55,8 @@ success("StrictEnumInt64Struct") {
 }
 
 success("StrictEnumUint8Struct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictEnumUint8Struct{
         e: 0x01,
     },
@@ -58,6 +68,8 @@ success("StrictEnumUint8Struct") {
 }
 
 success("StrictEnumUint16Struct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictEnumUint16Struct{
         e: 0x0102,
     },
@@ -69,6 +81,8 @@ success("StrictEnumUint16Struct") {
 }
 
 success("StrictEnumUint32Struct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictEnumUint32Struct{
         e: 0x01020304,
     },
@@ -80,6 +94,8 @@ success("StrictEnumUint32Struct") {
 }
 
 success("StrictEnumUint64Struct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictEnumUint64Struct{
         e: 0x0102030405060708,
     },
@@ -91,6 +107,8 @@ success("StrictEnumUint64Struct") {
 }
 
 success("VectorOfEnumStruct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = VectorOfEnumStruct{
         v: [0x0102],
     },
@@ -105,7 +123,8 @@ success("VectorOfEnumStruct") {
 
 encode_failure("StrictEnumInt8StructUnknownValue") {
     // Rust: cannot construct invalid enum.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     value = StrictEnumInt8Struct{
         e: 0x08, // invalid value
     },
@@ -114,7 +133,8 @@ encode_failure("StrictEnumInt8StructUnknownValue") {
 
 encode_failure("StrictEnumInt16StructUnknownValue") {
     // Rust: cannot construct invalid enum.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     value = StrictEnumInt16Struct{
         e: 0x08, // invalid value
     },
@@ -123,7 +143,8 @@ encode_failure("StrictEnumInt16StructUnknownValue") {
 
 encode_failure("StrictEnumInt32StructUnknownValue") {
     // Rust: cannot construct invalid enum.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     value = StrictEnumInt32Struct{
         e: 0x08, // invalid value
     },
@@ -132,7 +153,8 @@ encode_failure("StrictEnumInt32StructUnknownValue") {
 
 encode_failure("StrictEnumInt64StructUnknownValue") {
     // Rust: cannot construct invalid enum.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     value = StrictEnumInt64Struct{
         e: 0x08, // invalid value
     },
@@ -141,7 +163,8 @@ encode_failure("StrictEnumInt64StructUnknownValue") {
 
 encode_failure("StrictEnumUint8StructUnknownValue") {
     // Rust: cannot construct invalid enum.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     value = StrictEnumUint8Struct{
         e: 0x08, // invalid value
     },
@@ -150,7 +173,8 @@ encode_failure("StrictEnumUint8StructUnknownValue") {
 
 encode_failure("StrictEnumUint16StructUnknownValue") {
     // Rust: cannot construct invalid enum.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     value = StrictEnumUint16Struct{
         e: 0x08, // invalid value
     },
@@ -159,7 +183,8 @@ encode_failure("StrictEnumUint16StructUnknownValue") {
 
 encode_failure("StrictEnumUint32StructUnknownValue") {
     // Rust: cannot construct invalid enum.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     value = StrictEnumUint32Struct{
         e: 0x08, // invalid value
     },
@@ -168,7 +193,8 @@ encode_failure("StrictEnumUint32StructUnknownValue") {
 
 encode_failure("StrictEnumUint64StructUnknownValue") {
     // Rust: cannot construct invalid enum.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     value = StrictEnumUint64Struct{
         e: 0x08, // invalid value
     },
@@ -176,6 +202,8 @@ encode_failure("StrictEnumUint64StructUnknownValue") {
 }
 
 decode_failure("StrictEnumInt8StructUnknownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictEnumInt8Struct,
     bytes = {
         v1, v2 = [
@@ -186,6 +214,8 @@ decode_failure("StrictEnumInt8StructUnknownValue") {
 }
 
 decode_failure("StrictEnumInt16StructUnknownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictEnumInt16Struct,
     bytes = {
         v1, v2 = [
@@ -196,6 +226,8 @@ decode_failure("StrictEnumInt16StructUnknownValue") {
 }
 
 decode_failure("StrictEnumInt32StructUnknownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictEnumInt32Struct,
     bytes = {
         v1, v2 = [
@@ -206,6 +238,8 @@ decode_failure("StrictEnumInt32StructUnknownValue") {
 }
 
 decode_failure("StrictEnumInt64StructUnknownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictEnumInt64Struct,
     bytes = {
         v1, v2 = [
@@ -216,6 +250,8 @@ decode_failure("StrictEnumInt64StructUnknownValue") {
 }
 
 decode_failure("StrictEnumUint8StructUnknownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictEnumUint8Struct,
     bytes = {
         v1, v2 = [
@@ -226,6 +262,8 @@ decode_failure("StrictEnumUint8StructUnknownValue") {
 }
 
 decode_failure("StrictEnumUint16StructUnknownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictEnumUint16Struct,
     bytes = {
         v1, v2 = [
@@ -236,6 +274,8 @@ decode_failure("StrictEnumUint16StructUnknownValue") {
 }
 
 decode_failure("StrictEnumUint32StructUnknownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictEnumUint32Struct,
     bytes = {
         v1, v2 = [
@@ -246,6 +286,8 @@ decode_failure("StrictEnumUint32StructUnknownValue") {
 }
 
 decode_failure("StrictEnumUint64StructUnknownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictEnumUint64Struct,
     bytes = {
         v1, v2 = [

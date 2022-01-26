@@ -31,6 +31,8 @@ success("TableTwoReservedFields") {
 }
 
 success("TableStructWithReservedSandwich") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = TableStructWithReservedSandwichStruct{
         table: TableStructWithReservedSandwich{
             s1: StructSize3Align1{
@@ -141,6 +143,8 @@ success("TableStructWithUint32Sandwich") {
 }
 
 success("TableUnionWithVectorReservedSandwich") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = TableUnionWithVectorReservedSandwichStruct{
         table: TableUnionWithVectorReservedSandwich{
             uv: UnionWithVector{
@@ -291,6 +295,8 @@ success("TableUnionWithVectorStructSandwich") {
 }
 
 success("ArrayStruct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = ArrayStruct{
         unions: [
             StringUnion{
@@ -814,6 +820,8 @@ success("OutOfLineSandwich1Case1") {
 }
 
 success("OutOfLineSandwich1WithOptUnionPresent") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = OutOfLineSandwich1WithOptUnion{
         before: "soft migrations rock!",
         v: [
@@ -1040,6 +1048,8 @@ success("Regression4") {
 }
 
 success("Regression5Enums") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = Regression5{
         f1: 1,
         f2: 0x3231302f,
@@ -1063,6 +1073,8 @@ success("Regression5Enums") {
 }
 
 success("Regression6Bits") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = Regression6{
         f1: 1,
         f2: 0x30000003,
@@ -1185,6 +1197,8 @@ success("Regression7TableUnionXUnion") {
 }
 
 success("Regression8OptUnionSize12Aligned4") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = Regression8OptUnionSize12Align4{
         opt_union1: UnionSize12Align4{
             variant: [0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6],
@@ -1258,6 +1272,8 @@ success("Regression8OptUnionSize12Aligned4") {
 }
 
 success("Regression8VectorOfOptUnionSize12Aligned4") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = Regression8VectorOfOptUnionSize12Align4{
         value: [
             null,
@@ -1376,6 +1392,8 @@ success("Regression8VectorOfOptUnionSize12Aligned4") {
 }
 
 success("Regression8TableWithUnionSize12Aligned4") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = Regression8TableWithUnionSize12Align4{
         value: TableWithUnionSize12Align4{
             before: 0xaa,
@@ -1484,6 +1502,8 @@ success("Regression8TableWithUnionSize12Aligned4") {
 }
 
 success("Regression9Response") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = Regression9Message{
         header: TransactionHeader{
             tx_id: 1,
@@ -1935,6 +1955,8 @@ success("SimpleTableArrayStruct") {
 }
 
 success("StringUnionVector") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StringUnionVector{
         the_vector: [
             StringUnion{
@@ -2011,6 +2033,8 @@ success("StringUnionVector") {
 }
 
 success("StringUnionStructWrapperResponse") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StringUnionStructWrapperResponse{
         header: TransactionHeader{
             tx_id: 0,
@@ -2483,6 +2507,8 @@ success("UnionOfTable") {
 // value that can't be treated as an unknown value. Here, a union was chosen
 // because it is "special" in the context of the V1 <-> V2 migration.
 success("TableWithReservedFieldThenUnion") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = TableWithReservedFieldThenUnionStruct{
         t: TableWithReservedFieldThenUnion{
             uv: UnionSize8Align4{

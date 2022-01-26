@@ -79,6 +79,8 @@ success("GoldenStringStruct") {
 }
 
 success("GoldenNullableStringStructNonNull") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = GoldenNullableStringStruct{
         v: "abcd",
     },
@@ -104,6 +106,8 @@ success("GoldenNullableStringStructNull") {
 }
 
 success("GoldenEnumStruct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = GoldenEnumStruct{
         v: 1,
     },
@@ -115,6 +119,8 @@ success("GoldenEnumStruct") {
 }
 
 success("GoldenBitsStruct") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = GoldenBitsStruct{
         v: 1,
     },
@@ -169,6 +175,8 @@ success("GoldenUnionStruct") {
 }
 
 success("GoldenNullableUnionStructNonNull") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = GoldenNullableUnionStruct{
         v: GoldenUnion{
             v: 1,
@@ -247,6 +255,8 @@ success("GoldenByteVectorStruct") {
 }
 
 success("GoldenByteNullableVectorStructNonNull") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = GoldenNullableByteVectorStruct{
         v: [1, 2, 3, 4],
     },

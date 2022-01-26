@@ -874,6 +874,8 @@ decode_failure("RecursiveOptionalAndVectorExceedLimit") {
 }
 
 success("RecursiveOptionalStructWithStringUnderLimit") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     // gidl-format off
     value = RecursiveOptionalStructWithString { // 0
     inner: RecursiveOptionalStructWithString { // 1

@@ -10,6 +10,7 @@ import (
 	"text/template"
 
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
+	libhlcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/hlcpp"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -20,13 +21,16 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 
 #include <fidl/test.conformance/cpp/natural_types.h>
 
+#include "src/lib/fidl/cpp/tests/conformance/conformance_utils.h"
+
 {{ range .EncodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Encode) {
 	const std::vector<zx_handle_t> handle_defs;
 	{{ .ValueBuild }}
-	[[maybe_unused]] auto result = {{ .ValueVar }};
-
-	// TODO - compare the values.
+	auto obj = {{ .ValueVar }};
+	const auto expected_bytes = {{ .Bytes }};
+	conformance_utils::EncodeSuccess(
+		{{ .WireFormatVersion }}, obj, expected_bytes);
 }
 {{ end }}
 
@@ -37,8 +41,7 @@ type conformanceTmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	WireFormat                 gidlir.WireFormat
-	Name, ValueBuild, ValueVar string
+	WireFormatVersion, Name, ValueBuild, ValueVar, Bytes string
 }
 
 func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
@@ -74,10 +77,11 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-				Name:       testCaseName(encodeSuccess.Name, encoding.WireFormat),
-				WireFormat: encoding.WireFormat,
-				ValueBuild: valueBuild,
-				ValueVar:   valueVar,
+				Name:              testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				WireFormatVersion: wireFormatVersionName(encoding.WireFormat),
+				ValueBuild:        valueBuild,
+				ValueVar:          valueVar,
+				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
 			})
 		}
 	}
@@ -95,6 +99,10 @@ func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
 		}
 	}
 	return false
+}
+
+func wireFormatVersionName(wireFormat gidlir.WireFormat) string {
+	return fmt.Sprintf("::fidl::internal::WireFormatVersion::k%s", fidlgen.ToUpperCamelCase(wireFormat.String()))
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {

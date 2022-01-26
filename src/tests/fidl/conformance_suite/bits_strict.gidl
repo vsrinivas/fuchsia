@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 success("StrictBitsUint8KnownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint8Struct{
         b: 1,
     },
@@ -14,6 +16,8 @@ success("StrictBitsUint8KnownValue") {
 }
 
 success("StrictBitsUint8CombinedValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint8Struct{
         b: 3,
     },
@@ -25,6 +29,8 @@ success("StrictBitsUint8CombinedValue") {
 }
 
 success("StrictBitsUint16KnownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint16Struct{
         b: 1,
     },
@@ -36,6 +42,8 @@ success("StrictBitsUint16KnownValue") {
 }
 
 success("StrictBitsUint16CombinedValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint16Struct{
         b: 3,
     },
@@ -47,6 +55,8 @@ success("StrictBitsUint16CombinedValue") {
 }
 
 success("StrictBitsUint32KnownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint32Struct{
         b: 1,
     },
@@ -58,6 +68,8 @@ success("StrictBitsUint32KnownValue") {
 }
 
 success("StrictBitsUint32CombinedValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint32Struct{
         b: 3,
     },
@@ -69,6 +81,8 @@ success("StrictBitsUint32CombinedValue") {
 }
 
 success("StrictBitsUint64KnownValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint64Struct{
         b: 1,
     },
@@ -80,6 +94,8 @@ success("StrictBitsUint64KnownValue") {
 }
 
 success("StrictBitsUint64CombinedValue") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint64Struct{
         b: 3,
     },
@@ -91,6 +107,8 @@ success("StrictBitsUint64CombinedValue") {
 }
 
 encode_failure("StrictBitsUint8UnknownBit") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint8Struct{
         b: 4,
     },
@@ -98,6 +116,8 @@ encode_failure("StrictBitsUint8UnknownBit") {
 }
 
 encode_failure("StrictBitsUint16UnknownBit") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint16Struct{
         b: 4,
     },
@@ -105,6 +125,8 @@ encode_failure("StrictBitsUint16UnknownBit") {
 }
 
 encode_failure("StrictBitsUint32UnknownBit") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint32Struct{
         b: 4,
     },
@@ -112,6 +134,8 @@ encode_failure("StrictBitsUint32UnknownBit") {
 }
 
 encode_failure("StrictBitsUint64UnknownBit") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StrictBitsUint64Struct{
         b: 4,
     },
@@ -119,6 +143,8 @@ encode_failure("StrictBitsUint64UnknownBit") {
 }
 
 decode_failure("StrictBitsUint8UnknownBit") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictBitsUint8Struct,
     bytes = {
         v1, v2 = [
@@ -129,6 +155,8 @@ decode_failure("StrictBitsUint8UnknownBit") {
 }
 
 decode_failure("StrictBitsUint16UnknownBit") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictBitsUint16Struct,
     bytes = {
         v1, v2 = [
@@ -139,6 +167,8 @@ decode_failure("StrictBitsUint16UnknownBit") {
 }
 
 decode_failure("StrictBitsUint32UnknownBit") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictBitsUint32Struct,
     bytes = {
         v1, v2 = [
@@ -149,6 +179,8 @@ decode_failure("StrictBitsUint32UnknownBit") {
 }
 
 decode_failure("StrictBitsUint64UnknownBit") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     type = StrictBitsUint64Struct,
     bytes = {
         v1, v2 = [

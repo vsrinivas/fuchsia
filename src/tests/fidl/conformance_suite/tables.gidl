@@ -282,6 +282,8 @@ success("SimpleTableEmpty") {
 }
 
 success("SimpleTableXAndY") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StructOfSimpleTable{
         table: SimpleTable{
             x: 42,
@@ -343,6 +345,8 @@ success("SimpleTableJustX") {
 }
 
 success("SimpleTableJustY") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StructOfSimpleTable{
         table: SimpleTable{
             y: 67,
@@ -412,6 +416,8 @@ success("TableWithStringAndVectorNoVectorContent") {
 // TODO(fxbug.dev/7948): Create test with TableWithStringAndVectorHasVectorContent.
 
 success("SimpleTableThenUint64") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = SimpleTableThenUint64{
         table: SimpleTable{
             x: 42,
@@ -453,6 +459,8 @@ success("SimpleTableThenUint64") {
 }
 
 success("ReverseOrdinalTable") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StructOfReverseOrdinalTable{
         table: ReverseOrdinalTable{
             x: 0xaa,
@@ -503,6 +511,8 @@ success("ReverseOrdinalTable") {
 }
 
 success("TableWithGaps") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     value = StructOfTableWithGaps{
         table: TableWithGaps{
             second: 1,

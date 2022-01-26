@@ -51,7 +51,8 @@ success("PresentNonnullableVectorOfHandles") {
 
 success("PresentNullableVectorOfHandles") {
     // TODO(fxbug.dev/88979): generated Rust test does not compile.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -362,7 +363,8 @@ success("PresentNonnullableVectorOfUint32") {
 
 success("PresentNullableVectorOfUint32") {
     // TODO(fxbug.dev/88979): generated Rust test does not compile.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     value = UnboundedNullableVectorOfUint32s{
         vu0: [1, 2, 3, 4],
     },
@@ -430,7 +432,8 @@ success("PresentNonnullableBoundedVectorOfUint32") {
 
 success("PresentNullableBoundedVectorOfUint32") {
     // TODO(fxbug.dev/88979): generated Rust test does not compile.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     value = Bounded32NullableVectorOfUint32s{
         vu0: [1, 2, 3, 4],
     },
