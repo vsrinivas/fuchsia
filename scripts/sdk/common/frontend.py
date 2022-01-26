@@ -205,7 +205,11 @@ class Frontend(object):
             manifest = load_metadata(self.source('meta', 'manifest.json'))
             if not manifest:
                 return False
-            types = set([p['type'] for p in manifest['parts']])
+            types = set(
+                [
+                    p['type'] if 'type' in p else p['element_type']
+                    for p in manifest['parts']
+                ])
 
             try:
                 self.prepare(manifest['arch'], types)
@@ -215,7 +219,7 @@ class Frontend(object):
 
             # Process each SDK atom.
             for part in manifest['parts']:
-                type = part['type']
+                type = part['type'] if 'type' in part else part['element_type']
                 atom = load_metadata(self.source(part['meta']))
                 if not atom:
                     return False
@@ -236,7 +240,7 @@ class Frontend(object):
         '''Returns the SDK atom type.'''
         # For versioned SDK atoms, the type is inside the data field.
         if 'schema_id' in atom:
-            return atom['data']['type']
+            return atom['data']['element_type']
         return atom['type']
 
     def get_atom_name(self, atom):

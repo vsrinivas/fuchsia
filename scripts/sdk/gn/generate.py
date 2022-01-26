@@ -201,6 +201,10 @@ class GNBuilder(Frontend):
             ], 'meta/manifest.json')
 
     def update_metadata(self, entries, metafile):
+
+        def _atom_type(atom):
+            return atom['type'] if 'type' in atom else atom['element_type']
+
         with open(self.dest(metafile), 'r') as input:
             metadata = json.load(input)
 
@@ -208,15 +212,15 @@ class GNBuilder(Frontend):
             # descriptions are named inconsistently, so read the manifest and
             # copy them explicitly.
             for atom in metadata['parts']:
-                if atom['type'] in ['data', 'companion_host_tool',
-                                    'documentation', 'host_tool']:
+                if _atom_type(atom) in ['data', 'companion_host_tool',
+                                        'documentation', 'host_tool']:
                     self.copy_file(atom['meta'])
 
             # There are dart components in the Core SDK which are not part
             # of the GN SDK. Remove them from the manifest.
             metadata['parts'] = [
                 atom for atom in metadata['parts']
-                if not atom['type'] == 'dart_library'
+                if not _atom_type(atom) == 'dart_library'
             ]
 
             for entry in entries:
@@ -229,7 +233,8 @@ class GNBuilder(Frontend):
                         })
             # sort parts list so it is in a stable order
             def meta_type_key(part):
-                return '%s_%s' % (part['meta'], part['type'])
+                _type = part['type'] if 'type' in part else part['element_type']
+                return '%s_%s' % (part['meta'], _type)
 
             metadata['parts'].sort(key=meta_type_key)
 

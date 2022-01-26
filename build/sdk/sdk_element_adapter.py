@@ -38,7 +38,7 @@ def main():
 
     with open(args.meta_in, 'r') as meta_in:
         element_meta = json.load(meta_in)
-    element_type = element_meta['data']['type']
+    element_type = element_meta['data']['element_type']
     category = element_meta['data']['category'] if 'category' in element_meta[
         'data'] else 'partner'
 
@@ -50,7 +50,7 @@ def main():
         atom_meta = element_meta
         atom_id = "sdk://version_history"
     else:
-        return 'Unsupported element type ' + element_meta['data']['type']
+        return 'Unsupported element type ' + element_meta['data']['element_type']
 
     files = [
         {

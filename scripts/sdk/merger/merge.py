@@ -21,21 +21,22 @@ class Part(object):
 
     def __init__(self, json):
         self.meta = json['meta']
-        self.type = json['type']
+        self.element_type = json['type'] if 'type' in json else json[
+            'element_type']
 
     def __lt__(self, other):
-        return self.meta < other.meta and self.type < other.type
+        return self.meta < other.meta and self.element_type < other.element_type
 
     def __eq__(self, other):
         return (
             isinstance(other, self.__class__) and self.meta == other.meta and
-            self.type == other.type)
+            self.element_type == other.element_type)
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash((self.meta, self.type))
+        return hash((self.meta, self.element_type))
 
 
 @contextlib.contextmanager
@@ -90,11 +91,11 @@ def _get_meta(element, sdk_dir):
         return json.load(meta)
 
 
-def _get_type(element):
+def _get_element_type(element):
     '''Returns the SDK element type.'''
     # For versioned SDK elements, the type is inside the data field.
     if 'schema_id' in element:
-        return element['data']['type']
+        return element['data']['element_type']
     return element['type']
 
 
@@ -104,10 +105,10 @@ def _get_files(element_meta):
      - the set of arch-independent files;
      - the sets of arch-dependent files, indexed by architecture.
     '''
-    type = _get_type(element_meta)
+    element_type = _get_element_type(element_meta)
     common_files = set()
     arch_files = {}
-    if type == 'cc_prebuilt_library':
+    if element_type == 'cc_prebuilt_library':
         common_files.update(element_meta['headers'])
         for arch, binaries in element_meta['binaries'].items():
             contents = set()
@@ -117,22 +118,22 @@ def _get_files(element_meta):
             if 'debug' in binaries:
                 contents.add(binaries['debug'])
             arch_files[arch] = contents
-    elif type == 'cc_source_library':
+    elif element_type == 'cc_source_library':
         common_files.update(element_meta['headers'])
         common_files.update(element_meta['sources'])
-    elif type == 'dart_library':
+    elif element_type == 'dart_library':
         common_files.update(element_meta['sources'])
-    elif type == 'fidl_library':
+    elif element_type == 'fidl_library':
         common_files.update(element_meta['sources'])
-    elif type in ['host_tool', 'companion_host_tool']:
+    elif element_type in ['host_tool', 'companion_host_tool']:
         if 'files' in element_meta:
             common_files.update(element_meta['files'])
         if 'target_files' in element_meta:
             arch_files.update(element_meta['target_files'])
-    elif type == 'loadable_module':
+    elif element_type == 'loadable_module':
         common_files.update(element_meta['resources'])
         arch_files.update(element_meta['binaries'])
-    elif type == 'sysroot':
+    elif element_type == 'sysroot':
         for arch, version in element_meta['versions'].items():
             contents = set()
             contents.update(version['headers'])
@@ -140,17 +141,17 @@ def _get_files(element_meta):
             contents.update(version['dist_libs'])
             contents.update(version['debug_libs'])
             arch_files[arch] = contents
-    elif type == 'documentation':
+    elif element_type == 'documentation':
         common_files.update(element_meta['docs'])
-    elif type in ('config', 'license', 'component_manifest'):
+    elif element_type in ('config', 'license', 'component_manifest'):
         common_files.update(element_meta['data'])
-    elif type in ('version_history'):
+    elif element_type in ('version_history'):
         # These types are pure metadata.
         pass
-    elif type == 'bind_library':
+    elif element_type == 'bind_library':
         common_files.update(element_meta['sources'])
     else:
-        raise Exception('Unknown element type: ' + type)
+        raise Exception('Unknown element type: ' + element_type)
     return (common_files, arch_files)
 
 
@@ -215,28 +216,29 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
     meta_two = _get_meta(element, source_dir_two)
     # TODO(fxbug.dev/5362): verify that the common parts of the metadata files are in
     # fact identical.
-    type = _get_type(meta_one)
+    element_type = _get_element_type(meta_one)
     meta = {}
-    if type in ('cc_prebuilt_library', 'loadable_module'):
+    if element_type in ('cc_prebuilt_library', 'loadable_module'):
         meta = meta_one
         meta['binaries'].update(meta_two['binaries'])
-    elif type == 'sysroot':
+    elif element_type == 'sysroot':
         meta = meta_one
         meta['versions'].update(meta_two['versions'])
-    elif type in ['host_tool', 'companion_host_tool']:
+    elif element_type in ['host_tool', 'companion_host_tool']:
         meta = meta_one
         if not 'target_files' in meta:
             meta['target_files'] = {}
         if 'target_files' in meta_two:
             meta['target_files'].update(meta_two['target_files'])
-    elif type in ('cc_source_library', 'dart_library', 'fidl_library',
-                  'documentation', 'device_profile', 'config', 'license',
-                  'component_manifest', 'bind_library', 'version_history'):
+    elif element_type in ('cc_source_library', 'dart_library', 'fidl_library',
+                          'documentation', 'device_profile', 'config',
+                          'license', 'component_manifest', 'bind_library',
+                          'version_history'):
         # These elements are arch-independent, the metadata does not need any
         # update.
         meta = meta_one
     else:
-        raise Exception('Unknown element type: ' + type)
+        raise Exception('Unknown element type: ' + element_type)
     meta_path = os.path.join(dest_dir, element)
     _ensure_directory(meta_path)
     with open(meta_path, 'w') as meta_file:
@@ -249,7 +251,7 @@ def _has_host_content(parts):
     '''Returns true if the given list of SDK parts contains an element with
     content built for a host.
     '''
-    return 'host_tool' in [part.type for part in parts]
+    return 'host_tool' in [part.element_type for part in parts]
 
 
 def _write_manifest(source_dir_one, source_dir_two, dest_dir):
