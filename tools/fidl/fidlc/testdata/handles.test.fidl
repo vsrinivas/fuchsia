@@ -14,7 +14,6 @@ type obj_type = strict enum : uint32 {
     EVENT = 5;
     PORT = 6;
     INTERRUPT = 9;
-    PCI_DEVICE = 11;
     LOG = 12;
     SOCKET = 14;
     RESOURCE = 15;
@@ -67,7 +66,6 @@ type Handles = resource struct {
     iommu_handle handle:IOMMU;
     job_handle handle:JOB;
     pager_handle handle:PAGER;
-    pcidevice_handle handle:PCI_DEVICE;
     pmt_handle handle:PMT;
     port_handle handle:PORT;
     process_handle handle:PROCESS;

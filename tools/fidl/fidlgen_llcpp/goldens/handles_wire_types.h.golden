@@ -29,7 +29,6 @@
 #include <lib/zx/iommu.h>
 #include <lib/zx/job.h>
 #include <lib/zx/pager.h>
-#include <lib/zx/pcidevice.h>
 #include <lib/zx/pmt.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
@@ -87,8 +86,6 @@ struct Handles {
 
   ::zx::pager pager_handle = {};
 
-  ::zx::pcidevice pcidevice_handle = {};
-
   ::zx::pmt pmt_handle = {};
 
   ::zx::port port_handle = {};
@@ -145,9 +142,9 @@ template <>
 struct TypeTraits<::test_handles::wire::Handles> {
   static constexpr const fidl_type_t* kType =
       &::test_handles::wire::test_handles_HandlesTable;
-  static constexpr uint32_t kMaxNumHandles = 33;
-  static constexpr uint32_t kPrimarySize = 132;
-  static constexpr uint32_t kPrimarySizeV1 = 132;
+  static constexpr uint32_t kMaxNumHandles = 32;
+  static constexpr uint32_t kPrimarySize = 128;
+  static constexpr uint32_t kPrimarySizeV1 = 128;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasPointer = false;
@@ -172,30 +169,29 @@ static_assert(offsetof(::test_handles::wire::Handles, interrupt_handle) == 40);
 static_assert(offsetof(::test_handles::wire::Handles, iommu_handle) == 44);
 static_assert(offsetof(::test_handles::wire::Handles, job_handle) == 48);
 static_assert(offsetof(::test_handles::wire::Handles, pager_handle) == 52);
-static_assert(offsetof(::test_handles::wire::Handles, pcidevice_handle) == 56);
-static_assert(offsetof(::test_handles::wire::Handles, pmt_handle) == 60);
-static_assert(offsetof(::test_handles::wire::Handles, port_handle) == 64);
-static_assert(offsetof(::test_handles::wire::Handles, process_handle) == 68);
-static_assert(offsetof(::test_handles::wire::Handles, profile_handle) == 72);
-static_assert(offsetof(::test_handles::wire::Handles, resource_handle) == 76);
-static_assert(offsetof(::test_handles::wire::Handles, socket_handle) == 80);
+static_assert(offsetof(::test_handles::wire::Handles, pmt_handle) == 56);
+static_assert(offsetof(::test_handles::wire::Handles, port_handle) == 60);
+static_assert(offsetof(::test_handles::wire::Handles, process_handle) == 64);
+static_assert(offsetof(::test_handles::wire::Handles, profile_handle) == 68);
+static_assert(offsetof(::test_handles::wire::Handles, resource_handle) == 72);
+static_assert(offsetof(::test_handles::wire::Handles, socket_handle) == 76);
 static_assert(offsetof(::test_handles::wire::Handles, suspendtoken_handle) ==
-              84);
-static_assert(offsetof(::test_handles::wire::Handles, thread_handle) == 88);
-static_assert(offsetof(::test_handles::wire::Handles, timer_handle) == 92);
-static_assert(offsetof(::test_handles::wire::Handles, vcpu_handle) == 96);
-static_assert(offsetof(::test_handles::wire::Handles, vmar_handle) == 100);
-static_assert(offsetof(::test_handles::wire::Handles, vmo_handle) == 104);
-static_assert(offsetof(::test_handles::wire::Handles, rights_handle) == 108);
+              80);
+static_assert(offsetof(::test_handles::wire::Handles, thread_handle) == 84);
+static_assert(offsetof(::test_handles::wire::Handles, timer_handle) == 88);
+static_assert(offsetof(::test_handles::wire::Handles, vcpu_handle) == 92);
+static_assert(offsetof(::test_handles::wire::Handles, vmar_handle) == 96);
+static_assert(offsetof(::test_handles::wire::Handles, vmo_handle) == 100);
+static_assert(offsetof(::test_handles::wire::Handles, rights_handle) == 104);
 static_assert(offsetof(::test_handles::wire::Handles,
-                       aliased_plain_handle_field) == 112);
+                       aliased_plain_handle_field) == 108);
 static_assert(offsetof(::test_handles::wire::Handles,
-                       aliased_subtype_handle_field) == 116);
+                       aliased_subtype_handle_field) == 112);
 static_assert(offsetof(::test_handles::wire::Handles,
-                       aliased_rights_handle_field) == 120);
-static_assert(offsetof(::test_handles::wire::Handles, some_protocol) == 124);
+                       aliased_rights_handle_field) == 116);
+static_assert(offsetof(::test_handles::wire::Handles, some_protocol) == 120);
 static_assert(offsetof(::test_handles::wire::Handles, request_some_protocol) ==
-              128);
+              124);
 static_assert(sizeof(::test_handles::wire::Handles) ==
               TypeTraits<::test_handles::wire::Handles>::kPrimarySize);
 #endif  // __Fuchsia__

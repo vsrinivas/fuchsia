@@ -238,19 +238,10 @@ fidl_testdata_info = [
       "fidlgen_libfuzzer",
     ]
     build_denylist = [
-      # TODO(fxbug.dev/62533): Fix many issues.
-      "fidlgen_hlcpp",
       "fidlgen_libfuzzer",
-
-      # TODO(fxbug.dev/62526): Fix pcidevice.h include issue.
-      "fidlgen_llcpp",
 
       # TODO(fxbug.dev/62524): Fix Ord/Hash trait issue with fidl::Resource.
       "fidlgen_rust",
-    ]
-    host_build_denylist = [
-      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
-      "fidlgen_llcpp",
     ]
   },
   {

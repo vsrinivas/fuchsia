@@ -27,7 +27,6 @@
 #include <lib/zx/iommu.h>
 #include <lib/zx/job.h>
 #include <lib/zx/pager.h>
-#include <lib/zx/pcidevice.h>
 #include <lib/zx/pmt.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
@@ -62,8 +61,7 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
           ::zx::eventpair eventpair_handle, ::zx::exception exception_handle,
           ::zx::fifo fifo_handle, ::zx::guest guest_handle,
           ::zx::interrupt interrupt_handle, ::zx::iommu iommu_handle,
-          ::zx::job job_handle, ::zx::pager pager_handle,
-          ::zx::pcidevice pcidevice_handle, ::zx::pmt pmt_handle,
+          ::zx::job job_handle, ::zx::pager pager_handle, ::zx::pmt pmt_handle,
           ::zx::port port_handle, ::zx::process process_handle,
           ::zx::profile profile_handle, ::zx::resource resource_handle,
           ::zx::socket socket_handle, ::zx::suspend_token suspendtoken_handle,
@@ -89,7 +87,6 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
                   .iommu_handle = std::move(iommu_handle),
                   .job_handle = std::move(job_handle),
                   .pager_handle = std::move(pager_handle),
-                  .pcidevice_handle = std::move(pcidevice_handle),
                   .pmt_handle = std::move(pmt_handle),
                   .port_handle = std::move(port_handle),
                   .process_handle = std::move(process_handle),
@@ -181,12 +178,6 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
   const ::zx::pager& pager_handle() const { return storage_.pager_handle; }
 
   ::zx::pager& pager_handle() { return storage_.pager_handle; }
-
-  const ::zx::pcidevice& pcidevice_handle() const {
-    return storage_.pcidevice_handle;
-  }
-
-  ::zx::pcidevice& pcidevice_handle() { return storage_.pcidevice_handle; }
 
   const ::zx::pmt& pmt_handle() const { return storage_.pmt_handle; }
 
@@ -316,7 +307,6 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     ::zx::iommu iommu_handle{};
     ::zx::job job_handle{};
     ::zx::pager pager_handle{};
-    ::zx::pcidevice pcidevice_handle{};
     ::zx::pmt pmt_handle{};
     ::zx::port port_handle{};
     ::zx::process process_handle{};
@@ -361,8 +351,8 @@ struct ::fidl::internal::TypeTraits<::test_handles::Handles> final {
 
 template <>
 struct CodingTraits<::test_handles::Handles> {
-  static constexpr size_t inline_size_v1_no_ee = 132;
-  static constexpr size_t inline_size_v2 = 132;
+  static constexpr size_t inline_size_v1_no_ee = 128;
+  static constexpr size_t inline_size_v2 = 128;
 
   template <class EncoderImpl>
   static void Encode(
@@ -495,31 +485,22 @@ struct CodingTraits<::test_handles::Handles> {
     field_offset =
         encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 56
                                                                            : 56;
-    ::fidl::Encode(encoder, &value->storage_.pcidevice_handle,
-                   offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_PCI_DEVICE,
-                       .rights = 0x80000000,
-                   });
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 60
-                                                                           : 60;
     ::fidl::Encode(encoder, &value->storage_.pmt_handle, offset + field_offset,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_PMT,
                        .rights = 0x80000000,
                    });
     field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 64
-                                                                           : 64;
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 60
+                                                                           : 60;
     ::fidl::Encode(encoder, &value->storage_.port_handle, offset + field_offset,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_PORT,
                        .rights = 0x80000000,
                    });
     field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 68
-                                                                           : 68;
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 64
+                                                                           : 64;
     ::fidl::Encode(encoder, &value->storage_.process_handle,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -527,8 +508,8 @@ struct CodingTraits<::test_handles::Handles> {
                        .rights = 0x80000000,
                    });
     field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 72
-                                                                           : 72;
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 68
+                                                                           : 68;
     ::fidl::Encode(encoder, &value->storage_.profile_handle,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -536,8 +517,8 @@ struct CodingTraits<::test_handles::Handles> {
                        .rights = 0x80000000,
                    });
     field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 76
-                                                                           : 76;
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 72
+                                                                           : 72;
     ::fidl::Encode(encoder, &value->storage_.resource_handle,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -545,8 +526,8 @@ struct CodingTraits<::test_handles::Handles> {
                        .rights = 0x80000000,
                    });
     field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 80
-                                                                           : 80;
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 76
+                                                                           : 76;
     ::fidl::Encode(encoder, &value->storage_.socket_handle,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -554,8 +535,8 @@ struct CodingTraits<::test_handles::Handles> {
                        .rights = 0x80000000,
                    });
     field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 84
-                                                                           : 84;
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 80
+                                                                           : 80;
     ::fidl::Encode(encoder, &value->storage_.suspendtoken_handle,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -563,8 +544,8 @@ struct CodingTraits<::test_handles::Handles> {
                        .rights = 0x80000000,
                    });
     field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 88
-                                                                           : 88;
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 84
+                                                                           : 84;
     ::fidl::Encode(encoder, &value->storage_.thread_handle,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -572,8 +553,8 @@ struct CodingTraits<::test_handles::Handles> {
                        .rights = 0x80000000,
                    });
     field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 92
-                                                                           : 92;
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 88
+                                                                           : 88;
     ::fidl::Encode(encoder, &value->storage_.timer_handle,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -581,17 +562,16 @@ struct CodingTraits<::test_handles::Handles> {
                        .rights = 0x80000000,
                    });
     field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 96
-                                                                           : 96;
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 92
+                                                                           : 92;
     ::fidl::Encode(encoder, &value->storage_.vcpu_handle, offset + field_offset,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_VCPU,
                        .rights = 0x80000000,
                    });
     field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
-            ? 100
-            : 100;
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 96
+                                                                           : 96;
     ::fidl::Encode(encoder, &value->storage_.vmar_handle, offset + field_offset,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_VMAR,
@@ -599,8 +579,8 @@ struct CodingTraits<::test_handles::Handles> {
                    });
     field_offset =
         encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
-            ? 104
-            : 104;
+            ? 100
+            : 100;
     ::fidl::Encode(encoder, &value->storage_.vmo_handle, offset + field_offset,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_VMO,
@@ -608,8 +588,8 @@ struct CodingTraits<::test_handles::Handles> {
                    });
     field_offset =
         encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
-            ? 108
-            : 108;
+            ? 104
+            : 104;
     ::fidl::Encode(encoder, &value->storage_.rights_handle,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -618,8 +598,8 @@ struct CodingTraits<::test_handles::Handles> {
                    });
     field_offset =
         encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
-            ? 112
-            : 112;
+            ? 108
+            : 108;
     ::fidl::Encode(encoder, &value->storage_.aliased_plain_handle_field,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -628,8 +608,8 @@ struct CodingTraits<::test_handles::Handles> {
                    });
     field_offset =
         encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
-            ? 116
-            : 116;
+            ? 112
+            : 112;
     ::fidl::Encode(encoder, &value->storage_.aliased_subtype_handle_field,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -638,8 +618,8 @@ struct CodingTraits<::test_handles::Handles> {
                    });
     field_offset =
         encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
-            ? 120
-            : 120;
+            ? 116
+            : 116;
     ::fidl::Encode(encoder, &value->storage_.aliased_rights_handle_field,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -648,8 +628,8 @@ struct CodingTraits<::test_handles::Handles> {
                    });
     field_offset =
         encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
-            ? 124
-            : 124;
+            ? 120
+            : 120;
     ::fidl::Encode(encoder, &value->storage_.some_protocol,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -658,8 +638,8 @@ struct CodingTraits<::test_handles::Handles> {
                    });
     field_offset =
         encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
-            ? 128
-            : 128;
+            ? 124
+            : 124;
     ::fidl::Encode(encoder, &value->storage_.request_some_protocol,
                    offset + field_offset,
                    ::fidl::HandleInformation{
@@ -685,29 +665,28 @@ struct CodingTraits<::test_handles::Handles> {
     ::fidl::Decode(decoder, &value->storage_.iommu_handle, offset + 44);
     ::fidl::Decode(decoder, &value->storage_.job_handle, offset + 48);
     ::fidl::Decode(decoder, &value->storage_.pager_handle, offset + 52);
-    ::fidl::Decode(decoder, &value->storage_.pcidevice_handle, offset + 56);
-    ::fidl::Decode(decoder, &value->storage_.pmt_handle, offset + 60);
-    ::fidl::Decode(decoder, &value->storage_.port_handle, offset + 64);
-    ::fidl::Decode(decoder, &value->storage_.process_handle, offset + 68);
-    ::fidl::Decode(decoder, &value->storage_.profile_handle, offset + 72);
-    ::fidl::Decode(decoder, &value->storage_.resource_handle, offset + 76);
-    ::fidl::Decode(decoder, &value->storage_.socket_handle, offset + 80);
-    ::fidl::Decode(decoder, &value->storage_.suspendtoken_handle, offset + 84);
-    ::fidl::Decode(decoder, &value->storage_.thread_handle, offset + 88);
-    ::fidl::Decode(decoder, &value->storage_.timer_handle, offset + 92);
-    ::fidl::Decode(decoder, &value->storage_.vcpu_handle, offset + 96);
-    ::fidl::Decode(decoder, &value->storage_.vmar_handle, offset + 100);
-    ::fidl::Decode(decoder, &value->storage_.vmo_handle, offset + 104);
-    ::fidl::Decode(decoder, &value->storage_.rights_handle, offset + 108);
+    ::fidl::Decode(decoder, &value->storage_.pmt_handle, offset + 56);
+    ::fidl::Decode(decoder, &value->storage_.port_handle, offset + 60);
+    ::fidl::Decode(decoder, &value->storage_.process_handle, offset + 64);
+    ::fidl::Decode(decoder, &value->storage_.profile_handle, offset + 68);
+    ::fidl::Decode(decoder, &value->storage_.resource_handle, offset + 72);
+    ::fidl::Decode(decoder, &value->storage_.socket_handle, offset + 76);
+    ::fidl::Decode(decoder, &value->storage_.suspendtoken_handle, offset + 80);
+    ::fidl::Decode(decoder, &value->storage_.thread_handle, offset + 84);
+    ::fidl::Decode(decoder, &value->storage_.timer_handle, offset + 88);
+    ::fidl::Decode(decoder, &value->storage_.vcpu_handle, offset + 92);
+    ::fidl::Decode(decoder, &value->storage_.vmar_handle, offset + 96);
+    ::fidl::Decode(decoder, &value->storage_.vmo_handle, offset + 100);
+    ::fidl::Decode(decoder, &value->storage_.rights_handle, offset + 104);
     ::fidl::Decode(decoder, &value->storage_.aliased_plain_handle_field,
-                   offset + 112);
+                   offset + 108);
     ::fidl::Decode(decoder, &value->storage_.aliased_subtype_handle_field,
-                   offset + 116);
+                   offset + 112);
     ::fidl::Decode(decoder, &value->storage_.aliased_rights_handle_field,
-                   offset + 120);
-    ::fidl::Decode(decoder, &value->storage_.some_protocol, offset + 124);
+                   offset + 116);
+    ::fidl::Decode(decoder, &value->storage_.some_protocol, offset + 120);
     ::fidl::Decode(decoder, &value->storage_.request_some_protocol,
-                   offset + 128);
+                   offset + 124);
   }
 };
 #endif  // __Fuchsia__

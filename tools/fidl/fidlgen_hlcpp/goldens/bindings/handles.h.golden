@@ -28,8 +28,6 @@ enum class obj_type : uint32_t {
 
   INTERRUPT = 9u,
 
-  PCI_DEVICE = 11u,
-
   LOG = 12u,
 
   SOCKET = 14u,
@@ -120,8 +118,6 @@ class Handles final {
   ::zx::job job_handle{};
 
   ::zx::pager pager_handle{};
-
-  ::zx::pcidevice pcidevice_handle{};
 
   ::zx::pmt pmt_handle{};
 
@@ -230,7 +226,7 @@ struct Equality<::test::handles::obj_type> {
 
 template <>
 struct CodingTraits<::test::handles::Handles>
-    : public EncodableCodingTraits<::test::handles::Handles, 132, 132> {};
+    : public EncodableCodingTraits<::test::handles::Handles, 128, 128> {};
 
 template <>
 struct IsMemcpyCompatible<::test::handles::Handles>
@@ -254,7 +250,6 @@ struct IsMemcpyCompatible<::test::handles::Handles>
           IsMemcpyCompatible<::zx::iommu>::value &&
           IsMemcpyCompatible<::zx::job>::value &&
           IsMemcpyCompatible<::zx::pager>::value &&
-          IsMemcpyCompatible<::zx::pcidevice>::value &&
           IsMemcpyCompatible<::zx::pmt>::value &&
           IsMemcpyCompatible<::zx::port>::value &&
           IsMemcpyCompatible<::zx::process>::value &&
@@ -317,9 +312,6 @@ struct Equality<::test::handles::Handles> {
       return false;
     }
     if (!::fidl::Equals(_lhs.pager_handle, _rhs.pager_handle)) {
-      return false;
-    }
-    if (!::fidl::Equals(_lhs.pcidevice_handle, _rhs.pcidevice_handle)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.pmt_handle, _rhs.pmt_handle)) {

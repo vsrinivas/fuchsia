@@ -27,8 +27,6 @@ enum class obj_type : uint32_t {
 
   kInterrupt = 9u,
 
-  kPciDevice = 11u,
-
   kLog = 12u,
 
   kSocket = 14u,

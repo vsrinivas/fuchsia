@@ -18,7 +18,6 @@ void ::test_handles::wire::Handles::_CloseHandles() {
   iommu_handle.reset();
   job_handle.reset();
   pager_handle.reset();
-  pcidevice_handle.reset();
   pmt_handle.reset();
   port_handle.reset();
   process_handle.reset();
