@@ -79,7 +79,7 @@ pub struct FlashCommand {
 
     #[argh(
         switch,
-        description = "skip hardware verification.  This is dangerous, please be sure the images you are flashing match the device"
+        description = "skip hardware verification. This is dangerous, please be sure the images you are flashing match the device"
     )]
     pub skip_verify: bool,
 }
