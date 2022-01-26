@@ -13,4 +13,10 @@ pub mod types;
 /// The `Controller` type is a client-side abstraction for the `fuchsia.hardware.display.Controller`
 /// protocol.
 mod controller;
+
+/// Rust bindings for the Fuchsia-canonical `zx_pixel_format_t` declared in
+/// //zircon/system/public/zircon/pixelformat.h.
+mod pixel_format;
+
 pub use controller::{Controller, VsyncEvent};
+pub use pixel_format::PixelFormat;

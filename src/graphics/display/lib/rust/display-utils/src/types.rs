@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::pixel_format::PixelFormat;
 use {fidl_fuchsia_hardware_display::Info, std::fmt};
 
 /// Enhances the `fuchsia.hardware.display.Info` FIDL struct.
@@ -26,8 +27,8 @@ impl fmt::Display for DisplayInfo {
         )?;
 
         writeln!(f, "\tPixel Formats:")?;
-        for (i, format) in self.0.pixel_format.iter().enumerate() {
-            writeln!(f, "\t\t{}:\t{:#08x}", i, format)?;
+        for (i, format) in self.0.pixel_format.iter().map(PixelFormat::from).enumerate() {
+            writeln!(f, "\t\t{}:\t{}", i, format)?;
         }
 
         writeln!(f, "\tDisplay Modes:")?;
@@ -45,8 +46,11 @@ impl fmt::Display for DisplayInfo {
         for (i, config) in self.0.cursor_configs.iter().enumerate() {
             writeln!(
                 f,
-                "\t\t{}:\t{:#08x} - {}x{}",
-                i, config.pixel_format, config.width, config.height
+                "\t\t{}:\t{} - {}x{}",
+                i,
+                PixelFormat::from(config.pixel_format),
+                config.width,
+                config.height
             )?;
         }
 
