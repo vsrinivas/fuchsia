@@ -133,18 +133,18 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
 
     bool invalid_message() const { return invalid_message_; }
 
-    void OnDisplaysChanged(fidl::WireResponse<fhd::Controller::OnDisplaysChanged>* event) override {
+    void OnDisplaysChanged(fidl::WireEvent<fhd::Controller::OnDisplaysChanged>* event) override {
       for (size_t i = 0; i < event->added.count(); i++) {
         displays_->push_back(Display(event->added[i]));
       }
     }
 
-    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {
+    void OnVsync(fidl::WireEvent<fhd::Controller::OnVsync>* event) override {
       invalid_message_ = true;
     }
 
     void OnClientOwnershipChange(
-        fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {
+        fidl::WireEvent<fhd::Controller::OnClientOwnershipChange>* event) override {
       has_ownership_ = event->has_ownership;
     }
 
@@ -266,12 +266,12 @@ zx_status_t wait_for_vsync(fhd::wire::ConfigStamp expected_stamp) {
 
     zx_status_t status() const { return status_; }
 
-    void OnDisplaysChanged(fidl::WireResponse<fhd::Controller::OnDisplaysChanged>* event) override {
+    void OnDisplaysChanged(fidl::WireEvent<fhd::Controller::OnDisplaysChanged>* event) override {
       printf("Display disconnected\n");
       status_ = ZX_ERR_STOP;
     }
 
-    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {
+    void OnVsync(fidl::WireEvent<fhd::Controller::OnVsync>* event) override {
       // Acknowledge cookie if non-zero
       if (event->cookie) {
         dc->AcknowledgeVsync(event->cookie);
@@ -285,7 +285,7 @@ zx_status_t wait_for_vsync(fhd::wire::ConfigStamp expected_stamp) {
     }
 
     void OnClientOwnershipChange(
-        fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {
+        fidl::WireEvent<fhd::Controller::OnClientOwnershipChange>* event) override {
       has_ownership = event->has_ownership;
       status_ = ZX_ERR_NEXT;
     }

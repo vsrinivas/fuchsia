@@ -44,11 +44,11 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 51>
                     ::test_protocols::HandleRightsProtocol::ResponseMethod>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireResponse<::test_protocols::"
+            .fidl_type_name = "::fidl::WireEvent<::test_protocols::"
                               "HandleRightsProtocol::AnEvent>",
             .has_flexible_envelope = false,
             .decoder_encoder =
-                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireEvent<
                     ::test_protocols::HandleRightsProtocol::AnEvent>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
@@ -176,20 +176,20 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 51>
                         WithRequestWithResponse>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireResponse<::test_protocols::"
+            .fidl_type_name = "::fidl::WireEvent<::test_protocols::"
                               "WithAndWithoutRequestResponse::OnEmptyResponse>",
             .has_flexible_envelope = false,
             .decoder_encoder =
-                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireEvent<
                     ::test_protocols::WithAndWithoutRequestResponse::
                         OnEmptyResponse>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireResponse<::test_protocols::"
+            .fidl_type_name = "::fidl::WireEvent<::test_protocols::"
                               "WithAndWithoutRequestResponse::OnWithResponse>",
             .has_flexible_envelope = false,
             .decoder_encoder =
-                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireEvent<
                     ::test_protocols::WithAndWithoutRequestResponse::
                         OnWithResponse>>,
         },
@@ -217,10 +217,10 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 51>
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =
-                "::fidl::WireResponse<::test_protocols::Transitional::Event>",
+                "::fidl::WireEvent<::test_protocols::Transitional::Event>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireResponse<::test_protocols::Transitional::Event>>,
+                ::fidl::WireEvent<::test_protocols::Transitional::Event>>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
@@ -378,12 +378,11 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 51>
                     ::test_protocols::ChannelProtocol::MethodA>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireResponse<::test_protocols::"
-                              "ChannelProtocol::EventA>",
+            .fidl_type_name =
+                "::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>",
             .has_flexible_envelope = false,
-            .decoder_encoder =
-                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
-                    ::test_protocols::ChannelProtocol::EventA>>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl::WireRequest<::test_protocols::"

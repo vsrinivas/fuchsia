@@ -73,9 +73,9 @@ class PrimaryWrapper : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Pri
 
   void on_fidl_error(::fidl::UnbindInfo info) override;
   void OnNotifyMessagesConsumed(
-      ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumed>* event) override;
+      ::fidl::WireEvent<::fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumed>* event) override;
   void OnNotifyMemoryImported(
-      ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMemoryImported>* event) override;
+      ::fidl::WireEvent<::fuchsia_gpu_magma::Primary::OnNotifyMemoryImported>* event) override;
 
   async::Loop loop_;
   fidl::WireSharedClient<fuchsia_gpu_magma::Primary> client_;

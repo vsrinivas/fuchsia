@@ -77,7 +77,7 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
             result_flags_out_(result_flags_out) {}
 
       void OnPerformanceCounterReadCompleted(
-          fidl::WireResponse<
+          fidl::WireEvent<
               fuchsia_gpu_magma::PerformanceCounterEvents::OnPerformanceCounterReadCompleted>*
               event) override {
         *trigger_id_out_ = event->trigger_id;
@@ -117,12 +117,12 @@ void PrimaryWrapper::on_fidl_error(::fidl::UnbindInfo info) {
 }
 
 void PrimaryWrapper::OnNotifyMessagesConsumed(
-    ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumed>* event) {
+    ::fidl::WireEvent<::fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumed>* event) {
   inflight_count_ -= event->count;
 }
 
 void PrimaryWrapper::OnNotifyMemoryImported(
-    ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMemoryImported>* event) {
+    ::fidl::WireEvent<::fuchsia_gpu_magma::Primary::OnNotifyMemoryImported>* event) {
   inflight_bytes_ -= event->bytes;
 }
 

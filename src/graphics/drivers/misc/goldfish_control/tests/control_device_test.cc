@@ -179,19 +179,19 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
   class SysmemHeapEventHandler : public fidl::WireSyncEventHandler<fuchsia_sysmem2::Heap> {
    public:
     SysmemHeapEventHandler() = default;
-    void OnRegister(fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>* message) override {
+    void OnRegister(fidl::WireEvent<fuchsia_sysmem2::Heap::OnRegister>* message) override {
       if (handler != nullptr) {
         handler(message);
       }
     }
     zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
     void SetOnRegisterHandler(
-        fit::function<void(fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>*)> new_handler) {
+        fit::function<void(fidl::WireEvent<fuchsia_sysmem2::Heap::OnRegister>*)> new_handler) {
       handler = std::move(new_handler);
     }
 
    private:
-    fit::function<void(fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>*)> handler;
+    fit::function<void(fidl::WireEvent<fuchsia_sysmem2::Heap::OnRegister>*)> handler;
   };
 
   zx_status_t HandleSysmemEvents() {
@@ -199,7 +199,7 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
     for (auto& kv : heap_info_) {
       SysmemHeapEventHandler handler;
       handler.SetOnRegisterHandler(
-          [this, heap = kv.first](fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>* message) {
+          [this, heap = kv.first](fidl::WireEvent<fuchsia_sysmem2::Heap::OnRegister>* message) {
             auto& heap_info = heap_info_[heap];
             heap_info.is_registered = true;
             heap_info.cpu_supported =

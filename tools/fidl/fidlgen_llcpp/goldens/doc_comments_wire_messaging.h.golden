@@ -90,11 +90,11 @@ struct ::fidl::WireRequest<::test_doccomments::Interface::Method> final {
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<::test_doccomments::Interface::OnEvent> final {
+struct ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
 
-  WireResponse() { _InitHeader(); }
+  WireEvent() { _InitHeader(); }
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -136,16 +136,14 @@ static_assert(
         kPrimarySize);
 
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_doccomments::Interface::OnEvent>>
+struct IsFidlType<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>>
+struct IsFidlMessage<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>
     : public std::true_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>> {
+struct TypeTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> {
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
@@ -160,8 +158,8 @@ struct TypeTraits<
 };
 
 static_assert(
-    sizeof(::fidl::WireResponse<::test_doccomments::Interface::OnEvent>) ==
-    TypeTraits<::fidl::WireResponse<::test_doccomments::Interface::OnEvent>>::
+    sizeof(::fidl::WireEvent<::test_doccomments::Interface::OnEvent>) ==
+    TypeTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>::
         kPrimarySize);
 
 }  // namespace fidl
@@ -210,7 +208,7 @@ class ::fidl::internal::WireEventHandlerInterface<
   ///
   /// event comment #3
   virtual void OnEvent(
-      ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>* event) {}
+      ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>* event) {}
 };
 
 template <>

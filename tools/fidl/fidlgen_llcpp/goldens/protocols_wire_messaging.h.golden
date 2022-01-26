@@ -184,14 +184,14 @@ struct ::fidl::WireResponse<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>
+struct ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::zx::socket h;
 
-  explicit WireResponse(::zx::socket&& h) : h(std::move(h)) { _InitHeader(); }
-  WireResponse() { _InitHeader(); }
+  explicit WireEvent(::zx::socket&& h) : h(std::move(h)) { _InitHeader(); }
+  WireEvent() { _InitHeader(); }
   void _CloseHandles();
 
   class UnownedEncodedMessage;
@@ -335,21 +335,21 @@ static_assert(
 
 template <>
 struct IsFidlType<
-    ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>>
+    ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>>
+    ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>>
     : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<
-    ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>>
+    ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>>
     : public std::true_type {};
 
 template <>
 struct TypeTraits<
-    ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>> {
+    ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::
           test_protocols_HandleRightsProtocolAnEventEventMessageTable;
@@ -365,14 +365,13 @@ struct TypeTraits<
 };
 
 static_assert(
-    sizeof(::fidl::WireResponse<
-           ::test_protocols::HandleRightsProtocol::AnEvent>) ==
-    TypeTraits<::fidl::WireResponse<
+    sizeof(
+        ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>) ==
+    TypeTraits<::fidl::WireEvent<
         ::test_protocols::HandleRightsProtocol::AnEvent>>::kPrimarySize);
 static_assert(
-    offsetof(
-        ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>,
-        h) == 16);
+    offsetof(::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>,
+             h) == 16);
 #endif  // __Fuchsia__
 
 }  // namespace fidl
@@ -582,7 +581,7 @@ class ::fidl::internal::WireEventHandlerInterface<
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
   virtual void AnEvent(
-      ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>*
+      ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>*
           event) {}
 };
 
@@ -1105,13 +1104,13 @@ struct ::fidl::WireResponse<
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<
+struct ::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
 
-  WireResponse() { _InitHeader(); }
+  WireEvent() { _InitHeader(); }
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -1123,15 +1122,15 @@ struct ::fidl::WireResponse<
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<
+struct ::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl::StringView ret;
 
-  explicit WireResponse(::fidl::StringView ret) : ret(ret) { _InitHeader(); }
-  WireResponse() { _InitHeader(); }
+  explicit WireEvent(::fidl::StringView ret) : ret(ret) { _InitHeader(); }
+  WireEvent() { _InitHeader(); }
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -1502,16 +1501,16 @@ static_assert(
         ret) == 16);
 
 template <>
-struct IsFidlType<::fidl::WireResponse<
+struct IsFidlType<::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireResponse<
+struct IsFidlMessage<::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>
     : public std::true_type {};
 
 template <>
-struct TypeTraits<::fidl::WireResponse<
+struct TypeTraits<::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
@@ -1527,23 +1526,23 @@ struct TypeTraits<::fidl::WireResponse<
 };
 
 static_assert(
-    sizeof(::fidl::WireResponse<
+    sizeof(::fidl::WireEvent<
            ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>) ==
-    TypeTraits<::fidl::WireResponse<
+    TypeTraits<::fidl::WireEvent<
         ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>::
         kPrimarySize);
 
 template <>
-struct IsFidlType<::fidl::WireResponse<
+struct IsFidlType<::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireResponse<
+struct IsFidlMessage<::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
     : public std::true_type {};
 
 template <>
-struct TypeTraits<::fidl::WireResponse<
+struct TypeTraits<::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::
@@ -1560,14 +1559,14 @@ struct TypeTraits<::fidl::WireResponse<
 };
 
 static_assert(
-    sizeof(::fidl::WireResponse<
+    sizeof(::fidl::WireEvent<
            ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>) ==
-    TypeTraits<::fidl::WireResponse<
+    TypeTraits<::fidl::WireEvent<
         ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>::
         kPrimarySize);
 static_assert(
     offsetof(
-        ::fidl::WireResponse<
+        ::fidl::WireEvent<
             ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>,
         ret) == 16);
 
@@ -2320,11 +2319,11 @@ class ::fidl::internal::WireEventHandlerInterface<
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
   virtual void OnEmptyResponse(
-      ::fidl::WireResponse<
+      ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>*
           event) {}
   virtual void OnWithResponse(
-      ::fidl::WireResponse<
+      ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>*
           event) {}
 };
@@ -2880,13 +2879,13 @@ struct ::fidl::WireRequest<::test_protocols::Transitional::OneWay> final {
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<::test_protocols::Transitional::Event> final {
+struct ::fidl::WireEvent<::test_protocols::Transitional::Event> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   int64_t x;
 
-  explicit WireResponse(int64_t x) : x(x) { _InitHeader(); }
-  WireResponse() { _InitHeader(); }
+  explicit WireEvent(int64_t x) : x(x) { _InitHeader(); }
+  WireEvent() { _InitHeader(); }
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -2996,15 +2995,14 @@ static_assert(
     16);
 
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::Transitional::Event>>
+struct IsFidlType<::fidl::WireEvent<::test_protocols::Transitional::Event>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireResponse<::test_protocols::Transitional::Event>>
+struct IsFidlMessage<::fidl::WireEvent<::test_protocols::Transitional::Event>>
     : public std::true_type {};
 
 template <>
-struct TypeTraits<::fidl::WireResponse<::test_protocols::Transitional::Event>> {
+struct TypeTraits<::fidl::WireEvent<::test_protocols::Transitional::Event>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_TransitionalEventEventMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
@@ -3019,12 +3017,11 @@ struct TypeTraits<::fidl::WireResponse<::test_protocols::Transitional::Event>> {
 };
 
 static_assert(
-    sizeof(::fidl::WireResponse<::test_protocols::Transitional::Event>) ==
-    TypeTraits<::fidl::WireResponse<::test_protocols::Transitional::Event>>::
+    sizeof(::fidl::WireEvent<::test_protocols::Transitional::Event>) ==
+    TypeTraits<::fidl::WireEvent<::test_protocols::Transitional::Event>>::
         kPrimarySize);
-static_assert(
-    offsetof(::fidl::WireResponse<::test_protocols::Transitional::Event>, x) ==
-    16);
+static_assert(offsetof(::fidl::WireEvent<::test_protocols::Transitional::Event>,
+                       x) == 16);
 
 }  // namespace fidl
 namespace test_protocols {
@@ -3199,7 +3196,7 @@ class ::fidl::internal::WireEventHandlerInterface<
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
   virtual void Event(
-      ::fidl::WireResponse<::test_protocols::Transitional::Event>* event) {}
+      ::fidl::WireEvent<::test_protocols::Transitional::Event>* event) {}
 };
 
 template <>
@@ -7125,14 +7122,14 @@ struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> final {
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA> final {
+struct ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   int64_t a;
   int64_t b;
 
-  explicit WireResponse(int64_t a, int64_t b) : a(a), b(b) { _InitHeader(); }
-  WireResponse() { _InitHeader(); }
+  explicit WireEvent(int64_t a, int64_t b) : a(a), b(b) { _InitHeader(); }
+  WireEvent() { _InitHeader(); }
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -7313,17 +7310,16 @@ static_assert(
              b) == 24);
 
 template <>
-struct IsFidlType<
-    ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>>
+struct IsFidlType<::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>>
+    ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>>
     : public std::true_type {};
 
 template <>
 struct TypeTraits<
-    ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>> {
+    ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_ChannelProtocolEventAEventMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
@@ -7338,15 +7334,15 @@ struct TypeTraits<
 };
 
 static_assert(
-    sizeof(::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>) ==
-    TypeTraits<::fidl::WireResponse<
-        ::test_protocols::ChannelProtocol::EventA>>::kPrimarySize);
+    sizeof(::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>) ==
+    TypeTraits<::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>>::
+        kPrimarySize);
 static_assert(
-    offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>,
-             a) == 16);
+    offsetof(::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>, a) ==
+    16);
 static_assert(
-    offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>,
-             b) == 24);
+    offsetof(::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>, b) ==
+    24);
 
 template <>
 struct IsFidlType<
@@ -8038,7 +8034,7 @@ class ::fidl::internal::WireEventHandlerInterface<
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
   virtual void EventA(
-      ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>* event) {}
+      ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>* event) {}
 };
 
 template <>

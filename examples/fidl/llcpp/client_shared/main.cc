@@ -53,7 +53,7 @@ void OwnedEventHandler(async_dispatcher_t* dispatcher, fidl::ClientEnd<Echo> cli
     }
 
     // Regular event handling code is also supported.
-    void OnString(fidl::WireResponse<Echo::OnString>* event) override {
+    void OnString(fidl::WireEvent<Echo::OnString>* event) override {
       std::string response(event->response.data(), event->response.size());
       std::cout << "Got event: " << response << std::endl;
     }

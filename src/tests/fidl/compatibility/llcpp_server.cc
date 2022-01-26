@@ -193,7 +193,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
         fidl::Result result() const { return result_; }
 
-        void EchoMinimalEvent(fidl::WireResponse<Echo::EchoMinimalEvent>* event) override {
+        void EchoMinimalEvent(fidl::WireEvent<Echo::EchoMinimalEvent>* event) override {
           result_ = connection_->server_binding_.value()->EchoMinimalEvent();
         }
 
@@ -260,7 +260,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
         fidl::Result result() const { return result_; }
 
-        void EchoEvent(fidl::WireResponse<Echo::EchoEvent>* event) override {
+        void EchoEvent(fidl::WireEvent<Echo::EchoEvent>* event) override {
           result_ = connection_->server_binding_.value()->EchoEvent(std::move(event->value));
         }
 

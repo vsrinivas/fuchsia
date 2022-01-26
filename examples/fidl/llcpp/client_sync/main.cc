@@ -43,7 +43,7 @@ int main(int argc, const char** argv) {
      public:
       EventHandler() = default;
 
-      void OnString(fidl::WireResponse<fuchsia_examples::Echo::OnString>* event) override {
+      void OnString(fidl::WireEvent<fuchsia_examples::Echo::OnString>* event) override {
         std::string reply_string(event->response.data(), event->response.size());
         std::cout << "Got event: " << reply_string << std::endl;
       }

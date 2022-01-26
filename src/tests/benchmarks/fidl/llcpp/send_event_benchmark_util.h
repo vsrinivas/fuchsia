@@ -35,7 +35,7 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
                  std::condition_variable& cond)
         : state_(state), ready_(ready), mu_(mu), cond_(cond) {}
 
-    void Send(fidl::WireResponse<typename ProtocolType::Send>* event) override {
+    void Send(fidl::WireEvent<typename ProtocolType::Send>* event) override {
       state_->NextStep();  // End: SendEvent. Begin: Teardown.
       {
         std::lock_guard<std::mutex> guard(mu_);

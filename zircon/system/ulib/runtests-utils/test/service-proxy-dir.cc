@@ -103,9 +103,7 @@ TEST(ServiceProxyDirTest, Simple) {
 
       zx_status_t status() const { return status_; }
 
-      void OnOpen(fidl::WireResponse<fio::Directory::OnOpen>* event) override {
-        status_ = event->s;
-      }
+      void OnOpen(fidl::WireEvent<fio::Directory::OnOpen>* event) override { status_ = event->s; }
 
       zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
 
@@ -143,9 +141,7 @@ TEST(ServiceProxyDirTest, Simple) {
 
       zx_status_t status() const { return status_; }
 
-      void OnOpen(fidl::WireResponse<fio::Directory::OnOpen>* event) override {
-        status_ = event->s;
-      }
+      void OnOpen(fidl::WireEvent<fio::Directory::OnOpen>* event) override { status_ = event->s; }
 
       zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
 

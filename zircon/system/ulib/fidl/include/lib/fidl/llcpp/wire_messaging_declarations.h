@@ -27,7 +27,7 @@ template <typename FidlMethod>
 struct WireResponse;
 
 template <typename FidlMethod>
-using WireEvent = WireResponse<FidlMethod>;
+struct WireEvent;
 
 #ifdef __Fuchsia__
 // WireSyncEventHandler is used by synchronous clients to handle events for the

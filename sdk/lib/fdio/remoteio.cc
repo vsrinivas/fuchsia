@@ -160,7 +160,7 @@ zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) 
 
     const fidl::ClientEnd<fio::Node>& client_end() const { return client_end_; }
 
-    void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) override {
+    void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override {
       if (event->s != ZX_OK) {
         result_ = zx::error(event->s);
       } else {

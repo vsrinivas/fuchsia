@@ -34,13 +34,12 @@ class TestAsyncHandler : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::P
   auto& unbind_info() { return unbind_info_; }
 
   void OnNotifyMessagesConsumed(
-      ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumed>* event)
-      override {
+      ::fidl::WireEvent<::fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumed>* event) override {
     messages_consumed_ += event->count;
   }
 
   void OnNotifyMemoryImported(
-      ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMemoryImported>* event) override {
+      ::fidl::WireEvent<::fuchsia_gpu_magma::Primary::OnNotifyMemoryImported>* event) override {
     // noop
   }
 

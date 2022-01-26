@@ -26,7 +26,7 @@ class ComponentControllerEventHandler
     : public fidl::WireSyncEventHandler<fuchsia_sys::ComponentController> {
  public:
   void OnTerminated(
-      ::fidl::WireResponse<::fuchsia_sys::ComponentController::OnTerminated>* event) override {
+      ::fidl::WireEvent<::fuchsia_sys::ComponentController::OnTerminated>* event) override {
     zx_status_t status;
     switch (event->termination_reason) {
       case fuchsia_sys::TerminationReason::kExited:

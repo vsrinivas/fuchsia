@@ -45,8 +45,7 @@ TEST(DisplayTest, ClientVSyncOk) {
     EventHandler(fuchsia_hardware_display::wire::ConfigStamp expected_config_stamp)
         : expected_config_stamp_(expected_config_stamp) {}
 
-    void OnVsync(
-        fidl::WireResponse<fuchsia_hardware_display::Controller::OnVsync>* event) override {
+    void OnVsync(fidl::WireEvent<fuchsia_hardware_display::Controller::OnVsync>* event) override {
       if (event->applied_config_stamp == expected_config_stamp_) {
         vsync_handled_ = true;
       }

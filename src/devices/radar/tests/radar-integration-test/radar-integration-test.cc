@@ -104,7 +104,7 @@ class RadarIntegrationTest : public zxtest::Test {
 
     ~EventHandler() override { client_torn_down_promise_.set_value(); }
 
-    void OnBurst(fidl::WireResponse<BurstReader::OnBurst>* event) override {
+    void OnBurst(fidl::WireEvent<BurstReader::OnBurst>* event) override {
       if (burst_handler_) {
         burst_handler_(event->result);
       }

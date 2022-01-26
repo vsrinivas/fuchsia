@@ -164,6 +164,7 @@ var (
 	// Method related
 	WireRequest         = fidlNs.member("WireRequest")
 	WireResponse        = fidlNs.member("WireResponse")
+	WireEvent           = fidlNs.member("WireEvent")
 	WireResult          = fidlNs.member("WireResult")
 	WireUnownedResult   = transportNs.member("WireUnownedResult")
 	WireResponseContext = fidlNs.member("WireResponseContext")
@@ -436,6 +437,7 @@ type wireMethod struct {
 	WireRequestViewAlias name
 	WireResponse         name
 	WireResponseContext  name
+	WireEvent            name
 	WireResult           name
 	WireUnownedResult    name
 }
@@ -451,6 +453,7 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 		WireRequest:          WireRequest.template(methodMarker),
 		WireRequestView:      WireRequestView.template(methodMarker),
 		WireRequestViewAlias: s.appendName("RequestView"),
+		WireEvent:            WireEvent.template(methodMarker),
 		WireResponse:         WireResponse.template(methodMarker),
 		WireResponseContext:  WireResponseContext.template(methodMarker),
 		WireResult:           WireResult.template(methodMarker),
@@ -523,6 +526,7 @@ type methodInner struct {
 
 	nameVariants
 	Ordinal                   uint64
+	IsEvent                   bool
 	HasRequest                bool
 	HasRequestPayload         bool
 	RequestPayload            nameVariants
@@ -784,6 +788,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			// TODO(fxbug.dev/84834): Use the functionality in //tools/fidl/lib/fidlgen/identifiers.go
 			FullyQualifiedName:        fmt.Sprintf("%s.%s", p.Name, v.Name),
 			Ordinal:                   v.Ordinal,
+			IsEvent:                   !v.HasRequest && v.HasResponse,
 			HasRequest:                v.HasRequest,
 			HasRequestPayload:         v.HasRequestPayload(),
 			RequestPayload:            maybeRequestPayload,

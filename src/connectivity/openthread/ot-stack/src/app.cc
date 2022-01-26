@@ -562,16 +562,16 @@ void OtStackApp::EventLoopHandleInboundFrame(::fidl::VectorView<uint8_t> data) {
 }
 
 void OtStackApp::OnReadyForSendFrames(
-    fidl::WireResponse<fidl_spinel::Device::OnReadyForSendFrames>* event) {
+    fidl::WireEvent<fidl_spinel::Device::OnReadyForSendFrames>* event) {
   HandleRadioOnReadyForSendFrame(event->number_of_frames);
 }
 
-void OtStackApp::OnReceiveFrame(fidl::WireResponse<fidl_spinel::Device::OnReceiveFrame>* event) {
+void OtStackApp::OnReceiveFrame(fidl::WireEvent<fidl_spinel::Device::OnReceiveFrame>* event) {
   EventLoopHandleInboundFrame(std::move(event->data));
   UpdateRadioInboundAllowance();
 }
 
-void OtStackApp::OnError(fidl::WireResponse<fidl_spinel::Device::OnError>* event) {
+void OtStackApp::OnError(fidl::WireEvent<fidl_spinel::Device::OnError>* event) {
   handler_status_ =
       fidl::WireSendEvent(*binding_)->OnError(event->error, event->did_close).status();
 }

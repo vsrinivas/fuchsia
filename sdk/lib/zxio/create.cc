@@ -65,7 +65,7 @@ class ZxioCreateOnOpenEventHandler final : public fidl::WireSyncEventHandler<fio
       : node_(std::move(node)), storage_(storage), status_(status) {}
 
  protected:
-  void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) final {
+  void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) final {
     status_ = event->s;
     if (event->s != ZX_OK)
       return;

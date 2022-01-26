@@ -105,15 +105,15 @@ struct ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> final {
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive> final {
+struct ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::test_emptystruct::wire::Empty e;
 
-  explicit WireResponse(const ::test_emptystruct::wire::Empty& e) : e(e) {
+  explicit WireEvent(const ::test_emptystruct::wire::Empty& e) : e(e) {
     _InitHeader();
   }
-  WireResponse() { _InitHeader(); }
+  WireEvent() { _InitHeader(); }
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -205,17 +205,16 @@ static_assert(
     16);
 
 template <>
-struct IsFidlType<
-    ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>>
+struct IsFidlType<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>>
+    ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>>
     : public std::true_type {};
 
 template <>
 struct TypeTraits<
-    ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>> {
+    ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>> {
   static constexpr const fidl_type_t* kType =
       &::test_emptystruct::
           test_emptystruct_EmptyProtocolReceiveEventMessageTable;
@@ -231,11 +230,11 @@ struct TypeTraits<
 };
 
 static_assert(
-    sizeof(::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>) ==
-    TypeTraits<::fidl::WireResponse<
-        ::test_emptystruct::EmptyProtocol::Receive>>::kPrimarySize);
+    sizeof(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>) ==
+    TypeTraits<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>>::
+        kPrimarySize);
 static_assert(
-    offsetof(::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>,
+    offsetof(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>,
              e) == 16);
 
 template <>
@@ -493,8 +492,7 @@ class ::fidl::internal::WireEventHandlerInterface<
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
   virtual void Receive(
-      ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>* event) {
-  }
+      ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>* event) {}
 };
 
 template <>

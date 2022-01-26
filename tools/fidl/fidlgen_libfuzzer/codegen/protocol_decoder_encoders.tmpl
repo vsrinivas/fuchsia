@@ -17,11 +17,19 @@
 {{- end -}}
 
 {{- if .HasResponse }}
+{{- if .IsEvent }}
+::fidl::fuzzing::DecoderEncoderForType{
+	.fidl_type_name = "{{ .WireEvent }}",
+	.has_flexible_envelope = {{ .Response.TypeShapeV1.HasFlexibleEnvelope }},
+	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireEvent }}>,
+},
+{{- else }}
 ::fidl::fuzzing::DecoderEncoderForType{
 	.fidl_type_name = "{{ .WireResponse }}",
 	.has_flexible_envelope = {{ .Response.TypeShapeV1.HasFlexibleEnvelope }},
 	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireResponse }}>,
 },
+{{- end -}}
 {{- end -}}
 
 {{- end -}}

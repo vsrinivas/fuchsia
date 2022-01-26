@@ -573,7 +573,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
 
   class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_sysmem2::Heap> {
    public:
-    void OnRegister(fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>* event) override {
+    void OnRegister(fidl::WireEvent<fuchsia_sysmem2::Heap::OnRegister>* event) override {
       std::lock_guard checker(*device_->loop_checker_);
       // A heap should not be registered twice.
       ZX_DEBUG_ASSERT(heap_client_.is_valid());

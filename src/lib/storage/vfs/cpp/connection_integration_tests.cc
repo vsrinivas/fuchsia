@@ -65,24 +65,24 @@ zx::status<fio::wire::NodeInfo> GetOnOpenResponse(fidl::UnownedClientEnd<fio::No
      public:
       explicit EventHandler() = default;
 
-      void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) override {
+      void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override {
         ASSERT_NE(event, nullptr);
         response_ = std::move(*event);
       }
 
-      fidl::WireResponse<fio::Node::OnOpen> GetResponse() { return std::move(response_); }
+      fidl::WireEvent<fio::Node::OnOpen> GetResponse() { return std::move(response_); }
 
       zx_status_t Unknown() override { return ZX_ERR_UNAVAILABLE; }
 
      private:
-      fidl::WireResponse<fio::Node::OnOpen> response_;
+      fidl::WireEvent<fio::Node::OnOpen> response_;
     };
 
     EventHandler event_handler{};
     fidl::Result event_result = event_handler.HandleOneEvent(channel);
     // Expect that |on_open| was received
     ASSERT_TRUE(event_result.ok());
-    fidl::WireResponse<fio::Node::OnOpen> response = event_handler.GetResponse();
+    fidl::WireEvent<fio::Node::OnOpen> response = event_handler.GetResponse();
     if (response.s != ZX_OK) {
       node_info = zx::error(response.s);
       return;

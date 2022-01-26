@@ -340,10 +340,10 @@ fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>::
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::TypeTraits<::fidl::WireResponse<
+    if (::fidl::TypeTraits<::fidl::WireEvent<
             ::test_protocols::HandleRightsProtocol::AnEvent>>::kMaxNumHandles >=
         x) {
-      x = ::fidl::TypeTraits<::fidl::WireResponse<
+      x = ::fidl::TypeTraits<::fidl::WireEvent<
           ::test_protocols::HandleRightsProtocol::AnEvent>>::kMaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
@@ -375,7 +375,7 @@ fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>::
   switch (hdr->ordinal) {
     case ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
       ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>>
+          ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::Result(decoded);
@@ -396,7 +396,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   switch (msg.header()->ordinal) {
     case ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
       ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>>
+          ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>>
           decoded{std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::UnbindInfo{decoded};
@@ -572,13 +572,13 @@ void ::fidl::WireResponse<
 
 #ifdef __Fuchsia__
 
-void ::fidl::WireResponse<
+void ::fidl::WireEvent<
     ::test_protocols::HandleRightsProtocol::AnEvent>::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0,
                        ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal);
 }
 
-void ::fidl::WireResponse<
+void ::fidl::WireEvent<
     ::test_protocols::HandleRightsProtocol::AnEvent>::_CloseHandles() {
   h.reset();
 }
@@ -601,11 +601,11 @@ fidl::WireEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
 
 fidl::Result fidl::internal::WireWeakEventSender<
     ::test_protocols::HandleRightsProtocol>::AnEvent(::zx::socket&& h) {
-  ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>
-      _response{std::move(h)};
+  ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> _response{
+      std::move(h)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>,
+      ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -613,7 +613,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
 
 fidl::Result fidl::internal::WireWeakBufferEventSender<
     ::test_protocols::HandleRightsProtocol>::AnEvent(::zx::socket&& h) {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::HandleRightsProtocol::AnEvent>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
@@ -622,10 +622,10 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>
-      _response{std::move(h)};
+  ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> _response{
+      std::move(h)};
   ::fidl::UnownedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>,
+      ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -633,11 +633,11 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
 
 fidl::Result fidl::internal::WireEventSender<
     ::test_protocols::HandleRightsProtocol>::AnEvent(::zx::socket&& h) {
-  ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>
-      _response{std::move(h)};
+  ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> _response{
+      std::move(h)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>,
+      ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
@@ -647,7 +647,7 @@ fidl::Result fidl::internal::WireEventSender<
 
 fidl::Result fidl::internal::WireBufferEventSender<
     ::test_protocols::HandleRightsProtocol>::AnEvent(::zx::socket&& h) {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::HandleRightsProtocol::AnEvent>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
@@ -655,10 +655,10 @@ fidl::Result fidl::internal::WireBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>
-      _response{std::move(h)};
+  ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> _response{
+      std::move(h)};
   ::fidl::UnownedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::AnEvent>,
+      ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
@@ -1758,17 +1758,17 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::TypeTraits<::fidl::WireResponse<
+    if (::fidl::TypeTraits<::fidl::WireEvent<
             ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>::
             kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::WireResponse<
+      x = ::fidl::TypeTraits<::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>::
           kMaxNumHandles;
     }
-    if (::fidl::TypeTraits<::fidl::WireResponse<
+    if (::fidl::TypeTraits<::fidl::WireEvent<
             ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>::
             kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::WireResponse<
+      x = ::fidl::TypeTraits<::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>::
           kMaxNumHandles;
     }
@@ -1801,7 +1801,7 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
   switch (hdr->ordinal) {
     case ::test_protocols::
         kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::DecodedMessage<::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
@@ -1812,7 +1812,7 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
     }
     case ::test_protocols::
         kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::DecodedMessage<::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
@@ -1835,7 +1835,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireEventDispatcher<
   switch (msg.header()->ordinal) {
     case ::test_protocols::
         kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::DecodedMessage<::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>
           decoded{std::move(msg)};
       if (!decoded.ok()) {
@@ -1848,7 +1848,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireEventDispatcher<
     }
     case ::test_protocols::
         kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::DecodedMessage<::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
           decoded{std::move(msg)};
       if (!decoded.ok()) {
@@ -2218,15 +2218,15 @@ void ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
           kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
 }
 
-void ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                              OnEmptyResponse>::_InitHeader() {
+void ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::
+                           OnEmptyResponse>::_InitHeader() {
   fidl_init_txn_header(
       &_hdr, 0,
       ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal);
 }
 
-void ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
-                              OnWithResponse>::_InitHeader() {
+void ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::
+                           OnWithResponse>::_InitHeader() {
   fidl_init_txn_header(
       &_hdr, 0,
       ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
@@ -2241,12 +2241,12 @@ fidl::Result fidl::WireEventSender<
 
 fidl::Result fidl::internal::WireWeakEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
-  ::fidl::WireResponse<
+  ::fidl::WireEvent<
       ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
       _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<
+      ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -2255,7 +2255,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
 
 fidl::Result fidl::internal::WireWeakBufferEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
@@ -2264,11 +2264,11 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireResponse<
+  ::fidl::WireEvent<
       ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
       _response{};
   ::fidl::UnownedEncodedMessage<
-      ::fidl::WireResponse<
+      ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
@@ -2277,12 +2277,12 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
 
 fidl::Result fidl::internal::WireEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
-  ::fidl::WireResponse<
+  ::fidl::WireEvent<
       ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
       _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<
+      ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -2293,7 +2293,7 @@ fidl::Result fidl::internal::WireEventSender<
 
 fidl::Result fidl::internal::WireBufferEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
@@ -2301,11 +2301,11 @@ fidl::Result fidl::internal::WireBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireResponse<
+  ::fidl::WireEvent<
       ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
       _response{};
   ::fidl::UnownedEncodedMessage<
-      ::fidl::WireResponse<
+      ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
@@ -2331,12 +2331,12 @@ fidl::WireEventSender<::test_protocols::WithAndWithoutRequestResponse>::
 fidl::Result fidl::internal::WireWeakEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::
     OnWithResponse(::fidl::StringView ret) {
-  ::fidl::WireResponse<
+  ::fidl::WireEvent<
       ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
       _response{ret};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<
+      ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -2346,7 +2346,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
 fidl::Result fidl::internal::WireWeakBufferEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::
     OnWithResponse(::fidl::StringView ret) {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
@@ -2355,11 +2355,11 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireResponse<
+  ::fidl::WireEvent<
       ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
       _response{ret};
   ::fidl::UnownedEncodedMessage<
-      ::fidl::WireResponse<
+      ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
@@ -2369,12 +2369,12 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
 fidl::Result fidl::internal::WireEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::
     OnWithResponse(::fidl::StringView ret) {
-  ::fidl::WireResponse<
+  ::fidl::WireEvent<
       ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
       _response{ret};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<
+      ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -2386,7 +2386,7 @@ fidl::Result fidl::internal::WireEventSender<
 fidl::Result fidl::internal::WireBufferEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::
     OnWithResponse(::fidl::StringView ret) {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
@@ -2394,11 +2394,11 @@ fidl::Result fidl::internal::WireBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireResponse<
+  ::fidl::WireEvent<
       ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
       _response{ret};
   ::fidl::UnownedEncodedMessage<
-      ::fidl::WireResponse<
+      ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
@@ -2702,9 +2702,9 @@ fidl::WireSyncEventHandler<::test_protocols::Transitional>::HandleOneEvent(
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::TypeTraits<::fidl::WireResponse<
+    if (::fidl::TypeTraits<::fidl::WireEvent<
             ::test_protocols::Transitional::Event>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::WireResponse<
+      x = ::fidl::TypeTraits<::fidl::WireEvent<
           ::test_protocols::Transitional::Event>>::kMaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
@@ -2736,7 +2736,7 @@ fidl::WireSyncEventHandler<::test_protocols::Transitional>::HandleOneEvent(
   switch (hdr->ordinal) {
     case ::test_protocols::kTransitional_Event_Ordinal: {
       ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::test_protocols::Transitional::Event>>
+          ::fidl::WireEvent<::test_protocols::Transitional::Event>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::Result(decoded);
@@ -2757,7 +2757,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   switch (msg.header()->ordinal) {
     case ::test_protocols::kTransitional_Event_Ordinal: {
       ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::test_protocols::Transitional::Event>>
+          ::fidl::WireEvent<::test_protocols::Transitional::Event>>
           decoded{std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::UnbindInfo{decoded};
@@ -2896,8 +2896,7 @@ void ::fidl::WireRequest<
                        ::test_protocols::kTransitional_OneWay_Ordinal);
 }
 
-void ::fidl::WireResponse<
-    ::test_protocols::Transitional::Event>::_InitHeader() {
+void ::fidl::WireEvent<::test_protocols::Transitional::Event>::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, ::test_protocols::kTransitional_Event_Ordinal);
 }
 
@@ -2915,10 +2914,10 @@ fidl::Result fidl::WireEventSender<::test_protocols::Transitional>::Event(
 
 fidl::Result fidl::internal::WireWeakEventSender<
     ::test_protocols::Transitional>::Event(int64_t x) {
-  ::fidl::WireResponse<::test_protocols::Transitional::Event> _response{x};
+  ::fidl::WireEvent<::test_protocols::Transitional::Event> _response{x};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::Transitional::Event>,
+      ::fidl::WireEvent<::test_protocols::Transitional::Event>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -2926,7 +2925,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
 
 fidl::Result fidl::internal::WireWeakBufferEventSender<
     ::test_protocols::Transitional>::Event(int64_t x) {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::Transitional::Event>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
@@ -2935,9 +2934,9 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireResponse<::test_protocols::Transitional::Event> _response{x};
+  ::fidl::WireEvent<::test_protocols::Transitional::Event> _response{x};
   ::fidl::UnownedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::Transitional::Event>,
+      ::fidl::WireEvent<::test_protocols::Transitional::Event>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -2945,10 +2944,10 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
 
 fidl::Result fidl::internal::WireEventSender<
     ::test_protocols::Transitional>::Event(int64_t x) {
-  ::fidl::WireResponse<::test_protocols::Transitional::Event> _response{x};
+  ::fidl::WireEvent<::test_protocols::Transitional::Event> _response{x};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::Transitional::Event>,
+      ::fidl::WireEvent<::test_protocols::Transitional::Event>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
@@ -2958,7 +2957,7 @@ fidl::Result fidl::internal::WireEventSender<
 
 fidl::Result fidl::internal::WireBufferEventSender<
     ::test_protocols::Transitional>::Event(int64_t x) {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::Transitional::Event>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
@@ -2966,9 +2965,9 @@ fidl::Result fidl::internal::WireBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireResponse<::test_protocols::Transitional::Event> _response{x};
+  ::fidl::WireEvent<::test_protocols::Transitional::Event> _response{x};
   ::fidl::UnownedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::Transitional::Event>,
+      ::fidl::WireEvent<::test_protocols::Transitional::Event>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
@@ -6523,9 +6522,9 @@ fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>::HandleOneEvent(
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::TypeTraits<::fidl::WireResponse<
+    if (::fidl::TypeTraits<::fidl::WireEvent<
             ::test_protocols::ChannelProtocol::EventA>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::WireResponse<
+      x = ::fidl::TypeTraits<::fidl::WireEvent<
           ::test_protocols::ChannelProtocol::EventA>>::kMaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
@@ -6557,7 +6556,7 @@ fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>::HandleOneEvent(
   switch (hdr->ordinal) {
     case ::test_protocols::kChannelProtocol_EventA_Ordinal: {
       ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>>
+          ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::Result(decoded);
@@ -6578,7 +6577,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   switch (msg.header()->ordinal) {
     case ::test_protocols::kChannelProtocol_EventA_Ordinal: {
       ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>>
+          ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>>
           decoded{std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::UnbindInfo{decoded};
@@ -6797,7 +6796,7 @@ void ::fidl::WireRequest<
                        ::test_protocols::kChannelProtocol_MethodA_Ordinal);
 }
 
-void ::fidl::WireResponse<
+void ::fidl::WireEvent<
     ::test_protocols::ChannelProtocol::EventA>::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0,
                        ::test_protocols::kChannelProtocol_EventA_Ordinal);
@@ -6877,11 +6876,10 @@ fidl::Result fidl::WireEventSender<::test_protocols::ChannelProtocol>::EventA(
 
 fidl::Result fidl::internal::WireWeakEventSender<
     ::test_protocols::ChannelProtocol>::EventA(int64_t a, int64_t b) {
-  ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA> _response{a,
-                                                                            b};
+  ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> _response{a, b};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>,
+      ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -6889,7 +6887,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
 
 fidl::Result fidl::internal::WireWeakBufferEventSender<
     ::test_protocols::ChannelProtocol>::EventA(int64_t a, int64_t b) {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::ChannelProtocol::EventA>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
@@ -6898,10 +6896,9 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA> _response{a,
-                                                                            b};
+  ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> _response{a, b};
   ::fidl::UnownedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>,
+      ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -6909,11 +6906,10 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
 
 fidl::Result fidl::internal::WireEventSender<
     ::test_protocols::ChannelProtocol>::EventA(int64_t a, int64_t b) {
-  ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA> _response{a,
-                                                                            b};
+  ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> _response{a, b};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>,
+      ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
@@ -6923,7 +6919,7 @@ fidl::Result fidl::internal::WireEventSender<
 
 fidl::Result fidl::internal::WireBufferEventSender<
     ::test_protocols::ChannelProtocol>::EventA(int64_t a, int64_t b) {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::ChannelProtocol::EventA>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
@@ -6931,10 +6927,9 @@ fidl::Result fidl::internal::WireBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA> _response{a,
-                                                                            b};
+  ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> _response{a, b};
   ::fidl::UnownedEncodedMessage<
-      ::fidl::WireResponse<::test_protocols::ChannelProtocol::EventA>,
+      ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();

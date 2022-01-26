@@ -238,7 +238,7 @@ TEST_F(CloneTest, Reopen) {
 
     const fidl::ClientEnd<fio::Node>& client_end() const { return client_end_; }
 
-    void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) final {
+    void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) final {
       EXPECT_EQ(event->s, ZX_OK);
       EXPECT_TRUE(event->info.is_file());
       on_open_received_ = true;

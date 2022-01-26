@@ -140,7 +140,7 @@ static zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> 
     bool call_was_successful() const { return call_was_successful_; }
     zx_status_t status() const { return status_; }
 
-    void OnOpen(fidl::WireResponse<fuchsia_io::Node::OnOpen>* event) override {
+    void OnOpen(fidl::WireEvent<fuchsia_io::Node::OnOpen>* event) override {
       call_was_successful_ = true;
       status_ = event->s;
     }

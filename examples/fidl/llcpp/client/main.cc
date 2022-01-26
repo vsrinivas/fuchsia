@@ -35,7 +35,7 @@ int main(int argc, const char** argv) {
    public:
     explicit EventHandler(async::Loop& loop) : loop_(loop) {}
 
-    void OnString(fidl::WireResponse<fuchsia_examples::Echo::OnString>* event) override {
+    void OnString(fidl::WireEvent<fuchsia_examples::Echo::OnString>* event) override {
       std::string response(event->response.data(), event->response.size());
       std::cout << "Got event: " << response << std::endl;
       loop_.Quit();

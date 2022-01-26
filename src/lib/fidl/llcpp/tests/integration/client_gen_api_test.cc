@@ -172,7 +172,7 @@ TEST(GenAPITestCase, EventManaged) {
 
     sync_completion_t& done() { return done_; }
 
-    void OnEvent(fidl::WireResponse<Example::OnEvent>* event) {
+    void OnEvent(fidl::WireEvent<Example::OnEvent>* event) {
       ASSERT_EQ(strlen(data), event->out.size());
       EXPECT_EQ(0, strncmp(event->out.data(), data, strlen(data)));
       sync_completion_signal(&done_);
@@ -334,7 +334,7 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
    public:
     explicit EventHandler(sync_completion_t& done) : done_(done) {}
 
-    void OnEvent(fidl::WireResponse<Example::OnEvent>* event) override {
+    void OnEvent(fidl::WireEvent<Example::OnEvent>* event) override {
       FAIL();
       sync_completion_signal(&done_);
     }
@@ -353,8 +353,8 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
 
   // Set up an Example.OnEvent() message but send it without the payload. This should trigger a
   // decoding error.
-  fidl::WireResponse<Example::OnEvent> resp{fidl::StringView("")};
-  fidl::OwnedEncodedMessage<fidl::WireResponse<Example::OnEvent>> encoded(&resp);
+  fidl::WireEvent<Example::OnEvent> resp{fidl::StringView("")};
+  fidl::OwnedEncodedMessage<fidl::WireEvent<Example::OnEvent>> encoded(&resp);
   ASSERT_TRUE(encoded.ok());
   auto bytes = encoded.GetOutgoingMessage().CopyBytes();
   ASSERT_OK(remote.channel().write(0, bytes.data(), sizeof(fidl_message_header_t), nullptr, 0));
@@ -627,7 +627,7 @@ TEST(WireSharedClient, TeardownCompletesAfterUserCallbackReturns) {
     }
 
     class EventHandler : public fidl::WireAsyncEventHandler<Example> {
-      void OnResourceEvent(fidl::WireResponse<Example::OnResourceEvent>* event) override {
+      void OnResourceEvent(fidl::WireEvent<Example::OnResourceEvent>* event) override {
         // Signal to the test that the dispatcher thread has entered into
         // a user callback.
         event_ = zx::eventpair(event->h.release());
@@ -728,7 +728,7 @@ TEST(AllClients, DrainAllMessageInPeerClosedSendError) {
 
       bool received() const { return received_; }
 
-      void OnEvent(fidl::WireResponse<Example::OnEvent>* event) override {
+      void OnEvent(fidl::WireEvent<Example::OnEvent>* event) override {
         ASSERT_EQ(strlen(data), event->out.size());
         EXPECT_EQ(0, strncmp(event->out.data(), data, strlen(data)));
         received_ = true;

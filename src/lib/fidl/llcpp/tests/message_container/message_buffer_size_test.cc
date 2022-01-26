@@ -83,7 +83,7 @@ TEST(MessageBufferSize, BufferSizeConstexprFunctions) {
   static_assert(
       fidl::ServerReplyBufferSizeInChannel<Protocol::RequestOf512BytesAndResponseOf256Bytes>() ==
       256);
-  static_assert(fidl::ServerReplyBufferSizeInChannel<Protocol::EventOf256Bytes>() == 256);
+  static_assert(fidl::EventReplyBufferSizeInChannel<Protocol::EventOf256Bytes>() == 256);
 
   // Note: the computed value may need to be adjusted when changing the
   // in-memory wire format.

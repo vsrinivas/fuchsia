@@ -154,7 +154,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveEvent) {
 
   class EventHandler final : public fidl::WireAsyncEventHandler<test::Protocol> {
    public:
-    void ResourceEvent(fidl::WireResponse<test::Protocol::ResourceEvent>* r) override {
+    void ResourceEvent(fidl::WireEvent<test::Protocol::ResourceEvent>* r) override {
       // The handles in |r| should be closed by the bindings runtime after we return.
     }
   };

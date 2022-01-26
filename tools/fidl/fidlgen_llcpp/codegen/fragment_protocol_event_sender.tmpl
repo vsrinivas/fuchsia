@@ -130,9 +130,9 @@ fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
     {{- /* Weak, managed */}}
 fidl::Result {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) {
-  {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
+  {{ .WireEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}, {{ .Transport.Type }}> _response_message{
+  ::fidl::OwnedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -142,7 +142,7 @@ fidl::Result {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
 {{ "" }}
 fidl::Result {{ $.WireWeakBufferEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<{{ .Marker }}>();
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<{{ .Marker }}>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
@@ -150,8 +150,8 @@ fidl::Result {{ $.WireWeakBufferEventSender.NoLeading }}::{{ .Name }}(
     return _allocation.error_value();
   }
 
-  {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
-  ::fidl::UnownedEncodedMessage<{{ .WireResponse }}, {{ .Transport.Type }}> _response_message(
+  {{ .WireEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
+  ::fidl::UnownedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message(
       _allocation->data, _buffer_size, &_response);
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
@@ -160,9 +160,9 @@ fidl::Result {{ $.WireWeakBufferEventSender.NoLeading }}::{{ .Name }}(
     {{- /* Managed */}}
 fidl::Result {{ $.InternalWireEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) {
-  {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
+  {{ .WireEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}, {{ .Transport.Type }}> _response_message{
+  ::fidl::OwnedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -174,15 +174,15 @@ fidl::Result {{ $.InternalWireEventSender.NoLeading }}::{{ .Name }}(
 {{ "" }}
 fidl::Result {{ $.InternalWireBufferEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) {
-  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<{{ .Marker }}>();
+  constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<{{ .Marker }}>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
   }
 
-  {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
-  ::fidl::UnownedEncodedMessage<{{ .WireResponse }}, {{ .Transport.Type }}> _response_message(
+  {{ .WireEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
+  ::fidl::UnownedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message(
         _allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());

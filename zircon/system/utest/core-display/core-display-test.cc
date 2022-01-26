@@ -115,17 +115,17 @@ void CoreDisplayTest::SetUp() {
     bool has_display() const { return has_display_; }
     const fbl::Vector<fhd::wire::Info>& displays_tmp() const { return displays_tmp_; }
 
-    void OnDisplaysChanged(fidl::WireResponse<fhd::Controller::OnDisplaysChanged>* event) override {
+    void OnDisplaysChanged(fidl::WireEvent<fhd::Controller::OnDisplaysChanged>* event) override {
       for (unsigned i = 0; i < event->added.count(); i++) {
         displays_tmp_.push_back(std::move(event->added[i]));
       }
       has_display_ = true;
     }
 
-    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {}
+    void OnVsync(fidl::WireEvent<fhd::Controller::OnVsync>* event) override {}
 
     void OnClientOwnershipChange(
-        fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {}
+        fidl::WireEvent<fhd::Controller::OnClientOwnershipChange>* event) override {}
 
     zx_status_t Unknown() override { return ZX_ERR_STOP; }
 

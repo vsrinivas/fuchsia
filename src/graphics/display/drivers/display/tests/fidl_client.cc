@@ -144,17 +144,16 @@ bool TestFidlClient::Bind(async_dispatcher_t* dispatcher) {
 
       bool ok() const { return ok_; }
 
-      void OnDisplaysChanged(
-          fidl::WireResponse<fhd::Controller::OnDisplaysChanged>* event) override {
+      void OnDisplaysChanged(fidl::WireEvent<fhd::Controller::OnDisplaysChanged>* event) override {
         for (size_t i = 0; i < event->added.count(); i++) {
           client_->displays_.push_back(Display(event->added[i]));
         }
       }
 
-      void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override { ok_ = false; }
+      void OnVsync(fidl::WireEvent<fhd::Controller::OnVsync>* event) override { ok_ = false; }
 
       void OnClientOwnershipChange(
-          fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {
+          fidl::WireEvent<fhd::Controller::OnClientOwnershipChange>* event) override {
         client_->has_ownership_ = event->has_ownership;
       }
 
@@ -198,11 +197,10 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
    public:
     explicit EventHandler(TestFidlClient* client) : client_(client) {}
 
-    void OnDisplaysChanged(fidl::WireResponse<fhd::Controller::OnDisplaysChanged>* event) override {
-    }
+    void OnDisplaysChanged(fidl::WireEvent<fhd::Controller::OnDisplaysChanged>* event) override {}
 
     // The FIDL bindings do not know that the caller holds mtx(), so we can't TA_REQ(mtx()) here.
-    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override
+    void OnVsync(fidl::WireEvent<fhd::Controller::OnVsync>* event) override
         TA_NO_THREAD_SAFETY_ANALYSIS {
       client_->vsync_count_++;
       client_->recent_presented_config_stamp_ = event->applied_config_stamp;
@@ -212,7 +210,7 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
     }
 
     void OnClientOwnershipChange(
-        fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* message) override {}
+        fidl::WireEvent<fhd::Controller::OnClientOwnershipChange>* message) override {}
 
     zx_status_t Unknown() override { return ZX_ERR_STOP; }
 

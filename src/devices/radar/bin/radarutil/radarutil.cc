@@ -388,7 +388,7 @@ zx_status_t RadarUtil::ReadBursts() {
   return ZX_OK;
 }
 
-void RadarUtil::OnBurst(fidl::WireResponse<BurstReader::OnBurst>* event) {
+void RadarUtil::OnBurst(fidl::WireEvent<BurstReader::OnBurst>* event) {
   {
     fbl::AutoLock lock(&lock_);
     if (event->result.is_response()) {

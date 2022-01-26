@@ -565,7 +565,7 @@ void AssertReadOnDirentsEvent(zx::channel chan, const DirentArray& expected_dire
 
     zx_status_t status() const { return status_; }
 
-    void OnDirents(fidl::WireResponse<gen::DirEntTestInterface::OnDirents>* event) override {
+    void OnDirents(fidl::WireEvent<gen::DirEntTestInterface::OnDirents>* event) override {
       EXPECT_EQ(event->dirents.count(), expected_dirents_.size());
       if (event->dirents.count() != expected_dirents_.size()) {
         status_ = ZX_ERR_INVALID_ARGS;
@@ -625,7 +625,7 @@ TEST(DirentServerTest, CallerAllocateSendOnDirents) {
     name[i] = 'B';
   }
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
-  auto buffer = std::make_unique<fidl::ServerBuffer<gen::DirEntTestInterface::OnDirents>>();
+  auto buffer = std::make_unique<fidl::EventBuffer<gen::DirEntTestInterface::OnDirents>>();
   fidl::WireEventSender<gen::DirEntTestInterface> event_sender(std::move(server_chan));
   auto status = event_sender.OnDirents(buffer->view(),
                                        fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));

@@ -246,7 +246,7 @@ class ExpectHrobEventHandler : public fidl::WireAsyncEventHandler<test::Frobinat
  public:
   explicit ExpectHrobEventHandler(std::string expected) : expected_(std::move(expected)) {}
 
-  void Hrob(fidl::WireResponse<test::Frobinator::Hrob>* event) final {
+  void Hrob(fidl::WireEvent<test::Frobinator::Hrob>* event) final {
     EXPECT_EQ(event->value.get(), expected_);
     hrob_count_++;
   }
@@ -266,7 +266,7 @@ class ExpectPeerClosedEventHandler : public fidl::WireAsyncEventHandler<test::Fr
  public:
   ExpectPeerClosedEventHandler() = default;
 
-  void Hrob(fidl::WireResponse<test::Frobinator::Hrob>* event) final {
+  void Hrob(fidl::WireEvent<test::Frobinator::Hrob>* event) final {
     ADD_FAILURE("Unexpected Hrob event: %s", std::string(event->value.get()).c_str());
   }
 

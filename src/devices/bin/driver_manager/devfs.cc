@@ -442,10 +442,10 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
     auto describe =
         [&ipc, describe = flags & ZX_FS_FLAG_DESCRIBE](zx::status<fio::wire::NodeInfo> node_info) {
           if (describe) {
-            fidl::WireResponse<fio::Node::OnOpen> response{
+            fidl::WireEvent<fio::Node::OnOpen> response{
                 node_info.status_value(),
                 node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfo()};
-            fidl::OwnedEncodedMessage<fidl::WireResponse<fio::Node::OnOpen>> message(&response);
+            fidl::OwnedEncodedMessage<fidl::WireEvent<fio::Node::OnOpen>> message(&response);
             message.Write(ipc.channel());
           }
         };

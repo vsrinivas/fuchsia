@@ -78,8 +78,8 @@ constexpr uint32_t AsyncClientMethodBufferSizeInChannel() {
 }
 
 // Helper to calculate a safe buffer size for use in caller-allocating flavors
-// to reply to |Method| from a server or send a |Method| event, assuming the
-// size of each message is clamped at the Zircon channel packet size.
+// to reply to |Method| from a server, assuming the size of each message is
+// clamped at the Zircon channel packet size.
 //
 // |Method| is a method marker that looks like
 // |fuchsia_mylib::SomeProtocol::SomeMethod|.
@@ -91,6 +91,22 @@ constexpr uint32_t ServerReplyBufferSizeInChannel() {
   static_assert(IsFidlMessage<WireResponse<Method>>::value,
                 "|Method| must be a FIDL method marker type");
   return MaxSizeInChannel<WireResponse<Method>, MessageDirection::kSending>();
+}
+
+// Helper to calculate a safe buffer size for use in caller-allocating flavors
+// to send a |Method| event, assuming the size of each message is clamped at
+// the Zircon channel packet size.
+//
+// |Method| is a method marker that looks like
+// |fuchsia_mylib::SomeProtocol::SomeMethod|.
+//
+// This could be used as part of determining an optimum initial size for a FIDL
+// arena or buffer span.
+template <typename Method>
+constexpr uint32_t EventReplyBufferSizeInChannel() {
+  static_assert(IsFidlMessage<WireEvent<Method>>::value,
+                "|Method| must be a FIDL method marker type");
+  return MaxSizeInChannel<WireEvent<Method>, MessageDirection::kSending>();
 }
 
 namespace internal {
@@ -336,7 +352,7 @@ using AsyncClientBuffer =
     internal::InlineMessageBuffer<AsyncClientMethodBufferSizeInChannel<FidlMethod>()>;
 
 // A buffer holding data inline, sized specifically for |FidlMethod| and for
-// server-side use. It can be used to provide response/event buffers when using
+// server-side use. It can be used to provide response buffers when using
 // the caller-allocating flavor. For example:
 //
 //     void Foo(Args args, FooCompleter::Sync& completer) {
@@ -347,6 +363,19 @@ using AsyncClientBuffer =
 //
 template <typename FidlMethod>
 using ServerBuffer = internal::InlineMessageBuffer<ServerReplyBufferSizeInChannel<FidlMethod>()>;
+
+// A buffer holding data inline, sized specifically for |FidlMethod| and for
+// server-side use. It can be used to provide event buffers when using
+// the caller-allocating flavor. For example:
+//
+//     void Foo(Args args, FooCompleter::Sync& completer) {
+//       // All space used for the |Foo| reply is allocated from |buffer|.
+//       fidl::EventBuffer<MyProtocol::Foo> buffer;
+//       client.buffer(buffer.view())->OnEvent(args);
+//     }
+//
+template <typename FidlMethod>
+using EventBuffer = internal::InlineMessageBuffer<EventReplyBufferSizeInChannel<FidlMethod>()>;
 
 }  // namespace fidl
 
