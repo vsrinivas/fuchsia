@@ -333,17 +333,16 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
     fpromise::result<VnodeRepresentation, zx_status_t> result =
         internal::Describe(vnode, protocol, *options);
     if (result.is_error()) {
-      fidl::WireEventSender<fio::Node>(fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)))
-          .OnOpen(result.error(), fio::wire::NodeInfo());
+      fidl::WireSendEvent(fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)))
+          ->OnOpen(result.error(), fio::wire::NodeInfo());
       return result.error();
     }
     ConvertToIoV1NodeInfo(result.take_value(), [&](fio::wire::NodeInfo&& info) {
       // The channel may switch from |Node| protocol back to a custom protocol, after sending the
       // event, in the case of |VnodeProtocol::kConnector|.
-      fidl::WireEventSender<fio::Node> event_sender{
-          fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end))};
-      event_sender.OnOpen(ZX_OK, std::move(info));
-      server_end = event_sender.server_end().TakeChannel();
+      fidl::ServerEnd<fuchsia_io::Node> typed_server_end(std::move(server_end));
+      fidl::WireSendEvent(typed_server_end)->OnOpen(ZX_OK, std::move(info));
+      server_end = typed_server_end.TakeChannel();
     });
   }
 

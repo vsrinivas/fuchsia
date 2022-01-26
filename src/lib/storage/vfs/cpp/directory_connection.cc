@@ -48,8 +48,8 @@ void OpenAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent,
     using OpenResult = fs::Vfs::OpenResult;
     if constexpr (std::is_same_v<ResultT, OpenResult::Error>) {
       if (describe) {
-        fidl::WireEventSender<fio::Node>(std::move(server_end))
-            .OnOpen(result, fio::wire::NodeInfo());
+        fidl::WireSendEvent(server_end)->OnOpen(result, fio::wire::NodeInfo());
+        server_end.reset();
       }
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
       // Remote handoff to a remote filesystem node.
@@ -208,7 +208,8 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
   bool describe = request->flags & fio::wire::kOpenFlagDescribe;
   auto write_error = [describe](fidl::ServerEnd<fio::Node> channel, zx_status_t error) {
     if (describe) {
-      fidl::WireEventSender<fio::Node>(std::move(channel)).OnOpen(error, fio::wire::NodeInfo());
+      fidl::WireSendEvent(channel)->OnOpen(error, fio::wire::NodeInfo());
+      channel.reset();
     }
   };
 
