@@ -797,21 +797,23 @@ TEST_F(MacInterfaceTest, SetKeysTest) {
   ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
   ASSERT_EQ(kListenInterval, mvmvif_->bss_conf.listen_interval);
 
-  char keybuf[sizeof(wlan_key_config_t) + 16];
-  wlan_key_config_t* key_config = (wlan_key_config_t*)keybuf;
-  // PAIRWISE KEY
+  char keybuf[sizeof(wlan_key_config_t) + 16] = {};
+  wlan_key_config_t* key_config = new (keybuf) wlan_key_config_t();
+
+  // Set an arbitrary pairwise key.
   key_config->cipher_type = 4;
   key_config->key_type = 1;
   key_config->key_idx = 0;
   key_config->key_len = 16;
   memcpy(key_config->cipher_oui, kIeeeOui, 3);
-  ASSERT_EQ(ZX_OK, SetKey((const wlan_key_config_t*)key_config));
+  ASSERT_EQ(ZX_OK, SetKey(key_config));
   // Expect bit 0 to be set.
   ASSERT_EQ(*mvm->fw_key_table, 0x1);
-  // GROUP KEY
+
+  // Set an arbitrary group key.
   key_config->key_type = 2;
   key_config->key_idx = 1;
-  ASSERT_EQ(ZX_OK, SetKey((const wlan_key_config_t*)key_config));
+  ASSERT_EQ(ZX_OK, SetKey(key_config));
   // Expect bit 1 to be set as well.
   ASSERT_EQ(*mvm->fw_key_table, 0x3);
   ASSERT_EQ(ZX_OK, ClearAssoc());
@@ -820,6 +822,36 @@ TEST_F(MacInterfaceTest, SetKeysTest) {
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
   // Both the keys should have been deleted.
   ASSERT_EQ(*mvm->fw_key_table, 0x0);
+}
+
+// Check that we can sucessfully set some key configurations required for supported functionality.
+TEST_F(MacInterfaceTest, SetKeysSupportConfigs) {
+  constexpr uint8_t kIeeeOui[] = {0x00, 0x0F, 0xAC};
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
+  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+
+  char keybuf[sizeof(wlan_key_config_t) + 16] = {};
+  wlan_key_config_t* key_config = new (keybuf) wlan_key_config_t();
+  key_config->key_len = 16;
+  memcpy(key_config->cipher_oui, kIeeeOui, 3);
+
+  // Default cipher configuration for WPA2/3 PTK.  This is data frame protection, required for
+  // WPA2/3.
+  key_config->cipher_type = fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128;
+  key_config->key_type = WLAN_KEY_TYPE_PAIRWISE;
+  key_config->key_idx = 0;
+  ASSERT_EQ(ZX_OK, SetKey(key_config));
+
+  // Default cipher configuration for WPA2/3 IGTK.  This is management frame protection, optional
+  // for WPA2 and required for WPA3.
+  key_config->cipher_type = fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128;
+  key_config->key_type = WLAN_KEY_TYPE_IGTK;
+  key_config->key_idx = 1;
+  ASSERT_EQ(ZX_OK, SetKey(key_config));
+
+  ASSERT_EQ(ZX_OK, ClearAssoc());
 }
 
 TEST_F(MacInterfaceTest, TxPktTooLong) {

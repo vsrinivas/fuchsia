@@ -3136,9 +3136,13 @@ zx_status_t iwl_mvm_mac_add_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
   // Fuchsia only supports a limited selection of cipher types for now.
   switch (key->cipher) {
     case CIPHER_SUITE_TYPE_CCMP_128:
+      // Note: the Linux iwlwifi driver requests IEEE80211_KEY_FLAG_PUT_IV_SPACE from the mac80211
+      // stack.  We will apply equivalent functionality manually to Incoming packets from Fuchsia.
       if (iwl_mvm_has_new_tx_api(mvm)) {
         return ZX_ERR_NOT_SUPPORTED;
       }
+      break;
+    case CIPHER_SUITE_TYPE_BIP_CMAC_128:
       break;
     default:
       return ZX_ERR_NOT_SUPPORTED;

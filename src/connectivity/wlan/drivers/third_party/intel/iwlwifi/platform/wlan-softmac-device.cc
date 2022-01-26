@@ -68,7 +68,16 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacQueueTx(uint32_t options,
   mac_packet.body = packet->mac_frame_buffer + mac_packet.header_size;
   mac_packet.body_size = packet->mac_frame_size - mac_packet.header_size;
   if (ieee80211_pkt_is_protected(mac_packet.common_header)) {
-    mac_packet.info.control.hw_key = ap_mvm_sta_->GetKey(WLAN_KEY_TYPE_PAIRWISE);
+    switch (ieee80211_get_frame_type(mac_packet.common_header)) {
+      case ieee80211_frame_type::IEEE80211_FRAME_TYPE_MGMT:
+        mac_packet.info.control.hw_key = ap_mvm_sta_->GetKey(WLAN_KEY_TYPE_IGTK);
+        break;
+      case ieee80211_frame_type::IEEE80211_FRAME_TYPE_DATA:
+        mac_packet.info.control.hw_key = ap_mvm_sta_->GetKey(WLAN_KEY_TYPE_PAIRWISE);
+        break;
+      default:
+        break;
+    }
   }
 
   auto lock = std::lock_guard(mvmvif_->mvm->mutex);

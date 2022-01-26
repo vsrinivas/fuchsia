@@ -3220,6 +3220,7 @@ static zx_status_t __iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif
 
   if (mvmsta) {
     sta_id = mvmsta->sta_id;
+    mfp = (keyconf->key_type == WLAN_KEY_TYPE_IGTK);
   } else if (mvmvif->mac_role == WLAN_INFO_MAC_ROLE_AP &&
              keyconf->key_type != WLAN_KEY_TYPE_PAIRWISE) {
     sta_id = mvmvif->mcast_sta.sta_id;
@@ -3293,7 +3294,7 @@ static zx_status_t __iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, uint8_t sta_id,
 zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
                                 struct iwl_mvm_sta* mvmsta, struct ieee80211_key_conf* keyconf,
                                 uint8_t key_offset) {
-  bool mcast = keyconf->key_type != WLAN_KEY_TYPE_PAIRWISE;
+  bool mcast = keyconf->key_type == WLAN_KEY_TYPE_GROUP;
   uint8_t sta_id = IWL_MVM_INVALID_STA;
   zx_status_t ret = ZX_OK;
   static const uint8_t __maybe_unused zero_addr[ETH_ALEN] = {0};
@@ -3376,13 +3377,11 @@ zx_status_t iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmv
 
   IWL_INFO(mvm, "mvm remove dynamic key: idx=%d sta=%d\n", keyconf->keyidx, sta_id);
 
-#if 0   // NEEDS_PORTING
-  if (mvm_sta && (keyconf->cipher == WLAN_CIPHER_SUITE_AES_CMAC ||
-                  keyconf->cipher == WLAN_CIPHER_SUITE_BIP_GMAC_128 ||
-                  keyconf->cipher == WLAN_CIPHER_SUITE_BIP_GMAC_256)) {
+  if (mvm_sta && (keyconf->cipher == CIPHER_SUITE_TYPE_BIP_CMAC_128 ||
+                  keyconf->cipher == CIPHER_SUITE_TYPE_BIP_GMAC_128 ||
+                  keyconf->cipher == CIPHER_SUITE_TYPE_BIP_GMAC_256)) {
     return iwl_mvm_send_sta_igtk(mvm, keyconf, sta_id, true);
   }
-#endif  // NEEDS_PORTING
 
   if (!test_and_clear_bit(keyconf->hw_key_idx, mvm->fw_key_table)) {
     IWL_ERR(mvm, "offset %d not used in fw key table.\n", keyconf->hw_key_idx);

@@ -118,16 +118,6 @@ zx_status_t MvmSta::SetKey(const struct wlan_key_config* key_config) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  switch (static_cast<fuchsia_wlan_ieee80211::wire::CipherSuiteType>(key_config->cipher_type)) {
-    case fuchsia_wlan_ieee80211::wire::CipherSuiteType::kCcmp128:
-      // Note: the Linux iwlwifi driver requests IEEE80211_KEY_FLAG_PUT_IV_SPACE from the mac80211
-      // stack.  We will apply equivalent functionality manually to Incoming packets from Fuchsia.
-      break;
-    default:
-      // Additional porting required for other types.
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-
   if (key_config->key_type < 0 || key_config->key_type >= ieee80211_key_confs_.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
