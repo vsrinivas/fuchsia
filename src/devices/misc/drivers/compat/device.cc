@@ -57,6 +57,19 @@ Device::~Device() {
   if (vnode_teardown_callback_) {
     (*vnode_teardown_callback_)();
   }
+
+  // Technically we shouldn't unbind here, since unbind should go parent to child.
+  // However, this is much simpler than going parent to child, and this
+  // *technically* upholds the same invariant, because at this point we know
+  // the device does not have any children.
+  // Also, if a device has unbind, it would be an error to call Release before
+  // Unbind.
+  // This may be a potential difference in behavior from DFv1, so this needs
+  // to be investigated further. For now, it will let us run integration tests.
+  // TODO(fxbug.dev/92196)
+  if (HasOp(ops_, &zx_protocol_device_t::unbind)) {
+    ops_->unbind(context_);
+  }
   if (HasOp(ops_, &zx_protocol_device_t::release)) {
     ops_->release(context_);
   }
