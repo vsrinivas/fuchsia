@@ -197,7 +197,15 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
                               std::make_unique<FileEventHandler>(url));
   auto callback = [this, request = std::move(request->driver), completer = completer.ToAsync(),
                    url = std::move(url), converted_message = std::move(converted_message),
-                   _ = file.Clone()](fidl::WireResponse<fio::File::GetBuffer>* response) mutable {
+                   _ = file.Clone()](
+                      fidl::WireUnownedResult<fio::File::GetBuffer>& result) mutable {
+    if (!result.ok()) {
+      LOGF(ERROR, "Failed to start driver '%s', could not get library VMO: %s", url.data(),
+           result.error().FormatDescription().c_str());
+      completer.Close(result.status());
+      return;
+    }
+    auto* response = result.Unwrap();
     if (response->s != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '%s', could not get library VMO: %s", url.data(),
            zx_status_get_string(response->s));
