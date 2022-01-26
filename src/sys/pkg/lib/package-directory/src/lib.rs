@@ -199,6 +199,29 @@ async fn read_dirents<'a>(
 }
 
 #[cfg(test)]
+async fn verify_open_adjusts_flags(
+    entry: &Arc<dyn DirectoryEntry>,
+    in_flags: u32,
+    expected_flags: u32,
+) {
+    let (proxy, server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
+
+    DirectoryEntry::open(
+        Arc::clone(&entry),
+        ExecutionScope::new(),
+        in_flags,
+        0,
+        VfsPath::dot(),
+        server_end,
+    );
+
+    let (status, flags) = proxy.node_get_flags().await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
+    assert_eq!(flags, expected_flags);
+}
+
+#[cfg(test)]
 mod tests {
     use {
         super::*,

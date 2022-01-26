@@ -1348,15 +1348,29 @@ async fn node_get_flags() {
 
 async fn node_get_flags_per_package_source(source: PackageSource) {
     // Test get_flags APIs for root directory and subdirectory.
-    assert_node_get_flags_directory_calls(&source, ".").await;
-    assert_node_get_flags_directory_calls(&source, "dir").await;
+    assert_node_get_flags_directory_calls(
+        &source,
+        ".",
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+    )
+    .await;
+    assert_node_get_flags_directory_calls(
+        &source,
+        "dir",
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+    )
+    .await;
 
     // Test get_flags APIs for meta directory and subdirectory.
-    assert_node_get_flags_directory_calls(&source, "meta").await;
-    assert_node_get_flags_directory_calls(&source, "meta/dir").await;
+    assert_node_get_flags_directory_calls(&source, "meta", OPEN_RIGHT_READABLE).await;
+    assert_node_get_flags_directory_calls(&source, "meta/dir", OPEN_RIGHT_READABLE).await;
 }
 
-async fn assert_node_get_flags_directory_calls(source: &PackageSource, path: &str) {
+async fn assert_node_get_flags_directory_calls(
+    source: &PackageSource,
+    path: &str,
+    expected_rights: u32,
+) {
     let package_root = &source.dir;
     let dir = io_util::directory::open_directory(
         package_root,
@@ -1375,7 +1389,7 @@ async fn assert_node_get_flags_directory_calls(source: &PackageSource, path: &st
     if source.is_pkgdir() {
         // "NodeGetFlags() is supported on directories"
         let result = status.map(|()| OpenFlags(flags));
-        assert_eq!(result, Ok(OpenFlags(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)))
+        assert_eq!(result, Ok(OpenFlags(expected_rights)))
     } else {
         // Verify nodeGetFlags() is not supported.
         assert_eq!(status, Err(zx::Status::NOT_SUPPORTED));

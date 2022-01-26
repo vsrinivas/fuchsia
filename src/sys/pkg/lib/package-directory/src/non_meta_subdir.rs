@@ -9,7 +9,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_POSIX_DEPRECATED,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_WRITABLE,
     },
     fuchsia_syslog::fx_log_err,
@@ -47,6 +48,12 @@ impl vfs::directory::entry::DirectoryEntry for NonMetaSubdir {
         path: VfsPath,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        let flags = flags & !OPEN_FLAG_POSIX_WRITABLE;
+        let flags = if flags & OPEN_FLAG_POSIX_DEPRECATED != 0 {
+            (flags & !OPEN_FLAG_POSIX_DEPRECATED) | OPEN_FLAG_POSIX_EXECUTABLE
+        } else {
+            flags
+        };
         if path.is_empty() {
             if flags
                 & (OPEN_RIGHT_WRITABLE
@@ -161,7 +168,10 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         fidl::{AsyncChannel, Channel},
-        fidl_fuchsia_io::{DirectoryMarker, FileMarker, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE},
+        fidl_fuchsia_io::{
+            DirectoryMarker, FileMarker, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_EXECUTABLE,
+            OPEN_RIGHT_READABLE,
+        },
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
         vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
@@ -300,6 +310,32 @@ mod tests {
 
             assert_eq!(io_util::file::read(&proxy).await.unwrap(), b"bloblob".to_vec());
         }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_unsets_posix_writable() {
+        let (_env, sub_dir) = TestEnv::new().await;
+        let sub_dir = Arc::new(sub_dir);
+
+        let () = crate::verify_open_adjusts_flags(
+            &(sub_dir as Arc<dyn DirectoryEntry>),
+            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_WRITABLE,
+            OPEN_RIGHT_READABLE,
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_converts_posix_deprecated_to_posix_executable() {
+        let (_env, sub_dir) = TestEnv::new().await;
+        let sub_dir = Arc::new(sub_dir);
+
+        let () = crate::verify_open_adjusts_flags(
+            &(sub_dir as Arc<dyn DirectoryEntry>),
+            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_DEPRECATED,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+        )
+        .await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

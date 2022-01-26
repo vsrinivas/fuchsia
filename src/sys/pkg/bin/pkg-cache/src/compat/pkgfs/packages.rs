@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    super::BitFlags as _,
     crate::{base_packages::BasePackages, index::PackageIndex},
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_POSIX_DEPRECATED,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_WRITABLE,
     },
     fuchsia_hash::Hash,
@@ -106,6 +108,13 @@ impl DirectoryEntry for PkgfsPackages {
         mut path: Path,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        let flags = flags.unset(OPEN_FLAG_POSIX_WRITABLE);
+        let flags = if flags.is_any_set(OPEN_FLAG_POSIX_DEPRECATED) {
+            flags.unset(OPEN_FLAG_POSIX_DEPRECATED).set(OPEN_FLAG_POSIX_EXECUTABLE)
+        } else {
+            flags
+        };
+
         // This directory and all child nodes are read-only
         if flags
             & (OPEN_RIGHT_WRITABLE
@@ -189,7 +198,7 @@ mod tests {
         super::*,
         crate::{compat::pkgfs::testing::FakeSink, index::register_dynamic_package},
         assert_matches::assert_matches,
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        fidl_fuchsia_io::{OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE},
         fuchsia_pkg::PackagePath,
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         maplit::{convert_args, hashmap},
@@ -220,14 +229,16 @@ mod tests {
             )
         }
 
-        fn proxy(self: &Arc<Self>) -> fidl_fuchsia_io::DirectoryProxy {
+        fn proxy(self: &Arc<Self>, flags: u32) -> fidl_fuchsia_io::DirectoryProxy {
             let (proxy, server_end) =
                 fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
 
-            let () = ImmutableConnection::create_connection(
+            vfs::directory::entry::DirectoryEntry::open(
+                Arc::clone(&self),
                 ExecutionScope::new(),
-                self.clone(),
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                flags,
+                0,
+                Path::dot(),
                 server_end.into_channel().into(),
             );
 
@@ -406,7 +417,7 @@ mod tests {
         let (pkgfs_packages, _package_index) =
             PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
 
-        let proxy = pkgfs_packages.proxy();
+        let proxy = pkgfs_packages.proxy(OPEN_RIGHT_READABLE);
 
         assert_matches!(
             io_util::directory::open_directory(
@@ -424,7 +435,7 @@ mod tests {
         let (pkgfs_packages, _package_index) =
             PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
 
-        let proxy = pkgfs_packages.proxy();
+        let proxy = pkgfs_packages.proxy(OPEN_RIGHT_READABLE);
 
         assert_matches!(
             io_util::directory::open_directory(&proxy, "missing", OPEN_RIGHT_READABLE).await,
@@ -439,7 +450,7 @@ mod tests {
             non_static_allow_list(&[]),
         );
 
-        let proxy = pkgfs_packages.proxy();
+        let proxy = pkgfs_packages.proxy(OPEN_RIGHT_READABLE);
 
         assert_matches!(
             io_util::directory::open_directory(&proxy, "static", OPEN_RIGHT_READABLE).await,
@@ -452,7 +463,7 @@ mod tests {
         let (pkgfs_packages, package_index) =
             PkgfsPackages::new_test(vec![], non_static_allow_list(&["dynamic"]));
 
-        let proxy = pkgfs_packages.proxy();
+        let proxy = pkgfs_packages.proxy(OPEN_RIGHT_READABLE);
 
         assert_matches!(
             io_util::directory::open_directory(&proxy, "dynamic", OPEN_RIGHT_READABLE).await,
@@ -478,7 +489,7 @@ mod tests {
             blobfs_client,
         ));
 
-        let proxy = pkgfs_packages.proxy();
+        let proxy = pkgfs_packages.proxy(OPEN_RIGHT_READABLE);
 
         let package = PackageBuilder::new("dynamic")
             .add_resource_at("meta/message", &b"yes"[..])
@@ -495,5 +506,29 @@ mod tests {
                 .unwrap();
         let message = io_util::file::read_to_string(&file).await.unwrap();
         assert_eq!(message, "yes");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn open_unsets_posix_writable() {
+        let (pkgfs_packages, _package_index) =
+            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
+
+        let proxy = pkgfs_packages.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_WRITABLE);
+
+        let (status, flags) = proxy.node_get_flags().await.unwrap();
+        let () = zx::Status::ok(status).unwrap();
+        assert_eq!(flags, OPEN_RIGHT_READABLE);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn open_converts_posix_deprecated_to_posix_exec() {
+        let (pkgfs_packages, _package_index) =
+            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
+
+        let proxy = pkgfs_packages.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_DEPRECATED);
+
+        let (status, flags) = proxy.node_get_flags().await.unwrap();
+        let () = zx::Status::ok(status).unwrap();
+        assert_eq!(flags, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
     }
 }

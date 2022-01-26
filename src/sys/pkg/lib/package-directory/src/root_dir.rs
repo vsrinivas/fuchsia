@@ -18,6 +18,7 @@ use {
         FileProxy, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
         MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
         OPEN_FLAG_TRUNCATE, OPEN_RIGHT_WRITABLE, VMO_FLAG_READ,
     },
     fuchsia_archive::AsyncReader,
@@ -177,6 +178,12 @@ impl vfs::directory::entry::DirectoryEntry for RootDir {
         path: VfsPath,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        let flags = flags & !OPEN_FLAG_POSIX_WRITABLE;
+        let flags = if flags & OPEN_FLAG_POSIX_DEPRECATED != 0 {
+            (flags & !OPEN_FLAG_POSIX_DEPRECATED) | OPEN_FLAG_POSIX_EXECUTABLE
+        } else {
+            flags
+        };
         if path.is_empty() {
             if flags
                 & (OPEN_RIGHT_WRITABLE
@@ -354,7 +361,7 @@ mod tests {
         fidl::{AsyncChannel, Channel},
         fidl_fuchsia_io::{
             DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
-            OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
+            OPEN_FLAG_DESCRIBE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
         },
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
@@ -552,6 +559,32 @@ mod tests {
         let (_env, root_dir) = TestEnv::new().await;
 
         assert_eq!(Directory::close(&root_dir), Ok(()));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_unsets_posix_writable() {
+        let (_env, root_dir) = TestEnv::new().await;
+        let root_dir = Arc::new(root_dir);
+
+        let () = crate::verify_open_adjusts_flags(
+            &(root_dir as Arc<dyn DirectoryEntry>),
+            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_WRITABLE,
+            OPEN_RIGHT_READABLE,
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_converts_posix_deprecated_to_posix_executable() {
+        let (_env, root_dir) = TestEnv::new().await;
+        let root_dir = Arc::new(root_dir);
+
+        let () = crate::verify_open_adjusts_flags(
+            &(root_dir as Arc<dyn DirectoryEntry>),
+            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_DEPRECATED,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+        )
+        .await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

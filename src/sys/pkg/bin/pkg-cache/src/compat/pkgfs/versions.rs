@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use {
+    super::BitFlags as _,
     crate::{base_packages::BasePackages, index::PackageIndex},
     anyhow::anyhow,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_POSIX_DEPRECATED,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_hash::Hash,
@@ -38,12 +40,6 @@ pub struct PkgfsVersions {
     blobfs: blobfs::Client,
 }
 
-enum PackageValidationStatus {
-    AccessDenied,
-    NotFound,
-    Ok,
-}
-
 impl PkgfsVersions {
     pub fn new(
         base_packages: Arc<BasePackages>,
@@ -61,18 +57,6 @@ impl PkgfsVersions {
         }
     }
 
-    fn is_package_base(&self, hash: &Hash) -> bool {
-        self.base_packages.paths_to_hashes().any(|(_path, base_hash)| hash == base_hash)
-    }
-
-    async fn is_active_and_allowlisted(&self, hash: &Hash) -> (bool, bool) {
-        if let Some(name) = self.non_base_packages.lock().await.get_name_if_active(&hash) {
-            (true, self.non_static_allow_list.allows(name))
-        } else {
-            (false, false)
-        }
-    }
-
     async fn directory_entries(&self) -> BTreeMap<String, super::DirentType> {
         let active_packages = self.non_base_packages.lock().await.active_packages();
         self.base_packages
@@ -81,28 +65,6 @@ impl PkgfsVersions {
             .chain(active_packages.into_iter().map(|(_path, hash)| hash.to_string()))
             .map(|hash| (hash, super::DirentType::Directory))
             .collect()
-    }
-
-    async fn validate_package(&self, hash: &Hash, flags: u32) -> PackageValidationStatus {
-        if self.is_package_base(&hash) {
-            // Base packages are always allowed to be opened executable.
-            PackageValidationStatus::Ok
-        } else {
-            let needs_executability_enforcement = flags & OPEN_RIGHT_EXECUTABLE != 0
-                && self.executability_restrictions == ExecutabilityRestrictions::Enforce;
-
-            let (is_active, is_allowlisted) = self.is_active_and_allowlisted(&hash).await;
-            if !is_active {
-                // Non-base package isn't active.
-                PackageValidationStatus::NotFound
-            } else if needs_executability_enforcement && !is_allowlisted {
-                // Non-base package isn't allowlisted and executability is enforced.
-                PackageValidationStatus::AccessDenied
-            } else {
-                // Non-base package is allowlisted or executability is not enforced.
-                PackageValidationStatus::Ok
-            }
-        }
     }
 }
 
@@ -160,15 +122,21 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
         mut path: VfsPath,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        let flags = flags.unset(OPEN_FLAG_POSIX_WRITABLE);
+        let flags = if flags.is_any_set(OPEN_FLAG_POSIX_DEPRECATED) {
+            flags.unset(OPEN_FLAG_POSIX_DEPRECATED).set(OPEN_FLAG_POSIX_EXECUTABLE)
+        } else {
+            flags
+        };
+
         // This directory and all child nodes are read-only
-        if flags
-            & (OPEN_RIGHT_WRITABLE
+        if flags.is_any_set(
+            OPEN_RIGHT_WRITABLE
                 | OPEN_FLAG_CREATE
                 | OPEN_FLAG_CREATE_IF_ABSENT
                 | OPEN_FLAG_TRUNCATE
-                | OPEN_FLAG_APPEND)
-            != 0
-        {
+                | OPEN_FLAG_APPEND,
+        ) {
             return send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
         }
 
@@ -177,33 +145,56 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
             // still holds any remaining path elements.
             match path.next().map(Hash::from_str) {
                 None => ImmutableConnection::create_connection(scope, self, flags, server_end),
-                Some(Ok(package_hash)) => match self.validate_package(&package_hash, flags).await {
-                    PackageValidationStatus::NotFound => {
-                        send_on_open_with_error(flags, server_end, zx::Status::NOT_FOUND)
+                Some(Ok(package_hash)) => {
+                    let package_status = get_package_status(
+                        self.base_packages.as_ref(),
+                        self.non_base_packages.as_ref(),
+                        &package_hash,
+                    )
+                    .await;
+                    if let PackageStatus::Other = package_status {
+                        let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_FOUND);
+                        return;
                     }
-                    PackageValidationStatus::AccessDenied => {
-                        send_on_open_with_error(flags, server_end, zx::Status::ACCESS_DENIED)
-                    }
-                    PackageValidationStatus::Ok => {
-                        if let Err(e) = package_directory::serve_path(
-                            scope,
-                            self.blobfs.clone(),
-                            package_hash,
-                            flags,
-                            mode,
-                            path,
-                            server_end,
-                        )
-                        .await
-                        {
-                            fx_log_err!(
-                                "Unable to serve package for {}: {:#}",
-                                package_hash,
-                                anyhow!(e)
+
+                    let executability_status = executability_status(
+                        self.executability_restrictions,
+                        &package_status,
+                        self.non_static_allow_list.as_ref(),
+                    );
+                    let executablity_requested = flags.is_any_set(OPEN_RIGHT_EXECUTABLE);
+                    let flags = match (executability_status, executablity_requested) {
+                        (ExecutabilityStatus::Forbidden, true) => {
+                            let () = send_on_open_with_error(
+                                flags,
+                                server_end,
+                                zx::Status::ACCESS_DENIED,
                             );
+                            return;
                         }
+                        (ExecutabilityStatus::Forbidden, false) => {
+                            flags.unset(OPEN_FLAG_POSIX_EXECUTABLE)
+                        }
+                        (ExecutabilityStatus::Allowed, _) => flags,
+                    };
+                    if let Err(e) = package_directory::serve_path(
+                        scope,
+                        self.blobfs.clone(),
+                        package_hash,
+                        flags,
+                        mode,
+                        path,
+                        server_end,
+                    )
+                    .await
+                    {
+                        fx_log_err!(
+                            "Unable to serve package for {}: {:#}",
+                            package_hash,
+                            anyhow!(e)
+                        );
                     }
-                },
+                }
                 Some(Err(_)) => {
                     // Names that are not valid hashes can't exist in this directory.
                     send_on_open_with_error(flags, server_end, zx::Status::NOT_FOUND)
@@ -217,50 +208,77 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
     }
 }
 
+enum PackageStatus {
+    Base,
+    Active(fuchsia_pkg::PackageName),
+    Other,
+}
+
+async fn get_package_status(
+    base_packages: &BasePackages,
+    package_index: &Mutex<PackageIndex>,
+    package: &fuchsia_hash::Hash,
+) -> PackageStatus {
+    if base_packages.paths_to_hashes().any(|(_, hash)| hash == package) {
+        return PackageStatus::Base;
+    }
+
+    match package_index.lock().await.get_name_if_active(package) {
+        Some(name) => PackageStatus::Active(name.clone()),
+        None => PackageStatus::Other,
+    }
+}
+
+enum ExecutabilityStatus {
+    Allowed,
+    Forbidden,
+}
+
+fn executability_status(
+    executability_restrictions: system_image::ExecutabilityRestrictions,
+    package_status: &PackageStatus,
+    non_static_allow_list: &system_image::NonStaticAllowList,
+) -> ExecutabilityStatus {
+    use {system_image::ExecutabilityRestrictions::*, ExecutabilityStatus::*, PackageStatus::*};
+    match (executability_restrictions, package_status) {
+        (Enforce, Base) => Allowed,
+        (Enforce, Active(name)) => {
+            if non_static_allow_list.allows(name) {
+                Allowed
+            } else {
+                Forbidden
+            }
+        }
+        (Enforce, Other) => Forbidden,
+        (DoNotEnforce, _) => Allowed,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
         crate::{compat::pkgfs::testing::FakeSink, index::register_dynamic_package},
         assert_matches::assert_matches,
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        blobfs_ramdisk::BlobfsRamdisk,
+        fidl_fuchsia_io::{OPEN_FLAG_POSIX_EXECUTABLE, OPEN_RIGHT_READABLE},
         fuchsia_pkg::{PackagePath, PackageVariant},
-        fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
+        fuchsia_pkg_testing::{Package, PackageBuilder},
         std::collections::HashSet,
         vfs::directory::{entry::EntryInfo, entry_container::Directory},
     };
 
     impl PkgfsVersions {
-        pub fn new_test(
-            base_packages: Vec<(PackagePath, Hash)>,
-            non_static_allow_list: NonStaticAllowList,
-            executability_restrictions: ExecutabilityRestrictions,
-        ) -> (Arc<Self>, Arc<Mutex<PackageIndex>>) {
-            let (blobfs, _) = blobfs::Client::new_mock();
-            let index = Arc::new(Mutex::new(PackageIndex::new_test()));
-
-            (
-                Arc::new(PkgfsVersions::new(
-                    // PkgfsVersions only uses the path-hash mapping, so tests do not need to
-                    // populate the blob hashes.
-                    Arc::new(BasePackages::new_test_only(HashSet::new(), base_packages)),
-                    Arc::clone(&index),
-                    Arc::new(non_static_allow_list),
-                    executability_restrictions,
-                    blobfs,
-                )),
-                index,
-            )
-        }
-
         fn proxy(self: &Arc<Self>, flags: u32) -> fidl_fuchsia_io::DirectoryProxy {
             let (proxy, server_end) =
                 fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
 
-            let () = ImmutableConnection::create_connection(
+            vfs::directory::entry::DirectoryEntry::open(
+                Arc::clone(&self),
                 ExecutionScope::new(),
-                self.clone(),
                 flags,
+                0,
+                VfsPath::dot(),
                 server_end.into_channel().into(),
             );
 
@@ -268,11 +286,44 @@ mod tests {
         }
     }
 
+    struct TestEnv {
+        _blobfs: BlobfsRamdisk,
+        package_index: Arc<Mutex<PackageIndex>>,
+    }
+
+    impl TestEnv {
+        pub fn new(
+            base_packages: Vec<(PackagePath, Hash)>,
+            non_static_allow_list: NonStaticAllowList,
+            executability_restrictions: ExecutabilityRestrictions,
+            packages_on_disk: &[&Package],
+        ) -> (Self, Arc<PkgfsVersions>) {
+            let blobfs = BlobfsRamdisk::start().unwrap();
+
+            for pkg in packages_on_disk {
+                pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+            }
+
+            let index = Arc::new(Mutex::new(PackageIndex::new_test()));
+            let versions = PkgfsVersions::new(
+                // PkgfsVersions only uses the path-hash mapping, so tests do not need to
+                // populate the blob hashes.
+                Arc::new(BasePackages::new_test_only(HashSet::new(), base_packages)),
+                Arc::clone(&index),
+                Arc::new(non_static_allow_list),
+                executability_restrictions,
+                blobfs.client(),
+            );
+
+            (Self { _blobfs: blobfs, package_index: index }, Arc::new(versions))
+        }
+    }
+
     fn hash(n: u8) -> Hash {
         Hash::from([n; 32])
     }
 
-    fn default_package_path(name: &str) -> PackagePath {
+    fn create_path(name: &str) -> PackagePath {
         PackagePath::from_name_and_variant(
             name.parse().unwrap(),
             PackageVariant::from_str("0").unwrap(),
@@ -285,14 +336,14 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entries_unions_base_and_dynamic() {
-        let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
-            vec![(default_package_path("base_package"), hash(0))],
+        let (env, pkgfs_versions) = TestEnv::new(
+            vec![(create_path("base_package"), hash(0))],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
+            &[],
         );
 
-        register_dynamic_package(&package_index, default_package_path("dynamic_package"), hash(1))
-            .await;
+        register_dynamic_package(&env.package_index, create_path("dynamic_package"), hash(1)).await;
 
         assert_eq!(
             pkgfs_versions.directory_entries().await,
@@ -305,10 +356,11 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn readdir_empty() {
-        let (pkgfs_versions, _package_index) = PkgfsVersions::new_test(
+        let (_env, pkgfs_versions) = TestEnv::new(
             vec![],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
+            &[],
         );
 
         // Given adequate buffer space, the only entry is itself (".").
@@ -329,19 +381,20 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn readdir_enumerates_all_entries() {
-        let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
+        let (env, pkgfs_versions) = TestEnv::new(
             vec![
-                (default_package_path("allowed"), hash(0)),
-                (default_package_path("base"), hash(1)),
-                (default_package_path("same-hash"), hash(2)),
+                (create_path("allowed"), hash(0)),
+                (create_path("base"), hash(1)),
+                (create_path("same-hash"), hash(2)),
             ],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
+            &[],
         );
 
-        register_dynamic_package(&package_index, default_package_path("same-hash"), hash(2)).await;
-        register_dynamic_package(&package_index, default_package_path("allowed"), hash(10)).await;
-        register_dynamic_package(&package_index, default_package_path("dynonly"), hash(14)).await;
+        register_dynamic_package(&env.package_index, create_path("same-hash"), hash(2)).await;
+        register_dynamic_package(&env.package_index, create_path("allowed"), hash(10)).await;
+        register_dynamic_package(&env.package_index, create_path("dynonly"), hash(14)).await;
 
         let (pos, sealed) = Directory::read_dirents(
             &*pkgfs_versions,
@@ -367,13 +420,14 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn executable_open_access_denied_not_allowlisted() {
-        let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
+        let (env, pkgfs_versions) = TestEnv::new(
             vec![],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
+            &[],
         );
 
-        register_dynamic_package(&package_index, default_package_path("dynamic"), hash(1)).await;
+        register_dynamic_package(&env.package_index, create_path("dynamic"), hash(1)).await;
 
         let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
 
@@ -385,44 +439,117 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn executable_open_not_found() {
-        let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
-            vec![(default_package_path("base"), hash(0))],
+    async fn directory_entry_open_strips_posix_exec() {
+        let pkg = PackageBuilder::new("dynamic").build().await.unwrap();
+
+        let (env, pkgfs_versions) = TestEnv::new(
+            vec![],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
+            &[&pkg],
         );
 
-        register_dynamic_package(&package_index, default_package_path("dynamic"), hash(1)).await;
+        register_dynamic_package(
+            &env.package_index,
+            create_path("dynamic"),
+            *pkg.meta_far_merkle_root(),
+        )
+        .await;
+
+        let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
+
+        // Open a package directory with OPEN_FLAG_POSIX_EXECUTABLE set
+        let pkg_dir = io_util::directory::open_directory(
+            &proxy,
+            &pkg.meta_far_merkle_root().to_string(),
+            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_EXECUTABLE,
+        )
+        .await
+        .unwrap();
+
+        // DirectoryEntry::open should have unset OPEN_FLAG_POSIX_EXECUTABLE (instead of allowing
+        // the upgrade to OPEN_RIGHT_EXECUTABLE), so re-opening self with OPEN_RIGHT_EXECUTABLE
+        // should be rejected.
+        assert_matches!(
+            io_util::directory::open_directory(
+                &pkg_dir,
+                ".",
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE
+            )
+            .await,
+            Err(io_util::node::OpenError::OpenError(zx::Status::ACCESS_DENIED))
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_strips_posix_write() {
+        let (_env, pkgfs_versions) = TestEnv::new(
+            vec![],
+            non_static_allow_list(&[]),
+            ExecutabilityRestrictions::Enforce,
+            &[],
+        );
+
+        let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_WRITABLE);
+
+        let (status, flags) = proxy.node_get_flags().await.unwrap();
+        let () = zx::Status::ok(status).unwrap();
+        assert_eq!(flags, OPEN_RIGHT_READABLE);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_converts_posix_deprecated_to_posix_exec() {
+        let (_env, pkgfs_versions) = TestEnv::new(
+            vec![],
+            non_static_allow_list(&[]),
+            ExecutabilityRestrictions::Enforce,
+            &[],
+        );
+
+        let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_DEPRECATED);
+
+        let (status, flags) = proxy.node_get_flags().await.unwrap();
+        let () = zx::Status::ok(status).unwrap();
+        assert_eq!(flags, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_not_found_takes_precedence_over_access_denied() {
+        let (_env, pkgfs_versions) = TestEnv::new(
+            vec![],
+            non_static_allow_list(&[]),
+            ExecutabilityRestrictions::Enforce,
+            &[],
+        );
 
         let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, &hash(2).to_string(), OPEN_RIGHT_EXECUTABLE)
+            io_util::directory::open_directory(&proxy, &hash(0).to_string(), OPEN_RIGHT_EXECUTABLE)
                 .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn executable_open_not_found_no_enforcement() {
-        let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
-            vec![(default_package_path("base"), hash(0))],
+    async fn directory_entry_open_executable_no_enforcement_not_found() {
+        let (_env, pkgfs_versions) = TestEnv::new(
+            vec![],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::DoNotEnforce,
+            &[],
         );
-
-        register_dynamic_package(&package_index, default_package_path("dynamic"), hash(1)).await;
 
         let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, &hash(2).to_string(), OPEN_RIGHT_EXECUTABLE)
+            io_util::directory::open_directory(&proxy, &hash(0).to_string(), OPEN_RIGHT_EXECUTABLE)
                 .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
 
         assert_matches!(
-            io_util::directory::open_directory(&proxy, &hash(3).to_string(), OPEN_RIGHT_READABLE)
+            io_util::directory::open_directory(&proxy, &hash(1).to_string(), OPEN_RIGHT_READABLE)
                 .await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
@@ -430,10 +557,11 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_open_self() {
-        let (pkgfs_versions, _package_index) = PkgfsVersions::new_test(
-            vec![(default_package_path("base"), hash(0))],
+        let (_env, pkgfs_versions) = TestEnv::new(
+            vec![(create_path("base"), hash(0))],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::DoNotEnforce,
+            &[],
         );
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
@@ -464,40 +592,27 @@ mod tests {
             .await
             .expect("created pkg");
 
-        let (metafar_blob, content_blobs) = pkg.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        for content in content_blobs {
-            blobfs_fake.add_blob(content.merkle, content.contents);
-        }
-
-        let package_index = Arc::new(Mutex::new(PackageIndex::new_test()));
-        let pkgfs_versions = Arc::new(PkgfsVersions::new(
-            Arc::new(BasePackages::new_test_only(HashSet::new(), vec![])),
-            Arc::clone(&package_index),
-            Arc::new(non_static_allow_list(&["dynamic"])),
+        let (env, pkgfs_versions) = TestEnv::new(
+            vec![],
+            non_static_allow_list(&["dynamic"]),
             ExecutabilityRestrictions::Enforce,
-            blobfs_client,
-        ));
+            &[&pkg],
+        );
 
         register_dynamic_package(
-            &package_index,
-            default_package_path("dynamic"),
-            metafar_blob.merkle,
+            &env.package_index,
+            create_path("dynamic"),
+            *pkg.meta_far_merkle_root(),
         )
         .await;
 
-        let (proxy, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-
-        vfs::directory::entry::DirectoryEntry::open(
-            Arc::clone(&pkgfs_versions),
-            ExecutionScope::new(),
-            OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
-            VfsPath::validate_and_split(metafar_blob.merkle.to_string()).unwrap(),
-            server_end.into_channel().into(),
-        );
+        let proxy = io_util::directory::open_directory(
+            &pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE),
+            &pkg.meta_far_merkle_root().to_string(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+        )
+        .await
+        .unwrap();
 
         assert_eq!(
             files_async::readdir(&proxy).await.unwrap(),
@@ -513,10 +628,13 @@ mod tests {
             ]
         );
 
-        let proxy = pkgfs_versions.proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
-        let file_path = format!("{}/message", metafar_blob.merkle).to_string();
-        let file =
-            io_util::directory::open_file(&proxy, &file_path, OPEN_RIGHT_READABLE).await.unwrap();
+        let file = io_util::directory::open_file(
+            &proxy,
+            "message",
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+        )
+        .await
+        .unwrap();
         let message = io_util::file::read_to_string(&file).await.unwrap();
         assert_eq!(message, "test-content");
     }

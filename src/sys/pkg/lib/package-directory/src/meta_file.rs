@@ -9,7 +9,8 @@ use {
     fidl::{endpoints::ServerEnd, HandleBased as _},
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_FILE,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_POSIX_DEPRECATED,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC,
         VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
@@ -80,6 +81,8 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
             return;
         }
 
+        let flags = flags
+            & !(OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE | OPEN_FLAG_POSIX_DEPRECATED);
         if flags
             & (OPEN_RIGHT_WRITABLE
                 | OPEN_RIGHT_EXECUTABLE
@@ -225,7 +228,7 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         fidl::{endpoints::Proxy as _, AsHandleRef as _},
-        fidl_fuchsia_io::{FileProxy, NodeProxy, OPEN_FLAG_DESCRIBE},
+        fidl_fuchsia_io::{FileProxy, NodeProxy, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
         std::convert::{TryFrom as _, TryInto as _},
@@ -309,6 +312,22 @@ mod tests {
             Some(Ok(fidl_fuchsia_io::FileEvent::OnOpen_{ s, info: None}))
                 if s == zx::Status::NOT_DIR.into_raw()
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_unsets_posix_flags() {
+        let (_env, meta_file) = TestEnv::new().await;
+        let meta_file = Arc::new(meta_file);
+
+        let () = crate::verify_open_adjusts_flags(
+            &(meta_file as Arc<dyn DirectoryEntry>),
+            OPEN_RIGHT_READABLE
+                | OPEN_FLAG_POSIX_WRITABLE
+                | OPEN_FLAG_POSIX_EXECUTABLE
+                | OPEN_FLAG_POSIX_DEPRECATED,
+            OPEN_RIGHT_READABLE,
+        )
+        .await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

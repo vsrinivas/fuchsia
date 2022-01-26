@@ -176,6 +176,36 @@ pub fn serve(
     Ok(())
 }
 
+/// Extension trait for convenient manipulation of unsigned integers acting as flags, e.g.
+/// fuchsia.io/Directory.Open flags.
+trait BitFlags {
+    /// Return `self` with `flags` set.
+    #[must_use]
+    fn set(self, flags: Self) -> Self;
+
+    /// Return `self` with `flags` not set.
+    #[must_use]
+    fn unset(self, flags: Self) -> Self;
+
+    /// Return `true` iff any of `flags` are set in `self`.
+    #[must_use]
+    fn is_any_set(self, flags: Self) -> bool;
+}
+
+impl BitFlags for u32 {
+    fn set(self, flags: Self) -> Self {
+        self | flags
+    }
+
+    fn unset(self, flags: Self) -> Self {
+        self & !flags
+    }
+
+    fn is_any_set(self, flags: Self) -> bool {
+        self & flags != 0
+    }
+}
+
 #[cfg(test)]
 mod testing {
     use {
@@ -344,5 +374,81 @@ mod testing {
             ]
         );
         assert_eq!(pos, TraversalPosition::End);
+    }
+
+    const NONE: u32 = 0;
+    const A: u32 = 0b001;
+    const B: u32 = 0b010;
+    const C: u32 = 0b100;
+    const ALL: u32 = 0b111;
+
+    #[test]
+    fn bitflags_u32_set() {
+        assert_eq!(NONE.set(A), A);
+        assert_eq!(NONE.set(B), B);
+        assert_eq!(NONE.set(C), C);
+
+        assert_eq!(NONE.set(A | B), A | B);
+        assert_eq!(NONE.set(A | C), A | C);
+        assert_eq!(NONE.set(B | C), B | C);
+
+        assert_eq!(NONE.set(A | B | C), A | B | C);
+
+        assert_eq!(A.set(A), A);
+        assert_eq!(A.set(B), A | B);
+        assert_eq!(A.set(C), A | C);
+
+        assert_eq!(A.set(A | B), A | B);
+        assert_eq!(A.set(B | C), A | B | C);
+        assert_eq!(A.set(A | C), A | C);
+
+        assert_eq!(ALL.set(A), ALL);
+        assert_eq!(ALL.set(A | B), ALL);
+        assert_eq!(ALL.set(A | B | C), ALL);
+    }
+
+    #[test]
+    fn bitflags_u32_unset() {
+        assert_eq!(NONE.unset(A), NONE);
+        assert_eq!(NONE.unset(B), NONE);
+        assert_eq!(NONE.unset(C), NONE);
+        assert_eq!(NONE.unset(A | B | C), NONE);
+
+        assert_eq!(ALL.unset(A), B | C);
+        assert_eq!(ALL.unset(B), A | C);
+        assert_eq!(ALL.unset(C), A | B);
+
+        assert_eq!(ALL.unset(A | B), C);
+        assert_eq!(ALL.unset(A | C), B);
+        assert_eq!(ALL.unset(B | C), A);
+
+        assert_eq!(ALL.unset(A | B | C), NONE);
+
+        assert_eq!(A.unset(A), NONE);
+        assert_eq!(A.unset(B), A);
+        assert_eq!(A.unset(C), A);
+
+        assert_eq!(A.unset(A | B), NONE);
+        assert_eq!(A.unset(B | C), A);
+    }
+
+    #[test]
+    fn bitflags_u32_is_any_set() {
+        assert_eq!(NONE.is_any_set(NONE), false);
+        assert_eq!(NONE.is_any_set(A), false);
+        assert_eq!(NONE.is_any_set(A | B), false);
+        assert_eq!(NONE.is_any_set(A | B | C), false);
+
+        assert_eq!(A.is_any_set(A), true);
+        assert_eq!(A.is_any_set(B), false);
+        assert_eq!(A.is_any_set(A | B), true);
+        assert_eq!(A.is_any_set(B | C), false);
+        assert_eq!(A.is_any_set(ALL), true);
+        assert_eq!(A.is_any_set(NONE), false);
+
+        assert_eq!(ALL.is_any_set(A), true);
+        assert_eq!(ALL.is_any_set(A | B), true);
+        assert_eq!(ALL.is_any_set(A | B | C), true);
+        assert_eq!(ALL.is_any_set(NONE), false);
     }
 }

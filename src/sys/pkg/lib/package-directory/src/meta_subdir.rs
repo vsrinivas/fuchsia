@@ -8,7 +8,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_POSIX_DEPRECATED,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
@@ -46,6 +47,8 @@ impl vfs::directory::entry::DirectoryEntry for MetaSubdir {
         path: VfsPath,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        let flags = flags
+            & !(OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE | OPEN_FLAG_POSIX_DEPRECATED);
         if path.is_empty() {
             if flags
                 & (OPEN_RIGHT_WRITABLE
@@ -187,6 +190,22 @@ mod tests {
             let sub_dir = MetaSubdir::new(Arc::new(root_dir), "meta/dir/".to_string());
             (Self { _blobfs_fake: blobfs_fake }, sub_dir)
         }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_unsets_posix_flags() {
+        let (_env, sub_dir) = TestEnv::new().await;
+        let sub_dir = Arc::new(sub_dir);
+
+        let () = crate::verify_open_adjusts_flags(
+            &(sub_dir as Arc<dyn DirectoryEntry>),
+            OPEN_RIGHT_READABLE
+                | OPEN_FLAG_POSIX_WRITABLE
+                | OPEN_FLAG_POSIX_EXECUTABLE
+                | OPEN_FLAG_POSIX_DEPRECATED,
+            OPEN_RIGHT_READABLE,
+        )
+        .await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

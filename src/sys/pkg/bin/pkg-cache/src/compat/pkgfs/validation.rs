@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    super::BitFlags as _,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_POSIX_DEPRECATED,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
@@ -61,6 +63,9 @@ impl vfs::directory::entry::DirectoryEntry for Validation {
         path: VfsPath,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        let flags = flags.unset(
+            OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE | OPEN_FLAG_POSIX_DEPRECATED,
+        );
         if path.is_empty() {
             if flags
                 & (OPEN_RIGHT_WRITABLE
@@ -178,6 +183,27 @@ mod tests {
             let validation = Validation::new(blobfs.client(), base_blobs);
             (Self { _blobfs: blobfs }, validation)
         }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_unsets_posix_flags() {
+        let (_env, validation) = TestEnv::new().await;
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+
+        Arc::new(validation).open(
+            ExecutionScope::new(),
+            OPEN_RIGHT_READABLE
+                | OPEN_FLAG_POSIX_WRITABLE
+                | OPEN_FLAG_POSIX_EXECUTABLE
+                | OPEN_FLAG_POSIX_DEPRECATED,
+            0,
+            VfsPath::dot(),
+            server_end.into_channel().into(),
+        );
+
+        let (status, flags) = proxy.node_get_flags().await.unwrap();
+        let () = zx::Status::ok(status).unwrap();
+        assert_eq!(flags, OPEN_RIGHT_READABLE);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
