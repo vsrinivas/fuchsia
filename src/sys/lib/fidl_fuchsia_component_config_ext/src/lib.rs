@@ -105,7 +105,7 @@ macro_rules! config_decl {
         $(
             fields.push(cm_rust::ConfigField {
                 key: stringify!($key).to_string(),
-                value_type: $crate::config_ty!($($type_toks)+ ),
+                type_: $crate::config_ty!($($type_toks)+ ),
             });
         )*
         cm_rust::ConfigDecl {

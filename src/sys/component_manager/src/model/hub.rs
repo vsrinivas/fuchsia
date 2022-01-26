@@ -1012,15 +1012,15 @@ mod tests {
                         fields: vec![
                             ConfigField {
                                 key: "logging".to_string(),
-                                value_type: ConfigValueType::Bool,
+                                type_: ConfigValueType::Bool,
                             },
                             ConfigField {
                                 key: "verbosity".to_string(),
-                                value_type: ConfigValueType::String { max_size: 10 },
+                                type_: ConfigValueType::String { max_size: 10 },
                             },
                             ConfigField {
                                 key: "tags".to_string(),
-                                value_type: ConfigValueType::Vector {
+                                type_: ConfigValueType::Vector {
                                     max_count: 10,
                                     nested_type: ConfigNestedValueType::String { max_size: 20 },
                                 },

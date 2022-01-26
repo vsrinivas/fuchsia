@@ -156,7 +156,7 @@ impl ConfigField {
         let resolved_value = spec_field.value.ok_or(ValueError::MissingValue)?;
         let key = decl_field.key.clone();
 
-        match (&resolved_value, &decl_field.value_type) {
+        match (&resolved_value, &decl_field.type_) {
             (Value::Single(SingleValue::Flag(_)), ConfigValueType::Bool)
             | (Value::Single(SingleValue::Unsigned8(_)), ConfigValueType::Uint8)
             | (Value::Single(SingleValue::Unsigned16(_)), ConfigValueType::Uint16)
@@ -550,8 +550,8 @@ mod tests {
         ($test_name:ident: { $($ty_toks:tt)* }, $valid_spec:pat) => {
             #[test]
             fn $test_name() {
-                let value_type = fidl_fuchsia_component_config_ext::config_ty!($($ty_toks)*);
-                let decl = ConfigFieldDecl { key: "test_key".to_string(), value_type };
+                let type_ = fidl_fuchsia_component_config_ext::config_ty!($($ty_toks)*);
+                let decl = ConfigFieldDecl { key: "test_key".to_string(), type_ };
                 for value in [
                     // one value of each type
                     Single(Flag(true)),

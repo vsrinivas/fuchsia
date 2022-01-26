@@ -607,8 +607,8 @@ fn translate_collections(
     Ok(out_collections)
 }
 
-/// Translates a nested value type to a [`fuchsia.config.decl.ConfigValueType`]
-fn translate_nested_value_type(nested_type: &ConfigNestedValueType) -> fdecl::ConfigValueType {
+/// Translates a nested value type to a [`fuchsia.config.decl.ConfigType`]
+fn translate_nested_value_type(nested_type: &ConfigNestedValueType) -> fdecl::ConfigType {
     let layout = match nested_type {
         ConfigNestedValueType::Bool => fdecl::ConfigTypeLayout::Bool,
         ConfigNestedValueType::Uint8 => fdecl::ConfigTypeLayout::Uint8,
@@ -627,7 +627,7 @@ fn translate_nested_value_type(nested_type: &ConfigNestedValueType) -> fdecl::Co
         }
         _ => vec![],
     };
-    fdecl::ConfigValueType {
+    fdecl::ConfigType {
         layout,
         constraints,
         // This optional is not necessary, but without it,
@@ -637,8 +637,8 @@ fn translate_nested_value_type(nested_type: &ConfigNestedValueType) -> fdecl::Co
     }
 }
 
-/// Translates a value type to a [`fuchsia.sys2.ConfigValueType`]
-fn translate_value_type(value_type: &ConfigValueType) -> fdecl::ConfigValueType {
+/// Translates a value type to a [`fuchsia.sys2.ConfigType`]
+fn translate_value_type(value_type: &ConfigValueType) -> fdecl::ConfigType {
     let layout = match value_type {
         ConfigValueType::Bool => fdecl::ConfigTypeLayout::Bool,
         ConfigValueType::Uint8 => fdecl::ConfigTypeLayout::Uint8,
@@ -665,7 +665,7 @@ fn translate_value_type(value_type: &ConfigValueType) -> fdecl::ConfigValueType 
         }
         _ => (vec![], vec![]),
     };
-    fdecl::ConfigValueType {
+    fdecl::ConfigType {
         layout,
         constraints,
         // This optional is not necessary, but without it,
@@ -688,7 +688,7 @@ fn translate_config(
     for (key, value) in fields {
         fidl_fields.push(fdecl::ConfigField {
             key: Some(key.to_string()),
-            value_type: Some(translate_value_type(value)),
+            type_: Some(translate_value_type(value)),
             ..fdecl::ConfigField::EMPTY
         });
 

@@ -797,7 +797,7 @@ pub enum ConfigValueSource {
 #[fidl_decl(fidl_table = "fdecl::ConfigField")]
 pub struct ConfigField {
     pub key: String,
-    pub value_type: ConfigValueType,
+    pub type_: ConfigValueType,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -829,7 +829,7 @@ pub enum ConfigValueType {
     Vector { nested_type: ConfigNestedValueType, max_count: u32 },
 }
 
-impl FidlIntoNative<ConfigNestedValueType> for fdecl::ConfigValueType {
+impl FidlIntoNative<ConfigNestedValueType> for fdecl::ConfigType {
     fn fidl_into_native(mut self) -> ConfigNestedValueType {
         match self.layout {
             fdecl::ConfigTypeLayout::Bool => ConfigNestedValueType::Bool,
@@ -858,8 +858,8 @@ impl FidlIntoNative<ConfigNestedValueType> for fdecl::ConfigValueType {
     }
 }
 
-impl NativeIntoFidl<fdecl::ConfigValueType> for ConfigNestedValueType {
-    fn native_into_fidl(self) -> fdecl::ConfigValueType {
+impl NativeIntoFidl<fdecl::ConfigType> for ConfigNestedValueType {
+    fn native_into_fidl(self) -> fdecl::ConfigType {
         let layout = match self {
             ConfigNestedValueType::Bool => fdecl::ConfigTypeLayout::Bool,
             ConfigNestedValueType::Uint8 => fdecl::ConfigTypeLayout::Uint8,
@@ -878,11 +878,11 @@ impl NativeIntoFidl<fdecl::ConfigValueType> for ConfigNestedValueType {
             }
             _ => vec![],
         };
-        fdecl::ConfigValueType { layout, constraints, parameters: Some(vec![]) }
+        fdecl::ConfigType { layout, constraints, parameters: Some(vec![]) }
     }
 }
 
-impl FidlIntoNative<ConfigValueType> for fdecl::ConfigValueType {
+impl FidlIntoNative<ConfigValueType> for fdecl::ConfigType {
     fn fidl_into_native(mut self) -> ConfigValueType {
         match self.layout {
             fdecl::ConfigTypeLayout::Bool => ConfigValueType::Bool,
@@ -928,8 +928,8 @@ impl FidlIntoNative<ConfigValueType> for fdecl::ConfigValueType {
     }
 }
 
-impl NativeIntoFidl<fdecl::ConfigValueType> for ConfigValueType {
-    fn native_into_fidl(self) -> fdecl::ConfigValueType {
+impl NativeIntoFidl<fdecl::ConfigType> for ConfigValueType {
+    fn native_into_fidl(self) -> fdecl::ConfigType {
         let layout = match self {
             ConfigValueType::Bool => fdecl::ConfigTypeLayout::Bool,
             ConfigValueType::Uint8 => fdecl::ConfigTypeLayout::Uint8,
@@ -956,7 +956,7 @@ impl NativeIntoFidl<fdecl::ConfigValueType> for ConfigValueType {
             }
             _ => (vec![], vec![]),
         };
-        fdecl::ConfigValueType { layout, constraints, parameters: Some(parameters) }
+        fdecl::ConfigType { layout, constraints, parameters: Some(parameters) }
     }
 }
 
@@ -2198,7 +2198,7 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("enable_logging".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Bool,
                                 parameters: Some(vec![]),
                                 constraints: vec![],
@@ -2484,7 +2484,7 @@ mod tests {
                         fields: vec![
                             ConfigField {
                                 key: "enable_logging".to_string(),
-                                value_type: ConfigValueType::Bool
+                                type_: ConfigValueType::Bool
                             }
                         ],
                         declaration_checksum: vec![

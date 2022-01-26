@@ -40,12 +40,16 @@ table/member fuchsia.component.decl/Component.program fuchsia.component.decl/Pro
 table/member fuchsia.component.decl/Component.uses vector<fuchsia.component.decl/Use>
 table fuchsia.component.decl/Component
 table/member fuchsia.component.decl/ConfigField.key string:64
-table/member fuchsia.component.decl/ConfigField.value_type fuchsia.component.decl/ConfigValueType
+table/member fuchsia.component.decl/ConfigField.type fuchsia.component.decl/ConfigType
 table fuchsia.component.decl/ConfigField
 table/member fuchsia.component.decl/ConfigSchema.declaration_checksum vector<uint8>:32
 table/member fuchsia.component.decl/ConfigSchema.fields vector<fuchsia.component.decl/ConfigField>
 table/member fuchsia.component.decl/ConfigSchema.value_source fuchsia.component.decl/ConfigValueSource
 table fuchsia.component.decl/ConfigSchema
+struct/member fuchsia.component.decl/ConfigType.constraints vector<fuchsia.component.decl/LayoutConstraint>
+struct/member fuchsia.component.decl/ConfigType.layout fuchsia.component.decl/ConfigTypeLayout
+struct/member fuchsia.component.decl/ConfigType.parameters vector<fuchsia.component.decl/LayoutParameter>:optional
+struct fuchsia.component.decl/ConfigType
 enum/member fuchsia.component.decl/ConfigTypeLayout.BOOL 1
 enum/member fuchsia.component.decl/ConfigTypeLayout.INT16 7
 enum/member fuchsia.component.decl/ConfigTypeLayout.INT32 8
@@ -60,10 +64,6 @@ enum/member fuchsia.component.decl/ConfigTypeLayout.VECTOR 11
 flexible enum fuchsia.component.decl/ConfigTypeLayout uint32
 union/member fuchsia.component.decl/ConfigValueSource.package_path string
 flexible union fuchsia.component.decl/ConfigValueSource
-struct/member fuchsia.component.decl/ConfigValueType.constraints vector<fuchsia.component.decl/LayoutConstraint>
-struct/member fuchsia.component.decl/ConfigValueType.layout fuchsia.component.decl/ConfigTypeLayout
-struct/member fuchsia.component.decl/ConfigValueType.parameters vector<fuchsia.component.decl/LayoutParameter>:optional
-struct fuchsia.component.decl/ConfigValueType
 table/member fuchsia.component.decl/DebugProtocolRegistration.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/DebugProtocolRegistration.source_name string:100
 table/member fuchsia.component.decl/DebugProtocolRegistration.target_name string:100
@@ -137,7 +137,7 @@ table fuchsia.component.decl/ExposeService
 struct fuchsia.component.decl/FrameworkRef
 union/member fuchsia.component.decl/LayoutConstraint.max_size uint32
 flexible union fuchsia.component.decl/LayoutConstraint
-union/member fuchsia.component.decl/LayoutParameter.nested_type fuchsia.component.decl/ConfigValueType
+union/member fuchsia.component.decl/LayoutParameter.nested_type fuchsia.component.decl/ConfigType
 flexible union fuchsia.component.decl/LayoutParameter
 const fuchsia.component.decl/MAX_MONIKER_LENGTH uint32 4096
 const fuchsia.component.decl/MAX_NAME_LENGTH uint32 100

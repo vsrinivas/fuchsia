@@ -346,7 +346,7 @@ fn main() {
             fields: Some(vec![
                 ConfigField {
                     key: Some("my_flag".to_string()),
-                    value_type: Some(ConfigValueType {
+                    type_: Some(ConfigType {
                         layout: ConfigTypeLayout::Bool,
                         parameters: Some(vec![]),
                         constraints: vec![],
@@ -355,7 +355,7 @@ fn main() {
                 },
                 ConfigField {
                     key: Some("my_string".to_string()),
-                    value_type: Some(ConfigValueType {
+                    type_: Some(ConfigType {
                         layout: ConfigTypeLayout::String,
                         constraints: vec![LayoutConstraint::MaxSize(100)],
                         parameters: Some(vec![]),
@@ -364,7 +364,7 @@ fn main() {
                 },
                 ConfigField {
                     key: Some("my_uint8".to_string()),
-                    value_type: Some(ConfigValueType {
+                    type_: Some(ConfigType {
                         layout: ConfigTypeLayout::Uint8,
                         parameters: Some(vec![]),
                         constraints: vec![],
@@ -373,10 +373,10 @@ fn main() {
                 },
                 ConfigField {
                     key: Some("my_vector_of_string".to_string()),
-                    value_type: Some(ConfigValueType {
+                    type_: Some(ConfigType {
                         layout: ConfigTypeLayout::Vector,
                         constraints: vec![LayoutConstraint::MaxSize(100)],
-                        parameters: Some(vec![LayoutParameter::NestedType(ConfigValueType {
+                        parameters: Some(vec![LayoutParameter::NestedType(ConfigType {
                             layout: ConfigTypeLayout::String,
                             constraints: vec![LayoutConstraint::MaxSize(50)],
                             parameters: Some(vec![]),

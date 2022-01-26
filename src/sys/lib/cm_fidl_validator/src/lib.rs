@@ -270,8 +270,8 @@ impl<'a> ValidationContext<'a> {
                 if field.key.is_none() {
                     self.errors.push(Error::missing_field("ConfigField", "key"));
                 }
-                if let Some(value_type) = &field.value_type {
-                    self.validate_config_value_type(value_type, true);
+                if let Some(type_) = &field.type_ {
+                    self.validate_config_type(type_, true);
                 } else {
                     self.errors.push(Error::missing_field("ConfigField", "value_type"));
                 }
@@ -289,12 +289,8 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_config_value_type(
-        &mut self,
-        value_type: &fdecl::ConfigValueType,
-        accept_vectors: bool,
-    ) {
-        match &value_type.layout {
+    fn validate_config_type(&mut self, type_: &fdecl::ConfigType, accept_vectors: bool) {
+        match &type_.layout {
             fdecl::ConfigTypeLayout::Bool
             | fdecl::ConfigTypeLayout::Uint8
             | fdecl::ConfigTypeLayout::Uint16
@@ -305,70 +301,69 @@ impl<'a> ValidationContext<'a> {
             | fdecl::ConfigTypeLayout::Int32
             | fdecl::ConfigTypeLayout::Int64 => {
                 // These layouts have no parameters or constraints
-                if let Some(parameters) = &value_type.parameters {
+                if let Some(parameters) = &type_.parameters {
                     if !parameters.is_empty() {
-                        self.errors.push(Error::extraneous_field("ConfigValueType", "parameters"));
+                        self.errors.push(Error::extraneous_field("ConfigType", "parameters"));
                     }
                 } else {
-                    self.errors.push(Error::missing_field("ConfigValueType", "parameters"));
+                    self.errors.push(Error::missing_field("ConfigType", "parameters"));
                 }
 
-                if !value_type.constraints.is_empty() {
-                    self.errors.push(Error::extraneous_field("ConfigValueType", "constraints"));
+                if !type_.constraints.is_empty() {
+                    self.errors.push(Error::extraneous_field("ConfigType", "constraints"));
                 }
             }
             fdecl::ConfigTypeLayout::String => {
                 // String has exactly one constraint and no parameter
-                if let Some(parameters) = &value_type.parameters {
+                if let Some(parameters) = &type_.parameters {
                     if !parameters.is_empty() {
-                        self.errors.push(Error::extraneous_field("ConfigValueType", "parameters"));
+                        self.errors.push(Error::extraneous_field("ConfigType", "parameters"));
                     }
                 } else {
-                    self.errors.push(Error::missing_field("ConfigValueType", "parameters"));
+                    self.errors.push(Error::missing_field("ConfigType", "parameters"));
                 }
 
-                if value_type.constraints.is_empty() {
-                    self.errors.push(Error::missing_field("ConfigValueType", "constraints"));
-                } else if value_type.constraints.len() > 1 {
-                    self.errors.push(Error::extraneous_field("ConfigValueType", "constraints"));
-                } else if let fdecl::LayoutConstraint::MaxSize(_) = &value_type.constraints[0] {
+                if type_.constraints.is_empty() {
+                    self.errors.push(Error::missing_field("ConfigType", "constraints"));
+                } else if type_.constraints.len() > 1 {
+                    self.errors.push(Error::extraneous_field("ConfigType", "constraints"));
+                } else if let fdecl::LayoutConstraint::MaxSize(_) = &type_.constraints[0] {
                 } else {
-                    self.errors.push(Error::invalid_field("ConfigValueType", "constraints"));
+                    self.errors.push(Error::invalid_field("ConfigType", "constraints"));
                 }
             }
             fdecl::ConfigTypeLayout::Vector => {
                 if accept_vectors {
                     // Vector has exactly one constraint and one parameter
-                    if let Some(parameters) = &value_type.parameters {
+                    if let Some(parameters) = &type_.parameters {
                         if parameters.is_empty() {
-                            self.errors.push(Error::missing_field("ConfigValueType", "parameters"));
+                            self.errors.push(Error::missing_field("ConfigType", "parameters"));
                         } else if parameters.len() > 1 {
-                            self.errors
-                                .push(Error::extraneous_field("ConfigValueType", "parameters"));
+                            self.errors.push(Error::extraneous_field("ConfigType", "parameters"));
                         } else if let fdecl::LayoutParameter::NestedType(nested_type) =
                             &parameters[0]
                         {
-                            self.validate_config_value_type(nested_type, false);
+                            self.validate_config_type(nested_type, false);
                         } else {
-                            self.errors.push(Error::invalid_field("ConfigValueType", "parameters"));
+                            self.errors.push(Error::invalid_field("ConfigType", "parameters"));
                         }
                     } else {
-                        self.errors.push(Error::missing_field("ConfigValueType", "parameters"))
+                        self.errors.push(Error::missing_field("ConfigType", "parameters"))
                     }
 
-                    if value_type.constraints.is_empty() {
-                        self.errors.push(Error::missing_field("ConfigValueType", "constraints"));
-                    } else if value_type.constraints.len() > 1 {
-                        self.errors.push(Error::extraneous_field("ConfigValueType", "constraints"));
-                    } else if let fdecl::LayoutConstraint::MaxSize(_) = &value_type.constraints[0] {
+                    if type_.constraints.is_empty() {
+                        self.errors.push(Error::missing_field("ConfigType", "constraints"));
+                    } else if type_.constraints.len() > 1 {
+                        self.errors.push(Error::extraneous_field("ConfigType", "constraints"));
+                    } else if let fdecl::LayoutConstraint::MaxSize(_) = &type_.constraints[0] {
                     } else {
-                        self.errors.push(Error::invalid_field("ConfigValueType", "constraints"));
+                        self.errors.push(Error::invalid_field("ConfigType", "constraints"));
                     }
                 } else {
                     self.errors.push(Error::nested_vector());
                 }
             }
-            _ => self.errors.push(Error::invalid_field("ConfigValueType", "layout")),
+            _ => self.errors.push(Error::invalid_field("ConfigType", "layout")),
         }
     }
 
@@ -6624,7 +6619,7 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: None,
-                            value_type: None,
+                            type_: None,
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
@@ -6647,7 +6642,7 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Bool,
                                 parameters: Some(vec![]),
                                 constraints: vec![]
@@ -6671,7 +6666,7 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Bool,
                                 parameters: Some(vec![]),
                                 constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
@@ -6686,7 +6681,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::extraneous_field("ConfigValueType", "constraints")
+                Error::extraneous_field("ConfigType", "constraints")
             ])),
         },
 
@@ -6697,7 +6692,7 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Bool,
                                 parameters: None,
                                 constraints: vec![]
@@ -6712,7 +6707,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("ConfigValueType", "parameters")
+                Error::missing_field("ConfigType", "parameters")
             ])),
         },
 
@@ -6723,7 +6718,7 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::String,
                                 parameters: Some(vec![]),
                                 constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
@@ -6747,7 +6742,7 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::String,
                                 parameters: None,
                                 constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
@@ -6762,7 +6757,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("ConfigValueType", "parameters")
+                Error::missing_field("ConfigType", "parameters")
             ])),
         },
 
@@ -6773,7 +6768,7 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::String,
                                 parameters: Some(vec![]),
                                 constraints: vec![]
@@ -6788,7 +6783,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("ConfigValueType", "constraints")
+                Error::missing_field("ConfigType", "constraints")
             ])),
         },
 
@@ -6799,7 +6794,7 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::String,
                                 parameters: Some(vec![]),
                                 constraints: vec![fdecl::LayoutConstraint::MaxSize(10), fdecl::LayoutConstraint::MaxSize(10)]
@@ -6814,7 +6809,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::extraneous_field("ConfigValueType", "constraints")
+                Error::extraneous_field("ConfigType", "constraints")
             ])),
         },
 
@@ -6825,9 +6820,9 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Vector,
-                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigType {
                                     layout: fdecl::ConfigTypeLayout::Bool,
                                     parameters: Some(vec![]),
                                     constraints: vec![],
@@ -6853,13 +6848,13 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Vector,
-                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigType {
                                     layout: fdecl::ConfigTypeLayout::Bool,
                                     parameters: Some(vec![]),
                                     constraints: vec![],
-                                }), fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                }), fdecl::LayoutParameter::NestedType(fdecl::ConfigType {
                                     layout: fdecl::ConfigTypeLayout::Uint8,
                                     parameters: Some(vec![]),
                                     constraints: vec![],
@@ -6876,7 +6871,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::extraneous_field("ConfigValueType", "parameters")
+                Error::extraneous_field("ConfigType", "parameters")
             ])),
         },
 
@@ -6887,7 +6882,7 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Vector,
                                 parameters: Some(vec![]),
                                 constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
@@ -6902,7 +6897,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("ConfigValueType", "parameters")
+                Error::missing_field("ConfigType", "parameters")
             ])),
         },
 
@@ -6913,9 +6908,9 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Vector,
-                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigType {
                                     layout: fdecl::ConfigTypeLayout::String,
                                     parameters: Some(vec![]),
                                     constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]
@@ -6941,11 +6936,11 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Vector,
-                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigType {
                                     layout: fdecl::ConfigTypeLayout::Vector,
-                                    parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigValueType {
+                                    parameters: Some(vec![fdecl::LayoutParameter::NestedType(fdecl::ConfigType {
                                         layout: fdecl::ConfigTypeLayout::String,
                                         parameters: Some(vec![]),
                                         constraints: vec![fdecl::LayoutConstraint::MaxSize(10)]

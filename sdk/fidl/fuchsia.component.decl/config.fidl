@@ -32,19 +32,19 @@ type ConfigValueSource = flexible union {
     1: package_path string:MAX;
 };
 
-/// Declares a single config field (key + value type)
+/// Declares a single config field (key + type)
 type ConfigField = table {
     /// The identifier for this config field.
     /// This key will be used to match overrides.
     1: key ConfigKey;
 
-    /// The value type for this config field. Config values are verified
-    /// against this type during build time and run time.
-    2: value_type ConfigValueType;
+    /// The type of config values. Config values are verified
+    /// against this layout at build time and run time.
+    2: type ConfigType;
 };
 
 // The type of a config value
-type ConfigValueType = struct {
+type ConfigType = struct {
     layout ConfigTypeLayout;
     // This optional is not necessary, but without it,
     // FIDL compilation complains because of a possible include-cycle.
@@ -71,7 +71,7 @@ type ConfigTypeLayout = flexible enum {
 // Parameters of a given type layout
 type LayoutParameter = flexible union {
     // For vectors, this is the type of the nested element.
-    1: nested_type ConfigValueType;
+    1: nested_type ConfigType;
 };
 
 // Constraints on a given type layout

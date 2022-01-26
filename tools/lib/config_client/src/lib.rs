@@ -104,8 +104,8 @@ const RESERVED_WORDS: [&str; 73] = [
 /// Create a custom FIDL library source file containing all the fields of a config declaration
 pub fn create_fidl_source(config_decl: &ConfigDecl, library_name: String) -> String {
     let mut fidl_struct_fields = vec![];
-    for ConfigField { key, value_type } in &config_decl.fields {
-        let fidl_type = config_value_type_to_fidl_type(&value_type);
+    for ConfigField { key, type_ } in &config_decl.fields {
+        let fidl_type = config_value_type_to_fidl_type(&type_);
         let key = normalize_field_key(key);
         let fidl_struct_field = format!("{} {};", key, fidl_type);
         fidl_struct_fields.push(fidl_struct_field);
@@ -143,7 +143,7 @@ pub fn create_rust_wrapper(
 
     for field in &config_decl.fields {
         let (decl, conversion) =
-            get_rust_field_declaration_and_conversion(&field.key, &field.value_type)?;
+            get_rust_field_declaration_and_conversion(&field.key, &field.type_)?;
         field_declarations.push(decl);
         field_conversions.push(conversion)
     }

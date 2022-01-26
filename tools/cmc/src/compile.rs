@@ -682,7 +682,7 @@ mod tests {
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test1".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::String,
                                 parameters: Some(vec![]),
                                 constraints: vec![fdecl::LayoutConstraint::MaxSize(50)]
@@ -691,10 +691,10 @@ mod tests {
                         },
                         fdecl::ConfigField {
                             key: Some("test2".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Vector,
                                 parameters: Some(vec![fdecl::LayoutParameter::NestedType(
-                                    fdecl::ConfigValueType {
+                                    fdecl::ConfigType {
                                         layout: fdecl::ConfigTypeLayout::String,
                                         parameters: Some(vec![]),
                                         constraints: vec![fdecl::LayoutConstraint::MaxSize(50)]
@@ -706,7 +706,7 @@ mod tests {
                         },
                         fdecl::ConfigField {
                             key: Some("test3".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Bool,
                                 parameters: Some(vec![]),
                                 constraints: vec![]
@@ -715,7 +715,7 @@ mod tests {
                         },
                         fdecl::ConfigField {
                             key: Some("test4".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Uint8,
                                 parameters: Some(vec![]),
                                 constraints: vec![]
@@ -724,7 +724,7 @@ mod tests {
                         },
                         fdecl::ConfigField {
                             key: Some("test5".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Int8,
                                 parameters: Some(vec![]),
                                 constraints: vec![]
@@ -733,7 +733,7 @@ mod tests {
                         },
                         fdecl::ConfigField {
                             key: Some("test6".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Uint64,
                                 parameters: Some(vec![]),
                                 constraints: vec![]
@@ -742,7 +742,7 @@ mod tests {
                         },
                         fdecl::ConfigField {
                             key: Some("test7".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Int64,
                                 parameters: Some(vec![]),
                                 constraints: vec![]
@@ -752,10 +752,10 @@ mod tests {
 
                         fdecl::ConfigField {
                             key: Some("test8".to_string()),
-                            value_type: Some(fdecl::ConfigValueType {
+                            type_: Some(fdecl::ConfigType {
                                 layout: fdecl::ConfigTypeLayout::Vector,
                                 parameters: Some(vec![fdecl::LayoutParameter::NestedType(
-                                    fdecl::ConfigValueType {
+                                    fdecl::ConfigType {
                                         layout: fdecl::ConfigTypeLayout::Uint16,
                                         parameters: Some(vec![]),
                                         constraints: vec![]

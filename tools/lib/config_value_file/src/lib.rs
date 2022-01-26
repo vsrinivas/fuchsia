@@ -30,7 +30,7 @@ pub fn populate_value_file(
             let json_value = values
                 .remove(&field.key)
                 .ok_or_else(|| FileError::MissingValue { key: field.key.clone() })?;
-            let value = config_value_from_json_value(&json_value, &field.value_type)
+            let value = config_value_from_json_value(&json_value, &field.type_)
                 .map_err(|reason| FileError::InvalidField { key: field.key.clone(), reason })?;
             Ok(ValueSpec { value: Some(value), ..ValueSpec::EMPTY })
         })
