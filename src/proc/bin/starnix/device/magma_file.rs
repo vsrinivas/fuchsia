@@ -585,6 +585,65 @@ impl FileOps for MagmaFile {
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_POLL as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_EXECUTE_COMMAND_BUFFER_WITH_RESOURCES2 => {
+                let (control, mut response): (
+                    virtio_magma_execute_command_buffer_with_resources2_ctrl_t,
+                    virtio_magma_execute_command_buffer_with_resources2_resp_t,
+                ) = read_control_and_response(current_task, &command)?;
+
+                // First read the `virtmagma_command_buffer`, this contains pointers to all the
+                // remaining structures needed by `magma_execute_command_buffer_with_resources2`.
+                let virt_command_buffer_ref =
+                    UserRef::new(UserAddress::from(control.command_buffer as u64));
+                let mut virt_command_buffer = virtmagma_command_buffer::default();
+                current_task.mm.read_object(virt_command_buffer_ref, &mut virt_command_buffer)?;
+
+                let command_buffer_ref = UserRef::<magma_command_buffer>::new(UserAddress::from(
+                    virt_command_buffer.command_buffer,
+                ));
+                let mut command_buffer = magma_command_buffer::default();
+                current_task.mm.read_object(command_buffer_ref, &mut command_buffer)?;
+
+                let resources_ref = UserRef::<magma_exec_resource>::new(UserAddress::from(
+                    virt_command_buffer.resources as u64,
+                ));
+                let mut resources = vec![
+                    magma_exec_resource::default();
+                    std::cmp::max(1, command_buffer.resource_count as usize)
+                ];
+                // The resources vector is of length >= 1, since we need a valid reference to pass
+                // to the magma function even when there is no data. This check is here to prevent
+                // us from reading objects when the length is really 0.
+                if command_buffer.resource_count > 0 {
+                    current_task.mm.read_objects(resources_ref, &mut resources)?;
+                }
+
+                let semaphore_ids_ref =
+                    UserRef::<u64>::new(UserAddress::from(virt_command_buffer.semaphores as u64));
+                let semaphore_count = (command_buffer.wait_semaphore_count
+                    + command_buffer.signal_semaphore_count)
+                    as usize;
+                let mut semaphore_ids = vec![0; std::cmp::max(1, semaphore_count)];
+                // This check exists for the same reason as the command_buffer.resource_count check
+                // above (to avoid reading when the actual count is 0).
+                if semaphore_count > 0 {
+                    current_task.mm.read_objects(semaphore_ids_ref, &mut semaphore_ids)?;
+                }
+                response.result_return = unsafe {
+                    magma_execute_command_buffer_with_resources2(
+                        control.connection as magma_connection_t,
+                        control.context_id,
+                        &mut command_buffer,
+                        &mut resources[0] as *mut magma_exec_resource,
+                        &mut semaphore_ids[0] as *mut u64,
+                    ) as u64
+                };
+
+                response.hdr.type_ =
+                    virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXECUTE_COMMAND_BUFFER_WITH_RESOURCES2
+                        as u32;
+                current_task.mm.write_object(UserRef::new(response_address), &response)
+            }
             t => {
                 log::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)
