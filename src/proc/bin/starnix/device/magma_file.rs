@@ -210,6 +210,38 @@ impl FileOps for MagmaFile {
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_FLUSH as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_READ_NOTIFICATION_CHANNEL2 => {
+                let (control, mut response): (
+                    virtio_magma_read_notification_channel2_ctrl_t,
+                    virtio_magma_read_notification_channel2_resp_t,
+                ) = read_control_and_response(current_task, &command)?;
+
+                // Buffer has a min length of 1 to make sure the call to
+                // `magma_read_notification_channel2` uses a valid reference.
+                let mut buffer = vec![0; std::cmp::max(control.buffer_size as usize, 1)];
+                let mut buffer_size_out = 0;
+                let mut more_data_out: u8 = 0;
+
+                response.result_return = unsafe {
+                    magma_read_notification_channel2(
+                        control.connection as magma_connection_t,
+                        &mut buffer[0] as *mut u8,
+                        control.buffer_size,
+                        &mut buffer_size_out,
+                        &mut more_data_out as *mut u8,
+                    ) as u64
+                };
+
+                response.more_data_out = more_data_out as usize;
+                response.buffer_size_out = buffer_size_out as usize;
+                current_task
+                    .mm
+                    .write_memory(UserAddress::from(control.buffer as u64), &mut buffer)?;
+
+                response.hdr.type_ =
+                    virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_READ_NOTIFICATION_CHANNEL2 as u32;
+                current_task.mm.write_object(UserRef::new(response_address), &response)
+            }
             virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_GET_BUFFER_HANDLE2 => {
                 let (control, mut response): (
                     virtio_magma_get_buffer_handle2_ctrl_t,

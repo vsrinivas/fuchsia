@@ -2154,7 +2154,7 @@ extern "C" {
     #[doc = ""]
     pub fn magma_read_notification_channel2(
         connection: magma_connection_t,
-        buffer: *mut ::std::os::raw::c_void,
+        buffer: *mut u8,
         buffer_size: u64,
         buffer_size_out: *mut u64,
         more_data_out: *mut magma_bool_t,
