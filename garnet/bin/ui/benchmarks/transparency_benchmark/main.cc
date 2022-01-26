@@ -48,7 +48,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
   void SetBgra8Pixels(uint8_t* vmo_base, fuchsia::images::ImageInfo info) {
     // Set the entire texture to a random bitmap.
     for (uint32_t i = 0; i < info.height * info.width * SIZE_OF_BGRA8; ++i) {
-      vmo_base[i] = std::rand() % std::numeric_limits<uint8_t>::max();
+      vmo_base[i] = static_cast<uint8_t>(std::rand() % std::numeric_limits<uint8_t>::max());
     }
   }
 
@@ -197,7 +197,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
     }
 
     for (int i = 0; i < kFullScreenLayers; i++) {
-      full_res_textures_.push_back(CreateTexture(view_width_, view_height_));
+      full_res_textures_.push_back(CreateTexture(static_cast<uint32_t>(view_width_), static_cast<uint32_t>(view_height_)));
     }
 
     state_ = BLANK;
@@ -239,12 +239,12 @@ class View : public fuchsia::ui::scenic::SessionListener {
     const float center_x = view_width_ * .5f;
     const float center_y = view_height_ * .5f;
     for (int i = 0; i < kFullScreenLayers; i++) {
-      float x = i % width;
-      float y = (i / width) % height;
-      float z = i / (width * height);
+      float x = static_cast<float>(i % width);
+      float y = static_cast<float>((i / width) % height);
+      float z = static_cast<float>(i / (width * height));
       auto id = full_screen_shape_nodes_[i];
 
-      static const float PI = 3.14159;
+      static const float PI = 3.14159f;
 
       PushCommand(cmds,
                   scenic::NewSetRotationCmd(id, {0, 0, std::sin(PI / 2.0f), std::cos(PI / 2.0f)}));
@@ -318,7 +318,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
     uint64_t presentation_time = presentation_info.presentation_time;
     constexpr float kSecondsPerNanosecond = .000'000'001f;
 
-    float t = (presentation_time - last_presentation_time_) * kSecondsPerNanosecond;
+    float t = static_cast<float>(presentation_time - last_presentation_time_) * kSecondsPerNanosecond;
     if (last_presentation_time_ == 0) {
       t = 0;
     }

@@ -109,7 +109,7 @@ void ImageGridView::UpdateScene(uint64_t presentation_time) {
     start_time_ = presentation_time;
     last_update_time_ = presentation_time;
   }
-  spring_.ElapseTime((presentation_time - last_update_time_) * kSecondsPerNanosecond);
+  spring_.ElapseTime(static_cast<float>(presentation_time - last_update_time_) * kSecondsPerNanosecond);
   last_update_time_ = presentation_time;
   x_offset_ = -spring_.GetValue();
 
