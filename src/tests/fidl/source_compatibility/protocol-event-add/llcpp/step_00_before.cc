@@ -14,7 +14,9 @@ class SyncEventHandler : public fidl::WireSyncEventHandler<fidl_test::Example> {
   void OnExistingEvent(fidl::WireEvent<fidl_test::Example::OnExistingEvent>* event) override {}
 };
 
-void sendEvents(fidl::ServerBindingRef<fidl_test::Example> server) { server->OnExistingEvent(); }
+void sendEvents(fidl::ServerBindingRef<fidl_test::Example> server) {
+  fidl::WireSendEvent(server)->OnExistingEvent();
+}
 // [END contents]
 
 int main(int argc, const char** argv) { return 0; }

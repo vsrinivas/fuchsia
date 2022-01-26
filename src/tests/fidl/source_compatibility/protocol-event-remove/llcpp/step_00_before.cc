@@ -17,8 +17,8 @@ class SyncEventHandler : public fidl::WireSyncEventHandler<fidl_test::Example> {
 };
 
 void sendEvents(fidl::ServerBindingRef<fidl_test::Example> server) {
-  server->OnExistingEvent();
-  server->OnOldEvent();
+  fidl::WireSendEvent(server)->OnExistingEvent();
+  fidl::WireSendEvent(server)->OnOldEvent();
 }
 // [END contents]
 

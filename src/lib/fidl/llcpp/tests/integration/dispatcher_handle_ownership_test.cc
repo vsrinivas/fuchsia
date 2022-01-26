@@ -150,7 +150,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveEvent) {
   fidl::Arena allocator;
   test::wire::Resource r(allocator);
   r.set_handle(std::move(send));
-  ASSERT_OK(server_binding->ResourceEvent(r));
+  ASSERT_OK(fidl::WireSendEvent(server_binding)->ResourceEvent(r));
 
   class EventHandler final : public fidl::WireAsyncEventHandler<test::Protocol> {
    public:

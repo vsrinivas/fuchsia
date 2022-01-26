@@ -5,6 +5,8 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_LLCPP_SEND_EVENT_BENCHMARK_UTIL_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_LLCPP_SEND_EVENT_BENCHMARK_UTIL_H_
 
+#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -64,14 +66,13 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
         }
       });
 
-  fidl::WireEventSender<ProtocolType> sender(std::move(endpoints->server));
   while (state->KeepRunning()) {
     fidl::Arena<65536> allocator;
     FidlType aligned_value = builder(allocator);
 
     state->NextStep();  // End: Setup. Begin: SendEvent.
 
-    sender.Send(std::move(aligned_value));
+    fidl::WireSendEvent(endpoints->server)->Send(std::move(aligned_value));
 
     {
       std::unique_lock<std::mutex> lock(mu);
@@ -83,7 +84,7 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   }
 
   // close the channel
-  sender.channel().reset();
+  endpoints->server.reset();
   receiver_thread.join();
 
   return true;

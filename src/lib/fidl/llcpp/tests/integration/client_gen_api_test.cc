@@ -190,7 +190,7 @@ TEST(GenAPITestCase, EventManaged) {
                                          std::make_unique<Server>(data, strlen(data)));
 
   // Wait for the event from the server.
-  ASSERT_OK(server_binding->OnEvent(fidl::StringView(data)));
+  ASSERT_OK(fidl::WireSendEvent(server_binding)->OnEvent(fidl::StringView(data)));
   ASSERT_OK(sync_completion_wait(&event_handler->done(), ZX_TIME_INFINITE));
 
   server_binding.Unbind();

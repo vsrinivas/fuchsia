@@ -29,7 +29,6 @@ class TestProtocol {
 
   using Transport = fidl::internal::ChannelTransport;
   using WeakEventSender = fidl::internal::WireWeakEventSender<fidl_test::TestProtocol>;
-  using EventSender = fidl::WireEventSender<fidl_test::TestProtocol>;
 };
 }  // namespace
 }  // namespace fidl_test
@@ -38,18 +37,6 @@ template <>
 class ::fidl::internal::WireWeakEventSender<fidl_test::TestProtocol> {
  public:
   explicit WireWeakEventSender(std::weak_ptr<fidl::internal::AsyncServerBinding>&& binding) {}
-};
-
-template <>
-class ::fidl::WireEventSender<fidl_test::TestProtocol> {
- public:
-  explicit WireEventSender(fidl::ServerEnd<fidl_test::TestProtocol> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  zx::channel& channel() { return server_end_.channel(); }
-
- private:
-  fidl::ServerEnd<fidl_test::TestProtocol> server_end_;
 };
 
 template <>

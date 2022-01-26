@@ -183,7 +183,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
   void EchoMinimalNoRetVal(EchoMinimalNoRetValRequestView request,
                            EchoMinimalNoRetValCompleter::Sync&) override {
     if (request->forward_to_server.empty()) {
-      fidl::Result result = server_binding_.value()->EchoMinimalEvent();
+      fidl::Result result = fidl::WireSendEvent(server_binding_.value())->EchoMinimalEvent();
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
     } else {
@@ -195,6 +195,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
         void EchoMinimalEvent(fidl::WireEvent<Echo::EchoMinimalEvent>* event) override {
           result_ = connection_->server_binding_.value()->EchoMinimalEvent();
+          result_ = fidl::WireSendEvent(connection_->server_binding_.value())->EchoMinimalEvent();
         }
 
         zx_status_t Unknown() override {
@@ -250,7 +251,8 @@ class EchoConnection final : public fidl::WireServer<Echo> {
   void EchoStructNoRetVal(EchoStructNoRetValRequestView request,
                           EchoStructNoRetValCompleter::Sync&) override {
     if (request->forward_to_server.empty()) {
-      fidl::Result result = server_binding_.value()->EchoEvent(std::move(request->value));
+      fidl::Result result =
+          fidl::WireSendEvent(server_binding_.value())->EchoEvent(std::move(request->value));
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
     } else {
@@ -261,7 +263,8 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         fidl::Result result() const { return result_; }
 
         void EchoEvent(fidl::WireEvent<Echo::EchoEvent>* event) override {
-          result_ = connection_->server_binding_.value()->EchoEvent(std::move(event->value));
+          result_ = fidl::WireSendEvent(connection_->server_binding_.value())
+                        ->EchoEvent(std::move(event->value));
         }
 
         zx_status_t Unknown() override {

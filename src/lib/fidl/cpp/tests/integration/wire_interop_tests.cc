@@ -393,7 +393,7 @@ TEST_F(UnifiedClientToWireServerWithEventHandler, OnNode) {
   // Send an event.
   fidl::Arena arena;
   auto node = MakeWireDir(arena);
-  fidl::Result result = binding->OnNode(node);
+  fidl::Result result = fidl::WireSendEvent(binding)->OnNode(node);
   ASSERT_OK(result.status());
 
   // Test receiving natural domain objects.

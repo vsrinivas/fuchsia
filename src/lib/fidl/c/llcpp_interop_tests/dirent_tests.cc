@@ -600,8 +600,9 @@ void AssertReadOnDirentsEvent(zx::channel chan, const DirentArray& expected_dire
 }  // namespace
 
 TEST(DirentServerTest, CFlavorSendOnDirents) {
-  zx::channel client_chan, server_chan;
-  ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
+  zx::status endpoints = fidl::CreateEndpoints<gen::DirEntTestInterface>();
+  ASSERT_OK(endpoints.status_value());
+  auto [client_end, server_end] = std::move(*endpoints);
 
   constexpr size_t kNumDirents = 80;
   std::unique_ptr<char[]> name(new char[gen::wire::kTestMaxPath]);
@@ -609,15 +610,16 @@ TEST(DirentServerTest, CFlavorSendOnDirents) {
     name[i] = 'A';
   }
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
-  fidl::WireEventSender<gen::DirEntTestInterface> event_sender(std::move(server_chan));
-  auto status = event_sender.OnDirents(fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
+  auto status = fidl::WireSendEvent(server_end)
+                    ->OnDirents(fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
   ASSERT_OK(status);
-  ASSERT_NO_FATAL_FAILURE(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
+  ASSERT_NO_FATAL_FAILURE(AssertReadOnDirentsEvent(client_end.TakeChannel(), dirents));
 }
 
 TEST(DirentServerTest, CallerAllocateSendOnDirents) {
-  zx::channel client_chan, server_chan;
-  ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
+  zx::status endpoints = fidl::CreateEndpoints<gen::DirEntTestInterface>();
+  ASSERT_OK(endpoints.status_value());
+  auto [client_end, server_end] = std::move(*endpoints);
 
   constexpr size_t kNumDirents = 80;
   std::unique_ptr<char[]> name(new char[gen::wire::kTestMaxPath]);
@@ -626,11 +628,11 @@ TEST(DirentServerTest, CallerAllocateSendOnDirents) {
   }
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
   auto buffer = std::make_unique<fidl::EventBuffer<gen::DirEntTestInterface::OnDirents>>();
-  fidl::WireEventSender<gen::DirEntTestInterface> event_sender(std::move(server_chan));
-  auto status = event_sender.OnDirents(buffer->view(),
-                                       fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
+  auto status = fidl::WireSendEvent(server_end)
+                    .buffer(buffer->view())
+                    ->OnDirents(fidl::VectorView<gen::wire::DirEnt>::FromExternal(dirents));
   ASSERT_OK(status);
-  ASSERT_NO_FATAL_FAILURE(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
+  ASSERT_NO_FATAL_FAILURE(AssertReadOnDirentsEvent(client_end.TakeChannel(), dirents));
 }
 
 // Parameterized tests
