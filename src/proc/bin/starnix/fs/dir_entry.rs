@@ -5,6 +5,7 @@
 use parking_lot::{RwLock, RwLockWriteGuard};
 use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
+use std::fmt;
 use std::sync::{Arc, Weak};
 
 use crate::errno;
@@ -92,7 +93,7 @@ impl DirEntry {
     /// in another file system. For that reason, consider walking the
     /// NamespaceNode tree (which understands mounts) rather than the DirEntry
     /// tree.
-    pub fn parent(self: &DirEntryHandle) -> Option<DirEntryHandle> {
+    pub fn parent(&self) -> Option<DirEntryHandle> {
         self.state.read().parent.clone()
     }
 
@@ -605,6 +606,24 @@ impl DirEntry {
                 state.children.remove(&local_name);
             }
         }
+    }
+}
+
+impl fmt::Debug for DirEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut parents = vec![];
+        let mut maybe_parent = self.parent();
+        while let Some(parent) = maybe_parent {
+            parents.push(String::from_utf8_lossy(&parent.local_name()).into_owned());
+            maybe_parent = parent.parent();
+        }
+        let mut builder = f.debug_struct("DirEntry");
+        builder.field("id", &(self as *const DirEntry));
+        builder.field("local_name", &String::from_utf8_lossy(&self.local_name()));
+        if parents.len() > 0 {
+            builder.field("parents", &parents);
+        }
+        builder.finish()
     }
 }
 

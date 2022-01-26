@@ -61,6 +61,15 @@ impl Namespace {
     }
 }
 
+impl fmt::Debug for Namespace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Namespace")
+            .field("root_mount", &self.root_mount)
+            .field("mount_points", &self.mount_points.read())
+            .finish()
+    }
+}
+
 /// An instance of a filesystem mounted in a namespace.
 ///
 /// At a mount, path traversal switches from one filesystem to another.
@@ -83,6 +92,16 @@ impl Mount {
     fn mountpoint(&self) -> Option<NamespaceNode> {
         let (ref mount, ref node) = &self.mountpoint.as_ref()?;
         Some(NamespaceNode { mount: Some(mount.upgrade()?), entry: node.clone() })
+    }
+}
+
+impl fmt::Debug for Mount {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Mount")
+            .field("id", &(self as *const Mount))
+            .field("mountpoint", &self.mountpoint)
+            .field("root", &self.root)
+            .finish()
     }
 }
 
@@ -404,7 +423,9 @@ impl NamespaceNode {
 impl fmt::Debug for NamespaceNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("NamespaceNode")
-            .field("entry.local_name", &String::from_utf8_lossy(&self.entry.local_name()))
+            .field("path", &String::from_utf8_lossy(&self.path()))
+            .field("mount", &self.mount)
+            .field("entry", &self.entry)
             .finish()
     }
 }
