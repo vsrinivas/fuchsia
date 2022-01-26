@@ -7,9 +7,6 @@
 using VirtioMagmaGuestTest = GuestTest<TerminaEnclosedGuest>;
 
 static constexpr const char* kDevicePath = "/dev/magma0";
-static const std::unordered_map<std::string, std::string> kMagmaEnv = {
-    {"VK_ICD_FILENAMES", "/tmp/extras/magma.json"},
-};
 
 TEST_F(VirtioMagmaGuestTest, DeviceProperties) {
   int32_t return_code = 0;
@@ -19,11 +16,12 @@ TEST_F(VirtioMagmaGuestTest, DeviceProperties) {
   ASSERT_EQ(return_code, 0) << kDevicePath << " is not a character device";
 }
 
-TEST_F(VirtioMagmaGuestTest, MagmaConformance) {
+// TODO(fxb/92209) add a wayland device to the enclosed Termina guest for buffer import/export
+TEST_F(VirtioMagmaGuestTest, DISABLED_MagmaConformance) {
   std::string text;
   int32_t return_code = 0;
   ASSERT_EQ(
-      this->Execute({"/tmp/extras/virtmagma_conformance_tests"}, kMagmaEnv, &text, &return_code),
+      this->Execute({"/tmp/extras/virtmagma_conformance_tests"}, &text, &return_code),
       ZX_OK);
   ASSERT_EQ(return_code, 0) << "[BEGIN GUEST TEXT]" << text << "[END GUEST TEXT]";
 }
@@ -32,7 +30,7 @@ TEST_F(VirtioMagmaGuestTest, VulkanUnit) {
   std::string text;
   int32_t return_code = 0;
   ASSERT_EQ(
-      this->Execute({"/tmp/extras/virtmagma_vulkan_unit_tests"}, kMagmaEnv, &text, &return_code),
+      this->Execute({"/tmp/extras/virtmagma_vulkan_unit_tests"}, &text, &return_code),
       ZX_OK);
   ASSERT_EQ(return_code, 0) << "[BEGIN GUEST TEXT]" << text << "[END GUEST TEXT]";
 }

@@ -384,6 +384,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
                                              fuchsia::virtualization::GuestConfig* cfg) {
   *url = kTerminaGuestUrl;
   cfg->set_virtio_gpu(false);
+  cfg->set_magma_device(fuchsia::virtualization::MagmaDevice());
 
   // Add the block device that contains the test binaries.
   {

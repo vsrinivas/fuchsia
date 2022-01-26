@@ -462,41 +462,18 @@ fuchsia_package("virtualization_test_utils_pkg") {
   ]
 }
 
-icd_filename = "libvulkan_intel.so"
-icd_manifest = "${target_gen_dir}/magma.json"
-
-action("icd_manifest") {
-  visibility = [ ":*" ]
-  script = "//src/graphics/lib/magma/scripts/gen_icd_manifest.sh"
-  args = [
-    "${icd_filename}",
-    rebase_path(icd_manifest, root_build_dir),
-  ]
-  outputs = [ icd_manifest ]
-}
-
 romfs_image("extras") {
   testonly = true
 
   deps = [
-    ":icd_manifest",
     "//src/graphics/lib/magma/tests/integration:virtmagma_conformance_tests(${linux_exe_toolchain})",
     "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(${linux_exe_toolchain})",
-    "//src/lib/vulkan:vulkan_headers_and_loader(${linux_lib_toolchain})",
   ]
 
   inputs = [
-    "${icd_manifest}",
     "${linux_exe_path}/virtmagma_vulkan_unit_tests",
     "${linux_exe_path}/virtmagma_conformance_tests",
-    "${linux_lib_path}/libvulkan.so.1",  # Vulkan Loader
   ]
-
-  if (current_cpu == "x64") {
-    deps += [ "//third_party/mesa/src/intel/vulkan:vulkan_intel(${linux_lib_toolchain})" ]
-
-    inputs += [ "${linux_lib_path}/${icd_filename}" ]
-  }
 
   output = "$target_out_dir/linux/extras.img"
 }
