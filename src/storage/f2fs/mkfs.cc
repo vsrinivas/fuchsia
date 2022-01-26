@@ -877,9 +877,7 @@ zx_status_t MkfsWorker::CreateRootDir() {
   return err;
 }
 
-zx_status_t MkfsWorker::TrimDevice() {
-  return bc_->Trim(0, static_cast<block_t>(params_.total_sectors));
-}
+zx_status_t MkfsWorker::TrimDevice() { return bc_->Trim(0, static_cast<block_t>(bc_->Maxblk())); }
 
 zx_status_t MkfsWorker::FormatDevice() {
   zx_status_t err = ZX_OK;

@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <vector>
 
@@ -193,6 +194,9 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
         }
         if (requests[i].vmoid != BLOCK_VMOID_INVALID) {
           return ZX_ERR_INVALID_ARGS;
+        }
+        if (requests[i].dev_offset + requests[i].length > block_count_) {
+          return ZX_ERR_OUT_OF_RANGE;
         }
         break;
       case BLOCKIO_FLUSH:
