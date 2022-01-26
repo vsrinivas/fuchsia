@@ -48,7 +48,7 @@ class IoGuard : public fbl::RefCounted<IoGuard> {
 //   CreateVolatileWriteBlockDispatcher(size, std::move(disp),
 //                                      std::move(callback));
 // };
-// CreateFileBlockDispatcher(std::move(file), std::move(nested));
+// CreateFileBlockDispatcher(disp, std::move(file), std::move(nested));
 using NestedBlockDispatcherCallback =
     fit::function<void(uint64_t capacity, uint32_t block_size, std::unique_ptr<BlockDispatcher>)>;
 
