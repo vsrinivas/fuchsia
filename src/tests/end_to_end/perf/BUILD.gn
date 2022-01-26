@@ -64,6 +64,11 @@ foreach(target_name, test_list) {
         sherlock_env,
       ]
     }
+
+    # TODO(fxbug.dev/92173): Enable for vim3.
+    if (target_name == "flatland_benchmarks_test") {
+      environments -= [ vim3_env ]
+    }
   }
 }
 
