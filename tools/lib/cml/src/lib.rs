@@ -1160,6 +1160,7 @@ pub struct Document {
     ///     -   `debug`: One of [`debug_capabilities`][fidl-environment-decl] in the
     ///         environment assigned to this component.
     ///     -   `framework`: The Component Framework runtime.
+    ///     -   `self`: This component.
     ///     -   `#<capability-name>`: The name of another capability from which the
     ///         requested capability is derived.
     ///     -   `#<child-name>`: A [reference](#references) to a child component
