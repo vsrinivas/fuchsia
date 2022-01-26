@@ -41,13 +41,13 @@ Concretely, there are two ways that `A` can bind to `B`:
     by `B`. Unlike a traditional capability, this protocol
     is implemented by the component framework.
 
-For development purposes, users can also bind to a component by invoking
-[`ffx component bind`][doc-ffx-bind].
-
 The word "bind" is meant to imply that a component is run on account of being
 "bound" by its clients. In theory, when no more clients are bound to a
 component, the framework could stop running it, but this behavior isn't
 currently implemented.
+
+Note: For more details on running components during development, see
+[Run components][doc-run].
 
 ## Starting a component instance {#starting}
 
@@ -151,7 +151,7 @@ fx list-packages --base
 [doc-package-set]: /docs/concepts/packages/package.md#types_of_packages
 [doc-storage]: capabilities/storage.md
 [doc-topology]: topology.md
-[doc-ffx-bind]: /docs/development/components/run.md#bind_to_the_instance
+[doc-run]: /docs/development/components/run.md
 [handler-example]: /examples/components/lifecycle
 [principle-accountability]: design_principles.md#accountability
 [principle-continuity]: design_principles.md#illusion-of-continuity
