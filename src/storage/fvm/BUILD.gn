@@ -9,8 +9,8 @@ group("tests") {
   testonly = true
   deps = [
     ":fvm-integration-test",
+    ":fvm-tests",
     ":fvm_unit($host_toolchain)",
-    ":test_package",
     "//src/storage/fvm/driver:tests",
   ]
 }
@@ -132,22 +132,8 @@ test("fvm_unit") {
   }
 }
 
-fuchsia_component("fvm_unit_test_component") {
-  component_name = "fvm-unit-test"
-  testonly = true
-
-  manifest = "fvm_unit_test.cmx"
-
-  deps = [
-    ":fvm_unit",
-    "//src/storage/bin/blobfs",
-    "//src/storage/bin/minfs",
-  ]
-}
-
-fuchsia_test_package("test_package") {
-  package_name = "fvm-tests"
-  test_components = [ ":fvm_unit_test_component" ]
+fuchsia_unittest_package("fvm-tests") {
+  deps = [ ":fvm_unit" ]
 }
 
 test("fvm-integration") {
@@ -191,9 +177,12 @@ test("fvm-integration") {
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/bus/drivers/platform",
+    "//src/storage/fvm/driver",
+  ]
+
+  data_deps = [
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
-    "//src/storage/fvm/driver",
   ]
 }
 
