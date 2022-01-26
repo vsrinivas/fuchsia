@@ -18,8 +18,8 @@ root as a key. This process is done to eliminate duplication of `BLOB`s that
 may exist between packages. For example, a shared library which exists in
 multiple packages is only stored once on the device.
 
-The package server can serve as a root of trust and validates the authenticity
-of each package.
+The package server serves as a root of trust as it validates the authenticity of
+each package.
 
 Note: To understand how components and packages work together in Fuchsia,
 see [Fuchsia's software model](/docs/concepts/software_model.md).
