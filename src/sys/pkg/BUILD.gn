@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/pkg/sysmgr_config.gni")
-
 group("pkg") {
   testonly = true
   deps = [
@@ -17,7 +15,6 @@ group("tests") {
   public_deps = [
     "bin:tests",
     "lib:tests",
-    "scripts:merge_sysmgr_config_test($host_toolchain)",
     "testing:tests",
     "tests",
     "//src/sys/lib/fidl-fuchsia-pkg-ext:tests",

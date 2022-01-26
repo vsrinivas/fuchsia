@@ -5,7 +5,6 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
-import("//src/sys/pkg/sysmgr_config.gni")
 
 rustc_binary("bin") {
   name = "pkg_cache"

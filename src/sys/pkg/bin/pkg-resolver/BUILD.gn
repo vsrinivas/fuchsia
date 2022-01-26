@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/testing/environments.gni")
 import("//src/sys/pkg/bin/grand-swd-binary/gsb.gni")
-import("//src/sys/pkg/sysmgr_config.gni")
 import("pkg_resolver_config.gni")
 
 # `pkg-resolver` is conceptually a binary, but it built as a lib here so it can be
