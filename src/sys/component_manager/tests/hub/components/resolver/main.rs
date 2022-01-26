@@ -40,13 +40,14 @@ async fn main() {
         vec!["children", "component_type", "debug", "id", "resolved", "url"],
     )
     .await;
-    bind_component("/hub/debug/fuchsia.sys2.LifecycleController", "./child_b", true).await;
+    start_component("/hub/debug/fuchsia.sys2.LifecycleController", "./child_b", true).await;
     expect_dir_listing(
         "/hub/children/child_b",
         vec!["children", "component_type", "debug", "exec", "id", "resolved", "url"],
     )
     .await;
-    bind_component("/hub/children/child_a/debug/fuchsia.sys2.LifecycleController", ".", true).await;
+    start_component("/hub/children/child_a/debug/fuchsia.sys2.LifecycleController", ".", true)
+        .await;
     expect_dir_listing(
         "/hub/children/child_a",
         vec!["children", "component_type", "debug", "exec", "id", "resolved", "url"],

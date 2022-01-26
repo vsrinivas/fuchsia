@@ -98,11 +98,11 @@ impl LifecycleController {
         Ok(())
     }
 
-    async fn bind(&self, moniker: String) -> Result<fsys::StartResult, fcomponent::Error> {
+    async fn start(&self, moniker: String) -> Result<fsys::StartResult, fcomponent::Error> {
         let component = self.resolve_component(&moniker).await?;
         let res = component.bind(&BindReason::Debug).await.map_err(|e: ModelError| {
             debug!(
-                "lifecycle controller failed to bind to component instance {}: {:?}",
+                "lifecycle controller failed to start the component instance {}: {:?}",
                 moniker, e
             );
             fcomponent::Error::InstanceCannotStart
@@ -155,8 +155,8 @@ impl LifecycleController {
                         .send(&mut res)
                         .unwrap_or_else(|e| error!("response send failed: {}", e));
                 }
-                fsys::LifecycleControllerRequest::Bind { moniker, responder } => {
-                    let mut res = self.bind(moniker).await;
+                fsys::LifecycleControllerRequest::Start { moniker, responder } => {
+                    let mut res = self.start(moniker).await;
                     responder
                         .send(&mut res)
                         .unwrap_or_else(|e| error!("response send failed: {}", e));
@@ -293,8 +293,11 @@ mod tests {
             lifecycle_controller.serve(lifecycle_request_stream).await
         });
 
-        assert_eq!(lifecycle_proxy.bind(".").await.unwrap(), Ok(fsys::StartResult::Started));
+        assert_eq!(lifecycle_proxy.start(".").await.unwrap(), Ok(fsys::StartResult::Started));
 
-        assert_eq!(lifecycle_proxy.bind(".").await.unwrap(), Ok(fsys::StartResult::AlreadyStarted));
+        assert_eq!(
+            lifecycle_proxy.start(".").await.unwrap(),
+            Ok(fsys::StartResult::AlreadyStarted)
+        );
     }
 }

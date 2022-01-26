@@ -30,7 +30,7 @@ async fn start_impl<W: std::io::Write>(
 
     // LifecycleController accepts PartialRelativeMonikers only
     let moniker = format!(".{}", moniker.to_string_without_instances());
-    let res = lifecycle_controller.bind(&moniker).await;
+    let res = lifecycle_controller.start(&moniker).await;
     match res {
         Ok(sr) => match sr {
             Ok(fsys::StartResult::Started) => {
@@ -70,7 +70,7 @@ mod test {
         fuchsia_async::Task::local(async move {
             let req = stream.try_next().await.unwrap().unwrap();
             match req {
-                fsys::LifecycleControllerRequest::Bind { moniker, responder, .. } => {
+                fsys::LifecycleControllerRequest::Start { moniker, responder, .. } => {
                     assert_eq!(expected_moniker, moniker);
                     let sr = if is_running {
                         fsys::StartResult::AlreadyStarted

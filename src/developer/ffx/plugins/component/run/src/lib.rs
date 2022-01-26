@@ -106,13 +106,13 @@ async fn run_impl<W: std::io::Write>(
     // LifecycleController accepts PartialRelativeMonikers only
     let moniker = format!(".{}", moniker.to_string_without_instances());
 
-    let bind_result = lifecycle_controller
-        .bind(&moniker)
+    let start_result = lifecycle_controller
+        .start(&moniker)
         .await
-        .map_err(|e| ffx_error!("FIDL error while binding to component instance: {}", e))?;
+        .map_err(|e| ffx_error!("FIDL error while starting the component instance: {}", e))?;
 
-    if let Err(e) = bind_result {
-        ffx_bail!("Lifecycle protocol could not bind to component instance: {:?}", e);
+    if let Err(e) = start_result {
+        ffx_bail!("Lifecycle protocol could not start the component instance: {:?}", e);
     }
 
     Ok(())
@@ -155,7 +155,7 @@ mod test {
 
             let req = stream.try_next().await.unwrap().unwrap();
             match req {
-                fsys::LifecycleControllerRequest::Bind { moniker, responder, .. } => {
+                fsys::LifecycleControllerRequest::Start { moniker, responder, .. } => {
                     assert_eq!(expected_moniker, moniker);
                     responder.send(&mut Ok(fsys::StartResult::Started)).unwrap();
                 }
@@ -261,7 +261,7 @@ mod test {
 
             let req = stream.try_next().await.unwrap().unwrap();
             match req {
-                fsys::LifecycleControllerRequest::Bind { moniker, responder, .. } => {
+                fsys::LifecycleControllerRequest::Start { moniker, responder, .. } => {
                     assert_eq!(expected_moniker, moniker);
                     responder.send(&mut Ok(fsys::StartResult::Started)).unwrap();
                 }
