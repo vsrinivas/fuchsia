@@ -178,8 +178,13 @@ func Run(ctx context.Context, config *Config) error {
 
 	if config.OutputLicenseFile {
 		for _, extension := range config.OutputFileExtensions {
-			path := config.OutputFilePrefix + "." + extension
-			if err := saveToOutputFile(filepath.Join(config.OutDir, path), licenses, config); err != nil {
+			outputPath := filepath.Join(config.OutDir, config.OutputFilePrefix+"."+extension)
+			// Remove preexisting license files because they can be links to files
+			// from the checkout, and check-license should not write to them.
+			if err := os.Remove(outputPath); err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("removing preexisting license files %q: %v", outputPath, err)
+			}
+			if err := saveToOutputFile(outputPath, licenses, config); err != nil {
 				return err
 			}
 		}
