@@ -8,12 +8,16 @@ import("//build/test.gni")
 test("hid-driver-test") {
   sources = [ "hid-driver.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_c",
+    "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_llcpp",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//sdk/lib/device-watcher/cpp",
-    "//sdk/lib/driver_test_realm/simple",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/zx",
@@ -29,7 +33,9 @@ test("hid-driver-test") {
 fuchsia_unittest_package("hidctl-integration-test") {
   deps = [
     ":hid-driver-test",
+    "//src/devices/misc/drivers/test-parent",
     "//src/ui/input/drivers/hid",
+    "//src/ui/input/drivers/hid-input-report",
     "//src/ui/input/drivers/hidctl",
   ]
 }
