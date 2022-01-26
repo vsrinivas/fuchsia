@@ -101,10 +101,11 @@ TEST(HangingGetHelperTest, NonCopyableType) {
     Thing(Thing&&) = default;
     Thing& operator=(const Thing&) = delete;
     Thing& operator=(Thing&&) = default;
+    explicit Thing(int i) : x(i) {}
   };
   camera::HangingGetHelper<Thing> helper;
-  EXPECT_FALSE(helper.Set({42}));
-  EXPECT_TRUE(helper.Set({42}));
+  EXPECT_FALSE(helper.Set(Thing(42)));
+  EXPECT_TRUE(helper.Set(Thing(42)));
   int returned = -1;
   EXPECT_FALSE(helper.Get([&](Thing t) { returned = t.x; }));
   EXPECT_EQ(returned, 42);
