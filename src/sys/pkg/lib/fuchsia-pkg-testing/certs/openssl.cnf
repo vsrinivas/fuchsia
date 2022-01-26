@@ -10,13 +10,23 @@ subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid:always,issuer
 keyUsage = cRLSign,keyCertSign
 
-[ server ]
+[ test_fuchsia_com ]
 basicConstraints = critical,CA:false
 subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid:always,issuer:always
 keyUsage = nonRepudiation,digitalSignature,keyEncipherment
-subjectAltName = @alt_names
+subjectAltName = @test_fuchsia_com_alt_names
 
-[ alt_names ]
+[ test_fuchsia_com_alt_names ]
 DNS.1 = test.fuchsia.com
 DNS.2 = localhost
+
+[ wildcard_fuchsia_updates_googleusercontent_com ]
+basicConstraints = critical,CA:false
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+keyUsage = nonRepudiation,digitalSignature,keyEncipherment
+subjectAltName = @wildcard_fuchsia_updates_googleusercontent_com_alt_names
+
+[ wildcard_fuchsia_updates_googleusercontent_com_alt_names ]
+DNS.1 = *.fuchsia-updates.googleusercontent.com

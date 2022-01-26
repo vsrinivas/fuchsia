@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-set -ex
+set -exuo pipefail
 
 EXPIRATION_DAYS=3650
 
@@ -11,8 +11,14 @@ EXPIRATION_DAYS=3650
 rm -rf work
 mkdir work
 
+# Set exit trap to clean up temporary files
+function finish {
+  rm -rf work
+}
+trap finish EXIT
+
 # Clean up old outputs if present
-rm -f ca.cert server.certchain server.rsa
+rm -f ca.cert server.certchain test.fuchsia.com.rsa
 
 # Create a new self-signed root CA
 openssl req -batch -nodes \
@@ -47,34 +53,55 @@ openssl x509 -req \
           -days $EXPIRATION_DAYS \
           -set_serial 2
 
-# Create a server certificate signed by the intermediate CA
+# Create a test.fuchsia.com certificate signed by the intermediate CA
 openssl req -batch -nodes \
           -newkey rsa:2048 -sha256 \
           -subj "/CN=test.fuchsia.com" \
-          -keyout work/server.key \
-          -out work/server.req
+          -keyout work/test.fuchsia.com.key \
+          -out work/test.fuchsia.com.req
 
 openssl x509 -req \
-          -extensions server -extfile openssl.cnf \
-          -in work/server.req \
-          -out work/server.cert \
+          -extensions test_fuchsia_com -extfile openssl.cnf \
+          -in work/test.fuchsia.com.req \
+          -out work/test.fuchsia.com.cert \
           -CA work/intermediate.cert \
           -CAkey work/intermediate.key \
           -sha256 \
           -days $EXPIRATION_DAYS \
           -set_serial 3
 
-# Export the server's private key
+# Export the test.fuchsia.com private key
 openssl rsa \
-          -in work/server.key \
-          -out work/server.rsa
+          -in work/test.fuchsia.com.key \
+          -out work/test.fuchsia.com.rsa
 
-# Export the chain of certificates for the server cert
-cat work/server.cert work/intermediate.cert work/ca.cert > server.certchain
+# Create a *.fuchsia-updates.googleusercontent.com certificate signed by the intermediate CA
+openssl req -batch -nodes \
+          -newkey rsa:2048 -sha256 \
+          -subj "/CN=*.fuchsia-updates.googleusercontent.com" \
+          -keyout work/wildcard.fuchsia-updates.googleusercontent.com.key \
+          -out work/wildcard.fuchsia-updates.googleusercontent.com.req
+
+openssl x509 -req \
+          -extensions wildcard_fuchsia_updates_googleusercontent_com -extfile openssl.cnf \
+          -in work/wildcard.fuchsia-updates.googleusercontent.com.req \
+          -out work/wildcard.fuchsia-updates.googleusercontent.com.cert \
+          -CA work/intermediate.cert \
+          -CAkey work/intermediate.key \
+          -sha256 \
+          -days $EXPIRATION_DAYS \
+          -set_serial 3
+
+# Export the second *.fuchsia-updates.googleusercontent.com private key
+openssl rsa \
+          -in work/wildcard.fuchsia-updates.googleusercontent.com.key \
+          -out work/wildcard.fuchsia-updates.googleusercontent.com.rsa
+
+# Export the chains of certificates for the server certs
+cat work/test.fuchsia.com.cert work/intermediate.cert work/ca.cert > test.fuchsia.com.certchain
+cat work/wildcard.fuchsia-updates.googleusercontent.com.cert work/intermediate.cert work/ca.cert > wildcard.fuchsia-updates.googleusercontent.com.certchain
 
 # Extract the results
 mv work/ca.cert .
-mv work/server.rsa .
-
-# Clean up temporary files
-rm -rf work
+mv work/test.fuchsia.com.rsa .
+mv work/wildcard.fuchsia-updates.googleusercontent.com.rsa .

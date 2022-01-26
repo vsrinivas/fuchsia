@@ -77,8 +77,10 @@ rustc_library("fuchsia-pkg-testing") {
   ]
 
   inputs = [
-    "certs/server.rsa",
-    "certs/server.certchain",
+    "certs/wildcard.fuchsia-updates.googleusercontent.com.rsa",
+    "certs/test.fuchsia.com.rsa",
+    "certs/test.fuchsia.com.certchain",
+    "certs/wildcard.fuchsia-updates.googleusercontent.com.certchain",
   ]
 }
 

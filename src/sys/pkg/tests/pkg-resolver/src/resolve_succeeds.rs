@@ -12,7 +12,10 @@ use {
     fuchsia_async as fasync,
     fuchsia_inspect::assert_data_tree,
     fuchsia_merkle::MerkleTree,
-    fuchsia_pkg_testing::{serve::responder, Package, PackageBuilder, RepositoryBuilder},
+    fuchsia_pkg_testing::{
+        serve::{responder, Domain},
+        Package, PackageBuilder, RepositoryBuilder,
+    },
     futures::{join, prelude::*},
     http_uri_ext::HttpUriExt as _,
     lib::{
@@ -806,7 +809,12 @@ async fn test_https_endpoint(pkg_name: &str, bind_addr: impl Into<IpAddr>) {
             .await
             .unwrap(),
     );
-    let served_repository = repo.server().use_https(true).bind_to_addr(bind_addr).start().unwrap();
+    let served_repository = repo
+        .server()
+        .use_https_domain(Domain::TestFuchsiaCom)
+        .bind_to_addr(bind_addr)
+        .start()
+        .unwrap();
 
     env.register_repo(&served_repository).await;
 

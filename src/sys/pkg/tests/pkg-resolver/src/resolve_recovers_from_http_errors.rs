@@ -10,7 +10,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{
-        serve::{responder, HttpResponder},
+        serve::{responder, Domain, HttpResponder},
         Package, PackageBuilder, RepositoryBuilder,
     },
     lib::{
@@ -270,7 +270,7 @@ async fn blob_timeout_causes_new_tcp_connection() {
             "/blobs/",
             responder::Once::new(responder::HangBody),
         ))
-        .use_https(true)
+        .use_https_domain(Domain::TestFuchsiaCom)
         .bind_to_addr(Ipv4Addr::LOCALHOST)
         .start()
         .expect("Starting server succeeds");

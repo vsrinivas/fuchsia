@@ -41,13 +41,21 @@ pub mod responder;
 trait AsyncReadWrite: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send {}
 impl<T> AsyncReadWrite for T where T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send {}
 
+/// Domains with known keys and certificates for testing.
+pub enum Domain {
+    /// `test.fuchsia.com` and `localhost`.
+    TestFuchsiaCom,
+    /// `*.fuchsia-updates.googleusercontent.com`.
+    WildcardFuchsiaUpdatesGoogleusercontentCom,
+}
+
 /// A builder to construct a test repository server.
 pub struct ServedRepositoryBuilder {
     repo: Arc<Repository>,
     response_overriders: Vec<Arc<dyn HttpResponder>>,
-    use_https: bool,
     bind_addr: IpAddr,
     bind_port: u16,
+    https_domain: Option<Domain>,
 }
 
 /// Override how a `ServedRepository` responds to requests.
@@ -66,9 +74,9 @@ impl ServedRepositoryBuilder {
         ServedRepositoryBuilder {
             repo,
             response_overriders: vec![],
-            use_https: false,
             bind_addr: Ipv6Addr::UNSPECIFIED.into(),
             bind_port: 0,
+            https_domain: None,
         }
     }
 
@@ -81,10 +89,10 @@ impl ServedRepositoryBuilder {
         self
     }
 
-    /// Serve the repository over TLS, using a server certificate rooted to
-    /// //third_party/rust_crates/vendor/rustls/test-ca/rsa/ca.cert.
-    pub fn use_https(mut self, value: bool) -> Self {
-        self.use_https = value;
+    /// Serve the repository over https via a domain known by test certificates
+    /// and keys.
+    pub fn use_https_domain(mut self, domain: Domain) -> Self {
+        self.https_domain = Some(domain);
         self
     }
 
@@ -119,10 +127,26 @@ impl ServedRepositoryBuilder {
         let connection_attempts = Arc::new(AtomicU64::new(0));
         let connections: Pin<
             Box<dyn Stream<Item = Result<Pin<Box<dyn AsyncReadWrite>>, Error>> + Send>,
-        > = if self.use_https {
+        > = if let Some(ref https_domain) = self.https_domain {
             // build a server configuration using a test CA and cert chain
-            let certs = parse_cert_chain(&include_bytes!("../certs/server.certchain")[..]);
-            let key = parse_private_key(&include_bytes!("../certs/server.rsa")[..]);
+            let (certs, key) = match https_domain {
+                Domain::TestFuchsiaCom => (
+                    parse_cert_chain(&include_bytes!("../certs/test.fuchsia.com.certchain")[..]),
+                    parse_private_key(&include_bytes!("../certs/test.fuchsia.com.rsa")[..]),
+                ),
+                Domain::WildcardFuchsiaUpdatesGoogleusercontentCom => (
+                    parse_cert_chain(
+                        &include_bytes!(
+                            "../certs/wildcard.fuchsia-updates.googleusercontent.com.certchain"
+                        )[..],
+                    ),
+                    parse_private_key(
+                        &include_bytes!(
+                            "../certs/wildcard.fuchsia-updates.googleusercontent.com.rsa"
+                        )[..],
+                    ),
+                ),
+            };
             let mut tls_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
             // Configure ALPN and prefer H2 over HTTP/1.1.
             tls_config.set_protocols(&[b"h2".to_vec(), b"http/1.1".to_vec()]);
@@ -205,7 +229,7 @@ impl ServedRepositoryBuilder {
             stop,
             server,
             addr,
-            use_https: self.use_https,
+            https_domain: self.https_domain,
             auto_event_sender,
             connection_attempts,
         })
@@ -229,14 +253,14 @@ pub struct ServedRepository {
     stop: futures::channel::oneshot::Sender<()>,
     server: Task<()>,
     addr: SocketAddr,
-    use_https: bool,
     auto_event_sender: EventSender,
     connection_attempts: Arc<AtomicU64>,
+    https_domain: Option<Domain>,
 }
 
 impl ServedRepository {
     fn scheme(&self) -> &'static str {
-        if self.use_https {
+        if self.https_domain.is_some() {
             "https"
         } else {
             "http"
