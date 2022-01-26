@@ -1591,6 +1591,9 @@ impl RequestReceiver<xdg_shell::XdgToplevel> for XdgToplevel {
             XdgToplevelRequest::SetMaxSize { width, height } => {
                 let toplevel = this.get_mut(client)?;
                 toplevel.set_max_size(Size { width, height });
+                if !toplevel.waiting_for_initial_commit {
+                    XdgSurface::configure(toplevel.xdg_surface_ref, client)?;
+                }
             }
             XdgToplevelRequest::SetMinSize { .. } => {}
             XdgToplevelRequest::SetMaximized => {}
