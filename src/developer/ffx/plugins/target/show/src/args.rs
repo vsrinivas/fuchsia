@@ -10,7 +10,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
     subcommand,
     name = "show",
     description = "Display relevant information for the target",
-    note = "Displays a detailed iformation about the target.
+    note = "Displays a detailed information about the target.
 
 The default output is intended for a human reader. This output can be
 decorated with machine readable labels (--label) and descriptions of
