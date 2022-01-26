@@ -78,6 +78,7 @@ cache_package_labels += [
   "//src/media/playback/bundles:audio_consumer_config",
   "//src/session",
   "//src/ui/bin/terminal",
+  "//src/ui/bin/scene_manager",
   "//src/ui/scenic",
 ]
 

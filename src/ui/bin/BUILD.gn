@@ -8,6 +8,7 @@ group("bin") {
     "default_hardware_ime",
     "input-pipeline",
     "root_presenter",
+    "scene_manager",
     "shortcut",
     "text:text_manager",
   ]
@@ -22,6 +23,7 @@ group("tests") {
     "hardware_display_controller_provider:tests",
     "input-pipeline:tests",
     "root_presenter:tests",
+    "scene_manager:tests",
     "shortcut:tests",
     "terminal:tests",
     "text:tests",

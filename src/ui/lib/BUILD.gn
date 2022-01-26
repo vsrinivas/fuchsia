@@ -11,6 +11,7 @@ group("tests") {
     "input_pipeline:tests",
     "input_report_reader/tests",
     "key_util:test",
+    "scene_management:scene_management_tests",
     "yuv:test",
   ]
 }

@@ -8,11 +8,11 @@ in a session. For more information, see
 
 ## Building
 To add `scene_management` to your build, append
-`--with //src/session/lib/scene_management` to the `fx set` invocation.
+`--with //src/ui/lib/scene_management` to the `fx set` invocation.
 
 ## Using
 `scene_management` can be used by depending on the
-`//src/session/lib/scene_management` GN target.
+`//src/ui/lib/scene_management` GN target.
 
 `scene_management` is not available in the SDK.
 
