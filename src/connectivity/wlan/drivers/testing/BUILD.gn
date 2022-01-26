@@ -7,10 +7,7 @@ import("//build/drivers.gni")
 
 group("testing") {
   testonly = true
-  public_deps = [
-    ":wlanphy-testdev",
-    "util",
-  ]
+  public_deps = [ ":wlanphy-testdev" ]
 }
 
 driver_bind_rules("wlanphy_test_bind") {
