@@ -238,6 +238,7 @@ void QcowFile::ReadAt(BlockDispatcher* disp, void* data, uint64_t size, uint64_t
     uint64_t physical_offset;
     uint64_t cluster_offset = off & cluster_mask;
     uint64_t read_size = std::min(size, cluster_size() - cluster_offset);
+    FX_CHECK(read_size > 0);
     zx_status_t status = lookup_table_->Walk(off, &physical_offset);
     switch (status) {
       case ZX_OK: {

@@ -23,6 +23,29 @@ enum class Queue : uint16_t {
   REQUEST = 0,
 };
 
+static const char* block_format_string(fuchsia::virtualization::BlockFormat format) {
+  if (format == fuchsia::virtualization::BlockFormat::FILE) {
+    return "FILE";
+  } else if (format == fuchsia::virtualization::BlockFormat::QCOW) {
+    return "QCOW";
+  } else if (format == fuchsia::virtualization::BlockFormat::BLOCK) {
+    return "BLOCK";
+  } else {
+    return "UNKNOWN";
+  }
+}
+static const char* block_mode_string(fuchsia::virtualization::BlockMode mode) {
+  if (mode == fuchsia::virtualization::BlockMode::READ_WRITE) {
+    return "READ_WRITE";
+  } else if (mode == fuchsia::virtualization::BlockMode::READ_ONLY) {
+    return "READ_ONLY";
+  } else if (mode == fuchsia::virtualization::BlockMode::VOLATILE_WRITE) {
+    return "VOLATILE_WRITE";
+  } else {
+    return "UNKNOWN";
+  }
+}
+
 // A single asynchronous block request.
 class Request : public fbl::RefCounted<Request> {
  public:
@@ -35,6 +58,11 @@ class Request : public fbl::RefCounted<Request> {
   }
 
   ~Request() {
+    // If no status byte is found then this indicates either a bug on our side, or that the guest is
+    // giving us corrupted descriptor chains.
+    // TODO(fxb/86513): Once confident status byte is always present could downgrade this to a
+    // warning instead of a hard failure.
+    FX_CHECK(status_ptr_) << "No status byte found for request.";
     if (status_ptr_ != nullptr) {
       *status_ptr_ = status_;
     }
@@ -290,14 +318,16 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     PrepStart(std::move(start_info));
 
     NestedBlockDispatcherCallback nested =
-        [this, id = std::move(id), callback = std::move(callback)](
+        [this, id = std::move(id), callback = std::move(callback), format, mode](
             uint64_t capacity, uint32_t block_size, std::unique_ptr<BlockDispatcher> disp) {
           request_stream_.Init(
               std::move(disp), id, phys_mem_,
               fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioBlockImpl::Interrupt));
           callback(capacity, block_size);
+
           FX_LOGS(INFO) << "Started block device '" << id << "' with capacity " << capacity
-                        << " and block size " << block_size;
+                        << " and block size " << block_size << " format "
+                        << block_format_string(format) << " mode " << block_mode_string(mode);
         };
 
     if (format == fuchsia::virtualization::BlockFormat::BLOCK) {

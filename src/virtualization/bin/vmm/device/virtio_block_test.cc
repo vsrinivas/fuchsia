@@ -158,28 +158,6 @@ TEST_F(VirtioBlockTest, BadPayload) {
   EXPECT_EQ(VIRTIO_BLK_S_IOERR, *blk_status);
 }
 
-TEST_F(VirtioBlockTest, BadStatus) {
-  virtio_blk_req_t header = {
-      .type = VIRTIO_BLK_T_IN,
-  };
-  uint8_t* sector;
-  uint8_t* blk_status;
-  zx_status_t status = DescriptorChainBuilder(request_queue_)
-                           .AppendReadableDescriptor(&header, sizeof(header))
-                           .AppendWritableDescriptor(&sector, kBlockSectorSize)
-                           .AppendWritableDescriptor(&blk_status, 2)
-                           .Build();
-  ASSERT_EQ(ZX_OK, status);
-  *blk_status = UINT8_MAX;
-
-  status = block_->NotifyQueue(0);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
-
-  EXPECT_EQ(UINT8_MAX, *blk_status);
-}
-
 TEST_F(VirtioBlockTest, BadRequestType) {
   virtio_blk_req_t header = {
       .type = UINT32_MAX,

@@ -151,6 +151,7 @@ void CreateVmoBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::FileP
         // If the file is not backed by a vmo, or if we fail to get it, then fall back to a file
         // block dispatcher.
         if (status != ZX_OK) {
+          FX_LOGS(INFO) << "Failed to get VMO, falling back to file dispatcher";
           CreateFileBlockDispatcher(dispatcher, std::move(file), std::move(callback));
           return;
         }
@@ -204,6 +205,7 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
       }
 
       size_t read_size = (first_sector - sector) * kBlockSectorSize;
+      FX_CHECK(read_size > 0);
       if (unallocated) {
         // Not Allocated, delegate to dispatcher.
         auto callback = [io_guard](zx_status_t status) {
@@ -220,7 +222,7 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
 
       off += read_size;
       addr += read_size;
-      FX_DCHECK(size >= read_size);
+      FX_CHECK(size >= read_size);
       size -= read_size;
     }
   }
