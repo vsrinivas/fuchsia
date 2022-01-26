@@ -10,6 +10,7 @@
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 #include <lib/zx/eventpair.h>
+#include <limits.h>
 
 #include <functional>
 #include <memory>
@@ -530,6 +531,18 @@ void Flatland::SetOrientation(TransformId transform_id, Orientation orientation)
 }
 
 void Flatland::SetClipBounds(TransformId transform_id, fuchsia::math::Rect bounds) {
+  // Since this function is deprecated, forward it to the new function. If the bounds
+  // are (-1,-1,-1,-1), pass through a nullptr.
+  // TODO(fxbug.dev/91132): Remove when finished deprecating this function.
+  if (bounds.x == -1 && bounds.y == -1 && bounds.width == -1 && bounds.height == -1) {
+    SetClipBoundary(transform_id, nullptr);
+  } else {
+    SetClipBoundary(transform_id, std::make_unique<fuchsia::math::Rect>(std::move(bounds)));
+  }
+}
+
+void Flatland::SetClipBoundary(TransformId transform_id,
+                               std::unique_ptr<fuchsia::math::Rect> bounds_ptr) {
   if (transform_id.value == kInvalidId) {
     error_reporter_->ERROR() << "SetClipBounds called with transform_id 0";
     ReportBadOperationError();
@@ -545,19 +558,35 @@ void Flatland::SetClipBounds(TransformId transform_id, fuchsia::math::Rect bound
     return;
   }
 
-  // If we have a special clip bound of {-1,-1,-1,-1} we remove the bounds altogether.
-  if (bounds.x == -1 && bounds.y == -1 && bounds.width == -1 && bounds.height == -1) {
+  // If the optional bounds are empty, then remove them.
+  if (!bounds_ptr) {
     clip_regions_.erase(transform_kv->second);
     return;
   }
 
+  auto bounds = *bounds_ptr.get();
   if (bounds.width <= 0 || bounds.height <= 0) {
     error_reporter_->ERROR() << "SetClipBounds failed, width/height must both be positive "
                              << "(" << bounds.width << ", " << bounds.height << ")";
+    ReportBadOperationError();
+    return;
   }
 
-  if (bounds.x + bounds.width < 0 || bounds.y + bounds.height < 0) {
-    error_reporter_->ERROR() << "SetClipBounds failed, integer overflow.";
+  // The following overflow checks are based on those described here:
+  //    https://wiki.sei.cmu.edu/confluence/display/c/INT32-C.
+  //    +Ensure+that+operations+on+signed+integers+do+not+result+in+overflow
+  if (((bounds.x > 0) && (bounds.width > (INT_MAX - bounds.x))) ||
+      ((bounds.x < 0) && (bounds.width < (INT_MIN - bounds.x)))) {
+    error_reporter_->ERROR() << "SetClipBounds failed, integer overflow on the X-axis.";
+    ReportBadOperationError();
+    return;
+  }
+
+  if (((bounds.y > 0) && (bounds.height > (INT_MAX - bounds.y))) ||
+      ((bounds.y < 0) && (bounds.height < (INT_MIN - bounds.y)))) {
+    error_reporter_->ERROR() << "SetClipBounds failed, integer overflow on the Y-axis.";
+    ReportBadOperationError();
+    return;
   }
 
   clip_regions_[transform_kv->second] = bounds;
@@ -1280,6 +1309,16 @@ TransformHandle Flatland::GetRoot() const {
 std::optional<TransformHandle> Flatland::GetContentHandle(ContentId content_id) const {
   auto handle_kv = content_handles_.find(content_id.value);
   if (handle_kv == content_handles_.end()) {
+    return std::nullopt;
+  }
+  return handle_kv->second;
+}
+
+// For validating properties associated with transforms in tests only. If |transform_id| does not
+// exist for this Flatland instance, returns std::nullopt.
+std::optional<TransformHandle> Flatland::GetTransformHandle(TransformId transform_id) const {
+  auto handle_kv = transforms_.find(transform_id.value);
+  if (handle_kv == transforms_.end()) {
     return std::nullopt;
   }
   return handle_kv->second;

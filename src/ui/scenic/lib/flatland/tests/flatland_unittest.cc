@@ -3630,6 +3630,113 @@ TEST_F(FlatlandTest, SetImageSampleRegionTestCases) {
   }
 }
 
+TEST_F(FlatlandTest, SetClipBoundaryErrorCases) {
+  const TransformId kTransformId = {1};
+
+  // Zero is not a valid transform ID.
+  {
+    fuchsia::math::Rect rect = {0, 0, 20, 30};
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetClipBoundary({0}, std::make_unique<fuchsia::math::Rect>(std::move(rect)));
+    PRESENT(flatland, false);
+  }
+
+  // Transform ID is valid but not yet imported
+  {
+    fuchsia::math::Rect rect = {0, 0, 20, 30};
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetClipBoundary(kTransformId, std::make_unique<fuchsia::math::Rect>(std::move(rect)));
+    PRESENT(flatland, false);
+  }
+
+  // Width must be positive.
+  {
+    fuchsia::math::Rect rect = {0, 0, 20, 30};
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->CreateTransform(kTransformId);
+    flatland->SetRootTransform(kTransformId);
+    flatland->SetClipBoundary(kTransformId, std::make_unique<fuchsia::math::Rect>(std::move(rect)));
+    PRESENT(flatland, true);
+
+    const auto maybe_transform_handle = flatland->GetTransformHandle(kTransformId);
+    ASSERT_TRUE(maybe_transform_handle.has_value());
+    const auto transform_handle = maybe_transform_handle.value();
+
+    auto uber_struct = GetUberStruct(flatland.get());
+    auto clip_region_itr = uber_struct->local_clip_regions.find(transform_handle);
+    EXPECT_NE(clip_region_itr, uber_struct->local_clip_regions.end());
+    auto clip_region = clip_region_itr->second;
+    EXPECT_EQ(rect.x, clip_region.x);
+    EXPECT_EQ(rect.y, clip_region.y);
+    EXPECT_EQ(rect.width, clip_region.width);
+    EXPECT_EQ(rect.height, clip_region.height);
+
+    fuchsia::math::Rect rect_bad = {0, 0, -20, 30};
+    flatland->SetClipBoundary(kTransformId,
+                              std::make_unique<fuchsia::math::Rect>(std::move(rect_bad)));
+    PRESENT(flatland, false);
+  }
+
+  // Height must be positive.
+  {
+    fuchsia::math::Rect rect = {0, 0, 20, 30};
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->CreateTransform(kTransformId);
+    flatland->SetClipBoundary(kTransformId, std::make_unique<fuchsia::math::Rect>(std::move(rect)));
+    PRESENT(flatland, true);
+
+    fuchsia::math::Rect rect_bad = {0, 0, 20, -30};
+    flatland->SetClipBoundary(kTransformId,
+                              std::make_unique<fuchsia::math::Rect>(std::move(rect_bad)));
+    PRESENT(flatland, false);
+  }
+
+  // Null value is OK.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->CreateTransform(kTransformId);
+    flatland->SetRootTransform(kTransformId);
+
+    // Grab the transform handle.
+    const auto maybe_transform_handle = flatland->GetTransformHandle(kTransformId);
+    ASSERT_TRUE(maybe_transform_handle.has_value());
+    const auto transform_handle = maybe_transform_handle.value();
+
+    // Set a null value.
+    flatland->SetClipBoundary(kTransformId, nullptr);
+    PRESENT(flatland, true);
+
+    // Check that there is no clip region in the uber struct.
+    auto uber_struct = GetUberStruct(flatland.get());
+    auto clip_region_itr = uber_struct->local_clip_regions.find(transform_handle);
+    EXPECT_EQ(clip_region_itr, uber_struct->local_clip_regions.end());
+
+    // Set a proper value.
+    fuchsia::math::Rect rect = {10, 30, 20, 90};
+    flatland->SetClipBoundary(kTransformId, std::make_unique<fuchsia::math::Rect>(std::move(rect)));
+    PRESENT(flatland, true);
+
+    // Check that this value has now made its way to the uber struct.
+    uber_struct = GetUberStruct(flatland.get());
+    clip_region_itr = uber_struct->local_clip_regions.find(transform_handle);
+    EXPECT_NE(clip_region_itr, uber_struct->local_clip_regions.end());
+    auto clip_region = clip_region_itr->second;
+    EXPECT_EQ(rect.x, clip_region.x);
+    EXPECT_EQ(rect.y, clip_region.y);
+    EXPECT_EQ(rect.width, clip_region.width);
+    EXPECT_EQ(rect.height, clip_region.height);
+
+    // Set it to be null again.
+    flatland->SetClipBoundary(kTransformId, nullptr);
+    PRESENT(flatland, true);
+
+    // Now check that its not in the uber struct anymore.
+    uber_struct = GetUberStruct(flatland.get());
+    clip_region_itr = uber_struct->local_clip_regions.find(transform_handle);
+    EXPECT_EQ(clip_region_itr, uber_struct->local_clip_regions.end());
+  }
+}
+
 TEST_F(FlatlandTest, CreateImageErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
 

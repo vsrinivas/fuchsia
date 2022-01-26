@@ -108,6 +108,9 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // |fuchsia::ui::composition::Flatland|
   void SetClipBounds(TransformId transform_id, fuchsia::math::Rect bounds) override;
   // |fuchsia::ui::composition::Flatland|
+  void SetClipBoundary(TransformId transform_id,
+                       std::unique_ptr<fuchsia::math::Rect> bounds) override;
+  // |fuchsia::ui::composition::Flatland|
   void AddChild(TransformId parent_transform_id, TransformId child_transform_id) override;
   // |fuchsia::ui::composition::Flatland|
   void RemoveChild(TransformId parent_transform_id, TransformId child_transform_id) override;
@@ -173,6 +176,10 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // For validating properties associated with content in tests only. If |content_id| does not
   // exist for this Flatland instance, returns std::nullopt.
   std::optional<TransformHandle> GetContentHandle(ContentId content_id) const;
+
+  // For validating properties associated with transforms in tests only. If |transform_id| does not
+  // exist for this Flatland instance, returns std::nullopt.
+  std::optional<TransformHandle> GetTransformHandle(TransformId transform_id) const;
 
   // For validating logs in tests only.
   void SetErrorReporter(std::unique_ptr<scenic_impl::ErrorReporter> error_reporter);
