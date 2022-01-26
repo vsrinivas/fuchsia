@@ -178,7 +178,16 @@ impl FidlProtocol for Diagnostics {
                         fidl::endpoints::create_proxy::<bridge::TargetHandleMarker>()?;
                     // TODO(awdavies): Document that there needs to be a timeout handler on the client side, or just handle
                     // a timeout in here.
-                    match tc_proxy.open_target(target_str.as_deref(), th_server_end).await? {
+                    match tc_proxy
+                        .open_target(
+                            bridge::TargetQuery {
+                                string_matcher: target_str.clone(),
+                                ..bridge::TargetQuery::EMPTY
+                            },
+                            th_server_end,
+                        )
+                        .await?
+                    {
                         Err(e) => {
                             log::error!(
                                 "diagnostics encountered error while opening target {}: {:?}",

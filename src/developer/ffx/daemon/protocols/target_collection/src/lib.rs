@@ -89,7 +89,7 @@ impl FidlProtocol for TargetCollectionProtocol {
         match req {
             bridge::TargetCollectionRequest::ListTargets { reader, query, .. } => {
                 let reader = reader.into_proxy()?;
-                let targets = match query.as_ref().map(|s| s.as_str()) {
+                let targets = match query.string_matcher.as_deref() {
                     None | Some("") => target_collection
                         .targets()
                         .into_iter()
@@ -117,7 +117,7 @@ impl FidlProtocol for TargetCollectionProtocol {
                 Ok(())
             }
             bridge::TargetCollectionRequest::OpenTarget { query, responder, target_handle } => {
-                let target = match target_collection.wait_for_match(query).await {
+                let target = match target_collection.wait_for_match(query.string_matcher).await {
                     Ok(t) => t,
                     Err(e) => {
                         return responder
@@ -361,8 +361,14 @@ mod tests {
     ) -> Vec<bridge::Target> {
         let (reader, server) =
             fidl::endpoints::create_endpoints::<bridge::TargetCollectionReaderMarker>().unwrap();
-
-        tc.list_targets(query, reader).unwrap();
+        tc.list_targets(
+            bridge::TargetQuery {
+                string_matcher: query.map(|s| s.to_owned()),
+                ..bridge::TargetQuery::EMPTY
+            },
+            reader,
+        )
+        .unwrap();
         let mut res = Vec::new();
         let mut stream = server.into_stream().unwrap();
         while let Ok(Some(bridge::TargetCollectionReaderRequest::Next { entry, responder })) =

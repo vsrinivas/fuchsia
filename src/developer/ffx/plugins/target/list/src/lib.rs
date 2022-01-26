@@ -11,6 +11,7 @@ use {
     ffx_writer::Writer,
     fidl_fuchsia_developer_bridge::{
         TargetCollectionProxy, TargetCollectionReaderMarker, TargetCollectionReaderRequest,
+        TargetQuery,
     },
     futures::TryStreamExt,
     std::convert::TryFrom,
@@ -26,7 +27,10 @@ pub async fn list_targets(
 ) -> Result<()> {
     let (reader, server) = fidl::endpoints::create_endpoints::<TargetCollectionReaderMarker>()?;
 
-    tc_proxy.list_targets(cmd.nodename.as_deref(), reader)?;
+    tc_proxy.list_targets(
+        TargetQuery { string_matcher: cmd.nodename.clone(), ..TargetQuery::EMPTY },
+        reader,
+    )?;
     let mut res = Vec::new();
     let mut stream = server.into_stream()?;
     while let Ok(Some(TargetCollectionReaderRequest::Next { entry, responder })) =
@@ -105,13 +109,13 @@ mod test {
             bridge::TargetCollectionRequest::ListTargets { query, reader, .. } => {
                 let reader = reader.into_proxy().unwrap();
                 let fidl_values: Vec<FidlTarget> =
-                    if query.as_ref().map(|s| s.is_empty()).unwrap_or(true) {
+                    if query.string_matcher.as_deref().map(|s| s.is_empty()).unwrap_or(true) {
                         (0..num_tests)
                             .map(|i| format!("Test {}", i))
                             .map(|name| to_fidl_target(name))
                             .collect()
                     } else {
-                        let v = query.unwrap();
+                        let v = query.string_matcher.unwrap();
                         (0..num_tests)
                             .map(|i| format!("Test {}", i))
                             .filter(|t| *t == v)

@@ -18,7 +18,7 @@ use {
     fidl::endpoints::{create_proxy, ProtocolMarker},
     fidl_fuchsia_developer_bridge::{
         DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetCollectionMarker,
-        TargetHandleMarker, TargetHandleProxy, VersionInfo,
+        TargetHandleMarker, TargetHandleProxy, TargetQuery, VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::{futures::select, TimeoutExt},
@@ -64,7 +64,10 @@ fn open_target_with_fut<'a>(
     let t_clone = target.clone();
     let target_handle_fut = async move {
         tc_proxy
-            .open_target(t_clone.as_ref().map(|s| s.as_str()), target_server_end)
+            .open_target(
+                TargetQuery { string_matcher: t_clone, ..TargetQuery::EMPTY },
+                target_server_end,
+            )
             .await?
             .map_err(|err| FfxError::OpenTargetError { err, target, is_default_target })?;
         Result::<()>::Ok(())

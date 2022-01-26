@@ -8,7 +8,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_get_ssh_address_args::GetSshAddressCommand,
     fidl_fuchsia_developer_bridge::{
-        DaemonError, TargetAddrInfo, TargetCollectionProxy, TargetHandleMarker,
+        DaemonError, TargetAddrInfo, TargetCollectionProxy, TargetHandleMarker, TargetQuery,
     },
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
     netext::scope_id_to_name,
@@ -43,13 +43,16 @@ async fn get_ssh_address_impl<W: Write>(
     let t_clone = target.clone();
     let t_clone_2 = target.clone();
     let res = timeout(timeout_dur, async {
-        collection_proxy.open_target(target.as_deref(), handle).await?.map_err(|err| {
-            anyhow::Error::from(FfxError::OpenTargetError {
-                err,
-                target: t_clone_2,
-                is_default_target,
-            })
-        })?;
+        collection_proxy
+            .open_target(TargetQuery { string_matcher: target, ..TargetQuery::EMPTY }, handle)
+            .await?
+            .map_err(|err| {
+                anyhow::Error::from(FfxError::OpenTargetError {
+                    err,
+                    target: t_clone_2,
+                    is_default_target,
+                })
+            })?;
         proxy.get_ssh_address().await.map_err(anyhow::Error::from)
     })
     .await

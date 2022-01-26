@@ -122,6 +122,23 @@ protocol TargetCollectionReader {
     }) -> ();
 };
 
+/// A query for a Fuchsia target device. If empty when supplied to a method, will be
+/// interpreted as requesting the first target to be seen on the network, or ALL
+/// targets that have been seen on the network.
+type TargetQuery = table {
+    /// A string matcher is something that can match either the:
+    /// - Target nodename (partial matches okay).
+    /// - Target IP (any that have been seen).
+    /// - Serial number (partial matches okay).
+    ///
+    /// IPv6 and IPv4 addresses are both acceptable queries. However, an IPv6
+    /// address should not contain square brackets, and if it is a link-local
+    /// address, it should not contain the interface name. For example, an address
+    /// like "fe80::f00d%qemu" isn't valid, but "fe80::f00d" is. Any IPv4
+    /// address is also a valid query.
+    1: string_matcher string:255;
+};
+
 type OpenTargetError = strict enum {
     /// When querying for a target, an ambiguous query was received (one that
     /// matched multiple targets).
@@ -144,7 +161,7 @@ protocol TargetCollection {
     /// The client receives updates by handling calls to `Next` in the
     /// `TargetCollectionReader` protocol.
     ListTargets(resource struct {
-        query string:<255, optional>;
+        query TargetQuery;
         reader client_end:TargetCollectionReader;
     });
 
@@ -153,7 +170,7 @@ protocol TargetCollection {
     /// query, then this will hang until one is found. It is the caller's
     /// responsibility to time out if this call takes too long.
     OpenTarget(resource struct {
-        query string:<255, optional>;
+        query TargetQuery;
         target_handle server_end:TargetHandle;
     }) -> (struct {}) error OpenTargetError;
 

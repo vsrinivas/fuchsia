@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_developer_bridge::{
         DaemonProxy, Target, TargetCollectionMarker, TargetCollectionProxy,
         TargetCollectionReaderMarker, TargetCollectionReaderRequest, TargetHandleMarker,
-        TargetState, VersionInfo,
+        TargetQuery, TargetState, VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     futures::TryStreamExt,
@@ -484,7 +484,10 @@ fn get_kernel_name() -> Result<String> {
 async fn list_targets(query: Option<&str>, tc: &TargetCollectionProxy) -> Result<Vec<Target>> {
     let (reader, server) = fidl::endpoints::create_endpoints::<TargetCollectionReaderMarker>()?;
 
-    tc.list_targets(query, reader)?;
+    tc.list_targets(
+        TargetQuery { string_matcher: query.map(|s| s.to_owned()), ..TargetQuery::EMPTY },
+        reader,
+    )?;
     let mut res = Vec::new();
     let mut stream = server.into_stream()?;
     while let Ok(Some(TargetCollectionReaderRequest::Next { entry, responder })) =
@@ -761,7 +764,13 @@ async fn execute_steps(
             success_or_continue!(
                 timeout(
                     retry_delay,
-                    tc_proxy.open_target(target.nodename.as_deref(), target_server)
+                    tc_proxy.open_target(
+                        TargetQuery {
+                            string_matcher: target.nodename.clone(),
+                            ..TargetQuery::EMPTY
+                        },
+                        target_server
+                    )
                 ),
                 step_handler,
                 _t,
@@ -1119,8 +1128,8 @@ mod test {
         list_closure: F,
         open_targets_closure: F2,
     ) where
-        F: Fn(Option<String>) -> Vec<Target> + Clone + 'static,
-        F2: Fn(Option<String>, ServerEnd<TargetHandleMarker>) -> Result<(), OpenTargetError>
+        F: Fn(TargetQuery) -> Vec<Target> + Clone + 'static,
+        F2: Fn(TargetQuery, ServerEnd<TargetHandleMarker>) -> Result<(), OpenTargetError>
             + Clone
             + 'static,
     {
@@ -1293,7 +1302,7 @@ mod test {
                         spawn_target_collection(
                             server_end,
                             move |query| {
-                                let query = query.as_deref().unwrap_or("");
+                                let query = query.string_matcher.as_deref().unwrap_or("");
                                 if !query.is_empty()
                                     && query != NODENAME
                                     && query != UNRESPONSIVE_NODENAME
@@ -1339,7 +1348,8 @@ mod test {
                                         responder,
                                         remote_control,
                                     } => {
-                                        let target = query.as_deref().unwrap_or(NODENAME);
+                                        let target =
+                                            query.string_matcher.as_deref().unwrap_or(NODENAME);
                                         if target == NODENAME {
                                             serve_responsive_rcs(remote_control);
                                         } else if target == UNRESPONSIVE_NODENAME {
