@@ -105,7 +105,7 @@ pub struct MouseDeviceDescriptor {
     /// The range of possible y values of absolute mouse positions reported by this device.
     pub absolute_y_range: Option<fidl_input_report::Range>,
 
-    /// This is a vector of id's for the mouse buttons.
+    /// This is a vector of ids for the mouse buttons.
     pub buttons: Option<Vec<MouseButton>>,
 }
 

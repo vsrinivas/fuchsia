@@ -30,7 +30,7 @@ type MouseInputDescriptor = table {
     /// The range of relative horizontal scroll.
     4: scroll_h Axis;
 
-    /// This is a vector of id's for the mouse buttons.
+    /// This is a vector of ids for the mouse buttons.
     5: buttons vector<uint8>:MOUSE_MAX_NUM_BUTTONS;
 };
 
