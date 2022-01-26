@@ -549,7 +549,10 @@ class SyncToCommand:
 
     def print_synced_revision(self) -> None:
         print()
-        print("Success! To switch back to the latest, use `fx sync-to reset`.")
+        if self.state == "reset":
+            print("Reset success! You are now tracking JIRI_HEAD.")
+        else:
+            print("Success! To switch back to the latest, use `fx sync-to reset`.")
         print("//integration HEAD is now at:")
         self.run_command(
             "git",
