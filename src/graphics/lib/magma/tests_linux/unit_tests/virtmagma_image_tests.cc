@@ -12,6 +12,8 @@
 
 class MagmaImageTest : public ::testing::Test {
  public:
+  static constexpr bool kDirectToDisplaySupported = false;
+
   void SetUp() override {
     static constexpr const char* kDevicePath = "/dev/magma0";
     int fd = open(kDevicePath, O_NONBLOCK);
@@ -169,7 +171,7 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
         EXPECT_EQ(kWidth * 4, image_info.plane_strides[0]);
       }
       EXPECT_EQ(0u, image_info.plane_offsets[0]);
-      if (flags & MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE) {
+      if (kDirectToDisplaySupported && (flags & MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE)) {
         EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_RAM, image_info.coherency_domain);
       } else {
         EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
@@ -207,7 +209,7 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
         EXPECT_EQ(kWidth * 4, image_info.plane_strides[0]);
       }
       EXPECT_EQ(0u, image_info.plane_offsets[0]);
-      if (flags & MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE) {
+      if (kDirectToDisplaySupported && (flags & MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE)) {
         EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_RAM, image_info.coherency_domain);
       } else {
         EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
