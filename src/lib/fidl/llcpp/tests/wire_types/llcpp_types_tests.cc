@@ -71,7 +71,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
   EXPECT_EQ(encoded_bytes.size(), sizeof(NonNullableChannelRequest));
 
   uint8_t golden_encoded[] = {0x0a, 0x00, 0x00, 0x00,   // txid
-                              0x00, 0x00, 0x00, 0x01,   // flags and version
+                              0x02, 0x00, 0x00, 0x01,   // flags and version
                               0x4c, 0xf1, 0x17, 0xe9,   // low bytes of ordinal
                               0xa3, 0x24, 0xcb, 0x2d,   // high bytes of ordinal
                               0xff, 0xff, 0xff, 0xff,   // handle present
