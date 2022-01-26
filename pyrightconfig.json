@@ -1,5 +1,6 @@
 {
     "extraPaths": [
-        "build/python/modules"
+        "build/python/modules",
+        "third_party/parameterized/src"
     ]
 }

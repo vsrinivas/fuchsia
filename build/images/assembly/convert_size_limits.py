@@ -28,19 +28,20 @@ import collections
 import os
 
 
-def get_all_manifests(product_config_json):
+def get_all_manifests(image_assembly_config_json):
     """Returns the list of all the package manifests mentioned in the specified product configuration.
 
   Args:
-    product_config_json: Dictionary, holding manifest per categories.
+    image_assembly_config_json: Dictionary, holding manifest per categories.
   Returns:
     list of path to the manifest files as string.
   Raises:
     KeyError: if one of the manifest group is missing.
   """
     try:
-        return product_config_json.get("base", []) + product_config_json.get(
-            "cache", []) + product_config_json.get("system", [])
+        return image_assembly_config_json.get(
+            "base", []) + image_assembly_config_json.get(
+                "cache", []) + image_assembly_config_json.get("system", [])
     except KeyError as e:
         raise KeyError(
             f"Product config is missing in the product configuration: {e}")
@@ -87,17 +88,17 @@ def main():
     parser.add_argument(
         '--size_limits', type=argparse.FileType('r'), required=True)
     parser.add_argument(
-        '--product_config', type=argparse.FileType('r'), required=True)
+        '--image_assembly_config', type=argparse.FileType('r'), required=True)
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
     # Read all input configurations.
     size_limits = json.load(args.size_limits)
-    product_config = json.load(args.product_config)
+    image_assembly_config = json.load(args.image_assembly_config)
 
     # Convert the configuration to the new format.
-    all_manifests = get_all_manifests(product_config)
+    all_manifests = get_all_manifests(image_assembly_config)
     component_budgets = [
         convert_budget_format(component, all_manifests)
         for component in size_limits.get("components", [])

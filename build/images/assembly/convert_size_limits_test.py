@@ -29,7 +29,7 @@ class ConvertTest(unittest.TestCase):
                             limit=22,
                             src=["a/b"]),
                     ]),
-                product_config=dict(
+                image_assembly_config=dict(
                     base=[
                         "obj/a/b1/c1/package_manifest.json",
                         "obj/a/b/c2/package_manifest.json"
@@ -73,14 +73,15 @@ class ConvertTest(unittest.TestCase):
                             limit=22,
                             src=["a/b"]),
                     ]),
-                product_config=dict(base=["obj/a/b/c2/package_manifest.json"],
-                                   ),
+                image_assembly_config=dict(
+                    base=["obj/a/b/c2/package_manifest.json"],
+                ),
                 expected_output=None,
                 return_value=1),
             param(
                 name="success_when_size_limit_is_empty",
                 size_limits=dict(),
-                product_config=dict(
+                image_assembly_config=dict(
                     base=[],
                     cache=[],
                     system=[],
@@ -90,7 +91,7 @@ class ConvertTest(unittest.TestCase):
             param(
                 name="success_when_there_is_no_base",
                 size_limits=dict(components=[]),
-                product_config=dict(
+                image_assembly_config=dict(
                     cache=[],
                     system=[],
                 ),
@@ -99,7 +100,7 @@ class ConvertTest(unittest.TestCase):
             param(
                 name="success_when_there_is_no_cache",
                 size_limits=dict(components=[]),
-                product_config=dict(
+                image_assembly_config=dict(
                     base=[],
                     system=[],
                 ),
@@ -108,7 +109,7 @@ class ConvertTest(unittest.TestCase):
             param(
                 name="success_when_there_is_no_system",
                 size_limits=dict(components=[]),
-                product_config=dict(
+                image_assembly_config=dict(
                     base=[],
                     cache=[],
                 ),
@@ -116,7 +117,7 @@ class ConvertTest(unittest.TestCase):
                 return_value=0),
         ])
     def test_run_main(
-            self, name, size_limits, product_config, expected_output,
+            self, name, size_limits, image_assembly_config, expected_output,
             return_value):
         with tempfile.TemporaryDirectory() as tmpdir:
 
@@ -124,16 +125,18 @@ class ConvertTest(unittest.TestCase):
             with open(size_limits_path, "w") as file:
                 json.dump(size_limits, file)
 
-            product_config_path = os.path.join(tmpdir, "product_config.json")
-            with open(product_config_path, "w") as file:
-                json.dump(product_config, file)
+            image_assembly_config_path = os.path.join(
+                tmpdir, "image_assembly_config.json")
+            with open(image_assembly_config_path, "w") as file:
+                json.dump(image_assembly_config, file)
 
             output_path = os.path.join(tmpdir, "output.json")
             # The first argument of a command line is the path to the program.
             # It is unused and left empty.
             sys.argv = [
-                "", "--size_limits", size_limits_path, "--product_config",
-                product_config_path, "--output", output_path
+                "", "--size_limits", size_limits_path,
+                "--image_assembly_config", image_assembly_config_path,
+                "--output", output_path
             ]
 
             self.assertEqual(convert_size_limits.main(), return_value)

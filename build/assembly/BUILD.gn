@@ -22,7 +22,7 @@ labels = {
 
   # Compute the assembly config and config_data labels that are generated within
   # assemble_system()
-  legacy_product_config = "${legacy_image_assembly_dir}:${legacy_image_assembly_name}_product_config"
+  legacy_image_assembly_config = "${legacy_image_assembly_dir}:${legacy_image_assembly_name}_image_assembly_config"
   legacy_config_data = "${legacy_image_assembly_dir}:${legacy_image_assembly_name}_config-data_config_package_entries"
 }
 
@@ -32,8 +32,8 @@ assembly_config_filename = "assembly_config.json"
 files = {
   # Locate the output files from the above labels, in their out dir:
   legacy_image_assembly_config_dir =
-      get_label_info(labels.legacy_product_config, "target_out_dir")
-  legacy_image_assembly_config = "${legacy_image_assembly_config_dir}/${labels.legacy_image_assembly_name}_product_config.json"
+      get_label_info(labels.legacy_image_assembly_config, "target_out_dir")
+  legacy_image_assembly_config = "${legacy_image_assembly_config_dir}/${labels.legacy_image_assembly_name}_image_assembly_config.json"
   legacy_config_data_dir =
       get_label_info(labels.legacy_config_data, "target_out_dir")
   legacy_config_data_entries = "${legacy_config_data_dir}/${labels.legacy_image_assembly_name}_config-data_config_package_entries"
@@ -84,7 +84,7 @@ python_action("legacy") {
     files.legacy_config_data_entries,
   ]
   deps = [
-    labels.legacy_product_config,
+    labels.legacy_image_assembly_config,
     labels.legacy_config_data,
   ]
 }

@@ -200,7 +200,7 @@ template("assemble_system") {
     cache_packages_group = "${image_name}_cache_packages"
     meta_packages_group = "${image_name}_meta_packages"
     all_packages_group = "${image_name}_packages"
-    product_config = "${image_name}_product_config"
+    image_assembly_config = "${image_name}_image_assembly_config"
     board_config = "${image_name}_board_config"
     images_config = "${image_name}_images_config"
     partitions_config = "${image_name}_partitions_config"
@@ -220,7 +220,8 @@ template("assemble_system") {
 
   # Intermediate files produced for Image Assembly.
   files = {
-    product_config = "$target_out_dir/${image_name}_product_config.json"
+    image_assembly_config =
+        "$target_out_dir/${image_name}_image_assembly_config.json"
     board_config = "$target_out_dir/${image_name}_board_config.json"
     images_config = "$target_out_dir/${image_name}_images_config.json"
     partitions_config = "$target_out_dir/${image_name}_partitions.json"
@@ -423,14 +424,14 @@ template("assemble_system") {
   # Build the images using the Image Assembler.
   #
 
-  generated_product_config(labels.product_config) {
+  generated_product_config(labels.image_assembly_config) {
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
                            ])
 
-    output_path = files.product_config
+    output_path = files.image_assembly_config
     kernel_image = "//zircon/kernel"
 
     base_packages = []
@@ -573,13 +574,13 @@ template("assemble_system") {
                              "testonly",
                              "visibility",
                            ])
-    product_config = files.product_config
+    product_config = files.image_assembly_config
     board_config = files.board_config
     output_path = files.assembly_inputs
 
     deps = [
       ":${labels.board_config}",
-      ":${labels.product_config}",
+      ":${labels.image_assembly_config}",
     ]
   }
 
@@ -614,7 +615,7 @@ template("assemble_system") {
       "assembly",
       "image",
       "--product",
-      rebase_path(files.product_config, root_build_dir),
+      rebase_path(files.image_assembly_config, root_build_dir),
       "--board",
       rebase_path(files.board_config, root_build_dir),
       "--log-commands",
@@ -631,12 +632,12 @@ template("assemble_system") {
     }
     deps += [
       ":${labels.board_config}",
-      ":${labels.product_config}",
+      ":${labels.image_assembly_config}",
     ]
 
     inputs = [
       files.board_config,
-      files.product_config,
+      files.image_assembly_config,
     ]
 
     outputs = [
