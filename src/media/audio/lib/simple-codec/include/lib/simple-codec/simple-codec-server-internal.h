@@ -48,6 +48,15 @@ class SimpleCodecServerInternal {
   void SetProcessingElement(
       uint64_t processing_element_id, ::fuchsia::hardware::audio::ProcessingElementControl control,
       ::fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback);
+  void GetTopologies(::fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) {
+    callback(fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result::WithErr(
+        ZX_ERR_NOT_SUPPORTED));
+  }
+  void SetTopology(uint64_t topology_id,
+                   ::fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) {
+    callback(fuchsia::hardware::audio::SignalProcessing_SetTopology_Result::WithErr(
+        ZX_ERR_NOT_SUPPORTED));
+  }
   void IsBridgeable(Codec::IsBridgeableCallback callback);
   void SetBridgedMode(bool enable_bridged_mode);
   void GetDaiFormats(Codec::GetDaiFormatsCallback callback);
@@ -101,6 +110,15 @@ class SimpleCodecServerInstance
       ::fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback)
       override {
     parent_->SetProcessingElement(processing_element_id, std::move(control), std::move(callback));
+  }
+  void GetTopologies(
+      ::fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) override {
+    parent_->GetTopologies(std::move(callback));
+  }
+  void SetTopology(
+      uint64_t topology_id,
+      ::fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) override {
+    parent_->SetTopology(topology_id, std::move(callback));
   }
   void IsBridgeable(IsBridgeableCallback callback) override {
     parent_->IsBridgeable(std::move(callback));

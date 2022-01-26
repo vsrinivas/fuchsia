@@ -8,6 +8,8 @@ using zx;
 // TODO(fxbug.dev/64877): Complete parameters and types for processing elements.
 
 const MAX_COUNT_PROCESSING_ELEMENTS uint32 = 64;
+const MAX_COUNT_TOPOLOGIES uint32 = 64;
+const MAX_COUNT_PROCESSING_ELEMENTS_EDGE_PAIRS uint32 = 64;
 const MAX_STRING_SIZE uint32 = 256;
 
 type ProcessingElementType = flexible enum {
@@ -24,7 +26,7 @@ type ProcessingElementType = flexible enum {
     GAIN = 4;
 
     /// Automatic Gain Control.
-    /// Automatically maintains a suitable signal level regardless of varitation of its input.
+    /// Automatically maintains a suitable signal level regardless of variation of its input.
     AUTOMATIC_GAIN_CONTROL = 5;
 
     /// Automatic Gain Limiter.
@@ -71,7 +73,7 @@ type ProcessingElement = table {
     /// Required.
     1: id uint64;
 
-    /// Processing Element Type. Required.
+    /// Processing element type. Required.
     2: type ProcessingElementType;
 
     /// If included, parameters for the processing element.
@@ -113,10 +115,32 @@ type ProcessingElementControl = table {
     2: enabled bool;
 };
 
+/// Edge pairs between processing elements used to define ordering in processing elements
+/// arrangements.
+type EdgePair = struct {
+    processing_element_id_from uint64;
+    processing_element_id_to uint64;
+};
+
+/// A `Topology` specifies one way processing elements are arranged within the hardware.
+type Topology = table {
+    /// Unique ID for this topology. The scope of this id is only within the `SignalProcessing`
+    /// protocol lifespan, i.e. until the channel associated with the protocol is closed.
+    /// Required.
+    1: id uint64;
+
+    /// Vector of processing elements edge pairs in this order.
+    /// The ordering of processing elements with edge pairs form pipelines.
+    /// To define multiple possible pipelines, return more `Topology` entries in `GetTopologies`.
+    /// Required.
+    2: processing_elements_edge_pairs vector<EdgePair>:MAX_COUNT_PROCESSING_ELEMENTS_EDGE_PAIRS;
+};
+
 /// For an overview see
 /// [[Signal Processing Interface]](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_signal_processing).
 protocol SignalProcessing {
-    /// Returns a vector of supported Processing Elements.
+    /// Returns a vector of supported processing elements.
+    /// Must return one or more processing elements, or ZX_ERR_NOT_SUPORTED.
     GetProcessingElements() -> (struct {
         processing_elements vector<ProcessingElement>:MAX_COUNT_PROCESSING_ELEMENTS;
     }) error zx.status;
@@ -126,8 +150,50 @@ protocol SignalProcessing {
     /// by `GetProcessingElements` or the type of `ProcessingElementControlParameters` does not
     /// match the `ProcessingElementType` of the processing element returned by
     /// `GetProcessingElements` for this id.
+    ///
+    /// `SetProcessingElement` may be called before or after non-`SignalProcessing` protocol calls.
+    /// If called after non-`SignalProcessing` protocol calls then `SetProcessingElement` may or
+    /// may not require renegotiation of the driver state as reached with calls of the protocol
+    /// composing `SignalProcessing`, e.g. `Dai`.
+    /// For instance, `SetProcessingElement` changing an `AGL` processing element's parameters
+    /// may not require renegotiation of the `Dai` state because changing a gain parameter usually
+    /// does not change the set of supported audio formats.
+    /// By contrast, if `SetProcessingElement` changes the parameters of a `CONNECTION_POINT`
+    /// element, the change may require renegotiation becuase it may invalidate the set of
+    /// supported formats returned in a previous `GetDaiFormats` `Dai` protocol call.
+    ///
+    /// It is the driver's job to determine when renegotiation is required. If renegotiation is
+    /// required, then `SetProcessingElement` must return ZX_ERR_BAD_STATE and the client must
+    /// close the protocol channel such that the protocol negotiations are started over.
+    /// The client then must make the `SetProcessingElement` call that returned ZX_ERR_BAD_STATE
+    //// before any non-`SignalProcessing` protocol calls.
     SetProcessingElement(struct {
         processing_element_id uint64;
         control ProcessingElementControl;
+    }) -> (struct {}) error zx.status;
+
+    /// Returns a vector of supported topologies.
+    /// Must return one or more topologies, or ZX_ERR_NOT_SUPORTED.
+    /// If more than one topology is returned, then the client may choose any of the topologies from
+    /// the list with `SetTopology`.
+    /// If only one topology is returned, then the topology definition is informational only since
+    /// the one and only topology used can't be changed with `SetTopology`.
+    /// If `GetProcessingElements` returns one or more elements, `GetTopologies` must return one or
+    /// more topologies.
+    GetTopologies() -> (struct {
+        topologies vector<Topology>:MAX_COUNT_TOPOLOGIES;
+    }) error zx.status;
+
+    /// Sets the topology to be used using an id to the vector returned by `GetTopologies`.
+    /// If `GetTopologies` returns more than one `Topology`, `SetTopology` must be called to put the
+    /// driver in an initialized state. If `GetTopologies` returns only one `Topology`,
+    /// `SetTopology` is optional and has no effect.
+    ///
+    /// `SetTopology` may be called before or after non-`SignalProcessing` protocol calls.
+    /// If called after non-`SignalProcessing` protocol calls, then `SetTopology` may return
+    /// ZX_ERR_BAD_STATE to indicate that the operation can not proceed without renegotiation of the
+    /// driver state. See `SetProcessingElement` for further discussion.
+    SetTopology(struct {
+        topology_id uint64;
     }) -> (struct {}) error zx.status;
 };

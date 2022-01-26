@@ -360,7 +360,9 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     }
     void GetProcessingElements(GetProcessingElementsRequestView request,
                                GetProcessingElementsCompleter::Sync& completer) override {
-      completer.Reply({});
+      completer.Reply(
+          fuchsia_hardware_audio::wire::SignalProcessingGetProcessingElementsResult::WithErr(
+              ZX_ERR_NOT_SUPPORTED));
     }
     void SetProcessingElement(SetProcessingElementRequestView request,
                               SetProcessingElementCompleter::Sync& completer) override {
@@ -368,7 +370,16 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
           fuchsia_hardware_audio::wire::SignalProcessingSetProcessingElementResult::WithErr(
               ZX_ERR_NOT_SUPPORTED));
     }
-
+    void GetTopologies(GetTopologiesRequestView request,
+                       GetTopologiesCompleter::Sync& completer) override {
+      completer.Reply(fuchsia_hardware_audio::wire::SignalProcessingGetTopologiesResult::WithErr(
+          ZX_ERR_NOT_SUPPORTED));
+    }
+    void SetTopology(SetTopologyRequestView request,
+                     SetTopologyCompleter::Sync& completer) override {
+      completer.Reply(fuchsia_hardware_audio::wire::SignalProcessingSetTopologyResult::WithErr(
+          ZX_ERR_NOT_SUPPORTED));
+    }
     void GetSupportedFormats(GetSupportedFormatsRequestView request,
                              GetSupportedFormatsCompleter::Sync& completer) override {
       stream_.GetSupportedFormats(completer);

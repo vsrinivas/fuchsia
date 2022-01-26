@@ -277,13 +277,19 @@ impl SoftPcmOutput {
                 responder.send(HealthState::EMPTY)?;
             }
             StreamConfigRequest::GetProcessingElements { responder } => {
-                responder.send(&mut Ok(vec![ProcessingElement::EMPTY]))?;
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
             StreamConfigRequest::SetProcessingElement {
                 processing_element_id: _,
                 control: _,
                 responder,
             } => {
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
+            }
+            StreamConfigRequest::GetTopologies { responder } => {
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
+            }
+            StreamConfigRequest::SetTopology { topology_id: _, responder } => {
                 responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
             StreamConfigRequest::GetProperties { responder } => {

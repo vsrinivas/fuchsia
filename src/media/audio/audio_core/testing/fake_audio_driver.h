@@ -75,12 +75,24 @@ class FakeAudioDriver : public fuchsia::hardware::audio::StreamConfig,
   }
   void GetProcessingElements(
       fuchsia::hardware::audio::StreamConfig::GetProcessingElementsCallback callback) override {
-    callback({});
+    callback(fuchsia::hardware::audio::SignalProcessing_GetProcessingElements_Result::WithErr(
+        ZX_ERR_NOT_SUPPORTED));
   }
   void SetProcessingElement(
       uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementControl control,
       fuchsia::hardware::audio::StreamConfig::SetProcessingElementCallback callback) override {
     callback(fuchsia::hardware::audio::SignalProcessing_SetProcessingElement_Result::WithErr(
+        ZX_ERR_NOT_SUPPORTED));
+  }
+  void GetTopologies(
+      ::fuchsia::hardware::audio::StreamConfig::GetTopologiesCallback callback) override {
+    callback(fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result::WithErr(
+        ZX_ERR_NOT_SUPPORTED));
+  }
+  void SetTopology(
+      uint64_t topology_id,
+      ::fuchsia::hardware::audio::StreamConfig::SetTopologyCallback callback) override {
+    callback(fuchsia::hardware::audio::SignalProcessing_SetTopology_Result::WithErr(
         ZX_ERR_NOT_SUPPORTED));
   }
   void GetSupportedFormats(
