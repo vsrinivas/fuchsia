@@ -70,8 +70,11 @@ zx_status_t FactoryReset::Shred() const {
 
     zx_status_t status = ShredBlockDevice(std::move(block_fd), dev_fd_.duplicate());
     if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Error shredding " << de->d_name;
       closedir(dir);
       return status;
+    } else {
+      FX_LOGS(INFO) << "Successfully shredded " << de->d_name;
     }
   }
   closedir(dir);
