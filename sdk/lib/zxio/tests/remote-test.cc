@@ -193,8 +193,8 @@ class CloneTest : public zxtest::Test {
 
     if (request->flags & fio::wire::kOpenFlagDescribe) {
       fio::wire::FileObject file_object;
-      binding_ref->OnOpen(ZX_OK,
-                          fio::wire::NodeInfo::WithFile(
+      fidl::WireSendEvent(binding_ref)
+          ->OnOpen(ZX_OK, fio::wire::NodeInfo::WithFile(
                               fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
     }
   }

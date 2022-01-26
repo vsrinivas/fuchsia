@@ -186,10 +186,7 @@ class CreateTestBase : public zxtest::Test {
   zxio_storage_t* storage() { return &storage_; }
 
   void SendOnOpenEvent(fuchsia_io::wire::NodeInfo node_info) {
-    fidl::WireEventSender<ProtocolType> sender;
-    sender.server_end() = std::move(node_server_end_);
-    ASSERT_OK(sender.OnOpen(ZX_OK, std::move(node_info)));
-    node_server_end_ = std::move(sender.server_end());
+    ASSERT_OK(fidl::WireSendEvent(node_server_end_)->OnOpen(ZX_OK, std::move(node_info)));
   }
 
   NodeServer& node_server() { return node_server_; }

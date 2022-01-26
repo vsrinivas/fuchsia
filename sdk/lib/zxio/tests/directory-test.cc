@@ -67,11 +67,8 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
     fidl::Arena fidl_allocator;
     auto node_info = fuchsia_io::wire::NodeInfo::WithFile(fidl_allocator, std::move(file));
 
-    fidl::WireEventSender<fuchsia_io::File> sender(std::move(file_server));
-    ASSERT_OK(sender.OnOpen(ZX_OK, std::move(node_info)));
-
-    auto file_request = fidl::ServerEnd(std::move(sender.server_end()));
-    fidl::BindServer(dispatcher_, std::move(file_request), &file_);
+    ASSERT_OK(fidl::WireSendEvent(file_server)->OnOpen(ZX_OK, std::move(node_info)));
+    fidl::BindServer(dispatcher_, std::move(file_server), &file_);
   }
 
   void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) final {
