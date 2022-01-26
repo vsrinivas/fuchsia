@@ -32,6 +32,9 @@ class NetdeviceMigrationTestHelper {
     return netdev_.rx_started_;
   }
   const ethernet_ifc_protocol_t& EthernetIfcProto() { return netdev_.ethernet_ifc_proto_; }
+  const network_device_impl_protocol_ops_t& NetworkDeviceImplProtoOps() {
+    return netdev_.network_device_impl_protocol_ops_;
+  }
   const std::array<uint8_t, MAC_SIZE>& Mac() { return netdev_.mac_; }
   const zx::bti& Bti() { return netdev_.eth_bti_; }
   template <typename T, typename F>
@@ -859,6 +862,12 @@ TEST_F(NetdeviceMigrationDefaultSetupTest, GetMac) {
   for (size_t i = 0; i < addr.size(); ++i) {
     EXPECT_EQ(addr[i], helper.Mac()[i]);
   }
+}
+
+TEST_F(NetdeviceMigrationDefaultSetupTest, NetworkDeviceImplProto) {
+  EXPECT_EQ(Device().ddk_proto_id_, ZX_PROTOCOL_NETWORK_DEVICE_IMPL);
+  netdevice_migration::NetdeviceMigrationTestHelper helper(Device());
+  EXPECT_EQ(Device().ddk_proto_ops_, &helper.NetworkDeviceImplProtoOps());
 }
 
 }  // namespace

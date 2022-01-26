@@ -26,11 +26,12 @@ using NetdeviceMigrationVmoStore = vmo_store::VmoStore<vmo_store::SlabStorage<ui
 
 class NetdeviceMigration;
 using DeviceType = ddk::Device<NetdeviceMigration>;
-class NetdeviceMigration : public DeviceType,
-                           public ddk::EthernetIfcProtocol<NetdeviceMigration>,
-                           public ddk::NetworkDeviceImplProtocol<NetdeviceMigration>,
-                           public ddk::NetworkPortProtocol<NetdeviceMigration>,
-                           public ddk::MacAddrProtocol<NetdeviceMigration> {
+class NetdeviceMigration
+    : public DeviceType,
+      public ddk::EthernetIfcProtocol<NetdeviceMigration>,
+      public ddk::NetworkDeviceImplProtocol<NetdeviceMigration, ddk::base_protocol>,
+      public ddk::NetworkPortProtocol<NetdeviceMigration>,
+      public ddk::MacAddrProtocol<NetdeviceMigration> {
  public:
   static constexpr uint8_t kPortId = 13;
   // Equivalent to generic ethernet driver FIFO depth; see
