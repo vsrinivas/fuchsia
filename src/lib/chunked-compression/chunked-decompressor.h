@@ -8,7 +8,6 @@
 #include <memory>
 
 #include <fbl/array.h>
-#include <fbl/function.h>
 #include <fbl/macros.h>
 
 #include "chunked-archive.h"

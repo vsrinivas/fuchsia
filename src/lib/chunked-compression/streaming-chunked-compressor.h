@@ -5,11 +5,12 @@
 #ifndef SRC_LIB_CHUNKED_COMPRESSION_STREAMING_CHUNKED_COMPRESSOR_H_
 #define SRC_LIB_CHUNKED_COMPRESSION_STREAMING_CHUNKED_COMPRESSOR_H_
 
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <optional>
 
 #include <fbl/array.h>
-#include <fbl/function.h>
 #include <fbl/macros.h>
 
 #include "chunked-archive.h"
@@ -77,7 +78,7 @@ class StreamingChunkedCompressor {
 
   // Registers |callback| to be invoked after each frame is complete.
   using ProgressFn =
-      fbl::Function<void(size_t bytes_read, size_t bytes_total, size_t bytes_written)>;
+      fit::function<void(size_t bytes_read, size_t bytes_total, size_t bytes_written)>;
   void SetProgressCallback(ProgressFn callback) { progress_callback_ = std::move(callback); }
 
   const CompressionParams& params() const { return params_; }

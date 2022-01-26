@@ -5,8 +5,9 @@
 #ifndef SRC_LIB_CHUNKED_COMPRESSION_CHUNKED_COMPRESSOR_H_
 #define SRC_LIB_CHUNKED_COMPRESSION_CHUNKED_COMPRESSOR_H_
 
+#include <lib/fit/function.h>
+
 #include <fbl/array.h>
-#include <fbl/function.h>
 #include <fbl/macros.h>
 
 #include "chunked-archive.h"
@@ -55,7 +56,7 @@ class ChunkedCompressor {
 
   // Registers |callback| to be invoked after each frame is complete.
   using ProgressFn =
-      fbl::Function<void(size_t bytes_read, size_t bytes_total, size_t bytes_written)>;
+      fit::function<void(size_t bytes_read, size_t bytes_total, size_t bytes_written)>;
   void SetProgressCallback(ProgressFn callback) { inner_.SetProgressCallback(std::move(callback)); }
 
  private:
