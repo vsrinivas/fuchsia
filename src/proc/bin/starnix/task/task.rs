@@ -417,26 +417,6 @@ impl Task {
         }
     }
 
-    /// Determine namespace node indicated by the dir_fd.
-    ///
-    /// Returns the namespace node and the path to use relative to that node.
-    pub fn resolve_dir_fd<'a>(
-        &self,
-        dir_fd: FdNumber,
-        mut path: &'a FsStr,
-    ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
-        let dir = if !path.is_empty() && path[0] == b'/' {
-            path = &path[1..];
-            self.fs.root.clone()
-        } else if dir_fd == FdNumber::AT_FDCWD {
-            self.fs.cwd()
-        } else {
-            let file = self.files.get(dir_fd)?;
-            file.name.clone()
-        };
-        Ok((dir, path))
-    }
-
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
         self.thread_group.kernel.pids.read().get_task(pid)
     }
@@ -575,6 +555,26 @@ impl CurrentTask {
         dequeue_signal(self);
         self.signals.write().set_signal_mask(old_mask);
         wait_result
+    }
+
+    /// Determine namespace node indicated by the dir_fd.
+    ///
+    /// Returns the namespace node and the path to use relative to that node.
+    pub fn resolve_dir_fd<'a>(
+        &self,
+        dir_fd: FdNumber,
+        mut path: &'a FsStr,
+    ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
+        let dir = if !path.is_empty() && path[0] == b'/' {
+            path = &path[1..];
+            self.fs.root.clone()
+        } else if dir_fd == FdNumber::AT_FDCWD {
+            self.fs.cwd()
+        } else {
+            let file = self.files.get(dir_fd)?;
+            file.name.clone()
+        };
+        Ok((dir, path))
     }
 
     /// A convenient wrapper for opening files relative to FdNumber::AT_FDCWD.
@@ -770,7 +770,7 @@ impl CurrentTask {
     /// returned along with the parent.
     ///
     /// The returned parent might not be a directory.
-    pub fn lookup_parent<'a>(
+    fn lookup_parent<'a>(
         &self,
         context: &mut LookupContext,
         dir: NamespaceNode,

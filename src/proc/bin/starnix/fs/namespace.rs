@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -27,7 +26,10 @@ use crate::types::*;
 /// The namespace records at which entries filesystems are mounted.
 pub struct Namespace {
     root_mount: OnceCell<MountHandle>,
-    mount_points: RwLock<HashMap<NamespaceNode, MountHandle>>,
+    // The value in this hashmap is a vector because multiple mounts can be stacked on top of the
+    // same mount point. The last one in the vector shadows the others and is used for lookups.
+    // Unmounting will remove the last entry. Mounting will add an entry.
+    mount_points: RwLock<HashMap<NamespaceNode, Vec<MountHandle>>>,
 }
 
 impl Namespace {
@@ -294,8 +296,10 @@ impl NamespaceNode {
             }
 
             if let Some(namespace) = self.namespace() {
-                if let Some(mount) = namespace.mount_points.read().get(&child) {
-                    return Ok(mount.root());
+                if let Some(mounts_at_point) = namespace.mount_points.read().get(&child) {
+                    if let Some(mount) = mounts_at_point.last() {
+                        return Ok(mount.root());
+                    }
                 }
             }
             Ok(child)
@@ -308,14 +312,23 @@ impl NamespaceNode {
         self.namespace().map(|ns| ns.mount_points.read().contains_key(&child)).unwrap_or(false)
     }
 
+    /// If this is the root of a mount, go up a level and return the mount point. Otherwise return
+    /// the same node.
+    ///
+    /// This is not exactly the same as parent(). If parent() is called on a root, it will escape
+    /// the mount, but then return the parent of the mount point instead of the mount point.
+    pub fn escape_mount(&self) -> NamespaceNode {
+        self.mountpoint().unwrap_or_else(|| self.clone())
+    }
+
     /// Traverse up a child-to-parent link in the namespace.
     ///
     /// This traversal matches the child-to-parent link in the underlying
     /// FsNode except at mountpoints, where the link switches from one
     /// filesystem to another.
     pub fn parent(&self) -> Option<NamespaceNode> {
-        let current_task = self.mountpoint().unwrap_or_else(|| self.clone());
-        Some(current_task.with_new_entry(current_task.entry.parent()?.clone()))
+        let mountpoint_or_self = self.escape_mount();
+        Some(mountpoint_or_self.with_new_entry(mountpoint_or_self.entry.parent()?.clone()))
     }
 
     /// Returns the mountpoint at this location in the namespace.
@@ -352,30 +365,24 @@ impl NamespaceNode {
 
     pub fn mount(&self, root: WhatToMount, flags: MountFlags) -> Result<(), Errno> {
         if let Some(namespace) = self.namespace() {
-            match namespace.mount_points.write().entry(self.clone()) {
-                Entry::Occupied(_) => {
-                    log::warn!("mount shadowing is unimplemented");
-                    error!(EBUSY)
+            let mut mounts_hash = namespace.mount_points.write();
+            let mounts_at_point = mounts_hash.entry(self.clone()).or_default();
+            let mount = self.mount.as_ref().unwrap();
+            let (fs, root) = match root {
+                WhatToMount::Fs(fs) => {
+                    let root = fs.root().clone();
+                    (fs, root)
                 }
-                Entry::Vacant(v) => {
-                    let mount = self.mount.as_ref().unwrap();
-                    let (fs, root) = match root {
-                        WhatToMount::Fs(fs) => {
-                            let root = fs.root().clone();
-                            (fs, root)
-                        }
-                        WhatToMount::Dir(entry) => (entry.node.fs(), entry),
-                    };
-                    v.insert(Arc::new(Mount {
-                        namespace: mount.namespace.clone(),
-                        mountpoint: Some((Arc::downgrade(&mount), self.entry.clone())),
-                        root,
-                        _flags: flags,
-                        _fs: fs,
-                    }));
-                    Ok(())
-                }
-            }
+                WhatToMount::Dir(entry) => (entry.node.fs(), entry),
+            };
+            mounts_at_point.push(Arc::new(Mount {
+                namespace: mount.namespace.clone(),
+                mountpoint: Some((Arc::downgrade(&mount), self.entry.clone())),
+                root,
+                _flags: flags,
+                _fs: fs,
+            }));
+            Ok(())
         } else {
             error!(EBUSY)
         }
@@ -526,6 +533,28 @@ mod test {
         assert_eq!(b"/".to_vec(), ns.root().path());
         assert_eq!(b"/dev".to_vec(), dev.path());
         assert_eq!(b"/dev/pts".to_vec(), pts.path());
+        Ok(())
+    }
+
+    #[test]
+    fn test_shadowing() -> anyhow::Result<()> {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let root_fs = TmpFs::new();
+        let ns = Namespace::new(root_fs.clone());
+        let _foo_node = root_fs.root().create_dir(b"foo")?;
+        let mut context = LookupContext::default();
+        let foo_dir = ns.root().lookup_child(&current_task, &mut context, b"foo")?;
+
+        let foofs1 = TmpFs::new();
+        foo_dir.mount(WhatToMount::Fs(foofs1.clone()), MountFlags::empty())?;
+        let mut context = LookupContext::default();
+        assert!(Arc::ptr_eq(&ns.root().lookup_child(&current_task, &mut context, b"foo")?.entry, foofs1.root()));
+
+        let foofs2 = TmpFs::new();
+        foo_dir.mount(WhatToMount::Fs(foofs2.clone()), MountFlags::empty())?;
+        let mut context = LookupContext::default();
+        assert!(Arc::ptr_eq(&ns.root().lookup_child(&current_task, &mut context, b"foo")?.entry, foofs2.root()));
+
         Ok(())
     }
 

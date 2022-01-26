@@ -884,6 +884,16 @@ pub fn sys_memfd_create(
     Ok(fd.into())
 }
 
+// If the lookup ends up at the root of a mount, return its mountpoint instead. This is to make
+// mount shadowing work right.
+fn lookup_for_mount(
+    current_task: &CurrentTask,
+    path_addr: UserCString,
+) -> Result<NamespaceNode, Errno> {
+    let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupOptions::default())?;
+    Ok(node.escape_mount())
+}
+
 pub fn sys_mount(
     current_task: &CurrentTask,
     source_addr: UserCString,
@@ -900,28 +910,16 @@ pub fn sys_mount(
         errno!(EINVAL)
     })?;
 
-    let mut buf = [0u8; PATH_MAX as usize];
-    let target_path = current_task.mm.read_c_string(target_addr, &mut buf)?;
-    // TODO(tbodt): Figure out why it's not easy to allow relative paths here, then fix that, then
-    // allow relative paths
-    let target = current_task.lookup_path_from_root(target_path)?;
+    let target = lookup_for_mount(current_task, target_addr)?;
 
     if flags.contains(MountFlags::BIND) {
-        let mut buf = [0u8; PATH_MAX as usize];
-        let source = current_task.mm.read_c_string(source_addr, &mut buf)?;
-        log::info!(
-            "{:?} mount(source={:?}, target={:?}, MS_BIND)",
-            current_task,
-            String::from_utf8_lossy(source),
-            String::from_utf8_lossy(target_path),
-        );
+        strace!(current_task, "mount(MS_BIND)");
 
         if flags.contains(MountFlags::REC) {
             not_implemented!("MS_REC unimplemented");
         }
 
-        // TODO(tbodt): relative paths
-        let source = current_task.lookup_path_from_root(source)?;
+        let source = lookup_for_mount(current_task, source_addr)?;
         target.mount(WhatToMount::Dir(source.entry), flags)?;
     } else {
         let mut buf = [0u8; PATH_MAX as usize];
@@ -930,9 +928,8 @@ pub fn sys_mount(
         let fs_type = current_task.mm.read_c_string(filesystemtype_addr, &mut buf)?;
         strace!(
             current_task,
-            "mount(source={:?}, target={:?}, type={:?})",
+            "mount(source={:?}, type={:?})",
             String::from_utf8_lossy(source),
-            String::from_utf8_lossy(target_path),
             String::from_utf8_lossy(fs_type)
         );
 
