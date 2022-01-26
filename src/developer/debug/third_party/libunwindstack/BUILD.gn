@@ -46,7 +46,7 @@ static_library("libunwindstack") {
 
   if (is_fuchsia) {
     # This project does some locking but doesn't annotate usage.
-    configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
+    configs -= [ "//build/config:thread_safety_annotations" ]
 
     sources += [ "fuchsia/MemoryFuchsia.cpp" ]
 

@@ -392,10 +392,10 @@ if (zircon_toolchain == false) {
 
   if (is_fuchsia) {
     default_common_binary_configs += [
+      "//build/config:icf",
+      "//build/config:thread_safety_annotations",
       "//build/config/fuchsia:auto_var_init",
       "//build/config/fuchsia:large_rust_stack",
-      "//build/config/fuchsia:thread_safety_annotations",
-      "//build/config:icf",
       "//build/config/rust:panic_abort",
       "//build/config/rust:v0_symbol_mangling",
 
