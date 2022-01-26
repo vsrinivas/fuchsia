@@ -1074,6 +1074,18 @@ impl MemoryManager {
         self.read_memory(user.addr(), object.as_bytes_mut())
     }
 
+    #[cfg(test)]
+    pub fn read_objects<T: AsBytes + FromBytes>(
+        &self,
+        user: UserRef<T>,
+        objects: &mut [T],
+    ) -> Result<(), Errno> {
+        for (index, object) in objects.iter_mut().enumerate() {
+            self.read_object(user.at(index), object)?;
+        }
+        Ok(())
+    }
+
     pub fn read_c_string<'a>(
         &self,
         string: UserCString,
@@ -1143,6 +1155,18 @@ impl MemoryManager {
         object: &T,
     ) -> Result<(), Errno> {
         self.write_memory(user.addr(), &object.as_bytes())
+    }
+
+    #[cfg(test)]
+    pub fn write_objects<T: AsBytes + FromBytes>(
+        &self,
+        user: UserRef<T>,
+        objects: &[T],
+    ) -> Result<(), Errno> {
+        for (index, object) in objects.iter().enumerate() {
+            self.write_object(user.at(index), object)?;
+        }
+        Ok(())
     }
 
     pub fn write_each<F>(&self, data: &[UserBuffer], mut callback: F) -> Result<(), Errno>
@@ -1859,5 +1883,36 @@ mod tests {
             assert_eq!(mapping.vmo.get_size().unwrap(), *PAGE_SIZE);
             assert_ne!(original_vmo.get_koid().unwrap(), mapping.vmo.get_koid().unwrap());
         }
+    }
+
+    #[test]
+    fn test_read_write_objects() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+        let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+        let items_ref = UserRef::<i32>::new(addr);
+
+        let items_written = vec![0, 2, 3, 7, 1];
+        mm.write_objects(items_ref, &items_written).expect("Failed to write object array.");
+
+        let mut items_read = vec![0; items_written.len()];
+        mm.read_objects(items_ref, &mut items_read).expect("Failed to read object array.");
+
+        assert_eq!(items_written, items_read);
+    }
+
+    #[test]
+    fn test_read_write_objects_null() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let mm = &current_task.mm;
+        let items_ref = UserRef::<i32>::new(UserAddress::default());
+
+        let items_written = vec![];
+        mm.write_objects(items_ref, &items_written).expect("Failed to write empty object array.");
+
+        let mut items_read = vec![0; items_written.len()];
+        mm.read_objects(items_ref, &mut items_read).expect("Failed to read empty object array.");
+
+        assert_eq!(items_written, items_read);
     }
 }
