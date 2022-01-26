@@ -1430,6 +1430,156 @@ mod tests {
         }
     }
 
+    /// Tests that button press, mouse move, and button release inject changes accordingly.
+    #[fuchsia::test(allow_stalls = false)]
+    async fn down_move_up_event() {
+        // Set up fidl streams.
+        let (configuration_proxy, mut configuration_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
+                .expect("Failed to create pointerinjector Setup proxy and stream.");
+        let (injector_registry_proxy, injector_registry_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<pointerinjector::RegistryMarker>()
+                .expect("Failed to create pointerinjector Registry proxy and stream.");
+        let config_request_stream_fut =
+            handle_configuration_request_stream(&mut configuration_request_stream);
+
+        // Create MouseInjectorHandler.
+        // Note: The size of the CursorMessage channel's buffer is 3 to allow for one cursor
+        // update for every input event being sent.
+        let (sender, mut receiver) = futures::channel::mpsc::channel::<CursorMessage>(3);
+        let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            configuration_proxy,
+            injector_registry_proxy,
+            Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
+            sender,
+        );
+        let (mouse_handler_res, _) = futures::join!(mouse_handler_fut, config_request_stream_fut);
+        let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
+
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let zero_position = Position { x: 0.0, y: 0.0 };
+        let expected_position = Position { x: 10.0, y: 15.0 };
+        let expected_relative_motion = [10.0, 15.0];
+        let event1 = create_mouse_event(
+            mouse_binding::MouseLocation::Absolute(Position { x: 0.0, y: 0.0 }),
+            mouse_binding::MousePhase::Down,
+            HashSet::from_iter(vec![1]),
+            HashSet::from_iter(vec![1]),
+            event_time,
+            &DESCRIPTOR,
+        );
+        let event2 = create_mouse_event(
+            mouse_binding::MouseLocation::Relative(Position { x: 10.0, y: 15.0 }),
+            mouse_binding::MousePhase::Move,
+            HashSet::from_iter(vec![1]),
+            HashSet::from_iter(vec![1]),
+            event_time,
+            &DESCRIPTOR,
+        );
+        let event3 = create_mouse_event(
+            mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: 0.0 }),
+            mouse_binding::MousePhase::Up,
+            HashSet::from_iter(vec![1]),
+            HashSet::from_iter(vec![]),
+            event_time,
+            &DESCRIPTOR,
+        );
+
+        // Create a channel for the the registered device's handle to be forwarded to the
+        // DeviceRequestStream handler. This allows the registry_fut to complete and allows
+        // handle_input_event() to continue.
+        let (injector_stream_sender, injector_stream_receiver) =
+            mpsc::unbounded::<Vec<pointerinjector::Event>>();
+        // Up to 2 events per handle_input_event() call.
+        let mut injector_stream_receiver = injector_stream_receiver.ready_chunks(2);
+        let registry_fut = handle_registry_request_stream2(
+            injector_registry_request_stream,
+            injector_stream_sender,
+        );
+
+        // Run all futures until the handler future completes.
+        let _registry_task = fasync::Task::local(registry_fut);
+        mouse_handler.clone().handle_input_event(event1).await;
+        assert_eq!(
+            injector_stream_receiver.next().await.map(|events| events.concat()),
+            Some(vec![
+                create_mouse_pointer_sample_event(
+                    pointerinjector::EventPhase::Add,
+                    vec![1],
+                    zero_position,
+                    None,
+                    event_time,
+                ),
+                create_mouse_pointer_sample_event(
+                    pointerinjector::EventPhase::Change,
+                    vec![1],
+                    zero_position,
+                    None,
+                    event_time,
+                )
+            ])
+        );
+
+        // Wait until cursor position validation is complete.
+        match receiver.next().await {
+            Some(CursorMessage::SetPosition(position)) => {
+                assert_eq!(position, zero_position);
+            }
+            Some(CursorMessage::SetVisibility(_)) => {
+                panic!("Received unexpected cursor visibility update.")
+            }
+            None => panic!("Did not receive cursor update."),
+        }
+
+        // Send a move event.
+        mouse_handler.clone().handle_input_event(event2).await;
+        assert_eq!(
+            injector_stream_receiver.next().await.map(|events| events.concat()),
+            Some(vec![create_mouse_pointer_sample_event(
+                pointerinjector::EventPhase::Change,
+                vec![1],
+                expected_position,
+                Some(expected_relative_motion),
+                event_time,
+            )])
+        );
+
+        // Wait until cursor position validation is complete.
+        match receiver.next().await {
+            Some(CursorMessage::SetPosition(position)) => {
+                assert_eq!(position, expected_position);
+            }
+            Some(CursorMessage::SetVisibility(_)) => {
+                panic!("Received unexpected cursor visibility update.")
+            }
+            None => panic!("Did not receive cursor update."),
+        }
+
+        // Send an up event.
+        mouse_handler.clone().handle_input_event(event3).await;
+        assert_eq!(
+            injector_stream_receiver.next().await.map(|events| events.concat()),
+            Some(vec![create_mouse_pointer_sample_event(
+                pointerinjector::EventPhase::Change,
+                vec![],
+                expected_position,
+                None,
+                event_time,
+            )])
+        );
+
+        // Wait until cursor position validation is complete.
+        match receiver.next().await {
+            Some(CursorMessage::SetPosition(position)) => {
+                assert_eq!(position, expected_position);
+            }
+            Some(CursorMessage::SetVisibility(_)) => {
+                panic!("Received unexpected cursor visibility update.")
+            }
+            None => panic!("Did not receive cursor update."),
+        }
+    }
+
     // Tests that a mouse move event that has already been handled is not forwarded to scenic.
     #[fuchsia::test(allow_stalls = false)]
     async fn handler_ignores_handled_events() {
