@@ -70,6 +70,7 @@ struct bench_config
   bool            is_validate;
   bool            is_summary;
   bool            is_calibrated;  // Is VK_EXT_calibrated_timestamps present?
+  bool            is_calibrated_disabled;
 };
 
 //
@@ -483,6 +484,7 @@ bench_vk_usage(char const * argv[])
   // Usage: bench
   //        ["quiet"]                                    - Only print errors
   //        ["validate"]                                 - Enable Vulkan Validation Layers
+  //        ["no_calibrated"]                            - Disable calibrated timestamps
   //        ["summary"]                                  - Emit summary statistics instead of CSV
   //        ["device" <vendor id>:<device id>]           - Select a specific Vulkan Physical Device
   //        ["fill" <count> ["bytes"|"kbytes"|"mbytes"]  - Benchmark vkCmdFill()
@@ -502,6 +504,7 @@ bench_vk_usage(char const * argv[])
     "Usage: %s\n"
     "       [\"quiet\"]                                    - Only print errors\n"
     "       [\"validate\"]                                 - Enable Vulkan Validation Layers\n"
+    "       [\"no_calibrated\"]                            - Disable calibrated timestamps\n"
     "       [\"summary\"]                                  - Emit summary statistics instead of CSV\n"
     "       [\"device\" <vendor id>:<device id>]           - Select a specific Vulkan Physical Device\n"
     "       [\"fill\" <count> [\"bytes\"|\"kbytes\"|\"mbytes\"]  - Benchmark vkCmdFill()\n"
@@ -1286,6 +1289,23 @@ bench_config_validate(uint32_t const              argc,
 //
 //
 static bool
+bench_config_no_calibrated(uint32_t const              argc,
+                           char const * const          argv[],
+                           uint32_t * const            next_token,
+                           struct bench_config * const config)
+{
+  return bench_config_keyword_flag(argc,
+                                   argv,
+                                   next_token,
+                                   "no_calibrated",
+                                   &config->is_calibrated_disabled);
+  ;
+}
+
+//
+//
+//
+static bool
 bench_config_summary(uint32_t const              argc,
                      char const * const          argv[],
                      uint32_t * const            next_token,
@@ -1590,8 +1610,9 @@ bench_vk(uint32_t argc, char const * argv[])
   uint32_t next_token = 1;
 
   while (bench_config_quiet(argc, argv, &next_token, &config) ||
-         bench_config_validate(argc, argv, &next_token, &config) ||
+         bench_config_no_calibrated(argc, argv, &next_token, &config) ||
          bench_config_summary(argc, argv, &next_token, &config) ||
+         bench_config_validate(argc, argv, &next_token, &config) ||
          bench_config_device(argc, argv, &next_token, &config) ||
          bench_config_fill(argc, argv, &next_token, &config_fill) ||
          bench_config_copy(argc, argv, &next_token, &config_copy) ||
@@ -1797,7 +1818,7 @@ bench_vk(uint32_t argc, char const * argv[])
       if (strcmp(device_ext_props[ii].extensionName,  //
                  VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME) == 0)
         {
-          config.is_calibrated = true;
+          config.is_calibrated = true && !config.is_calibrated_disabled;
           break;
         }
     }
