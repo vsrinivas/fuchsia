@@ -150,6 +150,17 @@ async fn serve_view_provider(
                         }
                     });
                 }
+                fuiapp::ViewProviderRequest::CreateView2 { args, control_handle: _ } => {
+                    view_provider.as_ref().map(|view_provider| {
+                        match view_provider.create_view2(args) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                log::error!("Got an error when creating view: {:?}", e);
+                                return;
+                            }
+                        }
+                    });
+                }
                 r => {
                     log::warn!("Got unexpected view provider request: {:?}", r);
                 }

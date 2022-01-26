@@ -25,9 +25,7 @@ pub struct BufferCollectionFile {
 }
 
 impl BufferCollectionFile {
-    /// Creates a new anonymous `TimerFile` in `kernel`.
-    ///
-    /// Returns an error if the `zx::Timer` could not be created.
+    /// Creates a new anonymous `BufferCollectionFile` in `kernel`.
     pub fn new(
         kernel: &Kernel,
         token: fuicomp::BufferCollectionImportToken,

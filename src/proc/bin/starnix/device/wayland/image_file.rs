@@ -52,8 +52,6 @@ pub struct ImageFile {
 }
 
 impl ImageFile {
-    // TODO: Remove annotation once file is used.
-    #[allow(dead_code)]
     pub fn new(kernel: &Kernel, info: ImageInfo) -> FileHandle {
         Anon::new_file(anon_fs(kernel), Box::new(ImageFile { info }), OpenFlags::RDWR)
     }
