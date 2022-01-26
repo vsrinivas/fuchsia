@@ -80,5 +80,11 @@ int main(int argc, char** argv) {
     return init.error_value();
   }
 
-  return loop.Run();
+  status = loop.Run();
+
+  // We have to shut down the driver_loop before the DriverHost object is freed.
+  // Otherwise the loop will continue to access the freed DriverHost.
+  driver_loop.Shutdown();
+
+  return status;
 }
