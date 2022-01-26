@@ -17,7 +17,7 @@ extern "C" {
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-capa-test.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-time-event.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
@@ -390,10 +390,10 @@ class PassiveScanTest : public MvmTest {
   } scan_result;
 };
 
-class PassiveUmacScanTest : public FakeUcodeCapaTest {
+class PassiveUmacScanTest : public FakeUcodeTest {
  public:
   PassiveUmacScanTest() __TA_NO_THREAD_SAFETY_ANALYSIS
-      : FakeUcodeCapaTest(0, BIT(IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
+      : FakeUcodeTest(0, BIT(IWL_UCODE_TLV_CAPA_UMAC_SCAN), 0, 0) {
     mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;

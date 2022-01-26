@@ -13,7 +13,7 @@ config("test_config") {
 source_set("sim_library") {
   testonly = true
   sources = [
-    "fake-ucode-capa-test.cc",
+    "fake-ucode-test.cc",
     "inspect-host-cmd.cc",
     "inspect-host-cmd.h",
     "sim-mcc-update.cc",
@@ -28,7 +28,7 @@ source_set("sim_library") {
     "wlan-pkt-builder.cc",
   ]
   public = [
-    "fake-ucode-capa-test.h",
+    "fake-ucode-test.h",
     "mock-trans.h",
     "sim-mcc-update.h",
     "sim-mvm.h",

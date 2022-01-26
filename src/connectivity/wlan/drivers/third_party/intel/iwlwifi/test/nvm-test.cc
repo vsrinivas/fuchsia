@@ -11,14 +11,14 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-capa-test.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-test.h"
 
 namespace wlan::testing {
 namespace {
 
-class NvmTest : public FakeUcodeCapaTest {
+class NvmTest : public FakeUcodeTest {
  public:
-  NvmTest() : FakeUcodeCapaTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT)) {}
+  NvmTest() : FakeUcodeTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT), 0, 0) {}
   ~NvmTest() {}
 };
 

@@ -15,7 +15,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-capa-test.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 
@@ -91,9 +91,9 @@ class Mac80211Test : public SingleApTest {
   struct iwl_mvm* mvm_;
 };
 
-class Mac80211UcodeTest : public FakeUcodeCapaTest {
+class Mac80211UcodeTest : public FakeUcodeTest {
  public:
-  Mac80211UcodeTest() : FakeUcodeCapaTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT)) {}
+  Mac80211UcodeTest() : FakeUcodeTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT), 0, 0) {}
   ~Mac80211UcodeTest() {}
 };
 
