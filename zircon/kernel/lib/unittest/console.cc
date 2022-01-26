@@ -177,9 +177,9 @@ bool run_testcase_in_thread(const unittest_testcase_registration_t* testcase) {
   const cpu_mask_t online_mask_after = mp_get_online_mask();
   const cpu_mask_t active_mask_after = mp_get_active_mask();
   ASSERT_MSG(online_mask_after == online_mask_before, "name=%s after=0x%08x before=0x%08x\n",
-             testcase->name, online_mask_after, online_mask_after);
+             testcase->name, online_mask_after, online_mask_before);
   ASSERT_MSG(active_mask_after == active_mask_before, "name=%s after=0x%08x before=0x%08x\n",
-             testcase->name, active_mask_after, active_mask_after);
+             testcase->name, active_mask_after, active_mask_before);
 
   return success;
 }
