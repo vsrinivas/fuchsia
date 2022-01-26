@@ -185,6 +185,7 @@ pub fn load_executable(
     argv: &Vec<CString>,
     environ: &Vec<CString>,
 ) -> Result<ThreadStartInfo, Errno> {
+    *current_task.argv.write() = argv.clone();
     let main_elf = load_elf(current_task, &executable, &current_task.mm)?;
     let interp_elf = if let Some(interp_hdr) = main_elf
         .headers

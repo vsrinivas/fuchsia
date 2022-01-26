@@ -9,9 +9,12 @@ use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::mode;
 use crate::task::{CurrentTask, EventHandler, Task, Waiter};
 use crate::types::*;
-use crate::{errno, error, fd_impl_directory, fd_impl_nonblocking, fs_node_impl_symlink};
+use crate::{
+    errno, error, fd_impl_directory, fd_impl_nonblocking, fd_impl_seekable, fs_node_impl_symlink,
+};
 
 use maplit::hashmap;
+use parking_lot::Mutex;
 use std::collections::HashMap;
 
 /// The `PidDirectory` implements the `FsNodeOps` for the `proc/<pid>` directory.
@@ -28,6 +31,7 @@ impl PidDirectory {
             b"fdinfo".to_vec() => FdInfoDirectory::new(fs, task.clone()),
             b"maps".to_vec() => ProcMapsFile::new(fs, task.clone()),
             b"stat".to_vec() => ProcStatFile::new(fs, task.clone()),
+            b"cmdline".to_vec() => CmdlineFile::new(fs, task.clone()),
         });
 
         PidDirectory { nodes }
@@ -295,5 +299,56 @@ impl FsNodeOps for FdSymlink {
     ) -> Result<SymlinkTarget, Errno> {
         let file = self.task.files.get(self.fd).map_err(|_| errno!(ENOENT))?;
         Ok(SymlinkTarget::Node(file.name.clone()))
+    }
+}
+
+/// `CmdlineFile` implements the `FsNodeOps` for a `proc/<pid>/cmdline` file.
+pub struct CmdlineFile {
+    /// The task from which the `CmdlineFile` fetches the command line parameters.
+    task: Arc<Task>,
+    seq: Mutex<SeqFileState<()>>,
+}
+
+impl CmdlineFile {
+    fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+        fs.create_node_with_ops(
+            SimpleFileNode::new(move || {
+                Ok(CmdlineFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
+            }),
+            mode!(IFREG, 0o444),
+        )
+    }
+}
+
+impl FileOps for CmdlineFile {
+    fd_impl_seekable!();
+    fd_impl_nonblocking!();
+
+    fn read_at(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        let mut seq = self.seq.lock();
+        let iter = |_cursor, sink: &mut SeqFileBuf| {
+            let argv = self.task.argv.read();
+            for arg in &*argv {
+                sink.write(arg.as_bytes_with_nul());
+            }
+            Ok(None)
+        };
+        seq.read_at(current_task, iter, offset, data)
+    }
+
+    fn write_at(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _offset: usize,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        Err(ENOSYS)
     }
 }

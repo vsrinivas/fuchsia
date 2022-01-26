@@ -72,6 +72,9 @@ pub struct Task {
     // The command of this task.
     pub command: RwLock<CString>,
 
+    // The arguments with which this task was started.
+    pub argv: RwLock<Vec<CString>>,
+
     /// The thread group to which this task belongs.
     pub thread_group: Arc<ThreadGroup>,
 
@@ -168,6 +171,7 @@ impl Task {
     fn new(
         id: pid_t,
         comm: CString,
+        argv: Vec<CString>,
         thread_group: Arc<ThreadGroup>,
         parent: pid_t,
         thread: zx::Thread,
@@ -183,6 +187,7 @@ impl Task {
         CurrentTask::new(Task {
             id,
             command: RwLock::new(comm),
+            argv: RwLock::new(argv),
             thread_group,
             parent,
             children: RwLock::new(HashSet::new()),
@@ -219,6 +224,7 @@ impl Task {
         let task = Self::new(
             pid,
             initial_name,
+            Vec::new(),
             thread_group,
             1,
             thread,
@@ -314,6 +320,7 @@ impl Task {
         let child = Self::new(
             pid,
             comm.clone(),
+            self.argv.read().clone(),
             thread_group,
             self.id,
             thread,
