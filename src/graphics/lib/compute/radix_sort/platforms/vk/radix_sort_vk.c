@@ -497,10 +497,7 @@ radix_sort_vk_create(VkDevice                            device,
         {
           if (rsscis[ii].requiredSubgroupSize > 1)
             {
-              // clang-format off
               cpcis[ii].stage.pNext = rsscis + ii;
-              cpcis[ii].stage.flags = VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT_EXT;
-              // clang-format on
             }
         }
     }
