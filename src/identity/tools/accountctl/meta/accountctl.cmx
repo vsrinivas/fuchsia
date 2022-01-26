@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/accountctl"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.identity.account.AccountManager"
+        ]
+    }
+}

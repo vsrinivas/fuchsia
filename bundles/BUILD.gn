@@ -33,6 +33,7 @@ group("tools") {
     "//src/diagnostics/triage:install($host_toolchain)",
     "//src/graphics/display:tools",
     "//src/graphics/lib/magma:magma-tools",
+    "//src/identity:tools",
     "//src/lib/chunked-compression:chunked-compress-host-tool",
     "//src/lib/icu:tools",
     "//src/media/bundles:tools",

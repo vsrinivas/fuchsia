@@ -8,15 +8,30 @@ group("tools") {
   testonly = true
   deps = [
     ":tests",
+    "accountctl",
     "sktool",
+  ]
+}
+
+# Note: The test_package build rule assumes its components are
+# defined in the same GN file so we can't move these component
+# definitions down into the respective subdirectories
+fuchsia_unittest_component("accountctl_test") {
+  deps = [ "accountctl:bin_test" ]
+}
+
+fuchsia_unittest_component("sktool_test") {
+  deps = [ "sktool:bin_test" ]
+}
+
+fuchsia_test_package("identity_tools_unittests") {
+  test_components = [
+    ":accountctl_test",
+    ":sktool_test",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [ ":identity_tools_unittests" ]
-}
-
-fuchsia_unittest_package("identity_tools_unittests") {
-  deps = [ "sktool:bin_test" ]
 }

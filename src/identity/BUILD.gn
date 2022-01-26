@@ -24,3 +24,9 @@ group("tests") {
     "tools:tests",
   ]
 }
+
+group("tools") {
+  testonly = true
+
+  deps = [ "tools/accountctl" ]
+}
