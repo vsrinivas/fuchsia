@@ -12,7 +12,7 @@ mod state;
 
 pub use self::state::Ipv6DeviceConfiguration;
 pub(crate) use self::state::{
-    AddrConfig, AddrConfigType, AddressState, Ipv6AddressEntry, SlaacConfig,
+    AddrConfig, AddrConfigType, AddressState, IpDeviceState, Ipv6AddressEntry, SlaacConfig,
 };
 
 use alloc::boxed::Box;
@@ -709,6 +709,44 @@ pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     }
 }
 
+/// Gets the state associated with an IPv4 device.
+pub(crate) fn get_ipv4_device_state<D: EventDispatcher>(
+    ctx: &Ctx<D>,
+    device: DeviceId,
+) -> &IpDeviceState<D::Instant, Ipv4> {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            &ctx.state.device.ethernet.get(device.id).unwrap().device.ip.ipv4.ip_state
+        }
+    }
+}
+
+/// Gets the state associated with an IPv6 device.
+pub(crate) fn get_ipv6_device_state<D: EventDispatcher>(
+    ctx: &Ctx<D>,
+    device: DeviceId,
+) -> &IpDeviceState<D::Instant, Ipv6> {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            &ctx.state.device.ethernet.get(device.id).unwrap().device.ip.ipv6.ip_state
+        }
+    }
+}
+
+/// Iterates over all of the IPv4 devices in the stack.
+pub(crate) fn iter_ipv4_devices<D: EventDispatcher>(
+    ctx: &Ctx<D>,
+) -> impl Iterator<Item = (DeviceId, &IpDeviceState<D::Instant, Ipv4>)> + '_ {
+    list_devices(ctx).map(move |device| (device, get_ipv4_device_state(ctx, device)))
+}
+
+/// Iterates over all of the IPv6 devices in the stack.
+pub(crate) fn iter_ipv6_devices<D: EventDispatcher>(
+    ctx: &Ctx<D>,
+) -> impl Iterator<Item = (DeviceId, &IpDeviceState<D::Instant, Ipv6>)> + '_ {
+    list_devices(ctx).map(move |device| (device, get_ipv6_device_state(ctx, device)))
+}
+
 /// Get the IP address and subnet pairs associated with this device which are in
 /// the assigned state.
 ///
@@ -729,45 +767,6 @@ pub fn get_assigned_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
             self::ethernet::get_assigned_ip_addr_subnets(ctx, device.id.into())
         }
     }
-}
-
-/// Get the IPv6 address/subnet pairs associated with this device, including
-/// tentative and deprecated addresses.
-pub(crate) fn get_ipv6_addr_subnets<D: EventDispatcher>(
-    ctx: &Ctx<D>,
-    device: DeviceId,
-) -> impl Iterator<Item = &'_ Ipv6AddressEntry<D::Instant>> + '_ {
-    match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::get_ipv6_addr_subnets(ctx, device.id.into()),
-    }
-}
-
-/// Get the state of an address on device.
-///
-/// Returns `None` if `addr` is not associated with `device`.
-pub(crate) fn get_ip_addr_state<D: EventDispatcher, A: IpAddress>(
-    ctx: &Ctx<D>,
-    device: DeviceId,
-    addr: &SpecifiedAddr<A>,
-) -> Option<AddressState> {
-    match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr_state(ctx, device.id.into(), addr),
-    }
-}
-
-/// Checks if `addr` is a local address.
-pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(
-    ctx: &Ctx<D>,
-    addr: &SpecifiedAddr<A>,
-) -> bool {
-    // TODO(brunodalbo) this is a total hack just to enable UDP sockets in
-    // bindings.
-    let device_ids: Vec<_> = ctx.state.device.ethernet.iter().map(|(k, _)| k).collect();
-    device_ids.into_iter().any(|id| {
-        self::ethernet::get_ip_addr_state(ctx, id.into(), addr)
-            .map(|s| s.is_assigned())
-            .unwrap_or(false)
-    })
 }
 
 /// Adds an IP address and associated subnet to this device.
@@ -901,19 +900,6 @@ pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     }
 }
 
-/// Is `device` part of the IP multicast group `multicast_addr`.
-pub(crate) fn is_in_ip_multicast<D: EventDispatcher, A: IpAddress>(
-    ctx: &Ctx<D>,
-    device: DeviceId,
-    multicast_addr: MulticastAddr<A>,
-) -> bool {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::is_in_ip_multicast(ctx, device.id.into(), multicast_addr)
-        }
-    }
-}
-
 /// Get the MTU associated with this device.
 pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &Ctx<D>, device: DeviceId) -> u32 {
     match device.protocol {
@@ -926,19 +912,6 @@ pub(crate) fn get_ipv6_hop_limit<D: EventDispatcher>(ctx: &Ctx<D>, device: Devic
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::get_ipv6_hop_limit(ctx, device.id.into()),
     }
-}
-
-/// Determine if an IP Address is considered tentative on a device.
-///
-/// Returns `true` if the address is tentative on a device; `false` otherwise.
-/// Note, if the `addr` is not assigned to `device` but is considered tentative
-/// on another device, `is_addr_tentative_on_device` will return `false`.
-pub(crate) fn is_addr_tentative_on_device<D: EventDispatcher, A: IpAddress>(
-    ctx: &Ctx<D>,
-    addr: &SpecifiedAddr<A>,
-    device: DeviceId,
-) -> bool {
-    get_ip_addr_state::<_, A>(ctx, device, addr).map_or(false, |x| x.is_tentative())
 }
 
 /// Get a reference to the common device state for a `device`.
@@ -1286,6 +1259,41 @@ impl<D: EventDispatcher> MldPacketHandler<(), DeviceId> for Ctx<D> {
                     packet,
                 );
             }
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod testutil {
+    use net_types::ip::{Ipv4, Ipv6};
+
+    use crate::{
+        device::{DeviceId, DeviceIpExt, IpDeviceState},
+        Ctx, EventDispatcher,
+    };
+
+    pub(crate) trait DeviceTestIpExt<Instant: crate::Instant>: DeviceIpExt<Instant> {
+        fn get_ip_device_state<D: EventDispatcher<Instant = Instant>>(
+            ctx: &Ctx<D>,
+            device: DeviceId,
+        ) -> &IpDeviceState<D::Instant, Self>;
+    }
+
+    impl<Instant: crate::Instant> DeviceTestIpExt<Instant> for Ipv4 {
+        fn get_ip_device_state<D: EventDispatcher<Instant = Instant>>(
+            ctx: &Ctx<D>,
+            device: DeviceId,
+        ) -> &IpDeviceState<D::Instant, Ipv4> {
+            super::get_ipv4_device_state(ctx, device)
+        }
+    }
+
+    impl<Instant: crate::Instant> DeviceTestIpExt<Instant> for Ipv6 {
+        fn get_ip_device_state<D: EventDispatcher<Instant = Instant>>(
+            ctx: &Ctx<D>,
+            device: DeviceId,
+        ) -> &IpDeviceState<D::Instant, Ipv6> {
+            super::get_ipv6_device_state(ctx, device)
         }
     }
 }

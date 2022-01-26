@@ -62,6 +62,7 @@ pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, Soc
 pub use crate::ip::socket::{IpSockCreationError, IpSockSendError, IpSockUnroutableError};
 pub use crate::ip::{
     icmp, EntryDest, EntryDestEither, EntryEither, IpExt, Ipv4StateBuilder, Ipv6StateBuilder,
+    TransportIpContext,
 };
 pub use crate::transport::udp::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,

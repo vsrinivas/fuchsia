@@ -29,8 +29,9 @@ use netstack3_core::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, icmp, listen_udp, remove_udp_conn,
     remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferDispatcher,
     BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap, IdMapCollection,
-    IdMapCollectionKey, IpExt, IpSockCreationError, IpSockSendError, SocketError, UdpConnId,
-    UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpStateContext,
+    IdMapCollectionKey, IpExt, IpSockCreationError, IpSockSendError, SocketError,
+    TransportIpContext, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo,
+    UdpSendError, UdpStateContext,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -858,6 +859,7 @@ where
     C: RequestHandlerContext<I, T>,
     T: Send + Sync + 'static,
     C: Clone + Send + Sync + 'static,
+    Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>: TransportIpContext<I>,
 {
     /// Starts servicing events from the provided event stream.
     fn spawn(
@@ -1473,6 +1475,7 @@ where
     T: Transport<Ipv6>,
     T: TransportState<I, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
     C: RequestHandlerContext<I, T>,
+    Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>: TransportIpContext<I>,
 {
     /// Handles a [POSIX socket connect request].
     ///

@@ -18,7 +18,7 @@ use packet_formats::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
 use rand::Rng;
 use thiserror::Error;
 
-use crate::device::{DeviceId, FrameDestination, Ipv6AddressEntry};
+use crate::device::{AddressState, DeviceId, FrameDestination, Ipv6AddressEntry};
 use crate::ip::{forwarding::ForwardingTable, IpExt, Ipv6SocketData};
 use crate::socket::Socket;
 use crate::{BufferDispatcher, Ctx, EventDispatcher};
@@ -474,8 +474,9 @@ fn compute_ipv6_cached_info<D: EventDispatcher>(
             //   host model.
             // - What about when the socket is bound to a device? How does
             //   that affect things?
-            if crate::device::get_ip_addr_state(ctx, dst.device, &defn.local_ip)
-                .map_or(true, |state| state.is_tentative())
+            if crate::device::get_ipv6_device_state(ctx, dst.device)
+                .find_addr(&defn.local_ip)
+                .map_or(true, |addr| addr.state.is_tentative())
             {
                 return Err(IpSockUnroutableError::LocalAddrNotAssigned);
             }
@@ -519,17 +520,18 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Ctx<D> {
         let local_ip = super::lookup_route(self, remote_ip)
             .ok_or(IpSockUnroutableError::NoRouteToRemoteAddr.into())
             .and_then(|dst| {
+                let dev_state = crate::device::get_ipv4_device_state(self, dst.device);
                 if let Some(local_ip) = local_ip {
-                    if crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(self, dst.device)
-                        .any(|addr_sub| addr_sub.addr() == local_ip)
-                    {
+                    if dev_state.iter_addrs().any(|addr_sub| local_ip == addr_sub.addr()) {
                         Ok(local_ip)
                     } else {
                         return Err(IpSockUnroutableError::LocalAddrNotAssigned.into());
                     }
                 } else {
-                    crate::device::get_ip_addr_subnet(self, dst.device)
-                        .and_then(|subnet| Some(subnet.addr()))
+                    dev_state
+                        .iter_addrs()
+                        .next()
+                        .map(|entry| entry.addr())
                         .ok_or(IpSockCreationError::NoLocalAddrAvailable)
                 }
             })?;
@@ -582,12 +584,9 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Ctx<D> {
                     // check here.
                     let local_ip = UnicastAddr::from_witness(local_ip)
                         .ok_or(IpSockCreationError::LocalAddrNotUnicast)?;
-                    if crate::device::get_ip_addr_state(
-                        self,
-                        dst.device,
-                        &local_ip.into_specified(),
-                    )
-                    .map_or(true, |state| state.is_tentative())
+                    if crate::device::get_ipv6_device_state(self, dst.device)
+                        .find_addr(&local_ip)
+                        .map_or(true, |addr| addr.state.is_tentative())
                     {
                         return Err(IpSockUnroutableError::LocalAddrNotAssigned.into());
                     }
@@ -604,10 +603,9 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Ctx<D> {
                     ipv6_source_address_selection::select_ipv6_source_address(
                         remote_ip,
                         dst.device,
-                        crate::device::list_devices(self)
-                            .map(|device_id| {
-                                crate::device::get_ipv6_addr_subnets(self, device_id)
-                                    .map(move |a| (a, device_id))
+                        crate::device::iter_ipv6_devices(self)
+                            .map(|(device_id, ip_state)| {
+                                ip_state.iter_addrs().map(move |a| (a, device_id))
                             })
                             .flatten(),
                     )
@@ -658,15 +656,6 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv4, B> for Ct
 
         match &socket.cached {
             Ok(CachedInfo { builder, device, next_hop }) => {
-                // Tentative addresses are not considered bound to an interface
-                // in the traditional sense. Therefore, no packet should have a
-                // source IP set to a tentative address. This should be enforced
-                // by the `IpSock` being kept up to date.
-                debug_assert!(!crate::device::is_addr_tentative_on_device(
-                    self,
-                    &socket.defn.local_ip,
-                    *device
-                ));
                 let mut builder = builder.clone();
                 builder.id(self.state.ipv4.gen_next_packet_id());
                 let encapsulated = body.encapsulate(builder);
@@ -723,13 +712,16 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv6, B> for Ct
             Ok(CachedInfo { builder, device, next_hop }) => {
                 // Tentative addresses are not considered bound to an interface
                 // in the traditional sense. Therefore, no packet should have a
-                // source IP set to a tentative address. This should be enforced
+                // source IP set to a tentative address - only to an address
+                // which is "assigned" or "deprecated". This should be enforced
                 // by the `IpSock` being kept up to date.
-                debug_assert!(!crate::device::is_addr_tentative_on_device(
-                    self,
-                    &socket.defn.local_ip,
-                    *device
-                ));
+                assert_matches::debug_assert_matches!(
+                    crate::device::get_ipv6_device_state(self, *device)
+                        .find_addr(&socket.defn.local_ip)
+                        .unwrap()
+                        .state,
+                    AddressState::Assigned | AddressState::Deprecated
+                );
                 let encapsulated = body.encapsulate(builder);
 
                 match next_hop {

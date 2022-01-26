@@ -27,7 +27,8 @@ use core::slice::Iter;
 
 use log::{debug, trace};
 use net_types::ip::{
-    AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr, Subnet,
+    AddrSubnet, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr,
+    Subnet,
 };
 use net_types::{MulticastAddr, SpecifiedAddr, Witness};
 use nonzero_ext::nonzero;
@@ -216,11 +217,12 @@ impl<I: IpExt, B: BufferMut, C: IpDeviceIdContext + ?Sized> BufferIpTransportCon
 
 /// The execution context provided by the IP layer to transport layer protocols.
 pub trait TransportIpContext<I: Ip>: IpDeviceIdContext {
-    /// Is this one of our local addresses?
+    /// Is this one of our local addresses, and is it in the assigned state?
     ///
-    /// `is_local_addr` returns whether `addr` is the address associated with
-    /// one of our local interfaces.
-    fn is_local_addr(&self, addr: I::Addr) -> bool;
+    /// `is_assigned_local_addr` returns whether `addr` is the address
+    /// associated with one of our local interfaces and, for IPv6, whether it is
+    /// in the "assigned" state.
+    fn is_assigned_local_addr(&self, addr: I::Addr) -> bool;
 
     /// Get the local address of the interface that will be used to route to a
     /// remote address.
@@ -320,17 +322,28 @@ impl<I: IpExt, B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, IpPacketFro
 }
 
 impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Ctx<D> {
-    fn is_local_addr(&self, addr: I::Addr) -> bool {
-        SpecifiedAddr::new(addr)
-            .map(|addr| crate::device::is_local_addr(self, &addr))
-            .unwrap_or(false)
+    fn is_assigned_local_addr(&self, addr: I::Addr) -> bool {
+        match addr.to_ip_addr() {
+            IpAddr::V4(addr) => crate::device::iter_ipv4_devices(self)
+                .any(|(_, state)| state.find_addr(&addr).is_some()),
+            IpAddr::V6(addr) => crate::device::iter_ipv6_devices(self).any(|(_, state)| {
+                state
+                    .find_addr(&addr)
+                    .map(|entry| match entry.state {
+                        AddressState::Assigned => true,
+                        AddressState::Tentative { .. } | AddressState::Deprecated => false,
+                    })
+                    .unwrap_or(false)
+            }),
+        }
     }
 
     fn local_address_for_remote(
         &self,
         remote: SpecifiedAddr<I::Addr>,
     ) -> Option<SpecifiedAddr<I::Addr>> {
-        local_address_for_remote(self, remote)
+        let route = lookup_route(self, remote)?;
+        crate::device::get_ip_addr_subnet(self, route.device).map(|a| a.addr())
     }
 }
 
@@ -1431,20 +1444,6 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
     }
 }
 
-/// Get the local address of the interface that will be used to route to a
-/// remote address.
-///
-/// `local_address_for_remote` looks up the route to `remote`. If one is found,
-/// it returns the IP address of the interface specified by the route, or `None`
-/// if the interface has no IP address.
-pub(crate) fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
-    ctx: &Ctx<D>,
-    remote: SpecifiedAddr<A>,
-) -> Option<SpecifiedAddr<A>> {
-    let route = lookup_route(ctx, remote)?;
-    crate::device::get_ip_addr_subnet(ctx, route.device).map(|a| a.addr())
-}
-
 /// The action to take in order to process a received IP packet.
 #[cfg_attr(test, derive(Debug, PartialEq))]
 enum ReceivePacketAction<A: IpAddress> {
@@ -1499,16 +1498,17 @@ fn receive_ipv4_packet_action<D: EventDispatcher>(
     device: DeviceId,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
 ) -> ReceivePacketAction<Ipv4Addr> {
+    let dev_state = crate::device::get_ipv4_device_state(ctx, device);
     if Ipv4::LOOPBACK_SUBNET.contains(&dst_ip) {
         increment_counter!(ctx, "receive_ipv4_packet_action::loopback");
         ReceivePacketAction::Drop { reason: DropReason::Loopback }
-    } else if crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(ctx, device)
-        .by_ref()
-        .map(AddrSubnet::addr_subnet)
+    } else if dev_state
+        .iter_addrs()
+        .map(|addr| addr.addr_subnet())
         .any(|(addr, subnet)| dst_ip == addr || dst_ip.get() == subnet.broadcast())
         || dst_ip.is_limited_broadcast()
         || MulticastAddr::from_witness(dst_ip)
-            .map_or(false, |dst_ip| crate::device::is_in_ip_multicast(ctx, device, dst_ip))
+            .map_or(false, |dst_ip| dev_state.multicast_groups.contains(&dst_ip))
     {
         increment_counter!(ctx, "receive_ipv4_packet_action::deliver");
         ReceivePacketAction::Deliver
@@ -1527,14 +1527,15 @@ fn receive_ipv6_packet_action<D: EventDispatcher>(
         increment_counter!(ctx, "receive_ipv6_packet_action::loopback");
         ReceivePacketAction::Drop { reason: DropReason::Loopback }
     } else {
+        let dev_state = crate::device::get_ipv6_device_state(ctx, device);
         if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified()
             || MulticastAddr::new(dst_ip.get())
-                .map_or(false, |dst_ip| crate::device::is_in_ip_multicast(ctx, device, dst_ip))
+                .map_or(false, |dst_ip| dev_state.multicast_groups.contains(&dst_ip))
         {
             increment_counter!(ctx, "receive_ipv6_packet_action::deliver_multicast");
             ReceivePacketAction::Deliver
             // TODO(brunodalbo): We need to be able to have multiple IPs per interface.
-        } else if let Some(state) = crate::device::get_ip_addr_state(ctx, device, &dst_ip) {
+        } else if let Some(state) = dev_state.find_addr(&dst_ip).map(|addr| addr.state) {
             match state {
                 AddressState::Assigned | AddressState::Deprecated => {
                     increment_counter!(ctx, "receive_ipv6_packet_action::deliver_unicast");
@@ -1729,13 +1730,6 @@ pub(crate) fn send_ip_packet_from_device<
     body: S,
     mtu: Option<u32>,
 ) -> Result<(), S> {
-    // Tentative addresses are not considered bound to an interface in the
-    // traditional sense, therefore, no packet should have a source IP set to a
-    // tentative address.
-    debug_assert!(!SpecifiedAddr::new(src_ip).map_or(false, |src_ip| {
-        crate::device::is_addr_tentative_on_device(ctx, &src_ip, device)
-    }));
-
     #[ipv4addr]
     let builder = {
         assert!(!Ipv4::LOOPBACK_SUBNET.contains(&src_ip));
@@ -3129,7 +3123,12 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_joining_leaving_ip_multicast_group<I: Ip + TestIpExt + packet_formats::ip::IpExt>() {
+    fn test_joining_leaving_ip_multicast_group<
+        I: Ip
+            + TestIpExt
+            + packet_formats::ip::IpExt
+            + crate::device::testutil::DeviceTestIpExt<crate::testutil::DummyInstant>,
+    >() {
         #[specialize_ip_address]
         fn get_multicast_addr<A: IpAddress>() -> A {
             #[ipv4addr]
@@ -3164,21 +3163,21 @@ mod tests {
         let multi_addr = MulticastAddr::new(multi_addr).unwrap();
         // Should not have dispatched the packet since we are not in the
         // multicast group `multi_addr`.
-        assert!(!crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
+        assert!(!I::get_ip_device_state(&ctx, device).multicast_groups.contains(&multi_addr));
         receive_frame(&mut ctx, device, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
         // Join the multicast group and receive the packet, we should dispatch
         // it.
         crate::device::join_ip_multicast(&mut ctx, device, multi_addr);
-        assert!(crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
+        assert!(I::get_ip_device_state(&ctx, device).multicast_groups.contains(&multi_addr));
         receive_frame(&mut ctx, device, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Leave the multicast group and receive the packet, we should not
         // dispatch it.
         crate::device::leave_ip_multicast(&mut ctx, device, multi_addr);
-        assert!(!crate::device::is_in_ip_multicast(&ctx, device, multi_addr));
+        assert!(!I::get_ip_device_state(&ctx, device).multicast_groups.contains(&multi_addr));
         receive_frame(&mut ctx, device, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
     }

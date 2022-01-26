@@ -1079,7 +1079,7 @@ impl<
 /// ICMP checksum, which relies on both the source and destination IP addresses
 /// of the IP packet it's encapsulated in.
 fn send_icmp_reply<
-    I: IcmpIpExt + IpExt,
+    I: crate::ip::IpExt,
     B: BufferMut,
     C: BufferIpSocketContext<I, B> + IpDeviceIdContext + CounterContext,
     S: Serializer<Buffer = B>,

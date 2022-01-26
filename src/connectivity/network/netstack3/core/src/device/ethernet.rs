@@ -650,54 +650,6 @@ pub(super) fn get_assigned_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddr
     }));
 }
 
-/// Get the IPv6 address/subnet pairs associated with this device, including
-/// tentative and deprecated addresses.
-pub(super) fn get_ipv6_addr_subnets<C: EthernetIpDeviceContext>(
-    ctx: &C,
-    device_id: C::DeviceId,
-) -> impl Iterator<Item = &'_ Ipv6AddressEntry<C::Instant>> + '_ {
-    ctx.get_state_with(device_id).ip.ipv6.ip_state.iter_addrs()
-}
-
-/// Gets the state of an address on a device.
-///
-/// Returns `None` if `addr` is not associated with `device_id`.
-pub(super) fn get_ip_addr_state<C: EthernetIpDeviceContext, A: IpAddress>(
-    ctx: &C,
-    device_id: C::DeviceId,
-    addr: &SpecifiedAddr<A>,
-) -> Option<AddressState> {
-    get_ip_addr_state_inner(ctx, device_id, &addr.get())
-}
-
-/// Gets the state of an address on a device.
-///
-/// Returns `None` if `addr` is not associated with `device_id`.
-// TODO(ghanan): Use `SpecializedAddr` for `addr`.
-fn get_ip_addr_state_inner<C: EthernetIpDeviceContext, A: IpAddress>(
-    ctx: &C,
-    device_id: C::DeviceId,
-    addr: &A,
-) -> Option<AddressState> {
-    let state = &ctx.get_state_with(device_id).ip;
-    match addr.clone().into() {
-        IpAddr::V4(addr) => state.ipv4.ip_state.iter_addrs().find_map(|a| {
-            if a.addr().get() == addr {
-                Some(AddressState::Assigned)
-            } else {
-                None
-            }
-        }),
-        IpAddr::V6(addr) => state.ipv6.ip_state.iter_addrs().find_map(|a| {
-            if a.addr_sub().addr().get() == addr {
-                Some(a.state)
-            } else {
-                None
-            }
-        }),
-    }
-}
-
 /// Adds an IP address and associated subnet to this device.
 ///
 /// For IPv6, this function also joins the solicited-node multicast group and
@@ -736,11 +688,17 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
 
     let addr = addr_sub.addr().get();
 
-    if get_ip_addr_state_inner(ctx, device_id, &addr).is_some() {
+    let state = &mut ctx.get_state_mut_with(device_id).ip;
+
+    #[ipv4addr]
+    let exists = state.ipv4.ip_state.iter_addrs().find(|a| a.addr().get() == addr).is_some();
+    #[ipv6addr]
+    let exists =
+        state.ipv6.ip_state.iter_addrs().find(|a| a.addr_sub().addr().get() == addr).is_some();
+
+    if exists {
         return Err(AddressError::AlreadyExists);
     }
-
-    let state = &mut ctx.get_state_mut_with(device_id).ip;
 
     #[ipv4addr]
     state.ipv4.ip_state.add_addr(addr_sub);
@@ -1586,8 +1544,8 @@ mod tests {
     use super::*;
     use crate::context::testutil::DummyInstant;
     use crate::device::{
-        arp::ArpHandler, is_routing_enabled, set_routing_enabled, DeviceId, EthernetDeviceId,
-        IpLinkDeviceState,
+        arp::ArpHandler, is_routing_enabled, set_routing_enabled, testutil::DeviceTestIpExt,
+        AssignedAddress as _, DeviceId, EthernetDeviceId, IpLinkDeviceState,
     };
     use crate::ip::{
         dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId, IpDeviceIdContext,
@@ -1664,6 +1622,32 @@ mod tests {
         fn is_device_usable(&self, _device: DummyDeviceId) -> bool {
             unimplemented!()
         }
+    }
+
+    fn contains_addr<A: IpAddress>(
+        ctx: &Ctx<DummyEventDispatcher>,
+        device: DeviceId,
+        addr: SpecifiedAddr<A>,
+    ) -> bool
+    where
+        A::Version: DeviceTestIpExt<crate::testutil::DummyInstant>,
+    {
+        <A::Version as DeviceTestIpExt<_>>::get_ip_device_state(ctx, device)
+            .iter_addrs()
+            .any(|a| a.addr() == addr)
+    }
+
+    fn is_in_ip_multicast<A: IpAddress>(
+        ctx: &Ctx<DummyEventDispatcher>,
+        device: DeviceId,
+        addr: MulticastAddr<A>,
+    ) -> bool
+    where
+        A::Version: DeviceTestIpExt<crate::testutil::DummyInstant>,
+    {
+        <A::Version as DeviceTestIpExt<_>>::get_ip_device_state(ctx, device)
+            .multicast_groups
+            .contains(&addr)
     }
 
     #[test]
@@ -2045,7 +2029,9 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
+    fn test_add_remove_ip_addresses<
+        I: Ip + TestIpExt + DeviceTestIpExt<crate::testutil::DummyInstant>,
+    >() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -2059,63 +2045,42 @@ mod tests {
         let as1 = AddrSubnet::new(ip1.get(), prefix).unwrap();
         let as2 = AddrSubnet::new(ip2.get(), prefix).unwrap();
 
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), None);
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
+        assert!(!contains_addr(&ctx, device, ip1));
+        assert!(!contains_addr(&ctx, device, ip2));
+        assert!(!contains_addr(&ctx, device, ip3));
 
         // Add ip1 (ok)
         crate::device::add_ip_addr_subnet(&mut ctx, device, as1).unwrap();
-        assert_eq!(
-            crate::device::get_ip_addr_state(&ctx, device, &ip1),
-            Some(AddressState::Assigned)
-        );
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), None);
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
+        assert!(contains_addr(&ctx, device, ip1));
+        assert!(!contains_addr(&ctx, device, ip2));
+        assert!(!contains_addr(&ctx, device, ip3));
 
         // Add ip2 (ok)
         crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap();
-        assert_eq!(
-            crate::device::get_ip_addr_state(&ctx, device, &ip1),
-            Some(AddressState::Assigned)
-        );
-        assert_eq!(
-            crate::device::get_ip_addr_state(&ctx, device, &ip2),
-            Some(AddressState::Assigned)
-        );
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
+        assert!(contains_addr(&ctx, device, ip1));
+        assert!(contains_addr(&ctx, device, ip2));
+        assert!(!contains_addr(&ctx, device, ip3));
 
         // Del ip1 (ok)
         crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_eq!(
-            crate::device::get_ip_addr_state(&ctx, device, &ip2),
-            Some(AddressState::Assigned)
-        );
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
+        assert!(!contains_addr(&ctx, device, ip1));
+        assert!(contains_addr(&ctx, device, ip2));
+        assert!(!contains_addr(&ctx, device, ip3));
 
         // Del ip1 again (ip1 not found)
-        assert_eq!(
-            crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap_err(),
-            AddressError::NotFound
-        );
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_eq!(
-            crate::device::get_ip_addr_state(&ctx, device, &ip2),
-            Some(AddressState::Assigned)
-        );
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
+        assert_eq!(crate::device::del_ip_addr(&mut ctx, device, &ip1), Err(AddressError::NotFound));
+        assert!(!contains_addr(&ctx, device, ip1));
+        assert!(contains_addr(&ctx, device, ip2));
+        assert!(!contains_addr(&ctx, device, ip3));
 
         // Add ip2 again (ip2 already exists)
         assert_eq!(
             crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap_err(),
             AddressError::AlreadyExists
         );
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_eq!(
-            crate::device::get_ip_addr_state(&ctx, device, &ip2),
-            Some(AddressState::Assigned)
-        );
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
+        assert!(!contains_addr(&ctx, device, ip1));
+        assert!(contains_addr(&ctx, device, ip2));
+        assert!(!contains_addr(&ctx, device, ip3));
 
         // Add ip2 with different subnet (ip2 already exists)
         assert_eq!(
@@ -2127,12 +2092,9 @@ mod tests {
             .unwrap_err(),
             AddressError::AlreadyExists
         );
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_eq!(
-            crate::device::get_ip_addr_state(&ctx, device, &ip2),
-            Some(AddressState::Assigned)
-        );
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
+        assert!(!contains_addr(&ctx, device, ip1));
+        assert!(contains_addr(&ctx, device, ip2));
+        assert!(!contains_addr(&ctx, device, ip3));
     }
 
     fn receive_simple_ip_packet_test<A: IpAddress>(
@@ -2159,7 +2121,9 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_multiple_ip_addresses<I: Ip + TestIpExt>() {
+    fn test_multiple_ip_addresses<
+        I: Ip + TestIpExt + DeviceTestIpExt<crate::testutil::DummyInstant>,
+    >() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -2169,8 +2133,8 @@ mod tests {
         let ip2 = I::get_other_ip_address(2);
         let from_ip = I::get_other_ip_address(3).get();
 
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), None);
+        assert!(!contains_addr(&ctx, device, ip1));
+        assert!(!contains_addr(&ctx, device, ip2));
 
         // Should not receive packets on any IP.
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 0);
@@ -2183,8 +2147,8 @@ mod tests {
             AddrSubnet::new(ip1.get(), I::Addr::BYTES * 8).unwrap(),
         )
         .unwrap();
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).unwrap().is_assigned());
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), None);
+        assert!(contains_addr(&ctx, device, ip1));
+        assert!(!contains_addr(&ctx, device, ip2));
 
         // Should receive packets on ip1 but not ip2
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 1);
@@ -2197,8 +2161,8 @@ mod tests {
             AddrSubnet::new(ip2.get(), I::Addr::BYTES * 8).unwrap(),
         )
         .unwrap();
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).unwrap().is_assigned());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).unwrap().is_assigned());
+        assert!(contains_addr(&ctx, device, ip1));
+        assert!(contains_addr(&ctx, device, ip2));
 
         // Should receive packets on both ips
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 2);
@@ -2206,8 +2170,8 @@ mod tests {
 
         // Remove ip1
         crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
-        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).unwrap().is_assigned());
+        assert!(!contains_addr(&ctx, device, ip1));
+        assert!(contains_addr(&ctx, device, ip2));
 
         // Should receive packets on ip2
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 3);
@@ -2228,7 +2192,9 @@ mod tests {
     /// leave it after calling `leave_ip_multicast` the same number of times as
     /// `join_ip_multicast`.
     #[ip_test]
-    fn test_ip_join_leave_multicast_addr_ref_count<I: Ip + TestIpExt>() {
+    fn test_ip_join_leave_multicast_addr_ref_count<
+        I: Ip + TestIpExt + DeviceTestIpExt<crate::testutil::DummyInstant>,
+    >() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -2237,31 +2203,31 @@ mod tests {
         let multicast_addr = get_multicast_addr::<I>();
 
         // Should not be in the multicast group yet.
-        assert!(!crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+        assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Join the multicast group.
         crate::device::join_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+        assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Leave the multicast group.
         crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(!crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+        assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Join the multicst group.
         crate::device::join_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+        assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Join it again...
         crate::device::join_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+        assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Leave it (still in it because we joined twice).
         crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+        assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Leave it again... (actually left now).
         crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
-        assert!(!crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+        assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
     }
 
     /// Test leaving a multicast group a device has not yet joined.
@@ -2272,7 +2238,9 @@ mod tests {
     /// is a panic condition.
     #[ip_test]
     #[should_panic(expected = "attempted to leave IP multicast group we were not a member of:")]
-    fn test_ip_leave_unjoined_multicast<I: Ip + TestIpExt>() {
+    fn test_ip_leave_unjoined_multicast<
+        I: Ip + TestIpExt + DeviceTestIpExt<crate::testutil::DummyInstant>,
+    >() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -2281,7 +2249,7 @@ mod tests {
         let multicast_addr = get_multicast_addr::<I>();
 
         // Should not be in the multicast group yet.
-        assert!(!crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+        assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Leave it (this should panic).
         crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);

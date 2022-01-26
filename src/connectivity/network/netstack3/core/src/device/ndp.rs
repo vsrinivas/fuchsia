@@ -2312,8 +2312,8 @@ mod tests {
     use crate::device::{
         add_ip_addr_subnet, del_ip_addr,
         ethernet::{EthernetLinkDevice, EthernetTimerId},
-        get_assigned_ip_addr_subnets, get_ip_addr_state, get_ipv6_hop_limit, get_mtu,
-        is_in_ip_multicast, is_routing_enabled, set_routing_enabled, DeviceId, DeviceLayerTimerId,
+        get_assigned_ip_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
+        is_routing_enabled, set_routing_enabled, DeviceId, DeviceLayerTimerId,
         DeviceLayerTimerIdInner, EthernetDeviceId, Ipv6AddressEntry,
     };
     use crate::testutil::{
@@ -2686,8 +2686,12 @@ mod tests {
         assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 1);
 
         // Both devices should be in the solicited-node multicast group.
-        assert!(is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
-        assert!(is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
+        assert!(get_ipv6_device_state(net.context("local"), device_id)
+            .multicast_groups
+            .contains(&multicast_addr));
+        assert!(get_ipv6_device_state(net.context("remote"), device_id)
+            .multicast_groups
+            .contains(&multicast_addr));
 
         let _: StepResult = net.step();
 
@@ -2697,8 +2701,12 @@ mod tests {
         assert_empty(get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id));
 
         // Both devices should not be in the multicast group
-        assert!(!is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
-        assert!(!is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
+        assert!(!get_ipv6_device_state(net.context("local"), device_id)
+            .multicast_groups
+            .contains(&multicast_addr));
+        assert!(!get_ipv6_device_state(net.context("remote"), device_id)
+            .multicast_groups
+            .contains(&multicast_addr));
     }
 
     fn dad_timer_id(id: EthernetDeviceId, addr: UnicastAddr<Ipv6Addr>) -> TimerId {
@@ -2750,8 +2758,12 @@ mod tests {
         let multicast_addr = local_ip().to_solicited_node_address();
         add_ip_addr_subnet(net.context("local"), device_id, addr).unwrap();
         // Only local should be in the solicited node multicast group.
-        assert!(is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
-        assert!(!is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
+        assert!(get_ipv6_device_state(net.context("local"), device_id)
+            .multicast_groups
+            .contains(&multicast_addr));
+        assert!(!get_ipv6_device_state(net.context("remote"), device_id)
+            .multicast_groups
+            .contains(&multicast_addr));
 
         assert_eq!(
             testutil::trigger_next_timer(net.context("local")).unwrap(),
@@ -2769,8 +2781,12 @@ mod tests {
 
         add_ip_addr_subnet(net.context("remote"), device_id, addr).unwrap();
         // Local & remote should be in the multicast group.
-        assert!(is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
-        assert!(is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
+        assert!(get_ipv6_device_state(net.context("local"), device_id)
+            .multicast_groups
+            .contains(&multicast_addr));
+        assert!(get_ipv6_device_state(net.context("remote"), device_id)
+            .multicast_groups
+            .contains(&multicast_addr));
 
         let _: StepResult = net.step();
 
@@ -2789,8 +2805,12 @@ mod tests {
         .is_assigned());
 
         // Only local should be in the solicited node multicast group.
-        assert!(is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
-        assert!(!is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
+        assert!(get_ipv6_device_state(net.context("local"), device_id)
+            .multicast_groups
+            .contains(&multicast_addr));
+        assert!(!get_ipv6_device_state(net.context("remote"), device_id)
+            .multicast_groups
+            .contains(&multicast_addr));
     }
 
     #[test]
@@ -2949,8 +2969,10 @@ mod tests {
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&local_ip())
             .unwrap()
+            .state
             .is_tentative());
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
@@ -2962,11 +2984,15 @@ mod tests {
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&local_ip())
             .unwrap()
+            .state
             .is_tentative());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&remote_ip())
             .unwrap()
+            .state
             .is_tentative());
         assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
 
@@ -2976,21 +3002,29 @@ mod tests {
             run_for(&mut ctx, Duration::from_secs(2)),
             [local_timer_id, remote_timer_id, local_timer_id, remote_timer_id]
         );
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&local_ip())
             .unwrap()
+            .state
             .is_assigned());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&remote_ip())
             .unwrap()
+            .state
             .is_tentative());
         assert_eq!(ctx.dispatcher.frames_sent().len(), 6);
 
         // Run to the end for DAD for local ip
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [remote_timer_id]);
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&local_ip())
             .unwrap()
+            .state
             .is_assigned());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&remote_ip())
             .unwrap()
+            .state
             .is_assigned());
         assert_eq!(ctx.dispatcher.frames_sent().len(), 6);
 
@@ -3017,8 +3051,10 @@ mod tests {
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&local_ip())
             .unwrap()
+            .state
             .is_tentative());
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
@@ -3030,38 +3066,50 @@ mod tests {
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&local_ip())
             .unwrap()
+            .state
             .is_tentative());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&remote_ip())
             .unwrap()
+            .state
             .is_tentative());
         assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
 
         // Run 1s
         let remote_timer_id = dad_timer_id(dev_id.id().into(), remote_ip());
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id, remote_timer_id]);
-        assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&local_ip())
             .unwrap()
+            .state
             .is_tentative());
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&remote_ip())
             .unwrap()
+            .state
             .is_tentative());
         assert_eq!(ctx.dispatcher.frames_sent().len(), 5);
 
         // Remove local ip
         del_ip_addr(&mut ctx, dev_id, &local_ip().into_specified()).unwrap();
-        assert_eq!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified()), None);
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+        assert_eq!(crate::device::get_ipv6_device_state(&ctx, dev_id).find_addr(&local_ip()), None);
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&remote_ip())
             .unwrap()
+            .state
             .is_tentative());
         assert_eq!(ctx.dispatcher.frames_sent().len(), 5);
 
         // Run to the end for DAD for local ip
         assert_eq!(run_for(&mut ctx, Duration::from_secs(2)), [remote_timer_id, remote_timer_id]);
-        assert_eq!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified()), None);
-        assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
+        assert_eq!(crate::device::get_ipv6_device_state(&ctx, dev_id).find_addr(&local_ip()), None);
+        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+            .find_addr(&remote_ip())
             .unwrap()
+            .state
             .is_assigned());
         assert_eq!(ctx.dispatcher.frames_sent().len(), 6);
 

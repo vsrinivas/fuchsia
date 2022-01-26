@@ -755,7 +755,7 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
             .local_address_for_remote(remote_ip)
             .ok_or(SendError::Remote(RemoteAddressError::NoRoute))?,
     };
-    if !ctx.is_local_addr(local_ip.get()) {
+    if !ctx.is_assigned_local_addr(local_ip.get()) {
         return Err(SendError::Local(LocalAddressError::CannotBindToAddress));
     }
 
@@ -826,7 +826,7 @@ pub fn connect_udp<I: IcmpIpExt, C: UdpStateContext<I>>(
 
     let local_ip = local_ip.unwrap_or(default_local);
 
-    if !ctx.is_local_addr(local_ip.get()) {
+    if !ctx.is_assigned_local_addr(local_ip.get()) {
         return Err(SocketError::Local(LocalAddressError::CannotBindToAddress));
     }
     let local_port = if let Some(local_port) = local_port {
@@ -923,7 +923,7 @@ pub fn listen_udp<I: IcmpIpExt, C: UdpStateContext<I>>(
             ))
         }
         Some(addr) => {
-            if !ctx.is_local_addr(addr.get()) {
+            if !ctx.is_assigned_local_addr(addr.get()) {
                 return Err(SocketError::Local(LocalAddressError::CannotBindToAddress));
             }
             let state = ctx.get_first_state_mut();
@@ -1115,7 +1115,7 @@ mod tests {
     }
 
     impl<I: TestIpExt> TransportIpContext<I> for DummyCtx<I> {
-        fn is_local_addr(&self, addr: <I as Ip>::Addr) -> bool {
+        fn is_assigned_local_addr(&self, addr: <I as Ip>::Addr) -> bool {
             local_ip::<I>().get() == addr || self.get_ref().extra_local_addrs.contains(&addr)
         }
 
