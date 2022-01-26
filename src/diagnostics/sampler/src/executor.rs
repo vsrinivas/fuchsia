@@ -692,7 +692,7 @@ impl ProjectSampler {
             let SelectorIndexes { metric_index, selector_index } = index_info;
             let metric = &self.metrics[*metric_index];
             // It's fine if a selector has been removed and is None.
-            if let Some(ParsedSelector { selector, selector_string, upload_count, .. }) =
+            if let Some(ParsedSelector { selector, selector_string, .. }) =
                 &metric.selectors[*selector_index]
             {
                 let found_values = diagnostics_hierarchy::select_from_hierarchy(
@@ -704,7 +704,6 @@ impl ProjectSampler {
                     // metric is the correct one to find the data. Either way, not-found is fine.
                     0 => {}
                     1 => {
-                        upload_count.add(1);
                         // export_sample() needs mut self, so we can't pass in values directly from
                         // metric, since metric is a ref into data contained in self;
                         // we have to copy them out first.
@@ -727,6 +726,11 @@ impl ProjectSampler {
                             )
                             .await?
                         {
+                            if let Some(ParsedSelector { upload_count, .. }) =
+                                &self.metrics[*metric_index].selectors[*selector_index]
+                            {
+                                upload_count.add(1);
+                            }
                             events_to_log.push(event);
                         }
                         selectors_changed = selectors_changed

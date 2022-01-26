@@ -1,0 +1,14 @@
+{
+    metrics: [
+        {
+            metric_id: 2,
+            metric_type: "Occurrence",
+            selector: [
+                "core/exceptions:root/crash_counts:{MONIKER}",
+                "core/exceptions:root/crash_counts:app\\/sys\\/{MONIKER}",
+            ],
+        },
+    ],
+    poll_rate_sec: 300,
+    project_id: 13,
+}
