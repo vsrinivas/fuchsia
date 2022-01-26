@@ -258,14 +258,6 @@ def write_toml_file(
     if not for_workspace:
         fout.write(CARGO_PACKAGE_NO_WORKSPACE)
 
-    if features:
-        fout.write("\n[features]\n")
-        # Filter 'default' feature out to avoid generating a duplicated entry.
-        features = [x for x in features if x != "default"]
-        fout.write("default = %s\n" % json.dumps(features))
-        for feature in features:
-            fout.write("%s = []\n" % feature)
-
     if not for_workspace:
         # In a workspace, patches are ignored, so we skip emitting all the patch lines to cut down on warning spam
         fout.write("\n[patch.crates-io]\n")
@@ -277,6 +269,8 @@ def write_toml_file(
 
     # collect all dependencies
     deps = metadata["deps"][:]
+
+    dep_crate_names = set()
 
     def write_deps(deps, dep_type):
         while deps:
@@ -297,6 +291,7 @@ def write_toml_file(
                 has_third_party_deps = True
                 match = re.search("rust_crates:([\w-]*)", dep)
                 crate_name, version = str(match.group(1)).rsplit("-v", 1)
+                dep_crate_names.add(crate_name)
                 version = version.replace("_", ".")
                 feature_spec = project.third_party_features.get(crate_name)
                 fout.write("[%s.\"%s\"]\n" % (dep_type, crate_name))
@@ -306,6 +301,12 @@ def write_toml_file(
                         "features = %s\n" % json.dumps(feature_spec.features))
                     if feature_spec.default_features is False:
                         fout.write("default-features = false\n")
+                if crate_name in features:
+                    # Make the dependency optional if there is a feature with
+                    # the same name. Later, we'll make sure to list the feature
+                    # in the default feature list so that we do actually include
+                    # the dependency.
+                    fout.write("optional = true\n")
             # this is a in-tree rust target
             elif "crate_name" in project.targets[dep]:
                 toolchain = extract_toolchain(dep)
@@ -324,6 +325,17 @@ def write_toml_file(
     write_deps(deps, "dependencies")
     write_deps(extra_test_deps, "dev-dependencies")
 
+    if features:
+        fout.write("\n[features]\n")
+        # Filter 'default' feature out to avoid generating a duplicated entry.
+        features = [x for x in features if x != "default"]
+        fout.write("default = %s\n" % json.dumps(features))
+
+        for feature in features:
+            # Filter features that are also dependencies
+            # https://users.rust-lang.org/t/features-and-dependencies-cannot-have-the-same-name/47746/2
+            if feature not in dep_crate_names:
+                fout.write("%s = []\n" % feature)
 
 def main():
     # TODO(tmandry): Remove all hardcoded paths and replace with args.
