@@ -42,11 +42,11 @@ class TestFileServerBase : public fidl::testing::WireTestBase<fuchsia_io::File> 
 // This implementation provides a simple Read2() implementation.
 class TestReadFileServer : public TestFileServerBase {
  public:
-  void Read(ReadRequestView request, ReadCompleter::Sync& completer) final {
+  void Read2(Read2RequestView request, Read2Completer::Sync& completer) final {
     fidl::Arena fidl_allocator;
     fidl::VectorView<uint8_t> read_data(fidl_allocator, sizeof(kTestData));
     memcpy(read_data.mutable_data(), kTestData, sizeof(kTestData));
-    completer.Reply(ZX_OK, read_data);
+    completer.ReplySuccess(read_data);
   }
 
   static constexpr char kTestData[] = "abcdef";

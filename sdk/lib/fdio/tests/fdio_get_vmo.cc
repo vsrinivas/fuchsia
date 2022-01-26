@@ -95,23 +95,23 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
                            });
   }
 
-  void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) override {
+  void ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) override {
     if (!context->supports_read_at) {
-      completer.Reply(ZX_ERR_NOT_SUPPORTED, fidl::VectorView<uint8_t>());
+      completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
       return;
     }
     if (request->offset >= context->content_size) {
-      completer.Reply(ZX_OK, fidl::VectorView<uint8_t>());
+      completer.ReplySuccess(fidl::VectorView<uint8_t>());
       return;
     }
     size_t actual = std::min(request->count, context->content_size - request->offset);
     std::vector<uint8_t> buffer(zx_system_get_page_size());
     zx_status_t status = context->vmo.read(buffer.data(), request->offset, actual);
     if (status != ZX_OK) {
-      completer.Reply(status, fidl::VectorView<uint8_t>());
+      completer.ReplyError(status);
       return;
     }
-    completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer.data(), actual));
+    completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer.data(), actual));
   }
 
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {
