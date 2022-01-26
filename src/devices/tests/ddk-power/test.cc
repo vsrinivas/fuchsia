@@ -99,7 +99,7 @@ class PowerTestCase : public zxtest::Test {
       call_status = response->result.err();
     }
     ASSERT_OK(call_status);
-    zx::event event(std::move(response->result.mutable_response().event));
+    zx::event event(std::move(response->result.response().event));
     zx_signals_t signals;
     ASSERT_OK(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), &signals));
   }

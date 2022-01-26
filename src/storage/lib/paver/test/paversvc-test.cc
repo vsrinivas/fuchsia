@@ -1684,7 +1684,7 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   EXPECT_BYTES_EQ(fs_management::kFvmMagic, buffer, sizeof(fs_management::kFvmMagic));
 
   fidl::ClientEnd<fuchsia_hardware_block_volume::VolumeManager> volume_client =
-      std::move(result->result.mutable_response().volume);
+      std::move(result->result.response().volume);
   // This force-casts the protocol type from
   // |fuchsia.hardware.block.volume/VolumeManager| into
   // |fuchsia.device/Controller|. It only works because protocols hosted

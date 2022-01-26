@@ -118,7 +118,7 @@ class ConsoleIn {
       auto& info = result->info;
       FX_DCHECK(info.is_tty()) << "stdin expected to be a tty";
 
-      events_ = std::move(info.mutable_tty().event);
+      events_ = std::move(info.tty().event);
       pty_event_waiter_.set_object(events_.get());
       pty_event_waiter_.set_trigger(fpty::wire::kSignalEvent);
       auto status = pty_event_waiter_.Begin(loop_->dispatcher());

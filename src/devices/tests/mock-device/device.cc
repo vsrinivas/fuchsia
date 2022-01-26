@@ -421,7 +421,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
           printf("MockDevice::CreateThread: asked to create thread without device\n");
           return ZX_ERR_INVALID_ARGS;
         }
-        ctx->mock_device->CreateThread(std::move(action.mutable_create_thread()));
+        ctx->mock_device->CreateThread(std::move(action.create_thread()));
         break;
       }
       case device_mock::wire::Action::Tag::kAsyncRemoveDevice: {
@@ -509,7 +509,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
       }
       case device_mock::wire::Action::Tag::kAddDevice: {
         // TODO(teisenbe): Implement more functionality here
-        auto& add_device_action = action.mutable_add_device();
+        auto& add_device_action = action.add_device();
         ZX_ASSERT_MSG(!add_device_action.do_bind, "bind not yet supported\n");
         std::unique_ptr<MockDevice> dev;
         zx_status_t status =

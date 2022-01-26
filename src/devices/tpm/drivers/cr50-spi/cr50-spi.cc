@@ -56,7 +56,7 @@ zx_status_t Cr50SpiDevice::Bind(std::unique_ptr<Cr50SpiDevice> *dev) {
            result.ok() ? zx_status_get_string(result->result.err())
                        : result.FormatDescription().data());
   } else {
-    irq_ = std::move(result->result.mutable_response().irq);
+    irq_ = std::move(result->result.response().irq);
     irq_thread_ = std::thread(&Cr50SpiDevice::IrqThread, this);
   }
 
