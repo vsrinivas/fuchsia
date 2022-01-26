@@ -28,6 +28,8 @@ pub enum PhyManagerError {
     PhyQueryFailure,
     #[error("failed to set country for new PHY")]
     PhySetCountryFailure,
+    #[error("unable to apply power setting")]
+    PhySetLowPowerFailure,
     #[error("unable to query iface information")]
     IfaceQueryFailure,
     #[error("unable to create iface")]
@@ -130,6 +132,13 @@ pub trait PhyManagerApi {
 
     /// Returns whether any PHY has a client interface that supports WPA3.
     fn has_wpa3_client_iface(&self) -> bool;
+
+    /// Sets the low power state for all PHYs.  PHYs discovered in the future will have the low
+    /// power setting applied to them as well.
+    async fn set_power_state(
+        &mut self,
+        power_state: fidl_common::PowerSaveType,
+    ) -> Result<fuchsia_zircon::Status, anyhow::Error>;
 }
 
 /// Maintains a record of all PHYs that are present and their associated interfaces.
@@ -138,6 +147,7 @@ pub struct PhyManager {
     device_service: fidl_service::DeviceServiceProxy,
     device_monitor: fidl_service::DeviceMonitorProxy,
     client_connections_enabled: bool,
+    power_state: fidl_common::PowerSaveType,
     suggested_ap_mac: Option<MacAddress>,
     saved_country_code: Option<[u8; REGION_CODE_LEN]>,
     _node: inspect::Node,
@@ -173,6 +183,7 @@ impl PhyManager {
             device_service,
             device_monitor,
             client_connections_enabled: false,
+            power_state: fidl_common::PowerSaveType::PsModeOff,
             suggested_ap_mac: None,
             saved_country_code: None,
             _node: node,
@@ -279,6 +290,13 @@ impl PhyManagerApi for PhyManager {
             if let Some(_) = phy_container.client_ifaces.insert(iface_id, driver_features) {
                 warn!("Unexpectedly replaced existing iface information for id {}", iface_id);
             };
+        }
+
+        if self.power_state != fidl_common::PowerSaveType::PsModeOff {
+            let ps_result = set_ps_mode(&self.device_monitor, phy_id, self.power_state)
+                .await
+                .map_err(|_| PhyManagerError::PhySetLowPowerFailure)?;
+            fuchsia_zircon::ok(ps_result).map_err(|_| PhyManagerError::PhySetLowPowerFailure)?
         }
 
         if let Some(_) = self.phys.insert(phy_id, phy_container) {
@@ -591,6 +609,23 @@ impl PhyManagerApi for PhyManager {
         }
         false
     }
+
+    async fn set_power_state(
+        &mut self,
+        power_state: fidl_common::PowerSaveType,
+    ) -> Result<fuchsia_zircon::Status, anyhow::Error> {
+        self.power_state = power_state;
+        let mut final_status = fuchsia_zircon::Status::OK;
+
+        for phy_id in self.phys.keys() {
+            let result = set_ps_mode(&self.device_monitor, *phy_id, power_state).await?;
+            if let Err(status) = fuchsia_zircon::ok(result) {
+                final_status = status.into();
+            }
+        }
+
+        Ok(final_status)
+    }
 }
 
 /// Creates an interface of the requested role for the requested PHY ID.  Returns either the
@@ -685,6 +720,15 @@ async fn clear_phy_country_code(
         error!("Received bad status when clearing country code for PHY {}: {}", phy_id, e);
         PhyManagerError::PhySetCountryFailure
     })
+}
+
+async fn set_ps_mode(
+    proxy: &fidl_service::DeviceMonitorProxy,
+    phy_id: u16,
+    state: fidl_common::PowerSaveType,
+) -> Result<i32, anyhow::Error> {
+    let mut req = fidl_service::SetPsModeRequest { phy_id, ps_mode: state };
+    proxy.set_ps_mode(&mut req).await.map_err(|e| e.into())
 }
 
 #[cfg(test)]
@@ -2611,5 +2655,209 @@ mod tests {
 
         phy_manager.client_connections_enabled = false;
         assert!(!phy_manager.client_connections_enabled());
+    }
+
+    /// Tests the case where setting low power state succeeds.
+    #[fuchsia::test]
+    fn test_succeed_in_setting_power_state() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager =
+            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModeOff);
+
+        // Add a couple of PHYs.
+        let mut phy_ids = HashSet::<u16>::new();
+        let _ = phy_ids.insert(0);
+        let _ = phy_ids.insert(1);
+        for id in phy_ids.iter() {
+            let phy_container = PhyContainer::new(vec![]);
+            let _ = phy_manager.phys.insert(*id, phy_container);
+        }
+
+        {
+            // Set low power state on the PHYs.
+            let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::PsPollMode);
+
+            // The future should run until it stalls out requesting that one of the PHYs set its low
+            // power mode.
+            pin_mut!(fut);
+
+            for _ in 0..phy_ids.len() {
+                assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+                assert_variant!(
+                    exec.run_until_stalled(&mut test_values.monitor_stream.next()),
+                    Poll::Ready(Some(Ok(
+                        fidl_service::DeviceMonitorRequest::SetPsMode {
+                            req: fidl_service::SetPsModeRequest { phy_id, ps_mode },
+                            responder,
+                        }
+                    ))) => {
+                        assert!(phy_ids.remove(&phy_id));
+                        assert_eq!(ps_mode, fidl_common::PowerSaveType::PsPollMode);
+                        responder.send(ZX_OK).expect("sending fake set PS mode response");
+                    }
+                )
+            }
+
+            assert_variant!(
+                exec.run_until_stalled(&mut fut),
+                Poll::Ready(Ok(fuchsia_zircon::Status::OK))
+            );
+        }
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsPollMode);
+    }
+
+    /// Tests the case where setting low power state fails.
+    #[fuchsia::test]
+    fn test_fail_to_set_power_state() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager =
+            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModeOff);
+
+        // Add a couple of PHYs.
+        let mut phy_ids = HashSet::<u16>::new();
+        let _ = phy_ids.insert(0);
+        let _ = phy_ids.insert(1);
+        for id in phy_ids.iter() {
+            let phy_container = PhyContainer::new(vec![]);
+            let _ = phy_manager.phys.insert(*id, phy_container);
+        }
+
+        {
+            // Set low power state on the PHYs.
+            let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::PsPollMode);
+
+            // The future should run until it stalls out requesting that one of the PHYs set its low
+            // power mode.
+            pin_mut!(fut);
+
+            for _ in 0..phy_ids.len() {
+                assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+                assert_variant!(
+                    exec.run_until_stalled(&mut test_values.monitor_stream.next()),
+                    Poll::Ready(Some(Ok(
+                        fidl_service::DeviceMonitorRequest::SetPsMode {
+                            req: fidl_service::SetPsModeRequest { phy_id, ps_mode },
+                            responder,
+                        }
+                    ))) => {
+                        assert!(phy_ids.remove(&phy_id));
+                        assert_eq!(ps_mode, fidl_common::PowerSaveType::PsPollMode);
+
+                        // Send back a failure for one of the PHYs
+                        if phy_id == 0 {
+                            responder.send(ZX_OK).expect("sending fake set PS mode response");
+                        } else {
+                            responder
+                                .send(ZX_ERR_NOT_FOUND)
+                                .expect("sending negativefake set PS mode response");
+                        }
+                    }
+                )
+            }
+
+            // An error should be reported due to the failure to set the power mode on one of the
+            // PHYs.
+            assert_variant!(
+                exec.run_until_stalled(&mut fut),
+                Poll::Ready(Ok(fuchsia_zircon::Status::NOT_FOUND))
+            );
+        }
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsPollMode);
+    }
+
+    /// Tests the case where the request cannot be made to configure low power mode for a PHY.
+    #[fuchsia::test]
+    fn test_fail_to_request_low_power_mode() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager =
+            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+
+        // Drop the receiving end of the device monitor channel.
+        drop(test_values.monitor_stream);
+
+        // Add a couple of PHYs.
+        let mut phy_ids = HashSet::<u16>::new();
+        let _ = phy_ids.insert(0);
+        let _ = phy_ids.insert(1);
+        for id in phy_ids.iter() {
+            let phy_container = PhyContainer::new(vec![]);
+            let _ = phy_manager.phys.insert(*id, phy_container);
+        }
+
+        // Set low power state on the PHYs.
+        let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::PsModeOff);
+
+        // The future should run until it stalls out requesting that one of the PHYs set its low
+        // power mode.
+        pin_mut!(fut);
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+    }
+
+    /// Tests the case where a PHY is added after the low power state has been enabled.
+    #[fuchsia::test]
+    fn test_add_phy_after_low_power_enabled() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager =
+            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModeOff);
+
+        // Enable low power mode which should complete immediately.
+        {
+            let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::FastPsMode);
+            pin_mut!(fut);
+            assert_variant!(
+                exec.run_until_stalled(&mut fut),
+                Poll::Ready(Ok(fuchsia_zircon::Status::OK))
+            );
+        }
+
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::FastPsMode);
+
+        // Add a new PHY and ensure that the low power mode is set
+        {
+            let add_phy_fut = phy_manager.add_phy(0);
+            pin_mut!(add_phy_fut);
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+
+            send_get_supported_mac_roles_response(
+                &mut exec,
+                &mut test_values.monitor_stream,
+                Some(Vec::new()),
+            );
+
+            // There should be a stall as the low power mode is requested.
+            assert_variant!(exec.run_until_stalled(&mut add_phy_fut), Poll::Pending);
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.monitor_stream.next()),
+                Poll::Ready(Some(Ok(
+                    fidl_service::DeviceMonitorRequest::SetPsMode {
+                        req: fidl_service::SetPsModeRequest { phy_id, ps_mode },
+                        responder,
+                    }
+                ))) => {
+                    assert_eq!(ps_mode, fidl_common::PowerSaveType::FastPsMode);
+
+                    // Send back a failure for one of the PHYs
+                    if phy_id == 0 {
+                        responder.send(ZX_OK).expect("sending fake set PS mode response");
+                    } else {
+                        responder
+                            .send(ZX_ERR_NOT_FOUND)
+                            .expect("sending negativefake set PS mode response");
+                    }
+                }
+            );
+
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
+        }
     }
 }

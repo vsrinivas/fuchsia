@@ -1618,6 +1618,13 @@ mod tests {
         fn has_wpa3_client_iface(&self) -> bool {
             self.wpa3_iface.is_some()
         }
+
+        async fn set_power_state(
+            &mut self,
+            _low_power_enabled: fidl_fuchsia_wlan_common::PowerSaveType,
+        ) -> Result<fuchsia_zircon::Status, anyhow::Error> {
+            unimplemented!();
+        }
     }
 
     struct FakeClient {

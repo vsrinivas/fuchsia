@@ -77,7 +77,7 @@ mod tests {
         async_trait::async_trait,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_net::MacAddress,
-        fuchsia_async as fasync,
+        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::task::Poll,
         pin_utils::pin_mut,
         std::unimplemented,
@@ -166,6 +166,13 @@ mod tests {
         }
 
         fn has_wpa3_client_iface(&self) -> bool {
+            unimplemented!();
+        }
+
+        async fn set_power_state(
+            &mut self,
+            _low_power_enabled: fidl_common::PowerSaveType,
+        ) -> Result<zx::Status, anyhow::Error> {
             unimplemented!();
         }
     }
