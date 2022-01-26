@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/49508d9e4dbd3f8714110d1f9be90356ee1e8115/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/078b74abd72c96947e8c3a0568c136e50e0336e8/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/49508d9e4dbd3f8714110d1f9be90356ee1e8115/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/078b74abd72c96947e8c3a0568c136e50e0336e8/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -763,13 +763,14 @@ From //build/images/args.gni:75
 
 ### chromium_build_dir
 This variable specifies a fully qualified Chromium build output directory,
-such as `/home/USER/chrome/src/out/fuchsia`, that 'cast_runner', 'web_runner',
-and 'web_engine' will be obtained from. If unset, the prebuilt
-packages from CIPD will be used.
+such as `/home/$USER/chrome/src/out/fuchsia`, from which `chrome`,
+`cast_runner`, `web_runner`, and `web_engine` will be obtained.
+All of those targets must exist in the output directory.
+If unset, the prebuilt packages from CIPD will be used.
 
 **Current value (from the default):** `""`
 
-From //src/chromium/build_args.gni:10
+From //src/chromium/build_args.gni:11
 
 ### clang_embed_bitcode
 Embed LLVM bitcode as .llvmbc section in ELF files. This is intended
@@ -4133,12 +4134,13 @@ package.
 From //build/images/args.gni:32
 
 ### use_cast_runner_canary
-If true then the most recent canary version of the Cast Runner is used,
-otherwise the most recently validated version is used.
+Whether to use the most recent (canary) version of the CastRunner prebuilt.
+Otherwise, the qualified "release" version is used.
+Set [`use_chromium_canary`](#use_chromium_canary) to the same value.
 
 **Current value (from the default):** `false`
 
-From //src/chromium/build_args.gni:18
+From //src/chromium/build_args.gni:23
 
 ### use_ccache
 Set to true to enable compiling with ccache
@@ -4148,12 +4150,15 @@ Set to true to enable compiling with ccache
 From //build/toolchain/ccache.gni:9
 
 ### use_chromium_canary
-Set to use the most recent canary version of prebuilt Chromium components
-otherwise the most recently validated version is used.
+Whether to use the most recent (canary) version of prebuilt Chromium
+components. Otherwise, the qualified "release" version is used.
+For scenarios where CastRunner is used,
+[`use_cast_runner_canary`](#use_cast_runner_canary) must be set to the same
+value.
 
 **Current value (from the default):** `false`
 
-From //src/chromium/build_args.gni:14
+From //src/chromium/build_args.gni:18
 
 ### use_direct_for_carnelian_examples
 Include a config in the example packages to attempt to use view mode
@@ -4557,7 +4562,7 @@ From //build/images/args.gni:91
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:150
+From //build/config/fuchsia/BUILD.gn:140
 
 ### zircon_b_partition
 
