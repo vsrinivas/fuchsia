@@ -797,8 +797,6 @@ class TxqTest : public MvmTest, public MockTrans {
                                WIDE_ID(dev_cmd->hdr.group_id, dev_cmd->hdr.cmd), txq_id);
   }
 
-  void SetKeyConf(struct iwl_mvm_sta_key_conf* key_conf) { sta_.key_conf = key_conf; }
-
  protected:
   struct iwl_mvm_sta sta_;
 };
@@ -904,7 +902,7 @@ TEST_F(TxqTest, MgmtTxCmdRate) {
             tx_cmd.rate_n_flags);
 }
 
-TEST_F(TxqTest, TxpktInvalidInput) {
+TEST_F(TxqTest, TxPktInvalidInput) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt(builder.build());
 
@@ -942,59 +940,30 @@ TEST_F(TxqTest, TxPkt) {
 }
 
 // Check to see Tx params are set correctly based on frame control
-TEST_F(TxqTest, TxPktCheckTxParams) {
-  {
-    // Send a protected data frame and see that the crypt header is being added
-    WlanPktBuilder builder;
-    std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt(builder.build(0x4188));
+TEST_F(TxqTest, TxPktProtected) {
+  // Send a protected data frame and see that the crypt header is being added
+  WlanPktBuilder builder;
+  std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt(builder.build(0x4188));
 
-    EXPECT_EQ(wlan_pkt->mac_pkt()->headroom_used_size, 0);
-    // Setup a key conf to pretend that this is a secure connection
-    auto key_conf =
-        reinterpret_cast<iwl_mvm_sta_key_conf*>(malloc(sizeof(iwl_mvm_sta_key_conf) + 16));
-    memset(key_conf, 0, sizeof(*key_conf) + 16);
-    key_conf->cipher_type = 4;
-    key_conf->key_type = 1;
-    key_conf->keyidx = 0;
-    key_conf->keylen = 16;
-    key_conf->rx_seq = 0;
+  EXPECT_EQ(wlan_pkt->mac_pkt()->headroom_used_size, 0);
+  // Setup a key conf to pretend that this is a secure connection
+  auto key_conf = reinterpret_cast<ieee80211_key_conf*>(malloc(sizeof(ieee80211_key_conf) + 16));
+  memset(key_conf, 0, sizeof(*key_conf) + 16);
+  key_conf->cipher = 4;
+  key_conf->key_type = 1;
+  key_conf->keyidx = 0;
+  key_conf->keylen = 16;
+  key_conf->rx_seq = 0;
+  wlan_pkt->mac_pkt()->info.control.hw_key = key_conf;
 
-    SetKeyConf(key_conf);
-    bindTx(tx_wrapper);
-    // Expect the packet length to be 8 bytes longer
-    mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len() + 8, WIDE_ID(0, TX_CMD), 0);
-    EXPECT_EQ(ZX_OK, iwl_mvm_tx_skb(mvmvif_->mvm, wlan_pkt->mac_pkt(), &sta_));
-    unbindTx();
-    // Expect that the headroom size is set to 8
-    EXPECT_EQ(wlan_pkt->mac_pkt()->headroom_used_size, 8);
-    free(key_conf);
-  }
-  {
-    // Send an unprotected management frame and check that the crypt header is not being added
-    WlanPktBuilder builder;
-    std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt(builder.build(0xc0));
-
-    EXPECT_EQ(wlan_pkt->mac_pkt()->headroom_used_size, 0);
-    // Setup a key conf to pretend that this is a secure connection
-    auto key_conf =
-        reinterpret_cast<iwl_mvm_sta_key_conf*>(malloc(sizeof(iwl_mvm_sta_key_conf) + 16));
-    memset(key_conf, 0, sizeof(*key_conf) + 16);
-    key_conf->cipher_type = 4;
-    key_conf->key_type = 1;
-    key_conf->keyidx = 0;
-    key_conf->keylen = 16;
-    key_conf->rx_seq = 0;
-
-    SetKeyConf(key_conf);
-    bindTx(tx_wrapper);
-    // Expect the packet length to be unaltered
-    mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len(), WIDE_ID(0, TX_CMD), 0);
-    EXPECT_EQ(ZX_OK, iwl_mvm_tx_skb(mvmvif_->mvm, wlan_pkt->mac_pkt(), &sta_));
-    unbindTx();
-    // Expect that the headroom size is still 0
-    EXPECT_EQ(wlan_pkt->mac_pkt()->headroom_used_size, 0);
-    free(key_conf);
-  }
+  bindTx(tx_wrapper);
+  // Expect the packet length to be 8 bytes longer
+  mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len() + 8, WIDE_ID(0, TX_CMD), 0);
+  EXPECT_EQ(ZX_OK, iwl_mvm_tx_skb(mvmvif_->mvm, wlan_pkt->mac_pkt(), &sta_));
+  unbindTx();
+  // Expect that the headroom size is set to 8
+  EXPECT_EQ(wlan_pkt->mac_pkt()->headroom_used_size, 8);
+  free(key_conf);
 }
 
 }  // namespace

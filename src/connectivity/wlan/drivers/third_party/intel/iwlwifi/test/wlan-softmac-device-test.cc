@@ -781,18 +781,6 @@ TEST_F(MacInterfaceTest, AssocWithHtConfig) {
   ASSERT_EQ(ZX_OK, ClearAssoc());
 }
 
-TEST_F(MacInterfaceTest, InvalidSetKeysTest) {
-  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
-  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
-
-  char keybuf[sizeof(wlan_key_config_t) + 16];
-  wlan_key_config_t* key_config = (wlan_key_config_t*)keybuf;
-
-  // key length is too long.
-  key_config->key_len = WLAN_MAX_KEY_LEN + 1;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, SetKey((const wlan_key_config_t*)key_config));
-}
-
 // Check to ensure keys are set during assoc and deleted after disassoc
 // for now use open network
 TEST_F(MacInterfaceTest, SetKeysTest) {

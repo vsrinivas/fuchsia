@@ -137,6 +137,7 @@ struct cfg80211_scan_request;
 struct cfg80211_sched_scan_request;
 struct cfg80211_wowlan;
 struct ieee80211_key_conf;
+struct ieee80211_sta_ht_cap;
 struct ieee80211_scan_ies;
 struct ieee80211_tdls_ch_sw_params;
 
@@ -209,10 +210,6 @@ struct ieee80211_sta {
   struct ieee80211_txq* txq[IEEE80211_TIDS_MAX + 1];
 };
 
-struct ieee80211_tx_info {
-  void* driver_data[8];
-};
-
 struct ieee80211_txq {
   void* drv_priv;
 };
@@ -220,6 +217,28 @@ struct ieee80211_txq {
 // TODO(43559): completely remove this structure from code.
 struct ieee80211_vif {
   uint8_t dummy;
+};
+
+/**
+ * struct ieee80211_key_conf - HW key configuration data
+ * @tx_pn - TX packet number, in host byte order
+ * @rx_seq - RX sequence number, in host byte order
+ */
+struct ieee80211_key_conf {
+  atomic64_t tx_pn;
+  uint64_t rx_seq;
+  uint32_t cipher;
+  uint8_t hw_key_idx;
+  uint8_t keyidx;
+  uint8_t key_type;
+  size_t keylen;
+  uint8_t key[0];
+};
+
+struct ieee80211_tx_info {
+  struct {
+    struct ieee80211_key_conf* hw_key;
+  } control;
 };
 
 // Struct for transferring an IEEE 802.11 MAC-framed packet around the driver.
@@ -242,6 +261,9 @@ struct ieee80211_mac_packet {
 
   // MAC frame body size.
   size_t body_size;
+
+  // Control information for this packet.
+  struct ieee80211_tx_info info;
 };
 
 // Flags for the ieee80211_rx_status.flag

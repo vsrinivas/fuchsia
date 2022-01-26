@@ -323,6 +323,7 @@ struct iwl_mvm_tid_data {
 struct iwl_mvm_key_pn {
   struct rcu_head rcu_head;
   struct {
+    /* Stored in packet byte order (little-endian) */
     uint8_t pn[IWL_MAX_TID_COUNT][IEEE80211_CCMP_PN_LEN];
   } ____cacheline_aligned_in_smp q[];
 };
@@ -355,19 +356,6 @@ struct iwl_mvm_txq {
   /* Protects TX path invocation from two places */
   mtx_t tx_path_lock;
   bool stopped;
-};
-
-/**
- * struct iwl_mvm_sta_key_conf - per station key configuration data
- */
-struct iwl_mvm_sta_key_conf {
-  atomic64_t tx_pn;
-  uint64_t rx_seq;
-  cipher_suite_type_t cipher_type;
-  wlan_key_type_t key_type;
-  uint8_t keyidx;
-  size_t keylen;
-  uint8_t key[0];
 };
 
 /**
@@ -435,7 +423,6 @@ struct iwl_mvm_sta {
     struct iwl_lq_sta rs_drv;
   } lq_sta;
   struct iwl_mvm_vif* mvmvif;
-  struct iwl_mvm_sta_key_conf* key_conf;
   struct iwl_mvm_key_pn __rcu* ptk_pn[4];
   struct iwl_mvm_rxq_dup_data* dup_data;
 
@@ -516,10 +503,11 @@ int iwl_mvm_wait_sta_queues_empty(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_s
 zx_status_t iwl_mvm_rm_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta);
 int iwl_mvm_rm_sta_id(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint8_t sta_id);
 int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvm_vif,
-                        struct iwl_mvm_sta* mvm_sta, const struct iwl_mvm_sta_key_conf* key_conf,
+                        struct iwl_mvm_sta* mvm_sta, struct ieee80211_key_conf* key_conf,
                         uint8_t key_offset);
-zx_status_t iwl_mvm_remove_sta_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
-                                   struct iwl_mvm_sta_key_conf* keyconf);
+zx_status_t iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
+                                   struct iwl_mvm_sta* mvmsta,
+                                   const struct ieee80211_key_conf* keyconf);
 
 void iwl_mvm_update_tkip_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                              struct ieee80211_key_conf* keyconf, struct ieee80211_sta* sta,

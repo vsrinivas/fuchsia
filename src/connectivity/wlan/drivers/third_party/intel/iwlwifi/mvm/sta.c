@@ -45,7 +45,7 @@
 static zx_status_t iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm);
 
 static zx_status_t iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
-                                        const struct iwl_mvm_sta_key_conf* keyconf, bool mcast,
+                                        const struct ieee80211_key_conf* keyconf, bool mcast,
                                         uint32_t tkip_iv32, uint16_t* tkip_p1k, uint32_t cmd_flags,
                                         uint8_t key_offset, bool mfp);
 
@@ -3064,7 +3064,7 @@ static struct iwl_mvm_sta* iwl_mvm_get_key_sta(struct iwl_mvm* mvm, struct ieee8
 #endif  // NEEDS_PORTING
 
 static zx_status_t iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
-                                        const struct iwl_mvm_sta_key_conf* key, bool mcast,
+                                        const struct ieee80211_key_conf* key, bool mcast,
                                         uint32_t tkip_iv32, uint16_t* tkip_p1k, uint32_t cmd_flags,
                                         uint8_t key_offset, bool mfp) {
   union {
@@ -3089,7 +3089,7 @@ static zx_status_t iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
   key_flags = cpu_to_le16(keyidx);
   key_flags |= cpu_to_le16(STA_KEY_FLG_WEP_KEY_MAP);
 
-  switch (key->cipher_type) {
+  switch (key->cipher) {
     case CIPHER_SUITE_TYPE_CCMP_128:
       key_flags |= cpu_to_le16(STA_KEY_FLG_CCM);
       memcpy(u.cmd.common.key, key->key, key->keylen);
@@ -3131,21 +3131,20 @@ static zx_status_t iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
   return ret;
 }
 
-static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, const struct iwl_mvm_sta_key_conf* keyconf,
+static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, const struct ieee80211_key_conf* keyconf,
                                  uint8_t sta_id, bool remove_key) {
   struct iwl_mvm_mgmt_mcast_key_cmd igtk_cmd = {};
 
   /* verify the key details match the required command's expectations */
   if (WARN_ON((keyconf->key_type == WLAN_KEY_TYPE_PAIRWISE) ||
               (keyconf->keyidx != 4 && keyconf->keyidx != 5) ||
-              (keyconf->cipher_type != CIPHER_SUITE_TYPE_BIP_CMAC_128 &&
-               keyconf->cipher_type != CIPHER_SUITE_TYPE_BIP_GMAC_128 &&
-               keyconf->cipher_type != CIPHER_SUITE_TYPE_BIP_GMAC_256))) {
+              (keyconf->cipher != CIPHER_SUITE_TYPE_BIP_CMAC_128 &&
+               keyconf->cipher != CIPHER_SUITE_TYPE_BIP_GMAC_128 &&
+               keyconf->cipher != CIPHER_SUITE_TYPE_BIP_GMAC_256))) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (WARN_ON(!iwl_mvm_has_new_rx_api(mvm) &&
-              keyconf->cipher_type != CIPHER_SUITE_TYPE_BIP_CMAC_128)) {
+  if (WARN_ON(!iwl_mvm_has_new_rx_api(mvm) && keyconf->cipher != CIPHER_SUITE_TYPE_BIP_CMAC_128)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -3155,7 +3154,7 @@ static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, const struct iwl_mvm_sta_k
   if (remove_key) {
     igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_NOT_VALID);
   } else {
-    switch (keyconf->cipher_type) {
+    switch (keyconf->cipher) {
       case CIPHER_SUITE_TYPE_BIP_CMAC_128:
         igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_FLG_CCM);
         break;
@@ -3168,7 +3167,7 @@ static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, const struct iwl_mvm_sta_k
     }
 
     memcpy(igtk_cmd.igtk, keyconf->key, keyconf->keylen);
-    if (keyconf->cipher_type == CIPHER_SUITE_TYPE_BIP_GMAC_256) {
+    if (keyconf->cipher == CIPHER_SUITE_TYPE_BIP_GMAC_256) {
       igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_FLG_KEY_32BYTES);
     }
     igtk_cmd.receive_seq_cnt = cpu_to_le64(keyconf->rx_seq);
@@ -3211,7 +3210,7 @@ static inline uint8_t* iwl_mvm_get_mac_addr(struct iwl_mvm* mvm, struct ieee8021
 
 static zx_status_t __iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
                                          struct iwl_mvm_sta* mvmsta,
-                                         const struct iwl_mvm_sta_key_conf* keyconf,
+                                         const struct ieee80211_key_conf* keyconf,
                                          uint8_t key_offset, bool mcast) {
   zx_status_t ret = ZX_OK;
   uint32_t sta_id;
@@ -3229,7 +3228,7 @@ static zx_status_t __iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif
     return ZX_ERR_INVALID_ARGS;
   }
 
-  switch (keyconf->cipher_type) {
+  switch (keyconf->cipher) {
     case CIPHER_SUITE_TYPE_CCMP_128:
       ret = iwl_mvm_send_sta_key(mvm, sta_id, keyconf, mcast, 0, NULL, 0, key_offset, mfp);
       break;
@@ -3241,8 +3240,7 @@ static zx_status_t __iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif
 }
 
 static zx_status_t __iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, uint8_t sta_id,
-                                            const struct iwl_mvm_sta_key_conf* keyconf,
-                                            uint8_t key_offset, bool mcast) {
+                                            const struct ieee80211_key_conf* keyconf, bool mcast) {
   union {
     struct iwl_mvm_add_sta_key_cmd_v1 cmd_v1;
     struct iwl_mvm_add_sta_key_cmd cmd;
@@ -3271,7 +3269,7 @@ static zx_status_t __iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, uint8_t sta_id,
    * of the command, so we can do this union trick.
    */
   u.cmd.common.key_flags = key_flags;
-  u.cmd.common.key_offset = key_offset;
+  u.cmd.common.key_offset = keyconf->hw_key_idx;
   u.cmd.common.sta_id = sta_id;
 
   size = new_api ? sizeof(u.cmd) : sizeof(u.cmd_v1);
@@ -3293,8 +3291,8 @@ static zx_status_t __iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, uint8_t sta_id,
 }
 
 zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
-                                struct iwl_mvm_sta* mvmsta,
-                                const struct iwl_mvm_sta_key_conf* keyconf, uint8_t key_offset) {
+                                struct iwl_mvm_sta* mvmsta, struct ieee80211_key_conf* keyconf,
+                                uint8_t key_offset) {
   bool mcast = keyconf->key_type != WLAN_KEY_TYPE_PAIRWISE;
   uint8_t sta_id = IWL_MVM_INVALID_STA;
   zx_status_t ret = ZX_OK;
@@ -3309,20 +3307,11 @@ zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
     sta_id = mvmvif->mcast_sta.sta_id;
   }
 
-  if (keyconf->cipher_type == CIPHER_SUITE_TYPE_BIP_CMAC_128 ||
-      keyconf->cipher_type == CIPHER_SUITE_TYPE_BIP_GMAC_128 ||
-      keyconf->cipher_type == CIPHER_SUITE_TYPE_BIP_GMAC_256) {
+  if (keyconf->cipher == CIPHER_SUITE_TYPE_BIP_CMAC_128 ||
+      keyconf->cipher == CIPHER_SUITE_TYPE_BIP_GMAC_128 ||
+      keyconf->cipher == CIPHER_SUITE_TYPE_BIP_GMAC_256) {
     ret = iwl_mvm_send_sta_igtk(mvm, keyconf, sta_id, false);
     goto end;
-  }
-  // TODO(fxbug.dev/86728): remove the WPA2 key workaround
-  key_offset = keyconf->keyidx;
-  if (mvm->active_key_list[key_offset].keylen) {
-    // delete the last key if present
-    if (iwl_mvm_remove_sta_key(mvmvif, mvmsta, &mvm->active_key_list[key_offset]) != ZX_OK) {
-      IWL_WARN(mvm, "Unable to delete key at offset %d", key_offset);
-    }
-    memset(&mvm->active_key_list[key_offset], 0, sizeof(struct iwl_mvm_sta_key_conf));
   }
 
   /* If the key_offset is not pre-assigned, we need to find a
@@ -3341,6 +3330,7 @@ zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
     if (key_offset == STA_KEY_IDX_INVALID) {
       return ZX_ERR_NO_SPACE;
     }
+    keyconf->hw_key_idx = key_offset;
   }
 
   ret = __iwl_mvm_set_sta_key(mvm, mvmvif, mvmsta, keyconf, key_offset, mcast);
@@ -3354,34 +3344,29 @@ zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
    * to the same key slot (offset).
    * If this fails, remove the original as well.
    */
-  if ((keyconf->cipher_type == CIPHER_SUITE_TYPE_WEP_40 ||
-       keyconf->cipher_type == CIPHER_SUITE_TYPE_WEP_104) &&
+  if ((keyconf->cipher == CIPHER_SUITE_TYPE_WEP_40 ||
+       keyconf->cipher == CIPHER_SUITE_TYPE_WEP_104) &&
       mvmsta) {
     ret = __iwl_mvm_set_sta_key(mvm, mvmvif, mvmsta, keyconf, key_offset, !mcast);
     if (ret != ZX_OK) {
-      __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, key_offset, mcast);
+      __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, mcast);
       goto end;
     }
   }
 
   __set_bit(key_offset, mvm->fw_key_table);
-  // TODO(fxbug.dev/86728): remove the WPA2 key workaround
-  // Save the keyconf in the driver key table for easier deleteion
-  mvm->active_key_list[key_offset] = *keyconf;
 
 end:
-  IWL_DEBUG_WEP(mvm, "key: cipher=%x len=%zu idx=%d mvmsta=%pM ret=%d\n", keyconf->cipher_type,
+  IWL_DEBUG_WEP(mvm, "key: cipher=%x len=%zu idx=%d mvmsta=%pM ret=%d\n", keyconf->cipher,
                 keyconf->keylen, keyconf->keyidx, mvmsta ? mvmsta->addr : zero_addr, ret);
   return ret;
 }
 
-zx_status_t iwl_mvm_remove_sta_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta,
-                                   struct iwl_mvm_sta_key_conf* keyconf) {
-  struct iwl_mvm* mvm = mvmvif->mvm;
+zx_status_t iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
+                                   struct iwl_mvm_sta* mvm_sta,
+                                   const struct ieee80211_key_conf* keyconf) {
   bool mcast = keyconf->key_type != WLAN_KEY_TYPE_PAIRWISE;
   uint8_t sta_id = IWL_MVM_INVALID_STA;
-  // TODO(fxbug.dev/86728): remove the WPA2 key workaround
-  int hw_key_idx = keyconf->keyidx;
   int i;
   zx_status_t ret;
 
@@ -3399,8 +3384,8 @@ zx_status_t iwl_mvm_remove_sta_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_st
   }
 #endif  // NEEDS_PORTING
 
-  if (!test_and_clear_bit(hw_key_idx, mvm->fw_key_table)) {
-    IWL_ERR(mvm, "offset %d not used in fw key table.\n", hw_key_idx);
+  if (!test_and_clear_bit(keyconf->hw_key_idx, mvm->fw_key_table)) {
+    IWL_ERR(mvm, "offset %d not used in fw key table.\n", keyconf->hw_key_idx);
     return ZX_ERR_BAD_HANDLE;
   }
 
@@ -3410,22 +3395,21 @@ zx_status_t iwl_mvm_remove_sta_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_st
       mvm->fw_key_deleted[i]++;
     }
   }
-  mvm->fw_key_deleted[hw_key_idx] = 0;
+  mvm->fw_key_deleted[keyconf->hw_key_idx] = 0;
 
   if (!mvm_sta) {
     IWL_DEBUG_WEP(mvm, "station non-existent, early return.\n");
     return ZX_OK;
   }
 
-  ret = __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, hw_key_idx, mcast);
+  ret = __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, mcast);
   if (ret != ZX_OK) {
     return ret;
   }
 
   /* delete WEP key twice to get rid of (now useless) offset */
-  if (keyconf->cipher_type == CIPHER_SUITE_TYPE_WEP_40 ||
-      keyconf->cipher_type == CIPHER_SUITE_TYPE_WEP_104) {
-    ret = __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, hw_key_idx, !mcast);
+  if (keyconf->cipher == CIPHER_SUITE_TYPE_WEP_40 || keyconf->cipher == CIPHER_SUITE_TYPE_WEP_104) {
+    ret = __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, !mcast);
   }
 
   return ret;

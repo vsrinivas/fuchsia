@@ -353,7 +353,7 @@ void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm* mvm, struct iwl_tx_cmd* tx_cmd,
   tx_cmd->rate_n_flags = iwl_mvm_mac80211_idx_to_hwrate(IWL_FIRST_OFDM_RATE) |
                          (BIT(mvm->mgmt_last_antenna_idx) << RATE_MCS_ANT_POS);
 
-#else // NEEDS_PORTING
+#else  // NEEDS_PORTING
   // TODO(51120): below code needs rewrite to support QoS.
   /* Set retry limit on DATA packets and Probe Responses*/
   if (ieee80211_is_probe_resp(fc)) {
@@ -393,7 +393,7 @@ void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm* mvm, struct iwl_tx_cmd* tx_cmd,
 #endif  // NEEDS_PORTING
 }
 
-static void iwl_mvm_set_tx_cmd_pn(struct iwl_mvm_sta_key_conf* keyconf, uint8_t* ccmp_hdr) {
+static void iwl_mvm_set_tx_cmd_pn(struct ieee80211_key_conf* keyconf, uint8_t* ccmp_hdr) {
   uint64_t pn = atomic64_inc_return(&keyconf->tx_pn);
   ccmp_hdr[0] = pn;
   ccmp_hdr[2] = 0;
@@ -408,17 +408,18 @@ static void iwl_mvm_set_tx_cmd_pn(struct iwl_mvm_sta_key_conf* keyconf, uint8_t*
 /*
  * Sets the fields in the Tx cmd that are crypto related
  */
-static zx_status_t iwl_mvm_set_tx_cmd_crypto(struct iwl_mvm* mvm, struct iwl_mvm_sta_key_conf* key,
+static zx_status_t iwl_mvm_set_tx_cmd_crypto(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
                                              struct iwl_tx_cmd* tx_cmd,
                                              struct ieee80211_mac_packet* pkt) {
-  switch (key->cipher_type) {
+  struct ieee80211_key_conf* key_conf = info->control.hw_key;
+  switch (key_conf->cipher) {
     case CIPHER_SUITE_TYPE_CCMP_128:
       // Insert the CCMP header into the headroom space.
       if (sizeof(pkt->headroom) - pkt->headroom_used_size < 8) {
         return ZX_ERR_NO_SPACE;
       }
-      iwl_mvm_set_tx_cmd_ccmp(key, tx_cmd);
-      iwl_mvm_set_tx_cmd_pn(key, pkt->headroom + pkt->headroom_used_size);
+      iwl_mvm_set_tx_cmd_ccmp(key_conf, tx_cmd);
+      iwl_mvm_set_tx_cmd_pn(key_conf, pkt->headroom + pkt->headroom_used_size);
       tx_cmd->len += 8;
       pkt->headroom_used_size += 8;
       break;
@@ -441,6 +442,7 @@ static zx_status_t iwl_mvm_set_tx_cmd_crypto(struct iwl_mvm* mvm, struct iwl_mvm
  *
  */
 static zx_status_t iwl_mvm_set_tx_params(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt,
+                                         struct ieee80211_tx_info* info,
                                          const struct iwl_mvm_sta* mvmsta,
                                          struct iwl_device_cmd* dev_cmd) {
   zx_status_t ret = ZX_OK;
@@ -524,9 +526,8 @@ static zx_status_t iwl_mvm_set_tx_params(struct iwl_mvm* mvm, struct ieee80211_m
   tx_cmd = (struct iwl_tx_cmd*)dev_cmd->payload;
   iwl_mvm_set_tx_cmd(mvm, pkt, tx_cmd, sta_id);
 
-  // Setup crypto only if protection bit is set in the Mac Header
-  if (mvmsta->key_conf && ieee80211_pkt_is_protected(pkt->common_header)) {
-    if ((ret = iwl_mvm_set_tx_cmd_crypto(mvm, mvmsta->key_conf, tx_cmd, pkt)) != ZX_OK) {
+  if (info->control.hw_key) {
+    if ((ret = iwl_mvm_set_tx_cmd_crypto(mvm, info, tx_cmd, pkt)) != ZX_OK) {
       return ret;
     }
   }
@@ -964,14 +965,14 @@ static zx_status_t iwl_mvm_tx_pkt_queued(struct iwl_mvm* mvm, struct iwl_mvm_sta
   return ZX_OK;
 }
 
-zx_status_t iwl_mvm_tx_mpdu(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt,
-                            struct iwl_mvm_sta* mvmsta) {
+static zx_status_t iwl_mvm_tx_mpdu(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt,
+                                   struct ieee80211_tx_info* info, struct iwl_mvm_sta* mvmsta) {
   zx_status_t ret = ZX_OK;
   uint8_t tid = IWL_MAX_TID_COUNT;  // TODO(51120): support QoS
   uint16_t txq_id = mvmsta->tid_data[tid].txq_id;
 
   struct iwl_device_cmd dev_cmd;
-  if ((ret = iwl_mvm_set_tx_params(mvm, pkt, mvmsta, &dev_cmd)) != ZX_OK) {
+  if ((ret = iwl_mvm_set_tx_params(mvm, pkt, info, mvmsta, &dev_cmd)) != ZX_OK) {
     return ret;
   }
 
@@ -1086,6 +1087,7 @@ drop:
 
 zx_status_t iwl_mvm_tx_skb(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt,
                            struct iwl_mvm_sta* mvmsta) {
+  struct ieee80211_tx_info info = pkt->info;
   if (!mvmsta) {
     IWL_ERR(mvm, "iwl_mvm_tx_skb(): mvmsta is NULL\n");
     return ZX_ERR_INVALID_ARGS;
@@ -1096,7 +1098,7 @@ zx_status_t iwl_mvm_tx_skb(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return iwl_mvm_tx_mpdu(mvm, pkt, mvmsta);
+  return iwl_mvm_tx_mpdu(mvm, pkt, &info, mvmsta);
 
 #if 0   // NEEDS_PORTING
     // TODO(fxbug.dev/61069): supports TSO (TCP Segment Offload)/

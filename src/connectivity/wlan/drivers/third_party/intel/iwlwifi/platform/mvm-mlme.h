@@ -22,9 +22,6 @@ extern "C" {
 // IEEE Std 802.11-2016, Table 9-19
 #define WLAN_MSDU_MAX_LEN 2304UL
 
-// A reasonable key length is <= 256 bits.
-#define WLAN_MAX_KEY_LEN ((size_t)(256 / 8))
-
 struct iwl_mvm_vif;
 struct iwl_mvm_sta;
 
@@ -50,7 +47,6 @@ zx_status_t mac_query(void* ctx, uint32_t options, wlan_softmac_info_t* info);
 zx_status_t mac_start(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
                       zx_handle_t* out_mlme_channel);
 void mac_stop(struct iwl_mvm_vif* mvmvif);
-zx_status_t mac_queue_tx(void* ctx, uint32_t options, const wlan_tx_packet_t* packet);
 zx_status_t mac_set_channel(struct iwl_mvm_vif* mvmvif, uint32_t options,
                             const wlan_channel_t* channel);
 zx_status_t mac_configure_bss(struct iwl_mvm_vif* mvmvif, uint32_t options,
@@ -59,8 +55,6 @@ zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif);
 zx_status_t mac_enable_beaconing(void* ctx, uint32_t options, const wlan_bcn_config_t* bcn_cfg);
 zx_status_t mac_configure_beacon(void* ctx, uint32_t options,
                                  const wlan_tx_packet_t* packet_template);
-zx_status_t mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta, uint32_t options,
-                        const wlan_key_config_t* key_config);
 zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
                                 const wlan_assoc_ctx_t* assoc_ctx);
 zx_status_t mac_clear_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,

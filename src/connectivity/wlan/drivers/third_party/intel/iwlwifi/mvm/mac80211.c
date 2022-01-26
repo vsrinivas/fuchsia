@@ -585,18 +585,13 @@ out:
 }
 #endif  // NEEDS_PORTING
 
-zx_status_t iwl_mvm_mac_tx(struct iwl_mvm_vif* mvmvif, struct ieee80211_mac_packet* pkt) {
+zx_status_t iwl_mvm_mac_tx(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
+                           struct ieee80211_mac_packet* pkt) {
   iwl_assert_lock_held(&mvmvif->mvm->mutex);
 
   if (mvmvif->mac_role != WLAN_INFO_MAC_ROLE_CLIENT) {
     IWL_ERR(mvmvif, "%s(): not supported MAC role %d yet\n", __func__, mvmvif->mac_role);
     return ZX_ERR_INVALID_ARGS;
-  }
-
-  struct iwl_mvm_sta* mvmsta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
-  if (!mvmsta) {
-    IWL_ERR(mvmvif, "%s(): mvmsta is NULL. mvmvif->ap_sta_id=%d\n", __func__, mvmvif->ap_sta_id);
-    return ZX_ERR_INTERNAL;
   }
 
   return iwl_mvm_tx_skb(mvmvif->mvm, pkt, mvmsta);
@@ -2907,17 +2902,6 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
   } else if (old_state == IWL_STA_AUTH && new_state == IWL_STA_NONE) {
     ret = ZX_OK;
   } else if (old_state == IWL_STA_NONE && new_state == IWL_STA_NOTEXIST) {
-    // Delete all set keys
-    // TODO(fxbug.dev/86728): remove the WPA2 key workaround
-    for (int i = 0; i < STA_KEY_MAX_NUM; i++) {
-      if (mvm->active_key_list[i].keylen) {
-        // delete the key if present
-        if (iwl_mvm_remove_sta_key(mvmvif, mvm_sta, &mvm->active_key_list[i]) != ZX_OK) {
-          IWL_ERR(mvm, "Unable to delete key at offset %d", i);
-        }
-        memset(&mvm->active_key_list[i], 0, sizeof(struct iwl_mvm_sta_key_conf));
-      }
-    }
     ret = iwl_mvm_rm_sta(mvmvif, mvm_sta);
 #if 0   // NEEDS_PORTING
         if (sta->tdls) {
@@ -3062,21 +3046,95 @@ static int iwl_mvm_mac_sched_scan_stop(struct ieee80211_hw* hw, struct ieee80211
 
     return ret;
 }
+
+static int iwl_mvm_mac_set_key(struct ieee80211_hw *hw,
+			       enum set_key_cmd cmd,
+			       struct ieee80211_vif *vif,
+			       struct ieee80211_sta *sta,
+			       struct ieee80211_key_conf *key)
+{
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct iwl_mvm_sta *mvmsta;
+	struct iwl_mvm_key_pn *ptk_pn;
+	int keyidx = key->keyidx;
+	int ret;
+	u8 key_offset;
+
+	if (iwlwifi_mod_params.swcrypto) {
+		IWL_DEBUG_MAC80211(mvm, "leave - hwcrypto disabled\n");
+		return -EOPNOTSUPP;
+	}
+
+	switch (key->cipher) {
+	case WLAN_CIPHER_SUITE_TKIP:
+		if (!mvm->trans->cfg->gen2) {
+			key->flags |= IEEE80211_KEY_FLAG_GENERATE_MMIC;
+			key->flags |= IEEE80211_KEY_FLAG_PUT_IV_SPACE;
+		} else if (vif->type == NL80211_IFTYPE_STATION) {
+			key->flags |= IEEE80211_KEY_FLAG_PUT_MIC_SPACE;
+		} else {
+			IWL_DEBUG_MAC80211(mvm, "Use SW encryption for TKIP\n");
+			return -EOPNOTSUPP;
+		}
+		break;
+	case WLAN_CIPHER_SUITE_CCMP:
+	case WLAN_CIPHER_SUITE_GCMP:
+	case WLAN_CIPHER_SUITE_GCMP_256:
+		if (!iwl_mvm_has_new_tx_api(mvm))
+			key->flags |= IEEE80211_KEY_FLAG_PUT_IV_SPACE;
+		break;
+	case WLAN_CIPHER_SUITE_AES_CMAC:
+	case WLAN_CIPHER_SUITE_BIP_GMAC_128:
+	case WLAN_CIPHER_SUITE_BIP_GMAC_256:
+		WARN_ON_ONCE(!ieee80211_hw_check(hw, MFP_CAPABLE));
+		break;
+	case WLAN_CIPHER_SUITE_WEP40:
+	case WLAN_CIPHER_SUITE_WEP104:
+		if (vif->type == NL80211_IFTYPE_AP) {
+			struct iwl_mvm_vif *mvmvif =
+				iwl_mvm_vif_from_mac80211(vif);
+
+			mvmvif->ap_wep_key = kmemdup(key,
+						     sizeof(*key) + key->keylen,
+						     GFP_KERNEL);
+			if (!mvmvif->ap_wep_key)
+				return -ENOMEM;
+		}
+
+		if (vif->type != NL80211_IFTYPE_STATION)
+			return 0;
+		break;
+	default:
+		/* currently FW supports only one optional cipher scheme */
+		if (hw->n_cipher_schemes &&
+		    hw->cipher_schemes->cipher == key->cipher)
+			key->flags |= IEEE80211_KEY_FLAG_PUT_IV_SPACE;
+		else
+			return -EOPNOTSUPP;
+	}
+
+	switch (cmd) {
+	case SET_KEY:
+		ret = iwl_mvm_mac_add_key(vif, sta, key);
+	case DISABLE_KEY:
+		ret = iwl_mvm_mac_remove_key(vif, sta, key);
+	default:
+		ret = -EINVAL;
+	}
+
+	return ret;
+}
 #endif  // NEEDS_PORTING
 
-zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
-                                const struct iwl_mvm_sta_key_conf* key) {
+zx_status_t iwl_mvm_mac_add_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
+                                struct ieee80211_key_conf* key) {
   zx_status_t ret = ZX_OK;
   struct iwl_mvm* mvm = mvmvif->mvm;
-  struct iwl_mvm_key_pn* ptk_pn;
+  struct iwl_mvm_key_pn* ptk_pn = NULL;
   uint8_t key_offset = 0;
 
-  if (iwlwifi_mod_params.swcrypto) {
-    IWL_DEBUG_MAC80211(mvm, "leave - hwcrypto disabled\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  switch (key->cipher_type) {
+  // Fuchsia only supports a limited selection of cipher types for now.
+  switch (key->cipher) {
     case CIPHER_SUITE_TYPE_CCMP_128:
       if (iwl_mvm_has_new_tx_api(mvm)) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -3088,9 +3146,6 @@ zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
 
   mtx_lock(&mvm->mutex);
 
-  // Porting note: the following is the equivalent of just the SET_KEY path, as Fuchsia does not
-  // have the equivalent to a DELETE_KEY call.
-
   if ((mvmvif->mac_role == WLAN_INFO_MAC_ROLE_MESH || mvmvif->mac_role == WLAN_INFO_MAC_ROLE_AP) &&
       !mvmsta) {
     /*
@@ -3099,21 +3154,35 @@ zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
      * we don't support them for RX, so do the same.
      * CMAC/GMAC in AP/IBSS modes must be done in software.
      */
-    if (key->cipher_type == CIPHER_SUITE_TYPE_BIP_CMAC_128 ||
-        key->cipher_type == CIPHER_SUITE_TYPE_BIP_GMAC_128 ||
-        key->cipher_type == CIPHER_SUITE_TYPE_BIP_GMAC_256) {
+    if (key->cipher == CIPHER_SUITE_TYPE_BIP_CMAC_128 ||
+        key->cipher == CIPHER_SUITE_TYPE_BIP_GMAC_128 ||
+        key->cipher == CIPHER_SUITE_TYPE_BIP_GMAC_256) {
       ret = ZX_ERR_NOT_SUPPORTED;
     } else {
       ret = ZX_OK;
     }
+
+    if (key->cipher != CIPHER_SUITE_TYPE_GCMP_128 && key->cipher != CIPHER_SUITE_TYPE_GCMP_256 &&
+        !iwl_mvm_has_new_tx_api(mvm)) {
+      key->hw_key_idx = STA_KEY_IDX_INVALID;
+      goto out;
+    }
+  }
+
+  /* During FW restart, in order to restore the state as it was,
+   * don't try to reprogram keys we previously failed for.
+   */
+  if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) &&
+      key->hw_key_idx == STA_KEY_IDX_INVALID) {
+    IWL_DEBUG_MAC80211(mvm, "skip invalid idx key programming during restart\n");
+    ret = ZX_OK;
+    goto out;
   }
 
   if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) && mvmsta &&
       iwl_mvm_has_new_rx_api(mvm) && key->key_type == WLAN_KEY_TYPE_PAIRWISE &&
-      (key->cipher_type == CIPHER_SUITE_TYPE_CCMP_128 ||
-
-       key->cipher_type == CIPHER_SUITE_TYPE_GCMP_128 ||
-       key->cipher_type == CIPHER_SUITE_TYPE_GCMP_256)) {
+      (key->cipher == CIPHER_SUITE_TYPE_CCMP_128 || key->cipher == CIPHER_SUITE_TYPE_GCMP_128 ||
+       key->cipher == CIPHER_SUITE_TYPE_GCMP_256)) {
     int tid, q;
 
     ptk_pn = calloc(1, sizeof(*ptk_pn) + sizeof(ptk_pn->q->pn) * mvm->trans->num_rx_queues);
@@ -3124,7 +3193,9 @@ zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
 
     for (tid = 0; tid < IWL_MAX_TID_COUNT; tid++) {
       for (q = 0; q < mvm->trans->num_rx_queues; q++) {
-        memset(ptk_pn->q[q].pn[tid], 0, IEEE80211_CCMP_PN_LEN);
+        /* The packet number in packet byte order is little-endian */
+        uint64_t pn_le = cpu_to_le64(key->rx_seq);
+        memcpy(ptk_pn->q[q].pn[tid], &pn_le, IEEE80211_CCMP_PN_LEN);
       }
     }
 
@@ -3152,6 +3223,35 @@ zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
     ret = ZX_OK;
     goto out;
   }
+
+out:
+  mtx_unlock(&mvm->mutex);
+  return ret;
+}
+
+zx_status_t iwl_mvm_mac_remove_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
+                                   const struct ieee80211_key_conf* key) {
+  zx_status_t ret = ZX_OK;
+  struct iwl_mvm* mvm = mvmvif->mvm;
+  struct iwl_mvm_key_pn* ptk_pn = NULL;
+
+  mtx_lock(&mvm->mutex);
+
+  if (key->hw_key_idx == STA_KEY_IDX_INVALID) {
+    ret = 0;
+    goto out;
+  }
+
+  if (mvmsta && iwl_mvm_has_new_rx_api(mvm) && key->key_type == WLAN_KEY_TYPE_PAIRWISE &&
+      (key->cipher == CIPHER_SUITE_TYPE_CCMP_128 || key->cipher == CIPHER_SUITE_TYPE_GCMP_128 ||
+       key->cipher == CIPHER_SUITE_TYPE_GCMP_256)) {
+    ptk_pn = iwl_rcu_exchange(mvmsta->ptk_pn[key->keyidx], NULL);
+    if (ptk_pn)
+      iwl_rcu_free_sync(mvm->dev, ptk_pn);
+  }
+
+  IWL_DEBUG_MAC80211(mvm, "disable hwcrypto key\n");
+  ret = iwl_mvm_remove_sta_key(mvm, mvmvif, mvmsta, key);
 
 out:
   mtx_unlock(&mvm->mutex);

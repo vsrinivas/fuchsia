@@ -1025,8 +1025,6 @@ struct iwl_mvm {
    */
   unsigned long fw_key_table[BITS_TO_LONGS(STA_KEY_MAX_NUM)];
   uint8_t fw_key_deleted[STA_KEY_MAX_NUM];
-  // TODO(fxbug.dev/86728): remove the WPA2 key workaround
-  struct iwl_mvm_sta_key_conf active_key_list[STA_KEY_MAX_NUM];
 
   /* references taken by the driver and spinlock protecting them */
   mtx_t refs_lock;
@@ -1604,7 +1602,7 @@ zx_status_t iwl_mvm_flush_sta_tids(struct iwl_mvm* mvm, uint32_t sta_id, uint16_
 
 void iwl_mvm_async_handlers_purge(struct iwl_mvm* mvm);
 
-static inline void iwl_mvm_set_tx_cmd_ccmp(struct iwl_mvm_sta_key_conf* keyconf,
+static inline void iwl_mvm_set_tx_cmd_ccmp(struct ieee80211_key_conf* keyconf,
                                            struct iwl_tx_cmd* tx_cmd) {
   tx_cmd->sec_ctl = TX_CMD_SEC_CCM;
   memcpy(tx_cmd->key, keyconf->key, keyconf->keylen);
@@ -2147,7 +2145,8 @@ wlan_info_band_t iwl_mvm_get_channel_band(uint8_t chan_num);
 //
 // Interfaces for mac80211.c
 //
-zx_status_t iwl_mvm_mac_tx(struct iwl_mvm_vif* mvmvif, struct ieee80211_mac_packet* pkt);
+zx_status_t iwl_mvm_mac_tx(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
+                           struct ieee80211_mac_packet* pkt);
 
 zx_status_t iwl_mvm_find_free_mvmvif_slot(struct iwl_mvm* mvm, int* ret_idx);
 zx_status_t iwl_mvm_bind_mvmvif(struct iwl_mvm* mvm, int idx, struct iwl_mvm_vif* mvmvif);
@@ -2167,8 +2166,10 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
 void iwl_mvm_mac_mgd_prepare_tx(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
                                 uint16_t req_duration);
 
-zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
-                                const struct iwl_mvm_sta_key_conf* key);
+zx_status_t iwl_mvm_mac_add_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
+                                struct ieee80211_key_conf* key);
+zx_status_t iwl_mvm_mac_remove_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
+                                   const struct ieee80211_key_conf* key);
 
 zx_status_t iwl_mvm_add_chanctx(struct iwl_mvm* mvm, const wlan_channel_t* channeldef,
                                 uint16_t* phy_ctxt_id);

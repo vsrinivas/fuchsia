@@ -13,8 +13,10 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }  // extern "C"
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-sta.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/scoped_utils.h"
 
 namespace wlan::iwlwifi {
 
@@ -43,7 +45,34 @@ void WlanSoftmacDevice::WlanSoftmacStop() {
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacQueueTx(uint32_t options,
                                                   const wlan_tx_packet_t* packet) {
-  return mac_queue_tx(mvmvif_, options, packet);
+  if (ap_mvm_sta_ == nullptr) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (packet->mac_frame_size > WLAN_MSDU_MAX_LEN) {
+    IWL_ERR(mvmvif_, "Frame size is to large (%lu). expect less than %lu.\n",
+            packet->mac_frame_size, WLAN_MSDU_MAX_LEN);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  ieee80211_mac_packet mac_packet = {};
+  mac_packet.common_header =
+      reinterpret_cast<const ieee80211_frame_header*>(packet->mac_frame_buffer);
+  mac_packet.header_size = ieee80211_get_header_len(mac_packet.common_header);
+  if (mac_packet.header_size > packet->mac_frame_size) {
+    IWL_ERR(mvmvif_, "TX packet header size %zu too large for data size %zu\n",
+            mac_packet.header_size, packet->mac_frame_size);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  mac_packet.body = packet->mac_frame_buffer + mac_packet.header_size;
+  mac_packet.body_size = packet->mac_frame_size - mac_packet.header_size;
+  if (ieee80211_pkt_is_protected(mac_packet.common_header)) {
+    mac_packet.info.control.hw_key = ap_mvm_sta_->GetKey(WLAN_KEY_TYPE_PAIRWISE);
+  }
+
+  auto lock = std::lock_guard(mvmvif_->mvm->mutex);
+  return iwl_mvm_mac_tx(mvmvif_, ap_mvm_sta_->iwl_mvm_sta(), &mac_packet);
 }
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacSetChannel(uint32_t options,
@@ -96,7 +125,7 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacSetKey(uint32_t options,
   if (ap_mvm_sta_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
-  return mac_set_key(mvmvif_, ap_mvm_sta_->iwl_mvm_sta(), options, key_config);
+  return ap_mvm_sta_->SetKey(key_config);
 }
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureAssoc(uint32_t options,

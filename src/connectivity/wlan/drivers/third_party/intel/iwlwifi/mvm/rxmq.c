@@ -95,12 +95,12 @@ static inline zx_status_t iwl_mvm_check_pn(struct iwl_mvm* mvm, struct ieee80211
   }
 
   /* load pn */
-  pn[0] = stats->extiv[7];
-  pn[1] = stats->extiv[6];
-  pn[2] = stats->extiv[5];
-  pn[3] = stats->extiv[4];
-  pn[4] = stats->extiv[1];
-  pn[5] = stats->extiv[0];
+  pn[0] = stats->extiv[0];
+  pn[1] = stats->extiv[1];
+  pn[2] = stats->extiv[4];
+  pn[3] = stats->extiv[5];
+  pn[4] = stats->extiv[6];
+  pn[5] = stats->extiv[7];
 
   res = memcmp(pn, ptk_pn->q[queue].pn[tid], IEEE80211_CCMP_PN_LEN);
   if (res < 0) {
