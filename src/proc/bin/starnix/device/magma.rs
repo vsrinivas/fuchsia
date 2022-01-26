@@ -235,3 +235,51 @@ pub fn get_image_info(
     let vmo = collection_info.buffers[0].vmo.take().ok_or(errno!(EINVAL))?;
     Ok((vmo, image_info))
 }
+
+#[repr(C)]
+#[derive(AsBytes, FromBytes, Copy, Clone, Default, Debug)]
+/// `StarnixPollItem` exists to be able to `AsBytes` and `FromBytes` the union that exists in
+/// `magma_poll_item_t`.
+pub struct StarnixPollItem {
+    pub semaphore_or_handle: u64,
+    pub type_: u32,
+    pub condition: u32,
+    pub result: u32,
+    pub __bindgen_padding_0: [u8; 4usize],
+}
+
+impl StarnixPollItem {
+    pub fn new(poll_item: &magma_poll_item_t) -> StarnixPollItem {
+        let semaphore_or_handle = unsafe {
+            if poll_item.type_ == MAGMA_POLL_TYPE_SEMAPHORE {
+                poll_item.__bindgen_anon_1.semaphore as u64
+            } else {
+                poll_item.__bindgen_anon_1.handle as u64
+            }
+        };
+        StarnixPollItem {
+            semaphore_or_handle,
+            type_: poll_item.type_,
+            condition: poll_item.condition,
+            result: poll_item.result,
+            __bindgen_padding_0: poll_item.__bindgen_padding_0,
+        }
+    }
+
+    pub fn into_poll_item(&self) -> magma_poll_item_t {
+        let handle = if self.type_ == MAGMA_POLL_TYPE_SEMAPHORE {
+            magma_poll_item__bindgen_ty_1 {
+                semaphore: self.semaphore_or_handle as magma_semaphore_t,
+            }
+        } else {
+            magma_poll_item__bindgen_ty_1 { handle: self.semaphore_or_handle as magma_handle_t }
+        };
+        magma_poll_item_t {
+            __bindgen_anon_1: handle,
+            type_: self.type_,
+            condition: self.condition,
+            result: self.result,
+            __bindgen_padding_0: self.__bindgen_padding_0,
+        }
+    }
+}

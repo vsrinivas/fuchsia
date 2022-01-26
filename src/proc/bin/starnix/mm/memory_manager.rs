@@ -1074,7 +1074,6 @@ impl MemoryManager {
         self.read_memory(user.addr(), object.as_bytes_mut())
     }
 
-    #[cfg(test)]
     pub fn read_objects<T: AsBytes + FromBytes>(
         &self,
         user: UserRef<T>,
@@ -1157,7 +1156,6 @@ impl MemoryManager {
         self.write_memory(user.addr(), &object.as_bytes())
     }
 
-    #[cfg(test)]
     pub fn write_objects<T: AsBytes + FromBytes>(
         &self,
         user: UserRef<T>,

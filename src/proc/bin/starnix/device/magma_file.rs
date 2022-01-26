@@ -552,6 +552,39 @@ impl FileOps for MagmaFile {
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_MAP_BUFFER_GPU as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_POLL => {
+                let (control, mut response): (virtio_magma_poll_ctrl_t, virtio_magma_poll_resp_t) =
+                    read_control_and_response(current_task, &command)?;
+
+                let num_items = control.count as usize / std::mem::size_of::<StarnixPollItem>();
+                let items_ref = UserRef::new(UserAddress::from(control.items as u64));
+                // Read the poll items as `StarnixPollItem`, since they contain a union. Also note
+                // that the minimum length of the vector is 1, to always have a valid reference for
+                // `magma_poll`.
+                let mut starnix_items =
+                    vec![StarnixPollItem::default(); std::cmp::max(num_items, 1)];
+                current_task.mm.read_objects(items_ref, &mut starnix_items)?;
+                // Then convert each item "manually" into `magma_poll_item_t`.
+                let mut magma_items: Vec<magma_poll_item_t> =
+                    starnix_items.iter().map(|item| item.into_poll_item()).collect();
+
+                response.result_return = unsafe {
+                    magma_poll(
+                        &mut magma_items[0] as *mut magma_poll_item,
+                        num_items as u32,
+                        control.timeout_ns,
+                    ) as u64
+                };
+
+                // Convert the poll items back to a serializable version after the `magma_poll`
+                // call.
+                let starnix_items: Vec<StarnixPollItem> =
+                    magma_items.iter().map(StarnixPollItem::new).collect();
+                current_task.mm.write_objects(items_ref, &starnix_items)?;
+
+                response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_POLL as u32;
+                current_task.mm.write_object(UserRef::new(response_address), &response)
+            }
             t => {
                 log::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)
