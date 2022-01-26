@@ -93,6 +93,52 @@ impl From<fidl::State> for State {
     }
 }
 
+/// An error which can be returned when validating [`AttemptOptions`].
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum AttemptOptionsDecodeError {
+    /// The initiator field was not set.
+    #[error("missing field 'initiator'")]
+    MissingInitiator,
+}
+
+/// Wrapper type for [`fidl_fuchsia_update::AttemptOptions`] which validates the
+/// options on construction and works with [`proptest`].
+///
+/// Use [`TryFrom`] (or [`TryInto`]) to convert the fidl type and this one, and
+/// [`From`] (or [`Into`]) to convert back to the fidl type.
+#[derive(Clone, Debug, PartialEq, Arbitrary)]
+pub struct AttemptOptions {
+    pub initiator: Initiator,
+}
+
+impl Event for AttemptOptions {
+    fn can_merge(&self, _other: &AttemptOptions) -> bool {
+        true
+    }
+}
+
+impl TryFrom<fidl::AttemptOptions> for AttemptOptions {
+    type Error = AttemptOptionsDecodeError;
+
+    fn try_from(o: fidl::AttemptOptions) -> Result<Self, Self::Error> {
+        Ok(Self {
+            initiator: o.initiator.ok_or(AttemptOptionsDecodeError::MissingInitiator)?.into(),
+        })
+    }
+}
+
+impl From<AttemptOptions> for fidl::AttemptOptions {
+    fn from(o: AttemptOptions) -> Self {
+        Self { initiator: Some(o.initiator.into()), ..Self::EMPTY }
+    }
+}
+
+impl From<CheckOptions> for AttemptOptions {
+    fn from(o: CheckOptions) -> Self {
+        Self { initiator: o.initiator }
+    }
+}
+
 /// Wrapper type for [`fidl_fuchsia_update::InstallationErrorData`] which works
 /// with [`proptest`].
 ///
@@ -387,7 +433,7 @@ mod tests {
     proptest! {
         // states with the same update info but different progress should merge
         #[test]
-        fn test_can_merge(
+        fn test_state_can_merge(
             update_info: Option<UpdateInfo>,
             progress0: Option<InstallationProgress>,
             progress1: Option<InstallationProgress>,
@@ -405,6 +451,20 @@ mod tests {
                 }
             );
             prop_assert!(event0.can_merge(&event1));
+        }
+
+        #[test]
+        fn test_attempt_options_can_merge(
+            initiator0: Initiator,
+            initiator1: Initiator,
+        ) {
+            let attempt_options0 = AttemptOptions {
+                initiator: initiator0,
+            };
+            let attempt_options1 = AttemptOptions {
+                initiator: initiator1,
+            };
+            prop_assert!(attempt_options0.can_merge(&attempt_options1));
         }
 
         #[test]

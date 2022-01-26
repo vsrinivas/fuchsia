@@ -6,10 +6,11 @@ use crate::apply::{apply_system_update, ApplyProgress, ApplyState};
 use crate::channel::{CurrentChannelManager, TargetChannelManager};
 use crate::check::{check_for_system_update, SystemUpdateStatus};
 use crate::connect::ServiceConnect;
-use crate::update_monitor::{StateNotifier, UpdateMonitor};
-use crate::update_service::RealStateNotifier;
+use crate::update_monitor::{AttemptNotifier, StateNotifier, UpdateMonitor};
+use crate::update_service::{RealAttemptNotifier, RealStateNotifier};
 use anyhow::{anyhow, Context as _, Error};
 use async_generator::GeneratorState;
+use event_queue::ControlHandle;
 use fidl_fuchsia_update::{
     CheckNotStartedReason, CommitStatusProviderMarker, InstallationDeferralReason,
 };
@@ -33,11 +34,14 @@ use futures::{
 use std::sync::Arc;
 
 #[derive(Debug)]
-pub struct UpdateManagerControlHandle<N>(mpsc::Sender<UpdateManagerRequest<N>>);
+pub struct UpdateManagerControlHandle<N: StateNotifier, A>(
+    mpsc::Sender<UpdateManagerRequest<N, A>>,
+);
 
-impl<N> UpdateManagerControlHandle<N>
+impl<N, A> UpdateManagerControlHandle<N, A>
 where
     N: StateNotifier,
+    A: AttemptNotifier,
 {
     /// Try to start an update with the given options and optional monitor, returning whether or
     /// not the attempt was started (or attached to, if the options allow it).
@@ -53,6 +57,16 @@ where
             .await
             .map_err(|_| CheckNotStartedReason::Internal)?;
         recv.await.map_err(|_| CheckNotStartedReason::Internal)?
+    }
+
+    pub async fn handle_all_these_updates(
+        &mut self,
+        callback: Box<dyn FnOnce(ControlHandle<N>) -> A + Send>,
+    ) {
+        let _ = self
+            .0
+            .send(UpdateManagerRequest::RegisterAttemptsMonitor { callback: NoDebug(callback) })
+            .await;
     }
 
     #[cfg(test)]
@@ -76,23 +90,39 @@ where
 
 // Manually implement Clone as not all N impl Clone, so derive(Clone) won't always impl Clone.
 // See https://github.com/rust-lang/rust/issues/26925 for more context.
-impl<N> Clone for UpdateManagerControlHandle<N> {
+impl<N: StateNotifier, A> Clone for UpdateManagerControlHandle<N, A> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
+type MakeAttemptsMonitor<N, A> = Box<dyn FnOnce(ControlHandle<N>) -> A + Send>;
+pub(crate) struct NoDebug<T>(T);
+
+impl<T> std::fmt::Debug for NoDebug<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("NoDebug").finish()
+    }
+}
+
 #[derive(Debug)]
-pub(crate) enum UpdateManagerRequest<N> {
+pub(crate) enum UpdateManagerRequest<N: StateNotifier, A> {
     TryStartUpdate {
         options: CheckOptions,
         callback: Option<N>,
         responder: oneshot::Sender<Result<(), CheckNotStartedReason>>,
     },
+    RegisterAttemptsMonitor {
+        callback: NoDebug<MakeAttemptsMonitor<N, A>>,
+    },
     #[cfg_attr(not(test), allow(dead_code))]
-    GetState { responder: oneshot::Sender<Option<State>> },
+    GetState {
+        responder: oneshot::Sender<Option<State>>,
+    },
     #[cfg_attr(not(test), allow(dead_code))]
-    GetLastKnownUpdatePackageHash { responder: oneshot::Sender<Option<Hash>> },
+    GetLastKnownUpdatePackageHash {
+        responder: oneshot::Sender<Option<Hash>>,
+    },
 }
 
 #[derive(Debug)]
@@ -101,15 +131,16 @@ enum StatusEvent {
     VersionAvailableKnown(String),
 }
 
-pub struct UpdateManager<T, C, A, N, Cq>
+pub struct UpdateManager<T, C, A, N, Cq, Att>
 where
     T: TargetChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     N: StateNotifier,
     Cq: CommitQuerier,
+    Att: AttemptNotifier,
 {
-    monitor: UpdateMonitor<N>,
+    monitor: UpdateMonitor<N, Att>,
     updater: SystemInterface<T, C, A, Cq>,
 }
 
@@ -128,13 +159,22 @@ where
     commit_querier: Cq,
 }
 
-impl<T> UpdateManager<T, RealUpdateChecker, RealUpdateApplier, RealStateNotifier, RealCommitQuerier>
+impl<T>
+    UpdateManager<
+        T,
+        RealUpdateChecker,
+        RealUpdateApplier,
+        RealStateNotifier,
+        RealCommitQuerier,
+        RealAttemptNotifier,
+    >
 where
     T: TargetChannelUpdater,
 {
     pub async fn new(target_channel_updater: Arc<T>, node: finspect::Node) -> Self {
-        let (fut, update_monitor) = UpdateMonitor::from_inspect_node(node);
+        let (fut, attempt_fut, update_monitor) = UpdateMonitor::from_inspect_node(node);
         fasync::Task::spawn(fut).detach();
+        fasync::Task::spawn(attempt_fut).detach();
         Self {
             monitor: update_monitor,
             updater: SystemInterface::new(
@@ -149,13 +189,14 @@ where
     }
 }
 
-impl<T, C, A, N, Cq> UpdateManager<T, C, A, N, Cq>
+impl<T, C, A, N, Cq, Att> UpdateManager<T, C, A, N, Cq, Att>
 where
     T: TargetChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     N: StateNotifier,
     Cq: CommitQuerier,
+    Att: AttemptNotifier,
 {
     #[cfg(test)]
     pub async fn from_checker_and_applier(
@@ -164,8 +205,9 @@ where
         update_applier: A,
         commit_querier: Cq,
     ) -> Self {
-        let (fut, update_monitor) = UpdateMonitor::new();
+        let (fut, attempt_fut, update_monitor) = UpdateMonitor::new();
         fasync::Task::spawn(fut).detach();
+        fasync::Task::spawn(attempt_fut).detach();
         Self {
             monitor: update_monitor,
             updater: SystemInterface::new(
@@ -188,8 +230,9 @@ where
         commit_status: Option<CommitStatus>,
     ) -> Self {
         let last_known_update_package = None;
-        let (fut, update_monitor) = UpdateMonitor::new();
+        let (fut, attempt_fut, update_monitor) = UpdateMonitor::new();
         fasync::Task::spawn(fut).detach();
+        fasync::Task::spawn(attempt_fut).detach();
         Self {
             monitor: update_monitor,
             updater: SystemInterface::new(
@@ -206,19 +249,19 @@ where
     /// Builds and returns the update manager async task, along with a control handle to interact
     /// with the task. The returned future must be polled for the update manager task to make
     /// forward progress.
-    pub fn start(self) -> (UpdateManagerControlHandle<N>, impl Future<Output = ()>) {
+    pub fn start(self) -> (UpdateManagerControlHandle<N, Att>, impl Future<Output = ()>) {
         let (send, recv) = mpsc::channel(0);
         (UpdateManagerControlHandle(send), self.run(recv))
     }
 
     #[cfg(test)]
-    pub fn spawn(self) -> UpdateManagerControlHandle<N> {
+    pub fn spawn(self) -> UpdateManagerControlHandle<N, Att> {
         let (ctl, fut) = self.start();
         fasync::Task::spawn(fut).detach();
         ctl
     }
 
-    async fn run(self, requests: mpsc::Receiver<UpdateManagerRequest<N>>) {
+    async fn run(self, requests: mpsc::Receiver<UpdateManagerRequest<N, Att>>) {
         let Self { mut monitor, mut updater } = self;
         pin_mut!(requests);
 
@@ -236,6 +279,9 @@ where
                         let _ = responder.send(Ok(()));
                         break (options, callback);
                     }
+                    UpdateManagerRequest::RegisterAttemptsMonitor { callback } => {
+                        monitor.add_all_the_callbacks(callback.0).await;
+                    }
                     UpdateManagerRequest::GetState { responder } => {
                         let _ = responder.send(None);
                     }
@@ -251,6 +297,8 @@ where
                 monitor.add_temporary_callback(callback).await;
             }
 
+            monitor.tell_global_monitors_about_the_update(options.clone().into()).await;
+
             // Used for testing: it's ok to be slightly stale.
             let last_known_update_package = updater.last_known_update_package;
 
@@ -264,8 +312,8 @@ where
             // Run the update check, forwarding status updates to monitors, responding to requests
             // to monitor the attempt and blocking requests to start a new update attempt.
             let update_check_res = loop {
-                enum Op<N> {
-                    Request(UpdateManagerRequest<N>),
+                enum Op<N: StateNotifier, Att> {
+                    Request(UpdateManagerRequest<N, Att>),
                     Status(StatusEvent),
                 }
                 let op = select! {
@@ -290,6 +338,9 @@ where
                                 }
                                 Ok(())
                             });
+                    }
+                    Op::Request(UpdateManagerRequest::RegisterAttemptsMonitor { callback }) => {
+                        monitor.add_all_the_callbacks(callback.0).await;
                     }
                     Op::Request(UpdateManagerRequest::GetState { responder }) => {
                         let _ = responder.send(current_state.clone());
@@ -617,6 +668,7 @@ pub(crate) mod tests {
     use crate::errors;
     use assert_matches::assert_matches;
     use event_queue::{ClosedClient, Notify};
+    use fidl_fuchsia_update_ext::AttemptOptions;
     use fuchsia_async::{DurationExt, TimeoutExt};
     use fuchsia_zircon::prelude::*;
     use futures::channel::mpsc::{channel, Receiver, Sender};
@@ -634,18 +686,18 @@ pub(crate) mod tests {
     pub const CURRENT_UPDATE_PACKAGE: &str =
         "2222222222222222222222222222222222222222222222222222222222222222";
 
-    pub(crate) struct FakeUpdateManagerControlHandle<N> {
-        requests: mpsc::Receiver<UpdateManagerRequest<N>>,
+    pub(crate) struct FakeUpdateManagerControlHandle<N: StateNotifier, Att> {
+        requests: mpsc::Receiver<UpdateManagerRequest<N, Att>>,
     }
 
-    impl<N> FakeUpdateManagerControlHandle<N> {
-        pub(crate) fn new() -> (UpdateManagerControlHandle<N>, Self) {
+    impl<N: StateNotifier, Att> FakeUpdateManagerControlHandle<N, Att> {
+        pub(crate) fn new() -> (UpdateManagerControlHandle<N, Att>, Self) {
             let (send, recv) = mpsc::channel(0);
 
             (UpdateManagerControlHandle(send), Self { requests: recv })
         }
 
-        pub(crate) fn next(&mut self) -> Option<UpdateManagerRequest<N>> {
+        pub(crate) fn next(&mut self) -> Option<UpdateManagerRequest<N, Att>> {
             self.requests.next().now_or_never().flatten()
         }
     }
@@ -885,12 +937,24 @@ pub(crate) mod tests {
         }
     }
 
+    #[derive(Clone, Debug)]
+    pub struct FakeAttemptNotifier;
+
+    impl Notify for FakeAttemptNotifier {
+        type Event = AttemptOptions;
+        type NotifyFuture = future::Ready<Result<(), ClosedClient>>;
+        fn notify(&self, _options: AttemptOptions) -> Self::NotifyFuture {
+            future::ready(Ok(()))
+        }
+    }
+
     type FakeUpdateManager = UpdateManager<
         FakeTargetChannelUpdater,
         FakeUpdateChecker,
         FakeUpdateApplier,
         FakeStateNotifier,
         FakeCommitQuerier,
+        FakeAttemptNotifier,
     >;
 
     type BlockingManagerManager = UpdateManager<
@@ -899,6 +963,7 @@ pub(crate) mod tests {
         FakeUpdateApplier,
         FakeStateNotifier,
         FakeCommitQuerier,
+        FakeAttemptNotifier,
     >;
 
     async fn next_n_states(receiver: &mut Receiver<State>, n: usize) -> Vec<State> {

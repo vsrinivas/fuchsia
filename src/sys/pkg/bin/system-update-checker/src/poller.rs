@@ -4,19 +4,20 @@
 
 use crate::config::Config;
 use crate::update_manager::UpdateManagerControlHandle;
-use crate::update_monitor::StateNotifier;
+use crate::update_monitor::{AttemptNotifier, StateNotifier};
 use fidl_fuchsia_update::CheckNotStartedReason;
 use fidl_fuchsia_update_ext::{CheckOptions, Initiator};
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_info;
 use futures::prelude::*;
 
-pub fn run_periodic_update_check<N>(
-    mut manager: UpdateManagerControlHandle<N>,
+pub fn run_periodic_update_check<N, A>(
+    mut manager: UpdateManagerControlHandle<N, A>,
     config: &Config,
 ) -> impl Future<Output = ()>
 where
     N: StateNotifier,
+    A: AttemptNotifier,
 {
     let timer = config.poll_frequency().map(|duration| fasync::Interval::new(duration.into()));
 
@@ -53,7 +54,7 @@ mod tests {
     use crate::config::ConfigBuilder;
     use crate::update_manager::{
         tests::{
-            FakeCommitQuerier, FakeTargetChannelUpdater, FakeUpdateChecker,
+            FakeAttemptNotifier, FakeCommitQuerier, FakeTargetChannelUpdater, FakeUpdateChecker,
             FakeUpdateManagerControlHandle, StateChangeCollector, UnreachableUpdateApplier,
         },
         UpdateManager, UpdateManagerRequest,
@@ -69,7 +70,8 @@ mod tests {
     fn test_disabled_periodic_update_check() {
         let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
-        let (manager, mut requests) = FakeUpdateManagerControlHandle::<StateChangeCollector>::new();
+        let (manager, mut requests) =
+            FakeUpdateManagerControlHandle::<StateChangeCollector, FakeAttemptNotifier>::new();
 
         let mut cron = run_periodic_update_check(manager, &Config::default()).boxed();
 
@@ -82,7 +84,8 @@ mod tests {
     fn test_periodic_update_check() {
         let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
-        let (manager, mut requests) = FakeUpdateManagerControlHandle::<StateChangeCollector>::new();
+        let (manager, mut requests) =
+            FakeUpdateManagerControlHandle::<StateChangeCollector, FakeAttemptNotifier>::new();
 
         let period = 10.minutes();
         let config = ConfigBuilder::new().poll_frequency(period).build();
@@ -142,7 +145,7 @@ mod tests {
         let checker = FakeUpdateChecker::new_up_to_date();
         let update_blocked = checker.block().unwrap();
         let callback = StateChangeCollector::new();
-        let mut fut = UpdateManager::<_, _, _, StateChangeCollector, _>::from_checker_and_applier(
+        let mut fut = UpdateManager::<_, _, _, StateChangeCollector, _, FakeAttemptNotifier>::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
             checker.clone(),
             UnreachableUpdateApplier,

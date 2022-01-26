@@ -11,10 +11,11 @@ use {
     fidl_fuchsia_pkg::ResolveError,
     fidl_fuchsia_space::ErrorCode,
     fidl_fuchsia_update::{
-        CheckOptions, CheckingForUpdatesData, CommitStatusProviderMarker,
-        CommitStatusProviderProxy, Initiator, InstallationDeferralReason, InstallationDeferredData,
-        InstallationErrorData, InstallationProgress, InstallingData, ManagerMarker, ManagerProxy,
-        MonitorMarker, MonitorRequest, MonitorRequestStream, State, UpdateInfo,
+        AttemptsMonitorMarker, AttemptsMonitorRequest, AttemptsMonitorRequestStream, CheckOptions,
+        CheckingForUpdatesData, CommitStatusProviderMarker, CommitStatusProviderProxy, Initiator,
+        InstallationDeferralReason, InstallationDeferredData, InstallationErrorData,
+        InstallationProgress, InstallingData, ManagerMarker, ManagerProxy, MonitorMarker,
+        MonitorRequest, MonitorRequestStream, State, UpdateInfo,
     },
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
@@ -294,6 +295,16 @@ impl TestEnv {
             .expect("check started");
         stream
     }
+
+    async fn monitor_all_update_checks(&self) -> AttemptsMonitorRequestStream {
+        let (client_end, stream) =
+            fidl::endpoints::create_request_stream::<AttemptsMonitorMarker>().unwrap();
+        self.proxies
+            .update_manager
+            .monitor_all_update_checks(client_end)
+            .expect("make monitor_all_update call");
+        stream
+    }
 }
 
 async fn expect_states(stream: &mut MonitorRequestStream, expected_states: &[State]) {
@@ -464,6 +475,122 @@ async fn test_update_manager_progress() {
         .unwrap();
     expect_states(
         &mut stream,
+        &[State::WaitingForReboot(InstallingData {
+            update: update_info(Some(1000)),
+            installation_progress: progress(Some(1.0)),
+            ..InstallingData::EMPTY
+        })],
+    )
+    .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_monitor_all_updates() {
+    let (mut sender, receiver) = mpsc::channel(0);
+    let installer = MockUpdateInstallerService::builder().states_receiver(receiver).build();
+
+    let env = TestEnvBuilder::new().installer(installer).build().await;
+
+    env.proxies.resolver.url("fuchsia-pkg://fuchsia.com/update").resolve(
+        &env.proxies
+            .resolver
+            .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+            .add_file(
+                "packages.json",
+                make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
+            )
+            .add_file("zbi", "fake zbi"),
+    );
+    env.proxies
+        .resolver.url("fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")
+        .resolve(
+        &env.proxies
+            .resolver
+            .package("system_image", "beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeada")
+    );
+
+    env.check_now().await;
+    let mut request_stream = env.monitor_all_update_checks().await;
+    let AttemptsMonitorRequest::OnStart { options, monitor, responder } =
+        request_stream.next().await.unwrap().unwrap();
+
+    assert_matches!(options.initiator, Some(fidl_fuchsia_update::Initiator::User));
+
+    assert_matches!(responder.send(), Ok(()));
+    let mut monitor_stream = monitor.into_stream().unwrap();
+
+    expect_states(
+        &mut monitor_stream,
+        &[
+            State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
+            State::InstallingUpdate(InstallingData {
+                update: update_info(None),
+                installation_progress: None,
+                ..InstallingData::EMPTY
+            }),
+        ],
+    )
+    .await;
+    sender.send(installer::State::Prepare).await.unwrap();
+    expect_states(
+        &mut monitor_stream,
+        &[State::InstallingUpdate(InstallingData {
+            update: update_info(None),
+            installation_progress: progress(None),
+            ..InstallingData::EMPTY
+        })],
+    )
+    .await;
+    let installer_update_info = installer::UpdateInfo::builder().download_size(1000).build();
+    sender
+        .send(installer::State::Fetch(
+            installer::UpdateInfoAndProgress::new(
+                installer_update_info,
+                installer::Progress::none(),
+            )
+            .unwrap(),
+        ))
+        .await
+        .unwrap();
+    expect_states(
+        &mut monitor_stream,
+        &[State::InstallingUpdate(InstallingData {
+            update: update_info(Some(1000)),
+            installation_progress: progress(Some(0.0)),
+            ..InstallingData::EMPTY
+        })],
+    )
+    .await;
+    sender
+        .send(installer::State::Stage(
+            installer::UpdateInfoAndProgress::new(
+                installer_update_info,
+                installer::Progress::builder()
+                    .fraction_completed(0.5)
+                    .bytes_downloaded(500)
+                    .build(),
+            )
+            .unwrap(),
+        ))
+        .await
+        .unwrap();
+    expect_states(
+        &mut monitor_stream,
+        &[State::InstallingUpdate(InstallingData {
+            update: update_info(Some(1000)),
+            installation_progress: progress(Some(0.5)),
+            ..InstallingData::EMPTY
+        })],
+    )
+    .await;
+    sender
+        .send(installer::State::WaitToReboot(installer::UpdateInfoAndProgress::done(
+            installer_update_info,
+        )))
+        .await
+        .unwrap();
+    expect_states(
+        &mut monitor_stream,
         &[State::WaitingForReboot(InstallingData {
             update: update_info(Some(1000)),
             installation_progress: progress(Some(1.0)),

@@ -5,7 +5,7 @@
 use {
     anyhow::anyhow,
     event_queue::{ControlHandle, EventQueue, Notify},
-    fidl_fuchsia_update_ext::State,
+    fidl_fuchsia_update_ext::{AttemptOptions, State},
     fuchsia_inspect_contrib::inspectable::InspectableDebugString,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::prelude::*,
@@ -16,12 +16,18 @@ pub trait StateNotifier: Notify<Event = State> + Send + Sync + 'static {}
 
 impl<T> StateNotifier for T where T: Notify<Event = State> + Send + Sync + 'static {}
 
+pub trait AttemptNotifier: Notify<Event = AttemptOptions> + Send + Sync + 'static {}
+
+impl<T> AttemptNotifier for T where T: Notify<Event = AttemptOptions> + Send + Sync + 'static {}
+
 #[derive(Debug)]
-pub struct UpdateMonitor<N>
+pub struct UpdateMonitor<N, A>
 where
     N: StateNotifier,
+    A: AttemptNotifier,
 {
     temporary_queue: ControlHandle<N>,
+    attempt_queue: ControlHandle<A>,
     update_state: InspectableDebugString<Option<State>>,
     version_available: InspectableDebugString<Option<String>>,
     // TODO(fxbug.dev/84729)
@@ -29,16 +35,22 @@ where
     inspect_node: fuchsia_inspect::Node,
 }
 
-impl<N> UpdateMonitor<N>
+impl<N, A> UpdateMonitor<N, A>
 where
     N: StateNotifier,
+    A: AttemptNotifier,
 {
-    pub fn from_inspect_node(node: fuchsia_inspect::Node) -> (impl Future<Output = ()>, Self) {
+    pub fn from_inspect_node(
+        node: fuchsia_inspect::Node,
+    ) -> (impl Future<Output = ()>, impl Future<Output = ()>, Self) {
         let (temporary_fut, temporary_queue) = EventQueue::new();
+        let (attempt_fut, attempt_queue) = EventQueue::new();
         (
             temporary_fut,
+            attempt_fut,
             UpdateMonitor {
                 temporary_queue,
+                attempt_queue,
                 update_state: InspectableDebugString::new(None, &node, "update-state"),
                 version_available: InspectableDebugString::new(None, &node, "version-available"),
                 inspect_node: node,
@@ -47,10 +59,26 @@ where
     }
 
     #[cfg(test)]
-    pub fn new() -> (impl Future<Output = ()>, Self) {
+    pub fn new() -> (impl Future<Output = ()>, impl Future<Output = ()>, Self) {
         Self::from_inspect_node(
             fuchsia_inspect::Inspector::new().root().create_child("test-update-monitor-root-node"),
         )
+    }
+
+    pub async fn add_all_the_callbacks(
+        &mut self,
+        callback: Box<dyn FnOnce(ControlHandle<N>) -> A + Send>,
+    ) {
+        let attempt_notifier = callback(self.temporary_queue.clone());
+        if let Err(e) = self.attempt_queue.add_client(attempt_notifier).await {
+            fx_log_err!("error adding client to global queue: {:#}", anyhow!(e))
+        }
+    }
+
+    pub async fn tell_global_monitors_about_the_update(&mut self, attempt_options: AttemptOptions) {
+        if let Err(e) = self.attempt_queue.queue_event(attempt_options).await {
+            fx_log_warn!("error sending update to attempt queue: {:#}", anyhow!(e))
+        }
     }
 
     pub async fn add_temporary_callback(&mut self, callback: N) {
@@ -128,6 +156,17 @@ mod test {
         }
     }
 
+    #[derive(Clone, Debug)]
+    struct FakeAttemptNotifier;
+
+    impl Notify for FakeAttemptNotifier {
+        type Event = AttemptOptions;
+        type NotifyFuture = future::Ready<Result<(), ClosedClient>>;
+        fn notify(&self, _options: AttemptOptions) -> Self::NotifyFuture {
+            future::ready(Ok(()))
+        }
+    }
+
     struct MpscNotifier<T> {
         sender: mpsc::Sender<T>,
     }
@@ -146,12 +185,13 @@ mod test {
         }
     }
 
-    async fn random_update_monitor<N: StateNotifier>(
+    async fn random_update_monitor<N: StateNotifier, A: AttemptNotifier>(
         update_state: Option<State>,
         version_available: Option<String>,
-    ) -> UpdateMonitor<N> {
-        let (fut, mut mms) = UpdateMonitor::<N>::new();
+    ) -> UpdateMonitor<N, A> {
+        let (fut, attempt_fut, mut mms) = UpdateMonitor::<N, A>::new();
         fasync::Task::spawn(fut).detach();
+        fasync::Task::spawn(attempt_fut).detach();
         version_available.map(|s| mms.set_version_available(s));
         if let Some(update_state) = update_state {
             mms.advance_update_state(update_state).await;
@@ -167,12 +207,12 @@ mod test {
 
     proptest! {
         #[test]
-        fn test_adding_callback_sends_current_state(
+        fn test_adding_temporary_callback_sends_current_state(
                 update_state: Option<State>,
                 version_available in random_version_available(),
         ) {
             fasync::TestExecutor::new().unwrap().run_singlethreaded(async {
-                let mut update_monitor = random_update_monitor(update_state.clone(), version_available).await;
+                let mut update_monitor = random_update_monitor::<FakeStateNotifier, FakeAttemptNotifier>(update_state.clone(), version_available).await;
                 let expected_states: Vec<_> = update_state.into_iter().collect();
                 let temporary_callback = FakeStateNotifier::new();
 
@@ -194,7 +234,7 @@ mod test {
                 next_states in prop::collection::vec(any::<State>(), 0..4),
         ) {
             fasync::TestExecutor::new().unwrap().run_singlethreaded(async {
-                let mut update_monitor = random_update_monitor(initial_state.clone(), version_available).await;
+                let mut update_monitor = random_update_monitor::<FakeStateNotifier, FakeAttemptNotifier>(initial_state.clone(), version_available).await;
                 let temporary_callback = FakeStateNotifier::new();
                 let expected_states: Vec<_> = initial_state.clone().into_iter().chain(next_states.clone().into_iter()).collect();
 
@@ -219,7 +259,7 @@ mod test {
             version_available in random_version_available(),
         ) {
             fasync::TestExecutor::new().unwrap().run_singlethreaded(async {
-                let mut update_monitor = random_update_monitor::<FakeStateNotifier>(update_state, version_available).await;
+                let mut update_monitor = random_update_monitor::<FakeStateNotifier, FakeAttemptNotifier>(update_state, version_available).await;
                 update_monitor.set_version_available(VERSION_AVAILABLE.to_string());
 
                 update_monitor.clear().await;
@@ -238,7 +278,7 @@ mod test {
             version_available in random_version_available(),
         ) {
             fasync::TestExecutor::new().unwrap().run_singlethreaded(async {
-                let mut update_monitor = random_update_monitor(update_state, version_available).await;
+                let mut update_monitor = random_update_monitor::<FakeStateNotifier, FakeAttemptNotifier>(update_state, version_available).await;
                 let temporary_callback = FakeStateNotifier::new();
 
                 update_monitor.add_temporary_callback(temporary_callback.clone()).await;
@@ -257,7 +297,7 @@ mod test {
             version_available in random_version_available(),
         ) {
             let mut executor = fasync::TestExecutor::new().unwrap();
-            let mut update_monitor = executor.run_singlethreaded(random_update_monitor(Some(update_state.clone()), version_available));
+            let mut update_monitor = executor.run_singlethreaded(random_update_monitor::<_, FakeAttemptNotifier>(Some(update_state.clone()), version_available));
 
             let (sender, mut receiver) = mpsc::channel(0);
             let temporary_callback = MpscNotifier { sender };
@@ -277,7 +317,7 @@ mod test {
         ) {
             let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
             // Can't use run_singlethreaded on executor with fake time.
-            let update_monitor_fut = random_update_monitor(Some(update_state), version_available);
+            let update_monitor_fut = random_update_monitor::<_, FakeAttemptNotifier>(Some(update_state), version_available);
             pin_mut!(update_monitor_fut);
             let mut update_monitor = match executor.run_until_stalled(&mut update_monitor_fut) {
                 Poll::Ready(monitor) => monitor,
@@ -319,12 +359,23 @@ mod test_inspect {
         }
     }
 
+    #[derive(Clone, Debug)]
+    struct FakeAttemptNotifier;
+    impl Notify for FakeAttemptNotifier {
+        type Event = AttemptOptions;
+        type NotifyFuture = future::Ready<Result<(), ClosedClient>>;
+        fn notify(&self, _options: AttemptOptions) -> Self::NotifyFuture {
+            future::ready(Ok(()))
+        }
+    }
+
     #[test]
     fn test_inspect_initial_state() {
         let inspector = fuchsia_inspect::Inspector::new();
-        let _update_monitor = UpdateMonitor::<FakeStateNotifier>::from_inspect_node(
-            inspector.root().create_child("update-monitor"),
-        );
+        let _update_monitor =
+            UpdateMonitor::<FakeStateNotifier, FakeAttemptNotifier>::from_inspect_node(
+                inspector.root().create_child("update-monitor"),
+            );
 
         assert_data_tree!(
             inspector,
@@ -340,10 +391,12 @@ mod test_inspect {
     #[fasync::run_singlethreaded(test)]
     async fn test_inspect_update_state() {
         let inspector = fuchsia_inspect::Inspector::new();
-        let (fut, mut update_monitor) = UpdateMonitor::<FakeStateNotifier>::from_inspect_node(
-            inspector.root().create_child("update-monitor"),
-        );
+        let (fut, att_fut, mut update_monitor) =
+            UpdateMonitor::<FakeStateNotifier, FakeAttemptNotifier>::from_inspect_node(
+                inspector.root().create_child("update-monitor"),
+            );
         fasync::Task::spawn(fut).detach();
+        fasync::Task::spawn(att_fut).detach();
 
         update_monitor.advance_update_state(State::CheckingForUpdates).await;
 
@@ -361,9 +414,10 @@ mod test_inspect {
     #[test]
     fn test_inspect_version_available() {
         let inspector = fuchsia_inspect::Inspector::new();
-        let (_fut, mut update_monitor) = UpdateMonitor::<FakeStateNotifier>::from_inspect_node(
-            inspector.root().create_child("update-monitor"),
-        );
+        let (_fut, _att_fut, mut update_monitor) =
+            UpdateMonitor::<FakeStateNotifier, FakeAttemptNotifier>::from_inspect_node(
+                inspector.root().create_child("update-monitor"),
+            );
         let version_available = "fake-version-available";
 
         update_monitor.set_version_available(version_available.to_string());

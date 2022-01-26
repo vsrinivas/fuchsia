@@ -9,9 +9,12 @@ use crate::update_manager::{
     UpdateManagerControlHandle,
 };
 use anyhow::{Context as _, Error};
-use event_queue::{ClosedClient, Notify};
-use fidl_fuchsia_update::{CheckNotStartedReason, ManagerRequest, ManagerRequestStream};
-use fidl_fuchsia_update_ext::{CheckOptions, State};
+use event_queue::{ClosedClient, ControlHandle, Notify};
+use fidl::endpoints::ClientEnd;
+use fidl_fuchsia_update::{
+    AttemptsMonitorMarker, CheckNotStartedReason, ManagerRequest, ManagerRequestStream,
+};
+use fidl_fuchsia_update_ext::{AttemptOptions, CheckOptions, State};
 use futures::prelude::*;
 use std::convert::TryInto;
 
@@ -22,15 +25,18 @@ pub type RealUpdateManager = UpdateManager<
     RealUpdateApplier,
     RealStateNotifier,
     RealCommitQuerier,
+    RealAttemptNotifier,
 >;
 
 #[derive(Clone)]
 pub struct UpdateService {
-    update_manager: UpdateManagerControlHandle<RealStateNotifier>,
+    update_manager: UpdateManagerControlHandle<RealStateNotifier, RealAttemptNotifier>,
 }
 
 impl UpdateService {
-    pub fn new(update_manager: UpdateManagerControlHandle<RealStateNotifier>) -> Self {
+    pub fn new(
+        update_manager: UpdateManagerControlHandle<RealStateNotifier, RealAttemptNotifier>,
+    ) -> Self {
         Self { update_manager }
     }
 }
@@ -74,11 +80,9 @@ impl UpdateService {
                 }
 
                 ManagerRequest::MonitorAllUpdateChecks {
-                    attempts_monitor: _,
-                    control_handle: _,
-                } => {
-                    todo!();
-                }
+                    attempts_monitor,
+                    control_handle: _control_handle,
+                } => self.handle_monitor_all_updates(attempts_monitor).await?,
             }
         }
         Ok(())
@@ -90,6 +94,16 @@ impl UpdateService {
         monitor: Option<RealStateNotifier>,
     ) -> Result<(), CheckNotStartedReason> {
         self.update_manager.try_start_update(options, monitor).await
+    }
+
+    async fn handle_monitor_all_updates(
+        &mut self,
+        attempts_monitor: ClientEnd<AttemptsMonitorMarker>,
+    ) -> Result<(), Error> {
+        let proxy = attempts_monitor.into_proxy().context("MonitorAllUpdates into proxy")?;
+        let callback =
+            Box::new(move |control_handle| RealAttemptNotifier { proxy, control_handle });
+        Ok(self.update_manager.handle_all_these_updates(callback).await)
     }
 }
 
@@ -109,6 +123,33 @@ impl Notify for RealStateNotifier {
     }
 }
 
+pub struct RealAttemptNotifier {
+    proxy: fidl_fuchsia_update::AttemptsMonitorProxy,
+    control_handle: ControlHandle<RealStateNotifier>,
+}
+
+impl Notify for RealAttemptNotifier {
+    type Event = AttemptOptions;
+    type NotifyFuture = futures::future::BoxFuture<'static, Result<(), ClosedClient>>;
+
+    fn notify(&self, options: fidl_fuchsia_update_ext::AttemptOptions) -> Self::NotifyFuture {
+        let mut update_attempt_event_queue = self.control_handle.clone();
+        let proxy = self.proxy.clone();
+
+        async move {
+            let (monitor_proxy, monitor_server_end) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_update::MonitorMarker>()
+                    .map_err(|_| ClosedClient)?;
+            update_attempt_event_queue
+                .add_client(RealStateNotifier { proxy: monitor_proxy })
+                .await
+                .map_err(|_| ClosedClient)?;
+            proxy.on_start(options.into(), monitor_server_end).await.map_err(|_| ClosedClient)
+        }
+        .boxed()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,8 +162,12 @@ mod tests {
     };
     use assert_matches::assert_matches;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_update::{ManagerMarker, ManagerProxy, MonitorRequest, MonitorRequestStream};
-    use fidl_fuchsia_update_ext::{Initiator, InstallationErrorData, InstallingData, UpdateInfo};
+    use fidl_fuchsia_update::{
+        AttemptsMonitorRequest, ManagerMarker, ManagerProxy, MonitorRequest, MonitorRequestStream,
+    };
+    use fidl_fuchsia_update_ext::{
+        Initiator, InstallationErrorData, InstallationProgress, InstallingData, UpdateInfo,
+    };
     use fuchsia_async as fasync;
     use std::sync::Arc;
 
@@ -140,7 +185,7 @@ mod tests {
     {
         let mut update_service = UpdateService {
             update_manager:
-                UpdateManager::<T, C, A, RealStateNotifier, Cq>::from_checker_and_applier(
+                UpdateManager::<T, C, A, RealStateNotifier, Cq, RealAttemptNotifier>::from_checker_and_applier(
                     Arc::new(channel_updater),
                     update_checker,
                     update_applier,
@@ -294,6 +339,88 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_global_attempt_monitor_gets_events() {
+        let proxy = spawn_update_service(
+            FakeTargetChannelUpdater::new(),
+            FakeUpdateChecker::new_update_available(),
+            FakeUpdateApplier::new_success(),
+            FakeCommitQuerier::new(),
+        )
+        .await
+        .0;
+
+        let (client_end, mut request_stream) =
+            fidl::endpoints::create_request_stream().expect("create_request_stream");
+        let check_options = CheckOptions::builder().initiator(Initiator::User).build();
+
+        assert_matches!(proxy.monitor_all_update_checks(client_end), Ok(()));
+        assert_matches!(proxy.check_now(check_options.into(), None).await.unwrap(), Ok(()));
+
+        let AttemptsMonitorRequest::OnStart { options, monitor, responder } =
+            request_stream.next().await.unwrap().unwrap();
+
+        assert_matches!(responder.send(), Ok(()));
+        assert_matches!(options.initiator, Some(fidl_fuchsia_update::Initiator::User));
+
+        let (_, events) = next_n_on_state_events(monitor.into_stream().unwrap(), 3).await;
+
+        assert_eq!(
+            events,
+            vec![
+                State::CheckingForUpdates,
+                State::InstallingUpdate(InstallingData {
+                    update: Some(UpdateInfo {
+                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+                        download_size: None,
+                    }),
+                    installation_progress: None,
+                }),
+                State::InstallingUpdate(InstallingData {
+                    update: Some(UpdateInfo {
+                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+                        download_size: Some(1000),
+                    }),
+                    installation_progress: Some(InstallationProgress {
+                        fraction_completed: Some(0.42)
+                    })
+                }),
+            ]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_global_attempt_monitor_gets_state_events() {
+        let proxy = spawn_update_service(
+            FakeTargetChannelUpdater::new(),
+            FakeUpdateChecker::new_update_available(),
+            FakeUpdateApplier::new_success(),
+            FakeCommitQuerier::new(),
+        )
+        .await
+        .0;
+
+        let (attempt_client_end, mut attempt_request_stream) =
+            fidl::endpoints::create_request_stream().expect("create_request_stream");
+        let (client_end, request_stream) =
+            fidl::endpoints::create_request_stream().expect("create_request_stream");
+        let options = CheckOptions::builder().initiator(Initiator::User).build();
+
+        assert_matches!(proxy.monitor_all_update_checks(attempt_client_end), Ok(()));
+        assert_matches!(proxy.check_now(options.into(), Some(client_end)).await.unwrap(), Ok(()));
+
+        let AttemptsMonitorRequest::OnStart { options: _, monitor, responder } =
+            attempt_request_stream.next().await.unwrap().unwrap();
+
+        assert_matches!(responder.send(), Ok(()));
+
+        let (_, attempt_monitor_events) =
+            next_n_on_state_events(monitor.into_stream().unwrap(), 2).await;
+        let (_, events) = next_n_on_state_events(request_stream, 2).await;
+
+        assert_eq!(events, attempt_monitor_events);
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_check_now_monitor_already_in_progress() {
         let (blocking_update_checker, unblocker) = BlockingUpdateChecker::new_checker_and_sender();
         let proxy = spawn_update_service(
@@ -347,6 +474,220 @@ mod tests {
             ]
         );
         assert_eq!(collect_all_on_state_events(request_stream1).await, vec![]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_attempt_monitor_already_in_progress() {
+        let (blocking_update_checker, unblocker) = BlockingUpdateChecker::new_checker_and_sender();
+        let proxy = spawn_update_service(
+            FakeTargetChannelUpdater::new(),
+            blocking_update_checker,
+            FakeUpdateApplier::new_error(),
+            FakeCommitQuerier::new(),
+        )
+        .await
+        .0;
+        let expected_update_info = Some(UpdateInfo {
+            version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+            download_size: None,
+        });
+        let (attempt_client_end, mut attempt_request_stream) =
+            fidl::endpoints::create_request_stream::<AttemptsMonitorMarker>()
+                .expect("create_request_stream");
+        let (client_end0, _request_stream0) =
+            fidl::endpoints::create_request_stream().expect("create_request_stream");
+        let (client_end1, _request_stream1) =
+            fidl::endpoints::create_request_stream().expect("create_request_stream");
+        let options = CheckOptions::builder()
+            .initiator(Initiator::User)
+            .allow_attaching_to_existing_update_check(false)
+            .build();
+
+        assert_matches!(proxy.monitor_all_update_checks(attempt_client_end), Ok(()));
+        //Start a hang on InstallingUpdate
+        assert_matches!(
+            proxy.check_now(options.clone().into(), Some(client_end0)).await.unwrap(),
+            Ok(())
+        );
+
+        // When we do the next check, we should get an already in progress error since we're not
+        // allowed to attach another client
+        assert_eq!(
+            proxy.check_now(options.into(), Some(client_end1)).await.unwrap(),
+            Err(CheckNotStartedReason::AlreadyInProgress)
+        );
+
+        let AttemptsMonitorRequest::OnStart { options: _, monitor, responder } =
+            attempt_request_stream.next().await.unwrap().unwrap();
+        assert_matches!(responder.send(), Ok(()));
+
+        // When we resume, attempt_monitor should see the on state events
+        assert_matches!(unblocker.send(()), Ok(()));
+        assert_eq!(
+            collect_all_on_state_events(monitor.into_stream().unwrap()).await,
+            vec![
+                State::CheckingForUpdates,
+                State::InstallingUpdate(InstallingData {
+                    update: expected_update_info.clone(),
+                    installation_progress: None,
+                }),
+                State::InstallationError(InstallationErrorData {
+                    update: expected_update_info,
+                    installation_progress: None,
+                }),
+            ]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_attempt_monitor_persists_dropped_update() {
+        let (blocking_update_checker, unblocker) = BlockingUpdateChecker::new_checker_and_sender();
+        let (proxy0, mut service) = spawn_update_service(
+            FakeTargetChannelUpdater::new(),
+            blocking_update_checker,
+            FakeUpdateApplier::new_success(),
+            FakeCommitQuerier::new(),
+        )
+        .await;
+
+        let (monitor_client, monitor_request_stream) =
+            fidl::endpoints::create_request_stream().expect("create_request_stream");
+        let (attempt_client_end, mut attempt_request_stream) =
+            fidl::endpoints::create_request_stream().expect("create_request_stream");
+        let options = CheckOptions::builder()
+            .initiator(Initiator::User)
+            .allow_attaching_to_existing_update_check(true)
+            .build();
+
+        assert_matches!(proxy0.monitor_all_update_checks(attempt_client_end), Ok(()));
+        assert_matches!(
+            proxy0.check_now(options.clone().into(), Some(monitor_client)).await.unwrap(),
+            Ok(())
+        );
+
+        let (_, events) = next_n_on_state_events(monitor_request_stream, 1).await;
+        assert_eq!(events, vec![State::CheckingForUpdates]);
+
+        drop(proxy0);
+
+        let (proxy1, stream1) =
+            create_proxy_and_stream::<ManagerMarker>().expect("create_proxy_and_stream");
+        fasync::Task::spawn(
+            async move { service.handle_request_stream(stream1).map(|_| ()).await },
+        )
+        .detach();
+
+        assert_matches!(proxy1.check_now(options.into(), None).await.unwrap(), Ok(()));
+        let AttemptsMonitorRequest::OnStart { options, monitor, responder } =
+            attempt_request_stream.next().await.unwrap().unwrap();
+
+        assert_matches!(responder.send(), Ok(()));
+        assert_matches!(options.initiator, Some(fidl_fuchsia_update::Initiator::User));
+
+        assert_matches!(unblocker.send(()), Ok(()));
+        let (_, events) = next_n_on_state_events(monitor.into_stream().unwrap(), 3).await;
+        assert_eq!(
+            events,
+            vec![
+                State::CheckingForUpdates,
+                State::InstallingUpdate(InstallingData {
+                    update: Some(UpdateInfo {
+                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+                        download_size: None,
+                    }),
+                    installation_progress: None,
+                }),
+                State::InstallingUpdate(InstallingData {
+                    update: Some(UpdateInfo {
+                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+                        download_size: Some(1000),
+                    }),
+                    installation_progress: Some(InstallationProgress {
+                        fraction_completed: Some(0.42)
+                    })
+                }),
+            ]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_attempt_monitor_two_updates() {
+        let proxy = spawn_update_service(
+            FakeTargetChannelUpdater::new(),
+            FakeUpdateChecker::new_update_available(),
+            FakeUpdateApplier::new_error(),
+            FakeCommitQuerier::new(),
+        )
+        .await
+        .0;
+
+        let (attempt_client_end, mut attempt_request_stream) =
+            fidl::endpoints::create_request_stream().expect("create_request_stream");
+        let check_options = CheckOptions::builder()
+            .initiator(Initiator::User)
+            .allow_attaching_to_existing_update_check(true)
+            .build();
+
+        assert_matches!(proxy.monitor_all_update_checks(attempt_client_end), Ok(()));
+        assert_matches!(proxy.check_now(check_options.clone().into(), None).await.unwrap(), Ok(()));
+
+        let AttemptsMonitorRequest::OnStart { options, monitor, responder } =
+            attempt_request_stream.next().await.unwrap().unwrap();
+
+        assert_matches!(responder.send(), Ok(()));
+        assert_matches!(options.initiator, Some(fidl_fuchsia_update::Initiator::User));
+
+        let (_, events) = next_n_on_state_events(monitor.into_stream().unwrap(), 3).await;
+        assert_eq!(
+            events,
+            vec![
+                State::CheckingForUpdates,
+                State::InstallingUpdate(InstallingData {
+                    update: Some(UpdateInfo {
+                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+                        download_size: None,
+                    }),
+                    installation_progress: None,
+                }),
+                State::InstallationError(InstallationErrorData {
+                    update: Some(UpdateInfo {
+                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+                        download_size: None,
+                    }),
+                    installation_progress: None,
+                }),
+            ]
+        );
+
+        // Do another update check!
+        assert_matches!(proxy.check_now(check_options.into(), None).await.unwrap(), Ok(()));
+        let AttemptsMonitorRequest::OnStart { options, monitor, responder } =
+            attempt_request_stream.next().await.unwrap().unwrap();
+
+        assert_matches!(responder.send(), Ok(()));
+        assert_matches!(options.initiator, Some(fidl_fuchsia_update::Initiator::User));
+
+        let (_, events) = next_n_on_state_events(monitor.into_stream().unwrap(), 3).await;
+        assert_eq!(
+            events,
+            vec![
+                State::CheckingForUpdates,
+                State::InstallingUpdate(InstallingData {
+                    update: Some(UpdateInfo {
+                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+                        download_size: None,
+                    }),
+                    installation_progress: None,
+                }),
+                State::InstallationError(InstallationErrorData {
+                    update: Some(UpdateInfo {
+                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+                        download_size: None,
+                    }),
+                    installation_progress: None,
+                }),
+            ]
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
