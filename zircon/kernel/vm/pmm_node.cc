@@ -20,7 +20,6 @@
 #include <kernel/thread.h>
 #include <pretty/cpp/sizes.h>
 #include <vm/bootalloc.h>
-#include <vm/page_request.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/pmm_checker.h>
@@ -32,8 +31,6 @@
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 using pretty::FormattedBytes;
-
-KCOUNTER(pmm_alloc_async, "vm.pmm.alloc.async")
 
 // The number of PMM allocation calls that have failed.
 KCOUNTER(pmm_alloc_failed, "vm.pmm.alloc.failed")
@@ -72,16 +69,7 @@ PmmNode::PmmNode() : evictor_(this) {
   InitReclamation(&default_watermark, 1, 0, nullptr, noop_callback);
 }
 
-PmmNode::~PmmNode() {
-  if (request_thread_) {
-    request_thread_live_ = false;
-    request_evt_.Signal();
-    free_pages_evt_.Signal();
-    int res = 0;
-    request_thread_->Join(&res, ZX_TIME_INFINITE);
-    DEBUG_ASSERT(res == 0);
-  }
-}
+PmmNode::~PmmNode() {}
 
 // We disable thread safety analysis here, since this function is only called
 // during early boot before threading exists.
@@ -667,20 +655,6 @@ void PmmNode::FreeList(list_node* list) {
   FreeListLocked(list);
 }
 
-void PmmNode::AllocPages(uint alloc_flags, page_request_t* req) {
-  kcounter_add(pmm_alloc_async, 1);
-  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
-
-  // Allocation of loaned pages via this path is not yet supported.
-  DEBUG_ASSERT(!(alloc_flags & (PMM_ALLOC_FLAG_CAN_BORROW | PMM_ALLOC_FLAG_MUST_BORROW)));
-
-  AutoPreemptDisabler preempt_disable;
-  Guard<Mutex> guard{&lock_};
-  list_add_tail(&request_list_, &req->provider_node);
-
-  request_evt_.Signal();
-}
-
 bool PmmNode::InOomStateLocked() {
   if (mem_avail_state_cur_index_ == 0) {
     return true;
@@ -692,92 +666,6 @@ bool PmmNode::InOomStateLocked() {
 #else
   return false;
 #endif
-}
-
-bool PmmNode::ClearRequest(page_request_t* req) {
-  AutoPreemptDisabler preempt_disable;
-  Guard<Mutex> guard{&lock_};
-  bool res;
-  if (list_in_list(&req->provider_node)) {
-    // Get rid of our reference to the request and let the client know that we
-    // don't need the req->cb_ctx anymore.
-    list_delete(&req->provider_node);
-    res = true;
-  } else {
-    // We might still need the reference to the request's context, so tell the caller
-    // not to delete the context. That will be done when ProcessPendingRequest sees
-    // that current_request_ is null.
-    DEBUG_ASSERT(current_request_ == req);
-    current_request_ = nullptr;
-    res = false;
-  }
-
-  if (list_is_empty(&request_list_) && current_request_ == nullptr) {
-    request_evt_.Unsignal();
-  }
-
-  return res;
-}
-
-void PmmNode::SwapRequest(page_request_t* old, page_request_t* new_req) {
-  DEBUG_ASSERT(old->cb_ctx == new_req->cb_ctx);
-  DEBUG_ASSERT(old->drop_ref_cb == new_req->drop_ref_cb);
-  DEBUG_ASSERT(old->pages_available_cb == new_req->pages_available_cb);
-
-  AutoPreemptDisabler preempt_disable;
-  Guard<Mutex> guard{&lock_};
-
-  new_req->length = old->length;
-  new_req->offset = old->offset;
-
-  if (old == current_request_) {
-    current_request_ = new_req;
-  } else if (list_in_list(&old->provider_node)) {
-    list_replace_node(&old->provider_node, &new_req->provider_node);
-  }
-}
-
-void PmmNode::ProcessPendingRequests() {
-  AutoPreemptDisabler preempt_disable;
-  Guard<Mutex> guard{&lock_};
-  page_request* node = nullptr;
-  while ((node = list_peek_head_type(&request_list_, page_request, provider_node)) &&
-         mem_avail_state_cur_index_) {
-    // Create a local copy of the request because the memory might disappear as
-    // soon as we release lock_.
-    page_request_t req_copy = *node;
-
-    // Move the request from the list to the current request slot.
-    list_delete(&node->provider_node);
-    current_request_ = node;
-    node = nullptr;
-
-    uint64_t actual_supply;
-    guard.CallUnlocked([req_copy, &actual_supply]() {
-      // Note that this will call back into ::ClearRequest and
-      // clear current_request_ if the request is fulfilled.
-      req_copy.pages_available_cb(req_copy.cb_ctx, req_copy.offset, req_copy.length,
-                                  &actual_supply);
-    });
-
-    if (current_request_ != nullptr && actual_supply != req_copy.length) {
-      // If we didn't fully supply the pages and the pending node hasn't been
-      // cancelled, then we need to put the pending request and come back to it
-      // when more pages are available.
-      DEBUG_ASSERT(current_request_->offset == req_copy.offset);
-      DEBUG_ASSERT(current_request_->length == req_copy.length);
-
-      current_request_->offset += actual_supply;
-      current_request_->length -= actual_supply;
-
-      list_add_head(&request_list_, &current_request_->provider_node);
-      current_request_ = nullptr;
-    } else {
-      // If the request was cancelled or we successfully fulfilled the
-      // request, the we need to drop our ref to ctx.
-      guard.CallUnlocked([req_copy]() { req_copy.drop_ref_cb(req_copy.cb_ctx); });
-    }
-  }
 }
 
 uint64_t PmmNode::CountFreePages() const TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -833,18 +721,6 @@ void PmmNode::Dump(bool is_panic) const {
     Guard<Mutex> guard{&lock_};
     dump();
   }
-}
-
-int PmmNode::RequestThreadLoop() {
-  while (request_thread_live_) {
-    // There's a race where the request or free pages can disappear before we start
-    // processing them, but that just results in ProcessPendingRequests doing a little
-    // extra work before we get back to here and wait again.
-    request_evt_.Wait(Deadline::infinite());
-    free_pages_evt_.Wait(Deadline::infinite());
-    ProcessPendingRequests();
-  }
-  return 0;
 }
 
 zx_status_t PmmNode::InitReclamation(const uint64_t* watermarks, uint8_t watermark_count,
@@ -971,16 +847,6 @@ void PmmNode::DebugMemAvailStateCallback(uint8_t mem_state_idx) const {
   // Invoke callback for the requested state without allocating additional memory, or messing with
   // any of the internal memory state tracking counters.
   mem_avail_state_callback_(mem_avail_state_context_, mem_state_idx);
-}
-
-static int pmm_node_request_loop(void* arg) {
-  return static_cast<PmmNode*>(arg)->RequestThreadLoop();
-}
-
-void PmmNode::InitRequestThread() {
-  request_thread_ =
-      Thread::Create("pmm-node-request-thread", pmm_node_request_loop, this, HIGH_PRIORITY);
-  request_thread_->Resume();
 }
 
 int64_t PmmNode::get_alloc_failed_count() { return pmm_alloc_failed.Value(); }

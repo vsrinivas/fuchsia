@@ -10,52 +10,6 @@
 
 namespace vm_unittest {
 
-void TestPageRequest::WaitForAvailable(uint64_t* expected_off, uint64_t* expected_len,
-                                       uint64_t* actual_supplied) {
-  expected_off_ = expected_off;
-  expected_len_ = expected_len;
-  actual_supplied_ = actual_supplied;
-  avail_sem_.Post();
-
-  wait_for_avail_sem_.Wait(Deadline::infinite());
-}
-
-bool TestPageRequest::Cancel() {
-  bool res = node_->ClearRequest(&request_);
-  actual_supplied_ = nullptr;
-  avail_sem_.Post();
-  return res;
-}
-
-void TestPageRequest::OnPagesAvailable(uint64_t offset, uint64_t count, uint64_t* actual_supplied) {
-  on_pages_avail_evt_.Signal();
-  avail_sem_.Wait(Deadline::infinite());
-
-  if (actual_supplied_) {
-    *expected_off_ = offset;
-    *expected_len_ = count;
-    *actual_supplied = 0;
-
-    while (count) {
-      vm_page_t* page;
-      zx_status_t status = node_->AllocPage(PMM_ALLOC_DELAY_OK, &page, nullptr);
-      if (status != ZX_OK) {
-        break;
-      }
-
-      count--;
-      *actual_supplied += 1;
-      list_add_tail(&page_list_, &page->queue_node);
-    }
-    *actual_supplied_ = *actual_supplied;
-  } else {
-    *actual_supplied = count;
-  }
-
-  wait_for_avail_sem_.Post();
-  on_pages_avail_evt_.Unsignal();
-}
-
 // Helper function to allocate memory in a user address space.
 zx_status_t AllocUser(VmAspace* aspace, const char* name, size_t size, user_inout_ptr<void>* ptr) {
   ASSERT(aspace->is_user());

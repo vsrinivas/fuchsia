@@ -39,11 +39,6 @@ class PmmNode {
   // The list can be a combination of loaned and non-loaned pages.
   void FreeList(list_node* list);
 
-  // delayed allocator routines
-  void AllocPages(uint alloc_flags, page_request_t* req);
-  bool ClearRequest(page_request_t* req);
-  void SwapRequest(page_request_t* old, page_request_t* new_req);
-
   // Contiguous page loaning routines
   void BeginLoan(list_node* page_list);
   void CancelLoan(paddr_t address, size_t count);
@@ -56,9 +51,6 @@ class PmmNode {
   zx_status_t InitReclamation(const uint64_t* watermarks, uint8_t watermark_count,
                               uint64_t debounce, void* context,
                               mem_avail_state_updated_callback_t callback);
-
-  int RequestThreadLoop();
-  void InitRequestThread();
 
   uint64_t CountFreePages() const;
   uint64_t CountLoanedFreePages() const;
@@ -139,8 +131,6 @@ class PmmNode {
   void FreePageHelperLocked(vm_page* page) TA_REQ(lock_);
   void FreeListLocked(list_node* list) TA_REQ(lock_);
 
-  void ProcessPendingRequests();
-
   void UpdateMemAvailStateLocked() TA_REQ(lock_);
   void SetMemAvailStateLocked(uint8_t mem_avail_state) TA_REQ(lock_);
 
@@ -215,14 +205,7 @@ class PmmNode {
   // Free pages where loaned && !loan_cancelled.
   list_node free_loaned_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(free_loaned_list_);
 
-  // List of pending requests.
-  list_node_t request_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(request_list_);
-  // Request currently being processed. This is tracked seperately from request_list_
-  // because ClearRequest() handles the two cases differently.
-  page_request_t* current_request_ TA_GUARDED(lock_) = nullptr;
-
   Event free_pages_evt_;
-  Event request_evt_;
 
   uint64_t mem_avail_state_watermarks_[MAX_WATERMARK_COUNT] TA_GUARDED(lock_);
   uint8_t mem_avail_state_watermark_count_ TA_GUARDED(lock_);
@@ -232,9 +215,6 @@ class PmmNode {
   uint64_t mem_avail_state_lower_bound_ TA_GUARDED(lock_);
   void* mem_avail_state_context_ TA_GUARDED(lock_);
   mem_avail_state_updated_callback_t mem_avail_state_callback_ TA_GUARDED(lock_);
-
-  Thread* request_thread_ = nullptr;
-  ktl::atomic<bool> request_thread_live_ = true;
 
   PageQueues page_queues_;
 

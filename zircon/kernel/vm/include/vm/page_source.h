@@ -18,7 +18,6 @@
 #include <ktl/optional.h>
 #include <ktl/unique_ptr.h>
 #include <vm/page.h>
-#include <vm/page_request.h>
 #include <vm/vm.h>
 
 class PageRequest;
@@ -27,6 +26,14 @@ class PageSource;
 struct VmoDebugInfo {
   uintptr_t vmo_ptr;
   uint64_t vmo_id;
+};
+
+// The different types of page requests that can exist.
+enum page_request_type : uint32_t {
+  READ = 0,   // Request to provide the initial contents for the page.
+  DIRTY,      // Request to alter contents of the page, i.e. transition it from clean to dirty.
+  WRITEBACK,  // Request to write back modified page contents back to the source.
+  COUNT       // Number of page request types.
 };
 
 // These properties are constant per PageProvider type, so a given VmCowPages can query and cache

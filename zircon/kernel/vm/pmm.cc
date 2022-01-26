@@ -133,17 +133,6 @@ bool pmm_is_loaned(vm_page_t* page) {
   return pmm_node.IsLoaned(page);
 }
 
-void pmm_alloc_pages(uint alloc_flags, page_request_t* req) {
-  VM_KTRACE_DURATION(3, "pmm_alloc_pages");
-  pmm_node.AllocPages(alloc_flags, req);
-}
-
-bool pmm_clear_request(page_request_t* req) { return pmm_node.ClearRequest(req); }
-
-void pmm_swap_request(page_request_t* old, page_request_t* new_req) {
-  pmm_node.SwapRequest(old, new_req);
-}
-
 void pmm_free(list_node* list) {
   VM_KTRACE_DURATION(3, "pmm_free");
   pmm_node.FreeList(list);
@@ -240,10 +229,6 @@ static void pmm_dump_timer(Timer* t, zx_time_t now, void*) {
   t->SetOneshot(deadline, &pmm_dump_timer, nullptr);
   pmm_node.DumpFree();
 }
-
-static void init_request_thread(unsigned int level) { pmm_node.InitRequestThread(); }
-
-LK_INIT_HOOK(pmm, init_request_thread, LK_INIT_LEVEL_THREADING)
 
 LK_INIT_HOOK(
     pmm_boot_memory,

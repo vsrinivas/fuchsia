@@ -14,7 +14,6 @@
 #include <vm/evictor.h>
 #include <vm/page.h>
 #include <vm/page_queues.h>
-#include <vm/page_request.h>
 
 // physical allocator
 typedef struct pmm_arena_info {
@@ -53,7 +52,8 @@ zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffe
 // flags for allocation routines below
 #define PMM_ALLOC_FLAG_ANY (0 << 0)     // no restrictions on which arena to allocate from
 #define PMM_ALLOC_FLAG_LO_MEM (1 << 0)  // allocate only from arenas marked LO_MEM
-// the caller can handle allocation failures with a delayed page_request_t request.
+// the caller can handle allocation failures at low memory levels even if pages are technically
+// available.
 #define PMM_ALLOC_DELAY_OK (1 << 1)
 // The default (flag not set) is to not allocate a loaned page, so that we don't end up with loaned
 // pages allocated for arbitrary purposes that prevent us from getting the loaned page back quickly.
@@ -110,21 +110,6 @@ void pmm_end_loan(paddr_t address, size_t count, list_node* page_list);
 void pmm_delete_lender(paddr_t address, size_t count);
 
 bool pmm_is_loaned(vm_page_t* page);
-
-// Fallback delayed allocation function if regular synchronous allocation fails. See
-// the page_request_t struct documentation for more details.
-void pmm_alloc_pages(uint alloc_flags, page_request_t* req) __NONNULL((2));
-
-// Clears the request. Returns true if the pmm is temporarily retaining a reference
-// to the request's ctx, or false otherwise. Regardless of the return value, it is
-// safe to free |req| as soon as this function returns.
-bool pmm_clear_request(page_request_t* req) __NONNULL((1));
-
-// Swaps the memory used for tracking an outstanding request.
-//
-// The callbacks and request ctx must be identical for the two requests. As soon as
-// this function returns, it is safe to release the pointer |old|.
-void pmm_swap_request(page_request_t* old, page_request_t* new_req) __NONNULL((1, 2));
 
 // Free a list of physical pages.
 void pmm_free(list_node* list) __NONNULL((1));

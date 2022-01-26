@@ -43,51 +43,6 @@ namespace vm_unittest {
 constexpr uint kArchRwFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 constexpr uint kArchRwUserFlags = kArchRwFlags | ARCH_MMU_FLAG_PERM_USER;
 
-class TestPageRequest {
- public:
-  TestPageRequest(PmmNode* node, uint64_t off, uint64_t len)
-      : node_(node),
-        request_({off, len, page_request_type::READ, pages_available_cb, drop_ref_cb, this, {}}) {}
-
-  ~TestPageRequest() {
-    ASSERT(drop_ref_evt_.Wait(Deadline::no_slack(ZX_TIME_INFINITE_PAST)) == ZX_OK);
-  }
-
-  void WaitForAvailable(uint64_t* expected_off, uint64_t* expected_len, uint64_t* actual_supplied);
-
-  bool Cancel();
-
-  page_request_t* request() { return &request_; }
-  Event& drop_ref_evt() { return drop_ref_evt_; }
-  list_node* page_list() { return &page_list_; }
-  Event& on_pages_avail_evt() { return on_pages_avail_evt_; }
-
- private:
-  void OnPagesAvailable(uint64_t offset, uint64_t count, uint64_t* actual_supplied);
-
-  void OnDropRef() { drop_ref_evt_.Signal(); }
-
-  PmmNode* node_;
-  page_request_t request_;
-
-  list_node page_list_ = LIST_INITIAL_VALUE(page_list_);
-
-  Semaphore wait_for_avail_sem_;
-  Semaphore avail_sem_;
-  Event on_pages_avail_evt_;
-  uint64_t* expected_off_;
-  uint64_t* expected_len_;
-  uint64_t* actual_supplied_;
-
-  Event drop_ref_evt_;
-
-  static void pages_available_cb(void* ctx, uint64_t offset, uint64_t count,
-                                 uint64_t* actual_supplied) {
-    static_cast<TestPageRequest*>(ctx)->OnPagesAvailable(offset, count, actual_supplied);
-  }
-  static void drop_ref_cb(void* ctx) { static_cast<TestPageRequest*>(ctx)->OnDropRef(); }
-};
-
 // Stubbed page provider that is intended to be allowed to create a vmo that believes it is backed
 // by a user pager, but is incapable of actually providing pages.
 class StubPageProvider : public PageProvider {
