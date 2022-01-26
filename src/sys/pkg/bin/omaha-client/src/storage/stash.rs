@@ -20,26 +20,14 @@ type Result<T> = std::result::Result<T, StashError>;
 
 #[derive(Debug, Error)]
 pub enum StashError {
-    #[error("generic error: {0}")]
-    Failure(anyhow::Error),
+    #[error("generic error")]
+    Failure(#[from] anyhow::Error),
 
-    #[error("FIDL error: {0}")]
-    FIDL(fidl::Error),
+    #[error("FIDL error")]
+    FIDL(#[from] fidl::Error),
 
     #[error("Stash not available")]
     NotAvailable,
-}
-
-impl From<fidl::Error> for StashError {
-    fn from(e: fidl::Error) -> StashError {
-        StashError::FIDL(e)
-    }
-}
-
-impl From<anyhow::Error> for StashError {
-    fn from(e: anyhow::Error) -> StashError {
-        StashError::Failure(e)
-    }
 }
 
 pub struct Stash {

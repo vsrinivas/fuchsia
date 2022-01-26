@@ -115,14 +115,14 @@ pub enum State {
 /// collection of error types.
 #[derive(Error, Debug)]
 pub enum OmahaRequestError {
-    #[error("Unexpected JSON error constructing update check: {0}")]
+    #[error("Unexpected JSON error constructing update check")]
     Json(#[from] serde_json::Error),
 
-    #[error("Error building update check HTTP request: {0}")]
+    #[error("Error building update check HTTP request")]
     HttpBuilder(#[from] http::Error),
 
     // TODO: This still contains hyper user error which should be split out.
-    #[error("HTTP transport error performing update check: {0}")]
+    #[error("HTTP transport error performing update check")]
     HttpTransport(#[from] http_request::Error),
 
     #[error("HTTP error performing update check: {0}")]
@@ -149,22 +149,22 @@ impl From<http::StatusCode> for OmahaRequestError {
 #[derive(Error, Debug)]
 pub enum ResponseParseError {
     #[error("Response was not valid UTF-8")]
-    Utf8(Utf8Error),
+    Utf8(#[from] Utf8Error),
 
-    #[error("Unexpected JSON error parsing update check response: {}", _0)]
-    Json(serde_json::Error),
+    #[error("Unexpected JSON error parsing update check response")]
+    Json(#[from] serde_json::Error),
 }
 
 #[derive(Error, Debug)]
 pub enum UpdateCheckError {
-    #[error("Error checking with Omaha: {:?}", _0)]
-    OmahaRequest(OmahaRequestError),
+    #[error("Error checking with Omaha")]
+    OmahaRequest(#[from] OmahaRequestError),
 
-    #[error("Error parsing Omaha response: {:?}", _0)]
-    ResponseParser(ResponseParseError),
+    #[error("Error parsing Omaha response")]
+    ResponseParser(#[from] ResponseParseError),
 
-    #[error("Unable to create an install plan: {:?}", _0)]
-    InstallPlan(anyhow::Error),
+    #[error("Unable to create an install plan")]
+    InstallPlan(#[source] anyhow::Error),
 }
 
 /// A handle to interact with the state machine running in another task.

@@ -28,23 +28,11 @@ type ProtocolApp = crate::protocol::request::App;
 /// type that can be used to express those reasons.
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Unexpected JSON error constructing update check: {}", _0)]
-    Json(serde_json::Error),
+    #[error("Unexpected JSON error constructing update check")]
+    Json(#[from] serde_json::Error),
 
-    #[error("Http error performing update check: {}", _0)]
-    Http(http::Error),
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(e: serde_json::Error) -> Self {
-        Error::Json(e)
-    }
-}
-
-impl From<http::Error> for Error {
-    fn from(e: http::Error) -> Self {
-        Error::Http(e)
-    }
+    #[error("Http error performing update check")]
+    Http(#[from] http::Error),
 }
 
 /// The builder's own Result type.
