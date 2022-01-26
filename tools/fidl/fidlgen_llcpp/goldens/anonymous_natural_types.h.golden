@@ -979,12 +979,13 @@ struct CodingTraits<::test_anonymous::Flags> {
   static void Encode(
       EncoderImpl* encoder, ::test_anonymous::Flags* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_anonymous::Flags>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::test_anonymous::Flags* value,
                      size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_anonymous::Flags>(offset);
   }
 };
 template <>
@@ -996,12 +997,13 @@ struct CodingTraits<::test_anonymous::BitsMember> {
   static void Encode(
       EncoderImpl* encoder, ::test_anonymous::BitsMember* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_anonymous::BitsMember>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::test_anonymous::BitsMember* value,
                      size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_anonymous::BitsMember>(offset);
   }
 };
 
@@ -1015,13 +1017,18 @@ struct CodingTraits<::test_anonymous::SomeProtocol_SomeMethod_Error> {
       EncoderImpl* encoder,
       ::test_anonymous::SomeProtocol_SomeMethod_Error* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_anonymous::SomeProtocol_SomeMethod_Error>(
+        offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::test_anonymous::SomeProtocol_SomeMethod_Error* value,
                      size_t offset) {
-    // TODO: decode
+    *value =
+        *decoder
+             ->template GetPtr<::test_anonymous::SomeProtocol_SomeMethod_Error>(
+                 offset);
   }
 };
 template <>
@@ -1033,12 +1040,13 @@ struct CodingTraits<::test_anonymous::Op> {
   static void Encode(
       EncoderImpl* encoder, ::test_anonymous::Op* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_anonymous::Op>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::test_anonymous::Op* value,
                      size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_anonymous::Op>(offset);
   }
 };
 

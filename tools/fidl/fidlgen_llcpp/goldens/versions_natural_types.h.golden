@@ -237,12 +237,13 @@ struct CodingTraits<::test_versions::Bits> {
   static void Encode(
       EncoderImpl* encoder, ::test_versions::Bits* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_versions::Bits>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::test_versions::Bits* value,
                      size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_versions::Bits>(offset);
   }
 };
 
@@ -255,12 +256,13 @@ struct CodingTraits<::test_versions::Enum> {
   static void Encode(
       EncoderImpl* encoder, ::test_versions::Enum* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_versions::Enum>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::test_versions::Enum* value,
                      size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_versions::Enum>(offset);
   }
 };
 

@@ -357,12 +357,13 @@ struct CodingTraits<::test_handlesintypes::obj_type> {
       EncoderImpl* encoder, ::test_handlesintypes::obj_type* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_handlesintypes::obj_type>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::test_handlesintypes::obj_type* value, size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_handlesintypes::obj_type>(offset);
   }
 };
 

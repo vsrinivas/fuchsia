@@ -433,13 +433,17 @@ struct CodingTraits<::test_placementofattributes::ExampleBits> {
       EncoderImpl* encoder, ::test_placementofattributes::ExampleBits* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_placementofattributes::ExampleBits>(
+        offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::test_placementofattributes::ExampleBits* value,
                      size_t offset) {
-    // TODO: decode
+    *value =
+        *decoder->template GetPtr<::test_placementofattributes::ExampleBits>(
+            offset);
   }
 };
 
@@ -453,13 +457,17 @@ struct CodingTraits<::test_placementofattributes::ExampleEnum> {
       EncoderImpl* encoder, ::test_placementofattributes::ExampleEnum* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_placementofattributes::ExampleEnum>(
+        offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::test_placementofattributes::ExampleEnum* value,
                      size_t offset) {
-    // TODO: decode
+    *value =
+        *decoder->template GetPtr<::test_placementofattributes::ExampleEnum>(
+            offset);
   }
 };
 

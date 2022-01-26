@@ -4803,12 +4803,13 @@ struct CodingTraits<::test_protocols::rights> {
   static void Encode(
       EncoderImpl* encoder, ::test_protocols::rights* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_protocols::rights>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::test_protocols::rights* value,
                      size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_protocols::rights>(offset);
   }
 };
 
@@ -4821,12 +4822,13 @@ struct CodingTraits<::test_protocols::obj_type> {
   static void Encode(
       EncoderImpl* encoder, ::test_protocols::obj_type* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_protocols::obj_type>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::test_protocols::obj_type* value,
                      size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_protocols::obj_type>(offset);
   }
 };
 template <>
@@ -4838,12 +4840,13 @@ struct CodingTraits<::test_protocols::ErrorEnum> {
   static void Encode(
       EncoderImpl* encoder, ::test_protocols::ErrorEnum* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_protocols::ErrorEnum>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::test_protocols::ErrorEnum* value,
                      size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_protocols::ErrorEnum>(offset);
   }
 };
 

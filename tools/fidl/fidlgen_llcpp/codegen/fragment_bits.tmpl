@@ -133,11 +133,12 @@ using {{ .Name }} = {{ .Unified }};
     template <class EncoderImpl>
     static void Encode(EncoderImpl* encoder, {{ . }}* value, size_t offset,
                       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-      // TODO: encode
+      ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+      *encoder->template GetPtr<{{ . }}>(offset) = *value;
     }
     template <typename DecoderImpl>
     static void Decode(DecoderImpl* decoder, {{ . }}* value, size_t offset) {
-      // TODO: decode
+      *value = *decoder->template GetPtr<{{ . }}>(offset);
     }
   };
 

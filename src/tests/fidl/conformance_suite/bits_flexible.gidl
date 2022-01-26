@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 success("FlexibleBitsUint8KnownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint8Struct{
         b: 1,
     },
@@ -16,8 +14,6 @@ success("FlexibleBitsUint8KnownValue") {
 }
 
 success("FlexibleBitsUint8CombinedValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint8Struct{
         b: 3,
     },
@@ -29,8 +25,6 @@ success("FlexibleBitsUint8CombinedValue") {
 }
 
 success("FlexibleBitsUint16KnownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint16Struct{
         b: 1,
     },
@@ -42,8 +36,6 @@ success("FlexibleBitsUint16KnownValue") {
 }
 
 success("FlexibleBitsUint16CombinedValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint16Struct{
         b: 3,
     },
@@ -55,8 +47,6 @@ success("FlexibleBitsUint16CombinedValue") {
 }
 
 success("FlexibleBitsUint32KnownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint32Struct{
         b: 1,
     },
@@ -68,8 +58,6 @@ success("FlexibleBitsUint32KnownValue") {
 }
 
 success("FlexibleBitsUint32CombinedValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint32Struct{
         b: 3,
     },
@@ -81,8 +69,6 @@ success("FlexibleBitsUint32CombinedValue") {
 }
 
 success("FlexibleBitsUint64KnownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint64Struct{
         b: 1,
     },
@@ -94,8 +80,6 @@ success("FlexibleBitsUint64KnownValue") {
 }
 
 success("FlexibleBitsUint64CombinedValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint64Struct{
         b: 3,
     },
@@ -107,8 +91,6 @@ success("FlexibleBitsUint64CombinedValue") {
 }
 
 success("FlexibleBitsUint8UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint8Struct{
         b: 0xff,
     },
@@ -120,8 +102,6 @@ success("FlexibleBitsUint8UnknownValue") {
 }
 
 success("FlexibleBitsUint16UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint16Struct{
         b: 0x1234,
     },
@@ -133,8 +113,6 @@ success("FlexibleBitsUint16UnknownValue") {
 }
 
 success("FlexibleBitsUint32UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint32Struct{
         b: 0x12345678,
     },
@@ -146,8 +124,6 @@ success("FlexibleBitsUint32UnknownValue") {
 }
 
 success("FlexibleBitsUint64UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleBitsUint64Struct{
         b: 0x0102030405060708,
     },

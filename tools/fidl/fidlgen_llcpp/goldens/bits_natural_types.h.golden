@@ -26,12 +26,13 @@ struct CodingTraits<::test_bits::StrictBits> {
   static void Encode(
       EncoderImpl* encoder, ::test_bits::StrictBits* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_bits::StrictBits>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::test_bits::StrictBits* value,
                      size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_bits::StrictBits>(offset);
   }
 };
 template <>
@@ -43,12 +44,13 @@ struct CodingTraits<::test_bits::MyBits> {
   static void Encode(
       EncoderImpl* encoder, ::test_bits::MyBits* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_bits::MyBits>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::test_bits::MyBits* value,
                      size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_bits::MyBits>(offset);
   }
 };
 template <>
@@ -60,12 +62,13 @@ struct CodingTraits<::test_bits::FlexibleBits> {
   static void Encode(
       EncoderImpl* encoder, ::test_bits::FlexibleBits* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_bits::FlexibleBits>(offset) = *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::test_bits::FlexibleBits* value,
                      size_t offset) {
-    // TODO: decode
+    *value = *decoder->template GetPtr<::test_bits::FlexibleBits>(offset);
   }
 };
 

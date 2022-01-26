@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 success("FlexibleEnumInt8") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumInt8Struct{
         e: 0x01,
     },
@@ -16,8 +14,6 @@ success("FlexibleEnumInt8") {
 }
 
 success("FlexibleEnumInt16") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumInt16Struct{
         e: 0x0102,
     },
@@ -29,8 +25,6 @@ success("FlexibleEnumInt16") {
 }
 
 success("FlexibleEnumInt32") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumInt32Struct{
         e: 0x01020304,
     },
@@ -42,8 +36,6 @@ success("FlexibleEnumInt32") {
 }
 
 success("FlexibleEnumInt64") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumInt64Struct{
         e: 0x0102030405060708,
     },
@@ -55,8 +47,6 @@ success("FlexibleEnumInt64") {
 }
 
 success("FlexibleEnumUint8") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumUint8Struct{
         e: 0x01,
     },
@@ -68,8 +58,6 @@ success("FlexibleEnumUint8") {
 }
 
 success("FlexibleEnumUint16") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumUint16Struct{
         e: 0x0102,
     },
@@ -81,8 +69,6 @@ success("FlexibleEnumUint16") {
 }
 
 success("FlexibleEnumUint32") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumUint32Struct{
         e: 0x01020304,
     },
@@ -94,8 +80,6 @@ success("FlexibleEnumUint32") {
 }
 
 success("FlexibleEnumUint64") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumUint64Struct{
         e: 0x0102030405060708,
     },
@@ -107,8 +91,6 @@ success("FlexibleEnumUint64") {
 }
 
 success("FlexibleEnumInt8UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumInt8Struct{
         e: 0x0f,
     },
@@ -120,8 +102,6 @@ success("FlexibleEnumInt8UnknownValue") {
 }
 
 success("FlexibleEnumInt16UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumInt16Struct{
         e: 0x0fee,
     },
@@ -133,8 +113,6 @@ success("FlexibleEnumInt16UnknownValue") {
 }
 
 success("FlexibleEnumInt32UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumInt32Struct{
         e: 0x0feeddcc,
     },
@@ -146,8 +124,6 @@ success("FlexibleEnumInt32UnknownValue") {
 }
 
 success("FlexibleEnumInt64UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumInt64Struct{
         e: 0x0feeddccbbaa9988,
     },
@@ -159,8 +135,6 @@ success("FlexibleEnumInt64UnknownValue") {
 }
 
 success("FlexibleEnumUint8UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumUint8Struct{
         e: 0xff,
     },
@@ -172,8 +146,6 @@ success("FlexibleEnumUint8UnknownValue") {
 }
 
 success("FlexibleEnumUint16UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumUint16Struct{
         e: 0xffee,
     },
@@ -185,8 +157,6 @@ success("FlexibleEnumUint16UnknownValue") {
 }
 
 success("FlexibleEnumUint32UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumUint32Struct{
         e: 0xffeeddcc,
     },
@@ -198,8 +168,6 @@ success("FlexibleEnumUint32UnknownValue") {
 }
 
 success("FlexibleEnumUint64UnknownValue") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = FlexibleEnumUint64Struct{
         e: 0xffeeddccbbaa9988,
     },

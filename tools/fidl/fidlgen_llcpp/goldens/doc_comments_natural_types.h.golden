@@ -354,12 +354,15 @@ struct CodingTraits<::test_doccomments::MyStrictBits> {
       EncoderImpl* encoder, ::test_doccomments::MyStrictBits* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_doccomments::MyStrictBits>(offset) =
+        *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::test_doccomments::MyStrictBits* value, size_t offset) {
-    // TODO: decode
+    *value =
+        *decoder->template GetPtr<::test_doccomments::MyStrictBits>(offset);
   }
 };
 template <>
@@ -372,12 +375,15 @@ struct CodingTraits<::test_doccomments::MyFlexibleBits> {
       EncoderImpl* encoder, ::test_doccomments::MyFlexibleBits* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_doccomments::MyFlexibleBits>(offset) =
+        *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::test_doccomments::MyFlexibleBits* value, size_t offset) {
-    // TODO: decode
+    *value =
+        *decoder->template GetPtr<::test_doccomments::MyFlexibleBits>(offset);
   }
 };
 
@@ -391,12 +397,15 @@ struct CodingTraits<::test_doccomments::MyStrictEnum> {
       EncoderImpl* encoder, ::test_doccomments::MyStrictEnum* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_doccomments::MyStrictEnum>(offset) =
+        *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::test_doccomments::MyStrictEnum* value, size_t offset) {
-    // TODO: decode
+    *value =
+        *decoder->template GetPtr<::test_doccomments::MyStrictEnum>(offset);
   }
 };
 template <>
@@ -409,12 +418,15 @@ struct CodingTraits<::test_doccomments::MyFlexibleEnum> {
       EncoderImpl* encoder, ::test_doccomments::MyFlexibleEnum* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+    *encoder->template GetPtr<::test_doccomments::MyFlexibleEnum>(offset) =
+        *value;
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::test_doccomments::MyFlexibleEnum* value, size_t offset) {
-    // TODO: decode
+    *value =
+        *decoder->template GetPtr<::test_doccomments::MyFlexibleEnum>(offset);
   }
 };
 
