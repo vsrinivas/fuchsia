@@ -18,6 +18,7 @@ use wayland_bridge::dispatcher::WaylandDispatcher;
 
 use super::bridge_client::*;
 use super::file_creation::*;
+use crate::device::wayland::image_file::ImageFile;
 use crate::device::wayland::BufferCollectionFile;
 use crate::errno;
 use crate::fs::buffers::*;
@@ -196,6 +197,19 @@ fn handle_client_data(
                                 .duplicate(zx::Rights::SAME_RIGHTS)
                                 .expect("Failed to duplicate buffer collection import token.");
                             handles.push(import_token);
+                        } else if let Some(image_file) = file.downcast_file::<ImageFile>() {
+                            let import_token = image_file
+                                .info
+                                .token
+                                .value
+                                .as_handle_ref()
+                                .duplicate(zx::Rights::SAME_RIGHTS)
+                                .expect("Failed to duplicate buffer collection import token.");
+                            handles.push(import_token);
+                        } else {
+                            log::error!(
+                                "Trying to parse buffre collection token from invalid file type."
+                            );
                         }
                     }
                 }
