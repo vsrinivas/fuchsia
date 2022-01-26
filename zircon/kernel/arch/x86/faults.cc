@@ -63,6 +63,7 @@ KCOUNTER(exceptions_simd, "exceptions.simd")
 KCOUNTER(exceptions_gpf, "exceptions.gpf")
 KCOUNTER(exceptions_page, "exceptions.page_fault")
 KCOUNTER(exceptions_apic_err, "exceptions.apic_error")
+KCOUNTER(exceptions_apic_timer, "exceptions.apic_timer")
 KCOUNTER(exceptions_irq, "exceptions.irq")
 KCOUNTER(exceptions_unhandled, "exceptions.unhandled")
 KCOUNTER(exceptions_user, "exceptions.user")
@@ -424,6 +425,7 @@ static void handle_exception_types(iframe_t* frame) {
       break;
     }
     case X86_INT_APIC_TIMER: {
+      kcounter_add(exceptions_apic_timer, 1);
       apic_timer_interrupt_handler();
       apic_issue_eoi();
       break;
