@@ -136,7 +136,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveEvent) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  class Server : public test::testing::Protocol_TestBase {
+  class Server : public fidl::testing::WireTestBase<test::Protocol> {
    public:
     void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
       FAIL("%s not used by test", name.c_str());

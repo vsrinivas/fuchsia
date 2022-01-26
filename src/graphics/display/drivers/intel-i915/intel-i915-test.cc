@@ -55,7 +55,8 @@ zx_status_t zx_framebuffer_get_info(zx_handle_t resource, uint32_t* format, uint
 
 namespace {
 
-class MockNoCpuBufferCollection : public fuchsia_sysmem::testing::BufferCollection_TestBase {
+class MockNoCpuBufferCollection
+    : public fidl::testing::WireTestBase<fuchsia_sysmem::BufferCollection> {
  public:
   bool set_constraints_called() const { return set_constraints_called_; }
   void SetConstraints(SetConstraintsRequestView request,

@@ -19,7 +19,7 @@ namespace sysmem = fuchsia_sysmem;
 namespace {
 // Use a stub buffer collection instead of the real sysmem since some tests may
 // require things that aren't available on the current system.
-class StubBufferCollection : public fuchsia_sysmem::testing::BufferCollection_TestBase {
+class StubBufferCollection : public fidl::testing::WireTestBase<fuchsia_sysmem::BufferCollection> {
  public:
   void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& _completer) override {

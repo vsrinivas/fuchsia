@@ -19,18 +19,6 @@ class WireTestBase<::test_inheritancewithrecursivedecl::Parent>
   }
 };
 
-}  // namespace testing
-}  // namespace fidl
-namespace test_inheritancewithrecursivedecl {
-namespace testing {
-using Parent_TestBase =
-    ::fidl::testing::WireTestBase<::test_inheritancewithrecursivedecl::Parent>;
-
-}  // namespace testing
-}  // namespace test_inheritancewithrecursivedecl
-namespace fidl {
-namespace testing {
-
 template <>
 class WireTestBase<::test_inheritancewithrecursivedecl::Child>
     : public ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child> {
@@ -47,12 +35,5 @@ class WireTestBase<::test_inheritancewithrecursivedecl::Child>
     NotImplemented_("Second", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_inheritancewithrecursivedecl {
-namespace testing {
-using Child_TestBase =
-    ::fidl::testing::WireTestBase<::test_inheritancewithrecursivedecl::Child>;
-}  // namespace testing
-}  // namespace test_inheritancewithrecursivedecl

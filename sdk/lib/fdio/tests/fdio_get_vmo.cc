@@ -45,7 +45,7 @@ struct Context {
   size_t content_size;  // Must be <= zx_system_get_page_size().
   uint32_t last_flags;
 };
-class TestServer final : public fuchsia_io::testing::File_TestBase {
+class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
  public:
   explicit TestServer(Context* context) : context(context) {}
 

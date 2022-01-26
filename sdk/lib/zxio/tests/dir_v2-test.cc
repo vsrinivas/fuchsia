@@ -23,7 +23,7 @@ namespace {
 
 namespace fio2 = fuchsia_io2;
 
-class TestServerBase : public fio2::testing::Directory_TestBase {
+class TestServerBase : public fidl::testing::WireTestBase<fio2::Directory> {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;

@@ -18,12 +18,5 @@ class WireTestBase<::test_transitivedependenciescompose::Top>
     NotImplemented_("GetFoo", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_transitivedependenciescompose {
-namespace testing {
-using Top_TestBase =
-    ::fidl::testing::WireTestBase<::test_transitivedependenciescompose::Top>;
-}  // namespace testing
-}  // namespace test_transitivedependenciescompose

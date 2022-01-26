@@ -301,7 +301,7 @@ TEST(CreateWithInfo, Pipe) {
   ASSERT_OK(zxio_close(zxio));
 }
 
-class TestServiceNodeServer : public fuchsia_io::testing::Node_TestBase {
+class TestServiceNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Node> {
  public:
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
     ADD_FAILURE("unexpected message received: %s", name.c_str());
@@ -353,7 +353,7 @@ TEST(CreateWithInfo, Service) {
   service_control_loop.Shutdown();
 }
 
-class TestTtyServer : public fuchsia_hardware_pty::testing::Device_TestBase {
+class TestTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_pty::Device> {
  public:
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
     ADD_FAILURE("unexpected message received: %s", name.c_str());

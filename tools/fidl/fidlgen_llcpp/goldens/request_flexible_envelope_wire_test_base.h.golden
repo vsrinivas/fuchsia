@@ -24,12 +24,5 @@ class WireTestBase<::test_requestflexibleenvelope::Protocol>
     NotImplemented_("RequestFlexibleResponseStrict", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_requestflexibleenvelope {
-namespace testing {
-using Protocol_TestBase =
-    ::fidl::testing::WireTestBase<::test_requestflexibleenvelope::Protocol>;
-}  // namespace testing
-}  // namespace test_requestflexibleenvelope

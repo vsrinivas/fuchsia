@@ -41,7 +41,7 @@ fmem::wire::Buffer GetBuffer(std::string_view path) {
   return std::move(*result->buffer);
 }
 
-class TestNode : public fdf::testing::Node_TestBase {
+class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
  public:
   bool HasChildren() const { return !controllers_.empty() || !nodes_.empty(); }
 
@@ -60,7 +60,7 @@ class TestNode : public fdf::testing::Node_TestBase {
   std::vector<fidl::ServerEnd<fdf::Node>> nodes_;
 };
 
-class TestRootResource : public fboot::testing::RootResource_TestBase {
+class TestRootResource : public fidl::testing::WireTestBase<fboot::RootResource> {
  private:
   void Get(GetRequestView request, GetCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NO_RESOURCES);
@@ -72,7 +72,7 @@ class TestRootResource : public fboot::testing::RootResource_TestBase {
   }
 };
 
-class TestItems : public fboot::testing::Items_TestBase {
+class TestItems : public fidl::testing::WireTestBase<fboot::Items> {
  private:
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
     printf("Not implemented: Items::%s\n", name.data());
@@ -80,7 +80,7 @@ class TestItems : public fboot::testing::Items_TestBase {
   }
 };
 
-class TestFile : public fio::testing::File_TestBase {
+class TestFile : public fidl::testing::WireTestBase<fio::File> {
  public:
   void SetStatus(zx_status_t status) { status_ = status; }
   void SetBuffer(fmem::wire::Buffer buffer) { buffer_ = std::move(buffer); }
@@ -99,7 +99,7 @@ class TestFile : public fio::testing::File_TestBase {
   fmem::wire::Buffer buffer_;
 };
 
-class TestDirectory : public fio::testing::Directory_TestBase {
+class TestDirectory : public fidl::testing::WireTestBase<fio::Directory> {
  public:
   using OpenHandler = fit::function<void(OpenRequestView)>;
 

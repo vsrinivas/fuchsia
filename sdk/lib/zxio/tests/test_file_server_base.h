@@ -14,7 +14,7 @@ namespace zxio_tests {
 // This is a test friendly implementation of a fuchsia_io::File server
 // that simply returns ZX_ERR_NOT_SUPPORTED for every operation other than
 // fuchsia.io.File/Close.
-class TestFileServerBase : public fuchsia_io::testing::File_TestBase {
+class TestFileServerBase : public fidl::testing::WireTestBase<fuchsia_io::File> {
  public:
   TestFileServerBase() = default;
   virtual ~TestFileServerBase() = default;

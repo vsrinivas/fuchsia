@@ -832,10 +832,9 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		SyncEventAllocationV2: computeAllocation(
 			maxResponseSizeV2, messageDirectionResponse.queryBoundedness(
 				clientContext, anyEventHasFlexibleEnvelope(methods))),
-		Methods:            methods,
-		FuzzingName:        fuzzingName,
-		DeprecatedTestBase: protocolName.appendName("_TestBase").appendNamespace("testing"),
-		TestBase:           testBaseNames,
+		Methods:     methods,
+		FuzzingName: fuzzingName,
+		TestBase:    testBaseNames,
 	})
 	var transport *Transport
 	if len(p.Transports()) != 1 {

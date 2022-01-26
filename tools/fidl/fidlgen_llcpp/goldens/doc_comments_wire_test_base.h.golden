@@ -18,12 +18,5 @@ class WireTestBase<::test_doccomments::Interface>
     NotImplemented_("Method", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_doccomments {
-namespace testing {
-using Interface_TestBase =
-    ::fidl::testing::WireTestBase<::test_doccomments::Interface>;
-}  // namespace testing
-}  // namespace test_doccomments

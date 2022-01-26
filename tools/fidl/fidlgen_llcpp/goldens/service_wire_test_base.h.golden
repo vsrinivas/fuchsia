@@ -20,18 +20,6 @@ class WireTestBase<::test_service::SecondProtocol>
   }
 };
 
-}  // namespace testing
-}  // namespace fidl
-namespace test_service {
-namespace testing {
-using SecondProtocol_TestBase =
-    ::fidl::testing::WireTestBase<::test_service::SecondProtocol>;
-
-}  // namespace testing
-}  // namespace test_service
-namespace fidl {
-namespace testing {
-
 template <>
 class WireTestBase<::test_service::FirstProtocol>
     : public ::fidl::WireServer<::test_service::FirstProtocol> {
@@ -45,12 +33,5 @@ class WireTestBase<::test_service::FirstProtocol>
     NotImplemented_("MethodOnFirst", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_service {
-namespace testing {
-using FirstProtocol_TestBase =
-    ::fidl::testing::WireTestBase<::test_service::FirstProtocol>;
-}  // namespace testing
-}  // namespace test_service

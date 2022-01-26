@@ -31,7 +31,8 @@ constexpr char kValidLabel[] = "test";
 constexpr char kInvalidLabel1[] = "TheWrongLabel";
 constexpr char kInvalidLabel2[] = "StillTheWrongLabel";
 
-class FakePartition : public fuchsia_hardware_block_partition::testing::Partition_TestBase {
+class FakePartition
+    : public fidl::testing::WireTestBase<fuchsia_hardware_block_partition::Partition> {
  public:
   FakePartition(const uint8_t* type_guid, const uint8_t* instance_guid, const char* label)
       : type_guid_(type_guid), instance_guid_(instance_guid), label_(label) {}

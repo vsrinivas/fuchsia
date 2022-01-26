@@ -11,7 +11,7 @@
 
 #include <zxtest/zxtest.h>
 
-class WindowSizeTtyServer : public fuchsia_hardware_pty::testing::Device_TestBase {
+class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_pty::Device> {
  public:
   WindowSizeTtyServer() {
     zx_status_t status = zx::eventpair::create(0, &event0_, &event1_);

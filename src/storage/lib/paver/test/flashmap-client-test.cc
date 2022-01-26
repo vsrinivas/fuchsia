@@ -51,7 +51,7 @@ constexpr struct Area kDefaultAreas[] = {
     },
 };
 
-class FakeCrosAcpi : public fuchsia_acpi_chromeos::testing::Device_TestBase {
+class FakeCrosAcpi : public fidl::testing::WireTestBase<fuchsia_acpi_chromeos::Device> {
  public:
   using Slot = fuchsia_acpi_chromeos::wire::BootSlot;
 

@@ -31,7 +31,7 @@ class TestEventHandler : public fidl::WireAsyncEventHandler<fldsvc::Loader> {
   fidl::UnbindInfo error_;
 };
 
-class TestLoader : public fldsvc::testing::Loader_TestBase {
+class TestLoader : public fidl::testing::WireTestBase<fldsvc::Loader> {
  public:
   void SetLoadObjectVmo(zx::vmo vmo) { vmo_ = std::move(vmo); }
 

@@ -14,12 +14,5 @@ class WireTestBase<::test_handles::SomeProtocol>
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_handles {
-namespace testing {
-using SomeProtocol_TestBase =
-    ::fidl::testing::WireTestBase<::test_handles::SomeProtocol>;
-}  // namespace testing
-}  // namespace test_handles

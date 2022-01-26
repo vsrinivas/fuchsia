@@ -18,12 +18,5 @@ class WireTestBase<::test_placementofattributes::ExampleProtocol>
     NotImplemented_("Method", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_placementofattributes {
-namespace testing {
-using ExampleProtocol_TestBase = ::fidl::testing::WireTestBase<
-    ::test_placementofattributes::ExampleProtocol>;
-}  // namespace testing
-}  // namespace test_placementofattributes

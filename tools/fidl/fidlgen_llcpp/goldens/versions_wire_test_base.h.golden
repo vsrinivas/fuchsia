@@ -15,18 +15,6 @@ class WireTestBase<::test_versions::OtherProtocol>
                                ::fidl::CompleterBase& completer) = 0;
 };
 
-}  // namespace testing
-}  // namespace fidl
-namespace test_versions {
-namespace testing {
-using OtherProtocol_TestBase =
-    ::fidl::testing::WireTestBase<::test_versions::OtherProtocol>;
-
-}  // namespace testing
-}  // namespace test_versions
-namespace fidl {
-namespace testing {
-
 template <>
 class WireTestBase<::test_versions::Protocol>
     : public ::fidl::WireServer<::test_versions::Protocol> {
@@ -39,12 +27,5 @@ class WireTestBase<::test_versions::Protocol>
     NotImplemented_("Foo", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_versions {
-namespace testing {
-using Protocol_TestBase =
-    ::fidl::testing::WireTestBase<::test_versions::Protocol>;
-}  // namespace testing
-}  // namespace test_versions

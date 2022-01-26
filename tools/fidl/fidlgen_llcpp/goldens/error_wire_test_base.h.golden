@@ -18,11 +18,5 @@ class WireTestBase<::test_error::Example>
     NotImplemented_("Foo", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_error {
-namespace testing {
-using Example_TestBase = ::fidl::testing::WireTestBase<::test_error::Example>;
-}  // namespace testing
-}  // namespace test_error

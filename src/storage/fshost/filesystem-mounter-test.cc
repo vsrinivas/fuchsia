@@ -78,7 +78,7 @@ enum class FilesystemType {
 
 class TestMounter : public FilesystemMounter {
  public:
-  class FakeDirectoryImpl : public fuchsia_io::testing::Directory_TestBase {
+  class FakeDirectoryImpl : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
    public:
     void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
       ADD_FAILURE() << "Unexpected call to " << name;

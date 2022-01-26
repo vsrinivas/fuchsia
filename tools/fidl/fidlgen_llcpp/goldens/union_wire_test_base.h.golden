@@ -27,12 +27,5 @@ class WireTestBase<::test_union::TestProtocol>
                     _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_union {
-namespace testing {
-using TestProtocol_TestBase =
-    ::fidl::testing::WireTestBase<::test_union::TestProtocol>;
-}  // namespace testing
-}  // namespace test_union

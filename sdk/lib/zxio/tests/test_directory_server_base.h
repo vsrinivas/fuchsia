@@ -14,7 +14,7 @@ namespace zxio_tests {
 // This is a test friendly implementation of a fuchsia_io::Directory server
 // that simply returns ZX_ERR_NOT_SUPPORTED for every operation other than
 // fuchsia.io.Directory/Close.
-class TestDirectoryServerBase : public fuchsia_io::testing::Directory_TestBase {
+class TestDirectoryServerBase : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
  public:
   TestDirectoryServerBase() = default;
   virtual ~TestDirectoryServerBase() = default;

@@ -23,12 +23,5 @@ class WireTestBase<::test_emptystruct::EmptyProtocol>
     NotImplemented_("SendAndReceive", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_emptystruct {
-namespace testing {
-using EmptyProtocol_TestBase =
-    ::fidl::testing::WireTestBase<::test_emptystruct::EmptyProtocol>;
-}  // namespace testing
-}  // namespace test_emptystruct

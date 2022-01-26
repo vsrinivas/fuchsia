@@ -14,7 +14,7 @@
 
 namespace sysmem = fuchsia_sysmem;
 
-class MockBufferCollection : public fuchsia_sysmem::testing::BufferCollection_TestBase {
+class MockBufferCollection : public fidl::testing::WireTestBase<fuchsia_sysmem::BufferCollection> {
  public:
   void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& _completer) override {

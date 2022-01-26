@@ -19,17 +19,6 @@ class WireTestBase<::test_inheritance::Super>
   }
 };
 
-}  // namespace testing
-}  // namespace fidl
-namespace test_inheritance {
-namespace testing {
-using Super_TestBase = ::fidl::testing::WireTestBase<::test_inheritance::Super>;
-
-}  // namespace testing
-}  // namespace test_inheritance
-namespace fidl {
-namespace testing {
-
 template <>
 class WireTestBase<::test_inheritance::Sub>
     : public ::fidl::WireServer<::test_inheritance::Sub> {
@@ -42,11 +31,5 @@ class WireTestBase<::test_inheritance::Sub>
     NotImplemented_("Foo", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_inheritance {
-namespace testing {
-using Sub_TestBase = ::fidl::testing::WireTestBase<::test_inheritance::Sub>;
-}  // namespace testing
-}  // namespace test_inheritance

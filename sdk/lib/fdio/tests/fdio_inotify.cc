@@ -94,7 +94,7 @@ namespace fio = fuchsia_io;
 namespace fio2 = fuchsia_io2;
 constexpr char kTmpfsPath[] = "/tmp-inotify";
 
-class Server final : public fio::testing::Directory_TestBase {
+class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
  public:
   explicit Server(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 

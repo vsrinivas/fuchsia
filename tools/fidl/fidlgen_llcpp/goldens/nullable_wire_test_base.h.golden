@@ -18,12 +18,5 @@ class WireTestBase<::test_nullable::SimpleProtocol>
     NotImplemented_("Add", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_nullable {
-namespace testing {
-using SimpleProtocol_TestBase =
-    ::fidl::testing::WireTestBase<::test_nullable::SimpleProtocol>;
-}  // namespace testing
-}  // namespace test_nullable

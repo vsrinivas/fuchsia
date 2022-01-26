@@ -16,7 +16,7 @@
 
 namespace {
 
-class Server final : public fuchsia_io::testing::Node_TestBase {
+class Server final : public fidl::testing::WireTestBase<fuchsia_io::Node> {
  public:
   explicit Server(fuchsia_io::wire::NodeInfo describe_info)
       : describe_info_(std::move(describe_info)) {}

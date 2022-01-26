@@ -19,7 +19,7 @@ fidl/{{ .LibraryDots }}/cpp/wire_test_base.h
 #include <{{ .Library | Filename "WireHeader" }}>
 
 {{- range (call .ProtocolsForTransport "Channel") }}
-{{ EnsureNamespace "fidl::testing" }}
+  {{ EnsureNamespace "fidl::testing" }}
 
   template<>
   class {{ .TestBase.Name }} : public {{ .WireServer }} {
@@ -35,9 +35,6 @@ fidl/{{ .LibraryDots }}/cpp/wire_test_base.h
       {{- end }}
     {{- end }}
   };
-
-  {{ EnsureNamespace .DeprecatedTestBase }}
-  using {{ .DeprecatedTestBase.Name }} = ::fidl::testing::{{ .TestBase.Name }};
 {{ end -}}
 
 {{ UnsetTransport -}}

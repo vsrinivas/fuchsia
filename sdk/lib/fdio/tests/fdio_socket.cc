@@ -32,7 +32,7 @@
 
 namespace {
 
-class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase {
+class Server final : public fidl::testing::WireTestBase<fuchsia_posix_socket::StreamSocket> {
  public:
   explicit Server(zx::socket peer) : peer_(std::move(peer)) {}
 
@@ -74,7 +74,7 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
     if (on_connect_) {
       on_connect_(peer_, completer);
     } else {
-      fuchsia_posix_socket::testing::StreamSocket_TestBase::Connect(request, completer);
+      fidl::testing::WireTestBase<fuchsia_posix_socket::StreamSocket>::Connect(request, completer);
     }
   }
 

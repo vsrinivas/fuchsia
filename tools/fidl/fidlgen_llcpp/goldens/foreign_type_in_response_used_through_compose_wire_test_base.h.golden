@@ -20,12 +20,5 @@ class WireTestBase<::test_foreigntypeinresponseusedthroughcompose::Top>
     NotImplemented_("GetFoo", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_foreigntypeinresponseusedthroughcompose {
-namespace testing {
-using Top_TestBase = ::fidl::testing::WireTestBase<
-    ::test_foreigntypeinresponseusedthroughcompose::Top>;
-}  // namespace testing
-}  // namespace test_foreigntypeinresponseusedthroughcompose

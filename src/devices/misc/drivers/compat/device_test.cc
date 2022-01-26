@@ -14,7 +14,7 @@ namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia_io;
 namespace frunner = fuchsia_component_runner;
 
-class TestNode : public fdf::testing::Node_TestBase {
+class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
  public:
   void Clear() {
     controllers_.clear();

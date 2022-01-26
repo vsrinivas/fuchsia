@@ -24,12 +24,5 @@ class WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax>
     NotImplemented_("CallWhichMayFail", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_errorsyntax {
-namespace testing {
-using ExampleUseOfErrorSyntax_TestBase =
-    ::fidl::testing::WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax>;
-}  // namespace testing
-}  // namespace test_errorsyntax

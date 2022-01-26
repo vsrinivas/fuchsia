@@ -22,8 +22,6 @@ namespace {
 
 using ::fidl_test_coding_fuchsia::Example;
 using ::fidl_test_coding_fuchsia::Simple;
-using ::fidl_test_coding_fuchsia::testing::Example_TestBase;
-using ::fidl_test_coding_fuchsia::testing::Simple_TestBase;
 
 constexpr uint32_t kNumberOfAsyncs = 10;
 constexpr int32_t kExpectedReply = 7;
@@ -1018,7 +1016,7 @@ fidl::Endpoints<Example> CreateEndpointsWithoutServerWriteRight() {
 }
 
 // A mock server that panics upon receiving any message.
-class NotImplementedServer : public Example_TestBase {
+class NotImplementedServer : public fidl::testing::WireTestBase<fidl_test_coding_fuchsia::Example> {
   void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
     ZX_PANIC("Unreachable");
   }

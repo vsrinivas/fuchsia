@@ -18,12 +18,5 @@ class WireTestBase<::test_anonymous::SomeProtocol>
     NotImplemented_("SomeMethod", _completer);
   }
 };
-
 }  // namespace testing
 }  // namespace fidl
-namespace test_anonymous {
-namespace testing {
-using SomeProtocol_TestBase =
-    ::fidl::testing::WireTestBase<::test_anonymous::SomeProtocol>;
-}  // namespace testing
-}  // namespace test_anonymous

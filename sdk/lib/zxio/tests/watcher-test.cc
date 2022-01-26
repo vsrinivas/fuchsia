@@ -22,7 +22,7 @@ TEST(WatcherTest, WatchInvalidObject) {
 }
 
 template <typename F>
-class Server final : public fuchsia_io::testing::Directory_TestBase {
+class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
  public:
   explicit Server(F on_watch) : on_watch_(std::move(on_watch)) {}
 

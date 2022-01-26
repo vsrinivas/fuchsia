@@ -23,7 +23,7 @@ fidl::VectorView<uint8_t> MakeVectorView(T& response) {
   return fidl::VectorView<uint8_t>::FromExternal(reinterpret_cast<uint8_t*>(&response), sizeof(T));
 }
 
-class FakeEcDevice : public fuchsia_hardware_google_ec::testing::Device_TestBase {
+class FakeEcDevice : public fidl::testing::WireTestBase<fuchsia_hardware_google_ec::Device> {
  public:
   void SetFeatures(std::initializer_list<uint32_t> features) {
     for (uint32_t feature : features) {

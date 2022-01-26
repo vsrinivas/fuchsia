@@ -20,7 +20,8 @@
 
 namespace {
 
-class DatagramSocketServer final : public fuchsia_posix_socket::testing::DatagramSocket_TestBase {
+class DatagramSocketServer final
+    : public fidl::testing::WireTestBase<fuchsia_posix_socket::DatagramSocket> {
  public:
   DatagramSocketServer() = default;
 
@@ -118,7 +119,8 @@ TEST_F(DatagramSocketTest, CreateWithTypeWrapper) {
 
 namespace {
 
-class StreamSocketServer final : public fuchsia_posix_socket::testing::StreamSocket_TestBase {
+class StreamSocketServer final
+    : public fidl::testing::WireTestBase<fuchsia_posix_socket::StreamSocket> {
  public:
   StreamSocketServer() = default;
 
@@ -215,7 +217,7 @@ TEST_F(StreamSocketTest, CreateWithTypeWrapper) {
 
 namespace {
 
-class RawSocketServer final : public fuchsia_posix_socket_raw::testing::Socket_TestBase {
+class RawSocketServer final : public fidl::testing::WireTestBase<fuchsia_posix_socket_raw::Socket> {
  public:
   RawSocketServer() = default;
 
@@ -312,7 +314,8 @@ TEST_F(RawSocketTest, CreateWithTypeWrapper) {
 
 namespace {
 
-class PacketSocketServer final : public fuchsia_posix_socket_packet::testing::Socket_TestBase {
+class PacketSocketServer final
+    : public fidl::testing::WireTestBase<fuchsia_posix_socket_packet::Socket> {
  public:
   PacketSocketServer() = default;
 

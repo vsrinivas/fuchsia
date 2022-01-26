@@ -21,7 +21,7 @@ TEST(WatcherTest, WatchInvalidDirFD) {
 }
 
 template <typename F>
-class Server final : public fuchsia_io::testing::Directory_TestBase {
+class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
  public:
   explicit Server(F onWatch) : onWatch_(onWatch) {}
 

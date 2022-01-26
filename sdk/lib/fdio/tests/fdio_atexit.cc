@@ -15,7 +15,7 @@
 
 namespace {
 
-class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase {
+class Server final : public fidl::testing::WireTestBase<fuchsia_posix_socket::StreamSocket> {
  public:
   Server(zx_handle_t channel, zx::socket peer) : channel_(channel), peer_(std::move(peer)) {}
 
