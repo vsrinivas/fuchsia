@@ -54,6 +54,7 @@ fuchsia_driver_component("hid-input-report") {
   component_name = "hid-input-report"
   deps = [ ":hid-input-report-driver" ]
   info = "hid-input-report-info.json"
+  colocate = true
 }
 
 test("hid-input-report-test-bin") {

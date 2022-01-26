@@ -54,6 +54,7 @@ fuchsia_driver_component("hid") {
   component_name = "hid"
   deps = [ ":hid-driver" ]
   info = "hid-info.json"
+  colocate = true
 }
 
 test("hid-test") {
