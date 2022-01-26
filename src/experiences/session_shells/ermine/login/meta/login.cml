@@ -4,8 +4,8 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        data: "data/login",
         args: [ "--expose_dirs=hosted_directories" ],
+        data: "data/login",
     },
     children: [
         {
@@ -43,6 +43,7 @@
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.identity.account.AccountManager",
                 "fuchsia.intl.PropertyProvider",
+                "fuchsia.recovery.FactoryReset",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Privacy",
                 "fuchsia.ssh.AuthorizedKeys",

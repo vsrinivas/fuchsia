@@ -5,6 +5,7 @@
 import 'package:fidl/fidl.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_identity_account/fidl_async.dart';
+import 'package:fidl_fuchsia_recovery/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:fuchsia_vfs/vfs.dart';
@@ -48,6 +49,16 @@ class AuthService {
 
   void dispose() {
     _accountManager.ctrl.close();
+  }
+
+  /// Calls [FactoryReset] service to factory data reset the device.
+  void factoryReset() {
+    final proxy = FactoryResetProxy();
+    Incoming.fromSvcPath().connectToService(proxy);
+    proxy
+        .reset()
+        .then((status) => log.info('Requested factory reset.'))
+        .catchError((e) => log.shout('Failed to factory reset device: $e'));
   }
 
   /// Returns [true] after [_accountManager.getAccountIds()] completes.

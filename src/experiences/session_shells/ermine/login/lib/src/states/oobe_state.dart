@@ -64,6 +64,7 @@ abstract class OobeState {
   void skip();
   void finish();
   void shutdown();
+  void factoryReset();
 
   factory OobeState.fromEnv() {
     return OobeStateImpl(

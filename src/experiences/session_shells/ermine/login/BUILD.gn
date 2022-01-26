@@ -65,6 +65,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ssh",
     "//sdk/fidl/fuchsia.sys",

@@ -372,6 +372,9 @@ class OobeStateImpl with Disposable implements OobeState {
   @override
   void shutdown() => deviceService.shutdown();
 
+  @override
+  void factoryReset() => authService.factoryReset();
+
   void _onErmineShellExit() {
     // Logout when Ermine exits.
     authService.logout().then((_) {

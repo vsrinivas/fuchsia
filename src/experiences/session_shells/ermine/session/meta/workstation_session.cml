@@ -50,6 +50,7 @@
                 "fuchsia.net.interfaces.State",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.power.BatteryManager",
+                "fuchsia.recovery.FactoryReset",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",

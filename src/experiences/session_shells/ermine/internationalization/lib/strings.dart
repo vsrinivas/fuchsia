@@ -1101,15 +1101,29 @@ class Strings {
       );
 
   static String get factoryDataReset => Intl.message(
-        'Factory Data Reset',
+        'Erase all user data and settings and reset password',
         name: 'factoryDataReset',
         desc: 'The label of button to factory data reset a device.',
       );
+
+  static String get factoryDataResetPrompt => Intl.message(
+        'Are you sure to erase all user data and settings and reset the password?',
+        name: 'factoryDataReset',
+        desc: 'The label of button to factory data reset a device.',
+      );
+
+  static String get eraseAndReset => Intl.message(
+        'Erase & Reset',
+        name: 'eraseAndReset',
+        desc: 'The label of button confirm factory data reset.',
+      );
+
   static String get forget => Intl.message(
         'Forget',
         name: 'forget',
         desc: 'The label for "Forget" text field.',
       );
+
   static String connectToNetwork(String network) => Intl.message(
         'Connect to $network',
         name: 'Connect to network',

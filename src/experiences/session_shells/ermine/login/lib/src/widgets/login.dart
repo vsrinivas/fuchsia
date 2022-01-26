@@ -129,20 +129,14 @@ class Login extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     TextButton(
-                                      onPressed: () {},
+                                      onPressed: () =>
+                                          _confirmFactoryReset(context),
                                       child: Text(
                                         Strings.factoryDataReset,
                                         style: TextStyle(
                                           decoration: TextDecoration.underline,
                                         ),
                                       ),
-                                    ),
-                                    SizedBox(width: 10),
-                                    IconButton(
-                                      icon: Icon(Icons.help_outline),
-                                      // TODO(http://fxb/81598): Implement as a
-                                      // tooltip.
-                                      onPressed: () {},
                                     ),
                                   ],
                                 ),
@@ -202,4 +196,30 @@ class Login extends StatelessWidget {
   }
 
   bool _validate() => _formState.currentState?.validate() ?? false;
+
+  void _confirmFactoryReset(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: SizedBox(
+          width: 672,
+          child: Text(Strings.factoryDataResetPrompt),
+        ),
+        actions: [
+          OutlinedButton(
+            child: Text(Strings.cancel.toUpperCase()),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          ElevatedButton(
+            child: Text(Strings.eraseAndReset.toUpperCase()),
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
+    ).then((erase) {
+      if (erase) {
+        oobe.factoryReset();
+      }
+    });
+  }
 }
