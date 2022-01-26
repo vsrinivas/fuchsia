@@ -339,7 +339,7 @@ out:
   return ret;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 void iwl_mvm_update_changed_regdom(struct iwl_mvm* mvm) {
     bool changed;
     struct ieee80211_regdomain* regd;
@@ -354,13 +354,16 @@ void iwl_mvm_update_changed_regdom(struct iwl_mvm* mvm) {
         kfree(regd);
     }
 }
+#endif  // NEEDS_PORTING
 
-struct ieee80211_regdomain* iwl_mvm_get_current_regdomain(struct iwl_mvm* mvm, bool* changed) {
-    return iwl_mvm_get_regdomain(
-        mvm->hw->wiphy, "ZZ",
-        iwl_mvm_is_wifi_mcc_supported(mvm) ? MCC_SOURCE_GET_CURRENT : MCC_SOURCE_OLD_FW, changed);
+zx_status_t iwl_mvm_get_current_regdomain(struct iwl_mvm* mvm, bool* changed,
+                                          wlanphy_country_t* out_country) {
+  return iwl_mvm_get_regdomain(
+      mvm, "ZZ", iwl_mvm_is_wifi_mcc_supported(mvm) ? MCC_SOURCE_GET_CURRENT : MCC_SOURCE_OLD_FW,
+      changed, out_country);
 }
 
+#if 0  // NEEDS_PORTING
 int iwl_mvm_init_fw_regd(struct iwl_mvm* mvm) {
     enum iwl_mcc_source used_src;
     struct ieee80211_regdomain* regd;

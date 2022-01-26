@@ -93,8 +93,14 @@ class Mac80211Test : public SingleApTest {
 
 class Mac80211UcodeTest : public FakeUcodeTest {
  public:
-  Mac80211UcodeTest() : FakeUcodeTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT), 0, 0) {}
+  Mac80211UcodeTest()
+      : FakeUcodeTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT), 0,
+                      BIT(IWL_UCODE_TLV_API_WIFI_MCC_UPDATE)),
+        mvm_(iwl_trans_get_mvm(sim_trans_.iwl_trans())) {}
   ~Mac80211UcodeTest() {}
+
+ protected:
+  struct iwl_mvm* mvm_;
 };
 
 // Normal case: add an interface, then delete it.
@@ -368,16 +374,30 @@ TEST_F(RegulatoryTest, RegulatoryTestNormal) {
 
   bool changed;
   wlanphy_country_t country;
-  auto mvm = helper.mvm();
-  mtx_lock(&mvm->mutex);
-  EXPECT_EQ(ZX_OK, iwl_mvm_get_regdomain(mvm, "TW", MCC_SOURCE_WIFI, &changed, &country));
-  mtx_unlock(&mvm->mutex);
+  mtx_lock(&mvm_->mutex);
+  EXPECT_EQ(ZX_OK, iwl_mvm_get_regdomain(mvm_, "TW", MCC_SOURCE_WIFI, &changed, &country));
+  mtx_unlock(&mvm_->mutex);
 
   EXPECT_EQ(true, changed);
   EXPECT_EQ(0x54, country.alpha2[0]);
   EXPECT_EQ(0x57, country.alpha2[1]);
-  EXPECT_EQ(true, mvm->lar_regdom_set);
-  EXPECT_EQ(MCC_SOURCE_WIFI, mvm->mcc_src);
+  EXPECT_EQ(true, mvm_->lar_regdom_set);
+  EXPECT_EQ(MCC_SOURCE_WIFI, mvm_->mcc_src);
+}
+
+TEST_F(RegulatoryTest, TestGetCurrentRegDomain) {
+  ClientInterfaceHelper helper = ClientInterfaceHelper(&sim_trans_);
+
+  bool changed;
+  wlanphy_country_t country = {};
+  mtx_lock(&mvm_->mutex);
+  EXPECT_EQ(ZX_OK, iwl_mvm_get_current_regdomain(mvm_, &changed, &country));
+  mtx_unlock(&mvm_->mutex);
+
+  EXPECT_EQ(true, changed);
+  EXPECT_EQ(0x5a, country.alpha2[0]);  // Becomes 'ZZ' now.
+  EXPECT_EQ(0x5a, country.alpha2[1]);
+  EXPECT_EQ(MCC_SOURCE_GET_CURRENT, mvm_->mcc_src);
 }
 
 }  // namespace
