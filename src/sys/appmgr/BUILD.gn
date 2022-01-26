@@ -225,7 +225,7 @@ executable("unittest_bin") {
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/storage/memfs",
+    "//src/storage/memfs:cpp",
     "//src/testing/fidl:placeholders",
     "//third_party/googletest:gmock",
   ]

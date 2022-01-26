@@ -11,7 +11,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
@@ -22,6 +21,7 @@
 
 #include <unordered_map>
 
+#include "src/storage/memfs/scoped_memfs.h"
 #include "src/virtualization/bin/linux_runner/ports.h"
 
 namespace linux_runner {
@@ -33,72 +33,28 @@ static constexpr off_t kStatefulImageSizeForTest = 10ul * 1024 * 1024;
 static constexpr const char* kStatefulImagePath = "/data/stateful.img";
 static constexpr std::string_view kEnvironmentLabelForTest("test");
 
-// Mounts a memfs filesystem at a given path and unmounts it when this object
-// goes out of scope.
-class ScopedMemfs {
- public:
-  // Creates a new memfs filesystem at the given path.
-  static zx_status_t InstallAt(const char* path, async_dispatcher_t* dispatcher,
-                               std::unique_ptr<ScopedMemfs>* out) {
-    fdio_ns_t* ns;
-    zx_status_t status = fdio_ns_get_installed(&ns);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    memfs_filesystem_t* fs;
-    zx_handle_t root;
-    status = memfs_create_filesystem(dispatcher, &fs, &root);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    status = fdio_ns_bind(ns, path, root);
-    if (status != ZX_OK) {
-      memfs_free_filesystem(fs, nullptr);
-      return status;
-    }
-
-    *out = std::make_unique<ScopedMemfs>(fs, path);
-    return ZX_OK;
-  }
-
-  ScopedMemfs(memfs_filesystem_t* fs, const char* path) : fs_(fs), path_(path) {}
-
-  ~ScopedMemfs() {
-    fdio_ns_t* ns;
-    sync_completion_t completion;
-    memfs_free_filesystem(fs_, &completion);
-    FX_CHECK(sync_completion_wait(&completion, ZX_TIME_INFINITE) == ZX_OK)
-        << "Failed to unmount memfs";
-    FX_CHECK(fdio_ns_get_installed(&ns) == ZX_OK) << "Failed to read namespaces";
-    FX_CHECK(fdio_ns_unbind(ns, path_) == ZX_OK) << "Failed to unbind memfs filesystem";
-  }
-
- private:
-  memfs_filesystem_t* fs_;
-  const char* path_;
-};
-
 // Disabled due to flakes, see: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=69299
 class DISABLED_LinuxRunnerGuestTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     TestLoopFixture::SetUp();
 
-    // Install memfs on a different async loop thread to resolve some deadlock
-    // when doing blocking file operations on our test loop.
-    FX_CHECK(ScopedMemfs::InstallAt("/data", memfs_loop_.dispatcher(), &data_) == ZX_OK);
+    // Install memfs on a different async loop thread to resolve some deadlock when doing blocking
+    // file operations on our test loop.
     memfs_loop_.StartThread();
+    zx::status<ScopedMemfs> memfs = ScopedMemfs::CreateMountedAt(memfs_loop_.dispatcher(), "/data");
+    FX_CHECK(memfs.is_ok());
+    data_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
 
     // Add a fake guest Manager to the components context.
     provider_.service_directory_provider()->AddService(fake_guest_manager_.GetHandler());
   }
 
   void TearDown() override {
-    TestLoopFixture::TearDown();
     data_.reset();
     memfs_loop_.Shutdown();
+
+    TestLoopFixture::TearDown();
   }
 
  protected:

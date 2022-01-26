@@ -7,9 +7,10 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/memfs/memfs.h>
 
 #include <fbl/unique_fd.h>
+
+#include "src/storage/memfs/scoped_memfs.h"
 
 namespace scoped_tmpfs {
 
@@ -28,7 +29,7 @@ class ScopedTmpFS {
  private:
   async_loop_config_t config_;
   async::Loop loop_;
-  memfs_filesystem_t* memfs_;
+  ScopedMemfs memfs_;
   fbl::unique_fd root_fd_;
 };
 

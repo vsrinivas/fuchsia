@@ -8,7 +8,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fd.h>
-#include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
 #include <unistd.h>
 
@@ -16,6 +15,8 @@
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/memfs/scoped_memfs.h"
 
 namespace fio = fuchsia_io;
 
@@ -59,21 +60,18 @@ void TryFilesystemOperations(const fdio_cpp::UnownedFdioCaller& caller) {
 class Harness {
  public:
   Harness() = default;
-
-  ~Harness() {
-    if (memfs_) {
-      sync_completion_t unmounted;
-      memfs_free_filesystem(memfs_, &unmounted);
-      sync_completion_wait(&unmounted, ZX_SEC(3));
-    }
-  }
+  ~Harness() = default;
 
   void Setup() {
     ASSERT_EQ(loop_.StartThread(), ZX_OK);
-    zx_handle_t root;
-    ASSERT_EQ(memfs_create_filesystem(loop_.dispatcher(), &memfs_, &root), ZX_OK);
+
+    zx::status<ScopedMemfs> memfs = ScopedMemfs::Create(loop_.dispatcher());
+    ASSERT_TRUE(memfs.is_ok());
+    memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
+    memfs_->set_cleanup_timeout(zx::sec(3));
+
     int fd;
-    ASSERT_EQ(fdio_fd_create(root, &fd), ZX_OK);
+    ASSERT_EQ(fdio_fd_create(memfs_->root().release(), &fd), ZX_OK);
     fbl::unique_fd dir(fd);
     ASSERT_TRUE(dir);
     fd_.reset(openat(dir.get(), "my-file", O_CREAT | O_RDWR));
@@ -84,7 +82,7 @@ class Harness {
 
  private:
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  memfs_filesystem_t* memfs_ = nullptr;
+  std::unique_ptr<ScopedMemfs> memfs_;  // Must be after the loop_ for proper tear-down.
   fbl::unique_fd fd_;
 };
 

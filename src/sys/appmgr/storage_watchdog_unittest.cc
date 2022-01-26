@@ -7,7 +7,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/namespace.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
 
 #include <algorithm>
@@ -19,6 +18,7 @@
 #include <src/lib/files/path.h>
 
 #include "gtest/gtest.h"
+#include "src/storage/memfs/scoped_memfs.h"
 
 namespace {
 
@@ -32,28 +32,23 @@ class StorageWatchdogTest : public ::testing::Test {
 
   void SetUp() override {
     testing::Test::SetUp();
-    ASSERT_EQ(ZX_OK,
-              memfs_create_filesystem(loop_.dispatcher(), &memfs_handle_, &memfs_root_handle_));
-    ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&ns_));
-    ASSERT_EQ(ZX_OK, fdio_ns_bind(ns_, "/hippo_storage", memfs_root_handle_));
 
     ASSERT_EQ(ZX_OK, loop_.StartThread());
-  }
-  // Set up the async loop, create memfs, install memfs at /hippo_storage
-  void TearDown() override {
-    // Unbind memfs from our namespace, free memfs
-    ASSERT_EQ(ZX_OK, fdio_ns_unbind(ns_, "/hippo_storage"));
 
-    sync_completion_t memfs_freed_signal;
-    memfs_free_filesystem(memfs_handle_, &memfs_freed_signal);
-    ASSERT_EQ(ZX_OK, sync_completion_wait(&memfs_freed_signal, ZX_SEC(5)));
+    zx::status<ScopedMemfs> memfs =
+        ScopedMemfs::CreateMountedAt(loop_.dispatcher(), "/hippo_storage");
+    ASSERT_TRUE(memfs.is_ok());
+    memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
+  }
+
+  void TearDown() override {
+    memfs_->set_cleanup_timeout(zx::sec(5));
+    memfs_.reset();
   }
 
  private:
   async::Loop loop_;
-  memfs_filesystem_t* memfs_handle_;
-  zx_handle_t memfs_root_handle_;
-  fdio_ns_t* ns_;
+  std::unique_ptr<ScopedMemfs> memfs_;
 };
 
 class TestStorageWatchdog : public StorageWatchdog {

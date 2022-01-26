@@ -12,7 +12,7 @@ source_set("scoped_tmpfs") {
 
   public_deps = [
     "//src/lib/fsl",
-    "//src/storage/memfs",
+    "//src/storage/memfs:cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/sync",

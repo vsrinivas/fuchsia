@@ -9,7 +9,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/memfs/memfs.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
@@ -18,6 +17,7 @@
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"
+#include "src/storage/memfs/scoped_memfs.h"
 
 using namespace memory;
 
@@ -26,53 +26,6 @@ namespace {
 
 const char kMemfsDir[] = "/data";
 
-// Mounts a memfs filesystem at a given path and unmounts it when this object
-// goes out of scope.
-class ScopedMemfs {
- public:
-  // Creates a new memfs filesystem at the given path.
-  static zx_status_t InstallAt(const char* path, async_dispatcher_t* dispatcher,
-                               std::unique_ptr<ScopedMemfs>* out) {
-    fdio_ns_t* ns;
-    zx_status_t status = fdio_ns_get_installed(&ns);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    memfs_filesystem_t* fs;
-    zx_handle_t root;
-    status = memfs_create_filesystem(dispatcher, &fs, &root);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    status = fdio_ns_bind(ns, path, root);
-    if (status != ZX_OK) {
-      memfs_free_filesystem(fs, nullptr);
-      return status;
-    }
-
-    *out = std::make_unique<ScopedMemfs>(fs, path);
-    return ZX_OK;
-  }
-
-  ScopedMemfs(memfs_filesystem_t* fs, const char* path) : fs_(fs), path_(path) {}
-
-  ~ScopedMemfs() {
-    fdio_ns_t* ns;
-    sync_completion_t completion;
-    memfs_free_filesystem(fs_, &completion);
-    FX_CHECK(sync_completion_wait(&completion, ZX_TIME_INFINITE) == ZX_OK)
-        << "Failed to unmount memfs";
-    FX_CHECK(fdio_ns_get_installed(&ns) == ZX_OK) << "Failed to read namespaces";
-    FX_CHECK(fdio_ns_unbind(ns, path_) == ZX_OK) << "Failed to unbind memfs filesystem";
-  }
-
- private:
-  memfs_filesystem_t* fs_;
-  const char* path_;
-};
-
 class HighWaterUnitTest : public gtest::RealLoopFixture {
  protected:
   int memfs_dir_;
@@ -80,18 +33,24 @@ class HighWaterUnitTest : public gtest::RealLoopFixture {
  private:
   void SetUp() override {
     RealLoopFixture::SetUp();
-    // Install memfs on a different async loop thread to resolve some deadlock
-    // when doing blocking file operations on our test loop.
-    FX_CHECK(ScopedMemfs::InstallAt(kMemfsDir, memfs_loop_.dispatcher(), &data_) == ZX_OK);
+
+    // Install memfs on a different async loop thread to resolve some deadlock when doing blocking
+    // file operations on our test loop.
     memfs_loop_.StartThread();
+    zx::status<ScopedMemfs> memfs =
+        ScopedMemfs::CreateMountedAt(memfs_loop_.dispatcher(), kMemfsDir);
+    ASSERT_TRUE(memfs.is_ok());
+    data_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
+
     memfs_dir_ = open(kMemfsDir, O_RDONLY | O_DIRECTORY);
     ASSERT_LT(0, memfs_dir_);
   }
 
   void TearDown() override {
     RealLoopFixture::TearDown();
-    data_.reset();
+
     close(memfs_dir_);
+    data_.reset();
     memfs_loop_.Shutdown();
   }
 

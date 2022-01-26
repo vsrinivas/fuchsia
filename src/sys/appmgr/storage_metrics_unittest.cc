@@ -11,17 +11,18 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/inspect/cpp/reader.h>
-#include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
 
 #include <cstdint>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
-#include <src/lib/files/directory.h>
-#include <src/lib/files/file.h>
-#include <src/lib/files/path.h>
-#include <src/lib/fxl/strings/join_strings.h>
+
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/storage/memfs/scoped_memfs.h"
 
 class StorageMetricsTest : public ::testing::Test {
  public:
@@ -34,12 +35,12 @@ class StorageMetricsTest : public ::testing::Test {
 
   void SetUp() override {
     testing::Test::SetUp();
-    ASSERT_EQ(ZX_OK,
-              memfs_create_filesystem(loop_.dispatcher(), &memfs_handle_, &memfs_root_handle_));
-    ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&ns_));
-    ASSERT_EQ(ZX_OK, fdio_ns_bind(ns_, kTestRoot, memfs_root_handle_));
-
     ASSERT_EQ(ZX_OK, loop_.StartThread());
+
+    zx::status<ScopedMemfs> memfs = ScopedMemfs::CreateMountedAt(loop_.dispatcher(), kTestRoot);
+    ASSERT_TRUE(memfs.is_ok());
+    memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
+
     files::CreateDirectory(kPersistentPath);
     files::CreateDirectory(kCachePath);
     std::vector<std::string> watch = {kPersistentPath, kCachePath};
@@ -51,12 +52,8 @@ class StorageMetricsTest : public ::testing::Test {
   }
   // Set up the async loop, create memfs, install memfs at /hippo_storage
   void TearDown() override {
-    // Unbind memfs from our namespace, free memfs
-    ASSERT_EQ(ZX_OK, fdio_ns_unbind(ns_, kTestRoot));
-
-    sync_completion_t memfs_freed_signal;
-    memfs_free_filesystem(memfs_handle_, &memfs_freed_signal);
-    ASSERT_EQ(ZX_OK, sync_completion_wait(&memfs_freed_signal, ZX_SEC(5)));
+    memfs_->set_cleanup_timeout(zx::sec(5));
+    memfs_.reset();
   }
 
   // Grabs a new Hierarchy snapshot from Inspect.
@@ -120,9 +117,7 @@ class StorageMetricsTest : public ::testing::Test {
 
  private:
   async::Loop loop_;
-  memfs_filesystem_t* memfs_handle_;
-  zx_handle_t memfs_root_handle_;
-  fdio_ns_t* ns_;
+  std::unique_ptr<ScopedMemfs> memfs_;
 };
 
 // Basic test with two components.

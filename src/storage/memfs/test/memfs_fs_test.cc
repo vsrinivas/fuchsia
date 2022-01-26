@@ -6,9 +6,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/namespace.h>
-#include <lib/memfs/memfs.h>
 
 #include "src/storage/fs_test/fs_test.h"
+#include "src/storage/memfs/scoped_memfs.h"
 
 namespace {
 
@@ -17,30 +17,28 @@ class MemfsInstance : public fs_test::FilesystemInstance {
   MemfsInstance() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
     ZX_ASSERT(loop_.StartThread() == ZX_OK);
   }
-  ~MemfsInstance() override {
-    if (fs_) {
-      sync_completion_t sync;
-      memfs_free_filesystem(fs_, &sync);
-      ZX_ASSERT(sync_completion_wait(&sync, zx::duration::infinite().get()) == ZX_OK);
-    }
-  }
+
   zx::status<> Format(const fs_test::TestFilesystemOptions&) override {
-    return zx::make_status(
-        memfs_create_filesystem(loop_.dispatcher(), &fs_, root_.reset_and_get_address()));
+    zx::status<ScopedMemfs> memfs = ScopedMemfs::Create(loop_.dispatcher());
+    if (memfs.is_error())
+      return memfs.take_error();
+    memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
+    return zx::ok();
   }
 
   zx::status<> Mount(const std::string& mount_path,
                      const fs_management::MountOptions& options) override {
-    if (!root_) {
+    if (!memfs_->root()) {
       // Already mounted.
       return zx::error(ZX_ERR_BAD_STATE);
     }
+
     fdio_ns_t* ns;
     if (auto status = zx::make_status(fdio_ns_get_installed(&ns)); status.is_error()) {
       return status;
     }
-    return zx::make_status(
-        fdio_ns_bind(ns, fs_test::StripTrailingSlash(mount_path).c_str(), root_.release()));
+    return zx::make_status(fdio_ns_bind(ns, fs_test::StripTrailingSlash(mount_path).c_str(),
+                                        memfs_->root().release()));
   }
 
   zx::status<> Unmount(const std::string& mount_path) override {
@@ -53,8 +51,7 @@ class MemfsInstance : public fs_test::FilesystemInstance {
 
  private:
   async::Loop loop_;
-  memfs_filesystem_t* fs_ = nullptr;
-  zx::channel root_;  // Not valid after mounted.
+  std::unique_ptr<ScopedMemfs> memfs_;  // Must be torn down before the loop_.
 };
 
 class MemfsFilesystem : public fs_test::FilesystemImpl<MemfsFilesystem> {

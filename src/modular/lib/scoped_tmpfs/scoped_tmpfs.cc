@@ -16,29 +16,31 @@
 namespace scoped_tmpfs {
 
 namespace {
+
 async_loop_config_t MakeConfig() {
   async_loop_config_t result = kAsyncLoopConfigAttachToCurrentThread;
   result.make_default_for_current_thread = false;
   return result;
 }
+
+ScopedMemfs MakeMemfs(async_dispatcher_t* dispatcher) {
+  zx::status<ScopedMemfs> memfs = ScopedMemfs::Create(dispatcher);
+  FX_CHECK(memfs.is_ok());
+  memfs->set_cleanup_timeout(zx::sec(10));
+  return std::move(*memfs);
+}
+
 }  // namespace
 
-ScopedTmpFS::ScopedTmpFS() : config_(MakeConfig()), loop_(&config_) {
+ScopedTmpFS::ScopedTmpFS()
+    : config_(MakeConfig()), loop_(&config_), memfs_(MakeMemfs(loop_.dispatcher())) {
   zx_status_t status = loop_.StartThread("tmpfs_thread");
   FX_CHECK(status == ZX_OK);
-  zx_handle_t root_handle;
-  status = memfs_create_filesystem(loop_.dispatcher(), &memfs_, &root_handle);
-  FX_CHECK(status == ZX_OK);
-  root_fd_ = fsl::OpenChannelAsFileDescriptor(zx::channel(root_handle));
+
+  root_fd_ = fsl::OpenChannelAsFileDescriptor(std::move(memfs_.root()));
   FX_CHECK(root_fd_.is_valid());
 }
 
-ScopedTmpFS::~ScopedTmpFS() {
-  root_fd_.reset();
-  sync_completion_t unmounted;
-  memfs_free_filesystem(memfs_, &unmounted);
-  zx_status_t status = sync_completion_wait(&unmounted, ZX_SEC(10));
-  FX_DCHECK(status == ZX_OK) << status;
-}
+ScopedTmpFS::~ScopedTmpFS() = default;
 
 }  // namespace scoped_tmpfs

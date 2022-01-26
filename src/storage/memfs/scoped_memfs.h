@@ -7,6 +7,7 @@
 
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 
 // A wrapper around the C API that sets up and tears down memfs.
@@ -48,20 +49,30 @@ class ScopedMemfs {
 
   // Moveable but not copyable.
   ScopedMemfs(const ScopedMemfs&) = delete;
-  ScopedMemfs(ScopedMemfs&& other) : memfs_(other.memfs_), root_(std::move(other.root_)) {
+  ScopedMemfs(ScopedMemfs&& other)
+      : cleanup_timeout_(other.cleanup_timeout_),
+        memfs_(other.memfs_),
+        root_(std::move(other.root_)) {
     // Need to explicitly clear out the raw pointer since the default move will not do this.
     // Otherwise, the "moved from" ScopedMemfs will still try to clean up the filesystem.
     other.memfs_ = nullptr;
   }
 
-  // Blocks on cleanup/shutdown. The dispatcher must still be running for this to succeed.
+  // Blocks on cleanup/shutdown for "cleanup_timeout_" time, see set_cleanup_timeout(). The
+  // dispatcher must still be running for this to succeed.
   ~ScopedMemfs() {
     if (memfs_) {
       sync_completion_t unmounted;
       memfs_free_filesystem(memfs_, &unmounted);
-      sync_completion_wait(&unmounted, zx::duration::infinite().get());
+      sync_completion_wait(&unmounted, cleanup_timeout_.get());
     }
   }
+
+  // Set the timeout that this class will wait for memfs cleanup on the dispatcher thread. By
+  // default this is infinite. In practice, memfs cleanup is fast and deterministic so if you
+  // encounter hangs it indicates a more serious problem like the associated dispatcher is no
+  // longer running.
+  void set_cleanup_timeout(zx::duration duration) { cleanup_timeout_ = duration; }
 
   // The channel to the root directory of the filesystem. Users can move this out, close it, or use
   // in-place as they need.
@@ -70,6 +81,8 @@ class ScopedMemfs {
 
  private:
   ScopedMemfs(memfs_filesystem_t* memfs, zx_handle_t root) : memfs_(memfs), root_(root) {}
+
+  zx::duration cleanup_timeout_ = zx::duration::infinite();
 
   memfs_filesystem_t* memfs_;
   zx::channel root_;
