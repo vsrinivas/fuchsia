@@ -35,6 +35,7 @@
 #include <lib/zx/interrupt.h>
 #include <lib/zx/job.h>
 #include <lib/zx/object.h>
+#include <lib/zx/pager.h>
 #include <lib/zx/pmt.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
