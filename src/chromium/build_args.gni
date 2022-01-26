@@ -4,16 +4,21 @@
 
 declare_args() {
   # This variable specifies a fully qualified Chromium build output directory,
-  # such as `/home/USER/chrome/src/out/fuchsia`, that 'cast_runner', 'web_runner',
-  # and 'web_engine' will be obtained from. If unset, the prebuilt
-  # packages from CIPD will be used.
+  # such as `/home/$USER/chrome/src/out/fuchsia`, from which `chrome`,
+  # `cast_runner`, `web_runner`, and `web_engine` will be obtained.
+  # All of those targets must exist in the output directory.
+  # If unset, the prebuilt packages from CIPD will be used.
   chromium_build_dir = ""
 
-  # Set to use the most recent canary version of prebuilt Chromium components
-  # otherwise the most recently validated version is used.
+  # Whether to use the most recent (canary) version of prebuilt Chromium
+  # components. Otherwise, the qualified "release" version is used.
+  # For scenarios where CastRunner is used,
+  # [`use_cast_runner_canary`](#use_cast_runner_canary) must be set to the same
+  # value.
   use_chromium_canary = false
 
-  # If true then the most recent canary version of the Cast Runner is used,
-  # otherwise the most recently validated version is used.
+  # Whether to use the most recent (canary) version of the CastRunner prebuilt.
+  # Otherwise, the qualified "release" version is used.
+  # Set [`use_chromium_canary`](#use_chromium_canary) to the same value.
   use_cast_runner_canary = false
 }
