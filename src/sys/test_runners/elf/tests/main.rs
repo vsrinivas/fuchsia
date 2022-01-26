@@ -71,7 +71,8 @@ async fn launch_and_run_test_with_custom_args() {
     let test_url = "fuchsia-pkg://fuchsia.com/elf-test-runner-example-tests#meta/arg_test.cm";
     let mut options = default_options();
     options.arguments = Some(vec!["expected_arg".to_owned()]);
-    let events = run_test(test_url, options).await.unwrap();
+    let events =
+        run_test(test_url, options).await.unwrap().into_iter().group_by_test_case_unordered();
 
     let expected_events = vec![
         RunEvent::suite_started(),
@@ -81,7 +82,9 @@ async fn launch_and_run_test_with_custom_args() {
         RunEvent::case_stopped("main", CaseStatus::Passed),
         RunEvent::case_finished("main"),
         RunEvent::suite_stopped(SuiteStatus::Passed),
-    ];
+    ]
+    .into_iter()
+    .group_by_test_case_unordered();
     assert_eq!(expected_events, events);
 }
 
