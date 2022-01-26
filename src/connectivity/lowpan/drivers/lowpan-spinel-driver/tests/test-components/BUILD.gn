@@ -33,7 +33,7 @@ fuchsia_component("lowpan-driver-provision-mock") {
   manifest = "meta/lowpan-driver-provision-mock.cmx"
   deps = [
     ":lowpan-driver-provision-mock-bin",
-    "//src/connectivity/lowpan",
+    "//src/connectivity/lowpan:lowpan_for_components",
     "//src/connectivity/network/netstack:component-legacy",
     "//src/connectivity/network/tun/network-tun:component",
     "//src/connectivity/openthread/ot-stack:component",
