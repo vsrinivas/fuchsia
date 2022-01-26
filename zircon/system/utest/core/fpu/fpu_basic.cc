@@ -36,7 +36,7 @@ TEST(FPUTest, LongComputeLoop) {
   auto result = fpu_test_loop(5, 100);
   char result_str[64] = {};
   sprintf(result_str, "%3.18f", result);
-  ASSERT_EQ(strcmp("-1.123982548697285422", result_str), 0);
+  ASSERT_STREQ(result_str, "-1.123982548697285422");
 }
 
 }  // namespace
