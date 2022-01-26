@@ -59,6 +59,19 @@ generated_file("plasa") {
   deps = _sdk_public_deps
 }
 
+# This target is used by infra builders to build all SDK archives that
+# make up the "core" SDK.
+# If you are getting an error about missing targets, set
+# `build_sdk_archives = true` GN arg.
+group("archives") {
+  testonly = true
+  public_deps = [
+    ":core_archive",
+    ":fuchsia_dart_archive",
+    ":modular_testing_archive",
+  ]
+}
+
 group("sdk.modular") {
   testonly = true
 
