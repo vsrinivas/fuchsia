@@ -2,6 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! This crate implements IEEE Std 802.11-2016 MLME as a library for hardware that supports
+//! SoftMAC. This is distinct from FullMAC, which is implemented by drivers and firmware. The
+//! implementation is broadly divided between client and AP stations, with some shared components
+//! and state machine infrastructure. See the [`client`] and [`ap`] modules.
+//!
+//! [`ap`]: crate::ap
+//! [`client`]: crate::client
+
 mod akm_algorithm;
 pub mod ap;
 pub mod auth;
