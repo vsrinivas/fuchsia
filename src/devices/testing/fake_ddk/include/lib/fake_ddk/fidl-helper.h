@@ -35,18 +35,6 @@ class fidl::internal::WireWeakEventSender<fake_ddk::FidlProtocol> {
   fidl::internal::WeakEventSenderInner inner_;
 };
 
-template <>
-class fidl::WireEventSender<fake_ddk::FidlProtocol> {
- public:
-  explicit WireEventSender(::fidl::ServerEnd<fake_ddk::FidlProtocol> server_end)
-      : server_end_(std::move(server_end.channel())) {}
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
- private:
-  ::fidl::ServerEnd<fake_ddk::FidlProtocol> server_end_;
-};
 namespace fake_ddk {
 
 typedef zx_status_t(MessageOp)(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
@@ -84,7 +72,6 @@ class FidlMessenger : public fidl::internal::IncomingMessageDispatcher {
   using _Transport = fidl::internal::ChannelTransport;
   using Interface = FidlMessenger;
   using WeakEventSender = fidl::internal::WireWeakEventSender<fake_ddk::FidlMessenger>;
-  using EventSender = fidl::WireEventSender<fake_ddk::FidlMessenger>;
 
   explicit FidlMessenger() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   explicit FidlMessenger(const async_loop_config_t* config) : loop_(config) {}

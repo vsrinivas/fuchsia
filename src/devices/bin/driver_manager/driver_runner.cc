@@ -337,7 +337,7 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
 
 void Node::OnBind() const {
   if (controller_ref_) {
-    fidl::Result result = (*controller_ref_)->OnBind();
+    fidl::Result result = fidl::WireSendEvent(*controller_ref_)->OnBind();
     if (!result.ok()) {
       LOGF(ERROR, "Failed to send OnBind event: %s", result.FormatDescription().data());
     }

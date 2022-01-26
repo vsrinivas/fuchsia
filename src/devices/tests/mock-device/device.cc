@@ -90,10 +90,10 @@ class MockDevice : public MockDeviceType {
 
 struct ProcessActionsContext {
   // A channel that is either borrowing (zx::unowned_channel) or
-  // owned (EventSender).
+  // owned (ServerEnd).
   // In the borrowing case, the channel must outlive this variant.
   using ChannelVariants =
-      std::variant<zx::unowned_channel, fidl::WireEventSender<device_mock::MockDeviceThread>>;
+      std::variant<zx::unowned_channel, fidl::ServerEnd<device_mock::MockDeviceThread>>;
 
   // Constructs a process action context. Note that |channel_variants| must
   // outlive this context. Typically, the |channel_variants| is first created
@@ -110,8 +110,7 @@ struct ProcessActionsContext {
   // add/remove device requests.
   //
   // When this context is running in a separate thread, the context has the
-  // |fidl::WireEventSender<device_mock::MockDeviceThread>| variant i.e. it is the
-  // server-end of the MockDeviceThread protocol.
+  // |fidl::ServerEnd<device_mock::MockDeviceThread>| variant.
   // When this context is running in the same thread, the context has the
   // |zx::unowned_channel| variant, and is the client-end of the
   // MockDevice protocol.
@@ -162,21 +161,19 @@ MockDevice::MockDevice(zx_device_t* device, fidl::ClientEnd<device_mock::MockDev
 
 int MockDevice::ThreadFunc(void* raw_arg) {
   auto arg = std::unique_ptr<ThreadFuncArg>(static_cast<ThreadFuncArg*>(raw_arg));
-  std::variant<zx::unowned_channel, fidl::WireEventSender<device_mock::MockDeviceThread>>
-      event_sender =
-          fidl::WireEventSender<device_mock::MockDeviceThread>(std::move(arg->server_end));
+  std::variant<zx::unowned_channel, fidl::ServerEnd<device_mock::MockDeviceThread>> server_end =
+      std::move(arg->server_end);
 
   while (true) {
     fbl::Array<device_mock::wire::Action> actions;
     zx_status_t status = WaitForPerformActions(
-        std::get<fidl::WireEventSender<device_mock::MockDeviceThread>>(event_sender).channel(),
-        &actions);
+        std::get<fidl::ServerEnd<device_mock::MockDeviceThread>>(server_end).channel(), &actions);
     if (status != ZX_OK) {
       ZX_ASSERT_MSG(status == ZX_ERR_STOP, "MockDevice thread exiting: %s\n",
                     zx_status_get_string(status));
       break;
     }
-    ProcessActionsContext ctx(event_sender, false, arg->dev, arg->dev->zxdev());
+    ProcessActionsContext ctx(server_end, false, arg->dev, arg->dev->zxdev());
     status = ProcessActions(
         fidl::VectorView<device_mock::wire::Action>::FromExternal(actions.data(), actions.size()),
         &ctx);
@@ -447,8 +444,10 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         ctx->mock_device = nullptr;
         zx_status_t status = std::visit(
             matchers{
-                [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
-                  return sender.UnbindReplyDone(action.unbind_reply().action_id).status();
+                [&](fidl::ServerEnd<device_mock::MockDeviceThread>& server_end) {
+                  return fidl::WireSendEvent(server_end)
+                      ->UnbindReplyDone(action.unbind_reply().action_id)
+                      .status();
                 },
                 [&](zx::unowned_channel& channel) {
                   return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))
@@ -469,8 +468,10 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         ctx->pending_suspend_txn->Reply(ZX_OK, 0);
         zx_status_t status = std::visit(
             matchers{
-                [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
-                  return sender.SuspendReplyDone(action.suspend_reply().action_id).status();
+                [&](fidl::ServerEnd<device_mock::MockDeviceThread>& server_end) {
+                  return fidl::WireSendEvent(server_end)
+                      ->SuspendReplyDone(action.suspend_reply().action_id)
+                      .status();
                 },
                 [&](zx::unowned_channel& channel) {
                   return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))
@@ -491,8 +492,10 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         ctx->pending_resume_txn->Reply(ZX_OK, 0, 0);
         zx_status_t status = std::visit(
             matchers{
-                [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
-                  return sender.ResumeReplyDone(action.resume_reply().action_id).status();
+                [&](fidl::ServerEnd<device_mock::MockDeviceThread>& server_end) {
+                  return fidl::WireSendEvent(server_end)
+                      ->ResumeReplyDone(action.resume_reply().action_id)
+                      .status();
                 },
                 [&](zx::unowned_channel& channel) {
                   return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))
@@ -537,8 +540,10 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
 
         status = std::visit(
             matchers{
-                [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
-                  return sender.AddDeviceDone(add_device_action.action_id).status();
+                [&](fidl::ServerEnd<device_mock::MockDeviceThread>& server_end) {
+                  return fidl::WireSendEvent(server_end)
+                      ->AddDeviceDone(add_device_action.action_id)
+                      .status();
                 },
                 [&](zx::unowned_channel& channel) {
                   return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))
@@ -580,7 +585,7 @@ zx_status_t MockDeviceBind(void* ctx, zx_device_t* parent) {
 
   ProcessActionsContext::ChannelVariants channel_variants = zx::unowned_channel(c);
   ProcessActionsContext pac_ctx(channel_variants, true, nullptr, parent);
-  status = ProcessActions(std::move(result->actions), &pac_ctx);
+  status = ProcessActions(result->actions, &pac_ctx);
   ZX_ASSERT(status == ZX_OK);
   return pac_ctx.hook_status;
 }

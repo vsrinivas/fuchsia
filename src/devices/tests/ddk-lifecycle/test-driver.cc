@@ -56,7 +56,7 @@ class TestLifecycleDriver : public DeviceType {
   // Converts the device pointer into an id we can use as a unique identifier.
   uint64_t zxdev_to_id(zx_device_t* dev) { return reinterpret_cast<uint64_t>(dev); }
 
-  fidl::WireEventSender<Lifecycle> lifecycle_event_sender_;
+  fidl::ServerEnd<Lifecycle> lifecycle_server_end_;
   // Child devices added via |AddChild|.
   std::vector<fbl::RefPtr<TestLifecycleDriverChild>> children_;
 };
@@ -66,8 +66,8 @@ void TestLifecycleDriver::DdkChildPreRelease(void* child_ctx) {
   ZX_ASSERT(child != nullptr);
   auto id = zxdev_to_id(child->zxdev());
 
-  if (lifecycle_event_sender_.is_valid()) {
-    fidl::Result result = lifecycle_event_sender_.OnChildPreRelease(id);
+  if (lifecycle_server_end_.is_valid()) {
+    fidl::Result result = fidl::WireSendEvent(lifecycle_server_end_)->OnChildPreRelease(id);
     ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   }
   // Remove the child from our |children_| vector.
@@ -164,10 +164,10 @@ void TestLifecycleDriver::CompleteChildInit(CompleteChildInitRequestView request
 void TestLifecycleDriver::SubscribeToLifecycle(SubscribeToLifecycleRequestView request,
                                                SubscribeToLifecycleCompleter::Sync& completer) {
   // Currently we only care about supporting one client.
-  if (lifecycle_event_sender_.is_valid()) {
+  if (lifecycle_server_end_.is_valid()) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);
   } else {
-    lifecycle_event_sender_ = fidl::WireEventSender<Lifecycle>(std::move(request->client));
+    lifecycle_server_end_ = std::move(request->client);
     completer.ReplySuccess();
   }
 }

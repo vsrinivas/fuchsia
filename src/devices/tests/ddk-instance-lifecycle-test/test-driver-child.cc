@@ -14,7 +14,7 @@
 using fuchsia_device_instancelifecycle_test::Lifecycle;
 
 void TestLifecycleDriverChild::DdkRelease() {
-  fidl::Result result = lifecycle_.OnRelease();
+  fidl::Result result = fidl::WireSendEvent(lifecycle_)->OnRelease();
   ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   delete this;
 }
@@ -35,13 +35,13 @@ zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent,
 }
 
 void TestLifecycleDriverChild::DdkUnbind(ddk::UnbindTxn txn) {
-  fidl::Result result = lifecycle_.OnUnbind();
+  fidl::Result result = fidl::WireSendEvent(lifecycle_)->OnUnbind();
   ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   txn.Reply();
 }
 
 zx_status_t TestLifecycleDriverChild::DdkOpen(zx_device_t** out, uint32_t flags) {
-  fidl::Result result = lifecycle_.OnOpen();
+  fidl::Result result = fidl::WireSendEvent(lifecycle_)->OnOpen();
   ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
 
   auto device = std::make_unique<TestLifecycleDriverChildInstance>(zxdev(), this);
@@ -60,7 +60,7 @@ zx_status_t TestLifecycleDriverChild::DdkOpen(zx_device_t** out, uint32_t flags)
 
 zx_status_t TestLifecycleDriverChildInstance::DdkClose(uint32_t flags) {
   if (lifecycle_.is_valid()) {
-    fidl::Result result = lifecycle_.OnClose();
+    fidl::Result result = fidl::WireSendEvent(lifecycle_)->OnClose();
     ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   }
   return ZX_OK;
@@ -68,7 +68,7 @@ zx_status_t TestLifecycleDriverChildInstance::DdkClose(uint32_t flags) {
 
 void TestLifecycleDriverChildInstance::DdkRelease() {
   if (lifecycle_.is_valid()) {
-    fidl::Result result = lifecycle_.OnRelease();
+    fidl::Result result = fidl::WireSendEvent(lifecycle_)->OnRelease();
     ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   }
   delete this;
@@ -85,7 +85,7 @@ void TestLifecycleDriverChildInstance::SubscribeToLifecycle(
   if (lifecycle_.is_valid()) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);
   } else {
-    lifecycle_ = fidl::WireEventSender<Lifecycle>(std::move(request->lifecycle));
+    lifecycle_ = std::move(request->lifecycle);
     completer.ReplySuccess();
   }
 }

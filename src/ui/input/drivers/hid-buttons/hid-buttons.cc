@@ -101,7 +101,7 @@ void HidButtonsDevice::Notify(uint32_t button_index) {
 
       ButtonType type = static_cast<ButtonType>(raw_type);
       for (ButtonsNotifyInterface* interface : registered_notifiers_[type]) {
-        interface->binding()->OnNotify(type, button_value);
+        fidl::WireSendEvent(interface->binding())->OnNotify(type, button_value);
       }
     }
   }
