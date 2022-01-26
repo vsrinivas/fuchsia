@@ -681,16 +681,10 @@ async fn run_invocations(
                     let name =
                         invocation.name.ok_or(format_err!("cannot find name in invocation"))?;
                     let identifier = counter.fetch_add(1, Ordering::Relaxed);
-                    let mut events = vec![
+                    let events = vec![
                         Ok(SuiteEvents::case_found(identifier, name).into()),
                         Ok(SuiteEvents::case_started(identifier).into()),
                     ];
-                    if let Some(out) = std_handles.out {
-                        events.push(Ok(SuiteEvents::case_stdout(identifier, out).into()))
-                    }
-                    if let Some(err) = std_handles.err {
-                        events.push(Ok(SuiteEvents::case_stderr(identifier, err).into()))
-                    }
                     for event in events {
                         sender_clone.send(event).await.unwrap();
                     }
@@ -698,9 +692,72 @@ async fn run_invocations(
                         listener.into_stream().context("Cannot convert listener to stream")?;
                     running_test_cases.lock().await.insert(identifier);
                     let running_test_cases = running_test_cases.clone();
-                    let sender = sender_clone.clone();
+                    let mut sender = sender_clone.clone();
                     let task = fasync::Task::spawn(async move {
-                        let status = listen_for_completion(listener, identifier, sender).await;
+                        let mut sender_stdout = sender.clone();
+                        let mut sender_stderr = sender.clone();
+                        let completion_fut = async {
+                            let status = listen_for_completion(listener).await;
+                            sender
+                                .send(Ok(
+                                    SuiteEvents::case_stopped(identifier, status.clone()).into()
+                                ))
+                                .await
+                                .unwrap();
+                            status
+                        };
+                        let ftest::StdHandles { out, err, .. } = std_handles;
+                        let stdout_fut = async move {
+                            if let Some(out) = out {
+                                match fasync::OnSignals::new(
+                                    &out,
+                                    zx::Signals::SOCKET_READABLE | zx::Signals::SOCKET_PEER_CLOSED,
+                                )
+                                .await
+                                {
+                                    Ok(signals)
+                                        if signals.contains(zx::Signals::SOCKET_READABLE) =>
+                                    {
+                                        sender_stdout
+                                            .send(Ok(
+                                                SuiteEvents::case_stdout(identifier, out).into()
+                                            ))
+                                            .await
+                                            .unwrap();
+                                    }
+                                    Ok(_) | Err(_) => (),
+                                }
+                            }
+                        };
+                        let stderr_fut = async move {
+                            if let Some(err) = err {
+                                match fasync::OnSignals::new(
+                                    &err,
+                                    zx::Signals::SOCKET_READABLE | zx::Signals::SOCKET_PEER_CLOSED,
+                                )
+                                .await
+                                {
+                                    Ok(signals)
+                                        if signals.contains(zx::Signals::SOCKET_READABLE) =>
+                                    {
+                                        sender_stderr
+                                            .send(Ok(
+                                                SuiteEvents::case_stderr(identifier, err).into()
+                                            ))
+                                            .await
+                                            .unwrap();
+                                    }
+                                    Ok(_) | Err(_) => (),
+                                }
+                            }
+                        };
+                        let (status, (), ()) =
+                            futures::future::join3(completion_fut, stdout_fut, stderr_fut).await;
+
+                        sender
+                            .send(Ok(SuiteEvents::case_finished(identifier).into()))
+                            .await
+                            .unwrap();
                         running_test_cases.lock().await.remove(&identifier);
                         status
                     });
@@ -782,12 +839,8 @@ fn get_suite_status_from_case_status(
 
 /// Listen for test completion on the given |listener|. Returns None if the channel is closed
 /// before a test completion event.
-async fn listen_for_completion(
-    mut listener: ftest::CaseListenerRequestStream,
-    case_identifier: u32,
-    mut sender: mpsc::Sender<Result<FidlSuiteEvent, LaunchError>>,
-) -> CaseStatus {
-    let status = match listener.try_next().await.context("waiting for listener") {
+async fn listen_for_completion(mut listener: ftest::CaseListenerRequestStream) -> CaseStatus {
+    match listener.try_next().await.context("waiting for listener") {
         Ok(Some(request)) => {
             let ftest::CaseListenerRequest::Finished { result, control_handle: _ } = request;
             let result = match result.status {
@@ -807,14 +860,7 @@ async fn listen_for_completion(
             CaseStatus::Error
         }
         Ok(None) => CaseStatus::Error,
-    };
-
-    sender
-        .send(Ok(SuiteEvents::case_stopped(case_identifier, status.clone()).into()))
-        .await
-        .unwrap();
-    sender.send(Ok(SuiteEvents::case_finished(case_identifier).into())).await.unwrap();
-    status
+    }
 }
 
 // max events to send so that we don't cross fidl limits.
