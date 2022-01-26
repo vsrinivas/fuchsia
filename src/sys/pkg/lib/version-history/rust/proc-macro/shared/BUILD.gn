@@ -1,0 +1,38 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+# Rust looks for files included with `include_str` relative to the callsite. Rebase the
+# version_history.json relative to the files in src/.
+rebased_version_history_path = rebase_path("//sdk/version_history.json", "src")
+config("env") {
+  rustenv = [ "SDK_VERSION_HISTORY=$rebased_version_history_path" ]
+}
+
+rustc_library("version-history-shared") {
+  edition = "2021"
+  with_unit_tests = true
+
+  configs += [ ":env" ]
+
+  deps = [
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  sources = [ "src/lib.rs" ]
+  inputs = [ "//sdk/version_history.json" ]
+  visibility = [
+    ":*",
+    "//src/sys/pkg/lib/version-history/rust:*",
+    "//src/sys/pkg/lib/version-history/rust/proc-macro:*",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":version-history-shared_test($host_toolchain)" ]
+}
