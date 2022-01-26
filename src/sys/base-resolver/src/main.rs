@@ -466,14 +466,14 @@ mod tests {
                                             "foo-with-config.cm",
                                             Arc::new(MockFile::new(
                                                 encode_persistent(&mut fdecl::Component {
-                                                    config: Some(fdecl::Config {
+                                                    config: Some(fdecl::ConfigSchema {
                                                         value_source: Some(
                                                             fdecl::ConfigValueSource::PackagePath(
                                                                 "meta/foo-with-config.cvf"
                                                                     .to_string(),
                                                             ),
                                                         ),
-                                                        ..fdecl::Config::EMPTY
+                                                        ..fdecl::ConfigSchema::EMPTY
                                                     }),
                                                     ..fdecl::Component::EMPTY
                                                 })
@@ -493,8 +493,8 @@ mod tests {
                                             "foo-with-bad-config.cm",
                                             Arc::new(MockFile::new(
                                                 encode_persistent(&mut fdecl::Component {
-                                                    config: Some(fdecl::Config {
-                                                        ..fdecl::Config::EMPTY
+                                                    config: Some(fdecl::ConfigSchema {
+                                                        ..fdecl::ConfigSchema::EMPTY
                                                     }),
                                                     ..fdecl::Component::EMPTY
                                                 })
@@ -505,13 +505,13 @@ mod tests {
                                             "foo-without-config.cm",
                                             Arc::new(MockFile::new(
                                                 encode_persistent(&mut fdecl::Component {
-                                                    config: Some(fdecl::Config {
+                                                    config: Some(fdecl::ConfigSchema {
                                                         value_source: Some(
                                                             fdecl::ConfigValueSource::PackagePath(
                                                                 "doesnt-exist.cvf".to_string(),
                                                             ),
                                                         ),
-                                                        ..fdecl::Config::EMPTY
+                                                        ..fdecl::ConfigSchema::EMPTY
                                                     }),
                                                     ..fdecl::Component::EMPTY
                                                 })

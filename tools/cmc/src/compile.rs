@@ -678,7 +678,7 @@ mod tests {
                 }
             }),
             output = fdecl::Component {
-                config: Some(fdecl::Config {
+                config: Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test1".to_string()),
@@ -771,7 +771,7 @@ mod tests {
                         91, 155, 38, 197, 126, 10, 71, 100, 157, 39, 114, 195, 190, 132, 83, 65
                     ]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 }),
                 ..fdecl::Component::EMPTY
             },

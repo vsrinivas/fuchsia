@@ -31,7 +31,7 @@ struct fuchsia.component.decl/CollectionRef
 table/member fuchsia.component.decl/Component.capabilities vector<fuchsia.component.decl/Capability>
 table/member fuchsia.component.decl/Component.children vector<fuchsia.component.decl/Child>
 table/member fuchsia.component.decl/Component.collections vector<fuchsia.component.decl/Collection>
-table/member fuchsia.component.decl/Component.config fuchsia.component.decl/Config
+table/member fuchsia.component.decl/Component.config fuchsia.component.decl/ConfigSchema
 table/member fuchsia.component.decl/Component.environments vector<fuchsia.component.decl/Environment>
 table/member fuchsia.component.decl/Component.exposes vector<fuchsia.component.decl/Expose>
 table/member fuchsia.component.decl/Component.facets fuchsia.data/Dictionary
@@ -39,13 +39,13 @@ table/member fuchsia.component.decl/Component.offers vector<fuchsia.component.de
 table/member fuchsia.component.decl/Component.program fuchsia.component.decl/Program
 table/member fuchsia.component.decl/Component.uses vector<fuchsia.component.decl/Use>
 table fuchsia.component.decl/Component
-table/member fuchsia.component.decl/Config.declaration_checksum vector<uint8>:32
-table/member fuchsia.component.decl/Config.fields vector<fuchsia.component.decl/ConfigField>
-table/member fuchsia.component.decl/Config.value_source fuchsia.component.decl/ConfigValueSource
-table fuchsia.component.decl/Config
 table/member fuchsia.component.decl/ConfigField.key string:64
 table/member fuchsia.component.decl/ConfigField.value_type fuchsia.component.decl/ConfigValueType
 table fuchsia.component.decl/ConfigField
+table/member fuchsia.component.decl/ConfigSchema.declaration_checksum vector<uint8>:32
+table/member fuchsia.component.decl/ConfigSchema.fields vector<fuchsia.component.decl/ConfigField>
+table/member fuchsia.component.decl/ConfigSchema.value_source fuchsia.component.decl/ConfigValueSource
+table fuchsia.component.decl/ConfigSchema
 enum/member fuchsia.component.decl/ConfigTypeLayout.BOOL 1
 enum/member fuchsia.component.decl/ConfigTypeLayout.INT16 7
 enum/member fuchsia.component.decl/ConfigTypeLayout.INT32 8

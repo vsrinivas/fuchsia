@@ -679,7 +679,7 @@ fn translate_value_type(value_type: &ConfigValueType) -> fdecl::ConfigValueType 
 fn translate_config(
     fields: &BTreeMap<ConfigKey, ConfigValueType>,
     package_path: &str,
-) -> fdecl::Config {
+) -> fdecl::ConfigSchema {
     let mut fidl_fields = vec![];
 
     // Compute a SHA-256 hash from each field
@@ -701,12 +701,12 @@ fn translate_config(
     let hash: Vec<u8> = hasher.finalize().to_vec();
     assert_eq!(hash.len(), 32);
 
-    fdecl::Config {
+    fdecl::ConfigSchema {
         fields: Some(fidl_fields),
         declaration_checksum: Some(hash),
         // for now we only support ELF components that look up config by package path
         value_source: Some(fdecl::ConfigValueSource::PackagePath(package_path.to_owned())),
-        ..fdecl::Config::EMPTY
+        ..fdecl::ConfigSchema::EMPTY
     }
 }
 

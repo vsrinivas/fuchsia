@@ -649,11 +649,11 @@ mod tests {
         let (proxy, server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         let cm_bytes = encode_persistent(&mut fdecl::Component {
-            config: Some(fdecl::Config {
+            config: Some(fdecl::ConfigSchema {
                 value_source: Some(fdecl::ConfigValueSource::PackagePath(
                     "meta/test_with_config.cvf".to_string(),
                 )),
-                ..fdecl::Config::EMPTY
+                ..fdecl::ConfigSchema::EMPTY
             }),
             ..fdecl::Component::EMPTY
         })
@@ -687,11 +687,11 @@ mod tests {
         let (proxy, server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         let cm_bytes = encode_persistent(&mut fdecl::Component {
-            config: Some(fdecl::Config {
+            config: Some(fdecl::ConfigSchema {
                 value_source: Some(fdecl::ConfigValueSource::PackagePath(
                     "meta/test_with_config.cvf".to_string(),
                 )),
-                ..fdecl::Config::EMPTY
+                ..fdecl::ConfigSchema::EMPTY
             }),
             ..fdecl::Component::EMPTY
         })
@@ -715,7 +715,7 @@ mod tests {
         let (proxy, server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         let cm_bytes = encode_persistent(&mut fdecl::Component {
-            config: Some(fdecl::Config { ..fdecl::Config::EMPTY }),
+            config: Some(fdecl::ConfigSchema { ..fdecl::ConfigSchema::EMPTY }),
             ..fdecl::Component::EMPTY
         })
         .expect("failed to encode ComponentDecl FIDL");

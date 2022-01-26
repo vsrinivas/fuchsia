@@ -116,8 +116,9 @@ impl Registry {
                             None
                         };
 
-                        let config_values = if let Some(fcdecl::Config { value_source, .. }) =
-                            &decl.config
+                        let config_values = if let Some(fcdecl::ConfigSchema {
+                            value_source, ..
+                        }) = &decl.config
                         {
                             if let Some(fcdecl::ConfigValueSource::PackagePath(path)) = value_source
                             {

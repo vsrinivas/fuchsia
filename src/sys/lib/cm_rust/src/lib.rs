@@ -780,7 +780,7 @@ impl EnvironmentDecl {
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fdecl::Config")]
+#[fidl_decl(fidl_table = "fdecl::ConfigSchema")]
 pub struct ConfigDecl {
     pub fields: Vec<ConfigField>,
     pub declaration_checksum: Vec<u8>,
@@ -2194,7 +2194,7 @@ mod tests {
                         ..fdecl::Environment::EMPTY
                     }
                 ]),
-                config: Some(fdecl::Config {
+                config: Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("enable_logging".to_string()),
@@ -2214,7 +2214,7 @@ mod tests {
                     value_source: Some(
                         fdecl::ConfigValueSource::PackagePath("fake.cvf".to_string())
                     ),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 }),
                 ..fdecl::Component::EMPTY
             },

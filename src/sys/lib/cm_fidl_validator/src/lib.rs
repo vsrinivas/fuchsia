@@ -264,7 +264,7 @@ impl<'a> ValidationContext<'a> {
 
     // Validates a config schema. Checks that each field's layout matches the expected constraints
     // and properties.
-    fn validate_config(&mut self, config: &fdecl::Config) {
+    fn validate_config(&mut self, config: &fdecl::ConfigSchema) {
         if let Some(fields) = &config.fields {
             for field in fields {
                 if field.key.is_none() {
@@ -277,15 +277,15 @@ impl<'a> ValidationContext<'a> {
                 }
             }
         } else {
-            self.errors.push(Error::missing_field("Config", "fields"));
+            self.errors.push(Error::missing_field("ConfigSchema", "fields"));
         }
 
         if config.declaration_checksum.is_none() {
-            self.errors.push(Error::missing_field("Config", "declaration_checksum"));
+            self.errors.push(Error::missing_field("ConfigSchema", "declaration_checksum"));
         }
 
         if config.value_source.is_none() {
-            self.errors.push(Error::missing_field("Config", "value_source"));
+            self.errors.push(Error::missing_field("ConfigSchema", "value_source"));
         }
     }
 
@@ -6602,25 +6602,25 @@ mod tests {
         test_validate_config_missing_config => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: None,
                     declaration_checksum: None,
                     value_source: None,
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("Config", "fields"),
-                Error::missing_field("Config", "declaration_checksum"),
-                Error::missing_field("Config", "value_source"),
+                Error::missing_field("ConfigSchema", "fields"),
+                Error::missing_field("ConfigSchema", "declaration_checksum"),
+                Error::missing_field("ConfigSchema", "value_source"),
             ])),
         },
 
         test_validate_config_missing_config_field => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: None,
@@ -6630,7 +6630,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6643,7 +6643,7 @@ mod tests {
         test_validate_config_bool => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6657,7 +6657,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6667,7 +6667,7 @@ mod tests {
         test_validate_config_bool_extra_constraint => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6681,7 +6681,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6693,7 +6693,7 @@ mod tests {
         test_validate_config_bool_missing_parameters => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6707,7 +6707,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6719,7 +6719,7 @@ mod tests {
         test_validate_config_string => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6733,7 +6733,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6743,7 +6743,7 @@ mod tests {
         test_validate_config_string_missing_parameter => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6757,7 +6757,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6769,7 +6769,7 @@ mod tests {
         test_validate_config_string_missing_constraint => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6783,7 +6783,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6795,7 +6795,7 @@ mod tests {
         test_validate_config_string_extra_constraint => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6809,7 +6809,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6821,7 +6821,7 @@ mod tests {
         test_validate_config_vector_bool => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6839,7 +6839,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6849,7 +6849,7 @@ mod tests {
         test_validate_config_vector_extra_parameter => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6871,7 +6871,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6883,7 +6883,7 @@ mod tests {
         test_validate_config_vector_missing_parameter => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6897,7 +6897,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6909,7 +6909,7 @@ mod tests {
         test_validate_config_vector_string => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6927,7 +6927,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },
@@ -6937,7 +6937,7 @@ mod tests {
         test_validate_config_vector_vector => {
             input = {
                 let mut decl = new_component_decl();
-                decl.config = Some(fdecl::Config {
+                decl.config = Some(fdecl::ConfigSchema{
                     fields: Some(vec![
                         fdecl::ConfigField {
                             key: Some("test".to_string()),
@@ -6959,7 +6959,7 @@ mod tests {
                     ]),
                     declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
-                    ..fdecl::Config::EMPTY
+                    ..fdecl::ConfigSchema::EMPTY
                 });
                 decl
             },

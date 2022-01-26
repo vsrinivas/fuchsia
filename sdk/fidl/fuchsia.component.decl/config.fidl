@@ -14,12 +14,12 @@ alias ConfigChecksum = vector<uint8>:32;
 /// Config keys can only consist of these many characters
 const CONFIG_KEY_MAX_SIZE uint32 = 64;
 
-/// The declaration of a component's configuration interface.
-type Config = table {
+/// The schema of a component's configuration interface.
+type ConfigSchema = table {
     /// Ordered fields of the component's configuration interface.
     1: fields vector<ConfigField>:MAX;
 
-    /// Checksum over the config declaration.
+    /// Checksum produced over a component's configuration interface.
     2: declaration_checksum ConfigChecksum;
 
     /// Strategy used to resolve config values.

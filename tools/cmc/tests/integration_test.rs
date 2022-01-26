@@ -342,7 +342,7 @@ fn main() {
             },
         ];
 
-        let config = Config {
+        let config = ConfigSchema {
             fields: Some(vec![
                 ConfigField {
                     key: Some("my_flag".to_string()),
@@ -390,7 +390,7 @@ fn main() {
                 240, 41, 165, 95, 117, 57, 203, 42, 186, 167, 84, 26, 25, 231,
             ]),
             value_source: Some(ConfigValueSource::PackagePath("meta/example.cvf".to_string())),
-            ..Config::EMPTY
+            ..ConfigSchema::EMPTY
         };
 
         Component {
