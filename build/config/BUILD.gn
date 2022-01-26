@@ -583,7 +583,6 @@ config("Wno-conversion") {
     "//garnet/bin/trace/tests:*",
     "//garnet/lib/debugger_utils:*",
     "//garnet/lib/intel_pt_decode/*",
-    "//garnet/lib/loader:*",
     "//garnet/lib/perfmon:*",
     "//garnet/lib/profiler:*",
     "//garnet/lib/profiler/tests:*",
