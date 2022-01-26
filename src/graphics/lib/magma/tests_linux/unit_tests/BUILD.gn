@@ -4,20 +4,6 @@
 
 import("//build/compiled_action.gni")
 
-executable("virtmagma_unit_tests_linux") {
-  # TODO(fxbug.dev/13193): formalize guest-targeted tests
-  testonly = true
-
-  deps = [
-    "//src/graphics/lib/magma/src/libmagma_linux",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/vulkan:headers",
-    "//third_party/rapidjson",
-  ]
-
-  sources = [ "virtmagma_unit_tests.cc" ]
-}
-
 executable("virtmagma_vulkan_unit_tests") {
   testonly = true
 

@@ -28,15 +28,6 @@ TEST_F(VirtioMagmaGuestTest, MagmaConformance) {
   ASSERT_EQ(return_code, 0) << "[BEGIN GUEST TEXT]" << text << "[END GUEST TEXT]";
 }
 
-TEST_F(VirtioMagmaGuestTest, MagmaUnit) {
-  std::string text;
-  int32_t return_code = 0;
-  ASSERT_EQ(
-      this->Execute({"/tmp/extras/virtmagma_unit_tests_linux"}, kMagmaEnv, &text, &return_code),
-      ZX_OK);
-  ASSERT_EQ(return_code, 0) << "[BEGIN GUEST TEXT]" << text << "[END GUEST TEXT]";
-}
-
 TEST_F(VirtioMagmaGuestTest, VulkanUnit) {
   std::string text;
   int32_t return_code = 0;
