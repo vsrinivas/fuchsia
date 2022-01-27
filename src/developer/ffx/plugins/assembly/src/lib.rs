@@ -37,6 +37,9 @@ pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
         OperationClass::Product(args) => {
             operations::product::assemble(args).context("Product Assembly")
         }
+        OperationClass::SizeCheck(args) => {
+            operations::size_check::verify_budgets(args).context("Size checker")
+        }
     }
     .map_err(flatten_error_sources)
 }

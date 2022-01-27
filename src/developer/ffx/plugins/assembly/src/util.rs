@@ -4,6 +4,8 @@
 
 use anyhow::{Context, Result};
 use fuchsia_pkg::PackageManifest;
+use serde::Serialize;
+use std::fs;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
@@ -56,6 +58,21 @@ pub fn set_option_once_or<T, E>(
     }
 }
 
+/// Serializes the given object to a JSON file.
+pub fn write_json_file<T: ?Sized>(json_path: &Path, value: &T) -> Result<()>
+where
+    T: Serialize,
+{
+    if let Some(parent) = json_path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("cannot create {}", parent.display()))?;
+    }
+    let file = File::create(json_path)
+        .with_context(|| format!("cannot create {}", json_path.display()))?;
+    serde_json::to_writer_pretty(&file, &value)
+        .with_context(|| format!("cannot serialize {}", json_path.display()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,6 +83,7 @@ mod tests {
     use std::io::Cursor;
     use std::str::FromStr;
     use tempfile::NamedTempFile;
+    use tempfile::TempDir;
 
     #[derive(Debug, Deserialize, PartialEq)]
     struct MyStruct {
@@ -180,5 +198,18 @@ mod tests {
             Some("some value"),
             "Setting Some(other) on Some(value) changed the value with an error"
         );
+    }
+
+    #[test]
+    fn test_write_json_file() {
+        let expected = json!({
+            "key1": "value1",
+        });
+        let temp_dir = TempDir::new().unwrap();
+        let path = temp_dir.path().join("config.json");
+        write_json_file(&path, &expected).unwrap();
+
+        let actual: serde_json::Value = read_config(path).unwrap();
+        assert_eq!(expected, actual);
     }
 }

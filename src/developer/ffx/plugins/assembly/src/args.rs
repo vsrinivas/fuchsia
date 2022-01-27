@@ -25,6 +25,7 @@ pub enum OperationClass {
     CreateUpdate(CreateUpdateArgs),
     ConfigData(ConfigDataArgs),
     Product(ProductArgs),
+    SizeCheck(SizeCheckArgs),
 }
 
 /// perform the assembly of images
@@ -139,6 +140,26 @@ pub struct ConfigDataArgs {
     /// changes to the config data package, in JSON format.
     #[argh(positional, from_str_fn(config_data_change))]
     pub changes: Vec<ConfigDataChange>,
+}
+
+/// measure package sizes and verify they fit in the specified budgets.
+/// Exit status is 2 when one or more budgets are exceeded, and 1 when
+/// a failure prevented the budget verification to happen.
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "size-check")]
+pub struct SizeCheckArgs {
+    /// path to a JSON file containing the list of size budgets.
+    /// Each size budget has a `name`, a `size` which is the maximum
+    /// number of bytes, and `packages` a list of path to manifest files.
+    #[argh(option)]
+    pub budgets: PathBuf,
+    /// path to a `blobs.json` file. It provides the size of each blob
+    /// composing the package on device.
+    #[argh(option)]
+    pub blob_sizes: Vec<PathBuf>,
+    /// path where to write the verification report, in JSON format.
+    #[argh(option)]
+    pub gerrit_output: Option<PathBuf>,
 }
 
 /// Represents a single addition or modification of a config-data file.
