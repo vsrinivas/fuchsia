@@ -19,10 +19,6 @@ const TransformClipRegion kUnclippedRegion = {-INT_MAX / 2, -INT_MAX / 2, INT_MA
 namespace {
 
 bool Overlap(const TransformClipRegion& clip, const glm::vec2& origin, const glm::vec2& extent) {
-  // DCHECK overflows.
-  FX_DCHECK(clip.x + clip.width > 0);
-  FX_DCHECK(clip.y + clip.height > 0);
-
   if (clip.x == kUnclippedRegion.x && clip.y == kUnclippedRegion.y &&
       clip.width == kUnclippedRegion.width && clip.height == kUnclippedRegion.height)
     return true;
@@ -53,20 +49,34 @@ std::pair<glm::vec2, glm::vec2> ClipRectangle(const TransformClipRegion& clip,
   return {result_origin, result_extent};
 }
 
-// TODO(fxbug.dev/77993): This will not produce the correct results for the display
-// controller rendering pathway if a rotation is applied to the rectangle.
-// Please see comment with same bug number in display_compositor.cc for more details.
-escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix, const TransformClipRegion& clip,
-                                      const std::array<glm::vec2, 4>& uvs) {
-  // The local-space of the renderable has its top-left origin point at (0,0) and grows
-  // downward and to the right, so that the bottom-right point is at (1,-1). We apply
-  // the matrix to the four points that represent this unit square to get the points
-  // in the global coordinate space.
-  const glm::vec2 verts[4] = {
-      matrix * glm::vec3(0, 0, 1),
-      matrix * glm::vec3(1, 0, 1),
-      matrix * glm::vec3(1, -1, 1),
-      matrix * glm::vec3(0, -1, 1),
+std::array<glm::vec3, 4> ConvertRectToVerts(fuchsia::math::Rect rect) {
+  return {glm::vec3(static_cast<float>(rect.x), static_cast<float>(rect.y), 1),
+          glm::vec3(static_cast<float>(rect.x + rect.width), static_cast<float>(rect.y), 1),
+          glm::vec3(static_cast<float>(rect.x + rect.width),
+                    static_cast<float>(rect.y - rect.height), 1),
+          glm::vec3(static_cast<float>(rect.x), static_cast<float>(rect.y - rect.height), 1)};
+}
+
+// Template to handle both vec2 and vec3 inputs.
+template <typename T>
+fuchsia::math::Rect ConvertVertsToRect(const std::array<T, 4>& verts) {
+  return {.x = static_cast<int32_t>(verts[0].x),
+          .y = static_cast<int32_t>(verts[0].y),
+          .width = static_cast<int32_t>(fabs(verts[1].x - verts[0].x)),
+          .height = static_cast<int32_t>(fabs(verts[2].y - verts[1].y))};
+}
+
+// Assume that the 4 vertices represent a rectangle, and are provided in clockwise order,
+// starting at the top-left corner. Return a tuple of the transformed vertices as well as
+// those same transformed vertices reordered so that they are in clockwise order starting
+// at the top-left corner.
+std::tuple<std::array<glm::vec2, 4>, std::array<glm::vec2, 4>> MatrixMultiplyVerts(
+    const glm::mat3& matrix, const std::array<glm::vec3, 4>& in_verts) {
+  const std::array<glm::vec2, 4> verts = {
+      matrix * in_verts[0],
+      matrix * in_verts[1],
+      matrix * in_verts[2],
+      matrix * in_verts[3],
   };
 
   float min_x = FLT_MAX, min_y = FLT_MAX;
@@ -78,12 +88,34 @@ escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix, const TransformCl
     max_y = std::max(max_y, verts[i].y);
   }
 
-  glm::vec2 reordered_verts[4] = {
-      glm::vec2(min_x, max_y),  // top_left
-      glm::vec2(max_x, max_y),  // top_right
-      glm::vec2(max_x, min_y),  // bottom_right
-      glm::vec2(min_x, min_y),  // bottom_left
-  };
+  return {verts,
+          {
+              glm::vec2(min_x, max_y),  // top_left
+              glm::vec2(max_x, max_y),  // top_right
+              glm::vec2(max_x, min_y),  // bottom_right
+              glm::vec2(min_x, min_y),  // bottom_left
+          }};
+}
+
+fuchsia::math::Rect MatrixMultiplyRect(const glm::mat3& matrix, fuchsia::math::Rect rect) {
+  return ConvertVertsToRect(std::get<0>(MatrixMultiplyVerts(matrix, ConvertRectToVerts(rect))));
+}
+
+// TODO(fxbug.dev/77993): This will not produce the correct results for the display
+// controller rendering pathway if a rotation is applied to the rectangle.
+// Please see comment with same bug number in display_compositor.cc for more details.
+escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix, const TransformClipRegion& clip,
+                                      const std::array<glm::vec2, 4>& uvs) {
+  // The local space of the renderable has its top-left origin point at (0,0) and grows
+  // downward and to the right, so that the bottom-right point is at (1,-1). We apply
+  // the matrix to the four points that represent this unit square to get the points in
+  // the global coordinate space.
+  auto [verts, reordered_verts] = MatrixMultiplyVerts(matrix, {
+                                                                  glm::vec3(0, 0, 1),
+                                                                  glm::vec3(1, 0, 1),
+                                                                  glm::vec3(1, -1, 1),
+                                                                  glm::vec3(0, -1, 1),
+                                                              });
 
   std::array<glm::vec2, 4> reordered_uvs;
   for (uint32_t i = 0; i < 4; i++) {
@@ -192,36 +224,12 @@ GlobalImageSampleRegionVector ComputeGlobalImageSampleRegions(
     const GlobalTopologyData::ParentIndexVector& parent_indices,
     const UberStruct::InstanceMap& uber_structs) {
   GlobalImageSampleRegionVector sample_regions;
-  if (global_topology.empty()) {
-    return sample_regions;
-  }
-
   sample_regions.reserve(global_topology.size());
-
-  // The root entry's parent pointer points to itself, so special case it.
-  const auto& root_handle = global_topology.front();
-  const auto root_uber_struct_kv = uber_structs.find(root_handle.GetInstanceId());
-  FX_DCHECK(root_uber_struct_kv != uber_structs.end());
-
-  const auto root_regions_kv =
-      root_uber_struct_kv->second->local_image_sample_regions.find(root_handle);
-
-  if (root_regions_kv == root_uber_struct_kv->second->local_image_sample_regions.end()) {
-    // Only non-image nodes should get here. This gets pruned out when we select for
-    // content images.
-    sample_regions.emplace_back(kInvalidSampleRegion);
-  } else {
-    sample_regions.emplace_back(root_regions_kv->second);
-  }
-
-  for (size_t i = 1; i < global_topology.size(); ++i) {
-    const TransformHandle& handle = global_topology[i];
-    const size_t parent_index = parent_indices[i];
-
+  for (size_t i = 0; i < global_topology.size(); ++i) {
     // Every entry in the global topology comes from an UberStruct.
+    const TransformHandle& handle = global_topology[i];
     const auto uber_stuct_kv = uber_structs.find(handle.GetInstanceId());
     FX_DCHECK(uber_stuct_kv != uber_structs.end());
-
     const auto regions_kv = uber_stuct_kv->second->local_image_sample_regions.find(handle);
 
     if (regions_kv == uber_stuct_kv->second->local_image_sample_regions.end()) {
@@ -239,7 +247,10 @@ GlobalImageSampleRegionVector ComputeGlobalImageSampleRegions(
 GlobalTransformClipRegionVector ComputeGlobalTransformClipRegions(
     const GlobalTopologyData::TopologyVector& global_topology,
     const GlobalTopologyData::ParentIndexVector& parent_indices,
-    const UberStruct::InstanceMap& uber_structs) {
+    const GlobalMatrixVector& matrix_vector, const UberStruct::InstanceMap& uber_structs) {
+  FX_DCHECK(global_topology.size() == parent_indices.size());
+  FX_DCHECK(global_topology.size() == matrix_vector.size());
+
   GlobalTransformClipRegionVector clip_regions;
   if (global_topology.empty()) {
     return clip_regions;
@@ -254,35 +265,39 @@ GlobalTransformClipRegionVector ComputeGlobalTransformClipRegions(
 
   const auto root_regions_kv = root_uber_struct_kv->second->local_clip_regions.find(root_handle);
 
+  // Process the root separately from the rest of the tree.
   if (root_regions_kv == root_uber_struct_kv->second->local_clip_regions.end()) {
     clip_regions.emplace_back(kUnclippedRegion);
   } else {
-    clip_regions.emplace_back(root_regions_kv->second);
+    clip_regions.emplace_back(MatrixMultiplyRect(matrix_vector[0], root_regions_kv->second));
   }
 
   for (size_t i = 1; i < global_topology.size(); ++i) {
     const TransformHandle& handle = global_topology[i];
     const size_t parent_index = parent_indices[i];
+    auto parent_clip = clip_regions[parent_index];
 
     // Every entry in the global topology comes from an UberStruct.
     const auto uber_stuct_kv = uber_structs.find(handle.GetInstanceId());
     FX_DCHECK(uber_stuct_kv != uber_structs.end());
-
     const auto regions_kv = uber_stuct_kv->second->local_clip_regions.find(handle);
 
+    // A clip region is bounded to that of its parent region. If the current clip region
+    // is empty, then it defaults to that of its parent. Otherwise, we must find the
+    // intersection of the parent clip region and the current clip region, in the global
+    // coordinate space.
     if (regions_kv == uber_stuct_kv->second->local_clip_regions.end()) {
-      // Only non-image nodes should get here. This gets pruned out when we select for
-      // content images.
-      clip_regions.emplace_back(kUnclippedRegion);
+      clip_regions.emplace_back(parent_clip);
     } else {
-      // A clip region is bounded to that of its parent region.
-      auto parent_clip = clip_regions[parent_index];
-      auto curr_clip = regions_kv->second;
+      // Calculate the global position of the current clip region.
+      auto curr_clip = MatrixMultiplyRect(matrix_vector[i], regions_kv->second);
 
+      // Calculate the intersection of the current clip with its parent.
       glm::vec2 curr_origin = {curr_clip.x, curr_clip.y};
       glm::vec2 curr_extent = {curr_clip.width, curr_clip.height};
-
       auto [clipped_origin, clipped_extent] = ClipRectangle(parent_clip, curr_origin, curr_extent);
+
+      // Add the intersection to the global clip vector.
       clip_regions.emplace_back(TransformClipRegion{
           static_cast<int>(clipped_origin.x), static_cast<int>(clipped_origin.y),
           static_cast<int>(clipped_extent.x), static_cast<int>(clipped_extent.y)});

@@ -47,10 +47,13 @@ GlobalImageSampleRegionVector ComputeGlobalImageSampleRegions(
 // Gathers the image sample regions for each transform in |global_topology| using the local
 // image sample regions in the |uber_structs|. If a transform doesn't have image sample
 // regions present in the appropriate UberStruct, this function assumes the region is null.
+// Since clip regions are specified in the local space of the transform they are attached to,
+// this function transforms those into global clip regions before returning them. This requires
+// the global matrix vector to be passed along as a parameter.
 GlobalTransformClipRegionVector ComputeGlobalTransformClipRegions(
     const GlobalTopologyData::TopologyVector& global_topology,
     const GlobalTopologyData::ParentIndexVector& parent_indices,
-    const UberStruct::InstanceMap& uber_structs);
+    const GlobalMatrixVector& matrix_vector, const UberStruct::InstanceMap& uber_structs);
 
 // The list of global rectangles for a particular global topology. Each entry is the global
 // rectangle (i.e. relative to the root TransformHandle) of the transform in the corresponding

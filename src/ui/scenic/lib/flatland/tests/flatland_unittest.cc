@@ -3770,6 +3770,24 @@ TEST_F(FlatlandTest, SetClipBoundaryErrorCases) {
     PRESENT(flatland, false);
   }
 
+  // Can't overflow on the X-axis.
+  {
+    fuchsia::math::Rect rect = {INT_MAX - 1, 0, INT_MAX - 1, 30};
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->CreateTransform(kTransformId);
+    flatland->SetClipBoundary(kTransformId, std::make_unique<fuchsia::math::Rect>(std::move(rect)));
+    PRESENT(flatland, false);
+  }
+
+  // Can't overflow on the Y-axis.
+  {
+    fuchsia::math::Rect rect = {0, INT_MAX - 1, 30, INT_MAX - 1};
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->CreateTransform(kTransformId);
+    flatland->SetClipBoundary(kTransformId, std::make_unique<fuchsia::math::Rect>(std::move(rect)));
+    PRESENT(flatland, false);
+  }
+
   // Null value is OK.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();

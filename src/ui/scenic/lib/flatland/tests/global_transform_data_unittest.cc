@@ -531,9 +531,10 @@ TEST(GlobalTransformClipTest, EmptyTopologyReturnsEmptyClipRegions) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::TopologyVector topology_vector;
   GlobalTopologyData::ParentIndexVector parent_indices;
+  GlobalMatrixVector global_matrices;
 
-  auto global_clip_regions =
-      ComputeGlobalTransformClipRegions(topology_vector, parent_indices, uber_structs);
+  auto global_clip_regions = ComputeGlobalTransformClipRegions(topology_vector, parent_indices,
+                                                               global_matrices, uber_structs);
   EXPECT_TRUE(global_clip_regions.empty());
 }
 
@@ -547,6 +548,7 @@ TEST(GlobalTransformClipTest, EmptyClipRegionsAreInvalid) {
   // 1:0 - 1:1
   GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}};
   GlobalTopologyData::ParentIndexVector parent_indices = {0, 0};
+  GlobalMatrixVector global_matrices = {glm::mat3(1.0), glm::mat3(1.0)};
 
   // The UberStruct for instance ID 1 must exist, but it contains no local opacity values.
   auto uber_struct = std::make_unique<UberStruct>();
@@ -554,8 +556,8 @@ TEST(GlobalTransformClipTest, EmptyClipRegionsAreInvalid) {
 
   GlobalTransformClipRegionVector expected_clip_regions = {kUnclippedRegion, kUnclippedRegion};
 
-  auto global_clip_regions =
-      ComputeGlobalTransformClipRegions(topology_vector, parent_indices, uber_structs);
+  auto global_clip_regions = ComputeGlobalTransformClipRegions(topology_vector, parent_indices,
+                                                               global_matrices, uber_structs);
   EXPECT_EQ(expected_clip_regions.size(), global_clip_regions.size());
   for (uint32_t i = 0; i < global_clip_regions.size(); i++) {
     EXPECT_EQ(expected_clip_regions[i].x, global_clip_regions[i].x);
@@ -575,6 +577,7 @@ TEST(GlobalTransformClipTest, NoOverlapClipRegions) {
   // 1:0 - 1:1
   GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}};
   GlobalTopologyData::ParentIndexVector parent_indices = {0, 0};
+  GlobalMatrixVector global_matrices = {glm::mat3(1.0), glm::mat3(1.0)};
 
   auto uber_struct = std::make_unique<UberStruct>();
 
@@ -588,8 +591,27 @@ TEST(GlobalTransformClipTest, NoOverlapClipRegions) {
 
   GlobalTransformClipRegionVector expected_clip_regions = {clip_regions[0], {0, 0, 0, 0}};
 
-  auto global_clip_regions =
-      ComputeGlobalTransformClipRegions(topology_vector, parent_indices, uber_structs);
+  auto global_clip_regions = ComputeGlobalTransformClipRegions(topology_vector, parent_indices,
+                                                               global_matrices, uber_structs);
+  EXPECT_EQ(global_clip_regions.size(), expected_clip_regions.size());
+  for (uint64_t i = 0; i < global_clip_regions.size(); i++) {
+    const auto& a = global_clip_regions[i];
+    const auto& b = expected_clip_regions[i];
+    EXPECT_FLOAT_EQ(a.x, b.x);
+    EXPECT_FLOAT_EQ(a.y, b.y);
+    EXPECT_FLOAT_EQ(a.width, b.width);
+    EXPECT_FLOAT_EQ(a.height, b.height);
+  }
+
+  // Now translate the child transform, to (-200, -300). Since the clip region's region is specified
+  // to be (200,300) in the local coordinate space of the child transform, its global space should
+  // therefore be (0,0) and it should line up with the clip region of the parent.
+  global_matrices[1] = glm::translate(glm::mat3(1.0), glm::vec2(-200, -300));
+  global_clip_regions = ComputeGlobalTransformClipRegions(topology_vector, parent_indices,
+                                                          global_matrices, uber_structs);
+
+  // Both clip regions should be the same.
+  expected_clip_regions[1] = clip_regions[0];
   EXPECT_EQ(global_clip_regions.size(), expected_clip_regions.size());
   for (uint64_t i = 0; i < global_clip_regions.size(); i++) {
     const auto& a = global_clip_regions[i];
@@ -602,7 +624,7 @@ TEST(GlobalTransformClipTest, NoOverlapClipRegions) {
 }
 
 // Test a more complicated scenario with multiple transforms, each with its own
-// clip region set, and make sure that they all get calculated correctly.
+// clip region and transform matrix set.
 TEST(GlobalTransformClipTest, ComplicatedGraphClipRegions) {
   UberStruct::InstanceMap uber_structs;
 
@@ -613,11 +635,17 @@ TEST(GlobalTransformClipTest, ComplicatedGraphClipRegions) {
   //       1:3 - 1:4
   GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}};
   GlobalTopologyData::ParentIndexVector parent_indices = {0, 0, 1, 0, 3};
+  GlobalMatrixVector global_matrices = {glm::translate(glm::mat3(1.0), glm::vec2(5, 10)),
+                                        glm::translate(glm::mat3(1.0), glm::vec2(-5, -10)),
+                                        glm::translate(glm::mat3(1.0), glm::vec2(20, 30)),
+                                        glm::translate(glm::mat3(1.0), glm::vec2(-5, -10)),
+                                        glm::translate(glm::mat3(1.0), glm::vec2(-10, -20))};
 
   auto uber_struct = std::make_unique<UberStruct>();
 
   GlobalTransformClipRegionVector clip_regions = {
-      {5, 10, 100, 200}, kUnclippedRegion, {20, 30, 110, 300}, {0, 0, 300, 400}, {-10, -20, 20, 30},
+      {0, 0, 100, 200},    {-1000, -1000, 2000, 2000}, {0, 0, 110, 300},
+      {-5, -10, 300, 400}, {-15, -30, 20, 30},
   };
 
   uber_struct->local_clip_regions[{1, 0}] = clip_regions[0];
@@ -631,11 +659,11 @@ TEST(GlobalTransformClipTest, ComplicatedGraphClipRegions) {
   uber_structs[1] = std::move(uber_struct);
 
   GlobalTransformClipRegionVector expected_clip_regions = {
-      clip_regions[0], clip_regions[0], {20, 30, 85, 180}, {5, 10, 100, 200}, {5, 10, 5, 0},
+      {5, 10, 100, 200}, {5, 10, 100, 200}, {20, 30, 85, 180}, {5, 10, 100, 200}, {0, 0, 0, 0},
   };
 
-  auto global_clip_regions =
-      ComputeGlobalTransformClipRegions(topology_vector, parent_indices, uber_structs);
+  auto global_clip_regions = ComputeGlobalTransformClipRegions(topology_vector, parent_indices,
+                                                               global_matrices, uber_structs);
   EXPECT_EQ(global_clip_regions.size(), expected_clip_regions.size());
   for (uint64_t i = 0; i < global_clip_regions.size(); i++) {
     const auto& a = global_clip_regions[i];

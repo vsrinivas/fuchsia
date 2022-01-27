@@ -64,7 +64,7 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
       topology_data.topology_vector, topology_data.parent_indices, snapshot);
 
   const auto global_clip_regions = ComputeGlobalTransformClipRegions(
-      topology_data.topology_vector, topology_data.parent_indices, snapshot);
+      topology_data.topology_vector, topology_data.parent_indices, global_matrices, snapshot);
 
   const auto image_rectangles = flatland::ComputeGlobalRectangles(
       flatland::SelectAttribute(global_matrices, image_indices),
@@ -164,7 +164,7 @@ Renderables Engine::GetRenderables(TransformHandle root) {
       topology_data.topology_vector, topology_data.parent_indices, snapshot);
 
   const auto global_clip_regions = ComputeGlobalTransformClipRegions(
-      topology_data.topology_vector, topology_data.parent_indices, snapshot);
+      topology_data.topology_vector, topology_data.parent_indices, global_matrices, snapshot);
 
   const auto image_rectangles = flatland::ComputeGlobalRectangles(
       flatland::SelectAttribute(global_matrices, image_indices),

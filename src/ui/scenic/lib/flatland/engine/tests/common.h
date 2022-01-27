@@ -81,7 +81,7 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
           topology_data.topology_vector, topology_data.parent_indices, snapshot);
 
       const auto global_clip_regions = ComputeGlobalTransformClipRegions(
-          topology_data.topology_vector, topology_data.parent_indices, snapshot);
+          topology_data.topology_vector, topology_data.parent_indices, global_matrices, snapshot);
 
       const auto [image_indices, images] = ComputeGlobalImageData(
           topology_data.topology_vector, topology_data.parent_indices, snapshot);
