@@ -35,6 +35,9 @@ func TestFFXConfig(t *testing.T) {
 		"fastboot": map[string]map[string]bool{
 			"usb": {"disabled": true},
 		},
+		"ffx": map[string]map[string]bool{
+			"analytics": {"disabled": true},
+		},
 		"key": "value",
 	}
 	if diff := cmp.Diff(expectedConfig, config.config); diff != "" {
