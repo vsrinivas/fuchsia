@@ -49,12 +49,18 @@ protocol ClientController {
     /// to saved networks or acting on incoming calls triggering connections).
     /// Depending on the underlying capabilities of the device, this call may impact
     /// other device operation (for example, acting as an access point).
+    /// The returned status represents acknowledgement of the request.  The
+    /// ClientListener protocol should be monitored to learn when client functionality
+    /// has been enabled.
     StartClientConnections() -> (struct {
         status fuchsia.wlan.common.RequestStatus;
     });
 
     /// Tears down any existing connections to wlan networks and disables initiation of
     /// new connections.
+    /// The returned status represents acknowledgements of the request.  The
+    /// ClientListener protocol should be monitored to learn when client functionality
+    /// has been disabled.
     StopClientConnections() -> (struct {
         status fuchsia.wlan.common.RequestStatus;
     });
