@@ -169,6 +169,9 @@
         {{#if (eq runtime.log_level "verbose")}}
             "-verbose",
         {{/if}}
+        {{#if runtime.debugger}}
+            "-wait-for-debugger",
+        {{/if}}
         "-no-location-ui"
     ],
     "envs": {

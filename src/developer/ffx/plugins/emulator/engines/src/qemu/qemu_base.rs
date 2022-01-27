@@ -209,6 +209,11 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             }
         }
 
+        if self.emu_config().runtime.debugger {
+            println!("The emulator will wait for a debugger to attach before starting up.");
+            println!("Attach to process {} to continue launching the emulator.", self.get_pid());
+        }
+
         if self.emu_config().runtime.console == ConsoleType::Monitor
             || self.emu_config().runtime.console == ConsoleType::Console
         {
@@ -232,14 +237,6 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                         );
                     }
                     bail!("Emulator launcher did not terminate properly, error: {}", e)
-                }
-            }
-        } else if self.emu_config().runtime.debugger {
-            let status = child_arc.wait()?;
-            if !status.success() {
-                let exit_code = status.code().unwrap_or_default();
-                if exit_code != 0 {
-                    bail!("Cannot start Fuchsia Emulator.")
                 }
             }
         }
