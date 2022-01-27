@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_mem::Buffer,
-    fuchsia_zircon::{Status, VmoChildOptions},
-    thiserror::Error,
-};
+use {fuchsia_zircon_status::Status, thiserror::Error};
+
+#[cfg(target_os = "fuchsia")]
+use {fidl_fuchsia_io::DirectoryProxy, fidl_fuchsia_mem::Buffer, fuchsia_zircon::VmoChildOptions};
 
 /// An error encountered while opening an image.
 #[derive(Debug, Error)]
@@ -20,13 +18,13 @@ pub enum OpenImageError {
     FidlGetBuffer(#[source] fidl::Error),
 
     #[error("while obtaining vmo of file: {0}")]
-    GetBuffer(fuchsia_zircon::Status),
+    GetBuffer(Status),
 
     #[error("remote reported success without providing a vmo")]
     MissingBuffer,
 
     #[error("while converting vmo to a resizable vmo: {0}")]
-    CloneBuffer(fuchsia_zircon::Status),
+    CloneBuffer(Status),
 }
 
 /// An identifier for an image type which corresponds to the file's name without
@@ -176,6 +174,7 @@ impl ImageClass {
     }
 }
 
+#[cfg(target_os = "fuchsia")]
 pub(crate) async fn open(proxy: &DirectoryProxy, image: &Image) -> Result<Buffer, OpenImageError> {
     let file =
         io_util::directory::open_file(proxy, &image.name(), fidl_fuchsia_io::OPEN_RIGHT_READABLE)

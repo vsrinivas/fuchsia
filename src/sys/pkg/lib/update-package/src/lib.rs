@@ -60,6 +60,7 @@ impl UpdatePackage {
     }
 
     /// Opens the given `image` as a resizable VMO buffer.
+    #[cfg(target_os = "fuchsia")]
     pub async fn open_image(
         &self,
         image: &Image,
@@ -108,6 +109,9 @@ struct TestUpdatePackage {
 
 #[cfg(test)]
 impl TestUpdatePackage {
+    #[cfg(not(target_os = "fuchsia"))]
+    compile_error!("Building tests for non-fuchsia targets requires a library to serve a temp dir using the fidl_fuchsia_io::Directory protocol");
+
     fn new() -> Self {
         let temp_dir = tempfile::tempdir().expect("/tmp to exist");
         let update_pkg_proxy = io_util::directory::open_in_namespace(

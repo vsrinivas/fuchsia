@@ -6,7 +6,7 @@
 
 use {
     fidl_fuchsia_io::DirectoryProxy,
-    fuchsia_zircon::Status,
+    fuchsia_zircon_status::Status,
     serde::{Deserialize, Serialize},
     std::str::FromStr,
     thiserror::Error,

@@ -4,7 +4,10 @@
 
 //! Typesafe wrappers around parsing the epoch.json file.
 
-use {epoch::EpochFile, fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon::Status, thiserror::Error};
+use {
+    epoch::EpochFile, fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon_status::Status,
+    thiserror::Error,
+};
 
 /// An error encountered while parsing the epoch.json file.
 #[derive(Debug, Error)]

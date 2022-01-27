@@ -4,7 +4,7 @@
 
 //! Typesafe wrappers around verifying the board file.
 
-use {fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon::Status, thiserror::Error};
+use {fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon_status::Status, thiserror::Error};
 
 /// An error encountered while verifying the board.
 #[derive(Debug, Error)]
