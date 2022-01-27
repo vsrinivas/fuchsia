@@ -4,110 +4,105 @@
 package main
 
 import (
-	"errors"
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon"
+
+	"github.com/google/subcommands"
 )
 
 var (
 	// ExecCommand exports exec.Command as a variable so it can be mocked.
 	ExecCommand = exec.Command
-	// Logger level.
-	level = logger.InfoLevel
 )
 
-const logFlags = log.Ltime
+const (
+	privateKeyFlag = "private-key"
+	deviceNameFlag = "device-name"
+	deviceIPFlag   = "device-ip"
+	sshConfigFlag  = "sshconfig"
+	dataPathFlag   = "data-path"
+	logLevelFlag   = "level"
+	verboseFlag    = "verbose"
 
-type sdkProvider interface {
-	RunSSHShell(targetAddress string, sshConfig string, privateKey string, sshPort string,
-		verbose bool, sshArgs []string) error
+	logFlags = log.Ltime
+)
+
+type fsshCmd struct {
+	// Target related options.
+	privateKey string
+	deviceName string
+	deviceIP   string
+	sshConfig  string
+	dataPath   string
+
+	logLevel logger.LogLevel
+	verbose  bool
 }
 
-var osExit = os.Exit
+func (*fsshCmd) Name() string { return "fssh" }
 
-func main() {
-	var err error
+func (*fsshCmd) Synopsis() string {
+	return "Creates an SSH connection with a device and executes a command."
+}
 
-	helpFlag := flag.Bool("help", false, "Show the usage message")
-	verboseFlag := flag.Bool("verbose", false, "Print informational messages.")
+func (*fsshCmd) Usage() string {
+	return fmt.Sprintf("fssh [-%s device-name -%s device-ip -%s private-key -%s sshconfig -%s data-path -%s -%s log-level] [ssh_command]\n", deviceNameFlag, deviceIPFlag, privateKeyFlag, sshConfigFlag, dataPathFlag, verboseFlag, logLevelFlag)
+}
 
-	// target related options
-	privateKeyFlag := flag.String("private-key", "", "Uses additional private key when using ssh to access the device.")
-	deviceNameFlag := flag.String("device-name", "", `Serves packages to a device with the given device hostname. Cannot be used with --device-ip."
-		  If neither --device-name nor --device-ip are specified, the device-name configured using ffx is used.`)
-	deviceIPFlag := flag.String("device-ip", "", `Serves packages to a device with the given device ip address. Cannot be used with --device-name."
-		  If neither --device-name nor --device-ip are specified, the device-name configured using ffx is used.`)
-	sshConfigFlag := flag.String("sshconfig", "", "Use the specified sshconfig file instead of fssh's version.")
-	dataPathFlag := flag.String("data-path", "", "Specifies the data path for SDK tools. Defaults to $HOME/.fuchsia")
-	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
+func (c *fsshCmd) SetFlags(f *flag.FlagSet) {
+	c.logLevel = logger.InfoLevel // Default that may be overridden.
+	f.StringVar(&c.privateKey, privateKeyFlag, "", "Uses additional private key when using ssh to access the device.")
+	f.StringVar(&c.deviceName, deviceNameFlag, "", `Serves packages to a device with the given device hostname. Cannot be used with --device-ip."
+			  If neither --device-name nor --device-ip are specified, the device-name configured using ffx is used.`)
+	f.StringVar(&c.deviceIP, deviceIPFlag, "", `Serves packages to a device with the given device ip address. Cannot be used with --device-name."
+			  If neither --device-name nor --device-ip are specified, the device-name configured using ffx is used.`)
+	f.StringVar(&c.sshConfig, sshConfigFlag, "", "Use the specified sshconfig file instead of fssh's version.")
+	f.StringVar(&c.dataPath, dataPathFlag, "", "Specifies the data path for SDK tools. Defaults to $HOME/.fuchsia")
+	f.Var(&c.logLevel, logLevelFlag, "Output verbosity, can be fatal, error, warning, info, debug or trace.")
+	f.BoolVar(&c.verbose, verboseFlag, false, "Runs ssh in verbose mode.")
+}
 
-	flag.Parse()
-
+func (c *fsshCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	// Write all logs to stderr. Other tools parse the output of fssh which will break if logs
 	// are written to stdout.
-	log := logger.NewLogger(level, color.NewColor(color.ColorAuto), os.Stderr, os.Stderr, "fssh ")
+	log := logger.NewLogger(c.logLevel, color.NewColor(color.ColorAuto), os.Stderr, os.Stderr, "fssh ")
 	log.SetFlags(logFlags)
 
-	if *helpFlag {
-		usage()
-		osExit(0)
-	}
-	sdk, err := sdkcommon.NewWithDataPath(*dataPathFlag)
+	sdk, err := sdkcommon.NewWithDataPath(c.dataPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not initialize SDK %v", err)
-		osExit(1)
+		log.Fatalf("Could not initialize SDK %v", err)
 	}
 
-	deviceConfig, err := sdk.ResolveTargetAddress(*deviceIPFlag, *deviceNameFlag)
+	deviceConfig, err := sdk.ResolveTargetAddress(c.deviceIP, c.deviceName)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	log.Debugf("Using target address: %v", deviceConfig.DeviceIP)
+	log.Debugf("Using target address: %s", deviceConfig.DeviceIP)
 
-	// if no deviceIPFlag was given, then get the SSH Port from the configuration.
+	// If no deviceIPFlag was given, then get the SSH Port from the configuration.
 	// We can't look at the configuration if the ip address was passed in since we don't have the
 	// device name which is needed to look up the property.
 	sshPort := ""
-	if *deviceIPFlag == "" {
+	if c.deviceIP == "" {
 		sshPort = deviceConfig.SSHPort
-		if err != nil {
-			log.Fatalf("Error reading SSH port configuration: %v", err)
-		}
-		log.Debugf("Using sshport address: %v", sshPort)
+		log.Debugf("Using sshport address: %s", sshPort)
 		if sshPort == "22" {
 			sshPort = ""
 		}
 	}
 
-	log.Debugf("Running SSH with %v %v %v %v %v %v ", deviceConfig.DeviceIP, *sshConfigFlag,
-		*privateKeyFlag, sshPort, *verboseFlag, flag.Args())
-	if err := ssh(sdk, *verboseFlag, deviceConfig.DeviceIP, *sshConfigFlag, *privateKeyFlag, sshPort, flag.Args()); err != nil {
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
-			osExit(exitError.ExitCode())
-		} else {
-			log.Fatalf("Error running ssh: %v", err)
-		}
+	log.Debugf("Running SSH with %s %s %s %s %t %s ", deviceConfig.DeviceIP, c.sshConfig,
+		c.privateKey, sshPort, c.verbose, f.Args())
+	if err := sdk.RunSSHShell(deviceConfig.DeviceIP, c.sshConfig, c.privateKey, sshPort, c.verbose, f.Args()); err != nil {
+		log.Fatalf("Error running ssh: %v", err)
 	}
-	osExit(0)
-}
-
-func usage() {
-	fmt.Printf("Usage: %s [options] [args]\n", filepath.Base(os.Args[0]))
-	flag.PrintDefaults()
-}
-
-// ssh wraps sdk.RunSSHShell to enable testing by injecting an sdkProvider
-func ssh(sdk sdkProvider, verbose bool, targetAddress string, sshConfig string,
-	privateKey string, sshPort string, args []string) error {
-
-	return sdk.RunSSHShell(targetAddress, sshConfig, privateKey, sshPort, verbose, args)
+	return subcommands.ExitSuccess
 }

@@ -8,10 +8,16 @@ import("//build/go/go_test.gni")
 
 go_library("main") {
   source_dir = "cmd"
-  deps = [ "//tools/sdk-tools/sdkcommon" ]
+  deps = [
+    "//third_party/golibs:github.com/google/subcommands",
+    "//tools/lib/color",
+    "//tools/lib/logger",
+    "//tools/sdk-tools/sdkcommon",
+  ]
   sources = [
     "fssh.go",
     "fssh_test.go",
+    "main.go",
   ]
 }
 

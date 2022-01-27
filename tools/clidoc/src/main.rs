@@ -111,7 +111,8 @@ const ALLOW_LIST: &'static [&'static str] = &[
 // when invoking --help.
 lazy_static! {
     static ref IGNORE_ERR_CODE: HashSet<&'static str> = {
-        let h = HashSet::from(["bootserver", "minfs", "symbol-index", "symbolizer", "zxdb"]);
+        let h =
+            HashSet::from(["bootserver", "fssh", "minfs", "symbol-index", "symbolizer", "zxdb"]);
         h
     };
 }

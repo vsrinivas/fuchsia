@@ -4,7 +4,7 @@
 package main
 
 import (
-	"errors"
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -14,25 +14,9 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon"
+
+	"github.com/google/subcommands"
 )
-
-type testSDKProperties struct {
-	err                   error
-	expectedTargetAddress string
-}
-
-func (testSDK testSDKProperties) RunSSHShell(targetAddress string, sshConfig string,
-	privateKey string, sshPort string, verbose bool, sshArgs []string) error {
-	if targetAddress == "" {
-		return errors.New("target address must be specified")
-	}
-	if targetAddress != testSDK.expectedTargetAddress {
-		return fmt.Errorf("target address %v did not match expected %v", targetAddress, testSDK.expectedTargetAddress)
-	}
-	return testSDK.err
-}
-
-const defaultIPAddress = "e80::c00f:f0f0:eeee:cccc"
 
 func clearEnvVars() {
 	os.Unsetenv("_EXPECTED_IPADDR")
@@ -48,17 +32,16 @@ func clearEnvVars() {
 
 func TestMain(t *testing.T) {
 	dataDir := t.TempDir()
-	savedArgs := os.Args
 	savedCommandLine := flag.CommandLine
 	sdkcommon.ExecCommand = helperCommandForFSSH
 	defer func() {
 		clearEnvVars()
 		sdkcommon.ExecCommand = exec.Command
-		os.Args = savedArgs
 		flag.CommandLine = savedCommandLine
 	}()
 
 	tests := []struct {
+		cmd                    *fsshCmd
 		name                   string
 		args                   []string
 		deviceConfiguration    string
@@ -70,10 +53,12 @@ func TestMain(t *testing.T) {
 		expectedSSHConfig      string
 		expectedPrivateKey     string
 		expectedSSHArgs        string
+		expectedStatus         subcommands.ExitStatus
 	}{
 		{
+			cmd:                    &fsshCmd{},
 			name:                   "No configured device but 1 device is discoverable",
-			args:                   []string{os.Args[0], "-data-path", dataDir},
+			args:                   []string{"-data-path", dataDir},
 			expectedIPAddress:      "::1f",
 			expectedPort:           "",
 			expectedSSHArgs:        "",
@@ -83,8 +68,9 @@ func TestMain(t *testing.T) {
 			ffxTargetGetSSHAddress: `[::1f]:22`,
 		},
 		{
+			cmd:                &fsshCmd{},
 			name:               "Multiple discoverable devices and passing --device-name",
-			args:               []string{os.Args[0], "-data-path", dataDir, "-level", "debug", "--device-name", "test-device"},
+			args:               []string{"-data-path", dataDir, "-level", "debug", "--device-name", "test-device"},
 			expectedIPAddress:  "::1f",
 			expectedPort:       "",
 			expectedSSHArgs:    "",
@@ -95,8 +81,9 @@ func TestMain(t *testing.T) {
 			ffxTargetGetSSHAddress: `[::1f]:22`,
 		},
 		{
+			cmd:  &fsshCmd{},
 			name: "ffx has a default device",
-			args: []string{os.Args[0], "-data-path", dataDir},
+			args: []string{"-data-path", dataDir, "echo", "hello"},
 			deviceConfiguration: `{
 			"remote-target-name":{
 				"bucket":"fuchsia-bucket",
@@ -113,13 +100,14 @@ func TestMain(t *testing.T) {
 			ffxTargetDefault:   "remote-target-name",
 			expectedIPAddress:  "::1f",
 			expectedPort:       "2202",
-			expectedSSHArgs:    "",
+			expectedSSHArgs:    "echo hello",
 			expectedSSHConfig:  filepath.Join(dataDir, "sshconfig"),
 			expectedPrivateKey: "",
 		},
 		{
+			cmd:  &fsshCmd{},
 			name: "ffx non-default device with --device-name",
-			args: []string{os.Args[0], "-data-path", dataDir, "--device-name", "random-device"},
+			args: []string{"-data-path", dataDir, "-device-name", "random-device", "-private-key", filepath.Join(dataDir, "pkey")},
 			deviceConfiguration: `{
 			"remote-target-name":{
 				"bucket":"fuchsia-bucket",
@@ -146,14 +134,13 @@ func TestMain(t *testing.T) {
 			expectedPort:           "8022",
 			expectedSSHArgs:        "",
 			expectedSSHConfig:      filepath.Join(dataDir, "sshconfig"),
-			expectedPrivateKey:     "",
+			expectedPrivateKey:     filepath.Join(dataDir, "pkey"),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			clearEnvVars()
-			os.Args = test.args
 			os.Setenv("_EXPECTED_IPADDR", test.expectedIPAddress)
 			os.Setenv("_EXPECTED_PORT", test.expectedPort)
 			os.Setenv("_EXPECTED_ARGS", test.expectedSSHArgs)
@@ -163,74 +150,20 @@ func TestMain(t *testing.T) {
 			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
 			os.Setenv("_FAKE_FFX_GET_SSH_ADDRESS", test.ffxTargetGetSSHAddress)
-			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-			osExit = func(code int) {
-				if code != 0 {
-					t.Fatalf("Non-zero error code %d", code)
-				}
+
+			flagSet := flag.NewFlagSet("test", flag.ExitOnError)
+			test.cmd.SetFlags(flagSet)
+
+			if err := flagSet.Parse(test.args); err != nil {
+				t.Fatalf("unexpected failure to parse args: %s", err)
 			}
-			main()
+
+			ctx := context.Background()
+			status := test.cmd.Execute(ctx, flagSet)
+			if status != test.expectedStatus {
+				t.Fatalf("Got status %v, want %v", status, test.expectedStatus)
+			}
 		})
-	}
-}
-
-func TestSSH(t *testing.T) {
-	defaultDeviceProperties := make(map[string]string)
-	defaultDeviceProperties[fmt.Sprintf("test-device.%v", sdkcommon.DeviceIPKey)] = defaultIPAddress
-	tests := []struct {
-		sdk           sdkProvider
-		verbose       bool
-		targetAddress string
-		sshConfig     string
-		privateKey    string
-		args          []string
-		expectedError string
-	}{
-		{
-			sdk:           testSDKProperties{},
-			expectedError: "target address must be specified",
-		},
-		{
-			sdk:           testSDKProperties{expectedTargetAddress: defaultIPAddress},
-			targetAddress: defaultIPAddress,
-			expectedError: "",
-		},
-		{
-			sdk: testSDKProperties{
-				expectedTargetAddress: defaultIPAddress,
-			},
-			targetAddress: defaultIPAddress,
-			expectedError: "",
-		},
-		{
-			sdk: testSDKProperties{
-				expectedTargetAddress: defaultIPAddress,
-			},
-			targetAddress: defaultIPAddress,
-			verbose:       true,
-			expectedError: "",
-		},
-		{
-			sdk: testSDKProperties{
-				expectedTargetAddress: defaultIPAddress,
-			},
-			targetAddress: defaultIPAddress,
-			sshConfig:     "custom-config",
-			privateKey:    "private-key",
-			expectedError: "",
-		},
-	}
-
-	for _, test := range tests {
-		err := ssh(test.sdk, test.verbose, test.targetAddress, test.sshConfig, test.privateKey, "", test.args)
-		if err != nil {
-			message := fmt.Sprintf("%v", err)
-			if message != test.expectedError {
-				t.Fatalf("Unexpected error %v does not match %v", message, test.expectedError)
-			}
-		} else if test.expectedError != "" {
-			t.Fatalf("Expected error '%v', but got no error", test.expectedError)
-		}
 	}
 }
 
@@ -284,12 +217,17 @@ func TestFakeSSH(t *testing.T) {
 	expectedPort := os.Getenv("_EXPECTED_PORT")
 	expectedSSHArgs := os.Getenv("_EXPECTED_ARGS")
 	expectedSSHConfig := os.Getenv("_EXPECTED_SSHCONFIG")
-	//expectedPrivateKey := os.Getenv("_EXPECTED_PRIVKEY")
+	expectedPrivateKey := os.Getenv("_EXPECTED_PRIVKEY")
 	expectedArgs := []string{
 		args[0],
 		"-F",
 		expectedSSHConfig,
 	}
+
+	if expectedPrivateKey != "" {
+		expectedArgs = append(expectedArgs, "-i", expectedPrivateKey)
+	}
+
 	if expectedPort != "" {
 		expectedArgs = append(expectedArgs, "-p", expectedPort)
 	}
