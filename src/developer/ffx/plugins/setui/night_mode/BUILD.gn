@@ -4,14 +4,19 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_setui") {
+ffx_plugin("ffx_setui_night_mode") {
   version = "0.1.0"
   edition = "2018"
+  with_unit_tests = true
 
-  plugin_deps = [
-    "night_mode:ffx_setui_night_mode",
-    "privacy:ffx_setui_privacy",
+  deps = [
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//src/developer/ffx/plugins/setui/utils:utils",
   ]
 
+  test_deps = [ "//third_party/rust_crates:test-case" ]
+
   args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }
