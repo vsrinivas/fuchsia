@@ -403,9 +403,8 @@ func infraToolLogChecks() []FailureModeCheck {
 		},
 		// For fxbug.dev/92141.
 		&stringInLogCheck{
-			String:         ffxutilconstants.TimeoutReachingTargetMsg,
-			Type:           swarmingOutputType,
-			SkipPassedTask: true,
+			String: ffxutilconstants.TimeoutReachingTargetMsg,
+			Type:   swarmingOutputType,
 		},
 		// For fxbug.dev/56651.
 		// This error usually happens due to an SSH failure, so that error should take precedence.
