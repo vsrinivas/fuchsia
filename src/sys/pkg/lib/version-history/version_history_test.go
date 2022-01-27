@@ -13,7 +13,7 @@ import (
 )
 
 func TestCompiledVersionMatchesBuildVersion(t *testing.T) {
-	expectedBytes, err := ioutil.ReadFile("host_x64/test_data/version-history/go/version_history.json")
+	expectedBytes, err := ioutil.ReadFile("host_x64/test_data/version-history/version_history.json")
 	if err != nil {
 		t.Fatal(err)
 	}
