@@ -12,6 +12,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
+#include "lib/sys/cpp/testing/enclosing_environment.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/lib/vsh/command_runner.h"
 #include "src/virtualization/tests/fake_netstack.h"
@@ -40,9 +41,24 @@ class EnclosedGuest {
         real_services_(sys::ServiceDirectory::CreateFromNamespace()) {}
   virtual ~EnclosedGuest() {}
 
+  // Install the guest services.
+  //
+  // Use `Start` instead, unless `sys::testing::EnclosingEnvironment` will be created externally and
+  // passed in to `Launch` to launch the guest accordingly.
+  zx_status_t Install(sys::testing::EnvironmentServices& services);
+
+  // Launch the guest.
+  //
+  // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` first.
+  // Use `Start` instead, unless `environment` is created externally, where `Install` was called to
+  // install the guest services prior to its creation.
+  zx_status_t Launch(sys::testing::EnclosingEnvironment& environment, zx::time deadline);
+
   // Start the guest.
   //
   // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` first.
+  // This is the preferred way to start up the guest, which creates an enclosing environment
+  // internally, and launches the guest by calling `Install` and `Launch` respectively.
   zx_status_t Start(zx::time deadline);
 
   // Attempt to gracefully stop the guest.

@@ -84,70 +84,59 @@ zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
   return console_->ExecuteBlocking(command, ShellPrompt(), deadline, result);
 }
 
-zx_status_t EnclosedGuest::Start(zx::time deadline) {
-  Logger::Get().Reset();
-  PeriodicLogger logger;
-
-  logger.Start("Creating guest environment", zx::sec(5));
-  real_services_->Connect(real_env_.NewRequest());
-  auto services = sys::testing::EnvironmentServices::Create(real_env_, loop_.dispatcher());
-
+zx_status_t EnclosedGuest::Install(sys::testing::EnvironmentServices& services) {
   // Install faked network-related services into the guest environment.
-  fake_netstack_.Install(*services);
+  fake_netstack_.Install(services);
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kGuestManagerUrl;
-  zx_status_t status = services->AddServiceWithLaunchInfo(std::move(launch_info),
-                                                          fuchsia::virtualization::Manager::Name_);
+  zx_status_t status = services.AddServiceWithLaunchInfo(std::move(launch_info),
+                                                         fuchsia::virtualization::Manager::Name_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failure launching virtualization manager: " << zx_status_get_string(status);
     return status;
   }
 
-  status = services->AddService(fake_scenic_.GetHandler(), fuchsia::ui::scenic::Scenic::Name_);
+  status = services.AddService(fake_scenic_.GetHandler(), fuchsia::ui::scenic::Scenic::Name_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failure launching fake scenic service: " << zx_status_get_string(status);
     return status;
   }
 
-  status = services->AllowParentService(fuchsia::sysinfo::SysInfo::Name_);
+  status = services.AllowParentService(fuchsia::sysinfo::SysInfo::Name_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failure adding sysinfo service: " << zx_status_get_string(status);
     return status;
   }
 
-  status = services->AllowParentService(fuchsia::kernel::HypervisorResource::Name_);
+  status = services.AllowParentService(fuchsia::kernel::HypervisorResource::Name_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failure adding hypervisor resource service: "
                    << zx_status_get_string(status);
     return status;
   }
 
-  status = services->AllowParentService(fuchsia::kernel::VmexResource::Name_);
+  status = services.AllowParentService(fuchsia::kernel::VmexResource::Name_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failure adding vmex resource service: " << zx_status_get_string(status);
     return status;
   }
 
-  logger.Start("Creating guest sandbox", zx::sec(5));
-  enclosing_environment_ =
-      sys::testing::EnclosingEnvironment::Create(kRealm, real_env_, std::move(services));
-  bool environment_running = RunLoopUntil(
-      GetLoop(), [this] { return enclosing_environment_->is_running(); }, deadline);
-  if (!environment_running) {
-    FX_LOGS(ERROR) << "Timed out waiting for guest sandbox environment to become ready";
-    return ZX_ERR_TIMED_OUT;
-  }
+  return ZX_OK;
+}
 
+zx_status_t EnclosedGuest::Launch(sys::testing::EnclosingEnvironment& environment,
+                                  zx::time deadline) {
+  PeriodicLogger logger;
   std::string url;
   fuchsia::virtualization::GuestConfig cfg;
-  status = LaunchInfo(&url, &cfg);
+  zx_status_t status = LaunchInfo(&url, &cfg);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failure launching guest image: " << zx_status_get_string(status);
     return status;
   }
 
-  enclosing_environment_->ConnectToService(manager_.NewRequest());
+  environment.ConnectToService(manager_.NewRequest());
   manager_->Create("EnclosedGuest", realm_.NewRequest());
 
   status = SetupVsockServices(deadline);
@@ -245,6 +234,31 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
 
   ready_ = true;
   return ZX_OK;
+}
+
+zx_status_t EnclosedGuest::Start(zx::time deadline) {
+  Logger::Get().Reset();
+  PeriodicLogger logger;
+
+  logger.Start("Creating guest environment", zx::sec(5));
+  real_services_->Connect(real_env_.NewRequest());
+  auto services = sys::testing::EnvironmentServices::Create(real_env_, loop_.dispatcher());
+  zx_status_t status = Install(*services);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  logger.Start("Creating guest sandbox", zx::sec(5));
+  enclosing_environment_ =
+      sys::testing::EnclosingEnvironment::Create(kRealm, real_env_, std::move(services));
+  bool environment_running = RunLoopUntil(
+      GetLoop(), [this] { return enclosing_environment_->is_running(); }, deadline);
+  if (!environment_running) {
+    FX_LOGS(ERROR) << "Timed out waiting for guest sandbox environment to become ready";
+    return ZX_ERR_TIMED_OUT;
+  }
+
+  return Launch(*enclosing_environment_, deadline);
 }
 
 zx_status_t EnclosedGuest::Stop(zx::time deadline) {
