@@ -277,16 +277,23 @@ Once you have created a TOC entry, you are now ready to submit your RFC for revi
 Once you have edited the metadata file, created a markdown file, and added a TOC
 entry, you are ready to create a change for review.
 
+The first line of your change's commit message must be `[rfc]`, followed by the
+RFC's name. The body of the commit message may also include your RFC's short
+description. For example:
+
+```md
+[rfc] zx_channel_iovec_t support for zx_channel_write and zx_channel_call
+
+This RFC introduces a new mode to zx_channel_write and zx_channel_call that
+copies input data from multiple memory regions rather than from a single
+contiguous buffer.
+```
+
+Mail your change to your initial set of reviewers. The Fuchsia Eng Council will
+be automatically notified about the RFC's creation.
+
 Note: After you submit your change, update the metadata to include the assigned
 Gerrit change id and submit a patch to your change.
-
-You can add the current Fuchsia Eng Council as reviewers:
-
-<ul>
-  {% for member in eng_council.members %}
-  <li><a href="{{ gerrit_profile }}{{ member }}">{{ member }}</a></li>
-  {% endfor %}
-</ul>
 
 For more information, on creating a change in the Fuchsia project, see
 [Contribute changes].
