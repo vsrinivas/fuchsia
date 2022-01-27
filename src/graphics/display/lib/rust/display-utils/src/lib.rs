@@ -6,11 +6,15 @@
 
 //! This crate provides utilities for the Fuchsia display-controller API.
 
+/// Custom error definitions for `fuchsia.hardware.display` and sysmem API functions.
 mod error;
 
 /// The `types` module defines convenions wrappers for FIDL data types in the
 /// `fuchsia.hardware.display` library.
 mod types;
+
+/// Stateless representation of a display configuration.
+mod config;
 
 /// Helper functions setting up shared image buffers that can be assigned to display layers.
 mod image;
@@ -23,8 +27,9 @@ mod controller;
 /// //zircon/system/public/zircon/pixelformat.h.
 mod pixel_format;
 
+pub use config::*;
 pub use controller::{Controller, VsyncEvent};
-pub use error::{Error, Result};
+pub use error::*;
 pub use image::*;
 pub use pixel_format::PixelFormat;
 pub use types::*;

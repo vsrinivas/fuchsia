@@ -20,8 +20,9 @@ use {
 };
 
 use crate::{
-    error::{Error, Result},
-    types::{CollectionId, DisplayId, DisplayInfo, ImageId},
+    config::{DisplayConfig, LayerConfig},
+    error::{ConfigError, Error, Result},
+    types::{CollectionId, DisplayId, DisplayInfo, ImageId, LayerId},
 };
 
 const DEV_DIR_PATH: &str = "/dev/class/display-controller";
@@ -147,13 +148,6 @@ impl Controller {
         Ok(receiver)
     }
 
-    /// Apply a display configuration. The client is expected to receive a vsync event once the
-    /// configuration is successfully applied. Returns an error if the FIDL message cannot be sent.
-    // TODO(armansito): Parameterize this function with the contents of the display configuration.
-    pub fn apply_config(&self) -> Result<()> {
-        self.inner.read().proxy.apply_config().map_err(Error::from)
-    }
-
     /// Returns a Future that represents the FIDL event handling task. Once scheduled on an
     /// executor, this task will continuously handle incoming FIDL events from the display stack
     /// and the returned Future will not terminate until the FIDL channel is closed.
@@ -184,6 +178,52 @@ impl Controller {
             }
         }
         Ok(())
+    }
+
+    /// Allocates a new virtual hardware layer that is not associated with any display and has no
+    /// configuration.
+    pub async fn create_layer(&self) -> Result<LayerId> {
+        let (result, id) = self.proxy().create_layer().await?;
+        let _ = zx::Status::ok(result)?;
+        Ok(LayerId(id))
+    }
+
+    /// Apply a display configuration. The client is expected to receive a vsync event once the
+    /// configuration is successfully applied. Returns an error if the FIDL message cannot be sent.
+    pub async fn apply_config(
+        &self,
+        configs: &[DisplayConfig],
+    ) -> std::result::Result<(), ConfigError> {
+        let proxy = self.proxy();
+        for config in configs {
+            proxy.set_display_layers(
+                config.id.0,
+                &config.layers.iter().map(|l| l.id.0).collect::<Vec<u64>>(),
+            )?;
+            for layer in &config.layers {
+                match &layer.config {
+                    LayerConfig::Color { pixel_format, color_bytes } => {
+                        proxy.set_layer_color_config(
+                            layer.id.0,
+                            pixel_format.into(),
+                            &color_bytes,
+                        )?;
+                    }
+                    LayerConfig::Primary { image_id, mut image_config } => {
+                        proxy.set_layer_primary_config(layer.id.0, &mut image_config)?;
+                        proxy.set_layer_image(layer.id.0, image_id.0, 0, 0)?;
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        let (result, ops) = proxy.check_config(false).await?;
+        if result != display::ConfigResult::Ok {
+            return Err(ConfigError::invalid(result, ops));
+        }
+
+        proxy.apply_config().map_err(ConfigError::from)
     }
 
     /// Import a sysmem buffer collection. The returned `CollectionId` can be used in future API

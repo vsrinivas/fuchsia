@@ -16,6 +16,7 @@ rustc_library("display-utils") {
   with_unit_tests = true
 
   sources = [
+    "src/config.rs",
     "src/controller.rs",
     "src/error.rs",
     "src/image.rs",

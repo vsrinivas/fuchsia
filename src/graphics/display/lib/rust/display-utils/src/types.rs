@@ -9,6 +9,10 @@ use {fidl_fuchsia_hardware_display::Info, std::fmt};
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialOrd, PartialEq)]
 pub struct DisplayId(pub u64);
 
+/// Strongly typed wrapper around a display layer ID.
+#[derive(Clone, Copy, Debug)]
+pub struct LayerId(pub u64);
+
 /// Strongly typed wrapper around an image ID.
 #[derive(Clone, Copy, Debug)]
 pub struct ImageId(pub u64);
