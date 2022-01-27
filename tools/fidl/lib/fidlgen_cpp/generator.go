@@ -43,7 +43,7 @@ func NewGenerator(flags *CmdlineFlags, templates fs.FS, extraFuncs template.Func
 
 	if runtime.GOOS == "darwin" {
 		// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
-		formatter = fidlgen.NewFormatterWithSizeLimit(1024*1024,
+		formatter = fidlgen.NewFormatterWithSizeLimit(512*1024,
 			flags.clangFormatPath, clangFormatArgs...)
 	} else {
 		formatter = fidlgen.NewFormatter(flags.clangFormatPath, clangFormatArgs...)
