@@ -125,7 +125,13 @@ async fn route_events(
             }
         }
         if !matched {
-            warn!("Unahndled event moniker {}", moniker);
+            match moniker.down_path().get(0) {
+                Some(child_moniker) if child_moniker.collection.is_some() => {
+                    warn!("Unhandled event moniker {}", moniker)
+                }
+                // suppress warning if the moniker isn't in a collection (and thus isn't a test).
+                None | Some(_) => (),
+            }
         }
     }
     Ok(())
