@@ -6,6 +6,7 @@
 #![allow(unused)]
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
+#![allow(non_upper_case_globals)]
 
 use libc::{self, c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, size_t};
 
@@ -64,6 +65,8 @@ pub type FT_Stream = *const FT_StreamRec;
 pub type FT_StreamDesc = *mut c_void;
 pub type FT_Module = *const c_void;
 pub type FT_Face = *mut c_void;
+
+pub const FT_Err_Ok: FT_Error = 0;
 
 pub const FT_OPEN_STREAM: c_uint = 0x2;
 pub const FT_OPEN_PATHNAME: c_uint = 0x4;
