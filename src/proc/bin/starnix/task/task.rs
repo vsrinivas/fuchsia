@@ -824,10 +824,7 @@ impl CurrentTask {
         environ: Vec<CString>,
     ) -> Result<(), Errno> {
         let executable = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
-
-        // TODO: Implement #!interpreter [optional-arg]
-
-        let resolved_elf = resolve_executable(self, executable, argv, environ)?;
+        let resolved_elf = resolve_executable(self, executable, path.clone(), argv, environ)?;
         if let Err(err) = self.finish_exec(path, resolved_elf) {
             // TODO(tbodt): Replace this panic with a log and force a SIGSEGV.
             panic!("{:?} unrecoverable error in exec: {}", self, err);

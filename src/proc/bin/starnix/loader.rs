@@ -196,15 +196,130 @@ pub struct ResolvedInterpElf {
     vmo: zx::Vmo,
 }
 
-/// Resolves a file handle into a validated executable ELF.
+// The magic bytes of a script file.
+const HASH_BANG: &[u8; 2] = b"#!";
+const MAX_RECURSION_DEPTH: usize = 4;
+
+/// Resolves a file into a validated executable ELF, following script interpreters to a fixed
+/// recursion depth. `argv` may change due to script interpreter logic.
 pub fn resolve_executable(
     current_task: &CurrentTask,
-    executable: FileHandle,
+    file: FileHandle,
+    path: CString,
     argv: Vec<CString>,
     environ: Vec<CString>,
 ) -> Result<ResolvedElf, Errno> {
-    let vmo =
-        executable.get_vmo(current_task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
+    resolve_executable_impl(current_task, file, path, argv, environ, 0)
+}
+
+/// Resolves a file into a validated executable ELF, following script interpreters to a fixed
+/// recursion depth.
+fn resolve_executable_impl(
+    current_task: &CurrentTask,
+    file: FileHandle,
+    path: CString,
+    argv: Vec<CString>,
+    environ: Vec<CString>,
+    recursion_depth: usize,
+) -> Result<ResolvedElf, Errno> {
+    if recursion_depth >= MAX_RECURSION_DEPTH {
+        return error!(ELOOP);
+    }
+    let vmo = file.get_vmo(current_task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
+    let mut header = [0u8; 2];
+    match vmo.read(&mut header, 0) {
+        Ok(()) => {}
+        Err(zx::Status::OUT_OF_RANGE) => {
+            // The file is empty, or it would have at least one page allocated to it.
+            return error!(ENOEXEC);
+        }
+        Err(_) => return error!(EINVAL),
+    }
+    if &header == HASH_BANG {
+        resolve_script(current_task, vmo, path, argv, environ, recursion_depth)
+    } else {
+        resolve_elf(current_task, file, vmo, argv, environ)
+    }
+}
+
+/// Resolves a #! script file into a validated executable ELF.
+fn resolve_script(
+    current_task: &CurrentTask,
+    vmo: zx::Vmo,
+    path: CString,
+    argv: Vec<CString>,
+    environ: Vec<CString>,
+    recursion_depth: usize,
+) -> Result<ResolvedElf, Errno> {
+    // All VMOs have sizes in multiple of the system page size, so as long as we only read a page or
+    // less, we should never read past the end of the VMO.
+    // Since Linux 5.1, the max length of the interpreter following the #! is 255.
+    const HEADER_BUFFER_CAP: usize = 255 + HASH_BANG.len();
+    let mut buffer = [0u8; HEADER_BUFFER_CAP];
+    vmo.read(&mut buffer, 0).map_err(|_| errno!(EINVAL))?;
+
+    let mut args = parse_interpreter_line(&buffer)?;
+    let interpreter = current_task.open_file(args[0].as_bytes(), OpenFlags::RDONLY)?;
+
+    // Append the original script executable path as an argument.
+    args.push(path);
+
+    // Append the original arguments (minus argv[0]).
+    args.extend(argv.into_iter().skip(1));
+
+    // Recurse and resolve the interpreter executable
+    resolve_executable_impl(
+        current_task,
+        interpreter,
+        args[0].clone(),
+        args,
+        environ,
+        recursion_depth + 1,
+    )
+}
+
+/// Parses a "#!" byte string and extracts CString arguments. The byte string must contain an
+/// ASCII newline character or null-byte, or else it is considered truncated and parsing will fail.
+/// If the byte string is empty or contains only whitespace, parsing fails.
+/// If successful, the returned `Vec` will have at least one element (the interpreter path).
+fn parse_interpreter_line(line: &[u8]) -> Result<Vec<CString>, Errno> {
+    // Assuming the byte string starts with "#!", truncate the input to end at the first newline or
+    // null-byte. If not found, assume the input was truncated and fail parsing.
+    let end = line.iter().position(|&b| b == b'\n' || b == 0).ok_or_else(|| errno!(EINVAL))?;
+    let line = &line[HASH_BANG.len()..end];
+
+    // Split the byte string at the first whitespace character (or end of line). The first part
+    // is the interpreter path.
+    let is_tab_or_space = |&b| b == b' ' || b == b'\t';
+    let first_whitespace = line.iter().position(is_tab_or_space).unwrap_or(line.len());
+    let (interpreter, rest) = line.split_at(first_whitespace);
+    if interpreter.is_empty() {
+        return error!(ENOEXEC);
+    }
+
+    // The second part is the optional argument. Trim the leading and trailing whitespace, but
+    // treat the middle as a single argument, even if whitespace is encountered.
+    let begin = rest.iter().position(|b| !is_tab_or_space(b)).unwrap_or(rest.len());
+    let end = rest.iter().rposition(|b| !is_tab_or_space(b)).map(|b| b + 1).unwrap_or(rest.len());
+    let optional_arg = &rest[begin..end];
+
+    // SAFETY: `CString::new` can only fail if it encounters a null-byte, which we've made sure
+    // the input won't have.
+    Ok(if optional_arg.is_empty() {
+        vec![CString::new(interpreter).unwrap()]
+    } else {
+        vec![CString::new(interpreter).unwrap(), CString::new(optional_arg).unwrap()]
+    })
+}
+
+/// Resolves a file handle into a validated executable ELF.
+fn resolve_elf(
+    current_task: &CurrentTask,
+    file: FileHandle,
+    vmo: zx::Vmo,
+    argv: Vec<CString>,
+    environ: Vec<CString>,
+) -> Result<ResolvedElf, Errno> {
     let elf_headers = elf_parse::Elf64Headers::from_vmo(&vmo).map_err(elf_parse_error_to_errno)?;
     let interp = if let Some(interp_hdr) = elf_headers
         .program_header_with_type(elf_parse::SegmentType::Interp)
@@ -223,7 +338,7 @@ pub fn resolve_executable(
     } else {
         None
     };
-    Ok(ResolvedElf { file: executable, vmo, interp, argv, environ })
+    Ok(ResolvedElf { file, vmo, interp, argv, environ })
 }
 
 /// Loads a resolved ELF into memory, along with an interpreter if one is defined, and initializes
@@ -328,6 +443,7 @@ fn parse_debug_addr(elf: &LoadedElf) -> Option<UserAddress> {
 mod tests {
     use super::*;
     use fuchsia_async as fasync;
+    use matches::assert_matches;
 
     use crate::testing::*;
 
@@ -390,5 +506,45 @@ mod tests {
         current_task.mm.snapshot_to(&current2.mm).expect("failed to snapshot mm");
 
         assert_eq!(current_task.mm.get_mapping_count(), current2.mm.get_mapping_count());
+    }
+
+    #[test]
+    fn test_parse_interpreter_line() {
+        assert_matches!(parse_interpreter_line(b"#!"), Err(_));
+        assert_matches!(parse_interpreter_line(b"#!\n"), Err(_));
+        assert_matches!(parse_interpreter_line(b"#! \n"), Err(_));
+        assert_matches!(parse_interpreter_line(b"#!/bin/bash"), Err(_));
+        assert_eq!(
+            parse_interpreter_line(b"#!/bin/bash\x00\n"),
+            Ok(vec![CString::new("/bin/bash").unwrap()])
+        );
+        assert_eq!(
+            parse_interpreter_line(b"#!/bin/bash\n"),
+            Ok(vec![CString::new("/bin/bash").unwrap()])
+        );
+        assert_eq!(
+            parse_interpreter_line(b"#!/bin/bash -e\n"),
+            Ok(vec![CString::new("/bin/bash").unwrap(), CString::new("-e").unwrap()])
+        );
+        assert_eq!(
+            parse_interpreter_line(b"#!/bin/bash -e \n"),
+            Ok(vec![CString::new("/bin/bash").unwrap(), CString::new("-e").unwrap()])
+        );
+        assert_eq!(
+            parse_interpreter_line(b"#!/bin/bash \t -e\n"),
+            Ok(vec![CString::new("/bin/bash").unwrap(), CString::new("-e").unwrap()])
+        );
+        assert_eq!(
+            parse_interpreter_line(b"#!/bin/bash -e -x\n"),
+            Ok(vec![CString::new("/bin/bash").unwrap(), CString::new("-e -x").unwrap(),])
+        );
+        assert_eq!(
+            parse_interpreter_line(b"#!/bin/bash -e  -x\t-l\n"),
+            Ok(vec![CString::new("/bin/bash").unwrap(), CString::new("-e  -x\t-l").unwrap(),])
+        );
+        assert_eq!(
+            parse_interpreter_line(b"#!/bin/bash\nfoobar"),
+            Ok(vec![CString::new("/bin/bash").unwrap()])
+        );
     }
 }
