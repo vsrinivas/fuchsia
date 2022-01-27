@@ -800,9 +800,14 @@ class VmCowPages final
   // pages are clean and need to transition to dirty, in which case ZX_ERR_SHOULD_WAIT will be
   // returned and the caller should wait on |page_request|. If no page requests need to be
   // generated, i.e. the pages are already dirty, or if they do not require the dirty transition to
-  // be trapped, ZX_OK is returned. |offset| and |len| should be page-aligned.
-  zx_status_t PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len)
-      TA_REQ(lock_);
+  // be trapped, ZX_OK is returned.
+  //
+  // |offset| and |len| should be page-aligned.
+  //
+  // |dirty_len_out| will return the (page-aligned) length starting at |offset| that contains dirty
+  // pages, either already dirty before making the call or dirtied during the call.
+  zx_status_t PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len,
+                                    uint64_t* dirty_len_out) TA_REQ(lock_);
 
   // Initializes and adds as a child the given VmCowPages as a full clone of this one such that the
   // VmObjectPaged backlink can be moved from this to the child, keeping all page offsets, sizes and
