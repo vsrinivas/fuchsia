@@ -1647,12 +1647,15 @@ async fn test_terminate_signal() {
 
     directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
 
-    // Based on the exact timing, it's possible some test cases were reported, so manually assert
-    // only on the fields that shouldn't vary.
+    // Based on the exact timing, it's possible some test cases were reported, or the suite never
+    // started, so manually assert only on the fields that shouldn't vary.
     assert_eq!(suite_results.len(), 1);
     let directory::SuiteResult::V0 { outcome: suite_outcome, name: suite_name, .. } =
         suite_results.into_iter().next().unwrap();
-    assert_eq!(suite_outcome, directory::Outcome::Inconclusive);
+    assert_matches!(
+        suite_outcome,
+        directory::Outcome::Inconclusive | directory::Outcome::NotStarted
+    );
     assert_eq!(
         suite_name,
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm"
@@ -1690,7 +1693,7 @@ async fn test_terminate_signal_multiple_suites() {
 
     directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
 
-    // There should be exactly one test that started and is inconclusive. Remaining tests should
+    // There should be at most one test that started and is inconclusive. Remaining tests should
     // be NOT_STARTED. Note this assumes that test manager is running tests sequentially, this test
     // could start flaking when this changes.
     let (inconclusive_suite_results, other_suite_results): (Vec<_>, Vec<_>) = suite_results
@@ -1698,16 +1701,8 @@ async fn test_terminate_signal_multiple_suites() {
         .partition(|&directory::SuiteResult::V0 { ref outcome, .. }| {
             *outcome == directory::Outcome::Inconclusive
         });
-    assert_eq!(inconclusive_suite_results.len(), 1);
-    assert_eq!(other_suite_results.len(), 9);
-
-    let directory::SuiteResult::V0 { outcome: suite_outcome, name: suite_name, .. } =
-        inconclusive_suite_results.into_iter().next().unwrap();
-    assert_eq!(suite_outcome, directory::Outcome::Inconclusive);
-    assert_eq!(
-        suite_name,
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm"
-    );
+    assert!(inconclusive_suite_results.len() <= 1);
+    assert!(other_suite_results.len() >= 9);
 
     other_suite_results.into_iter().for_each(|suite_result| {
         directory::testing::assert_suite_result(

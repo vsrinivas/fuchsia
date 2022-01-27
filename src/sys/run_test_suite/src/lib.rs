@@ -11,7 +11,7 @@ use {
         RunBuilderProxy, SuiteArtifact, SuiteStopped,
     },
     fuchsia_async as fasync,
-    futures::{channel::mpsc, future::Either, prelude::*, stream::FuturesUnordered, StreamExt},
+    futures::{channel::mpsc, prelude::*, stream::FuturesUnordered, StreamExt},
     log::{error, warn},
     std::collections::{HashMap, HashSet, VecDeque},
     std::convert::TryInto,
@@ -21,6 +21,7 @@ use {
 };
 
 mod artifact;
+mod cancel;
 pub mod diagnostics;
 mod error;
 pub mod output;
@@ -29,6 +30,7 @@ mod stream_util;
 pub use error::{RunTestSuiteError, UnexpectedEventError};
 use {
     artifact::Artifact,
+    cancel::{Cancelled, OrCancel},
     output::{
         ArtifactType, CaseId, DirectoryArtifactType, RunReporter, SuiteId, SuiteReporter, Timestamp,
     },
@@ -136,11 +138,11 @@ pub enum TimeoutBehavior {
 // * Err(RunTestSuiteError)
 // * Ok(Outcome::Error(RunTestSuiteError))
 // We should consider how to consolidate these.
-async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
+async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
     mut running_suite: RunningSuite,
     suite_reporter: &SuiteReporter<'_>,
     log_opts: diagnostics::LogCollectionOptions,
-    cancel_fut: F,
+    cancel_fut: futures::future::Shared<F>,
 ) -> Result<Outcome, RunTestSuiteError> {
     let mut test_cases = HashMap::new();
     let mut test_case_reporters = HashMap::new();
@@ -153,24 +155,21 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
     let mut cancelled = false;
     let mut tasks = vec![];
 
-    futures::pin_mut!(cancel_fut);
-
     loop {
         let cancellation_or_event_result =
-            futures::future::select(&mut cancel_fut, running_suite.next_event().boxed()).await;
+            running_suite.next_event().boxed_local().or_cancelled(cancel_fut.clone()).await;
         match cancellation_or_event_result {
-            // cancel invoked.
-            Either::Left(((), _)) => {
+            Err(Cancelled) => {
                 cancelled = true;
                 break;
             }
             // stream completes normally.
-            Either::Right((None, _)) => break,
-            Either::Right((Some(Err(e)), _)) => {
+            Ok(None) => break,
+            Ok(Some(Err(e))) => {
                 suite_reporter.stopped(&output::ReportedOutcome::Error, Timestamp::Unknown).await?;
                 return Err(e);
             }
-            Either::Right((Some(Ok(event)), _)) => {
+            Ok(Some(Ok(event))) => {
                 let timestamp = Timestamp::from_nanos(event.timestamp);
                 match event.payload.expect("event cannot be None") {
                     ftest_manager::SuiteEventPayload::CaseFound(CaseFound {
@@ -433,7 +432,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
     }
 
     for t in tasks.into_iter() {
-        t.await;
+        let _ = t.or_cancelled(cancel_fut.clone()).await;
     }
 
     // TODO(fxbug.dev/90037) - unless the suite was cancelled, this indicates an internal error.
@@ -564,7 +563,7 @@ impl RunningSuite {
 /// Schedule and run the tests specified in |test_params|, and collect the results.
 /// Note this currently doesn't record the result or call finished() on run_reporter,
 /// the caller should do this instead.
-async fn run_tests<'a, F: 'a + Future<Output = ()>>(
+async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
     builder_proxy: RunBuilderProxy,
     test_params: Vec<TestParams>,
     run_params: RunParams,
@@ -616,8 +615,21 @@ async fn run_tests<'a, F: 'a + Future<Output = ()>>(
     let handle_suite_fut = async move {
         let mut num_failed = 0;
         let mut final_outcome = None;
+        let mut stopped_prematurely = false;
         // for now, we assume that suites are run serially.
-        while let Some((running_suite, suite_id)) = suite_start_futs.next().await {
+        loop {
+            let (running_suite, suite_id) =
+                match suite_start_futs.next().or_cancelled(cancel_fut.clone()).await {
+                    Ok(Some((running_suite, suite_id))) => (running_suite, suite_id),
+                    // normal completion.
+                    Ok(None) => break,
+                    Err(Cancelled) => {
+                        stopped_prematurely = true;
+                        final_outcome = Some(Outcome::Cancelled);
+                        break;
+                    }
+                };
+
             let suite_reporter = suite_reporters.remove(&suite_id).unwrap();
 
             let log_options = diagnostics::LogCollectionOptions {
@@ -654,25 +666,29 @@ async fn run_tests<'a, F: 'a + Future<Output = ()>>(
                 _ => false,
             };
 
-            if stop_due_to_timeout
-                || stop_due_to_failures
-                || stop_due_to_cancellation
-                || stop_due_to_internal_error
-            {
-                // Ignore errors here since we're stopping anyway.
-                let _ = run_controller_ref.stop();
-                // Drop remaining controllers, which is the same as calling kill on
-                // each controller.
-                suite_start_futs.clear();
-                for (_id, reporter) in suite_reporters.drain() {
-                    reporter.finished().await?;
-                }
-            }
             final_outcome = match (final_outcome.take(), suite_outcome) {
                 (None, first_outcome) => Some(first_outcome),
                 (Some(outcome), Outcome::Passed) => Some(outcome),
                 (Some(_), failing_outcome) => Some(failing_outcome),
             };
+            if stop_due_to_timeout
+                || stop_due_to_failures
+                || stop_due_to_cancellation
+                || stop_due_to_internal_error
+            {
+                stopped_prematurely = true;
+                break;
+            }
+        }
+        if stopped_prematurely {
+            // Ignore errors here since we're stopping anyway.
+            let _ = run_controller_ref.stop();
+            // Drop remaining controllers, which is the same as calling kill on
+            // each controller.
+            suite_start_futs.clear();
+            for (_id, reporter) in suite_reporters.drain() {
+                reporter.finished().await?;
+            }
         }
         Ok(final_outcome.unwrap_or(Outcome::Passed))
     };
@@ -827,7 +843,7 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
         run_params,
         min_severity_logs,
         &run_reporter,
-        cancel_fut,
+        cancel_fut.boxed_local(),
     )
     .await
     {
