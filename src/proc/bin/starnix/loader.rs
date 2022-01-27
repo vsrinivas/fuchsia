@@ -442,8 +442,8 @@ fn parse_debug_addr(elf: &LoadedElf) -> Option<UserAddress> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fuchsia_async as fasync;
-    use matches::assert_matches;
 
     use crate::testing::*;
 

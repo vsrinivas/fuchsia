@@ -516,9 +516,9 @@ impl<T: std::ops::RangeBounds<u16>> QueueCheck for T {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_virtualization_hardware::VirtioDeviceMarker;
     use fuchsia_async::{self as fasync};
-    use matches::assert_matches;
     use virtio_device::util::NotificationCounter;
 
     // Make a QueueConfig for a given queue size offset in guest memory. Also returns the offset at

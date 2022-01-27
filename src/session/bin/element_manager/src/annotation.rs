@@ -208,9 +208,9 @@ mod tests {
             handle_annotation_controller_request, AnnotationError, AnnotationHolder,
             MAX_ANNOTATIONS,
         },
+        assert_matches::assert_matches,
         fidl::endpoints::spawn_stream_handler,
         fidl_fuchsia_element as felement,
-        matches::assert_matches,
         std::{cmp::Ordering, sync::Arc, sync::Mutex},
     };
 

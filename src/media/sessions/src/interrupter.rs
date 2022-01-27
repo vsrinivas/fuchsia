@@ -109,12 +109,12 @@ impl FusedStream for Interrupter {
 #[cfg(test)]
 mod test {
     use super::*;
+    use assert_matches::assert_matches;
     use fuchsia_async as fasync;
     use futures::{
         future,
         stream::{StreamExt, TryStreamExt},
     };
-    use matches::assert_matches;
 
     fn test_interrupter() -> (Interrupter, UsageReporterRequestStream) {
         let (usage_reporter, usage_reporter_requests) =

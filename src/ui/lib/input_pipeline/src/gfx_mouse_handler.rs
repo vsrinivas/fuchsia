@@ -303,11 +303,11 @@ mod tests {
         },
         crate::touch_binding,
         crate::utils::Position,
+        assert_matches::assert_matches,
         fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::StreamExt,
         maplit::hashmap,
-        matches::assert_matches,
         pretty_assertions::assert_eq,
     };
 

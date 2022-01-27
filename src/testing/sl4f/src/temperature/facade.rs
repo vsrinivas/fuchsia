@@ -141,12 +141,12 @@ impl TemperatureFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_hardware_temperature::DeviceRequest;
     use fidl_fuchsia_thermal_test::TemperatureLoggerRequest;
     use fuchsia_async as fasync;
     use futures::prelude::*;
-    use matches::assert_matches;
     use serde_json::json;
 
     /// Tests that the `get_temperature_celsius` method correctly queries the temperature device and

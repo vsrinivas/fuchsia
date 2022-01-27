@@ -612,10 +612,10 @@ mod tests {
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         anyhow::{anyhow, Error},
+        assert_matches::assert_matches,
         async_trait::async_trait,
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, join},
-        matches::assert_matches,
         std::{
             any::Any,
             ops::Range,

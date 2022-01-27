@@ -604,10 +604,10 @@ mod tests {
         events::types::{ComponentIdentifier, MonikerSegment},
         logs::budget::BudgetManager,
     };
+    use assert_matches::assert_matches;
     use fidl_fuchsia_diagnostics::{ComponentSelector, Severity, StringSelector};
     use fidl_fuchsia_logger::{LogSinkEventStream, LogSinkMarker, LogSinkProxy};
     use fuchsia_async::Duration;
-    use matches::assert_matches;
 
     async fn initialize_container() -> (Arc<LogsArtifactsContainer>, LogSinkEventStream) {
         // Initialize container

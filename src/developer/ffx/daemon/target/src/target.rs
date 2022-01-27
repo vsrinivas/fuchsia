@@ -1006,6 +1006,7 @@ mod test {
     use {
         super::*,
         anyhow::Context as _,
+        assert_matches::assert_matches,
         bridge::TargetIp,
         chrono::TimeZone,
         fidl, fidl_fuchsia_developer_remotecontrol as rcs,
@@ -1013,7 +1014,6 @@ mod test {
         fidl_fuchsia_net::Subnet,
         fidl_fuchsia_overnet_protocol::NodeId,
         futures::prelude::*,
-        matches::assert_matches,
         std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     };
 

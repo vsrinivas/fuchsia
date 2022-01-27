@@ -109,11 +109,11 @@ pub fn watcher_filter(
 #[cfg(test)]
 mod test {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::{encoding::Decodable, endpoints::create_endpoints};
     use fuchsia_async as fasync;
     use futures::{stream, Future, SinkExt, StreamExt};
     use futures_test::task::*;
-    use matches::assert_matches;
     use std::sync::Arc;
 
     #[fasync::run_singlethreaded]

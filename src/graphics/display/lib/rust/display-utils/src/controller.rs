@@ -391,12 +391,12 @@ mod tests {
     use super::{Controller, DisplayId, VsyncEvent};
     use {
         anyhow::{format_err, Context, Result},
+        assert_matches::assert_matches,
         display_mocks::{create_proxy_and_mock, MockController},
         fidl_fuchsia_hardware_display as display,
         fuchsia_async::TestExecutor,
         fuchsia_zircon as zx,
         futures::{pin_mut, select, task::Poll, FutureExt, StreamExt},
-        matches::assert_matches,
     };
 
     async fn init_with_proxy(proxy: display::ControllerProxy) -> Result<Controller> {

@@ -473,12 +473,12 @@ async fn forward_traffic(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo,
         fidl_fuchsia_io::NodeMarker,
         fidl_fuchsia_net as fnet, fidl_fuchsia_net_interfaces as fnet_interfaces,
         fuchsia_zircon as zx,
-        matches::assert_matches,
         selectors::{parse_selector, VerboseError},
         service_discovery::PathEntry,
         std::net::Ipv4Addr,

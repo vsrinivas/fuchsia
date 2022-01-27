@@ -155,7 +155,7 @@ pub fn write_result<T>(
 mod test {
     use super::*;
     use anyhow::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use std::io::Cursor;
 
     const FFX_STR: &str = "I am an ffx error";

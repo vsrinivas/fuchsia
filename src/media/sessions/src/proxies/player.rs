@@ -477,6 +477,7 @@ impl FusedStream for Player {
 #[cfg(test)]
 mod test {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::encoding::Decodable;
     use fidl::endpoints::*;
     use fuchsia_async as fasync;
@@ -486,7 +487,6 @@ mod test {
     };
     use futures_test::task::noop_waker;
     use inspect::{assert_data_tree, Inspector};
-    use matches::assert_matches;
 
     static TEST_DOMAIN: &str = "test_domain";
 

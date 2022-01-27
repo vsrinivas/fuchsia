@@ -309,6 +309,7 @@ mod tests {
         CustomPlayerApplicationSettingsAttributeIds, CustomRepeatStatusMode, CustomScanMode,
     };
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_avrcp::{
         BatteryStatus, ControllerRequest, Notifications, PlayStatus,
@@ -317,7 +318,6 @@ mod tests {
     use futures::prelude::*;
     use futures::Future;
     use lazy_static::lazy_static;
-    use matches::assert_matches;
 
     lazy_static! {
         static ref PLAY_STATUS: CustomPlayStatus = CustomPlayStatus {

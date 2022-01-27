@@ -317,7 +317,7 @@ fn overnet_pipe(overnet_instance: &dyn OvernetInstance) -> Result<fidl::AsyncSoc
 mod test {
     use super::*;
     use addr::TargetAddr;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use std::rc::Rc;
 
     const ERR_CTX: &'static str = "running fake host-pipe command for test";

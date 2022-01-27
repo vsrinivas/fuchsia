@@ -908,6 +908,7 @@ pub fn route_from_capabilities(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         cm_rust::{
             CapabilityName, CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl,
             ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferSource, OfferTarget,
@@ -915,7 +916,6 @@ mod tests {
         },
         fidl_fuchsia_component_test as fctest,
         fuchsia_component_test::error::Error as RealmBuilderError,
-        matches::assert_matches,
     };
 
     async fn assert_realm_contains(builder: &RealmBuilder, child_name: &str) {

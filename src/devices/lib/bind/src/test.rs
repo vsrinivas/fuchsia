@@ -191,7 +191,7 @@ impl fmt::Display for TestError {
 #[cfg(test)]
 mod test {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn parse_one_test() {

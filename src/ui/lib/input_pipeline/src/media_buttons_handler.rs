@@ -170,9 +170,9 @@ impl MediaButtonsHandler {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::testing_utilities, fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_input_report as fidl_input_report, fuchsia_async as fasync,
-        fuchsia_zircon as zx, futures::StreamExt, matches::assert_matches,
+        super::*, crate::testing_utilities, assert_matches::assert_matches,
+        fidl::endpoints::create_proxy_and_stream, fidl_fuchsia_input_report as fidl_input_report,
+        fuchsia_async as fasync, fuchsia_zircon as zx, futures::StreamExt,
         pretty_assertions::assert_eq,
     };
 

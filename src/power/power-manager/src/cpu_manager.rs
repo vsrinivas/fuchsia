@@ -905,9 +905,9 @@ mod tests {
     use crate::test::mock_node::{MessageMatcher, MockNode, MockNodeMaker};
     use crate::types::{Hertz, Volts};
     use crate::{msg_eq, msg_ok_return};
+    use assert_matches::assert_matches;
     use fuchsia_async as fasync;
     use inspect::assert_data_tree;
-    use matches::assert_matches;
     use test_util::assert_lt;
 
     // Common test configurations for big and little clusters.

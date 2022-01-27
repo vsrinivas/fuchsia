@@ -25,7 +25,7 @@ rustc_binary("bin") {
   ]
   test_deps = [
     "//src/lib/fidl/rust/fidl",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [ "src/main.rs" ]

@@ -99,12 +99,12 @@ mod tests {
         SerializableBandwidthInfo, SerializableBandwidthMeasurementConfig,
         SerializableGrantedCyclesResult,
     };
+    use assert_matches::assert_matches;
     use fidl_fuchsia_hardware_ram_metrics::{
         BandwidthInfo, BandwidthMeasurementConfig, DeviceRequest,
     };
     use fuchsia_zircon as zx;
     use futures::{future::Future, join, stream::StreamExt};
-    use matches::assert_matches;
 
     /// An arbitrary rigistry value, for tests.
     const TEST_REG_VALUE: u32 = 33;

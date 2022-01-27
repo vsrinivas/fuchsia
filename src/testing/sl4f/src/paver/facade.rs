@@ -168,12 +168,12 @@ pub(super) struct ReadAssetRequest {
 mod tests {
     use super::*;
     use crate::common_utils::test::assert_value_round_trips_as;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_paver::{
         BootManagerRequest, BootManagerRequestStream, DataSinkRequest, DataSinkRequestStream,
         PaverRequest,
     };
     use futures::{future::Future, join, stream::StreamExt};
-    use matches::assert_matches;
     use serde_json::json;
 
     #[test]

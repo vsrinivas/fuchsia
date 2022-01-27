@@ -78,7 +78,7 @@ pub async fn stop(temperature_logger: fthermal::TemperatureLoggerProxy) -> Resul
 
 #[cfg(test)]
 mod tests {
-    use {super::*, futures::channel::mpsc, matches::assert_matches, std::time::Duration};
+    use {super::*, assert_matches::assert_matches, futures::channel::mpsc, std::time::Duration};
 
     const ONE_SEC: Duration = Duration::from_secs(1);
 

@@ -304,7 +304,7 @@ pub enum ManifestLoadError {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, anyhow::Error, matches::assert_matches};
+    use {super::*, anyhow::Error, assert_matches::assert_matches};
 
     #[test]
     fn test_deserialize_manifest_version_v1_implicit() -> Result<(), Error> {

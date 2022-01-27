@@ -173,10 +173,10 @@ mod tests {
         super::*,
         crate::keyboard_binding::{self, KeyboardEvent},
         crate::testing_utilities,
+        assert_matches::assert_matches,
         fidl_fuchsia_input as fidl_input, fidl_fuchsia_ui_input3 as fidl_ui_input3,
         fuchsia_async as fasync,
         futures::StreamExt,
-        matches::assert_matches,
         std::convert::TryFrom as _,
         test_case::test_case,
     };

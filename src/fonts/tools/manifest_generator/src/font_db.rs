@@ -457,10 +457,10 @@ mod tests {
             font_sets::{FontSet, FontSets},
             product_config::{ProductConfig, Settings, TypefaceId},
         },
+        assert_matches::assert_matches,
         fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width},
         manifest::v2::Style,
         maplit::btreemap,
-        matches::assert_matches,
     };
 
     fn make_font_db_contents() -> (FontCatalog, FontPackageListing, FontSets) {
@@ -533,7 +533,7 @@ mod tests {
 
         assert!(result.is_err());
         let errors: Vec<FontDbError> = result.unwrap_err().into();
-        assert_matches!(errors[0], FontDbError::UnknownFallbackChainEntry{ typeface_id: _ });
+        assert_matches!(errors[0], FontDbError::UnknownFallbackChainEntry { typeface_id: _ });
 
         Ok(())
     }
@@ -559,7 +559,7 @@ mod tests {
 
         assert!(result.is_err());
         let errors: Vec<FontDbError> = result.unwrap_err().into();
-        assert_matches!(errors[0], FontDbError::UnknownFallbackChainEntry{ typeface_id: _ });
+        assert_matches!(errors[0], FontDbError::UnknownFallbackChainEntry { typeface_id: _ });
 
         Ok(())
     }

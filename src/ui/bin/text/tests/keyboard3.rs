@@ -5,6 +5,7 @@
 
 use {
     anyhow::{Context as _, Result},
+    assert_matches::assert_matches,
     fidl::endpoints::{create_request_stream, ProtocolMarker as _},
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
     fidl_fuchsia_ui_keyboard_focus as fidl_focus, fidl_fuchsia_ui_views as ui_views,
@@ -21,7 +22,6 @@ use {
         future,
         stream::{FusedStream, StreamExt},
     },
-    matches::assert_matches,
     test_case::test_case,
     test_helpers::create_key_event,
 };
@@ -488,6 +488,6 @@ fn test_inject_key_yields_expected_key_and_key_meaning(
         create_key_event(zx::Time::ZERO, ui_input3::KeyEventType::Pressed, key, None, key_meaning),
     )
     .expect("injection failed");
-    matches::assert_matches!(was_handled, Ok(ui_input3::KeyEventStatus::Handled));
+    assert_matches::assert_matches!(was_handled, Ok(ui_input3::KeyEventStatus::Handled));
     (received_event.key, received_event.key_meaning)
 }

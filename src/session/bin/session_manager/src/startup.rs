@@ -280,7 +280,7 @@ mod tests {
 
         // By not implementing a handler for exposed_dir channel, the
         // set_session function will observe a PEER_CLOSED signal.
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             set_session(session_url, &realm).await,
             Err(StartupError::NotLaunched { .. })
         );

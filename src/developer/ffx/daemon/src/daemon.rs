@@ -651,11 +651,11 @@ mod test {
     use {
         super::*,
         addr::TargetAddr,
+        assert_matches::assert_matches,
         fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy},
         fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
         fidl_fuchsia_overnet_protocol::PeerDescription,
         fuchsia_async::Task,
-        matches::assert_matches,
         std::cell::RefCell,
         std::collections::BTreeSet,
         std::iter::FromIterator,

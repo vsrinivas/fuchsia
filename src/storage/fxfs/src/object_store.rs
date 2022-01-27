@@ -1214,9 +1214,9 @@ mod tests {
                 HandleOptions, ObjectStore,
             },
         },
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         futures::join,
-        matches::assert_matches,
         std::{
             ops::Bound,
             sync::{Arc, Mutex},

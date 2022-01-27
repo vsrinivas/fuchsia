@@ -104,6 +104,7 @@ impl WeaveFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_weave::{
         FactoryDataManagerGetPairingCodeResult, FactoryDataManagerRequest,
@@ -113,7 +114,6 @@ mod tests {
     use fuchsia_async as fasync;
     use futures::prelude::*;
     use lazy_static::lazy_static;
-    use matches::assert_matches;
     use serde_json::{json, Value};
 
     lazy_static! {

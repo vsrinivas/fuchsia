@@ -53,7 +53,7 @@ if (is_host) {
     ]
     test_deps = [
       ":empty-repo",
-      "//third_party/rust_crates:matches",
+      "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:serial_test",
       "//third_party/rust_crates:simplelog",
     ]

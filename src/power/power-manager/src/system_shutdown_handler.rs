@@ -440,8 +440,8 @@ pub mod tests {
     use crate::shutdown_request::RebootReason;
     use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
+    use assert_matches::assert_matches;
     use inspect::assert_data_tree;
-    use matches::assert_matches;
 
     pub fn setup_test_node(shutdown_function: impl Fn() + 'static) -> Rc<SystemShutdownHandler> {
         SystemShutdownHandlerBuilder::new(create_dummy_node())

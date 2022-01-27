@@ -5,6 +5,7 @@
 use {
     crate::shutdown_mocks::{new_mocks_provider, Admin, Signal},
     anyhow::Error,
+    assert_matches::assert_matches,
     fidl_fuchsia_boot as fboot, fidl_fuchsia_device_manager as fdevicemanager,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
@@ -13,7 +14,6 @@ use {
     },
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future, StreamExt},
-    matches::assert_matches,
 };
 
 mod shutdown_mocks;

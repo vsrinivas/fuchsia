@@ -80,9 +80,9 @@ impl I2cFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_hardware_i2c::Device2Request;
     use futures::{future::Future, join, stream::StreamExt};
-    use matches::assert_matches;
     use serde_json::json;
 
     struct MockDevice2Builder {

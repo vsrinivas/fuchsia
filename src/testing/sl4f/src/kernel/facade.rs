@@ -71,9 +71,9 @@ impl KernelFacade {
 mod tests {
     use super::*;
     use crate::kernel::types::SerializablePerCpuStats;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_kernel::StatsRequest;
     use futures::{future::Future, join, stream::StreamExt};
-    use matches::assert_matches;
 
     struct MockKernelBuilder {
         expected: Vec<Box<dyn FnOnce(StatsRequest) + Send + 'static>>,

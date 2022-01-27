@@ -353,6 +353,7 @@ mod test {
     use {
         super::*,
         anyhow::Error,
+        assert_matches::assert_matches,
         async_trait::async_trait,
         diagnostics_data::{DiagnosticsHierarchy, InspectData, LifecycleData, Property, Severity},
         fidl::endpoints::create_proxy,
@@ -362,7 +363,6 @@ mod test {
         },
         fuchsia_async as fasync,
         futures::stream::iter,
-        matches::assert_matches,
     };
 
     const LONG_LOG_LEN: u32 = MAX_DATAGRAM_LEN_BYTES * 2;

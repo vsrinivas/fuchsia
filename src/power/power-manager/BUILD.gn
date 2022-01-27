@@ -85,7 +85,7 @@ rustc_binary("bin") {
     "rkf45:lib",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/test_util",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [

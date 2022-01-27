@@ -505,8 +505,8 @@ mod tests {
                 HandleOptions, ObjectDescriptor, ObjectStore,
             },
         },
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
-        matches::assert_matches,
         std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };

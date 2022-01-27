@@ -209,8 +209,8 @@ impl CrashReportHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use futures::TryStreamExt;
-    use matches::assert_matches;
 
     /// Tests that the node responds to the FileCrashReport message and that the expected crash
     /// report is received by the CrashReporter service.

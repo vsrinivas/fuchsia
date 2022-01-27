@@ -222,8 +222,8 @@ mod tests {
     #![allow(unused_imports, unused_mut, unused_variables, dead_code)]
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_kernel::{CpuStats, PerCpuStats},
-        matches::assert_matches,
         std::cell::RefCell,
     };
 

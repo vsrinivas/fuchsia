@@ -6,6 +6,7 @@
 
 use {
     anyhow::Error,
+    assert_matches::assert_matches,
     fdio::{SpawnAction, SpawnOptions},
     fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE},
     fidl_fuchsia_mem::Buffer,
@@ -16,7 +17,6 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef, DurationNum},
     io_util,
     maplit::hashmap,
-    matches::assert_matches,
     ramdevice_client::RamdiskClient,
     remote_block_device::{BlockClient, RemoteBlockClient},
     sha2::{Digest, Sha256},

@@ -40,9 +40,8 @@ impl InputDeviceRegistryServer {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl::endpoints::create_proxy_and_stream,
+        super::*, assert_matches::assert_matches, fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_input_injection::InputDeviceRegistryMarker, fuchsia_async as fasync,
-        matches::assert_matches,
     };
 
     #[fasync::run_singlethreaded(test)]

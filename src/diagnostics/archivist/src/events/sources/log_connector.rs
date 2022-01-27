@@ -90,13 +90,13 @@ async fn listen_for_log_connections(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_logger::LogSinkMarker,
         fidl_fuchsia_sys_internal::{
             LogConnectionListenerProxy, LogConnectorMarker, LogConnectorRequest,
             LogConnectorRequestStream, SourceIdentity,
         },
         futures::StreamExt,
-        matches::assert_matches,
     };
 
     fn spawn_log_connector(mut stream: LogConnectorRequestStream) -> LogConnectionListenerProxy {

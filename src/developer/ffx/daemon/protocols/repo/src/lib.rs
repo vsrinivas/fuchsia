@@ -1111,6 +1111,7 @@ mod tests {
     use {
         super::*,
         addr::TargetAddr,
+        assert_matches::assert_matches,
         ffx_config::ConfigLevel,
         fidl::{self, endpoints::Request},
         fidl_fuchsia_developer_bridge_ext::RepositoryStorageType,
@@ -1122,7 +1123,6 @@ mod tests {
             EditTransactionRequest, EngineMarker, EngineRequest, RuleIteratorRequest,
         },
         futures::TryStreamExt,
-        matches::assert_matches,
         protocols::testing::FakeDaemonBuilder,
         std::{
             cell::RefCell,

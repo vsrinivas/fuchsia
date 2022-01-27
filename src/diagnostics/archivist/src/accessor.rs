@@ -509,11 +509,11 @@ impl TryFrom<&StreamParameters> for PerformanceConfig {
 mod tests {
     use super::*;
     use crate::{pipeline::Pipeline, repository::DataRepo};
+    use assert_matches::assert_matches;
     use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, BatchIteratorMarker};
     use fuchsia_inspect::Node;
     use fuchsia_zircon_status as zx_status;
     use futures::channel::mpsc;
-    use matches::assert_matches;
     use parking_lot::RwLock;
 
     #[fuchsia::test]

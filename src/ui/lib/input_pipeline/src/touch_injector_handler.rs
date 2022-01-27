@@ -386,11 +386,11 @@ mod tests {
         crate::testing_utilities::{
             create_touch_contact, create_touch_event, create_touch_pointer_sample_event,
         },
+        assert_matches::assert_matches,
         fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::StreamExt,
         maplit::hashmap,
-        matches::assert_matches,
         pretty_assertions::assert_eq,
         std::convert::TryFrom as _,
     };

@@ -346,9 +346,9 @@ mod tests {
     };
 
     use {
+        assert_matches::assert_matches,
         fidl::endpoints,
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
-        matches::assert_matches,
         ramdevice_client::RamdiskClient,
         vfs::{
             directory::entry::DirectoryEntry as _, execution_scope::ExecutionScope,

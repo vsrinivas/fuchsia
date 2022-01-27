@@ -63,8 +63,8 @@ rustc_library("lib") {
     "//src/lib/test_util",
     "//src/lib/ui/fuchsia-scenic",
     "//src/session/testing",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:matches",
   ]
 
   sources = [

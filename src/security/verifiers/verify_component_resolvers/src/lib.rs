@@ -161,7 +161,7 @@ pub fn verify_component_resolvers(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, std::collections::HashMap};
+    use {super::*, assert_matches::assert_matches, std::collections::HashMap};
 
     #[derive(Debug)]
     struct MockQueryComponentResolvers {

@@ -261,9 +261,9 @@ fn file_stream(
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         futures::{FutureExt, StreamExt},
-        matches::assert_matches,
         std::{fs::File, io::Write as _, time::Duration},
     };
     struct TestEnv {

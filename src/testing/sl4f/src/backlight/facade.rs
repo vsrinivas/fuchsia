@@ -119,9 +119,9 @@ impl BacklightFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_hardware_backlight::DeviceRequest;
     use futures::{future::Future, join, stream::StreamExt};
-    use matches::assert_matches;
     use serde_json::json;
 
     struct MockBacklightBuilder {

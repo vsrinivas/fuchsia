@@ -919,7 +919,7 @@ mod test {
         ])];
 
         let mut writer = Vec::new();
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             log_cmd(
                 setup_fake_daemon_server(params, Arc::new(expected_responses)),
                 setup_fake_rcs(),

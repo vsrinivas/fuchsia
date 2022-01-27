@@ -1077,9 +1077,9 @@ mod tests {
             },
             round::round_up,
         },
+        assert_matches::assert_matches,
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, join},
-        matches::assert_matches,
         rand::Rng,
         std::{
             ops::{Bound, Range},

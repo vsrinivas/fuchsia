@@ -114,9 +114,9 @@ impl GpioFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_hardware_gpio::GpioRequest;
     use futures::{future::Future, join, stream::StreamExt};
-    use matches::assert_matches;
 
     struct MockGpioBuilder {
         expected: Vec<Box<dyn FnOnce(GpioRequest) + Send + 'static>>,

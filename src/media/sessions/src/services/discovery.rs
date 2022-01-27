@@ -379,6 +379,7 @@ impl Discovery {
 mod test {
     use super::*;
     use crate::{id::Id, spawn_log_error};
+    use assert_matches::assert_matches;
     use fidl::{
         encoding::Decodable,
         endpoints::{create_endpoints, create_proxy},
@@ -387,7 +388,6 @@ mod test {
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use futures::channel::oneshot;
-    use matches::assert_matches;
 
     #[fasync::run_singlethreaded]
     #[test]

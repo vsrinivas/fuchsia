@@ -393,6 +393,7 @@ mod tests {
     use super::*;
     use {
         crate::common_utils::namespace_binder::NamespaceBinder,
+        assert_matches::assert_matches,
         fidl::endpoints::spawn_stream_handler,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_modular_internal as fmodular_internal,
@@ -401,7 +402,6 @@ mod tests {
         futures::SinkExt,
         io_util,
         lazy_static::lazy_static,
-        matches::assert_matches,
         serde_json::json,
         std::sync::{Arc, Mutex},
         test_util::Counter,

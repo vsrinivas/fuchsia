@@ -485,7 +485,7 @@ pub struct RecoveryConfig {
 mod tests {
     use super::*;
     use crate::util::from_reader;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use serde_json::json;
     use std::path::Path;
 

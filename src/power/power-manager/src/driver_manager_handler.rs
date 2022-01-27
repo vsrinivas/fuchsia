@@ -527,8 +527,8 @@ impl InspectData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use inspect::assert_data_tree;
-    use matches::assert_matches;
     use std::cell::Cell;
 
     /// Creates a fake implementation of the SystemStateTransition protocol. Responds to the

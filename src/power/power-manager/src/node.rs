@@ -87,8 +87,8 @@ mod tests {
     use super::*;
     use crate::test::mock_node::{MessageMatcher, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
+    use assert_matches::assert_matches;
     use fuchsia_async as fasync;
-    use matches::assert_matches;
 
     struct TestNode;
     impl Node for TestNode {

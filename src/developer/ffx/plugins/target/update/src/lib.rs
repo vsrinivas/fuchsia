@@ -153,9 +153,9 @@ async fn force_install(_update_pkg_url: String, _reboot: bool) -> Result<(), Err
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_update_channelcontrol::ChannelControlRequest;
-    use matches::assert_matches;
 
     async fn perform_channel_control_test<V, O>(
         argument: args::channel::Command,

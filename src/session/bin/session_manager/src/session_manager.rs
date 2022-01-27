@@ -509,6 +509,7 @@ impl SessionManager {
 mod tests {
     use {
         super::SessionManager,
+        assert_matches::assert_matches,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream, spawn_stream_handler},
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
         fidl_fuchsia_input_injection::{InputDeviceRegistryMarker, InputDeviceRegistryRequest},
@@ -520,7 +521,6 @@ mod tests {
         fidl_fuchsia_ui_accessibility_view::{RegistryMarker, RegistryRequest},
         fuchsia_scenic as scenic,
         futures::prelude::*,
-        matches::assert_matches,
         session_testing::spawn_noop_directory_server,
     };
 

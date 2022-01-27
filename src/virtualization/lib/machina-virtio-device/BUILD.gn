@@ -30,7 +30,7 @@ rustc_library("machina-virtio-device") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
 
   with_unit_tests = true
 }

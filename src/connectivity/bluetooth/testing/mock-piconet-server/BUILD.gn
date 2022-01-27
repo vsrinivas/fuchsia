@@ -51,7 +51,7 @@ rustc_library("lib_v2") {
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
 }
 
 fuchsia_unittest_package("mock-piconet-client-v2-tests") {

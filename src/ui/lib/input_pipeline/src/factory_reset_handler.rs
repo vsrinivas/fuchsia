@@ -388,11 +388,11 @@ mod tests {
     use {
         super::*,
         crate::consumer_controls_binding::ConsumerControlsDeviceDescriptor,
+        assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_recovery_policy::{DeviceMarker, DeviceProxy},
         fidl_fuchsia_recovery_ui::{FactoryResetCountdownMarker, FactoryResetCountdownProxy},
         fuchsia_async::TestExecutor,
-        matches::assert_matches,
         pin_utils::pin_mut,
         pretty_assertions::assert_eq,
         std::task::Poll,

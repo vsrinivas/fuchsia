@@ -284,9 +284,9 @@ fn handle_mdns_event(tc: &Rc<TargetCollection>, t: bridge::Target) {
 mod tests {
     use super::*;
     use addr::TargetAddr;
+    use assert_matches::assert_matches;
     use async_channel::{Receiver, Sender};
     use fidl_fuchsia_net::{IpAddress, Ipv6Address};
-    use matches::assert_matches;
     use protocols::testing::FakeDaemonBuilder;
     use std::cell::RefCell;
 

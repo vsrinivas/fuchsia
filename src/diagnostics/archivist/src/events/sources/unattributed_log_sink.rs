@@ -62,7 +62,7 @@ impl EventSource for UnattributedLogSinkSource {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl, fidl_fuchsia_logger::LogSinkMarker, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches, fidl, fidl_fuchsia_logger::LogSinkMarker};
 
     #[fuchsia::test]
     async fn events_have_unknown_identity() {

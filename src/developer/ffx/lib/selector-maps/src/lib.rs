@@ -74,7 +74,7 @@ impl SelectorMappingList {
 
 #[cfg(test)]
 mod test {
-    use {super::*, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches};
 
     fn tup_to_map(items: Vec<(&str, &str)>) -> HashMap<String, String> {
         items.iter().map(|s| (s.0.to_string(), s.1.to_string())).collect()

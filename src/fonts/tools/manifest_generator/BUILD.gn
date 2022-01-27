@@ -34,8 +34,8 @@ rustc_binary("font_manifest_generator") {
 
   test_deps = [
     "//src/lib/intl/unicode_utils/char_collection",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:tempfile",
   ]

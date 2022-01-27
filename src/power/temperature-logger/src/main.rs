@@ -433,9 +433,9 @@ async fn inner_main() -> Result<()> {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         futures::{FutureExt, TryStreamExt},
         inspect::assert_data_tree,
-        matches::assert_matches,
         std::cell::Cell,
     };
 

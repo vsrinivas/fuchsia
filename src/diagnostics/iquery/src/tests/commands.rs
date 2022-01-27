@@ -5,8 +5,8 @@
 #![cfg(test)]
 
 use crate::tests::utils::{self, AssertionOption, AssertionParameters, IqueryCommand, TestBuilder};
+use assert_matches::assert_matches;
 use iquery::types::Error;
-use matches::assert_matches;
 use std::path::Path;
 use tempfile::tempdir;
 

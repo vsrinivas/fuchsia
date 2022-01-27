@@ -159,8 +159,8 @@ impl Node for CrashReportHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use futures::{poll, TryStreamExt};
-    use matches::assert_matches;
     use std::task::Poll;
 
     /// Tests that the node responds to the FileCrashReport message and that the expected crash

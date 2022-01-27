@@ -344,7 +344,7 @@ impl InputEvent {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl::endpoints::spawn_stream_handler, matches::assert_matches,
+        super::*, assert_matches::assert_matches, fidl::endpoints::spawn_stream_handler,
         pretty_assertions::assert_eq, std::convert::TryFrom as _, test_case::test_case,
     };
 

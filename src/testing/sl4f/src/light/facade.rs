@@ -244,9 +244,9 @@ impl LightFacade {
 mod tests {
     use super::*;
     use crate::light::types::SerializableCapability;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_hardware_light::{Capability, GroupInfo, Info, LightError, LightRequest, Rgb};
     use futures::{future::Future, join, stream::StreamExt};
-    use matches::assert_matches;
 
     struct MockLightBuilder {
         expected: Vec<Box<dyn FnOnce(LightRequest) + Send + 'static>>,

@@ -199,8 +199,8 @@ pub fn create_dummy_node() -> Rc<dyn Node> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fuchsia_async as fasync;
-    use matches::assert_matches;
 
     /// Tests that receiving an unexpected Message variant results in a panic.
     #[fasync::run_singlethreaded(test)]

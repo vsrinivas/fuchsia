@@ -33,8 +33,8 @@ use {
         serialized_types::Versioned,
     },
     anyhow::{Context, Error},
+    assert_matches::assert_matches,
     fuchsia_async as fasync,
-    matches::assert_matches,
     std::{
         ops::{Bound, Deref},
         sync::{Arc, Mutex},

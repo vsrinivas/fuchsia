@@ -262,9 +262,9 @@ impl InspectData {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::prelude::*;
     use inspect::assert_data_tree;
-    use matches::assert_matches;
 
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
     #[fasync::run_singlethreaded(test)]

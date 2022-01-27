@@ -113,8 +113,8 @@ impl PointerMotionScaleHandler {
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         maplit::hashset,
-        matches::assert_matches,
         std::{cell::Cell, collections::HashSet},
         test_case::test_case,
     };

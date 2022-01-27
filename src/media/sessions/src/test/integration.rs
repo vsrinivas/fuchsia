@@ -4,6 +4,7 @@
 
 use crate::{Result, SessionId};
 use anyhow::Context as _;
+use assert_matches::assert_matches;
 use diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect};
 use fidl::encoding::Decodable;
 use fidl::endpoints::{create_endpoints, create_proxy, create_request_stream};
@@ -22,7 +23,6 @@ use futures::{
     sink::SinkExt,
     stream::{StreamExt, TryStreamExt},
 };
-use matches::assert_matches;
 use std::collections::HashMap;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";

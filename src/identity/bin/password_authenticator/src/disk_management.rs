@@ -537,6 +537,7 @@ pub mod test {
             constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
             prototype::INSECURE_EMPTY_KEY,
         },
+        assert_matches::assert_matches,
         fidl_fuchsia_hardware_block::{BlockInfo, MAX_TRANSFER_UNBOUNDED},
         fidl_fuchsia_hardware_block_encrypted::{DeviceManagerRequest, DeviceManagerRequestStream},
         fidl_fuchsia_hardware_block_partition::Guid,
@@ -547,7 +548,6 @@ pub mod test {
             MockPartitionMarker, MockPartitionRequest, MockPartitionRequestStream,
         },
         futures::future::BoxFuture,
-        matches::assert_matches,
         std::sync::Arc,
         vfs::{
             directory::{

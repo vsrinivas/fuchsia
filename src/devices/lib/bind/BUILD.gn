@@ -39,10 +39,10 @@ rustc_library("lib") {
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:nom_locate",
     "//third_party/rust_crates:num-derive",

@@ -206,9 +206,9 @@ impl InputReportFacade {
 mod tests {
     use super::*;
     use crate::input_report::types::*;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_input_report::*;
     use futures::{future::Future, join, stream::StreamExt};
-    use matches::assert_matches;
     use serde::de::Deserialize;
     use serde_json::{Map, Number, Value};
 

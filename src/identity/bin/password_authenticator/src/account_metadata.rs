@@ -305,8 +305,8 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
 #[cfg(test)]
 pub mod test {
     use {
-        super::*, fidl_fuchsia_io::DirectoryMarker, lazy_static::lazy_static,
-        matches::assert_matches, tempfile::TempDir,
+        super::*, assert_matches::assert_matches, fidl_fuchsia_io::DirectoryMarker,
+        lazy_static::lazy_static, tempfile::TempDir,
     };
 
     impl AccountMetadata {
