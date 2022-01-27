@@ -1,0 +1,23 @@
+{
+    "data": {
+        "device_refs": [
+            "generic-x64",
+            "virtual-arm64"
+        ],
+        "images": [
+            {
+                "base_uri": "gs://fuchsia/test_fake.tgz",
+                "format": "tgz"
+            }
+        ],
+        "name": "test_fake-x64",
+        "packages": [
+            {
+                "format": "tgz",
+                "repo_uri": "gs://fuchsia/test_fake.tar.gz"
+            }
+        ],
+        "type": "product_bundle"
+    },
+    "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+}

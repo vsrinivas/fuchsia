@@ -27,8 +27,16 @@ if (is_host) {
 
     test_deps = [ "//third_party/rust_crates:tempfile" ]
 
-    inputs = []
-    sources = [ "src/lib.rs" ]
+    inputs = [
+      "test_data/test_core.json",
+      "test_data/test_images.json",
+      "test_data/test_product_bundle.json",
+    ]
+    sources = [
+      "src/in_tree.rs",
+      "src/lib.rs",
+      "src/sdk.rs",
+    ]
   }
 
   group("pbms") {

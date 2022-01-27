@@ -1,4 +1,4 @@
-# Product Bundles tool (plugin)
+# Product Bundle tool (plugin)
 
 The Product Bundle Metadata (PBM) holds configuration information for an
 individual product. PBM files are also included in Product Bundle container
@@ -7,7 +7,7 @@ device specification, etc.
 
 ## Development of PBMS Lib
 
-When working on the `ffx product-bundles` tool, consider using:
+When working on the `ffx product-bundle` tool, consider using:
 
 ```
 $ fx set [...] --with-host //src/developer/ffx

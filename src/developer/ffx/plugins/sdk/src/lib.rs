@@ -4,7 +4,6 @@
 
 use {
     anyhow::{Context, Result},
-    errors::ffx_bail,
     ffx_config::{
         sdk::{Sdk, SdkVersion},
         set, ConfigLevel,
@@ -14,7 +13,7 @@ use {
         ListCommand, ListSubCommand, SdkCommand, SetCommand, SetRootCommand, SetSubCommand,
         SubCommand,
     },
-    pbms::{pbms_from_sdk, pbms_from_tree},
+    pbms::get_pbms,
     sdk_metadata::Metadata,
     std::io::{stdout, Write},
 };
@@ -53,36 +52,22 @@ async fn exec_set(cmd: &SetCommand) -> Result<()> {
 }
 
 /// Execute the `list` sub-command.
-async fn exec_list<W: Write + Sync>(writer: &mut W, sdk: Sdk, cmd: &ListCommand) -> Result<()> {
+async fn exec_list<W: Write + Sync>(writer: &mut W, _sdk: Sdk, cmd: &ListCommand) -> Result<()> {
     match &cmd.sub {
-        ListSubCommand::ProductBundles(_) => match sdk.get_version() {
-            SdkVersion::Version(v) => exec_list_pbms_sdk(writer, v).await,
-            SdkVersion::InTree => exec_list_pbms_in_tree(writer, sdk).await,
-            SdkVersion::Unknown => ffx_bail!("Unknown SDK version"),
-        },
+        ListSubCommand::ProductBundles(_) => exec_list_pbms(writer).await,
     }
 }
 
-/// Execute `list product-bundles` for the SDK (rather than in-tree).
-async fn exec_list_pbms_sdk<W: Write + Sync>(writer: &mut W, version: &String) -> Result<()> {
-    let entries = pbms_from_sdk(version).await?;
+/// Execute `list product-bundles`.
+///
+/// The list will be written to `writer`.
+async fn exec_list_pbms<W: Write + Sync>(writer: &mut W) -> Result<()> {
+    let entries = get_pbms(/*update_metadata=*/ true).await.context("get pbms entries")?;
     for entry in entries.iter() {
         match entry {
             Metadata::ProductBundleV1(bundle) => writeln!(writer, "{}", bundle.name)?,
             _ => {}
         }
-    }
-    Ok(())
-}
-
-/// Execute `list product-bundles` for in-tree (rather than the SDK).
-async fn exec_list_pbms_in_tree<W: Write + Sync>(writer: &mut W, sdk: Sdk) -> Result<()> {
-    let path = sdk.get_path_prefix();
-    let entries = pbms_from_tree(&path).await.context("Get product bundle in-tree build.")?;
-    // A local, in-tree build only builds one product bundle.
-    match entries.iter().next() {
-        Some(Metadata::ProductBundleV1(bundle)) => writeln!(writer, "{}", bundle.name)?,
-        _ => {}
     }
     Ok(())
 }

@@ -1,0 +1,8 @@
+[
+    {
+        "label": "fake_image_build",
+        "name": "product_bundle",
+        "path": "product_bundle.json",
+        "type": "manifest"
+    }
+]

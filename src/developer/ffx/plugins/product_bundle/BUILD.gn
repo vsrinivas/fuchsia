@@ -4,7 +4,7 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_product_bundles") {
+ffx_plugin("ffx_product_bundle") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
@@ -12,21 +12,26 @@ ffx_plugin("ffx_product_bundles") {
 
   args_sources = [ "src/args.rs" ]
 
-  deps = [ "//build/sdk/meta:rust" ]
+  deps = [
+    "//build/sdk/meta:rust",
+    "//src/developer/ffx/lib/fms:lib",
+    "//src/developer/ffx/lib/pbms:lib",
+    "//src/lib/gcs:lib",
+  ]
 
   sources = [ "src/lib.rs" ]
 }
 
-group("product_bundles") {
+group("product_bundle") {
   testonly = true
 
   # The unit tests are also built by the ffx_plugin target.
-  deps = [ ":ffx_product_bundles" ]
+  deps = [ ":ffx_product_bundle" ]
 }
 
 group("tests") {
   testonly = true
 
   # The unit tests are also built by the ffx_plugin target.
-  deps = [ ":ffx_product_bundles" ]
+  deps = [ ":ffx_product_bundle" ]
 }
