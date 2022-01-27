@@ -136,6 +136,7 @@ template("access_ota_blob_as_executable") {
       # Production SWD components.
       "//src/sys/pkg/bin/pkg-cache:component",
       "//src/sys/pkg/bin/pkg-resolver:component",
+      "//src/sys/pkg/bin/system-updater:component",
 
       # Production network components for OTA update.
       "//src/connectivity/network/dns:component",

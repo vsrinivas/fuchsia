@@ -49,6 +49,10 @@
             name: "pkg-resolver",
             url: "#meta/pkg-resolver.cm",
         },
+        {
+            name: "system-updater",
+            url: "#meta/system-updater.cm",
+        },
     ],
     capabilities: [
         {
@@ -118,7 +122,10 @@
             directory: "pkgfs",
             from: "#fshost",
             as: "pkgfs-system",
-            to: "#pkg-resolver",
+            to: [
+                "#pkg-resolver",
+                "#system-updater",
+            ],
             subdir: "system",
         },
         {
@@ -142,7 +149,10 @@
         {
             protocol: "fuchsia.pkg.PackageCache",
             from: "#pkg-cache",
-            to: "#pkg-resolver",
+            to: [
+                "#pkg-resolver",
+                "#system-updater",
+            ],
         },
         {
             protocol: "fuchsia.tracing.provider.Registry",
@@ -172,7 +182,33 @@
                 "#pkg-cache",
                 "#pkg-resolver",
                 "#pkg_server",
+                "#system-updater",
             ],
+        },
+        {
+            protocol: "fuchsia.pkg.PackageResolver",
+            from: "#pkg-resolver",
+            to: "#system-updater",
+        },
+        {
+            protocol: [
+                "fuchsia.pkg.RetainedPackages",
+                "fuchsia.space.Manager",
+            ],
+            from: "#pkg-cache",
+            to: "#system-updater",
+        },
+        {
+            protocol: "fuchsia.paver.Paver",
+            from: "#paver",
+            to: "#system-updater",
+        },
+        {
+            directory: "pkgfs",
+            from: "#fshost",
+            as: "build-info",
+            to: "#system-updater",
+            subdir: "packages/build-info/0/data",
         },
         {
             protocol: "fuchsia.cobalt.LoggerFactory",
@@ -180,6 +216,7 @@
             to: [
                 "#pkg-cache",
                 "#pkg-resolver",
+                "#system-updater",
             ],
         },
 
@@ -198,6 +235,13 @@
         //     ],
         //     from: "???",
         //     to: "#pkg-resolver",
+        // },
+        // {
+        //     protocol: [
+        //         "fuchsia.hardware.power.statecontrol.Admin",
+        //     ],
+        //     from: "???",
+        //     to: "#system-updater",
         // },
     ],
 }
