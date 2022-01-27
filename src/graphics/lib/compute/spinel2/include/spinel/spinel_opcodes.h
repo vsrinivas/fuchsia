@@ -48,13 +48,14 @@
 
 #define SPN_STYLING_OPCODE_COLOR_ACC_OVER_BACKGROUND         20
 #define SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_RGBA8  21
-#define SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY            22
+#define SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_BGRA8  22 // NOTE(allanmac): Short-term workaround
+#define SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY            23
 
-#define SPN_STYLING_OPCODE_COLOR_ILL_ZERO                    23
-#define SPN_STYLING_OPCODE_COLOR_ILL_COPY_ACC                24
-#define SPN_STYLING_OPCODE_COLOR_ACC_MULTIPLY_ILL            25
+#define SPN_STYLING_OPCODE_COLOR_ILL_ZERO                    24
+#define SPN_STYLING_OPCODE_COLOR_ILL_COPY_ACC                25
+#define SPN_STYLING_OPCODE_COLOR_ACC_MULTIPLY_ILL            26
 
-#define SPN_STYLING_OPCODE_COUNT                             26
+#define SPN_STYLING_OPCODE_COUNT                             27
 
 //
 // clang-format on

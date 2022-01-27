@@ -1524,7 +1524,34 @@ spn_tile_color_acc_store_to_surface_rgba8()
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   {                                                                                                \
-    surface.extent[I * subtile] = packUnorm4x8(SPN_DEVICE_RENDER_SURFACE_SWIZZLE(color_acc##I)); \
+    surface.extent[I * subtile] = packUnorm4x8(color_acc##I);                                      \
+  }
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+}
+
+void
+spn_tile_color_acc_store_to_surface_bgra8()
+{
+  SPN_SUBGROUP_UNIFORM const uint32_t tile_x = SPN_TTCK_GET_X(lgf_lxy) * SPN_TILE_WIDTH;
+  SPN_SUBGROUP_UNIFORM const uint32_t tile_y = SPN_TTCK_GET_Y(lgf_lxy) * SPN_TILE_HEIGHT;
+
+  const uint32_t x = tile_x + SPN_RENDER_SUBTILE_LANE_TO_X();
+  const uint32_t y = tile_y + SPN_RENDER_SUBTILE_LANE_TO_Y();
+
+  const uint32_t offset = (x * push.row_pitch + y) * 4;
+
+  SPN_BUFREF_DEFINE_AT_OFFSET_UINT32(SPN_BUFFER_TYPE(surface),
+                                     surface,
+                                     push.devaddr_surface,
+                                     offset);
+
+  const uint32_t subtile = SPN_RENDER_SUBTILE_COUNT * push.row_pitch;
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  {                                                                                                \
+    surface.extent[I * subtile] = packUnorm4x8((color_acc##I).bgra);                               \
   }
 
   SPN_RENDER_SUBTILE_WIDTH_EXPAND()
@@ -2214,6 +2241,10 @@ main()
 
                   case SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_RGBA8:
                     spn_tile_color_acc_store_to_surface_rgba8();
+                    break;
+
+                  case SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE_BGRA8:
+                    spn_tile_color_acc_store_to_surface_bgra8();
                     break;
 
                   case SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY:

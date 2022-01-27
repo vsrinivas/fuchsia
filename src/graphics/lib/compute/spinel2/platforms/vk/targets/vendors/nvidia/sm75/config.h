@@ -152,12 +152,6 @@
 
 #define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8
 
-#if defined(__Fuchsia__) // TODO(allanmac): The tile copy pass will eventually take care of this
-#define SPN_DEVICE_RENDER_SURFACE_SWIZZLE(rgba_)                  (rgba_)
-#else
-#define SPN_DEVICE_RENDER_SURFACE_SWIZZLE(rgba_)                  (rgba_).bgra
-#endif
-
 //
 // KERNEL: RENDER DISPATCH
 //

@@ -117,7 +117,7 @@ param const params[] = {
     .name      = "red_square_2x2",
     .surface   = { 1024, 1024 },
     .checksums = {
-      { 0xFFEC0004, {} }
+      { 0xFBF00400, {} }
     },
     .test = std::make_shared<test>(
       "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
@@ -232,16 +232,13 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xF994CF80, {
-          { param::ARM,    {} },                                     // all arm
-          { param::INTEL,  {} }                                      // all intel
+          { param::ARM,    {} },                                      // all arm
+          { param::INTEL,  {} },                                      // all intel
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }, // nvidia fp16
         }
       },
-      { 0x91582546, {
-          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }         // nvidia fp32
-        }
-      },
-      { 0x91583746, {
-          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } } // nvidia fp16
+      { 0xF994BD80, {
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }          // nvidia fp32
         }
       },
     },
@@ -301,16 +298,13 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xC5127E22, {
-          { param::ARM,    {} },                                     // all arm
-          { param::INTEL,  {} }                                      // all intel
+          { param::ARM,    {} },                                      // all arm
+          { param::INTEL,  {} },                                      // all intel
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }, // nvidia fp16
         }
       },
-      { 0x8836B7D6, {
-          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }         // nvidia fp32
-        }
-      },
-      { 0x8836BAD6, {
-          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } } // nvidia fp16
+      { 0xC5127B22, {
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }          // nvidia fp32
         }
       },
     },
@@ -359,11 +353,11 @@ param const params[] = {
           { param::INTEL,  {} }                                      // all intel
         }
       },
-      { 0x7156912, {
+      { 0xB783B9A6, {
           { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }         // nvidia fp32
         }
       },
-      { 0x7157B12, {
+      { 0xB783CBA6, {
           { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } } // nvidia fp16
         }
       },
@@ -424,16 +418,13 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0x138096C0, {
-          { param::ARM,    {} },                                     // all arm
-          { param::INTEL,  {} },                                     // all intel
+          { param::ARM,    {} },                                      // all arm
+          { param::INTEL,  {} },                                      // all intel
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }, // nvidia fp16
         }
       },
-      { 0xF24EB49E, {
-          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }         // nvidia fp32
-        }
-      },
-      { 0xF24EB79E, {
-          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } } // nvidia fp16
+      { 0x138093C0, {
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }          // nvidia fp32
         }
       },
     },
@@ -518,15 +509,12 @@ param const params[] = {
         }
       },
       { 0xC2E4C3A9, {
-          { param::INTEL,  {} }                                       // all intel
+          { param::INTEL,  {} },                                      // all intel
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }, // nvidia fp16
         }
       },
-      { 0x7F1D1193, {
+      { 0xC2E7CDA9, {
           { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }          // nvidia fp32
-        }
-      },
-      { 0x7F1D0790, {
-          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }  // nvidia fp16
         }
       },
     },
