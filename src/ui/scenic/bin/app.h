@@ -67,7 +67,7 @@ struct ConfigValues {
   bool enable_allocator_for_flatland = true;
   bool pointer_auto_focus_on = true;
   flatland::BufferCollectionImportMode flatland_buffer_collection_import_mode =
-      flatland::BufferCollectionImportMode::AttemptDisplayConstraints;
+      flatland::BufferCollectionImportMode::RendererOnly;
   // TODO(fxb/76985): Remove these when we have proper multi-display support.
   std::optional<uint64_t> i_can_haz_display_id;
   std::optional<size_t> i_can_haz_display_mode;
