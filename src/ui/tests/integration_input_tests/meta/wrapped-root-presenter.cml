@@ -1,0 +1,40 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_manager/cmx_runner/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        legacy_url: "fuchsia-pkg://fuchsia.com/text-input-test#meta/root_presenter.cmx",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.ui.policy.Presenter" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.accessibility.ColorTransform",
+                "fuchsia.accessibility.Magnifier",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.sounds.Player",
+                "fuchsia.recovery.FactoryReset",
+                "fuchsia.sys.Launcher",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.keyboard.focus.Controller",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ui.policy.Presenter" ],
+            from: "self",
+        },
+    ],
+}

@@ -2,10 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 group("integration_input_tests") {
   testonly = true
 
   deps = [
+    ":workstation-test-realm",
     "factory-reset:tests",
     "factory-reset-handler:tests",
     "focus:tests",
@@ -13,5 +16,40 @@ group("integration_input_tests") {
     "pointerinjector_config:tests",
     "touch:tests",
     "virtual-keyboard:tests",
+  ]
+}
+
+fuchsia_component("wrapped-scenic") {
+  testonly = true
+  manifest = "meta/wrapped-scenic.cml"
+  deps = [ "//src/ui/scenic" ]
+}
+
+fuchsia_component("wrapped-text-manager") {
+  testonly = true
+  manifest = "meta/wrapped-text-manager.cml"
+  deps = [ "//src/ui/bin/text:text_manager_comp" ]
+}
+
+fuchsia_component("wrapped-root-presenter") {
+  testonly = true
+  manifest = "meta/wrapped-root-presenter.cml"
+  deps = [ "//src/ui/bin/root_presenter:component_v1_for_test" ]
+}
+
+# workstation-test-realm is a realm replicating the workstation UI setup that
+# can be stenciled out in tests, and amended to fit.
+# TODO(92183): The realm definition is still under construction.
+fuchsia_component("workstation-test-realm") {
+  testonly = true
+  manifest = "meta/workstation-test-realm.cml"
+  deps = [
+    ":wrapped-root-presenter",
+    ":wrapped-scenic",
+    ":wrapped-text-manager",
+    "//examples/fidl/rust/server:echo-server",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/bin/text:text_manager_comp",
   ]
 }

@@ -1,0 +1,127 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+
+        // A fake binary to allow realm startup.
+        binary: "bin/fidl_echo_rust_server",
+    },
+    children: [
+        {
+            name: "fake_display_provider",
+            url: "#meta/hdcp.cm",
+        },
+        {
+            name: "mock_cobalt",
+            url: "#meta/mock_cobalt.cm",
+        },
+        {
+            name: "text_manager",
+            url: "#meta/wrapped-text-manager.cm",
+        },
+        {
+            name: "scenic",
+            url: "#meta/wrapped-scenic.cm",
+        },
+        {
+            name: "root_presenter",
+            url: "#meta/wrapped-root-presenter.cm",
+        },
+
+        //{
+        //    name: "scene_manager",
+        //    url: "fuchsia-pkg://fuchsia.com/text-input-test#meta/scene_manager.cm",
+        //},
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#fake_display_provider",
+                "#mock_cobalt",
+                "#root_presenter",
+                "#scenic",
+                "#text_manager",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+
+                // ?? Is this correct?
+                "fuchsia.ui.keyboard.focus.Controller",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#fake_display_provider" ],
+        },
+        {
+            protocol: [ "fuchsia.hardware.display.Provider" ],
+            from: "#fake_display_provider",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#mock_cobalt",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#scenic",
+            to: [ "#root_presenter" ],
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: [ "#root_presenter" ],
+        },
+
+        // TODO(fmil): replace root_presenter with scene_manager.
+        // fidl.fuchsia.ui.pointerinjector.configuration
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#scenic",
+        },
+        {
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+            ],
+            from: "#text_manager",
+        },
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#mock_cobalt",
+        },
+        {
+            protocol: [ "fuchsia.ui.policy.Presenter" ],
+            from: "#root_presenter",
+        },
+    ],
+}
