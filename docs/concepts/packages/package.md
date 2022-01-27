@@ -1,9 +1,9 @@
 # Fuchsia packages
 
-A Fuchsia package is a namespace hierarchy, which distributes and organizes files,
-and then provides one or more programs, components or services for a Fuchsia system.
-A Fuchsia package is a term representing a unit of distribution, though unlike many
-other package systems, that unit is composed of parts and is not a single binary `BLOB`.
+A Fuchsia package is a hierarchical collection of files that provides one or more programs,
+components or services to a Fuchsia system.  A Fuchsia package is a term representing a
+unit of distribution, though unlike many other package systems, that unit is composed of
+parts and is not a single binary `BLOB`.
 
 Note: For more information on components, see
 [Introduction to the Fuchsia component framework](/docs/concepts/components/v2/introduction.md).
