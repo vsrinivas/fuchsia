@@ -177,6 +177,21 @@ func StringInLogsChecks() []FailureModeCheck {
 		// This is a serious issue and always causes the Swarming task to fail,
 		// so we prioritize it over all other checks.
 		&stringInLogCheck{String: "error: blob size changed while uploading", Type: swarmingOutputType},
+		// Failure modes for CAS uploads from Swarming tasks during task cleanup
+		// (outside the scope of the command run during the task). These logs
+		// are unfortunately copy-pasted from the luci-go repository. These
+		// failures are generally a result of a degradation in the upstream
+		// RBE-CAS service.
+		&stringInLogCheck{
+			String:       "cas: failed to call UploadIfMissing",
+			Type:         swarmingOutputType,
+			OnlyOnStates: []string{"BOT_DIED"},
+		},
+		&stringInLogCheck{
+			String:       "cas: failed to create cas client",
+			Type:         swarmingOutputType,
+			OnlyOnStates: []string{"BOT_DIED"},
+		},
 	}
 	// Many of the infra tool checks match failure modes that have a root cause
 	// somewhere within Fuchsia itself, so we want to make sure to check for
