@@ -20,8 +20,13 @@ fuchsia_unittest_component("fdio-zxtest-component") {
   ]
 }
 
+fuchsia_unittest_component("cleanpath-tests-component") {
+  deps = [ ":cleanpath-tests" ]
+}
+
 fuchsia_test_package("fdio-unittest-package") {
   test_components = [
+    ":cleanpath-tests-component",
     ":fdio-gtest-component",
     ":fdio-zxtest-component",
   ]
@@ -35,6 +40,7 @@ group("tests") {
     # because calling chroot requires root (or other) privileges that we lack in our host
     # test environment.
     ":chroot-child($host_toolchain)",
+    ":cleanpath-tests",
     ":fdio-unittest-package",
     "constructors:tests",
     "getaddrinfo:tests",
@@ -82,7 +88,6 @@ test("fdio-test") {
       "fdio_memfd.cc",
       "fdio_null_namespace.cc",
       "fdio_open_max.cc",
-      "fdio_path_canonicalize.cc",
       "fdio_pipe.cc",
       "fdio_pty.cc",
       "fdio_root.cc",
@@ -113,6 +118,14 @@ test("fdio-test") {
       "//zircon/system/ulib/zx",
     ]
   }
+}
+
+test("cleanpath-tests") {
+  deps = [
+    "//sdk/lib/fdio:cleanpath",
+    "//zircon/system/ulib/zxtest",
+  ]
+  sources = [ "fdio_cleanpath.cc" ]
 }
 
 test("fdio-gtest") {

@@ -17,9 +17,10 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
-#include "fdio_unistd.h"
-#include "internal.h"
-#include "zxio.h"
+#include "sdk/lib/fdio/cleanpath.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/internal.h"
+#include "sdk/lib/fdio/zxio.h"
 
 namespace {
 
@@ -186,7 +187,7 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
   char buffer[PATH_MAX];
   size_t outlen;
   bool has_ending_slash;
-  zx_status_t status = __fdio_cleanpath(pathname, buffer, &outlen, &has_ending_slash);
+  zx_status_t status = fdio_internal::cleanpath(pathname, buffer, &outlen, &has_ending_slash);
   if (status != ZX_OK) {
     return STATUS(status);
   }

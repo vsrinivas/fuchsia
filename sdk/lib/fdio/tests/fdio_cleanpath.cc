@@ -2,23 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/private.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <zxtest/zxtest.h>
 
-#define TEST_CLEAN(p1, p2, dir)                             \
-  {                                                         \
-    const char in[] = (p1);                                 \
-    const char out_gold[] = (p2);                           \
-    size_t outlen;                                          \
-    bool is_dir;                                            \
-    EXPECT_OK(__fdio_cleanpath(in, out, &outlen, &is_dir)); \
-    EXPECT_EQ(is_dir, dir);                                 \
-    EXPECT_EQ(strcmp(out, out_gold), 0);                    \
+#include "sdk/lib/fdio/cleanpath.h"
+
+#define TEST_CLEAN(p1, p2, dir)                                     \
+  {                                                                 \
+    const char in[] = (p1);                                         \
+    const char out_gold[] = (p2);                                   \
+    size_t outlen;                                                  \
+    bool is_dir;                                                    \
+    EXPECT_OK(fdio_internal::cleanpath(in, out, &outlen, &is_dir)); \
+    EXPECT_EQ(is_dir, dir);                                         \
+    EXPECT_EQ(strcmp(out, out_gold), 0);                            \
   }
+
+namespace {
 
 TEST(PathCanonicalizationTest, Basic) {
   char out[PATH_MAX];
@@ -65,3 +68,5 @@ TEST(PathCanonicalizationTest, Minimal) {
   TEST_CLEAN("..", "..", true)
   TEST_CLEAN("...", "...", false)
 }
+
+}  // anonymous namespace

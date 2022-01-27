@@ -75,6 +75,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "fdio.cc",
       "fdio_unistd.cc",
       "inotify.cc",
+      "internal.h",
       "io.cc",
       "iovec.cc",
       "mem.cc",
@@ -96,6 +97,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "zxio.cc",
     ]
     deps = [
+      ":cleanpath",
       "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
@@ -125,4 +127,15 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
   source_set("fdio") {
     public_configs = [ ":fdio_includes" ]
   }
+}
+
+source_set("cleanpath") {
+  visibility = [
+    ":*",
+    "tests:*",
+  ]
+  sources = [
+    "cleanpath.cc",
+    "cleanpath.h",
+  ]
 }

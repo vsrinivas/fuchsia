@@ -39,9 +39,10 @@
 #include <fbl/auto_lock.h>
 #include <fbl/string_buffer.h>
 
-#include "fdio_unistd.h"
-#include "internal.h"
-#include "zxio.h"
+#include "sdk/lib/fdio/cleanpath.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/internal.h"
+#include "sdk/lib/fdio/zxio.h"
 
 namespace fio = fuchsia_io;
 
@@ -188,105 +189,6 @@ fdio_ptr fdio_iodir(const char** path, int dirfd) {
   return fd_to_io_locked(dirfd);
 }
 
-#define IS_SEPARATOR(c) ((c) == '/' || (c) == 0)
-
-// Checks that if we increment this index forward, we'll
-// still have enough space for a null terminator within
-// PATH_MAX bytes.
-#define CHECK_CAN_INCREMENT(i)         \
-  if (unlikely((i) + 1 >= PATH_MAX)) { \
-    return ZX_ERR_BAD_PATH;            \
-  }
-
-// Cleans an input path, transforming it to out, according to the
-// rules defined by "Lexical File Names in Plan 9 or Getting Dot-Dot Right",
-// accessible at: https://9p.io/sys/doc/lexnames.html
-//
-// Code heavily inspired by Go's filepath.Clean function, from:
-// https://golang.org/src/path/filepath/path.go
-//
-// out is expected to be PATH_MAX bytes long.
-// Sets is_dir to 'true' if the path is a directory, and 'false' otherwise.
-__EXPORT
-zx_status_t __fdio_cleanpath(const char* in, char* out, size_t* outlen, bool* is_dir) {
-  if (in[0] == 0) {
-    strcpy(out, ".");
-    *outlen = 1;
-    *is_dir = true;
-    return ZX_OK;
-  }
-
-  bool rooted = (in[0] == '/');
-  size_t in_index = 0;   // Index of the next byte to read
-  size_t out_index = 0;  // Index of the next byte to write
-
-  if (rooted) {
-    out[out_index++] = '/';
-    in_index++;
-    *is_dir = true;
-  }
-  size_t dotdot = out_index;  // The output index at which '..' cannot be cleaned further.
-
-  while (in[in_index] != 0) {
-    *is_dir = true;
-    if (in[in_index] == '/') {
-      // 1. Reduce multiple slashes to a single slash
-      CHECK_CAN_INCREMENT(in_index);
-      in_index++;
-    } else if (in[in_index] == '.' && IS_SEPARATOR(in[in_index + 1])) {
-      // 2. Eliminate . path name elements (the current directory)
-      CHECK_CAN_INCREMENT(in_index);
-      in_index++;
-    } else if (in[in_index] == '.' && in[in_index + 1] == '.' && IS_SEPARATOR(in[in_index + 2])) {
-      CHECK_CAN_INCREMENT(in_index + 1);
-      in_index += 2;
-      if (out_index > dotdot) {
-        // 3. Eliminate .. path elements (the parent directory) and the element that
-        // precedes them.
-        out_index--;
-        while (out_index > dotdot && out[out_index] != '/') {
-          out_index--;
-        }
-      } else if (rooted) {
-        // 4. Eliminate .. elements that begin a rooted path, that is, replace /.. by / at
-        // the beginning of a path.
-        continue;
-      } else if (!rooted) {
-        if (out_index > 0) {
-          out[out_index++] = '/';
-        }
-        // 5. Leave intact .. elements that begin a non-rooted path.
-        out[out_index++] = '.';
-        out[out_index++] = '.';
-        dotdot = out_index;
-      }
-    } else {
-      *is_dir = false;
-      if ((rooted && out_index != 1) || (!rooted && out_index != 0)) {
-        // Add '/' before normal path component, for non-root components.
-        out[out_index++] = '/';
-      }
-
-      while (!IS_SEPARATOR(in[in_index])) {
-        CHECK_CAN_INCREMENT(in_index);
-        out[out_index++] = in[in_index++];
-      }
-    }
-  }
-
-  if (out_index == 0) {
-    strcpy(out, ".");
-    *outlen = 1;
-    *is_dir = true;
-    return ZX_OK;
-  }
-
-  // Append null character
-  *outlen = out_index;
-  out[out_index++] = 0;
-  return ZX_OK;
-}
-
 namespace fdio_internal {
 
 zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32_t mode,
@@ -305,7 +207,7 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32
   char clean[PATH_MAX];
   size_t outlen;
   bool has_ending_slash;
-  zx_status_t status = __fdio_cleanpath(path, clean, &outlen, &has_ending_slash);
+  zx_status_t status = cleanpath(path, clean, &outlen, &has_ending_slash);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -438,7 +340,7 @@ zx::status<fdio_ptr> opendir_containing_at(int dirfd, const char* path, NameBuff
   char clean[PATH_MAX];
   size_t pathlen;
   bool is_dir;
-  zx_status_t status = __fdio_cleanpath(path, clean, &pathlen, &is_dir);
+  zx_status_t status = cleanpath(path, clean, &pathlen, &is_dir);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -1308,14 +1210,14 @@ char* realpath(const char* __restrict filename, char* __restrict resolved) {
     }
     tmp2[cwd_len] = '/';
     strcpy(tmp2 + cwd_len + 1, filename);
-    zx_status_t status = __fdio_cleanpath(tmp2, tmp, &outlen, &is_dir);
+    zx_status_t status = fdio_internal::cleanpath(tmp2, tmp, &outlen, &is_dir);
     if (status != ZX_OK) {
       errno = EINVAL;
       return nullptr;
     }
   } else {
     // Clean the provided absolute path
-    zx_status_t status = __fdio_cleanpath(filename, tmp, &outlen, &is_dir);
+    zx_status_t status = fdio_internal::cleanpath(filename, tmp, &outlen, &is_dir);
     if (status != ZX_OK) {
       errno = EINVAL;
       return nullptr;
@@ -1539,7 +1441,7 @@ int chdir(const char* path) {
 static zx_status_t resolve_path(const char* relative, char* out_resolved, size_t* out_length) {
   bool is_dir = false;
   if (relative[0] == '/') {
-    return __fdio_cleanpath(relative, out_resolved, out_length, &is_dir);
+    return fdio_internal::cleanpath(relative, out_resolved, out_length, &is_dir);
   }
 
   char buffer[PATH_MAX] = {};
@@ -1556,7 +1458,7 @@ static zx_status_t resolve_path(const char* relative, char* out_resolved, size_t
 
   buffer[cwd_length] = '/';
   memcpy(buffer + cwd_length + 1, relative, relative_length + 1);
-  return __fdio_cleanpath(buffer, out_resolved, out_length, &is_dir);
+  return fdio_internal::cleanpath(buffer, out_resolved, out_length, &is_dir);
 }
 
 __EXPORT

@@ -523,12 +523,6 @@ extern "C" {
         zxflags: u32,
         h: zx_handle_t,
     ) -> zx_status_t;
-    pub fn __fdio_cleanpath(
-        in_: *const raw::c_char,
-        out: *mut raw::c_char,
-        outlen: *mut usize,
-        is_dir: *mut bool,
-    ) -> zx_status_t;
     pub fn fdio_unsafe_fd_to_io(fd: raw::c_int) -> *mut fdio_t;
     pub fn fdio_unsafe_borrow_channel(io: *mut fdio) -> zx_handle_t;
     pub fn fdio_unsafe_release(io: *mut fdio_t);
