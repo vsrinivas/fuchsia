@@ -121,6 +121,23 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 		cases = append(cases, newCase)
 	}
 
+	// If the stdout/stderr file didn't already exist in the test result's OutputFiles,
+	// create it using the bytes from the test Stdio.
+	if !containsStdio {
+		stdioPath := filepath.Join(o.OutDir, stdioPath)
+		pathWriter, err := osmisc.CreateFile(stdioPath)
+		if err != nil {
+			return fmt.Errorf("failed to create stdio file for test %q: %w", result.Name, err)
+		}
+		defer pathWriter.Close()
+		if _, err := pathWriter.Write(result.Stdio); err != nil {
+			return fmt.Errorf("failed to write stdio file for test %q: %w", result.Name, err)
+		}
+	}
+
+	// Only append the test summary after writing all output files to disk. This
+	// ensures that even if writing the output files fails, the summary won't
+	// reference nonexistent files.
 	o.Summary.Tests = append(o.Summary.Tests, runtests.TestDetails{
 		Name:           result.Name,
 		GNLabel:        result.GNLabel,
@@ -135,19 +152,6 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 	desc := fmt.Sprintf("%s (%s)", result.Name, duration)
 	o.tap.Ok(result.Passed(), desc)
 
-	// If the stdout/stderr file didn't already exist in the test result's OutputFiles,
-	// create it using the bytes from the test Stdio.
-	if !containsStdio {
-		stdioPath := filepath.Join(o.OutDir, stdioPath)
-		pathWriter, err := osmisc.CreateFile(stdioPath)
-		if err != nil {
-			return fmt.Errorf("failed to create stdio file for test %q: %w", result.Name, err)
-		}
-		defer pathWriter.Close()
-		if _, err := pathWriter.Write(result.Stdio); err != nil {
-			return fmt.Errorf("failed to write stdio file for test %q: %w", result.Name, err)
-		}
-	}
 	return nil
 }
 
