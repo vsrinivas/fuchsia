@@ -5,13 +5,28 @@
 use crate::pixel_format::PixelFormat;
 use {fidl_fuchsia_hardware_display::Info, std::fmt};
 
+/// Strongly typed wrapper around a display ID.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialOrd, PartialEq)]
+pub struct DisplayId(pub u64);
+
+/// Strongly typed wrapper around an image ID.
+#[derive(Clone, Copy, Debug)]
+pub struct ImageId(pub u64);
+
+/// Strongly typed wrapper around a sysmem buffer collection ID.
+#[derive(Clone, Copy, Debug)]
+pub struct CollectionId(pub u64);
+
 /// Enhances the `fuchsia.hardware.display.Info` FIDL struct.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct DisplayInfo(pub Info);
 
-/// Strongly typed wrapper around a display ID.
-#[derive(Debug, Eq, Hash, Ord, PartialOrd, PartialEq)]
-pub struct DisplayId(pub u64);
+impl DisplayInfo {
+    /// Returns the ID for this display.
+    pub fn id(&self) -> DisplayId {
+        DisplayId(self.0.id)
+    }
+}
 
 /// Custom user-friendly format representation.
 impl fmt::Display for DisplayInfo {

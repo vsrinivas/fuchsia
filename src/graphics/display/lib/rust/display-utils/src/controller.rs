@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::{Proxy, ServerEnd},
+    fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_hardware_display::{self as display, ControllerEvent},
     fuchsia_async::{self as fasync, futures::TryStreamExt, DurationExt, TimeoutExt},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
@@ -17,42 +17,15 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
-    thiserror::Error,
 };
 
-use crate::types::{DisplayId, DisplayInfo};
+use crate::{
+    error::{Error, Result},
+    types::{CollectionId, DisplayId, DisplayInfo, ImageId},
+};
 
 const DEV_DIR_PATH: &str = "/dev/class/display-controller";
 const TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
-
-#[derive(Error, Debug)]
-pub enum ControllerError {
-    #[error("could not find a display-controller device")]
-    DeviceNotFound,
-
-    #[error("device did not enumerate initial displays")]
-    NoDisplays,
-
-    #[error("failed to watch files in device directory")]
-    VfsWatcherError,
-
-    #[error("a singleton task was already initiated")]
-    AlreadyRequested,
-
-    #[error("FIDL error: {0}")]
-    FidlError(#[from] fidl::Error),
-
-    #[error("OS I/O error: {0}")]
-    IoError(#[from] std::io::Error),
-
-    #[error("zircon error: {0}")]
-    ZxError(#[from] zx::Status),
-
-    #[error("failed to notify vsync: {0}")]
-    VsyncEventError(#[from] mpsc::TrySendError<VsyncEvent>),
-}
-
-pub type Result<T> = std::result::Result<T, ControllerError>;
 
 /// Client abstraction for the `fuchsia.hardware.display.Controller` protocol. Instances can be
 /// safely cloned and passed across threads.
@@ -73,6 +46,9 @@ struct ControllerInner {
 
     // All subscribed vsync listeners and their optional ID filters.
     vsync_listeners: Vec<(mpsc::UnboundedSender<VsyncEvent>, Option<DisplayId>)>,
+
+    // Simple counter to generate client-assigned integer identifiers.
+    id_counter: u64,
 }
 
 /// A vsync event payload.
@@ -108,7 +84,7 @@ impl Controller {
     // a timeout if the display driver sent en event with no displays.
     pub async fn init() -> Result<Controller> {
         let path = watch_first_file(DEV_DIR_PATH)
-            .on_timeout(TIMEOUT.after_now(), || Err(ControllerError::DeviceNotFound))
+            .on_timeout(TIMEOUT.after_now(), || Err(Error::DeviceNotFound))
             .await?;
         let (proxy, redundant_device_channel) = connect_controller(&path).await?;
         Self::init_with_proxy(proxy, redundant_device_channel).await
@@ -128,7 +104,7 @@ impl Controller {
     ) -> Result<Controller> {
         let mut events = proxy.take_event_stream();
         let displays = wait_for_initial_displays(&mut events)
-            .on_timeout(TIMEOUT.after_now(), || Err(ControllerError::NoDisplays))
+            .on_timeout(TIMEOUT.after_now(), || Err(Error::NoDisplays))
             .await?
             .into_iter()
             .map(DisplayInfo)
@@ -140,6 +116,7 @@ impl Controller {
                 displays,
                 _redundant_device_channel,
                 vsync_listeners: Vec::new(),
+                id_counter: 0,
             })),
         })
     }
@@ -147,6 +124,14 @@ impl Controller {
     /// Returns a copy of the list of displays that are currently known to be present on the system.
     pub fn displays(&self) -> Vec<DisplayInfo> {
         self.inner.read().displays.clone()
+    }
+
+    /// Returns a clone of the underlying FIDL client proxy.
+    ///
+    /// Note: This can be helpful to prevent holding the inner RwLock when awaiting a chained FIDL
+    /// call over a proxy.
+    pub fn proxy(&self) -> display::ControllerProxy {
+        self.inner.read().proxy.clone()
     }
 
     /// Tell the driver to enable vsync notifications and register a channel to listen to vsync events.
@@ -166,7 +151,7 @@ impl Controller {
     /// configuration is successfully applied. Returns an error if the FIDL message cannot be sent.
     // TODO(armansito): Parameterize this function with the contents of the display configuration.
     pub fn apply_config(&self) -> Result<()> {
-        self.inner.read().proxy.apply_config().map_err(ControllerError::from)
+        self.inner.read().proxy.apply_config().map_err(Error::from)
     }
 
     /// Returns a Future that represents the FIDL event handling task. Once scheduled on an
@@ -176,7 +161,7 @@ impl Controller {
     /// This task can be scheduled safely on any thread.
     pub async fn handle_events(&self) -> Result<()> {
         let inner = self.inner.clone();
-        let mut events = inner.write().events.take().ok_or(ControllerError::AlreadyRequested)?;
+        let mut events = inner.write().events.take().ok_or(Error::AlreadyRequested)?;
         while let Some(msg) = events.try_next().await? {
             match msg {
                 ControllerEvent::OnDisplaysChanged { added, removed } => {
@@ -200,6 +185,48 @@ impl Controller {
         }
         Ok(())
     }
+
+    /// Import a sysmem buffer collection. The returned `CollectionId` can be used in future API
+    /// calls to refer to the imported collection.
+    pub(crate) async fn import_buffer_collection(
+        &self,
+        token: ClientEnd<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>,
+    ) -> Result<CollectionId> {
+        let id = self.inner.write().next_free_collection_id()?;
+        let proxy = self.proxy();
+
+        // First import the token.
+        let _ = zx::Status::ok(proxy.import_buffer_collection(id.0, token).await?)?;
+
+        // Tell the driver to assign any device-specific constraints.
+        // TODO(fxbug.dev/85320): These fields are effectively unused except for `type` in the case
+        // of IMAGE_TYPE_CAPTURE.
+        let _ = zx::Status::ok(
+            proxy
+                .set_buffer_collection_constraints(
+                    id.0,
+                    &mut display::ImageConfig { width: 0, height: 0, pixel_format: 0, type_: 0 },
+                )
+                .await?,
+        )?;
+        Ok(id)
+    }
+
+    /// Notify the display driver to release its handle on a previously imported buffer collection.
+    pub(crate) fn release_buffer_collection(&self, id: CollectionId) -> Result<()> {
+        self.inner.read().proxy.release_buffer_collection(id.0).map_err(Error::from)
+    }
+
+    /// Register a sysmem buffer collection backed image to the display driver.
+    pub(crate) async fn import_image(
+        &self,
+        id: CollectionId,
+        mut config: display::ImageConfig,
+    ) -> Result<ImageId> {
+        let (result, id) = self.proxy().import_image(&mut config, id.0, 0).await?;
+        let _ = zx::Status::ok(result)?;
+        Ok(ImageId(id))
+    }
 }
 
 // fmt::Debug implementation to allow a `Controller` instance to be used with a debug format
@@ -211,6 +238,11 @@ impl fmt::Debug for Controller {
 }
 
 impl ControllerInner {
+    fn next_free_collection_id(&mut self) -> Result<CollectionId> {
+        self.id_counter = self.id_counter.checked_add(1).ok_or(Error::IdsExhausted)?;
+        Ok(CollectionId(self.id_counter))
+    }
+
     fn handle_displays_changed(&self, _added: Vec<display::Info>, _removed: Vec<u64>) {
         // TODO(armansito): update the displays list and notify clients. Terminate vsync listeners
         // that are attached to a removed display.
@@ -266,7 +298,7 @@ async fn watch_first_file<P: AsRef<Path> + AsRef<OsStr>>(dir: P) -> Result<PathB
         fidl_fuchsia_io::DirectoryProxy::from_channel(fasync_channel)
     };
 
-    let mut watcher = Watcher::new(dir).await.map_err(|_| ControllerError::VfsWatcherError)?;
+    let mut watcher = Watcher::new(dir).await.map_err(|_| Error::VfsWatcherError)?;
     while let Some(msg) = watcher.try_next().await? {
         match msg.event {
             WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
@@ -275,7 +307,7 @@ async fn watch_first_file<P: AsRef<Path> + AsRef<OsStr>>(dir: P) -> Result<PathB
             _ => continue,
         }
     }
-    Err(ControllerError::DeviceNotFound)
+    Err(Error::DeviceNotFound)
 }
 
 // Establishes a fuchsia.hardware.display.Controller protocol channel to the display-controller
@@ -311,7 +343,7 @@ async fn wait_for_initial_displays(
         ControllerEvent::OnDisplaysChanged { added, removed: _ } => future::ok(Some(added)),
         _ => future::ok(None),
     });
-    stream.try_next().await?.ok_or(ControllerError::NoDisplays)
+    stream.try_next().await?.ok_or(Error::NoDisplays)
 }
 
 #[cfg(test)]

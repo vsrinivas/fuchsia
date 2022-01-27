@@ -6,9 +6,14 @@
 
 //! This crate provides utilities for the Fuchsia display-controller API.
 
+mod error;
+
 /// The `types` module defines convenions wrappers for FIDL data types in the
 /// `fuchsia.hardware.display` library.
-pub mod types;
+mod types;
+
+/// Helper functions setting up shared image buffers that can be assigned to display layers.
+mod image;
 
 /// The `Controller` type is a client-side abstraction for the `fuchsia.hardware.display.Controller`
 /// protocol.
@@ -19,4 +24,7 @@ mod controller;
 mod pixel_format;
 
 pub use controller::{Controller, VsyncEvent};
+pub use error::{Error, Result};
+pub use image::*;
 pub use pixel_format::PixelFormat;
+pub use types::*;
