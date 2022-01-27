@@ -18,6 +18,8 @@ go_library("main") {
     "fssh.go",
     "fssh_test.go",
     "main.go",
+    "synckeys.go",
+    "tunnel.go",
   ]
 }
 

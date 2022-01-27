@@ -34,6 +34,8 @@ func main() {
 	subcommands.Register(subcommands.FlagsCommand(), "")
 	subcommands.Register(subcommands.CommandsCommand(), "")
 	subcommands.Register(&fsshCmd{}, "")
+	subcommands.Register(&tunnelCmd{}, "")
+	subcommands.Register(&syncKeysCmd{}, "")
 
 	flag.Parse()
 	ctx := context.Background()
