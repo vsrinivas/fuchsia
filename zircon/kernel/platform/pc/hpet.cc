@@ -46,7 +46,6 @@ DECLARE_SINGLETON_SPINLOCK(hpet_lock);
 static bool hpet_present = false;
 static struct hpet_registers* hpet_regs;
 uint64_t _hpet_ticks_per_ms;
-static uint64_t tick_period_in_fs;
 static uint8_t num_timers;
 
 #define MAX_PERIOD_IN_FS 0x05F5E100ULL
@@ -91,7 +90,7 @@ static void hpet_init(uint level) {
   });
 
   bool has_64bit_count = BIT_SET(hpet_regs->general_caps, 13);
-  tick_period_in_fs = hpet_regs->general_caps >> 32;
+  uint64_t tick_period_in_fs = hpet_regs->general_caps >> 32;
   if (tick_period_in_fs == 0 || tick_period_in_fs > MAX_PERIOD_IN_FS) {
     return;
   }
@@ -107,34 +106,45 @@ static void hpet_init(uint level) {
     hpet_regs->timers[i].conf_caps = hpet_regs->timers[i].conf_caps & ~TIMER_CONF_INT_EN;
   }
 
-  /* figure out the ratio of clock monotonic ticks to HPET ticks.  This is the
-   * scaling factor when converting from HPET to clock mono.
-   *
-   * There are 10^6 fSec/clock mono tick
-   * |tick_period_in_fs| fSec/HPET tick.
-   *
-   * So, there should be |tick_period_in_fs|/10^6 CM_ticks/HPET_ticks
-   *
-   * Compute this, make sure that we can represent it as a 32 bit ratio, then
-   * store it.
-   */
-  uint64_t N = tick_period_in_fs;
-  uint64_t D = 1000000;
+  // Figure out the nominal ratio of clock monotonic ticks (nsec) to HPET ticks.
+  // This is the scaling factor when converting from HPET to clock monotonic.
+  // Unfortunately, the HPET's rate is reported by the registers as a nominal
+  // period (in femtosecond) instead of a nominal frequency (in Hz, or even
+  // mHz).
+  //
+  // In the real world, the HPET is most likely running at the bus-issue rate
+  // for the motherboard (24MHz, 100MHz, etc) or the CPU issue rate (2.4GHz, 4.0
+  // GHZ, etc), meaning that the nominal period reported is off by some fraction
+  // of a femtosecond because the nominal frequency of the counter does not
+  // perfectly divide the value 10^15.
+  //
+  // For example, when the actual nominal HPET rate is 24MHz, the value which
+  // will be reported by the register is 41,666,667 instead of the more precise
+  // 41,666,666 + 2/3 (the actual nominal ratio).
+  //
+  // So: when computing the HPET -> clock monotonic ticks ratio, assume that the
+  // underlying period actually comes from a clock expressed as an integer
+  // number of Hz, and try to reconstruct that frequency from the reported
+  // period by dividing and rounding up instead of rounding down.
+  constexpr uint64_t val10e15 = 1'000'000'000'000'000;
+  const uint64_t hpet_nominal_frequency = (val10e15 + tick_period_in_fs - 1) / tick_period_in_fs;
+
+  uint64_t N = 1'000'000'000;
+  uint64_t D = hpet_nominal_frequency;
   affine::Ratio::Reduce(&N, &D);
 
-  // ASSERT that we can represent this as a 32 bit ratio.  If we cannot, it
-  // means that tick_period_in_fs is a number so large, and with so few prime
-  // factors of 2 and 5, that it cannot be reduced to fit into a 32 bit
-  // integer.  This would imply an extremely odd and slow clock.  For now,
-  // just ASSERT that this will never happen.
-  ZX_ASSERT_MSG(
-      (N <= ktl::numeric_limits<uint32_t>::max()) && (D <= ktl::numeric_limits<uint32_t>::max()),
-      "Clock monotonic ticks : HPET ticks ratio (%lu : %lu) "
-      "too large to store in a 32 bit ratio!!",
-      N, D);
-  hpet_ticks_to_clock_monotonic = {static_cast<uint32_t>(N), static_cast<uint32_t>(D)};
+  // If ratio between HPET's rate and clock monotonic's rate cannot be stored
+  // in a 32 bit integer, then we cannot use HPET as our reference timer.
+  if ((N > ktl::numeric_limits<uint32_t>::max()) || (D > ktl::numeric_limits<uint32_t>::max())) {
+    printf(
+        "HPET to clock monotonic rate ratio (%lu/%lu) cannot be stored as a 32 bit ratio! Ignoring "
+        "HPET\n",
+        N, D);
+    return;
+  }
 
-  _hpet_ticks_per_ms = 1000000000000ULL / tick_period_in_fs;
+  hpet_ticks_to_clock_monotonic = {static_cast<uint32_t>(N), static_cast<uint32_t>(D)};
+  _hpet_ticks_per_ms = static_cast<uint64_t>(hpet_nominal_frequency) / 1000;
   hpet_present = true;
 
   dprintf(INFO, "HPET: detected at %#" PRIx64 " ticks per ms %" PRIu64 " num timers %hhu\n",
