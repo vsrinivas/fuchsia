@@ -1,0 +1,24 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/system_update_configurator",
+    },
+    capabilities: [
+        { protocol: "fuchsia.update.config.OptOut" },
+        { protocol: "fuchsia.update.config.OptOutAdmin" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.update.config.OptOut",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.update.config.OptOutAdmin",
+            from: "self",
+        },
+    ],
+}

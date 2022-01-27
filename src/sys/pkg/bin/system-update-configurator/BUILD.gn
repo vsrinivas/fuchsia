@@ -1,0 +1,69 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+import("//src/sys/pkg/bin/grand-swd-binary/gsb.gni")
+
+# `system-update-configurator` is conceptually a binary, but it built as a lib here so
+# it can be aggregated into //src/sys/pkg/bin/grand-swd-binary to save disk space.
+rustc_library("lib") {
+  name = "system-update-configurator"
+  with_unit_tests = true
+  edition = "2021"
+
+  deps = [
+    "//sdk/fidl/fuchsia.update.config:fuchsia.update.config-rustc",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
+  ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
+
+  source_root = "src/main.rs"
+  sources = [
+    "src/bridge.rs",
+    "src/bridge/testing.rs",
+    "src/health.rs",
+    "src/main.rs",
+    "src/service.rs",
+  ]
+
+  visibility = [
+    ":*",
+    "//src/sys/pkg/bin/grand-swd-binary:*",
+  ]
+}
+
+grand_swd_binary("bin") {
+  output_name = "system_update_configurator"
+}
+
+fuchsia_component("component") {
+  component_name = "system-update-configurator"
+  manifest = "meta/system-update-configurator.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("system-update-configurator") {
+  deps = [ ":component" ]
+}
+
+fuchsia_unittest_package("system-update-configurator-tests") {
+  deps = [ ":lib_test" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":system-update-configurator-tests" ]
+}
