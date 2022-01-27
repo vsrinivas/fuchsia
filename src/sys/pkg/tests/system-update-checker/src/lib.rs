@@ -20,8 +20,8 @@ use {
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{
-        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_pkg_testing::make_packages_json,
     fuchsia_zircon as zx,
@@ -163,85 +163,98 @@ impl TestEnvBuilder {
 
         let fs_holder = Mutex::new(Some(fs));
         let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
-        builder
+        let system_update_checker = builder
             .add_child("system_update_checker",
                 "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker.cm",
-                ChildOptions::new().eager()).await.unwrap()
+                ChildOptions::new().eager()).await.unwrap();
+        let system_update_committer = builder
             .add_child("system_update_committer",
-                "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-committer.cm", ChildOptions::new().eager()).await.unwrap()
-            .add_mock_child(
+                "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-committer.cm", ChildOptions::new().eager()).await.unwrap();
+        let fake_capabilities = builder
+            .add_local_child(
                 "fake_capabilities",
-                move |mock_handles| {
-                    let mut rfs = fs_holder.lock().take().expect("mock component should only be launched once");
+                move |handles| {
+                    let mut rfs = fs_holder
+                        .lock()
+                        .take()
+                        .expect("mock component should only be launched once");
                     async {
-                        rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
-                        fasync::Task::spawn(rfs.collect()).detach();
+                        rfs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
+                        let () = rfs.collect().await;
                         Ok(())
-                    }.boxed()
+                    }
+                    .boxed()
                 },
                 ChildOptions::new(),
-            ).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![
-                    RouteEndpoint::component("system_update_checker"),
-                    RouteEndpoint::component("system_update_committer"),
-                ])
-            ).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.paver.Paver")
-                .source(RouteEndpoint::component("fake_capabilities"))
-                .targets(vec![
-                    RouteEndpoint::component("system_update_checker"),
-                    RouteEndpoint::component("system_update_committer"),
-                ])
-            ).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.update.installer.Installer")
-                .source(RouteEndpoint::component("fake_capabilities"))
-                .targets(vec![ RouteEndpoint::component("system_update_checker") ])
-            ).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.pkg.PackageResolver")
-                .source(RouteEndpoint::component("fake_capabilities"))
-                .targets(vec![ RouteEndpoint::component("system_update_checker")])
-            ).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.pkg.rewrite.Engine")
-                .source(RouteEndpoint::component("fake_capabilities"))
-                .targets(vec![ RouteEndpoint::component("system_update_checker") ])
-            ).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.pkg.RepositoryManager")
-                .source(RouteEndpoint::component("fake_capabilities"))
-                .targets(vec![ RouteEndpoint::component("system_update_checker") ])
-            ).await.unwrap()
-            .add_route(RouteBuilder::directory("pkgfs-system", "/pkgfs/system", fio2::R_STAR_DIR)
-                .source(RouteEndpoint::component("fake_capabilities"))
-                .targets(vec![ RouteEndpoint::component("system_update_checker") ])
-            ).await.unwrap()
-            .add_route(RouteBuilder::directory("deprecated-misc-storage", "/misc", fio2::RW_STAR_DIR)
-                .source(RouteEndpoint::component("fake_capabilities"))
-                .targets(vec![ RouteEndpoint::component("system_update_checker") ])
-            ).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.space.Manager")
-                .source(RouteEndpoint::component("fake_capabilities"))
-                .targets(vec![ RouteEndpoint::component("system_update_checker") ])
-            ).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.update.channel.Provider")
-                .source(RouteEndpoint::component("system_update_checker"))
-                .targets(vec! [ RouteEndpoint::AboveRoot ])
-            ).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.update.channelcontrol.ChannelControl")
-                .source(RouteEndpoint::component("system_update_checker"))
-                .targets(vec! [ RouteEndpoint::AboveRoot ])
-            ).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.update.Manager")
-                .source(RouteEndpoint::component("system_update_checker"))
-                .targets(vec! [ RouteEndpoint::AboveRoot ])
-            ).await.unwrap()
-            .add_route(RouteBuilder::protocol("fuchsia.update.CommitStatusProvider")
-                .source(RouteEndpoint::component("system_update_committer"))
-                .targets(vec![
-                        RouteEndpoint::component("system_update_checker"),
-                        RouteEndpoint::AboveRoot,
-                ])
-            ).await.unwrap();
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(Ref::parent())
+                    .to(&system_update_checker)
+                    .to(&system_update_committer),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.paver.Paver"))
+                    .from(&fake_capabilities)
+                    .to(&system_update_checker)
+                    .to(&system_update_committer),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.update.installer.Installer"))
+                    .capability(Capability::protocol_by_name("fuchsia.pkg.PackageResolver"))
+                    .capability(Capability::protocol_by_name("fuchsia.pkg.rewrite.Engine"))
+                    .capability(Capability::protocol_by_name("fuchsia.pkg.RepositoryManager"))
+                    .capability(Capability::protocol_by_name("fuchsia.space.Manager"))
+                    .capability(
+                        Capability::directory("pkgfs-system")
+                            .path("/pkgfs/system")
+                            .rights(fio2::R_STAR_DIR),
+                    )
+                    .capability(
+                        Capability::directory("deprecated-misc-storage")
+                            .path("/misc")
+                            .rights(fio2::RW_STAR_DIR),
+                    )
+                    .from(&fake_capabilities)
+                    .to(&system_update_checker),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.update.channel.Provider"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.update.channelcontrol.ChannelControl",
+                    ))
+                    .capability(Capability::protocol_by_name("fuchsia.update.Manager"))
+                    .from(&system_update_checker)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.update.CommitStatusProvider"))
+                    .from(&system_update_committer)
+                    .to(&system_update_checker)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
 
         let realm_instance = builder.build().await.unwrap();
         let channel_provider = realm_instance

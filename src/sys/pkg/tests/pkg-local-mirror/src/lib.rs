@@ -15,8 +15,8 @@ use {
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy},
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::Status,
@@ -74,17 +74,17 @@ impl TestEnvBuilder {
 
         // Create the component-under-test (pkg-local-mirror) child component.
         // This is the production component + manifest.
-        builder
+        let component_under_test = builder
             .add_child(COMPONENT_UNDER_TEST, PKG_LOCAL_MIRROR_URL, ChildOptions::new().eager())
             .await
             .expect("component added");
 
         // Create a mock component that provides the mock `/usb` directory.
         // The `/usb` directory that is served is configured in this builder.
-        builder
-            .add_mock_child(
+        let usb_mock = builder
+            .add_local_child(
                 USB_MOCK_COMPONENT,
-                move |h: MockHandles| {
+                move |h: LocalComponentHandles| {
                     let proxy = spawn_vfs(usb_dir.clone());
                     async move {
                         let mut fs = ServiceFs::new();
@@ -104,9 +104,10 @@ impl TestEnvBuilder {
         // Route the mock `/usb` directory from the mock source to the component-under-test.
         builder
             .add_route(
-                RouteBuilder::directory("usb", "/usb", fio2::R_STAR_DIR)
-                    .source(RouteEndpoint::component(USB_MOCK_COMPONENT))
-                    .targets(vec![RouteEndpoint::component(COMPONENT_UNDER_TEST)]),
+                Route::new()
+                    .capability(Capability::directory("usb").path("/usb").rights(fio2::R_STAR_DIR))
+                    .from(&usb_mock)
+                    .to(&component_under_test),
             )
             .await
             .expect("usb capability routed");
@@ -115,9 +116,10 @@ impl TestEnvBuilder {
         // accessible by this test.
         builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.pkg.LocalMirror")
-                    .source(RouteEndpoint::component(COMPONENT_UNDER_TEST))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.pkg.LocalMirror"))
+                    .from(&component_under_test)
+                    .to(Ref::parent()),
             )
             .await
             .expect("fuchsia.pkg.LocalMirror routed");
@@ -126,9 +128,10 @@ impl TestEnvBuilder {
         // debugged.
         builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.logger.LogSink")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component(COMPONENT_UNDER_TEST)]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(Ref::parent())
+                    .to(&component_under_test),
             )
             .await
             .expect("fuchsia.logger.LogSink routed");
