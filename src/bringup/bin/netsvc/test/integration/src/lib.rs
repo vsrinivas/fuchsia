@@ -887,13 +887,21 @@ async fn pave(image_name: &str, sock: fuchsia_async::net::UdpSocket, scope_id: u
                     return (Some(index), sock);
                 }
                 // Wait for an acknowledgement.
-                let mut pb = &mut buffer[..];
-                let ack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
-                    .await
-                    .into_ack()
-                    .expect("unexpected response");
-                assert_eq!(ack.block(), index);
-                (None, sock)
+                loop {
+                    let mut pb = &mut buffer[..];
+                    let ack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
+                        .await
+                        .into_ack()
+                        .expect("unexpected response");
+                    if ack.block() == index {
+                        break (None, sock);
+                    }
+                    // If this is not an acknowledgement for the most recent
+                    // block, we must be seeing a retransmission for the
+                    // previous acknowledgement (can happen due to timing woes
+                    // in CQ).
+                    assert_eq!(ack.block(), index - WINDOW_SIZE);
+                }
             })
             .await;
     if let Some(index) = unacked {
