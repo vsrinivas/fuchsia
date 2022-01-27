@@ -38,6 +38,10 @@ kernel_cmdline("driver_manager.use_driver_framework_v2--true") {
   args = [ "driver_manager.use_driver_framework_v2=true" ]
 }
 
+kernel_cmdline("bootsvc.next--host_bootfs") {
+  args = [ "bootsvc.next=bin/component_manager,fuchsia-boot:///#meta/root.cm,--config,/boot/config/component_manager,--host_bootfs" ]
+}
+
 kernel_cmdline("kernel.bypass-debuglog--true") {
   args = [ "kernel.bypass-debuglog=true" ]
 }
