@@ -27,7 +27,7 @@
         {
             protocol: [
                 "fuchsia.net.debug.Interfaces",
-                "fuchsia.net.stack.Stack",
+                "fuchsia.net.interfaces.State",
             ],
         },
         {

@@ -14,7 +14,6 @@ use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
-use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_net_test_realm as fntr;
 use fidl_fuchsia_netstack as fnetstack;
 use fidl_fuchsia_posix_socket as fposix_socket;
@@ -22,6 +21,7 @@ use fuchsia_async::{self as fasync, futures::StreamExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, SinkExt as _, TryFutureExt as _, TryStreamExt as _};
 use log::{error, warn};
+use std::collections::HashMap;
 use std::convert::TryFrom as _;
 use std::os::unix::io::AsRawFd as _;
 use std::path;
@@ -120,45 +120,55 @@ async fn find_device_client_end(
 async fn find_enabled_interface_id(
     expected_mac_address: fnet_ext::MacAddress,
 ) -> Result<Option<u64>, fntr::Error> {
-    // TODO(https://fxbug.dev/89648): Replace this function with a call to
-    // fuchsia.net.debug. As an intermediate solution, the deprecated
-    // ListInterfaces method is used to obtain the matching interface id (which
-    // isn't available via the devfs route).
-    SystemConnector
-        .connect_to_protocol::<fstack::StackMarker>()?
-        .list_interfaces()
-        .await
-        .map_err(|e| {
-            error!("list_interfaces failed: {:?}", e);
-            fntr::Error::Internal
-        })?
-        .into_iter()
-        .find_map(
-            |fstack::InterfaceInfo {
-                 id,
-                 properties: fstack::InterfaceProperties { mac, administrative_status, .. },
-             }| {
-                mac.map_or(false, move |mac| mac.octets == expected_mac_address.octets)
-                    .then(move || (administrative_status, id))
-            },
-        )
-        .ok_or_else(|| {
-            warn!(
-                "failed to find interface with MAC address {} in the system netstack",
-                expected_mac_address
-            );
-            fntr::Error::InterfaceNotFound
-        })
-        .map(|(administrative_status, id)| {
-            // The `Controller` only needs to mutate this system interface if it
-            // is enabled. As a result, disabled interfaces are not returned
-            // here.
-            if administrative_status == fstack::AdministrativeStatus::Enabled {
-                Some(id)
-            } else {
-                None
+    let state_proxy = SystemConnector.connect_to_protocol::<fnet_interfaces::StateMarker>()?;
+    let stream = fnet_interfaces_ext::event_stream_from_state(&state_proxy).map_err(|e| {
+        error!("failed to read interface stream: {:?}", e);
+        fntr::Error::Internal
+    })?;
+
+    let interfaces = fnet_interfaces_ext::existing(stream, HashMap::new()).await.map_err(|e| {
+        error!("failed to read existing interfaces: {:?}", e);
+        fntr::Error::Internal
+    })?;
+
+    let debug_interfaces_proxy =
+        SystemConnector.connect_to_protocol::<fnet_debug::InterfacesMarker>()?;
+
+    let interfaces_stream = futures::stream::iter(interfaces.into_values());
+
+    let results =
+        interfaces_stream.filter_map(|fnet_interfaces_ext::Properties { id, online, .. }| {
+            let debug_interfaces_proxy = &debug_interfaces_proxy;
+            async move {
+                match debug_interfaces_proxy.get_mac(id).await {
+                    Err(e) => {
+                        let _: fidl::Error = e;
+                        warn!("get_mac failure: {:?}", e);
+                        None
+                    }
+                    Ok(result) => match result {
+                        Err(fnet_debug::InterfacesGetMacError::NotFound) => {
+                            warn!("get_mac interface not found for ID: {}", id);
+                            None
+                        }
+                        Ok(mac_address) => mac_address.and_then(|mac_address| {
+                            (mac_address.octets == expected_mac_address.octets)
+                                .then(move || (id, online))
+                        }),
+                    },
+                }
             }
-        })
+        });
+
+    futures::pin_mut!(results);
+
+    results.next().await.ok_or(fntr::Error::InterfaceNotFound).map(|(id, online)| {
+        if online {
+            Some(id)
+        } else {
+            None
+        }
+    })
 }
 
 /// Returns a `fnet_interfaces_admin::ControlProxy` that can be used to
