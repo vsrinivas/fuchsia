@@ -319,7 +319,7 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
   // important that it contains no references to live data. This means the hit testing closure must
   // contain only plain values or data with value semantics like shared_ptr<const>, to ensure that
   // it's safe to call from any thread.
-  hit_tester = [leaf_node_koid](zx_koid_t start_node, glm::vec2 local_point,
+  hit_tester = [leaf_node_koid](zx_koid_t start_node, glm::vec2 world_point,
                                 bool is_semantic_hit_test) {
     return view_tree::SubtreeHitTestResult{.hits = {leaf_node_koid}};
   };

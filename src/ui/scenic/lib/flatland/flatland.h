@@ -143,6 +143,9 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // |fuchsia::ui::composition::Flatland|
   void SetImageOpacity(ContentId image_id, float val) override;
   // |fuchsia::ui::composition::Flatland|
+  void SetHitRegions(TransformId transform_id,
+                     std::vector<fuchsia::ui::composition::HitRegion> regions) override;
+  // |fuchsia::ui::composition::Flatland|
   void SetContent(TransformId transform_id, ContentId content_id) override;
   // |fuchsia::ui::composition::Flatland|
   void SetViewportProperties(ContentId viewport_id,

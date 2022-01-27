@@ -617,7 +617,7 @@ protocol Flatland {
     ///
     /// Precedence rules
     ///   Within a Transform, if multiple hit regions overlap, the hit test examines each
-    ///   intersecting hit region for a possible interaction. Thus, for a regular hit test H and an
+    ///   intersecting hit region for a possible interaction. Thus, for a regular hit test R and an
     ///   accessibility hit test A, where R and A both intersect two hit regions D ([`DEFAULT`]) and
     ///   S ([`SEMANTICALLY_INVISIBLE`]) on the same Transform, (1) R interacts with both D and S,
     ///   and (2) A only interacts with D. Generally, hit regions that overlap in a single Transform
@@ -635,7 +635,6 @@ protocol Flatland {
     ///   the parent View, the user expects to interact with the child's Content.
     ///
     /// To reset a Transform to "no hit testing": send an empty vector.
-    @transitional
     SetHitRegions(struct {
         transform_id TransformId;
         regions vector<HitRegion>:MAX_HIT_REGION_COUNT;

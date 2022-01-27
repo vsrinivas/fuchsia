@@ -826,6 +826,85 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   EXPECT_TRUE(utils::IsEventSignalled(release2_copy, ZX_EVENT_SIGNALED));
 }
 
+TEST_F(FlatlandTest, SetHitRegionsErrorTest) {
+  // Zero is not a valid transform ID.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    const TransformId kId = {0};
+    flatland->SetHitRegions(kId, {});
+    PRESENT(flatland, /*expect_success=*/false);
+  }
+
+  // Transform ID should be present.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    const TransformId kId = {42};
+    flatland->SetHitRegions(kId, {});
+    PRESENT(flatland, /*expect_success=*/false);
+  }
+
+  fuchsia::ui::composition::HitTestInteraction interaction =
+      fuchsia::ui::composition::HitTestInteraction::DEFAULT;
+  const TransformId kId = {1};
+
+  // Height should be non-negative.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    fuchsia::math::RectF rect = {0, 0, 0, -1};
+    fuchsia::ui::composition::HitRegion region = {rect, interaction};
+
+    flatland->CreateTransform(kId);
+    flatland->SetRootTransform(kId);
+    flatland->SetHitRegions(kId, {region});
+    PRESENT(flatland, /*expect_success=*/false);
+  }
+
+  // Width should be non-negative.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    fuchsia::math::RectF rect = {0, 0, -1, 0};
+    fuchsia::ui::composition::HitRegion region = {rect, interaction};
+
+    flatland->CreateTransform(kId);
+    flatland->SetRootTransform(kId);
+    flatland->SetHitRegions(kId, {region});
+    PRESENT(flatland, /*expect_success=*/false);
+  }
+
+  // Negative origin should succeed.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    fuchsia::math::RectF rect = {-1, -1, 0, 0};
+    fuchsia::ui::composition::HitRegion region = {rect, interaction};
+
+    flatland->CreateTransform(kId);
+    flatland->SetRootTransform(kId);
+    flatland->SetHitRegions(kId, {region});
+    PRESENT(flatland, /*expect_success=*/true);
+  }
+
+  // Empty hit region vector should succeed.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->CreateTransform(kId);
+    flatland->SetRootTransform(kId);
+    flatland->SetHitRegions(kId, {});
+    PRESENT(flatland, /*expect_success=*/true);
+  }
+
+  // Valid hit region vector should succeed.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    fuchsia::math::RectF rect = {0, 0, 10, 10};
+    fuchsia::ui::composition::HitRegion region = {rect, interaction};
+
+    flatland->CreateTransform(kId);
+    flatland->SetRootTransform(kId);
+    flatland->SetHitRegions(kId, {region});
+    PRESENT(flatland, /*expect_success=*/true);
+  }
+}
+
 TEST_F(FlatlandTest, SetDebugNameAddsPrefixToLogs) {
   class TestErrorReporter : public scenic_impl::ErrorReporter {
    public:

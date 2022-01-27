@@ -32,6 +32,7 @@ using fuchsia::math::Vec;
 using fuchsia::ui::composition::ChildViewStatus;
 using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::FlatlandError;
+using fuchsia::ui::composition::HitRegion;
 using fuchsia::ui::composition::ImageProperties;
 using fuchsia::ui::composition::OnNextFrameBeginValues;
 using fuchsia::ui::composition::Orientation;
@@ -1025,7 +1026,7 @@ void Flatland::ReleaseFilledRect(ContentId rect_id) {
 
 void Flatland::SetImageOpacity(ContentId image_id, float val) {
   if (image_id.value == kInvalidId) {
-    error_reporter_->ERROR() << "SetImageOpacity called with image_id 0";
+    error_reporter_->ERROR() << "SetImageOpacity called with invalid image_id";
     ReportBadOperationError();
     return;
   }
@@ -1060,6 +1061,36 @@ void Flatland::SetImageOpacity(ContentId image_id, float val) {
 
   // Opacity is stored as the alpha channel of the multiply color.
   metadata.multiply_color[3] = val;
+}
+
+void Flatland::SetHitRegions(TransformId transform_id, std::vector<HitRegion> regions) {
+  if (transform_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "SetHitRegions called with invalid transform ID";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto transform_kv = transforms_.find(transform_id.value);
+  if (transform_kv == transforms_.end()) {
+    error_reporter_->ERROR() << "SetHitRegions failed, transform_id " << transform_id.value
+                             << " not found";
+    ReportBadOperationError();
+    return;
+  }
+
+  // Validate |regions|.
+  for (auto& region : regions) {
+    auto rect = region.region;
+
+    if (rect.width < 0 || rect.height < 0) {
+      error_reporter_->ERROR() << "SetHitRegions failed, contains invalid (negative) dimensions: ("
+                               << rect.width << "," << rect.height << ")";
+      ReportBadOperationError();
+      return;
+    }
+  }
+
+  // TODO(fxbug.dev/72075) Finish implementation.
 }
 
 void Flatland::SetContent(TransformId transform_id, ContentId content_id) {
