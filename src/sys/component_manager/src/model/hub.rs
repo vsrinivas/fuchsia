@@ -7,7 +7,7 @@ use {
         capability::{CapabilityProvider, CapabilitySource},
         model::{
             addable_directory::AddableDirectoryWithResult,
-            component::{BindReason, WeakComponentInstance},
+            component::{StartReason, WeakComponentInstance},
             dir_tree::{DirTree, DirTreeCapability},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
@@ -407,10 +407,10 @@ impl Hub {
 
     fn add_start_reason_file(
         execution_directory: Directory,
-        bind_reason: &BindReason,
+        start_reason: &StartReason,
         abs_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let start_reason = format!("{}", bind_reason);
+        let start_reason = format!("{}", start_reason);
         execution_directory.add_node(
             "start_reason",
             read_only_static(start_reason.into_bytes()),
@@ -491,7 +491,7 @@ impl Hub {
         target: &WeakComponentInstance,
         runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
-        bind_reason: &BindReason,
+        start_reason: &StartReason,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_start_instance_async");
 
@@ -543,7 +543,7 @@ impl Hub {
             &target_moniker,
         )?;
 
-        Self::add_start_reason_file(execution_directory.clone(), bind_reason, &target_moniker)?;
+        Self::add_start_reason_file(execution_directory.clone(), start_reason, &target_moniker)?;
 
         instance.directory.add_node("exec", execution_directory, &target_moniker)?;
         instance.has_execution_directory = true;
@@ -681,13 +681,13 @@ impl Hook for Hub {
             Ok(EventPayload::Destroyed) => {
                 self.on_destroyed_async(target_moniker).await?;
             }
-            Ok(EventPayload::Started { component, runtime, component_decl, bind_reason }) => {
+            Ok(EventPayload::Started { component, runtime, component_decl, start_reason }) => {
                 self.on_started_async(
                     target_moniker,
                     component,
                     &runtime,
                     &component_decl,
-                    bind_reason,
+                    start_reason,
                 )
                 .await?;
             }
@@ -718,7 +718,7 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 binding::Binder,
-                component::BindReason,
+                component::StartReason,
                 model::Model,
                 testing::{
                     test_helpers::{
@@ -846,7 +846,7 @@ mod tests {
         model.root().hooks.install(additional_hooks).await;
 
         let root_moniker = PartialAbsoluteMoniker::root();
-        model.bind(&root_moniker, &BindReason::Root).await.unwrap();
+        model.bind(&root_moniker, &StartReason::Root).await.unwrap();
 
         (model, builtin_environment, hub_proxy)
     }
@@ -882,7 +882,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", BindReason::Root),
+            format!("{}", StartReason::Root),
             read_file(&hub_proxy, "exec/start_reason").await
         );
 
@@ -1214,7 +1214,7 @@ mod tests {
         model
             .bind(
                 &PartialAbsoluteMoniker::parse_string_without_instances("/a").unwrap(),
-                &BindReason::Debug,
+                &StartReason::Debug,
             )
             .await
             .unwrap();

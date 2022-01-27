@@ -6,7 +6,7 @@ use {
     crate::model::{
         actions::{ActionKey, DiscoverAction},
         binding::Binder,
-        component::{BindReason, ComponentInstance, ComponentManagerInstance},
+        component::{ComponentInstance, ComponentManagerInstance, StartReason},
         context::ModelContext,
         environment::Environment,
         error::ModelError,
@@ -104,7 +104,7 @@ impl Model {
             // This returns a Future that does not need to be polled.
             let _ = actions.register_no_wait(&self.root, DiscoverAction::new());
         }
-        if let Err(e) = self.bind(&PartialAbsoluteMoniker::root(), &BindReason::Root).await {
+        if let Err(e) = self.bind(&PartialAbsoluteMoniker::root(), &StartReason::Root).await {
             // If we fail binding to the root, but the root is being shutdown, that's ok. The
             // system is tearing down, so it doesn't matter any more if we never got everything
             // started that we wanted to.

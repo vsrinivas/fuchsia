@@ -83,7 +83,7 @@ pub type WeakExtendedInstance = WeakExtendedInstanceInterface<ComponentInstance>
 
 /// Describes the reason a component instance is being requested to start.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub enum BindReason {
+pub enum StartReason {
     /// Indicates that the target is starting the component because it wishes to access
     /// the capability at path.
     AccessCapability { target: PartialAbsoluteMoniker, name: CapabilityName },
@@ -92,9 +92,9 @@ pub enum BindReason {
     /// Indicates that the component was explicitly started for debugging purposes.
     Debug,
     /// Indicates that the component was marked as eagerly starting by the parent.
-    // TODO(fxbug.dev/50714): Include the parent BindReason.
+    // TODO(fxbug.dev/50714): Include the parent StartReason.
     // parent: ExtendedMoniker,
-    // parent_bind_reason: Option<Arc<BindReason>>
+    // parent_start_reason: Option<Arc<StartReason>>
     Eager,
     /// Indicates that this component is starting because it is the root component.
     Root,
@@ -102,20 +102,20 @@ pub enum BindReason {
     StorageAdmin,
 }
 
-impl fmt::Display for BindReason {
+impl fmt::Display for StartReason {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                BindReason::AccessCapability { target, name } => {
+                StartReason::AccessCapability { target, name } => {
                     format!("'{}' requested capability '{}'", target, name)
                 }
-                BindReason::SingleRun => "Instance is in a single_run collection".to_string(),
-                BindReason::Debug => "Instance was started from debugging workflow".to_string(),
-                BindReason::Eager => "Instance is an eager child".to_string(),
-                BindReason::Root => "Instance is the root".to_string(),
-                BindReason::StorageAdmin => "Storage administration on instance".to_string(),
+                StartReason::SingleRun => "Instance is in a single_run collection".to_string(),
+                StartReason::Debug => "Instance was started from debugging workflow".to_string(),
+                StartReason::Eager => "Instance is an eager child".to_string(),
+                StartReason::Root => "Instance is the root".to_string(),
+                StartReason::StorageAdmin => "Storage administration on instance".to_string(),
             }
         )
     }
@@ -967,7 +967,7 @@ impl ComponentInstance {
     /// Binds to the component instance in this instance, starting it if it's not already running.
     pub async fn bind(
         self: &Arc<Self>,
-        reason: &BindReason,
+        reason: &StartReason,
     ) -> Result<fsys::StartResult, ModelError> {
         // Skip starting a component instance that was already started. It's important to bail out
         // here so we don't waste time binding to eager children more than once.
@@ -1015,7 +1015,7 @@ impl ComponentInstance {
         let f = async move {
             let futures: Vec<_> = instances_to_bind
                 .iter()
-                .map(|component| async move { component.bind(&BindReason::Eager).await })
+                .map(|component| async move { component.bind(&StartReason::Eager).await })
                 .collect();
             join_all(futures)
                 .await
@@ -2361,7 +2361,7 @@ pub mod tests {
 
         let model = test.model.clone();
         let (f, bind_handle) = async move {
-            model.bind(&vec![].into(), &BindReason::Root).await.expect("failed to bind")
+            model.bind(&vec![].into(), &StartReason::Root).await.expect("failed to bind")
         }
         .remote_handle();
         fasync::Task::spawn(f).detach();
@@ -2425,7 +2425,7 @@ pub mod tests {
         // Bind to the root so it and its eager children start
         let _root = test
             .model
-            .bind(&vec![].into(), &BindReason::Root)
+            .bind(&vec![].into(), &StartReason::Root)
             .await
             .expect("failed to bind to root");
         test.runner
@@ -2491,12 +2491,12 @@ pub mod tests {
             .await;
 
         let root_realm =
-            test.model.bind(&PartialAbsoluteMoniker::root(), &BindReason::Root).await.unwrap();
+            test.model.bind(&PartialAbsoluteMoniker::root(), &StartReason::Root).await.unwrap();
         assert_eq!(instance_id, root_realm.instance_id());
 
         let a_realm = test
             .model
-            .bind(&PartialAbsoluteMoniker::from(vec!["a"]), &BindReason::Root)
+            .bind(&PartialAbsoluteMoniker::from(vec!["a"]), &StartReason::Root)
             .await
             .unwrap();
         assert_eq!(None, a_realm.instance_id());
@@ -2531,11 +2531,11 @@ pub mod tests {
             .await;
 
         let root_realm =
-            test.model.bind(&PartialAbsoluteMoniker::root(), &BindReason::Root).await.unwrap();
+            test.model.bind(&PartialAbsoluteMoniker::root(), &StartReason::Root).await.unwrap();
 
         assert_eq!(
             fsys::StartResult::AlreadyStarted,
-            root_realm.bind(&BindReason::Root).await.unwrap()
+            root_realm.bind(&StartReason::Root).await.unwrap()
         );
     }
 }

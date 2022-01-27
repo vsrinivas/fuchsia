@@ -6,7 +6,7 @@ use {
     crate::{
         capability::CapabilitySource,
         model::{
-            component::{BindReason, ComponentInstance},
+            component::{ComponentInstance, StartReason},
             error::ModelError,
             routing::{RouteRequest, RouteSource},
         },
@@ -61,12 +61,12 @@ impl<'a> OpenOptions<'a> {
                     server_chan,
                 }))
             }
-            // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
-            // capability to plumb through the correct BindReason.
+            // TODO(fxbug.dev/50716): This StartReason is wrong. We need to refactor the Storage
+            // capability to plumb through the correct StartReason.
             RouteRequest::UseStorage(_) => Ok(Self::Storage(OpenStorageOptions {
                 open_mode,
                 server_chan,
-                bind_reason: BindReason::Eager,
+                start_reason: StartReason::Eager,
             })),
             _ => Err(ModelError::unsupported("capability cannot be installed in a namespace")),
         }
@@ -109,7 +109,7 @@ pub struct OpenServiceOptions<'a> {
 pub struct OpenStorageOptions<'a> {
     pub open_mode: u32,
     pub server_chan: &'a mut zx::Channel,
-    pub bind_reason: BindReason,
+    pub start_reason: StartReason,
 }
 
 /// A request to open a capability at its source.

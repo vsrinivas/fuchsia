@@ -7,7 +7,7 @@ use {
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         model::{
             binding::Binder,
-            component::{BindReason, ComponentInstance, InstanceState, WeakComponentInstance},
+            component::{ComponentInstance, InstanceState, StartReason, WeakComponentInstance},
             events::{registry::EventSubscription, source::EventSource, stream::EventStream},
             hooks::HooksRegistration,
             model::Model,
@@ -467,7 +467,7 @@ impl ActionsTest {
 
     pub async fn bind(&self, moniker: PartialAbsoluteMoniker) -> Arc<ComponentInstance> {
         self.model
-            .bind(&moniker, &BindReason::Eager)
+            .bind(&moniker, &StartReason::Eager)
             .await
             .expect(&format!("could not bind to {}", moniker))
     }

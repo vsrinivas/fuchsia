@@ -5,7 +5,7 @@
 use {
     crate::framework::RealmCapabilityHost,
     crate::model::{
-        component::{BindReason, ComponentInstance, WeakComponentInstance},
+        component::{ComponentInstance, StartReason, WeakComponentInstance},
         error::ModelError,
         model::Model,
     },
@@ -100,7 +100,7 @@ impl LifecycleController {
 
     async fn start(&self, moniker: String) -> Result<fsys::StartResult, fcomponent::Error> {
         let component = self.resolve_component(&moniker).await?;
-        let res = component.bind(&BindReason::Debug).await.map_err(|e: ModelError| {
+        let res = component.bind(&StartReason::Debug).await.map_err(|e: ModelError| {
             debug!(
                 "lifecycle controller failed to start the component instance {}: {:?}",
                 moniker, e

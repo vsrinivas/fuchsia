@@ -8,7 +8,7 @@ use {
         model::{
             binding::Binder,
             component::{
-                BindReason, ComponentInstance, ComponentManagerInstance, WeakComponentInstance,
+                ComponentInstance, ComponentManagerInstance, StartReason, WeakComponentInstance,
             },
             environment::Environment,
             error::ModelError,
@@ -431,7 +431,7 @@ impl Binder for FakeBinder {
     async fn bind<'a>(
         &'a self,
         _abs_moniker: &'a PartialAbsoluteMoniker,
-        _reason: &'a BindReason,
+        _reason: &'a StartReason,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         let resolver = ResolverRegistry::new();
         let root_component_url = "test:///root".to_string();

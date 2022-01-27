@@ -8,7 +8,7 @@ use {
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         model::{
             binding::Binder,
-            component::{BindReason, ComponentInstance, InstanceState},
+            component::{ComponentInstance, InstanceState, StartReason},
             error::ModelError,
             hooks::HooksRegistration,
             model::Model,
@@ -408,7 +408,7 @@ impl RoutingTest {
         let component =
             self.model.look_up(&moniker.to_partial()).await.expect("failed to look up component");
         self.model
-            .bind(&component.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("bind instance failed");
         let partial_moniker =
@@ -584,18 +584,18 @@ impl RoutingTest {
     }
 
     /// Attempt to bind the instance associated with the given moniker with the
-    /// default reason of BindReason::Eager.
+    /// default reason of StartReason::Eager.
     ///
     /// On success, returns the short name of the component.
     pub async fn bind_instance(
         &self,
         moniker: &PartialAbsoluteMoniker,
     ) -> Result<String, ModelError> {
-        self.bind_instance_with(moniker, BindReason::Eager, false).await
+        self.bind_instance_with(moniker, StartReason::Eager, false).await
     }
 
     /// Attempt to bind the instance associated with the given moniker with the
-    /// default reason of BindReason::Eager, and waits for the runner to start the component.
+    /// default reason of StartReason::Eager, and waits for the runner to start the component.
     /// This method will only work if the component in question is using the default mock runner
     /// (otherwise, it will hang).
     ///
@@ -604,13 +604,13 @@ impl RoutingTest {
         &self,
         moniker: &PartialAbsoluteMoniker,
     ) -> Result<String, ModelError> {
-        self.bind_instance_with(moniker, BindReason::Eager, true).await
+        self.bind_instance_with(moniker, StartReason::Eager, true).await
     }
 
     async fn bind_instance_with(
         &self,
         moniker: &PartialAbsoluteMoniker,
-        reason: BindReason,
+        reason: StartReason,
         wait_for_start: bool,
     ) -> Result<String, ModelError> {
         self.model.bind(moniker, &reason).await?;
@@ -628,7 +628,7 @@ impl RoutingTest {
     pub async fn bind_and_get_instance<'a>(
         &self,
         moniker: &PartialAbsoluteMoniker,
-        reason: BindReason,
+        reason: StartReason,
         wait_for_start: bool,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         let instance = self.model.bind(moniker, &reason).await?;
@@ -655,7 +655,7 @@ impl RoutingTest {
         self.model.look_up(moniker).await.expect("lookup component failed");
         let mut server_end = server_end.into_channel();
         self.model
-            .bind(moniker, &BindReason::Eager)
+            .bind(moniker, &StartReason::Eager)
             .await
             .expect("failed to bind to component")
             .open_outgoing(
@@ -1532,7 +1532,7 @@ pub mod capability_util {
             .look_up(abs_moniker)
             .await
             .expect(&format!("component not found {}", abs_moniker));
-        model.bind(abs_moniker, &BindReason::Eager).await.expect("failed to bind instance");
+        model.bind(abs_moniker, &StartReason::Eager).await.expect("failed to bind instance");
         let state = component.lock_state().await;
         match &*state {
             InstanceState::Resolved(resolved_instance_state) => {

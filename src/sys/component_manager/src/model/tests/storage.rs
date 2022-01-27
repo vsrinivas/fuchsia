@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        component::BindReason,
+        component::StartReason,
         error::ModelError,
         routing::{route_and_open_capability, OpenOptions, OpenStorageOptions},
         testing::routing_test_helpers::*,
@@ -640,7 +640,7 @@ async fn use_restricted_storage_open_failure() {
     let parent_consumer_moniker =
         PartialAbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap();
     let parent_consumer_instance = test
-        .bind_and_get_instance(&parent_consumer_moniker, BindReason::Eager, false)
+        .bind_and_get_instance(&parent_consumer_moniker, StartReason::Eager, false)
         .await
         .expect("could not resolve state");
 
@@ -655,7 +655,7 @@ async fn use_restricted_storage_open_failure() {
         &parent_consumer_instance,
         OpenOptions::Storage(OpenStorageOptions {
             open_mode: fio::MODE_TYPE_DIRECTORY,
-            bind_reason: BindReason::Eager,
+            start_reason: StartReason::Eager,
             server_chan: &mut server_end,
         }),
     )
@@ -664,7 +664,7 @@ async fn use_restricted_storage_open_failure() {
 
     // now modify StorageDecl so that it restricts storage
     let provider_instance = test
-        .bind_and_get_instance(&PartialAbsoluteMoniker::root(), BindReason::Eager, false)
+        .bind_and_get_instance(&PartialAbsoluteMoniker::root(), StartReason::Eager, false)
         .await
         .expect("could not resolve state");
     {
@@ -690,7 +690,7 @@ async fn use_restricted_storage_open_failure() {
         &parent_consumer_instance,
         OpenOptions::Storage(OpenStorageOptions {
             open_mode: fio::MODE_TYPE_DIRECTORY,
-            bind_reason: BindReason::Eager,
+            start_reason: StartReason::Eager,
             server_chan: &mut server_end,
         }),
     )

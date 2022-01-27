@@ -6,7 +6,7 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
         model::{
-            component::{BindReason, ComponentInstance, WeakComponentInstance},
+            component::{ComponentInstance, StartReason, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
@@ -192,7 +192,7 @@ impl RealmCapabilityHost {
                     &weak_component,
                     child_ref,
                     server_end,
-                    BindReason::SingleRun,
+                    StartReason::SingleRun,
                 )
                 .await
             }
@@ -215,12 +215,12 @@ impl RealmCapabilityHost {
         component: &WeakComponentInstance,
         child: fdecl::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
-        bind_reason: BindReason,
+        start_reason: StartReason,
     ) -> Result<(), fcomponent::Error> {
         match Self::get_child(component, child.clone()).await? {
             Some(child) => {
                 let mut exposed_dir = exposed_dir.into_channel();
-                child.bind(&bind_reason).await.map_err(|e| match e {
+                child.bind(&start_reason).await.map_err(|e| match e {
                     ModelError::ResolverError { err, .. } => {
                         debug!("failed to resolve child: {}", err);
                         fcomponent::Error::InstanceCannotResolve
@@ -450,7 +450,7 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 binding::Binder,
-                component::{BindReason, ComponentInstance},
+                component::{ComponentInstance, StartReason},
                 events::{source::EventSource, stream::EventStream},
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::*},
             },
@@ -504,7 +504,7 @@ mod tests {
 
             // Look up and bind to component.
             let component = model
-                .bind(&component_moniker, &BindReason::Eager)
+                .bind(&component_moniker, &StartReason::Eager)
                 .await
                 .expect("failed to bind to component");
 

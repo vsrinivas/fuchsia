@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        component::{BindReason, ComponentInstance},
+        component::{ComponentInstance, StartReason},
         error::ModelError,
         model::Model,
     },
@@ -21,7 +21,7 @@ pub trait Binder: Send + Sync {
     async fn bind<'a>(
         &'a self,
         abs_moniker: &'a PartialAbsoluteMoniker,
-        reason: &'a BindReason,
+        reason: &'a StartReason,
     ) -> Result<Arc<ComponentInstance>, ModelError>;
 }
 
@@ -37,7 +37,7 @@ impl Binder for Arc<Model> {
     async fn bind<'a>(
         &'a self,
         abs_moniker: &'a PartialAbsoluteMoniker,
-        reason: &'a BindReason,
+        reason: &'a StartReason,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         bind_at_moniker(self, abs_moniker, reason).await
     }
@@ -48,7 +48,7 @@ impl Binder for Weak<Model> {
     async fn bind<'a>(
         &'a self,
         abs_moniker: &'a PartialAbsoluteMoniker,
-        reason: &'a BindReason,
+        reason: &'a StartReason,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         if let Some(model) = self.upgrade() {
             model.bind(abs_moniker, reason).await
@@ -63,7 +63,7 @@ impl Binder for Weak<Model> {
 pub async fn bind_at_moniker<'a>(
     model: &'a Arc<Model>,
     abs_moniker: &'a PartialAbsoluteMoniker,
-    reason: &BindReason,
+    reason: &StartReason,
 ) -> Result<Arc<ComponentInstance>, ModelError> {
     let component = model.look_up(abs_moniker).await?;
     component.bind(reason).await?;

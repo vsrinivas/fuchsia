@@ -6,7 +6,7 @@ use {
     crate::{
         constants::PKG_PATH,
         model::{
-            component::{BindReason, ComponentInstance, Package, Runtime, WeakComponentInstance},
+            component::{ComponentInstance, Package, Runtime, StartReason, WeakComponentInstance},
             error::ModelError,
             routing::{
                 self, route_and_open_capability, OpenDirectoryOptions, OpenOptions,
@@ -318,12 +318,12 @@ impl IncomingNamespace {
                 ),
                 UseDecl::Storage(use_storage_decl) => (
                     RouteRequest::UseStorage(use_storage_decl.clone()),
-                    // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
-                    // capability to plumb through the correct BindReason.
+                    // TODO(fxbug.dev/50716): This StartReason is wrong. We need to refactor the Storage
+                    // capability to plumb through the correct StartReason.
                     OpenOptions::Storage(OpenStorageOptions {
                         open_mode: fio::MODE_TYPE_DIRECTORY,
                         server_chan: &mut server_end,
-                        bind_reason: BindReason::Eager,
+                        start_reason: StartReason::Eager,
                     }),
                 ),
                 _ => panic!("not a directory or storage capability"),

@@ -6,7 +6,7 @@ use {
     crate::model::{
         actions::{Action, ActionKey},
         component::{
-            BindReason, ComponentInstance, ExecutionState, InstanceState, Package, Runtime,
+            ComponentInstance, ExecutionState, InstanceState, Package, Runtime, StartReason,
         },
         error::ModelError,
         hooks::{Event, EventError, EventErrorPayload, EventPayload, RuntimeInfo},
@@ -31,12 +31,12 @@ use {
 
 /// Starts a component instance.
 pub struct StartAction {
-    bind_reason: BindReason,
+    start_reason: StartReason,
 }
 
 impl StartAction {
-    pub fn new(bind_reason: BindReason) -> Self {
-        Self { bind_reason }
+    pub fn new(start_reason: StartReason) -> Self {
+        Self { start_reason }
     }
 }
 
@@ -44,7 +44,7 @@ impl StartAction {
 impl Action for StartAction {
     type Output = Result<fsys::StartResult, ModelError>;
     async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
-        do_start(component, &self.bind_reason).await
+        do_start(component, &self.start_reason).await
     }
 
     fn key(&self) -> ActionKey {
@@ -62,7 +62,7 @@ struct StartContext {
 
 async fn do_start(
     component: &Arc<ComponentInstance>,
-    bind_reason: &BindReason,
+    start_reason: &StartReason,
 ) -> Result<fsys::StartResult, ModelError> {
     // Pre-flight check: if the component is already started, or was shut down, return now. Note
     // that `bind_at` also performs this check before scheduling the action here. We do it again
@@ -121,7 +121,7 @@ async fn do_start(
                         start_context.resolved_url.clone(),
                     ),
                     component_decl: start_context.component_decl.clone(),
-                    bind_reason: bind_reason.clone(),
+                    start_reason: start_reason.clone(),
                 }),
                 pending_runtime.timestamp,
             );
@@ -290,8 +290,8 @@ mod tests {
                 start::should_return_early, ActionSet, ShutdownAction, StartAction, StopAction,
             },
             component::{
-                BindReason, ComponentInstance, ExecutionState, InstanceState,
-                ResolvedInstanceState, Runtime,
+                ComponentInstance, ExecutionState, InstanceState, ResolvedInstanceState, Runtime,
+                StartReason,
             },
             error::ModelError,
             hooks::{Event, EventType, Hook, HooksRegistration},
@@ -342,7 +342,7 @@ mod tests {
             )])
             .await;
 
-        match ActionSet::register(child.clone(), StartAction::new(BindReason::Debug)).await {
+        match ActionSet::register(child.clone(), StartAction::new(StartReason::Debug)).await {
             Err(ModelError::InstanceShutDown { moniker: m }) => {
                 assert_eq!(PartialAbsoluteMoniker::from(vec![TEST_CHILD_NAME]), m);
             }
@@ -373,7 +373,7 @@ mod tests {
 
         {
             let timestamp = zx::Time::get_monotonic();
-            ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+            ActionSet::register(child.clone(), StartAction::new(StartReason::Debug))
                 .await
                 .expect("failed to start child");
             let execution = child.lock_execution().await;
@@ -391,7 +391,7 @@ mod tests {
 
         {
             let timestamp = zx::Time::get_monotonic();
-            ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+            ActionSet::register(child.clone(), StartAction::new(StartReason::Debug))
                 .await
                 .expect("failed to start child");
             let execution = child.lock_execution().await;
@@ -406,7 +406,7 @@ mod tests {
 
         {
             let timestamp = zx::Time::get_monotonic();
-            ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+            ActionSet::register(child.clone(), StartAction::new(StartReason::Debug))
                 .await
                 .expect("failed to start child");
             let execution = child.lock_execution().await;
@@ -429,7 +429,7 @@ mod tests {
         modified_decl.children.push(ChildDeclBuilder::new().name("foo").build());
         resolver.add_component(TEST_CHILD_NAME, modified_decl.clone());
 
-        ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+        ActionSet::register(child.clone(), StartAction::new(StartReason::Debug))
             .await
             .expect("failed to start child");
 
@@ -508,14 +508,14 @@ mod tests {
         let (_test_harness, child) = build_tree_with_single_child(TEST_CHILD_NAME).await;
 
         assert_eq!(
-            ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+            ActionSet::register(child.clone(), StartAction::new(StartReason::Debug))
                 .await
                 .expect("failed to start child"),
             fsys::StartResult::Started
         );
 
         assert_eq!(
-            ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+            ActionSet::register(child.clone(), StartAction::new(StartReason::Debug))
                 .await
                 .expect("failed to start child"),
             fsys::StartResult::AlreadyStarted

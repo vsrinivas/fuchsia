@@ -6,7 +6,7 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
         model::{
-            component::{BindReason, WeakComponentInstance},
+            component::{StartReason, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
@@ -75,11 +75,11 @@ impl CapabilityProvider for BinderCapabilityProvider {
                     }
                 };
 
-                let bind_reason = BindReason::AccessCapability {
+                let start_reason = StartReason::AccessCapability {
                     target: target.partial_abs_moniker.clone(),
                     name: BINDER_SERVICE.clone(),
                 };
-                match source.bind(&bind_reason).await {
+                match source.bind(&start_reason).await {
                     Ok(_) => {
                         source.scope_to_runtime(server_end).await;
                     }

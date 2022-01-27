@@ -14,7 +14,7 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
         model::{
-            component::{BindReason, ComponentInstance, WeakComponentInstance},
+            component::{ComponentInstance, StartReason, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
@@ -222,7 +222,7 @@ impl StorageAdmin {
                         relative_moniker,
                         instance_id.as_ref(),
                         mode,
-                        &BindReason::StorageAdmin,
+                        &StartReason::StorageAdmin,
                     )
                     .await?;
                     dir_proxy.clone(flags, object)?;
@@ -276,7 +276,7 @@ impl StorageAdmin {
                     match storage::open_isolated_storage_by_id(
                         storage_capability_source_info.clone(),
                         id,
-                        &BindReason::StorageAdmin,
+                        &StartReason::StorageAdmin,
                     )
                     .await
                     {

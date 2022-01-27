@@ -8,7 +8,7 @@ use {
             Action, ActionKey, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction,
             ResolveAction, StartAction,
         },
-        component::{BindReason, ComponentInstance, InstanceState},
+        component::{ComponentInstance, InstanceState, StartReason},
         error::ModelError,
     },
     async_trait::async_trait,
@@ -103,7 +103,7 @@ async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> 
         let actions = component.lock_actions().await;
         vec![
             wait(actions.wait(ResolveAction::new())),
-            wait(actions.wait(StartAction::new(BindReason::Debug))),
+            wait(actions.wait(StartAction::new(StartReason::Debug))),
         ]
         .into_iter()
     };
@@ -126,7 +126,7 @@ pub mod tests {
                 ActionNotifier, ShutdownAction,
             },
             binding::Binder,
-            component::BindReason,
+            component::StartReason,
             events::{registry::EventSubscription, stream::EventStream},
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             testing::{
@@ -158,7 +158,7 @@ pub mod tests {
         let component_root = test.look_up(vec![].into()).await;
         let component_a = test.look_up(vec!["a"].into()).await;
         test.model
-            .bind(&component_a.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_a.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("could not bind to a");
         assert!(is_executing(&component_a).await);
@@ -193,7 +193,7 @@ pub mod tests {
 
         // Trying to bind to the component should fail because it's shut down.
         test.model
-            .bind(&component_a.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_a.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect_err("successfully bound to a after shutdown");
 
@@ -226,15 +226,15 @@ pub mod tests {
         let component_a = test.look_up(vec!["container", "coll:a"].into()).await;
         let component_b = test.look_up(vec!["container", "coll:b"].into()).await;
         test.model
-            .bind(&component_container.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_container.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("could not bind to container");
         test.model
-            .bind(&component_a.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_a.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("could not bind to coll:a");
         test.model
-            .bind(&component_b.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_b.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("could not bind to coll:b");
         assert!(is_executing(&component_container).await);
@@ -512,7 +512,7 @@ pub mod tests {
         let bind_a = async {
             // This could fail if it races with deletion.
             let _: Result<Arc<ComponentInstance>, ModelError> =
-                test.model.bind(&vec!["a"].into(), &BindReason::Eager).await;
+                test.model.bind(&vec!["a"].into(), &StartReason::Eager).await;
         };
         join!(
             bind_a,
@@ -520,7 +520,7 @@ pub mod tests {
                 &test,
                 &mut event_stream,
                 EventType::Started,
-                StartAction::new(BindReason::Eager),
+                StartAction::new(StartReason::Eager),
                 // expected_ref_count:
                 // - 1 for the ActionSet
                 // - 1 for the task that registers the action
@@ -542,7 +542,7 @@ pub mod tests {
         let component_root = test.look_up(vec![].into()).await;
         let component_a = test.look_up(vec!["a"].into()).await;
         test.model
-            .bind(&component_a.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_a.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("could not bind to a");
         assert!(is_executing(&component_a).await);
@@ -614,11 +614,11 @@ pub mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&component_a.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_a.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("could not bind to a");
         test.model
-            .bind(&component_x.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_x.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("could not bind to x");
         assert!(is_executing(&component_a).await);
@@ -730,15 +730,15 @@ pub mod tests {
 
         // Bind to second `b`.
         test.model
-            .bind(&component_a.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_a.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("could not bind to b2");
         test.model
-            .bind(&component_b.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_b.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("could not bind to b2");
         test.model
-            .bind(&component_b2.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_b2.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("could not bind to b2");
         assert!(is_executing(&component_a).await);
@@ -866,7 +866,7 @@ pub mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&component_a.partial_abs_moniker, &BindReason::Eager)
+            .bind(&component_a.partial_abs_moniker, &StartReason::Eager)
             .await
             .expect("could not bind to a");
         assert!(is_executing(&component_a).await);

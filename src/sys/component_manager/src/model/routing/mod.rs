@@ -13,7 +13,7 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
         model::{
-            component::{BindReason, ComponentInstance, ExtendedInstance, WeakComponentInstance},
+            component::{ComponentInstance, ExtendedInstance, StartReason, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload},
             storage,
@@ -175,7 +175,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
             // Start the source component, if necessary
             let source = self.source.upgrade()?;
             source
-                .bind(&BindReason::AccessCapability {
+                .bind(&StartReason::AccessCapability {
                     target: self.target.partial_abs_moniker.clone(),
                     name: self.name.clone(),
                 })
@@ -402,13 +402,13 @@ async fn open_storage_capability(
     let dir_source = source.storage_provider.clone();
     let relative_moniker_2 = relative_moniker.clone();
     match options {
-        OpenOptions::Storage(OpenStorageOptions { open_mode, server_chan, bind_reason }) => {
+        OpenOptions::Storage(OpenStorageOptions { open_mode, server_chan, start_reason }) => {
             let storage_dir_proxy = storage::open_isolated_storage(
                 source,
                 relative_moniker,
                 target.instance_id().as_ref(),
                 open_mode,
-                &bind_reason,
+                &start_reason,
             )
             .await
             .map_err(|e| ModelError::from(e))?;

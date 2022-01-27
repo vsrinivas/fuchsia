@@ -6,7 +6,7 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
         model::{
-            component::{BindReason, ComponentInstance, Runtime, WeakComponentInstance},
+            component::{ComponentInstance, Runtime, StartReason, WeakComponentInstance},
             error::ModelError,
             events::error::EventsError,
         },
@@ -304,7 +304,7 @@ pub enum EventPayload {
         component: WeakComponentInstance,
         runtime: RuntimeInfo,
         component_decl: ComponentDecl,
-        bind_reason: BindReason,
+        start_reason: StartReason,
     },
     Stopped {
         status: zx::Status,
@@ -530,8 +530,8 @@ impl fmt::Display for Event {
                     EventPayload::CapabilityRouted { source, .. } => {
                         format!("routed {}", source.to_string())
                     }
-                    EventPayload::Started { bind_reason, .. } => {
-                        format!("because {}", bind_reason.to_string())
+                    EventPayload::Started { start_reason, .. } => {
+                        format!("because {}", start_reason.to_string())
                     }
                     EventPayload::Stopped { status } => {
                         format!("with status: {}", status.to_string())

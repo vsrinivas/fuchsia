@@ -170,7 +170,7 @@ mod tests {
         super::*,
         crate::model::{
             binding::Binder,
-            component::BindReason,
+            component::StartReason,
             error::ModelError,
             model::{Model, ModelParams},
             testing::mocks::MockResolver,
@@ -308,7 +308,7 @@ mod tests {
         })
         .await
         .unwrap();
-        let component = model.bind(&vec!["a", "b"].into(), &BindReason::Eager).await?;
+        let component = model.bind(&vec!["a", "b"].into(), &StartReason::Eager).await?;
         assert_eq!(component.component_url, "test:///b");
 
         let registered_runner =
@@ -397,7 +397,7 @@ mod tests {
             top_instance,
         })
         .await?;
-        let component = model.bind(&vec!["a", "b"].into(), &BindReason::Eager).await?;
+        let component = model.bind(&vec!["a", "b"].into(), &StartReason::Eager).await?;
         assert_eq!(component.component_url, "test:///b");
 
         let registered_runner =
@@ -492,14 +492,14 @@ mod tests {
         .await?;
         // Add instance to collection.
         {
-            let parent = model.bind(&vec!["a"].into(), &BindReason::Eager).await?;
+            let parent = model.bind(&vec!["a"].into(), &StartReason::Eager).await?;
             let child_decl = ChildDeclBuilder::new_lazy_child("b").build();
             parent
                 .add_dynamic_child("coll".into(), &child_decl, fcomponent::CreateChildArgs::EMPTY)
                 .await
                 .expect("failed to add child");
         }
-        let component = model.bind(&vec!["a", "coll:b"].into(), &BindReason::Eager).await?;
+        let component = model.bind(&vec!["a", "coll:b"].into(), &StartReason::Eager).await?;
         assert_eq!(component.component_url, "test:///b");
 
         let registered_runner =
@@ -581,7 +581,7 @@ mod tests {
         .await
         .unwrap();
 
-        let component = model.bind(&vec!["a", "b"].into(), &BindReason::Eager).await?;
+        let component = model.bind(&vec!["a", "b"].into(), &StartReason::Eager).await?;
         assert_eq!(component.component_url, "test:///b");
 
         let registered_runner =
@@ -645,7 +645,7 @@ mod tests {
         })
         .await?;
         assert_matches!(
-            model.bind(&vec!["a", "b"].into(), &BindReason::Eager).await,
+            model.bind(&vec!["a", "b"].into(), &StartReason::Eager).await,
             Err(ModelError::ComponentInstanceError {
                 err: ComponentInstanceError::ResolveFailed { .. }
             })
