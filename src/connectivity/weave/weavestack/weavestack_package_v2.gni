@@ -30,7 +30,6 @@ template("_weavestack_package_v2") {
       deps = []
     }
     deps += [
-      "//src/connectivity/network/tun/network-tun",
       "//src/connectivity/weave/weavestack:bin",
       "//src/connectivity/weave/weavestack:default_environment_schema",
     ]
