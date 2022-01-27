@@ -325,6 +325,59 @@ TEST(Inspect, CreateGetStats) {
   EXPECT_EQ(0, stats.dynamic_child_count);
 }
 
+TEST(Inspect, StringArrays) {
+  Inspector inspector;
+
+  const inspect::StringReference array_name("array_name");
+  const inspect::StringReference shared_ref("shared_ref");
+  const std::string big(inspect::internal::kMaxOrderSize + 1, '.');
+
+  auto property = inspector.GetRoot().CreateInt(shared_ref, 5);
+
+  {
+    auto array = inspector.GetRoot().CreateStringArray(array_name, 5);
+    array.Set(0, "zero");
+    array.Set(1, shared_ref);
+    array.Set(3, big);
+
+    auto bytes = inspector.CopyBytes();
+    auto result = inspect::ReadFromBuffer(std::move(bytes));
+    ASSERT_TRUE(result.is_ok());
+    auto hierarchy = result.take_value();
+    hierarchy.Sort();
+
+    EXPECT_EQ(0u, hierarchy.children().size());
+    EXPECT_EQ(2u, hierarchy.node().properties().size());
+
+    const auto& int_prop = hierarchy.node().properties().at(1);
+    const auto& array_prop = hierarchy.node().properties().at(0);
+
+    EXPECT_EQ(shared_ref.Data(), int_prop.name());
+    EXPECT_EQ(array_name.Data(), array_prop.name());
+
+    const auto& array_data = array_prop.Get<inspect::StringArrayValue>().value();
+
+    EXPECT_EQ("zero", array_data.at(0));
+    EXPECT_EQ(shared_ref.Data(), array_data.at(1));
+    EXPECT_TRUE(array_data.at(2).empty());
+    EXPECT_EQ(big, array_data.at(3));
+    EXPECT_TRUE(array_data.at(4).empty());
+  }
+
+  auto bytes = inspector.CopyBytes();
+  auto result = inspect::ReadFromBuffer(std::move(bytes));
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+  hierarchy.Sort();
+
+  EXPECT_EQ(0u, hierarchy.children().size());
+  EXPECT_EQ(1u, hierarchy.node().properties().size());
+
+  const auto& int_prop = hierarchy.node().properties().at(0);
+
+  EXPECT_EQ(shared_ref.Data(), int_prop.name());
+}
+
 namespace {
 const char* FUCHSIA_INSPECT_STATS = "fuchsia.inspect.Stats-0";
 }

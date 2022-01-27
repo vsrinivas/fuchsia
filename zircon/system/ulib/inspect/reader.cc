@@ -4,6 +4,7 @@
 
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/cpp/vmo/block.h>
+#include <lib/inspect/cpp/vmo/limits.h>
 #include <lib/inspect/cpp/vmo/scanner.h>
 #include <lib/inspect/cpp/vmo/snapshot.h>
 #include <lib/stdcompat/optional.h>
@@ -142,7 +143,7 @@ class Reader {
   void InnerCreateObject(BlockIndex index, const Block* block);
 
   // Parse a numeric property block and attach it to the given parent.
-  void InnerParseNumericProperty(ParsedNode* parent, const Block* block);
+  void InnerParseNumericOrArrayProperty(ParsedNode* parent, const Block* block);
 
   // Parse a property block and attach it to the given parent.
   void InnerParseProperty(ParsedNode* parent, const Block* block);
@@ -247,7 +248,7 @@ void Reader::InnerScanBlocks() {
       // This block defines a numeric property for an Object, parse the
       // property into the properties field of the ParsedNode.
       auto parent_index = ValueBlockFields::ParentIndex::Get<BlockIndex>(block->header);
-      InnerParseNumericProperty(GetOrCreate(parent_index), block);
+      InnerParseNumericOrArrayProperty(GetOrCreate(parent_index), block);
     } else if (type == BlockType::kBufferValue) {
       // This block defines a property for an Object, parse the property
       // into the properties field of the ParsedNode.
@@ -359,7 +360,7 @@ ArrayDisplayFormat ArrayBlockFormatToDisplay(ArrayBlockFormat format) {
   }
 }
 
-void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
+void Reader::InnerParseNumericOrArrayProperty(ParsedNode* parent, const Block* block) {
   auto name = GetAndValidateName(ValueBlockFields::NameIndex::Get<size_t>(block->header));
   if (!name.has_value()) {
     return;
@@ -425,6 +426,11 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
         for (auto i = 0; i < count; i++) {
           const auto value_index = GetArraySlotForString(block, i);
           if (!value_index.has_value()) {
+            continue;
+          }
+
+          if (value_index.value() == kEmptyStringSlotIndex) {
+            // values.at(i) is defaulted to std::string{}, don't need to set it
             continue;
           }
 

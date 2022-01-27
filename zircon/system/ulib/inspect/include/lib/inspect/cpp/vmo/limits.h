@@ -20,6 +20,11 @@ constexpr size_t kMinOrderSize = 1 << kMinOrderShift;  // 16 bytes
 // The total number of orders in the buddy allocator.
 constexpr size_t kNumOrders = 8;
 
+// `kEmptyStringSlotIndex` a special value semantically representing
+// an empty string in a string array. It is used in place of a string reference
+// index, and is read as `""`.
+constexpr uint64_t kEmptyStringSlotIndex = 0;
+
 // The size of the maximum order.
 constexpr size_t kMaxOrderShift = kMinOrderShift + kNumOrders - 1;
 constexpr size_t kMaxOrderSize = 1 << kMaxOrderShift;

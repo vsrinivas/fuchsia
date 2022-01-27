@@ -260,6 +260,11 @@ constexpr T* GetArraySlot(B* block, size_t index) {
   return arr + index + (sizeof(uint64_t) / sizeof(T)) /* skip inline payload */;
 }
 
+// Get a BlockIndex pointing to a string reference from a string array `Block`.
+//
+// This can't return a pointer because the VMO representation of block indexes is smaller
+// than the C++ one, so a string reference's BlockIndex written directly to the array
+// through the pointer would overwrite other data.
 inline cpp17::optional<BlockIndex> GetArraySlotForString(const Block* block, size_t index) {
   const auto* tmp = GetArraySlot<const uint32_t>(block, index);
   if (tmp == nullptr) {
@@ -267,6 +272,21 @@ inline cpp17::optional<BlockIndex> GetArraySlotForString(const Block* block, siz
   }
 
   return static_cast<const BlockIndex>(*tmp);
+}
+
+// Set the value of a string array at `index_into_array` with a `BlockIndex`, `value`,
+// pointing to a string reference.
+//
+// Necessary to have a helper function instead of returning a mutable pointer into the array
+// for the reasons noted on `GetArraySlotForString`.
+inline void SetArraySlotForString(Block* block, size_t index_into_array, BlockIndex value) {
+  auto* slot = GetArraySlot<uint32_t>(block, index_into_array);
+  if (slot == nullptr) {
+    return;
+  }
+
+  auto value_as_u32 = static_cast<uint32_t>(value);
+  *slot = value_as_u32;
 }
 
 constexpr size_t kMaxPayloadSize = kMaxOrderSize - sizeof(Block::header);

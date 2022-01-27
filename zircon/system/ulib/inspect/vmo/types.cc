@@ -135,6 +135,32 @@ void internal::NumericProperty<double>::Subtract(double value) {
 }
 
 template <>
+internal::ArrayValue<BorrowedStringValue>::~ArrayValue<BorrowedStringValue>() {
+  if (state_) {
+    state_->FreeStringArray(this);
+  }
+}
+
+template <>
+internal::ArrayValue<BorrowedStringValue>& internal::ArrayValue<BorrowedStringValue>::operator=(
+    internal::ArrayValue<BorrowedStringValue>&& other) noexcept {
+  if (state_) {
+    state_->FreeStringArray(this);
+  }
+  state_ = std::move(other.state_);
+  name_index_ = other.name_index_;
+  value_index_ = other.value_index_;
+  return *this;
+}
+
+template <>
+void internal::ArrayValue<BorrowedStringValue>::Set(size_t index, BorrowedStringValue value) {
+  if (state_) {
+    state_->SetStringArray(this, index, value);
+  }
+}
+
+template <>
 internal::ArrayValue<int64_t>::~ArrayValue<int64_t>() {
   if (state_) {
     state_->FreeIntArray(this);
@@ -161,12 +187,14 @@ void internal::ArrayValue<int64_t>::Set(size_t index, int64_t value) {
 }
 
 template <>
+template <>
 void internal::ArrayValue<int64_t>::Add(size_t index, int64_t value) {
   if (state_) {
     state_->AddIntArray(this, index, value);
   }
 }
 
+template <>
 template <>
 void internal::ArrayValue<int64_t>::Subtract(size_t index, int64_t value) {
   if (state_) {
@@ -201,12 +229,14 @@ void internal::ArrayValue<uint64_t>::Set(size_t index, uint64_t value) {
 }
 
 template <>
+template <>
 void internal::ArrayValue<uint64_t>::Add(size_t index, uint64_t value) {
   if (state_) {
     state_->AddUintArray(this, index, value);
   }
 }
 
+template <>
 template <>
 void internal::ArrayValue<uint64_t>::Subtract(size_t index, uint64_t value) {
   if (state_) {
@@ -241,12 +271,14 @@ void internal::ArrayValue<double>::Set(size_t index, double value) {
 }
 
 template <>
+template <>
 void internal::ArrayValue<double>::Add(size_t index, double value) {
   if (state_) {
     state_->AddDoubleArray(this, index, value);
   }
 }
 
+template <>
 template <>
 void internal::ArrayValue<double>::Subtract(size_t index, double value) {
   if (state_) {
@@ -386,6 +418,14 @@ DoubleArray Node::CreateDoubleArray(BorrowedStringValue name, size_t slots) {
     return state_->CreateDoubleArray(name, value_index_, slots, ArrayBlockFormat::kDefault);
   }
   return DoubleArray();
+}
+
+StringArray Node::CreateStringArray(BorrowedStringValue name, size_t slots) {
+  if (state_) {
+    return state_->CreateStringArray(name, value_index_, slots, ArrayBlockFormat::kDefault);
+  }
+
+  return StringArray();
 }
 
 namespace {

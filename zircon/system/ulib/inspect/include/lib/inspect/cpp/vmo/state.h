@@ -98,6 +98,11 @@ class State final {
   IntArray CreateIntArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                           ArrayBlockFormat format);
 
+  // Create a new |StringArray| in the Inspect VMO. The returned value releases
+  // the array when destroyed.
+  StringArray CreateStringArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
+                                ArrayBlockFormat format);
+
   // Create a new |UintArray| in the Inspect VMO. The returned value releases
   // the array when destroyed.
   UintArray CreateUintArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
@@ -147,7 +152,6 @@ class State final {
   // disposition.
   LazyNode CreateLazyValues(BorrowedStringValue name, BlockIndex parent,
                             LazyNodeCallbackFn callback);
-
   // Setters for various property types
   void SetIntProperty(IntProperty* property, int64_t value);
   void SetUintProperty(UintProperty* property, uint64_t value);
@@ -156,6 +160,7 @@ class State final {
   void SetIntArray(IntArray* array, size_t index, int64_t value);
   void SetUintArray(UintArray* array, size_t index, uint64_t value);
   void SetDoubleArray(DoubleArray* array, size_t index, double value);
+  void SetStringArray(StringArray* array, size_t index, BorrowedStringValue value);
   void SetStringProperty(StringProperty* property, const std::string& value);
   void SetByteVectorProperty(ByteVectorProperty* property, cpp20::span<const uint8_t> value);
 
@@ -183,6 +188,7 @@ class State final {
   void FreeIntArray(IntArray* array);
   void FreeUintArray(UintArray* array);
   void FreeDoubleArray(DoubleArray* array);
+  void FreeStringArray(StringArray* array);
   void FreeStringProperty(StringProperty* property);
   void FreeByteVectorProperty(ByteVectorProperty* property);
   void FreeLink(Link* link);
@@ -284,7 +290,7 @@ class State final {
       __TA_REQUIRES(mutex_);
 
   // Helper function to create an array with the given name, number of slots, and format.
-  template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
+  template <typename WrapperType, BlockType BlockTypeValue>
   WrapperType InnerCreateArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                ArrayBlockFormat format);
 

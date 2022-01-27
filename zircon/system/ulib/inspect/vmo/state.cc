@@ -106,7 +106,7 @@ void AutoGenerationIncrement::Release(Block* block) {
 
 }  // namespace
 
-template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
+template <typename WrapperType, BlockType BlockTypeValue>
 WrapperType State::InnerCreateArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                     ArrayBlockFormat format) {
   const auto size_of_payload_type = SizeForArrayPayload(BlockTypeValue);
@@ -140,8 +140,8 @@ WrapperType State::InnerCreateArray(BorrowedStringValue name, BlockIndex parent,
   return WrapperType(weak_self_ptr_.lock(), name_index, value_index);
 }
 
-template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
-void State::InnerSetArray(WrapperType* metric, size_t index, NumericType value) {
+template <typename ValueType, typename WrapperType, BlockType BlockTypeValue>
+void State::InnerSetArray(WrapperType* metric, size_t index, ValueType value) {
   ZX_ASSERT(metric->state_.get() == this);
   std::lock_guard<std::mutex> lock(mutex_);
   AutoGenerationIncrement gen(header_, heap_.get());
@@ -150,9 +150,19 @@ void State::InnerSetArray(WrapperType* metric, size_t index, NumericType value) 
   ZX_ASSERT(GetType(block) == BlockType::kArrayValue);
   auto entry_type = ArrayBlockPayload::EntryType::Get<BlockType>(block->payload.u64);
   ZX_ASSERT(entry_type == BlockTypeValue);
-  auto* slot = GetArraySlot<NumericType>(block, index);
-  if (slot != nullptr) {
-    *slot = value;
+  if (BlockTypeValue == BlockType::kStringReference) {
+    // compile time check that the static_cast used below is legal
+    static_assert(BlockTypeValue == BlockType::kStringReference
+                      ? std::is_same<ValueType, BlockIndex>::value
+                      : true,
+                  "Invalid type set in string array");
+    // static_cast to get rid of incorrect lint errors
+    SetArraySlotForString(block, index, static_cast<BlockIndex>(value));
+  } else {
+    auto* slot = GetArraySlot<ValueType>(block, index);
+    if (slot != nullptr) {
+      *slot = value;
+    }
   }
 }
 
@@ -185,6 +195,22 @@ void State::InnerFreeArray(WrapperType* value) {
   DecrementParentRefcount(value->value_index_);
 
   InnerReleaseStringReference(value->name_index_);
+
+  auto* block = heap_->GetBlock(value->value_index_);
+  if (ArrayBlockPayload::EntryType::Get<BlockType>(block->payload.u64) ==
+      BlockType::kStringReference) {
+    // free/decrease ref count of string references
+    for (size_t i = 0; i < ArrayBlockPayload::Count::Get<size_t>(block->payload.u64); i++) {
+      const auto string_index = GetArraySlotForString(block, i);
+      if (!string_index.has_value()) {
+        continue;
+      }
+
+      InnerReleaseStringReference(string_index.value());
+      SetArraySlotForString(block, i, kEmptyStringSlotIndex);
+    }
+  }
+
   heap_->Free(value->value_index_);
   value->state_ = nullptr;
 }
@@ -349,18 +375,22 @@ BoolProperty State::CreateBoolProperty(BorrowedStringValue name, BlockIndex pare
 
 IntArray State::CreateIntArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                ArrayBlockFormat format) {
-  return InnerCreateArray<int64_t, IntArray, BlockType::kIntValue>(name, parent, slots, format);
+  return InnerCreateArray<IntArray, BlockType::kIntValue>(name, parent, slots, format);
 }
 
 UintArray State::CreateUintArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                  ArrayBlockFormat format) {
-  return InnerCreateArray<uint64_t, UintArray, BlockType::kUintValue>(name, parent, slots, format);
+  return InnerCreateArray<UintArray, BlockType::kUintValue>(name, parent, slots, format);
 }
 
 DoubleArray State::CreateDoubleArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
                                      ArrayBlockFormat format) {
-  return InnerCreateArray<double, DoubleArray, BlockType::kDoubleValue>(name, parent, slots,
-                                                                        format);
+  return InnerCreateArray<DoubleArray, BlockType::kDoubleValue>(name, parent, slots, format);
+}
+
+StringArray State::CreateStringArray(BorrowedStringValue name, BlockIndex parent, size_t slots,
+                                     ArrayBlockFormat format) {
+  return InnerCreateArray<StringArray, BlockType::kStringReference>(name, parent, slots, format);
 }
 
 template <typename WrapperType, typename ValueType>
@@ -542,6 +572,12 @@ void State::SetUintArray(UintArray* array, size_t index, uint64_t value) {
 
 void State::SetDoubleArray(DoubleArray* array, size_t index, double value) {
   InnerSetArray<double, DoubleArray, BlockType::kDoubleValue>(array, index, value);
+}
+
+void State::SetStringArray(StringArray* array, size_t index, BorrowedStringValue value) {
+  BlockIndex value_index;
+  CreateAndIncrementStringReference(value, &value_index);
+  InnerSetArray<BlockIndex, StringArray, BlockType::kStringReference>(array, index, value_index);
 }
 
 void State::AddIntProperty(IntProperty* metric, int64_t value) {
@@ -784,6 +820,8 @@ void State::FreeUintArray(UintArray* array) { InnerFreeArray<UintArray>(array); 
 
 void State::FreeDoubleArray(DoubleArray* array) { InnerFreeArray<DoubleArray>(array); }
 
+void State::FreeStringArray(StringArray* array) { InnerFreeArray<StringArray>(array); }
+
 template <typename WrapperType>
 void State::InnerFreePropertyWithExtents(WrapperType* property) {
   ZX_DEBUG_ASSERT_MSG(property->state_.get() == this, "Property being freed from the wrong state");
@@ -897,6 +935,10 @@ void State::ReleaseStringReference(const BlockIndex index) {
 
 void State::InnerReleaseStringReference(const BlockIndex index) {
   auto* const block = heap_->GetBlock(index);
+  if (BlockFields::Type::Get<BlockType>(block->header) != BlockType::kStringReference) {
+    return;
+  }
+
   const auto reference_count =
       StringReferenceBlockFields::ReferenceCount::Get<uint64_t>(block->header);
   StringReferenceBlockFields::ReferenceCount::Set(&block->header,

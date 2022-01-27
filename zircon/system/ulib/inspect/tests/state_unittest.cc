@@ -36,6 +36,7 @@ using inspect::IntProperty;
 using inspect::Link;
 using inspect::Node;
 using inspect::Snapshot;
+using inspect::StringArray;
 using inspect::StringProperty;
 using inspect::StringReference;
 using inspect::UintArray;
@@ -94,7 +95,8 @@ std::string print_block(const Block* block) {
 void CompareBlock(const Block* actual, const Block expected) {
   if (memcmp((const uint8_t*)(&expected), (const uint8_t*)(actual), sizeof(Block)) != 0) {
     std::cout << "Block header contents did not match. Expected BlockType: "
-              << static_cast<int>(GetType(&expected)) << std::endl;
+              << static_cast<int>(GetType(&expected)) << ". "
+              << "Actual BlockType: " << static_cast<int>(GetType(actual)) << std::endl;
     std::cout << "Expected: " << print_block(&expected) << std::endl;
     std::cout << "Actual:   " << print_block(actual) << std::endl;
     EXPECT_TRUE(false);
@@ -102,10 +104,28 @@ void CompareBlock(const Block* actual, const Block expected) {
 }
 
 template <typename T>
+void PrintArray(const T* value, size_t count) {
+  std::cout << "Array payload contents, interpreted as given type: ";
+  for (size_t i = 0; i < count; i++) {
+    std::cout << value[i] << " ";
+  }
+
+  std::cout << std::endl;
+}
+
+template <typename T>
 void CompareArray(const Block* block, const T* expected, size_t count) {
-  EXPECT_EQ(0,
-            memcmp(reinterpret_cast<const uint8_t*>(expected),
-                   reinterpret_cast<const uint8_t*>(&block->payload) + 8, sizeof(int64_t) * count));
+  if (0 != memcmp(reinterpret_cast<const uint8_t*>(expected),
+                  reinterpret_cast<const uint8_t*>(&block->payload) + 8, sizeof(T) * count)) {
+    std::cout << "Compare Array Failed:\n"
+              << "Expected: ";
+    PrintArray(expected, count);
+
+    std::cout << "Actual: ";
+    PrintArray(reinterpret_cast<const T*>(block->payload_ptr() + 8),
+               ArrayBlockPayload::Count::Get<size_t>(block->payload.u64));
+    EXPECT_TRUE(false, "This assertion is not related to test contents; it only marks failure.");
+  }
 }
 
 Block MakeBlock(uint64_t header) {
@@ -126,7 +146,8 @@ Block MakeBlock(uint64_t header, const char payload[9]) {
 // larger than sizeof(Block) (AKA order 0) would be a memory error in this context.
 // This will also reduce the order of the block to 0, even if `data` could be stored in its
 // entirety in a larger order block.
-Block MakeInlinedStringReferenceBlock(cpp17::string_view data, const uint64_t reference_count = 1) {
+Block MakeInlinedOrder0StringReferenceBlock(cpp17::string_view data,
+                                            const uint64_t reference_count = 1) {
   EXPECT_LE(data.size(), 4);
 
   auto block = Block{};
@@ -413,17 +434,17 @@ TEST(State, CreateIntProperty) {
                MakeIntBlock(ValueBlockFields::Type::Make(BlockType::kIntValue) |
                                 ValueBlockFields::NameIndex::Make(2),
                             10));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("a"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
   CompareBlock(blocks.find(3)->block,
                MakeIntBlock(ValueBlockFields::Type::Make(BlockType::kIntValue) |
                                 ValueBlockFields::NameIndex::Make(4),
                             -5));
-  CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("b"));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("b"));
   CompareBlock(blocks.find(5)->block,
                MakeIntBlock(ValueBlockFields::Type::Make(BlockType::kIntValue) |
                                 ValueBlockFields::NameIndex::Make(6),
                             0));
-  CompareBlock(blocks.find(6)->block, MakeInlinedStringReferenceBlock("c"));
+  CompareBlock(blocks.find(6)->block, MakeInlinedOrder0StringReferenceBlock("c"));
 }
 
 TEST(State, CreateUintProperty) {
@@ -452,17 +473,17 @@ TEST(State, CreateUintProperty) {
                MakeBlock(ValueBlockFields::Type::Make(BlockType::kUintValue) |
                              ValueBlockFields::NameIndex::Make(2),
                          10));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("a"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
   CompareBlock(blocks.find(3)->block,
                MakeBlock(ValueBlockFields::Type::Make(BlockType::kUintValue) |
                              ValueBlockFields::NameIndex::Make(4),
                          5));
-  CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("b"));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("b"));
   CompareBlock(blocks.find(5)->block,
                MakeIntBlock(ValueBlockFields::Type::Make(BlockType::kUintValue) |
                                 ValueBlockFields::NameIndex::Make(6),
                             0));
-  CompareBlock(blocks.find(6)->block, MakeInlinedStringReferenceBlock("c"));
+  CompareBlock(blocks.find(6)->block, MakeInlinedOrder0StringReferenceBlock("c"));
 }
 
 TEST(State, CreateDoubleProperty) {
@@ -491,17 +512,17 @@ TEST(State, CreateDoubleProperty) {
                MakeDoubleBlock(ValueBlockFields::Type::Make(BlockType::kDoubleValue) |
                                    ValueBlockFields::NameIndex::Make(2),
                                3.25));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("a"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
   CompareBlock(blocks.find(3)->block,
                MakeDoubleBlock(ValueBlockFields::Type::Make(BlockType::kDoubleValue) |
                                    ValueBlockFields::NameIndex::Make(4),
                                0.25));
-  CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("b"));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("b"));
   CompareBlock(blocks.find(5)->block,
                MakeIntBlock(ValueBlockFields::Type::Make(BlockType::kDoubleValue) |
                                 ValueBlockFields::NameIndex::Make(6),
                             0));
-  CompareBlock(blocks.find(6)->block, MakeInlinedStringReferenceBlock("c"));
+  CompareBlock(blocks.find(6)->block, MakeInlinedOrder0StringReferenceBlock("c"));
 }
 
 TEST(State, CreateBoolProperty) {
@@ -523,15 +544,59 @@ TEST(State, CreateBoolProperty) {
                MakeBoolBlock(ValueBlockFields::Type::Make(BlockType::kBoolValue) |
                                  ValueBlockFields::NameIndex::Make(2),
                              true));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("t"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("t"));
   CompareBlock(blocks.find(3)->block,
                MakeBoolBlock(ValueBlockFields::Type::Make(BlockType::kBoolValue) |
                                  ValueBlockFields::NameIndex::Make(4),
                              false));
-  CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("f"));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("f"));
 }
 
-TEST(State, CreateArrays) {
+TEST(State, CreateStringArray) {
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != nullptr);
+
+  StringArray d = state->CreateStringArray("d", 0, 2, ArrayBlockFormat::kDefault);
+  d.Set(0, "abc");
+  d.Set(1, "wxyz");
+
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
+  size_t free_blocks, allocated_blocks;
+  auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
+  ASSERT_TRUE(snapshot);
+
+  EXPECT_EQ(allocated_blocks, 5u);
+
+  const auto expected_gen_count = allocated_blocks * 2;
+
+  CompareBlock(blocks.find(0)->block, MakeHeader(expected_gen_count));
+
+  CompareBlock(blocks.find(1)->block, MakeInlinedOrder0StringReferenceBlock("d"));
+
+  CompareBlock(
+      blocks.find(2)->block,
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
+                    ValueBlockFields::Order::Make(1) | ValueBlockFields::NameIndex::Make(1),
+                ArrayBlockPayload::EntryType::Make(BlockType::kStringReference) |
+                    ArrayBlockPayload::Flags::Make(ArrayBlockFormat::kDefault) |
+                    ArrayBlockPayload::Count::Make(2)));
+  uint32_t value_indexes[] = {4, 5};
+  CompareArray(blocks.find(2)->block, value_indexes, 2);
+
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("abc"));
+  CompareBlock(blocks.find(5)->block, MakeInlinedOrder0StringReferenceBlock("wxyz"));
+
+  state->FreeStringArray(&d);
+
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks_2;
+  free_blocks = allocated_blocks = 0;
+  snapshot = SnapshotAndScan(state->GetVmo(), &blocks_2, &free_blocks, &allocated_blocks);
+  ASSERT_TRUE(snapshot);
+
+  EXPECT_EQ(allocated_blocks, 1u);
+}
+
+TEST(State, CreateNumericArrays) {
   auto state = InitState(4096);
   ASSERT_TRUE(state != NULL);
 
@@ -575,7 +640,7 @@ TEST(State, CreateArrays) {
   CompareBlock(blocks.find(0)->block, MakeHeader(42));
 
   {
-    CompareBlock(blocks.find(1)->block, MakeInlinedStringReferenceBlock("a"));
+    CompareBlock(blocks.find(1)->block, MakeInlinedOrder0StringReferenceBlock("a"));
     CompareBlock(
         blocks.find(8)->block,
         MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
@@ -588,7 +653,7 @@ TEST(State, CreateArrays) {
   }
 
   {
-    CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("b"));
+    CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("b"));
 
     CompareBlock(
         blocks.find(16)->block,
@@ -602,7 +667,7 @@ TEST(State, CreateArrays) {
   }
 
   {
-    CompareBlock(blocks.find(3)->block, MakeInlinedStringReferenceBlock("c"));
+    CompareBlock(blocks.find(3)->block, MakeInlinedOrder0StringReferenceBlock("c"));
 
     CompareBlock(
         blocks.find(24)->block,
@@ -643,10 +708,10 @@ TEST(State, CreateArrayChildren) {
                     ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(2),
                 3));
 
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("root"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("root"));
 
   {
-    CompareBlock(blocks.find(3)->block, MakeInlinedStringReferenceBlock("a"));
+    CompareBlock(blocks.find(3)->block, MakeInlinedOrder0StringReferenceBlock("a"));
     CompareBlock(
         blocks.find(8)->block,
         MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
@@ -660,7 +725,7 @@ TEST(State, CreateArrayChildren) {
   }
 
   {
-    CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("b"));
+    CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("b"));
 
     CompareBlock(
         blocks.find(16)->block,
@@ -675,7 +740,7 @@ TEST(State, CreateArrayChildren) {
   }
 
   {
-    CompareBlock(blocks.find(5)->block, MakeInlinedStringReferenceBlock("c"));
+    CompareBlock(blocks.find(5)->block, MakeInlinedOrder0StringReferenceBlock("c"));
 
     CompareBlock(
         blocks.find(24)->block,
@@ -739,10 +804,10 @@ TEST(State, CreateLinearHistogramChildren) {
                     ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(2),
                 3));
 
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("root"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("root"));
 
   {
-    CompareBlock(blocks.find(3)->block, MakeInlinedStringReferenceBlock("a"));
+    CompareBlock(blocks.find(3)->block, MakeInlinedOrder0StringReferenceBlock("a"));
     CompareBlock(
         blocks.find(8)->block,
         MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
@@ -758,7 +823,7 @@ TEST(State, CreateLinearHistogramChildren) {
   }
 
   {
-    CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("b"));
+    CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("b"));
 
     CompareBlock(
         blocks.find(16)->block,
@@ -775,7 +840,7 @@ TEST(State, CreateLinearHistogramChildren) {
   }
 
   {
-    CompareBlock(blocks.find(5)->block, MakeInlinedStringReferenceBlock("c"));
+    CompareBlock(blocks.find(5)->block, MakeInlinedOrder0StringReferenceBlock("c"));
 
     CompareBlock(
         blocks.find(24)->block,
@@ -844,10 +909,10 @@ TEST(State, CreateExponentialHistogramChildren) {
                     ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(2),
                 3));
 
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("root"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("root"));
 
   {
-    CompareBlock(blocks.find(3)->block, MakeInlinedStringReferenceBlock("a"));
+    CompareBlock(blocks.find(3)->block, MakeInlinedOrder0StringReferenceBlock("a"));
     CompareBlock(
         blocks.find(8)->block,
         MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
@@ -863,7 +928,7 @@ TEST(State, CreateExponentialHistogramChildren) {
   }
 
   {
-    CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("b"));
+    CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("b"));
 
     CompareBlock(
         blocks.find(16)->block,
@@ -880,7 +945,7 @@ TEST(State, CreateExponentialHistogramChildren) {
   }
 
   {
-    CompareBlock(blocks.find(5)->block, MakeInlinedStringReferenceBlock("c"));
+    CompareBlock(blocks.find(5)->block, MakeInlinedOrder0StringReferenceBlock("c"));
 
     CompareBlock(
         blocks.find(24)->block,
@@ -922,7 +987,7 @@ TEST(State, CreateSmallProperties) {
                              ValueBlockFields::NameIndex::Make(2),
                          PropertyBlockPayload::ExtentIndex::Make(3) |
                              PropertyBlockPayload::TotalLength::Make(5)));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("a"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
 
   CompareBlock(blocks.find(3)->block,
                MakeBlock(ExtentBlockFields::Type::Make(BlockType::kExtent), "Hello\0\0\0"));
@@ -935,7 +1000,7 @@ TEST(State, CreateSmallProperties) {
                          PropertyBlockPayload::ExtentIndex::Make(6) |
                              PropertyBlockPayload::TotalLength::Make(8) |
                              PropertyBlockPayload::Flags::Make(PropertyBlockFormat::kBinary)));
-  CompareBlock(blocks.find(5)->block, MakeInlinedStringReferenceBlock("b"));
+  CompareBlock(blocks.find(5)->block, MakeInlinedOrder0StringReferenceBlock("b"));
 
   CompareBlock(blocks.find(6)->block,
                MakeBlock(ExtentBlockFields::Type::Make(BlockType::kExtent), "88888888"));
@@ -974,7 +1039,7 @@ TEST(State, CreateLargeSingleExtentProperties) {
                              ValueBlockFields::NameIndex::Make(2),
                          PropertyBlockPayload::ExtentIndex::Make(128) |
                              PropertyBlockPayload::TotalLength::Make(2040)));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("a"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
   CompareBlock(blocks.find(128)->block,
                MakeBlock(ExtentBlockFields::Type::Make(BlockType::kExtent) |
                              ExtentBlockFields::Order::Make(kNumOrders - 1),
@@ -990,7 +1055,7 @@ TEST(State, CreateLargeSingleExtentProperties) {
                          PropertyBlockPayload::ExtentIndex::Make(256) |
                              PropertyBlockPayload::TotalLength::Make(2040) |
                              PropertyBlockPayload::Flags::Make(PropertyBlockFormat::kBinary)));
-  CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("b"));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("b"));
   CompareBlock(blocks.find(256)->block,
                MakeBlock(ExtentBlockFields::Type::Make(BlockType::kExtent) |
                              ExtentBlockFields::Order::Make(kNumOrders - 1),
@@ -1027,7 +1092,7 @@ TEST(State, CreateMultiExtentProperty) {
                              ValueBlockFields::NameIndex::Make(2),
                          PropertyBlockPayload::ExtentIndex::Make(128) |
                              PropertyBlockPayload::TotalLength::Make(6000)));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("a"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
   // Extents are threaded between blocks 128, 256, and 384.
   CompareBlock(blocks.find(128)->block,
                MakeBlock(ExtentBlockFields::Type::Make(BlockType::kExtent) |
@@ -1075,7 +1140,7 @@ TEST(State, SetSmallStringProperty) {
                          PropertyBlockPayload::ExtentIndex::Make(3) |
                              PropertyBlockPayload::TotalLength::Make(5) |
                              PropertyBlockPayload::Flags::Make(PropertyBlockFormat::kUtf8)));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("a"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
 
   CompareBlock(blocks.find(3)->block,
                MakeBlock(ValueBlockFields::Type::Make(BlockType::kExtent), "World\0\0\0"));
@@ -1113,7 +1178,7 @@ TEST(State, SetSmallBinaryProperty) {
                          PropertyBlockPayload::ExtentIndex::Make(3) |
                              PropertyBlockPayload::TotalLength::Make(4) |
                              PropertyBlockPayload::Flags::Make(PropertyBlockFormat::kBinary)));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("a"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
 
   CompareBlock(blocks.find(3)->block,
                MakeBlock(ValueBlockFields::Type::Make(BlockType::kExtent), "aaaa\0\0\0\0"));
@@ -1151,7 +1216,7 @@ TEST(State, SetLargeProperty) {
                              ValueBlockFields::NameIndex::Make(2),
                          PropertyBlockPayload::ExtentIndex::Make(3) |
                              PropertyBlockPayload::TotalLength::Make(5)));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("a"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
 
   CompareBlock(blocks.find(3)->block,
                MakeBlock(ExtentBlockFields::Type::Make(BlockType::kExtent), "World\0\0\0"));
@@ -1209,7 +1274,7 @@ TEST(State, CreateNodeHierarchy) {
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
                     ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(2),
                 2));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("objs"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("objs"));
 
   // Requests object is at index 3.
   // It has 2 references (wifi and network).
@@ -1218,7 +1283,7 @@ TEST(State, CreateNodeHierarchy) {
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
                     ValueBlockFields::ParentIndex::Make(1) | ValueBlockFields::NameIndex::Make(4),
                 2));
-  CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("reqs"));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("reqs"));
 
   // Network value
   CompareBlock(
@@ -1226,7 +1291,7 @@ TEST(State, CreateNodeHierarchy) {
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kUintValue) |
                     ValueBlockFields::ParentIndex::Make(3) | ValueBlockFields::NameIndex::Make(6),
                 10));
-  CompareBlock(blocks.find(6)->block, MakeInlinedStringReferenceBlock("netw"));
+  CompareBlock(blocks.find(6)->block, MakeInlinedOrder0StringReferenceBlock("netw"));
 
   // Wifi value
   CompareBlock(
@@ -1234,7 +1299,7 @@ TEST(State, CreateNodeHierarchy) {
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kUintValue) |
                     ValueBlockFields::ParentIndex::Make(3) | ValueBlockFields::NameIndex::Make(8),
                 5));
-  CompareBlock(blocks.find(8)->block, MakeInlinedStringReferenceBlock("wifi"));
+  CompareBlock(blocks.find(8)->block, MakeInlinedOrder0StringReferenceBlock("wifi"));
 
   // Version property
   CompareBlock(
@@ -1243,7 +1308,7 @@ TEST(State, CreateNodeHierarchy) {
                     ValueBlockFields::ParentIndex::Make(1) | ValueBlockFields::NameIndex::Make(10),
                 PropertyBlockPayload::ExtentIndex::Make(11) |
                     PropertyBlockPayload::TotalLength::Make(8)));
-  CompareBlock(blocks.find(10)->block, MakeInlinedStringReferenceBlock("vrsn"));
+  CompareBlock(blocks.find(10)->block, MakeInlinedOrder0StringReferenceBlock("vrsn"));
 
   CompareBlock(blocks.find(11)->block,
                MakeBlock(ExtentBlockFields::Type::Make(BlockType::kExtent), "1.0beta2"));
@@ -1282,12 +1347,12 @@ TEST(State, TombstoneTest) {
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kTombstone) |
                     ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(2),
                 1));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("objs"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("objs"));
   CompareBlock(
       blocks.find(3)->block,
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
                 ValueBlockFields::ParentIndex::Make(1) | ValueBlockFields::NameIndex::Make(4)));
-  CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("reqs"));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("reqs"));
 }
 
 TEST(State, TombstoneCleanup) {
@@ -1341,7 +1406,7 @@ TEST(State, TombstoneCleanup) {
                                 ValueBlockFields::ParentIndex::Make(0) |
                                 ValueBlockFields::NameIndex::Make(2),
                             0));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("a"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
 
   // Root object is at index 3.
   // It has 0 references since the children should be removed.
@@ -1349,7 +1414,7 @@ TEST(State, TombstoneCleanup) {
       blocks.find(3)->block,
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
                 ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(4)));
-  CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("root"));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("root"));
 }
 
 TEST(State, LinkTest) {
@@ -1379,22 +1444,22 @@ TEST(State, LinkTest) {
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
                     ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(2),
                 2));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("root"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("root"));
   CompareBlock(
       blocks.find(3)->block,
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kLinkValue) |
                     ValueBlockFields::ParentIndex::Make(1) | ValueBlockFields::NameIndex::Make(4),
                 LinkBlockPayload::ContentIndex::Make(5)));
-  CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("link"));
-  CompareBlock(blocks.find(5)->block, MakeInlinedStringReferenceBlock("/tst"));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("link"));
+  CompareBlock(blocks.find(5)->block, MakeInlinedOrder0StringReferenceBlock("/tst"));
   CompareBlock(
       blocks.find(6)->block,
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kLinkValue) |
                     ValueBlockFields::ParentIndex::Make(1) | ValueBlockFields::NameIndex::Make(7),
                 LinkBlockPayload::ContentIndex::Make(8) |
                     LinkBlockPayload::Flags::Make(LinkBlockDisposition::kInline)));
-  CompareBlock(blocks.find(7)->block, MakeInlinedStringReferenceBlock("lnk2"));
-  CompareBlock(blocks.find(8)->block, MakeInlinedStringReferenceBlock("/tst"));
+  CompareBlock(blocks.find(7)->block, MakeInlinedOrder0StringReferenceBlock("lnk2"));
+  CompareBlock(blocks.find(8)->block, MakeInlinedOrder0StringReferenceBlock("/tst"));
 }
 
 TEST(State, LinkContentsAllocationFailure) {
@@ -1423,7 +1488,7 @@ TEST(State, LinkContentsAllocationFailure) {
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
                     ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(2),
                 "\0\0\0\0\0\0\0\0"));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("root"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("root"));
 }
 
 TEST(State, GetStatsTest) {
@@ -1551,7 +1616,7 @@ TEST(State, MultithreadingTest) {
                                 ValueBlockFields::ParentIndex::Make(0) |
                                 ValueBlockFields::NameIndex::Make(2),
                             kThreadTimes));
-  CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("a"));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
 
   // Root object is at index 3.
   // It has 0 references since the children should be removed.
@@ -1559,7 +1624,7 @@ TEST(State, MultithreadingTest) {
       blocks.find(3)->block,
       MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
                 ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(4)));
-  CompareBlock(blocks.find(4)->block, MakeInlinedStringReferenceBlock("root"));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("root"));
 }
 
 TEST(State, OutOfOrderDeletion) {

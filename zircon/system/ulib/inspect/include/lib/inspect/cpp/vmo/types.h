@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace inspect {
@@ -27,6 +28,49 @@ class Node;
 class Inspector;
 
 using LazyNodeCallbackFn = fit::function<fpromise::promise<Inspector>()>;
+
+// StringReference is a type that can be used as a name of a Node in the Inspect API.
+// Each StringReference will have a single allocation in the appropriate VMO.
+// StringReferences are lazy-node safe.
+//
+// StringReferences can be statically declared as a constant in namespace-scope.
+// Example:
+//
+// `namespace {`
+// `const StringReference kTimestamp("timestamp");`
+// `}  // namespace`
+//
+// Or,
+// `static const StringReference kTimestamp("timestamp");`
+class StringReference final {
+ public:
+  StringReference(StringReference&&) = default;
+  StringReference(const StringReference&) = default;
+
+  // Create a new `StringReference` for the given value.
+  //
+  // StringReference treats the data as borrowed; the caller is responsible for lifetime
+  // management. `data` must live as long as the StringReference. `data` must be null
+  // terminated.
+  explicit StringReference(const char* data);
+
+  // Access the data referenced by `this`.
+  cpp17::string_view Data() const;
+
+  // Access the state ID of the StringReference.
+  uint64_t ID() const;
+
+ private:
+  StringReference() = delete;
+  const cpp17::string_view data_;
+  const uint64_t reference_id_;
+};
+
+// `BorrowedStringValue` is a non-owning polymorphic type that allows the discrimination between
+// single-use StringReference-as-names and user-declared StringReferences that have
+// a re-usable state ID. This allows us to not do the work associated with maintaining
+// the state ID when unnecessary.
+using BorrowedStringValue = cpp17::variant<cpp17::string_view, StringReference>;
 
 namespace internal {
 class State;
@@ -97,9 +141,13 @@ class ArrayValue final {
   void Set(size_t index, T value);
 
   // Add the given value to the value of this numeric metric.
+  template <typename X = T,
+            typename = std::enable_if_t<!std::is_same<X, BorrowedStringValue>::value>>
   void Add(size_t index, T value);
 
   // Subtract the given value from the value of this numeric metric.
+  template <typename X = T,
+            typename = std::enable_if_t<!std::is_same<X, BorrowedStringValue>::value>>
   void Subtract(size_t index, T value);
 
   // Return true if this metric is stored in a buffer. False otherwise.
@@ -292,6 +340,7 @@ using BoolProperty = internal::Property<bool>;
 using IntArray = internal::ArrayValue<int64_t>;
 using UintArray = internal::ArrayValue<uint64_t>;
 using DoubleArray = internal::ArrayValue<double>;
+using StringArray = internal::ArrayValue<BorrowedStringValue>;
 
 using LinearIntHistogram = internal::LinearHistogram<int64_t>;
 using LinearUintHistogram = internal::LinearHistogram<uint64_t>;
@@ -381,48 +430,6 @@ class LazyNode final {
   Link link_;
 };
 
-// StringReference is a type that can be used as a name of a Node in the Inspect API.
-// Each StringReference will have a single allocation in the appropriate VMO.
-// StringReferences are lazy-node safe.
-//
-// StringReferences can be statically declared as a constant in namespace-scope.
-// Example:
-//
-// `namespace {`
-// `const StringReference kTimestamp("timestamp");`
-// `}  // namespace`
-//
-// Or,
-// `static const StringReference kTimestamp("timestamp");`
-class StringReference final {
- public:
-  StringReference(StringReference&&) = default;
-  StringReference(const StringReference&) = default;
-
-  // Create a new `StringReference` for the given value.
-  //
-  // StringReference treats the data as borrowed; the caller is responsible for lifetime
-  // management. `data` must live as long as the StringReference. `data` must be null
-  // terminated.
-  explicit StringReference(const char* data);
-
-  // Access the data referenced by `this`.
-  cpp17::string_view Data() const;
-
-  // Access the state ID of the StringReference.
-  uint64_t ID() const;
-
- private:
-  StringReference() = delete;
-  const cpp17::string_view data_;
-  const uint64_t reference_id_;
-};
-
-// `BorrowedStringValue` is a non-owning polymorphic type that allows the discrimination between
-// single-use StringReference-as-names and user-declared StringReferences that have
-// a re-usable state ID. This allows us to not do the work associated with maintaining
-// the state ID when unnecessary.
-using BorrowedStringValue = cpp17::variant<cpp17::string_view, StringReference>;
 namespace internal {
 enum StringReferenceWrapperDiscriminant {
   isStringLiteral,
@@ -559,6 +566,11 @@ class Node final {
   // If this node is not stored in a buffer, the created value will
   // also not be stored in a buffer.
   DoubleArray CreateDoubleArray(BorrowedStringValue name, size_t slots) __WARN_UNUSED_RESULT;
+
+  // Create a new |StringArray| with the given name and slots that is a child of this node.
+  // If this node is not stored in a buffer, the created value will
+  // also not be stored in a buffer.
+  StringArray CreateStringArray(BorrowedStringValue name, size_t slots) __WARN_UNUSED_RESULT;
 
   // Create a new |LinearIntHistogram| with the given name and format that is a child of this
   // node. If this node is not stored in a buffer, the created value will also not be stored in
