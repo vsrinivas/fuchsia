@@ -896,6 +896,20 @@ impl Data<Logs> {
             .flatten()
     }
 
+    /// Returns number of rolled out logs if reported in the message.
+    pub fn rolled_out_logs(&self) -> Option<u64> {
+        self.metadata
+            .errors
+            .as_ref()
+            .map(|errors| {
+                errors.iter().find_map(|e| match e {
+                    LogError::RolledOutLogs { count } => Some(*count),
+                    _ => None,
+                })
+            })
+            .flatten()
+    }
+
     pub fn verbosity(&self) -> Option<i8> {
         self.payload_message().and_then(|payload| {
             payload

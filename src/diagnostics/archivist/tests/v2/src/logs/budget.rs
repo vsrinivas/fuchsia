@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{constants::*, test_topology, utils};
+use crate::{constants::*, test_topology};
 use anyhow::Error;
-use archivist_lib::configs::parse_config;
-use component_events::{events::*, matcher::ExitStatusMatcher};
-use diagnostics_data::{Data, LogError, Logs, Severity};
-use diagnostics_hierarchy::trie::TrieIterableNode;
+use diagnostics_data::{Data, Logs};
 use diagnostics_message::{fx_log_packet_t, METADATA_SIZE};
-use diagnostics_reader::{ArchiveReader, Inspect, SubscriptionResultsStream};
+use diagnostics_reader::ArchiveReader;
 use fidl::prelude::*;
 use fidl_fuchsia_archivist_tests::{
     SocketPuppetControllerRequest, SocketPuppetControllerRequestStream, SocketPuppetProxy,
@@ -19,8 +16,7 @@ use fidl_fuchsia_component::RealmMarker;
 use fidl_fuchsia_component_decl::ChildRef;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_io::DirectoryMarker;
-use fidl_fuchsia_sys2::EventSourceMarker;
-use fuchsia_async::{Task, Timer};
+use fuchsia_async::Task;
 use fuchsia_component::{client, server::ServiceFs};
 use fuchsia_component_test::new::{
     Capability, ChildOptions, LocalComponentHandles, RealmInstance, Ref, Route,
@@ -30,12 +26,14 @@ use futures::{
     channel::mpsc::{self, Receiver},
     StreamExt,
 };
-use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
-use std::{collections::BTreeMap, ops::Deref, time::Duration};
-use tracing::{debug, info, trace};
+use std::ops::Deref;
+use tracing::{debug, info};
 
 const TEST_PACKET_LEN: usize = 49;
 const MAX_PUPPETS: usize = 5;
+const SPAM_PUPPET_ID: usize = 0;
+const VICTIM_PUPPET_ID: usize = 1;
+const SPAM_COUNT: usize = 9001;
 
 #[fuchsia::test(logging = false)]
 async fn test_budget() {
@@ -52,28 +50,33 @@ async fn test_budget() {
 
     info!("creating nested environment for collecting diagnostics");
     let mut env = PuppetEnv::create(MAX_PUPPETS).await;
-
-    info!("check that archivist log state is clean");
-    env.assert_archivist_state_matches_expected().await;
-
-    for i in 0..MAX_PUPPETS {
-        env.launch_puppet(i).await;
+    // New test
+    // Spam puppet which spams the good puppet's logs removing them from the buffer
+    env.create_puppet(SPAM_PUPPET_ID).await;
+    env.create_puppet(VICTIM_PUPPET_ID).await;
+    let expected = env.running_puppets[VICTIM_PUPPET_ID].emit_packet().await;
+    let mut observed_logs = env.log_reader.snapshot_then_subscribe::<Logs>().unwrap();
+    let msg_a = observed_logs.next().await.unwrap().unwrap();
+    assert_eq!(expected, msg_a);
+    let mut last_msg;
+    for _ in 0..SPAM_COUNT {
+        last_msg = env.running_puppets[SPAM_PUPPET_ID].emit_packet().await;
+        assert_eq!(last_msg, observed_logs.next().await.unwrap().unwrap());
     }
-    env.validate().await;
+    let mut observed_logs = env.log_reader.snapshot_then_subscribe::<Logs>().unwrap();
+    let msg_b = observed_logs.next().await.unwrap().unwrap();
+    // First message should have been rolled out
+    assert_eq!(msg_b.rolled_out_logs(), Some(1));
+    assert_ne!(msg_a, msg_b);
 }
 
 struct PuppetEnv {
     max_puppets: usize,
     instance: RealmInstance,
     controllers: Receiver<SocketPuppetControllerRequestStream>,
-    messages_allowed_in_cache: usize,
-    messages_sent: Vec<MessageReceipt>,
     launched_monikers: Vec<String>,
     running_puppets: Vec<Puppet>,
-    inspect_reader: ArchiveReader,
     log_reader: ArchiveReader,
-    log_subscription: SubscriptionResultsStream<Logs>,
-    rng: StdRng,
     _log_errors: Task<()>,
 }
 
@@ -138,9 +141,6 @@ impl PuppetEnv {
         test_topology::expose_test_realm_protocol(&builder, &test_realm).await;
         let instance = builder.build().await.expect("create instance");
 
-        let config = parse_config("/pkg/data/config/small-caches-config.json").unwrap();
-        let messages_allowed_in_cache = config.logs.max_cached_original_bytes / TEST_PACKET_LEN;
-
         let archive =
             || instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
         let mut inspect_reader = ArchiveReader::new();
@@ -154,7 +154,7 @@ impl PuppetEnv {
             .with_archive(archive())
             .with_minimum_schema_count(0) // we want this to return even when no log messages
             .retry_if_empty(false);
-        let (log_subscription, mut errors) =
+        let (_log_subscription, mut errors) =
             log_reader.snapshot_then_subscribe::<Logs>().unwrap().split_streams();
 
         let _log_errors = Task::spawn(async move {
@@ -167,19 +167,14 @@ impl PuppetEnv {
             max_puppets,
             controllers,
             instance,
-            messages_allowed_in_cache,
-            messages_sent: vec![],
             launched_monikers: vec![],
             running_puppets: vec![],
-            inspect_reader,
             log_reader,
-            log_subscription,
-            rng: StdRng::seed_from_u64(0xA455),
             _log_errors,
         }
     }
 
-    async fn launch_puppet(&mut self, id: usize) {
+    async fn create_puppet(&mut self, id: usize) -> String {
         assert!(id < self.max_puppets);
         let mut child_ref = ChildRef { name: format!("puppet-{}", id), collection: None };
 
@@ -207,184 +202,21 @@ impl PuppetEnv {
 
         let moniker =
             format!("realm_builder:{}/test/puppet-{}", self.instance.root.child_name(), id);
-        let puppet = Puppet { id, moniker: moniker.clone(), proxy };
+        let puppet = Puppet { moniker: moniker.clone(), proxy };
 
         info!("having the puppet connect to LogSink");
         puppet.connect_to_log_sink().await.unwrap();
 
         info!("observe the puppet appears in archivist's inspect output");
-        self.launched_monikers.push(moniker);
+        self.launched_monikers.push(moniker.clone());
         self.running_puppets.push(puppet);
-
-        // wait for archivist to catch up with what we launched
-        while self.current_expected_sources() != self.current_observed_sources().await {
-            Timer::new(Duration::from_millis(100)).await;
-        }
-    }
-
-    fn current_expected_sources(&self) -> BTreeMap<String, Count> {
-        // make sure we have an empty entry for each puppet we've launched
-        let mut expected_sources = BTreeMap::new();
-        for source in &self.launched_monikers {
-            expected_sources.insert(source.clone(), Count { total: 0, rolled_out: 0 });
-        }
-
-        // compute the expected drops for each component based on our list of receipts
-        for (prior_messages, receipt) in self.messages_sent.iter().rev().enumerate() {
-            let mut puppet_count = expected_sources.get_mut(&receipt.moniker).unwrap();
-            puppet_count.total += 1;
-            if prior_messages >= self.messages_allowed_in_cache {
-                puppet_count.rolled_out += 1;
-            }
-        }
-
-        // archivist should have rolled out all containers that have stopped and are empty
-        expected_sources
-            .into_iter()
-            .filter(|(moniker, count)| {
-                let has_messages = count.total > 0 && count.total != count.rolled_out;
-                let is_running =
-                    self.running_puppets.iter().find(|puppet| moniker == &puppet.moniker).is_some();
-                is_running || has_messages
-            })
-            .collect()
-    }
-
-    async fn current_observed_sources(&self) -> BTreeMap<String, Count> {
-        // we only request inspect from archivist-with-small-caches.cmx, 1 result always returned
-        let results =
-            self.inspect_reader.snapshot::<Inspect>().await.unwrap().into_iter().next().unwrap();
-        let root = results.payload.as_ref().unwrap();
-
-        let mut counts = BTreeMap::new();
-        let sources = root.get_child("sources").unwrap();
-
-        for (moniker, source) in sources.get_children() {
-            if let Some(logs) = source.get_child("logs") {
-                let total = logs.get_child("total").unwrap();
-                let total_number = *total.get_property("number").unwrap().uint().unwrap() as usize;
-                let total_bytes = *total.get_property("bytes").unwrap().uint().unwrap() as usize;
-                assert_eq!(total_bytes, total_number * TEST_PACKET_LEN);
-
-                let rolled_out = logs.get_child("rolled_out").unwrap();
-                let rolled_out_number =
-                    *rolled_out.get_property("number").unwrap().uint().unwrap() as usize;
-                let rolled_out_bytes =
-                    *rolled_out.get_property("bytes").unwrap().uint().unwrap() as usize;
-                assert_eq!(rolled_out_bytes, rolled_out_number * TEST_PACKET_LEN);
-
-                counts.insert(
-                    moniker.clone(),
-                    Count { total: total_number, rolled_out: rolled_out_number },
-                );
-            }
-        }
-
-        counts
-    }
-
-    async fn assert_archivist_state_matches_expected(&self) {
-        let expected_sources = self.current_expected_sources();
-        let observed_sources = self.current_observed_sources().await;
-        assert_eq!(observed_sources, expected_sources);
-
-        let expected_drops = || expected_sources.iter().filter(|(_, c)| c.rolled_out > 0);
-        let mut expected_logs = self
-            .messages_sent
-            .iter()
-            .rev() // we want the newest messages
-            .take(self.messages_allowed_in_cache)
-            .rev(); // but in the order they were sent
-        trace!("reading log snapshot");
-        let observed_logs = self.log_reader.snapshot::<Logs>().await.unwrap().into_iter();
-
-        let mut rolled_out_message_warnings = BTreeMap::new();
-        for observed in observed_logs {
-            if observed.metadata.errors.is_some() {
-                rolled_out_message_warnings.insert(observed.moniker.clone(), observed);
-            } else {
-                let expected = expected_logs.next().unwrap();
-                assert_eq!(expected, &observed);
-            }
-        }
-
-        for (moniker, Count { rolled_out, .. }) in expected_drops() {
-            let rolled_out_logs_warning = rolled_out_message_warnings.remove(moniker).unwrap();
-            assert_eq!(
-                rolled_out_logs_warning.metadata.errors,
-                Some(vec![LogError::RolledOutLogs { count: *rolled_out as u64 }])
-            );
-            assert_eq!(rolled_out_logs_warning.metadata.severity, Severity::Warn);
-        }
-
-        assert!(
-            rolled_out_message_warnings.is_empty(),
-            "must have encountered all expected warnings"
-        );
-    }
-
-    async fn validate(mut self) {
-        // we want to spend most of this test's effort exercising the behavior of dropping messages
-        let overall_messages_to_log = self.messages_allowed_in_cache * 15;
-
-        // we want to ensure that messages are retained after a component stops, up to our policy.
-        // this value should be chosen to ensure that we get to a point of rolling out all the
-        // messages for the stopped component and actually dropping it
-        let iteration_for_killing_a_puppet = self.messages_allowed_in_cache;
-
-        let event_source =
-            EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-        let mut event_stream = event_source
-            .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-            .await
-            .unwrap();
-
-        info!("having the puppets log packets until overflow");
-        for i in 0..overall_messages_to_log {
-            trace!(i, "loop ticked");
-            if i == iteration_for_killing_a_puppet {
-                let to_stop = self.running_puppets.pop().unwrap();
-                let receipt = to_stop.emit_packet().await;
-                self.check_receipt(receipt).await;
-
-                let id = to_stop.id;
-                drop(to_stop);
-
-                utils::wait_for_component_stopped_event(
-                    &self.instance.root.child_name(),
-                    &format!("puppet-{}", id),
-                    ExitStatusMatcher::Clean,
-                    &mut event_stream,
-                )
-                .await;
-            }
-
-            let puppet = self.running_puppets.choose(&mut self.rng).unwrap();
-            let receipt = puppet.emit_packet().await;
-            self.check_receipt(receipt).await;
-        }
-
-        assert_eq!(
-            self.current_expected_sources().len(),
-            self.running_puppets.len(),
-            "must have stopped a component and rolled out all of its logs"
-        );
-        info!("test complete!");
-    }
-
-    async fn check_receipt(&mut self, receipt: MessageReceipt) {
-        let next_message = self.log_subscription.next().await.unwrap();
-        assert_eq!(receipt, next_message);
-
-        self.messages_sent.push(receipt);
-        self.assert_archivist_state_matches_expected().await;
+        moniker
     }
 }
 
 struct Puppet {
     proxy: SocketPuppetProxy,
     moniker: String,
-    id: usize,
 }
 
 impl std::fmt::Debug for Puppet {
