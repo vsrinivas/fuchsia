@@ -17,7 +17,7 @@ class {{ .Name }};
 extern "C" const fidl_type_t {{ .CodingTableType.Name }};
 
 {{ .Docs }}
-class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}>  {
+class {{ .Name }} final {
  private:
   struct Storage_;
  public:
@@ -65,14 +65,6 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}>  {
     }
   {{- end }}
  private:
-  friend ::fidl::internal::CodableBase<{{ .Name }}>;
-  friend ::fidl::CodingTraits<{{ .Name }}>;
-  {{ .Name }}(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload) -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     {{- range .Members }}
       {{- .Docs }}
@@ -89,6 +81,24 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}>  {
   {{- if not .IsResourceType }}
     Storage_ CloneStorage_() const;
   {{- end }}
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<{{ . }},
+      {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}>;
+  static constexpr auto kMembers = std::make_tuple(
+    {{- range $i, $m := .Members }}
+      {{- if $i }}, {{ end -}}
+      ::fidl::internal::NaturalStructMember<Storage_, {{ $m.Type }}>{
+        &Storage_::{{ $m.Name }}, {{ $m.OffsetV1 }}, {{ $m.OffsetV2 }}
+        {{- if $m.HandleInformation -}}
+          ,std::make_optional<::fidl::HandleInformation>({
+            .object_type = {{ $m.HandleInformation.ObjectType }},
+            .rights = {{ $m.HandleInformation.Rights }}
+          })
+        {{- end -}}
+      }
+    {{- end -}}
+  );
+
 };
 
 {{ if .IsResourceType }}
@@ -115,44 +125,10 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}>  {
     static constexpr const fidl_type_t* kCodingTable = &{{ .CodingTableType.Self }};
   };
 
-  {{- /*
-  TODO(fxbug.dev/82189): We are reusing the HLCPP coding machinery. For now this
-  is the minimal to support encoding/decoding, without any optimizations. This may
-  change as we gradually move to a complete natural domain object fork.
-  */}}
-
   template <>
-  struct CodingTraits<{{ . }}> {
-    static constexpr size_t inline_size_v1_no_ee = {{ .TypeShapeV1.InlineSize }};
-    static constexpr size_t inline_size_v2 = {{ .TypeShapeV2.InlineSize }};
-
-    template <class EncoderImpl>
-    static void Encode(EncoderImpl* encoder, {{ . }}* value, size_t offset,
-                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-      [[maybe_unused]] uint32_t field_offset;
-      {{- range .Members }}
-      field_offset =
-          encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ?
-          {{ .OffsetV1 }} : {{ .OffsetV2 }};
-      ::fidl::Encode(
-          encoder,
-          &value->storage_.{{ .Name }},
-          offset + field_offset
-          {{- if .HandleInformation }}, ::fidl::HandleInformation {
-            .object_type = {{ .HandleInformation.ObjectType }},
-            .rights = {{ .HandleInformation.Rights }},
-          }{{ end }}
-      );
-      {{- end }}
-    }
-
-    template <typename DecoderImpl>
-    static void Decode(DecoderImpl* decoder, {{ . }}* value, size_t offset) {
-      {{- range .Members }}
-      ::fidl::Decode(decoder, &value->storage_.{{ .Name }}, offset + {{ .OffsetV2 }});
-      {{- end }}
-    }
-  };
+  struct CodingTraits<{{ . }}> final
+    : public ::fidl::internal::NaturalStructCodingTraits<{{ . }},
+        {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}> {};
 
   {{- EndifFuchsia -}}
 {{- end }}
@@ -162,17 +138,6 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}>  {
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 
-void {{ . }}::EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<{{ . }}, ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<{{ . }}>::Encode(&encoder, this, offset);
-}
-
-{{ . }}::{{ .Name }}(::fidl::Decoder& decoder) : storage_({
-    {{- range $index, $member := .Members -}}
-      {{- if $index }}, {{ end -}}
-      ::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .OffsetV2 }})
-    {{- end -}}
-}) {}
 
 {{- EndifFuchsia -}}
 

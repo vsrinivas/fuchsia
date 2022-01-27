@@ -4,23 +4,6 @@
 
 #ifdef __Fuchsia__
 
-void ::test_requestflexibleenvelope::
-    ProtocolRequestStrictResponseFlexibleRequest::EncodeWithoutValidating(
-        ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_requestflexibleenvelope::
-                    ProtocolRequestStrictResponseFlexibleRequest,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_requestflexibleenvelope::
-          ProtocolRequestStrictResponseFlexibleRequest>::Encode(&encoder, this,
-                                                                offset);
-}
-
-::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::
-    ProtocolRequestStrictResponseFlexibleRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_requestflexibleenvelope::StrictFoo>(
-          &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::
@@ -31,26 +14,6 @@ void ::test_requestflexibleenvelope::
 }
 #ifdef __Fuchsia__
 
-void ::test_requestflexibleenvelope::
-    ProtocolRequestFlexibleResponseStrictTopResponse::EncodeWithoutValidating(
-        ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_requestflexibleenvelope::
-                    ProtocolRequestFlexibleResponseStrictTopResponse,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_requestflexibleenvelope::
-          ProtocolRequestFlexibleResponseStrictTopResponse>::Encode(&encoder,
-                                                                    this,
-                                                                    offset);
-}
-
-::test_requestflexibleenvelope::
-    ProtocolRequestFlexibleResponseStrictTopResponse::
-        ProtocolRequestFlexibleResponseStrictTopResponse(
-            ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_requestflexibleenvelope::StrictFoo>(
-          &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_requestflexibleenvelope::
@@ -62,26 +25,6 @@ void ::test_requestflexibleenvelope::
 }
 #ifdef __Fuchsia__
 
-void ::test_requestflexibleenvelope::
-    ProtocolRequestStrictResponseFlexibleTopResponse::EncodeWithoutValidating(
-        ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_requestflexibleenvelope::
-                    ProtocolRequestStrictResponseFlexibleTopResponse,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_requestflexibleenvelope::
-          ProtocolRequestStrictResponseFlexibleTopResponse>::Encode(&encoder,
-                                                                    this,
-                                                                    offset);
-}
-
-::test_requestflexibleenvelope::
-    ProtocolRequestStrictResponseFlexibleTopResponse::
-        ProtocolRequestStrictResponseFlexibleTopResponse(
-            ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_requestflexibleenvelope::FlexibleFoo>(
-          &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_requestflexibleenvelope::
@@ -93,23 +36,6 @@ void ::test_requestflexibleenvelope::
 }
 #ifdef __Fuchsia__
 
-void ::test_requestflexibleenvelope::
-    ProtocolRequestFlexibleResponseStrictRequest::EncodeWithoutValidating(
-        ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_requestflexibleenvelope::
-                    ProtocolRequestFlexibleResponseStrictRequest,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_requestflexibleenvelope::
-          ProtocolRequestFlexibleResponseStrictRequest>::Encode(&encoder, this,
-                                                                offset);
-}
-
-::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest::
-    ProtocolRequestFlexibleResponseStrictRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_requestflexibleenvelope::FlexibleFoo>(
-          &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest::

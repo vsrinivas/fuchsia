@@ -5,7 +5,6 @@
 #include <fidl/test.requestflexibleenvelope/cpp/common_types.h>
 #include <fidl/test.requestflexibleenvelope/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -119,9 +118,7 @@ class StrictFoo final {
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
-class ProtocolRequestStrictResponseFlexibleRequest final
-    : public ::fidl::internal::CodableBase<
-          ProtocolRequestStrictResponseFlexibleRequest> {
+class ProtocolRequestStrictResponseFlexibleRequest final {
  private:
   struct Storage_;
 
@@ -154,30 +151,27 @@ class ProtocolRequestStrictResponseFlexibleRequest final
   ::test_requestflexibleenvelope::StrictFoo& s() { return storage_.s; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      ProtocolRequestStrictResponseFlexibleRequest>;
-  friend ::fidl::CodingTraits<ProtocolRequestStrictResponseFlexibleRequest>;
-  ProtocolRequestStrictResponseFlexibleRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_requestflexibleenvelope::StrictFoo s{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleRequest,
+      24, 16>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::test_requestflexibleenvelope::StrictFoo>{
+          &Storage_::s, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
-class ProtocolRequestFlexibleResponseStrictTopResponse final
-    : public ::fidl::internal::CodableBase<
-          ProtocolRequestFlexibleResponseStrictTopResponse> {
+class ProtocolRequestFlexibleResponseStrictTopResponse final {
  private:
   struct Storage_;
 
@@ -211,22 +205,21 @@ class ProtocolRequestFlexibleResponseStrictTopResponse final
   ::test_requestflexibleenvelope::StrictFoo& f() { return storage_.f; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      ProtocolRequestFlexibleResponseStrictTopResponse>;
-  friend ::fidl::CodingTraits<ProtocolRequestFlexibleResponseStrictTopResponse>;
-  ProtocolRequestFlexibleResponseStrictTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_requestflexibleenvelope::StrictFoo f{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictTopResponse,
+      24, 16>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::test_requestflexibleenvelope::StrictFoo>{
+          &Storage_::f, 0, 0});
 };
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
@@ -320,9 +313,7 @@ class FlexibleFoo final {
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
 
-class ProtocolRequestStrictResponseFlexibleTopResponse final
-    : public ::fidl::internal::CodableBase<
-          ProtocolRequestStrictResponseFlexibleTopResponse> {
+class ProtocolRequestStrictResponseFlexibleTopResponse final {
  private:
   struct Storage_;
 
@@ -356,30 +347,27 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final
   ::test_requestflexibleenvelope::FlexibleFoo& f() { return storage_.f; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      ProtocolRequestStrictResponseFlexibleTopResponse>;
-  friend ::fidl::CodingTraits<ProtocolRequestStrictResponseFlexibleTopResponse>;
-  ProtocolRequestStrictResponseFlexibleTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_requestflexibleenvelope::FlexibleFoo f{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleTopResponse,
+      24, 16>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::test_requestflexibleenvelope::FlexibleFoo>{
+          &Storage_::f, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
-class ProtocolRequestFlexibleResponseStrictRequest final
-    : public ::fidl::internal::CodableBase<
-          ProtocolRequestFlexibleResponseStrictRequest> {
+class ProtocolRequestFlexibleResponseStrictRequest final {
  private:
   struct Storage_;
 
@@ -412,22 +400,21 @@ class ProtocolRequestFlexibleResponseStrictRequest final
   ::test_requestflexibleenvelope::FlexibleFoo& s() { return storage_.s; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      ProtocolRequestFlexibleResponseStrictRequest>;
-  friend ::fidl::CodingTraits<ProtocolRequestFlexibleResponseStrictRequest>;
-  ProtocolRequestFlexibleResponseStrictRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_requestflexibleenvelope::FlexibleFoo s{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictRequest,
+      24, 16>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::test_requestflexibleenvelope::FlexibleFoo>{
+          &Storage_::s, 0, 0});
 };
 
 }  // namespace test_requestflexibleenvelope
@@ -454,32 +441,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<::test_requestflexibleenvelope::
-                        ProtocolRequestStrictResponseFlexibleRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_requestflexibleenvelope::
-          ProtocolRequestStrictResponseFlexibleRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.s, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_requestflexibleenvelope::
-                         ProtocolRequestStrictResponseFlexibleRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
-  }
-};
+                        ProtocolRequestStrictResponseFlexibleRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_requestflexibleenvelope::
+                    ProtocolRequestStrictResponseFlexibleRequest,
+                24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -503,33 +469,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<::test_requestflexibleenvelope::
-                        ProtocolRequestFlexibleResponseStrictTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_requestflexibleenvelope::
-          ProtocolRequestFlexibleResponseStrictTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.f, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_requestflexibleenvelope::
-          ProtocolRequestFlexibleResponseStrictTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.f, offset + 0);
-  }
-};
+                        ProtocolRequestFlexibleResponseStrictTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_requestflexibleenvelope::
+                    ProtocolRequestFlexibleResponseStrictTopResponse,
+                24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -553,33 +497,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<::test_requestflexibleenvelope::
-                        ProtocolRequestStrictResponseFlexibleTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_requestflexibleenvelope::
-          ProtocolRequestStrictResponseFlexibleTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.f, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_requestflexibleenvelope::
-          ProtocolRequestStrictResponseFlexibleTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.f, offset + 0);
-  }
-};
+                        ProtocolRequestStrictResponseFlexibleTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_requestflexibleenvelope::
+                    ProtocolRequestStrictResponseFlexibleTopResponse,
+                24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -603,32 +525,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<::test_requestflexibleenvelope::
-                        ProtocolRequestFlexibleResponseStrictRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_requestflexibleenvelope::
-          ProtocolRequestFlexibleResponseStrictRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.s, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_requestflexibleenvelope::
-                         ProtocolRequestFlexibleResponseStrictRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
-  }
-};
+                        ProtocolRequestFlexibleResponseStrictRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_requestflexibleenvelope::
+                    ProtocolRequestFlexibleResponseStrictRequest,
+                24, 16> {};
 #endif  // __Fuchsia__
 
 template <>

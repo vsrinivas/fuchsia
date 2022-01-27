@@ -4,16 +4,6 @@
 
 #ifdef __Fuchsia__
 
-void ::test_arrays::StructSmallArray::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<::test_arrays::StructSmallArray,
-                                           ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_arrays::StructSmallArray>::Encode(&encoder, this,
-                                                                offset);
-}
-
-::test_arrays::StructSmallArray::StructSmallArray(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::std::array<uint32_t, 2>>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_arrays::StructSmallArray::Storage_
@@ -22,16 +12,6 @@ test_arrays::StructSmallArray::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_arrays::StructLargeArray::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<::test_arrays::StructLargeArray,
-                                           ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_arrays::StructLargeArray>::Encode(&encoder, this,
-                                                                offset);
-}
-
-::test_arrays::StructLargeArray::StructLargeArray(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::std::array<uint32_t, 100>>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_arrays::StructLargeArray::Storage_

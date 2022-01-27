@@ -5,7 +5,6 @@
 #include <fidl/test.typealiases/cpp/common_types.h>
 #include <fidl/test.typealiases/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -26,8 +25,7 @@ class ExampleOfUseOfAliases;
 
 extern "C" const fidl_type_t test_typealiases_ExampleOfUseOfAliasesTable;
 
-class ExampleOfUseOfAliases final
-    : public ::fidl::internal::CodableBase<ExampleOfUseOfAliases> {
+class ExampleOfUseOfAliases final {
  private:
   struct Storage_;
 
@@ -121,15 +119,6 @@ class ExampleOfUseOfAliases final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<ExampleOfUseOfAliases>;
-  friend ::fidl::CodingTraits<ExampleOfUseOfAliases>;
-  ExampleOfUseOfAliases(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t field_of_u32{};
     ::std::vector<::std::string> field_of_vec_of_strings{};
@@ -143,6 +132,36 @@ class ExampleOfUseOfAliases final
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_typealiases::ExampleOfUseOfAliases, 88, 88>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          &Storage_::field_of_u32, 0, 0},
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::std::vector<::std::string>>{
+          &Storage_::field_of_vec_of_strings, 8, 8},
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::std::vector<::std::string>>{
+          &Storage_::field_of_vec_of_strings_at_most_nine, 24, 24},
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::std::vector<::std::string>>{
+          &Storage_::field_of_vec_of_strings_at_most_5, 40, 40},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::vector<::test_someotherlibrary::ReferenceMe>>{
+          &Storage_::field_of_vec_of_ref_me_at_most_5, 56, 56},
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::channel>{
+          &Storage_::field_of_channel, 72, 72,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL, .rights = 0x80000000})},
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::channel>{
+          &Storage_::field_of_client_end, 76, 76,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL, .rights = 0x80000000})},
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::channel>{
+          &Storage_::field_of_nullable_client_end, 80, 80,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL, .rights = 0x80000000})});
 };
 
 #endif  // __Fuchsia__
@@ -169,91 +188,9 @@ struct ::fidl::internal::TypeTraits<::test_typealiases::ExampleOfUseOfAliases>
 };
 
 template <>
-struct CodingTraits<::test_typealiases::ExampleOfUseOfAliases> {
-  static constexpr size_t inline_size_v1_no_ee = 88;
-  static constexpr size_t inline_size_v2 = 88;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_typealiases::ExampleOfUseOfAliases* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.field_of_u32,
-                   offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.field_of_vec_of_strings,
-                   offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 24
-                                                                           : 24;
-    ::fidl::Encode(encoder,
-                   &value->storage_.field_of_vec_of_strings_at_most_nine,
-                   offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 40
-                                                                           : 40;
-    ::fidl::Encode(encoder, &value->storage_.field_of_vec_of_strings_at_most_5,
-                   offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 56
-                                                                           : 56;
-    ::fidl::Encode(encoder, &value->storage_.field_of_vec_of_ref_me_at_most_5,
-                   offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 72
-                                                                           : 72;
-    ::fidl::Encode(encoder, &value->storage_.field_of_channel,
-                   offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = 0x80000000,
-                   });
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 76
-                                                                           : 76;
-    ::fidl::Encode(encoder, &value->storage_.field_of_client_end,
-                   offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = 0x80000000,
-                   });
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 80
-                                                                           : 80;
-    ::fidl::Encode(encoder, &value->storage_.field_of_nullable_client_end,
-                   offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = 0x80000000,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_typealiases::ExampleOfUseOfAliases* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.field_of_u32, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.field_of_vec_of_strings,
-                   offset + 8);
-    ::fidl::Decode(decoder,
-                   &value->storage_.field_of_vec_of_strings_at_most_nine,
-                   offset + 24);
-    ::fidl::Decode(decoder, &value->storage_.field_of_vec_of_strings_at_most_5,
-                   offset + 40);
-    ::fidl::Decode(decoder, &value->storage_.field_of_vec_of_ref_me_at_most_5,
-                   offset + 56);
-    ::fidl::Decode(decoder, &value->storage_.field_of_channel, offset + 72);
-    ::fidl::Decode(decoder, &value->storage_.field_of_client_end, offset + 76);
-    ::fidl::Decode(decoder, &value->storage_.field_of_nullable_client_end,
-                   offset + 80);
-  }
-};
+struct CodingTraits<::test_typealiases::ExampleOfUseOfAliases> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_typealiases::ExampleOfUseOfAliases, 88, 88> {};
 #endif  // __Fuchsia__
 
 template <>

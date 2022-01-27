@@ -5,7 +5,6 @@
 #include <fidl/test.emptystruct/cpp/common_types.h>
 #include <fidl/test.emptystruct/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -30,7 +29,7 @@ class EmptyProtocolReceiveRequest;
 
 extern "C" const fidl_type_t test_emptystruct_EmptyTable;
 
-class Empty final : public ::fidl::internal::CodableBase<Empty> {
+class Empty final {
  private:
   struct Storage_;
 
@@ -53,27 +52,23 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
   uint8_t& __reserved() { return storage_.__reserved; }
 
  private:
-  friend ::fidl::internal::CodableBase<Empty>;
-  friend ::fidl::CodingTraits<Empty>;
-  Empty(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint8_t __reserved = 0u;
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_emptystruct::Empty, 1, 1>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+          &Storage_::__reserved, 0, 0});
 };
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
-class EmptyProtocolSendRequest final
-    : public ::fidl::internal::CodableBase<EmptyProtocolSendRequest> {
+class EmptyProtocolSendRequest final {
  private:
   struct Storage_;
 
@@ -100,29 +95,24 @@ class EmptyProtocolSendRequest final
   ::test_emptystruct::Empty& e() { return storage_.e; }
 
  private:
-  friend ::fidl::internal::CodableBase<EmptyProtocolSendRequest>;
-  friend ::fidl::CodingTraits<EmptyProtocolSendRequest>;
-  EmptyProtocolSendRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_emptystruct::Empty e{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_emptystruct::EmptyProtocolSendRequest, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::test_emptystruct::Empty>{&Storage_::e, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
-class EmptyProtocolSendAndReceiveTopResponse final
-    : public ::fidl::internal::CodableBase<
-          EmptyProtocolSendAndReceiveTopResponse> {
+class EmptyProtocolSendAndReceiveTopResponse final {
  private:
   struct Storage_;
 
@@ -152,28 +142,24 @@ class EmptyProtocolSendAndReceiveTopResponse final
   ::test_emptystruct::Empty& e() { return storage_.e; }
 
  private:
-  friend ::fidl::internal::CodableBase<EmptyProtocolSendAndReceiveTopResponse>;
-  friend ::fidl::CodingTraits<EmptyProtocolSendAndReceiveTopResponse>;
-  EmptyProtocolSendAndReceiveTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_emptystruct::Empty e{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::test_emptystruct::Empty>{&Storage_::e, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
-class EmptyProtocolSendAndReceiveRequest final
-    : public ::fidl::internal::CodableBase<EmptyProtocolSendAndReceiveRequest> {
+class EmptyProtocolSendAndReceiveRequest final {
  private:
   struct Storage_;
 
@@ -203,27 +189,23 @@ class EmptyProtocolSendAndReceiveRequest final
   ::test_emptystruct::Empty& e() { return storage_.e; }
 
  private:
-  friend ::fidl::internal::CodableBase<EmptyProtocolSendAndReceiveRequest>;
-  friend ::fidl::CodingTraits<EmptyProtocolSendAndReceiveRequest>;
-  EmptyProtocolSendAndReceiveRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_emptystruct::Empty e{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::test_emptystruct::Empty>{&Storage_::e, 0, 0});
 };
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
 
-class EmptyProtocolReceiveRequest final
-    : public ::fidl::internal::CodableBase<EmptyProtocolReceiveRequest> {
+class EmptyProtocolReceiveRequest final {
  private:
   struct Storage_;
 
@@ -250,21 +232,18 @@ class EmptyProtocolReceiveRequest final
   ::test_emptystruct::Empty& e() { return storage_.e; }
 
  private:
-  friend ::fidl::internal::CodableBase<EmptyProtocolReceiveRequest>;
-  friend ::fidl::CodingTraits<EmptyProtocolReceiveRequest>;
-  EmptyProtocolReceiveRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_emptystruct::Empty e{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_emptystruct::EmptyProtocolReceiveRequest, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::test_emptystruct::Empty>{&Storage_::e, 0, 0});
 };
 
 }  // namespace test_emptystruct
@@ -284,27 +263,9 @@ struct ::fidl::internal::TypeTraits<::test_emptystruct::Empty> final {
 };
 
 template <>
-struct CodingTraits<::test_emptystruct::Empty> {
-  static constexpr size_t inline_size_v1_no_ee = 1;
-  static constexpr size_t inline_size_v2 = 1;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_emptystruct::Empty* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.__reserved, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_emptystruct::Empty* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
-  }
-};
+struct CodingTraits<::test_emptystruct::Empty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_emptystruct::Empty, 1, 1> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -324,29 +285,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_emptystruct::EmptyProtocolSendRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_emptystruct::EmptyProtocolSendRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.e, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_emptystruct::EmptyProtocolSendRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.e, offset + 0);
-  }
-};
+struct CodingTraits<::test_emptystruct::EmptyProtocolSendRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_emptystruct::EmptyProtocolSendRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -367,32 +308,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
-    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.e, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.e, offset + 0);
-  }
-};
+struct CodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -413,30 +332,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.e, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.e, offset + 0);
-  }
+struct CodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 8, 8> {
 };
 #endif  // __Fuchsia__
 
@@ -457,29 +355,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_emptystruct::EmptyProtocolReceiveRequest* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.e, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_emptystruct::EmptyProtocolReceiveRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.e, offset + 0);
-  }
-};
+struct CodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_emptystruct::EmptyProtocolReceiveRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

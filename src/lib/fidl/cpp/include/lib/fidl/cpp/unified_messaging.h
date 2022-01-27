@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_base.h>
 #include <lib/fidl/cpp/internal/natural_types.h>
+#include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging_declarations.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/transaction.h>
@@ -48,7 +49,7 @@ class MessageBase {
       // Delegate into the decode logic of the payload.
       const fidl_message_header& header = *message.header();
       auto metadata = ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(header);
-      ::fitx::result decode_result = Traits::Payload::DecodeFrom(
+      ::fitx::result decode_result = DecodeFrom<typename Traits::Payload>(
           ::fidl::internal::SkipTransactionHeader(std::move(message)), metadata);
       if (decode_result.is_error()) {
         return decode_result.take_error();
@@ -83,7 +84,8 @@ template <typename Payload = const cpp17::nullopt_t&>
   // |cpp17::nullopt|, which is of type |cpp17::nullopt_t|.
   constexpr bool kHasPayload = !std::is_same_v<cpp20::remove_cvref_t<Payload>, cpp17::nullopt_t>;
   if constexpr (kHasPayload) {
-    payload.EncodeWithoutValidating(encoder, sizeof(fidl_message_header_t));
+    encoder.Alloc(::fidl::EncodingInlineSize<Payload, ::fidl::Encoder>(&encoder));
+    ::fidl::CodingTraits<Payload>::Encode(&encoder, &payload, sizeof(fidl_message_header_t));
   }
 
   return encoder.GetMessage();

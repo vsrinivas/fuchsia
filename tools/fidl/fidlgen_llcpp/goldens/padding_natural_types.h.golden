@@ -5,7 +5,6 @@
 #include <fidl/test.padding/cpp/common_types.h>
 #include <fidl/test.padding/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -50,8 +49,7 @@ class Padding1ByteEnd;
 
 extern "C" const fidl_type_t test_padding_Padding7ByteMiddleTable;
 
-class Padding7ByteMiddle final
-    : public ::fidl::internal::CodableBase<Padding7ByteMiddle> {
+class Padding7ByteMiddle final {
  private:
   struct Storage_;
 
@@ -80,15 +78,6 @@ class Padding7ByteMiddle final
   uint64_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding7ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding7ByteMiddle>;
-  Padding7ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint8_t a{};
     uint64_t b{};
@@ -96,12 +85,19 @@ class Padding7ByteMiddle final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding7ByteMiddle, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::a, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::b, 8,
+                                                                8});
 };
 
 extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
 
-class Padding7ByteEnd final
-    : public ::fidl::internal::CodableBase<Padding7ByteEnd> {
+class Padding7ByteEnd final {
  private:
   struct Storage_;
 
@@ -129,15 +125,6 @@ class Padding7ByteEnd final
   uint8_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding7ByteEnd>;
-  friend ::fidl::CodingTraits<Padding7ByteEnd>;
-  Padding7ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint64_t a{};
     uint8_t b{};
@@ -145,12 +132,19 @@ class Padding7ByteEnd final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding7ByteEnd, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::b, 8,
+                                                               8});
 };
 
 extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
 
-class Padding6ByteMiddle final
-    : public ::fidl::internal::CodableBase<Padding6ByteMiddle> {
+class Padding6ByteMiddle final {
  private:
   struct Storage_;
 
@@ -179,15 +173,6 @@ class Padding6ByteMiddle final
   uint64_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding6ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding6ByteMiddle>;
-  Padding6ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint16_t a{};
     uint64_t b{};
@@ -195,12 +180,19 @@ class Padding6ByteMiddle final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding6ByteMiddle, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::b, 8,
+                                                                8});
 };
 
 extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
 
-class Padding6ByteEnd final
-    : public ::fidl::internal::CodableBase<Padding6ByteEnd> {
+class Padding6ByteEnd final {
  private:
   struct Storage_;
 
@@ -228,15 +220,6 @@ class Padding6ByteEnd final
   uint16_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding6ByteEnd>;
-  friend ::fidl::CodingTraits<Padding6ByteEnd>;
-  Padding6ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint64_t a{};
     uint16_t b{};
@@ -244,12 +227,19 @@ class Padding6ByteEnd final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding6ByteEnd, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{&Storage_::b, 8,
+                                                                8});
 };
 
 extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
 
-class Padding5ByteMiddle final
-    : public ::fidl::internal::CodableBase<Padding5ByteMiddle> {
+class Padding5ByteMiddle final {
  private:
   struct Storage_;
 
@@ -282,15 +272,6 @@ class Padding5ByteMiddle final
   uint64_t& c() { return storage_.c; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding5ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding5ByteMiddle>;
-  Padding5ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint16_t a{};
     uint8_t b{};
@@ -299,12 +280,21 @@ class Padding5ByteMiddle final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding5ByteMiddle, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::b, 2,
+                                                               2},
+      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::c, 8,
+                                                                8});
 };
 
 extern "C" const fidl_type_t test_padding_Padding5ByteEndTable;
 
-class Padding5ByteEnd final
-    : public ::fidl::internal::CodableBase<Padding5ByteEnd> {
+class Padding5ByteEnd final {
  private:
   struct Storage_;
 
@@ -336,15 +326,6 @@ class Padding5ByteEnd final
   uint8_t& c() { return storage_.c; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding5ByteEnd>;
-  friend ::fidl::CodingTraits<Padding5ByteEnd>;
-  Padding5ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint64_t a{};
     uint16_t b{};
@@ -353,12 +334,21 @@ class Padding5ByteEnd final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding5ByteEnd, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{&Storage_::b, 8,
+                                                                8},
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::c, 10,
+                                                               10});
 };
 
 extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
 
-class Padding4ByteMiddle final
-    : public ::fidl::internal::CodableBase<Padding4ByteMiddle> {
+class Padding4ByteMiddle final {
  private:
   struct Storage_;
 
@@ -387,15 +377,6 @@ class Padding4ByteMiddle final
   uint64_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding4ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding4ByteMiddle>;
-  Padding4ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t a{};
     uint64_t b{};
@@ -403,12 +384,19 @@ class Padding4ByteMiddle final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding4ByteMiddle, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::b, 8,
+                                                                8});
 };
 
 extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
 
-class Padding4ByteEnd final
-    : public ::fidl::internal::CodableBase<Padding4ByteEnd> {
+class Padding4ByteEnd final {
  private:
   struct Storage_;
 
@@ -436,15 +424,6 @@ class Padding4ByteEnd final
   uint32_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding4ByteEnd>;
-  friend ::fidl::CodingTraits<Padding4ByteEnd>;
-  Padding4ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint64_t a{};
     uint32_t b{};
@@ -452,12 +431,19 @@ class Padding4ByteEnd final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding4ByteEnd, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::b, 8,
+                                                                8});
 };
 
 extern "C" const fidl_type_t test_padding_Padding4ByteAlignmentLength12Table;
 
-class Padding4ByteAlignmentLength12 final
-    : public ::fidl::internal::CodableBase<Padding4ByteAlignmentLength12> {
+class Padding4ByteAlignmentLength12 final {
  private:
   struct Storage_;
 
@@ -502,15 +488,6 @@ class Padding4ByteAlignmentLength12 final
   uint16_t& d() { return storage_.d; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding4ByteAlignmentLength12>;
-  friend ::fidl::CodingTraits<Padding4ByteAlignmentLength12>;
-  Padding4ByteAlignmentLength12(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t a{};
     uint8_t b{};
@@ -520,12 +497,23 @@ class Padding4ByteAlignmentLength12 final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding4ByteAlignmentLength12, 12, 12>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::b, 4,
+                                                               4},
+      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{&Storage_::c, 6,
+                                                                6},
+      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{&Storage_::d, 8,
+                                                                8});
 };
 
 extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
 
-class Padding3ByteMiddle final
-    : public ::fidl::internal::CodableBase<Padding3ByteMiddle> {
+class Padding3ByteMiddle final {
  private:
   struct Storage_;
 
@@ -554,15 +542,6 @@ class Padding3ByteMiddle final
   uint32_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding3ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding3ByteMiddle>;
-  Padding3ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint8_t a{};
     uint32_t b{};
@@ -570,12 +549,19 @@ class Padding3ByteMiddle final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding3ByteMiddle, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::a, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::b, 4,
+                                                                4});
 };
 
 extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
 
-class Padding3ByteEnd final
-    : public ::fidl::internal::CodableBase<Padding3ByteEnd> {
+class Padding3ByteEnd final {
  private:
   struct Storage_;
 
@@ -603,15 +589,6 @@ class Padding3ByteEnd final
   uint8_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding3ByteEnd>;
-  friend ::fidl::CodingTraits<Padding3ByteEnd>;
-  Padding3ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t a{};
     uint8_t b{};
@@ -619,12 +596,19 @@ class Padding3ByteEnd final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding3ByteEnd, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::b, 4,
+                                                               4});
 };
 
 extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
 
-class Padding2ByteMiddle final
-    : public ::fidl::internal::CodableBase<Padding2ByteMiddle> {
+class Padding2ByteMiddle final {
  private:
   struct Storage_;
 
@@ -653,15 +637,6 @@ class Padding2ByteMiddle final
   uint32_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding2ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding2ByteMiddle>;
-  Padding2ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint16_t a{};
     uint32_t b{};
@@ -669,12 +644,19 @@ class Padding2ByteMiddle final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding2ByteMiddle, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::b, 4,
+                                                                4});
 };
 
 extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
 
-class Padding2ByteEnd final
-    : public ::fidl::internal::CodableBase<Padding2ByteEnd> {
+class Padding2ByteEnd final {
  private:
   struct Storage_;
 
@@ -702,15 +684,6 @@ class Padding2ByteEnd final
   uint16_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding2ByteEnd>;
-  friend ::fidl::CodingTraits<Padding2ByteEnd>;
-  Padding2ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t a{};
     uint16_t b{};
@@ -718,12 +691,19 @@ class Padding2ByteEnd final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding2ByteEnd, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{&Storage_::b, 4,
+                                                                4});
 };
 
 extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
 
-class Padding2ByteAlignmentLength6 final
-    : public ::fidl::internal::CodableBase<Padding2ByteAlignmentLength6> {
+class Padding2ByteAlignmentLength6 final {
  private:
   struct Storage_;
 
@@ -760,15 +740,6 @@ class Padding2ByteAlignmentLength6 final
   uint8_t& c() { return storage_.c; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding2ByteAlignmentLength6>;
-  friend ::fidl::CodingTraits<Padding2ByteAlignmentLength6>;
-  Padding2ByteAlignmentLength6(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint8_t a{};
     uint16_t b{};
@@ -777,12 +748,21 @@ class Padding2ByteAlignmentLength6 final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding2ByteAlignmentLength6, 6, 6>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::a, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{&Storage_::b, 2,
+                                                                2},
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::c, 4,
+                                                               4});
 };
 
 extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
 
-class Padding1ByteMiddle final
-    : public ::fidl::internal::CodableBase<Padding1ByteMiddle> {
+class Padding1ByteMiddle final {
  private:
   struct Storage_;
 
@@ -811,15 +791,6 @@ class Padding1ByteMiddle final
   uint16_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding1ByteMiddle>;
-  friend ::fidl::CodingTraits<Padding1ByteMiddle>;
-  Padding1ByteMiddle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint8_t a{};
     uint16_t b{};
@@ -827,12 +798,19 @@ class Padding1ByteMiddle final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding1ByteMiddle, 4, 4>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::a, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{&Storage_::b, 2,
+                                                                2});
 };
 
 extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
 
-class Padding1ByteEnd final
-    : public ::fidl::internal::CodableBase<Padding1ByteEnd> {
+class Padding1ByteEnd final {
  private:
   struct Storage_;
 
@@ -860,15 +838,6 @@ class Padding1ByteEnd final
   uint8_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Padding1ByteEnd>;
-  friend ::fidl::CodingTraits<Padding1ByteEnd>;
-  Padding1ByteEnd(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint16_t a{};
     uint8_t b{};
@@ -876,6 +845,14 @@ class Padding1ByteEnd final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_padding::Padding1ByteEnd, 4, 4>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::b, 2,
+                                                               2});
 };
 
 }  // namespace test_padding
@@ -896,33 +873,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding7ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding7ByteMiddle> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding7ByteMiddle* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding7ByteMiddle* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-  }
-};
+struct CodingTraits<::test_padding::Padding7ByteMiddle> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding7ByteMiddle, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -939,33 +892,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding7ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding7ByteEnd> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding7ByteEnd* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding7ByteEnd* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-  }
-};
+struct CodingTraits<::test_padding::Padding7ByteEnd> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding7ByteEnd, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -983,33 +912,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding6ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding6ByteMiddle> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding6ByteMiddle* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding6ByteMiddle* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-  }
-};
+struct CodingTraits<::test_padding::Padding6ByteMiddle> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding6ByteMiddle, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1026,33 +931,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding6ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding6ByteEnd> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding6ByteEnd* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding6ByteEnd* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-  }
-};
+struct CodingTraits<::test_padding::Padding6ByteEnd> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding6ByteEnd, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1070,38 +951,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding5ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding5ByteMiddle> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding5ByteMiddle* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 2
-                                                                           : 2;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding5ByteMiddle* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 2);
-    ::fidl::Decode(decoder, &value->storage_.c, offset + 8);
-  }
-};
+struct CodingTraits<::test_padding::Padding5ByteMiddle> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding5ByteMiddle, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1118,38 +970,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding5ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding5ByteEnd> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding5ByteEnd* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 10
-                                                                           : 10;
-    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding5ByteEnd* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-    ::fidl::Decode(decoder, &value->storage_.c, offset + 10);
-  }
-};
+struct CodingTraits<::test_padding::Padding5ByteEnd> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding5ByteEnd, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1167,33 +990,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding4ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding4ByteMiddle> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding4ByteMiddle* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding4ByteMiddle* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-  }
-};
+struct CodingTraits<::test_padding::Padding4ByteMiddle> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding4ByteMiddle, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1210,33 +1009,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding4ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding4ByteEnd> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding4ByteEnd* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding4ByteEnd* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-  }
-};
+struct CodingTraits<::test_padding::Padding4ByteEnd> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding4ByteEnd, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1256,44 +1031,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding4ByteAlignmentLength12> {
-  static constexpr size_t inline_size_v1_no_ee = 12;
-  static constexpr size_t inline_size_v2 = 12;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_padding::Padding4ByteAlignmentLength12* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
-                                                                           : 4;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 6
-                                                                           : 6;
-    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.d, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding4ByteAlignmentLength12* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
-    ::fidl::Decode(decoder, &value->storage_.c, offset + 6);
-    ::fidl::Decode(decoder, &value->storage_.d, offset + 8);
-  }
-};
+struct CodingTraits<::test_padding::Padding4ByteAlignmentLength12> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding4ByteAlignmentLength12, 12, 12> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1311,33 +1051,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding3ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding3ByteMiddle> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding3ByteMiddle* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
-                                                                           : 4;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding3ByteMiddle* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
-  }
-};
+struct CodingTraits<::test_padding::Padding3ByteMiddle> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding3ByteMiddle, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1354,33 +1070,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding3ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding3ByteEnd> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding3ByteEnd* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
-                                                                           : 4;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding3ByteEnd* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
-  }
-};
+struct CodingTraits<::test_padding::Padding3ByteEnd> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding3ByteEnd, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1398,33 +1090,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding2ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding2ByteMiddle> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding2ByteMiddle* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
-                                                                           : 4;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding2ByteMiddle* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
-  }
-};
+struct CodingTraits<::test_padding::Padding2ByteMiddle> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding2ByteMiddle, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1441,33 +1109,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding2ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding2ByteEnd> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding2ByteEnd* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
-                                                                           : 4;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding2ByteEnd* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
-  }
-};
+struct CodingTraits<::test_padding::Padding2ByteEnd> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding2ByteEnd, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1487,39 +1131,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding2ByteAlignmentLength6> {
-  static constexpr size_t inline_size_v1_no_ee = 6;
-  static constexpr size_t inline_size_v2 = 6;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding2ByteAlignmentLength6* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 2
-                                                                           : 2;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
-                                                                           : 4;
-    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding2ByteAlignmentLength6* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 2);
-    ::fidl::Decode(decoder, &value->storage_.c, offset + 4);
-  }
-};
+struct CodingTraits<::test_padding::Padding2ByteAlignmentLength6> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding2ByteAlignmentLength6, 6, 6> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1537,33 +1151,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding1ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding1ByteMiddle> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding1ByteMiddle* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 2
-                                                                           : 2;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding1ByteMiddle* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 2);
-  }
-};
+struct CodingTraits<::test_padding::Padding1ByteMiddle> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding1ByteMiddle, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1580,33 +1170,9 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding1ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding1ByteEnd> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_padding::Padding1ByteEnd* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 2
-                                                                           : 2;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_padding::Padding1ByteEnd* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 2);
-  }
-};
+struct CodingTraits<::test_padding::Padding1ByteEnd> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_padding::Padding1ByteEnd, 4, 4> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

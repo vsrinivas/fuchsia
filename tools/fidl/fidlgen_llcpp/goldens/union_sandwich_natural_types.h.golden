@@ -5,7 +5,6 @@
 #include <fidl/test.unionsandwich/cpp/common_types.h>
 #include <fidl/test.unionsandwich/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -107,8 +106,7 @@ class UnionSize8Alignment4 final {
 extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize8Alignment4Table;
 
-class SandwichUnionSize8Alignment4 final
-    : public ::fidl::internal::CodableBase<SandwichUnionSize8Alignment4> {
+class SandwichUnionSize8Alignment4 final {
  private:
   struct Storage_;
 
@@ -153,15 +151,6 @@ class SandwichUnionSize8Alignment4 final
   uint32_t& after() { return storage_.after; }
 
  private:
-  friend ::fidl::internal::CodableBase<SandwichUnionSize8Alignment4>;
-  friend ::fidl::CodingTraits<SandwichUnionSize8Alignment4>;
-  SandwichUnionSize8Alignment4(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t before{};
     ::test_unionsandwich::UnionSize8Alignment4 union_{};
@@ -170,6 +159,17 @@ class SandwichUnionSize8Alignment4 final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_unionsandwich::SandwichUnionSize8Alignment4, 40, 32>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          &Storage_::before, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_unionsandwich::UnionSize8Alignment4>{
+          &Storage_::union_, 8, 8},
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          &Storage_::after, 32, 24});
 };
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize36Alignment4Table;
@@ -246,8 +246,7 @@ class UnionSize36Alignment4 final {
 extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize36Alignment4Table;
 
-class SandwichUnionSize36Alignment4 final
-    : public ::fidl::internal::CodableBase<SandwichUnionSize36Alignment4> {
+class SandwichUnionSize36Alignment4 final {
  private:
   struct Storage_;
 
@@ -292,15 +291,6 @@ class SandwichUnionSize36Alignment4 final
   uint32_t& after() { return storage_.after; }
 
  private:
-  friend ::fidl::internal::CodableBase<SandwichUnionSize36Alignment4>;
-  friend ::fidl::CodingTraits<SandwichUnionSize36Alignment4>;
-  SandwichUnionSize36Alignment4(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t before{};
     ::test_unionsandwich::UnionSize36Alignment4 union_{};
@@ -309,6 +299,17 @@ class SandwichUnionSize36Alignment4 final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_unionsandwich::SandwichUnionSize36Alignment4, 40, 32>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          &Storage_::before, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_unionsandwich::UnionSize36Alignment4>{
+          &Storage_::union_, 8, 8},
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          &Storage_::after, 32, 24});
 };
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize12Alignment4Table;
@@ -385,8 +386,7 @@ class UnionSize12Alignment4 final {
 extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize12Alignment4Table;
 
-class SandwichUnionSize12Alignment4 final
-    : public ::fidl::internal::CodableBase<SandwichUnionSize12Alignment4> {
+class SandwichUnionSize12Alignment4 final {
  private:
   struct Storage_;
 
@@ -431,15 +431,6 @@ class SandwichUnionSize12Alignment4 final
   int32_t& after() { return storage_.after; }
 
  private:
-  friend ::fidl::internal::CodableBase<SandwichUnionSize12Alignment4>;
-  friend ::fidl::CodingTraits<SandwichUnionSize12Alignment4>;
-  SandwichUnionSize12Alignment4(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t before{};
     ::test_unionsandwich::UnionSize12Alignment4 union_{};
@@ -448,12 +439,22 @@ class SandwichUnionSize12Alignment4 final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_unionsandwich::SandwichUnionSize12Alignment4, 40, 32>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          &Storage_::before, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_unionsandwich::UnionSize12Alignment4>{
+          &Storage_::union_, 8, 8},
+      ::fidl::internal::NaturalStructMember<Storage_, int32_t>{&Storage_::after,
+                                                               32, 24});
 };
 
 extern "C" const fidl_type_t test_unionsandwich_StructSize16Alignment8Table;
 
-class StructSize16Alignment8 final
-    : public ::fidl::internal::CodableBase<StructSize16Alignment8> {
+class StructSize16Alignment8 final {
  private:
   struct Storage_;
 
@@ -484,15 +485,6 @@ class StructSize16Alignment8 final
   uint64_t& f2() { return storage_.f2; }
 
  private:
-  friend ::fidl::internal::CodableBase<StructSize16Alignment8>;
-  friend ::fidl::CodingTraits<StructSize16Alignment8>;
-  StructSize16Alignment8(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint64_t f1{};
     uint64_t f2{};
@@ -500,6 +492,14 @@ class StructSize16Alignment8 final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_unionsandwich::StructSize16Alignment8, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::f1,
+                                                                0, 0},
+      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::f2,
+                                                                8, 8});
 };
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize24Alignment8Table;
@@ -578,8 +578,7 @@ class UnionSize24Alignment8 final {
 extern "C" const fidl_type_t
     test_unionsandwich_SandwichUnionSize24Alignment8Table;
 
-class SandwichUnionSize24Alignment8 final
-    : public ::fidl::internal::CodableBase<SandwichUnionSize24Alignment8> {
+class SandwichUnionSize24Alignment8 final {
  private:
   struct Storage_;
 
@@ -624,15 +623,6 @@ class SandwichUnionSize24Alignment8 final
   uint32_t& after() { return storage_.after; }
 
  private:
-  friend ::fidl::internal::CodableBase<SandwichUnionSize24Alignment8>;
-  friend ::fidl::CodingTraits<SandwichUnionSize24Alignment8>;
-  SandwichUnionSize24Alignment8(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t before{};
     ::test_unionsandwich::UnionSize24Alignment8 union_{};
@@ -641,6 +631,17 @@ class SandwichUnionSize24Alignment8 final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_unionsandwich::SandwichUnionSize24Alignment8, 40, 32>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          &Storage_::before, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_unionsandwich::UnionSize24Alignment8>{
+          &Storage_::union_, 8, 8},
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          &Storage_::after, 32, 24});
 };
 
 }  // namespace test_unionsandwich
@@ -664,39 +665,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_unionsandwich::SandwichUnionSize8Alignment4> {
-  static constexpr size_t inline_size_v1_no_ee = 40;
-  static constexpr size_t inline_size_v2 = 32;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_unionsandwich::SandwichUnionSize8Alignment4* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.before, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.union_, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 32
-                                                                           : 24;
-    ::fidl::Encode(encoder, &value->storage_.after, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_unionsandwich::SandwichUnionSize8Alignment4* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.before, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.union_, offset + 8);
-    ::fidl::Decode(decoder, &value->storage_.after, offset + 24);
-  }
-};
+struct CodingTraits<::test_unionsandwich::SandwichUnionSize8Alignment4> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_unionsandwich::SandwichUnionSize8Alignment4, 40, 32> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -717,39 +688,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_unionsandwich::SandwichUnionSize36Alignment4> {
-  static constexpr size_t inline_size_v1_no_ee = 40;
-  static constexpr size_t inline_size_v2 = 32;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_unionsandwich::SandwichUnionSize36Alignment4* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.before, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.union_, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 32
-                                                                           : 24;
-    ::fidl::Encode(encoder, &value->storage_.after, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_unionsandwich::SandwichUnionSize36Alignment4* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.before, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.union_, offset + 8);
-    ::fidl::Decode(decoder, &value->storage_.after, offset + 24);
-  }
-};
+struct CodingTraits<::test_unionsandwich::SandwichUnionSize36Alignment4> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_unionsandwich::SandwichUnionSize36Alignment4, 40, 32> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -770,39 +711,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_unionsandwich::SandwichUnionSize12Alignment4> {
-  static constexpr size_t inline_size_v1_no_ee = 40;
-  static constexpr size_t inline_size_v2 = 32;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_unionsandwich::SandwichUnionSize12Alignment4* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.before, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.union_, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 32
-                                                                           : 24;
-    ::fidl::Encode(encoder, &value->storage_.after, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_unionsandwich::SandwichUnionSize12Alignment4* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.before, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.union_, offset + 8);
-    ::fidl::Decode(decoder, &value->storage_.after, offset + 24);
-  }
-};
+struct CodingTraits<::test_unionsandwich::SandwichUnionSize12Alignment4> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_unionsandwich::SandwichUnionSize12Alignment4, 40, 32> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -822,34 +733,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_unionsandwich::StructSize16Alignment8> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_unionsandwich::StructSize16Alignment8* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.f1, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.f2, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_unionsandwich::StructSize16Alignment8* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.f1, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.f2, offset + 8);
-  }
-};
+struct CodingTraits<::test_unionsandwich::StructSize16Alignment8> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_unionsandwich::StructSize16Alignment8, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -870,39 +756,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_unionsandwich::SandwichUnionSize24Alignment8> {
-  static constexpr size_t inline_size_v1_no_ee = 40;
-  static constexpr size_t inline_size_v2 = 32;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_unionsandwich::SandwichUnionSize24Alignment8* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.before, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.union_, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 32
-                                                                           : 24;
-    ::fidl::Encode(encoder, &value->storage_.after, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_unionsandwich::SandwichUnionSize24Alignment8* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.before, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.union_, offset + 8);
-    ::fidl::Decode(decoder, &value->storage_.after, offset + 24);
-  }
-};
+struct CodingTraits<::test_unionsandwich::SandwichUnionSize24Alignment8> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_unionsandwich::SandwichUnionSize24Alignment8, 40, 32> {};
 #endif  // __Fuchsia__
 
 template <>

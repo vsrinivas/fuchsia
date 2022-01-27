@@ -5,7 +5,6 @@
 #include <fidl/test.errorsyntax/cpp/common_types.h>
 #include <fidl/test.errorsyntax/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -31,9 +30,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result;
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 
-class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final
-    : public ::fidl::internal::CodableBase<
-          ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
+class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final {
  private:
   struct Storage_;
 
@@ -64,23 +61,19 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final
   int64_t& value() { return storage_.value; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Response>;
-  friend ::fidl::CodingTraits<
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Response>;
-  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t value{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response, 8,
+      8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+          &Storage_::value, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -195,9 +188,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 
-class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
-    : public ::fidl::internal::CodableBase<
-          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
+class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final {
  private:
   struct Storage_;
 
@@ -237,17 +228,6 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
-  friend ::fidl::CodingTraits<
-      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
-  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
         result{};
@@ -255,14 +235,21 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
+      24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_,
+          ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>{
+          &Storage_::result, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 
-class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final
-    : public ::fidl::internal::CodableBase<
-          ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final {
  private:
   struct Storage_;
 
@@ -292,22 +279,19 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final
   ::std::string& s() { return storage_.s; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
-  friend ::fidl::CodingTraits<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::string s{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16,
+      16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
+          &Storage_::s, 0, 0});
 };
 
 }  // namespace test_errorsyntax
@@ -333,33 +317,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response*
-          value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.value, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response*
-          value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.value, offset + 0);
-  }
-};
+    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response,
+          8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -382,33 +344,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
-          value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
-          value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
-};
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_errorsyntax::
+                    ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
+                24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -431,31 +371,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.s, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
-  }
-};
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest,
+          16, 16> {};
 #endif  // __Fuchsia__
 
 template <>

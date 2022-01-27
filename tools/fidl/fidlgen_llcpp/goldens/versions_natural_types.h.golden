@@ -5,7 +5,6 @@
 #include <fidl/test.versions/cpp/common_types.h>
 #include <fidl/test.versions/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -132,7 +131,7 @@ class Table final {
 
 extern "C" const fidl_type_t test_versions_StructTable;
 
-class Struct final : public ::fidl::internal::CodableBase<Struct> {
+class Struct final {
  private:
   struct Storage_;
 
@@ -154,21 +153,18 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
   uint32_t& x() { return storage_.x; }
 
  private:
-  friend ::fidl::internal::CodableBase<Struct>;
-  friend ::fidl::CodingTraits<Struct>;
-  Struct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t x{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_versions::Struct, 4, 4>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          &Storage_::x, 0, 0});
 };
 
 constexpr uint32_t Const = 0u;
@@ -189,27 +185,9 @@ struct ::fidl::internal::TypeTraits<::test_versions::Struct> final {
 };
 
 template <>
-struct CodingTraits<::test_versions::Struct> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_versions::Struct* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.x, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_versions::Struct* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
-  }
-};
+struct CodingTraits<::test_versions::Struct> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_versions::Struct, 4, 4> {};
 #endif  // __Fuchsia__
 
 template <>

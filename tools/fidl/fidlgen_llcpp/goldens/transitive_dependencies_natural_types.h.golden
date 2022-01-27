@@ -5,7 +5,6 @@
 #include <fidl/test.transitivedependencies/cpp/common_types.h>
 #include <fidl/test.transitivedependencies/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -22,7 +21,7 @@ class Baz;
 
 extern "C" const fidl_type_t test_transitivedependencies_BazTable;
 
-class Baz final : public ::fidl::internal::CodableBase<Baz> {
+class Baz final {
  private:
   struct Storage_;
 
@@ -44,21 +43,18 @@ class Baz final : public ::fidl::internal::CodableBase<Baz> {
   ::test_middle::Bar& g() { return storage_.g; }
 
  private:
-  friend ::fidl::internal::CodableBase<Baz>;
-  friend ::fidl::CodingTraits<Baz>;
-  Baz(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_middle::Bar g{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_transitivedependencies::Baz, 4, 4>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::test_middle::Bar>{
+          &Storage_::g, 0, 0});
 };
 
 }  // namespace test_transitivedependencies
@@ -79,28 +75,9 @@ struct ::fidl::internal::TypeTraits<::test_transitivedependencies::Baz> final {
 };
 
 template <>
-struct CodingTraits<::test_transitivedependencies::Baz> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_transitivedependencies::Baz* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.g, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_transitivedependencies::Baz* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.g, offset + 0);
-  }
-};
+struct CodingTraits<::test_transitivedependencies::Baz> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_transitivedependencies::Baz, 4, 4> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

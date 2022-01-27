@@ -5,7 +5,6 @@
 #include <fidl/test.byteandbytes/cpp/common_types.h>
 #include <fidl/test.byteandbytes/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -20,7 +19,7 @@ class ByteAndBytes;
 
 extern "C" const fidl_type_t test_byteandbytes_ByteAndBytesTable;
 
-class ByteAndBytes final : public ::fidl::internal::CodableBase<ByteAndBytes> {
+class ByteAndBytes final {
  private:
   struct Storage_;
 
@@ -73,15 +72,6 @@ class ByteAndBytes final : public ::fidl::internal::CodableBase<ByteAndBytes> {
   }
 
  private:
-  friend ::fidl::internal::CodableBase<ByteAndBytes>;
-  friend ::fidl::CodingTraits<ByteAndBytes>;
-  ByteAndBytes(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint8_t single_byte{};
     ::std::vector<uint8_t> many_bytes{};
@@ -91,6 +81,19 @@ class ByteAndBytes final : public ::fidl::internal::CodableBase<ByteAndBytes> {
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_byteandbytes::ByteAndBytes, 56, 56>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+          &Storage_::single_byte, 0, 0},
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::vector<uint8_t>>{
+          &Storage_::many_bytes, 8, 8},
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::vector<uint8_t>>{
+          &Storage_::only_one_k_bytes, 24, 24},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::cpp17::optional<::std::vector<uint8_t>>>{
+          &Storage_::opt_only_one_k_bytes, 40, 40});
 };
 
 }  // namespace test_byteandbytes
@@ -110,46 +113,9 @@ struct ::fidl::internal::TypeTraits<::test_byteandbytes::ByteAndBytes> final {
 };
 
 template <>
-struct CodingTraits<::test_byteandbytes::ByteAndBytes> {
-  static constexpr size_t inline_size_v1_no_ee = 56;
-  static constexpr size_t inline_size_v2 = 56;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_byteandbytes::ByteAndBytes* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.single_byte,
-                   offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.many_bytes, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 24
-                                                                           : 24;
-    ::fidl::Encode(encoder, &value->storage_.only_one_k_bytes,
-                   offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 40
-                                                                           : 40;
-    ::fidl::Encode(encoder, &value->storage_.opt_only_one_k_bytes,
-                   offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_byteandbytes::ByteAndBytes* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.single_byte, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.many_bytes, offset + 8);
-    ::fidl::Decode(decoder, &value->storage_.only_one_k_bytes, offset + 24);
-    ::fidl::Decode(decoder, &value->storage_.opt_only_one_k_bytes, offset + 40);
-  }
-};
+struct CodingTraits<::test_byteandbytes::ByteAndBytes> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_byteandbytes::ByteAndBytes, 56, 56> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

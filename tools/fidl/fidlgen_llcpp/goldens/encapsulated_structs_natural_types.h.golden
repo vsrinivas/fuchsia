@@ -5,7 +5,6 @@
 #include <fidl/test.encapsulatedstructs/cpp/common_types.h>
 #include <fidl/test.encapsulatedstructs/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -35,8 +34,7 @@ class TopLevelStruct;
 extern "C" const fidl_type_t
     test_encapsulatedstructs_NonInlineStructTestStructTable;
 
-class NonInlineStructTestStruct final
-    : public ::fidl::internal::CodableBase<NonInlineStructTestStruct> {
+class NonInlineStructTestStruct final {
  private:
   struct Storage_;
 
@@ -67,28 +65,30 @@ class NonInlineStructTestStruct final
   ::zx::handle& h() { return storage_.h; }
 
  private:
-  friend ::fidl::internal::CodableBase<NonInlineStructTestStruct>;
-  friend ::fidl::CodingTraits<NonInlineStructTestStruct>;
-  NonInlineStructTestStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element{};
     ::zx::handle h{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_encapsulatedstructs::NonInlineStructTestStruct, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>>{
+          &Storage_::element, 0, 0},
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
+          &Storage_::h, 8, 8,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_NONE, .rights = 0x80000000})});
 };
 
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_encapsulatedstructs_Int8Int32Table;
 
-class Int8Int32 final : public ::fidl::internal::CodableBase<Int8Int32> {
+class Int8Int32 final {
  private:
   struct Storage_;
 
@@ -116,15 +116,6 @@ class Int8Int32 final : public ::fidl::internal::CodableBase<Int8Int32> {
   int32_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Int8Int32>;
-  friend ::fidl::CodingTraits<Int8Int32>;
-  Int8Int32(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int8_t a{};
     int32_t b{};
@@ -132,11 +123,19 @@ class Int8Int32 final : public ::fidl::internal::CodableBase<Int8Int32> {
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_encapsulatedstructs::Int8Int32, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, int8_t>{&Storage_::a, 0,
+                                                              0},
+      ::fidl::internal::NaturalStructMember<Storage_, int32_t>{&Storage_::b, 4,
+                                                               4});
 };
 
 extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
 
-class Int16Int8 final : public ::fidl::internal::CodableBase<Int16Int8> {
+class Int16Int8 final {
  private:
   struct Storage_;
 
@@ -164,15 +163,6 @@ class Int16Int8 final : public ::fidl::internal::CodableBase<Int16Int8> {
   int8_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<Int16Int8>;
-  friend ::fidl::CodingTraits<Int16Int8>;
-  Int16Int8(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int16_t a{};
     int8_t b{};
@@ -180,12 +170,19 @@ class Int16Int8 final : public ::fidl::internal::CodableBase<Int16Int8> {
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_encapsulatedstructs::Int16Int8, 4, 4>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, int16_t>{&Storage_::a, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, int8_t>{&Storage_::b, 2,
+                                                              2});
 };
 
 extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
 
-class ArrayInt16Int8 final
-    : public ::fidl::internal::CodableBase<ArrayInt16Int8> {
+class ArrayInt16Int8 final {
  private:
   struct Storage_;
 
@@ -214,28 +211,25 @@ class ArrayInt16Int8 final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<ArrayInt16Int8>;
-  friend ::fidl::CodingTraits<ArrayInt16Int8>;
-  ArrayInt16Int8(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::array<::test_encapsulatedstructs::Int16Int8, 3> arr{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_encapsulatedstructs::ArrayInt16Int8, 12, 12>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::array<::test_encapsulatedstructs::Int16Int8, 3>>{
+          &Storage_::arr, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_encapsulatedstructs_StructPaddingTestStructTable;
 
-class StructPaddingTestStruct final
-    : public ::fidl::internal::CodableBase<StructPaddingTestStruct> {
+class StructPaddingTestStruct final {
  private:
   struct Storage_;
 
@@ -283,15 +277,6 @@ class StructPaddingTestStruct final
   ::test_encapsulatedstructs::ArrayInt16Int8& array() { return storage_.array; }
 
  private:
-  friend ::fidl::internal::CodableBase<StructPaddingTestStruct>;
-  friend ::fidl::CodingTraits<StructPaddingTestStruct>;
-  StructPaddingTestStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_encapsulatedstructs::Int16Int8 trailing{};
     ::test_encapsulatedstructs::Int8Int32 inner{};
@@ -300,14 +285,26 @@ class StructPaddingTestStruct final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_encapsulatedstructs::StructPaddingTestStruct, 24, 24>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_encapsulatedstructs::Int16Int8>{&Storage_::trailing,
+                                                           0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_encapsulatedstructs::Int8Int32>{&Storage_::inner, 4,
+                                                           4},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_encapsulatedstructs::ArrayInt16Int8>{
+          &Storage_::array, 12, 12});
 };
 
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_encapsulatedstructs_TopLevelStructTable;
 
-class TopLevelStruct final
-    : public ::fidl::internal::CodableBase<TopLevelStruct> {
+class TopLevelStruct final {
  private:
   struct Storage_;
 
@@ -339,21 +336,22 @@ class TopLevelStruct final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<TopLevelStruct>;
-  friend ::fidl::CodingTraits<TopLevelStruct>;
-  TopLevelStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_encapsulatedstructs::StructPaddingTestStruct a{};
     ::test_encapsulatedstructs::NonInlineStructTestStruct b{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_encapsulatedstructs::TopLevelStruct, 40, 40>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_encapsulatedstructs::StructPaddingTestStruct>{
+          &Storage_::a, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_encapsulatedstructs::NonInlineStructTestStruct>{
+          &Storage_::b, 24, 24});
 };
 
 #endif  // __Fuchsia__
@@ -382,40 +380,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_encapsulatedstructs::NonInlineStructTestStruct* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.element, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_NONE,
-                       .rights = 0x80000000,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_encapsulatedstructs::NonInlineStructTestStruct* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.element, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.h, offset + 8);
-  }
-};
+struct CodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_encapsulatedstructs::NonInlineStructTestStruct, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -434,34 +401,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::Int8Int32>
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::Int8Int32> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_encapsulatedstructs::Int8Int32* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
-                                                                           : 4;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_encapsulatedstructs::Int8Int32* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
-  }
-};
+struct CodingTraits<::test_encapsulatedstructs::Int8Int32> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_encapsulatedstructs::Int8Int32, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -480,34 +422,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::Int16Int8>
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::Int16Int8> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_encapsulatedstructs::Int16Int8* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 2
-                                                                           : 2;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_encapsulatedstructs::Int16Int8* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 2);
-  }
-};
+struct CodingTraits<::test_encapsulatedstructs::Int16Int8> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_encapsulatedstructs::Int16Int8, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -526,29 +443,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::ArrayInt16Int8>
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::ArrayInt16Int8> {
-  static constexpr size_t inline_size_v1_no_ee = 12;
-  static constexpr size_t inline_size_v2 = 12;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_encapsulatedstructs::ArrayInt16Int8* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.arr, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_encapsulatedstructs::ArrayInt16Int8* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.arr, offset + 0);
-  }
-};
+struct CodingTraits<::test_encapsulatedstructs::ArrayInt16Int8> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_encapsulatedstructs::ArrayInt16Int8, 12, 12> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -569,39 +466,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::StructPaddingTestStruct> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 24;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_encapsulatedstructs::StructPaddingTestStruct* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.trailing, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
-                                                                           : 4;
-    ::fidl::Encode(encoder, &value->storage_.inner, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 12
-                                                                           : 12;
-    ::fidl::Encode(encoder, &value->storage_.array, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_encapsulatedstructs::StructPaddingTestStruct* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.trailing, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.inner, offset + 4);
-    ::fidl::Decode(decoder, &value->storage_.array, offset + 12);
-  }
-};
+struct CodingTraits<::test_encapsulatedstructs::StructPaddingTestStruct> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_encapsulatedstructs::StructPaddingTestStruct, 24, 24> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -623,34 +490,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::TopLevelStruct>
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::TopLevelStruct> {
-  static constexpr size_t inline_size_v1_no_ee = 40;
-  static constexpr size_t inline_size_v2 = 40;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_encapsulatedstructs::TopLevelStruct* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 24
-                                                                           : 24;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_encapsulatedstructs::TopLevelStruct* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 24);
-  }
-};
+struct CodingTraits<::test_encapsulatedstructs::TopLevelStruct> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_encapsulatedstructs::TopLevelStruct, 40, 40> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

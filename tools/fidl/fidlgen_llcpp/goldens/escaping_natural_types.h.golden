@@ -5,7 +5,6 @@
 #include <fidl/test.escaping/cpp/common_types.h>
 #include <fidl/test.escaping/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -21,8 +20,7 @@ class DocCommentWithQuotes;
 extern "C" const fidl_type_t test_escaping_DocCommentWithQuotesTable;
 
 /// "pleaseescapethisdocommentproperly"
-class DocCommentWithQuotes final
-    : public ::fidl::internal::CodableBase<DocCommentWithQuotes> {
+class DocCommentWithQuotes final {
  private:
   struct Storage_;
 
@@ -47,21 +45,18 @@ class DocCommentWithQuotes final
   uint8_t& __reserved() { return storage_.__reserved; }
 
  private:
-  friend ::fidl::internal::CodableBase<DocCommentWithQuotes>;
-  friend ::fidl::CodingTraits<DocCommentWithQuotes>;
-  DocCommentWithQuotes(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint8_t __reserved = 0u;
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_escaping::DocCommentWithQuotes, 1, 1>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+          &Storage_::__reserved, 0, 0});
 };
 
 }  // namespace test_escaping
@@ -83,29 +78,9 @@ struct ::fidl::internal::TypeTraits<::test_escaping::DocCommentWithQuotes>
 };
 
 template <>
-struct CodingTraits<::test_escaping::DocCommentWithQuotes> {
-  static constexpr size_t inline_size_v1_no_ee = 1;
-  static constexpr size_t inline_size_v2 = 1;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_escaping::DocCommentWithQuotes* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.__reserved, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_escaping::DocCommentWithQuotes* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
-  }
-};
+struct CodingTraits<::test_escaping::DocCommentWithQuotes> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_escaping::DocCommentWithQuotes, 1, 1> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

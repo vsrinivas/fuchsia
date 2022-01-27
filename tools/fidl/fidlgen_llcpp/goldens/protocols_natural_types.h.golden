@@ -5,7 +5,6 @@
 #include <fidl/test.protocols/cpp/common_types.h>
 #include <fidl/test.protocols/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -113,9 +112,7 @@ class WithErrorSyntax_ErrorAsEnum_Result;
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
 
-class WithErrorSyntax_HandleInResult_Response final
-    : public ::fidl::internal::CodableBase<
-          WithErrorSyntax_HandleInResult_Response> {
+class WithErrorSyntax_HandleInResult_Response final {
  private:
   struct Storage_;
 
@@ -137,20 +134,19 @@ class WithErrorSyntax_HandleInResult_Response final
   ::zx::handle& h() { return storage_.h; }
 
  private:
-  friend ::fidl::internal::CodableBase<WithErrorSyntax_HandleInResult_Response>;
-  friend ::fidl::CodingTraits<WithErrorSyntax_HandleInResult_Response>;
-  WithErrorSyntax_HandleInResult_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::zx::handle h{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithErrorSyntax_HandleInResult_Response, 4, 4>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
+          &Storage_::h, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_NONE, .rights = 0x80000000})});
 };
 
 #endif  // __Fuchsia__
@@ -257,9 +253,7 @@ class WithErrorSyntax_HandleInResult_Result final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
 
-class WithErrorSyntaxHandleInResultTopResponse final
-    : public ::fidl::internal::CodableBase<
-          WithErrorSyntaxHandleInResultTopResponse> {
+class WithErrorSyntaxHandleInResultTopResponse final {
  private:
   struct Storage_;
 
@@ -287,21 +281,18 @@ class WithErrorSyntaxHandleInResultTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithErrorSyntaxHandleInResultTopResponse>;
-  friend ::fidl::CodingTraits<WithErrorSyntaxHandleInResultTopResponse>;
-  WithErrorSyntaxHandleInResultTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_protocols::WithErrorSyntax_HandleInResult_Result result{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithErrorSyntaxHandleInResultTopResponse, 24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_protocols::WithErrorSyntax_HandleInResult_Result>{
+          &Storage_::result, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -311,9 +302,7 @@ class WithErrorSyntaxHandleInResultTopResponse final
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
 
-class HandleRightsProtocolResponseMethodTopResponse final
-    : public ::fidl::internal::CodableBase<
-          HandleRightsProtocolResponseMethodTopResponse> {
+class HandleRightsProtocolResponseMethodTopResponse final {
  private:
   struct Storage_;
 
@@ -335,21 +324,19 @@ class HandleRightsProtocolResponseMethodTopResponse final
   ::zx::socket& h() { return storage_.h; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      HandleRightsProtocolResponseMethodTopResponse>;
-  friend ::fidl::CodingTraits<HandleRightsProtocolResponseMethodTopResponse>;
-  HandleRightsProtocolResponseMethodTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::zx::socket h{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::HandleRightsProtocolResponseMethodTopResponse, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
+          &Storage_::h, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x1})});
 };
 
 #endif  // __Fuchsia__
@@ -359,9 +346,7 @@ class HandleRightsProtocolResponseMethodTopResponse final
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolResponseMethodRequestTable;
 
-class HandleRightsProtocolResponseMethodRequest final
-    : public ::fidl::internal::CodableBase<
-          HandleRightsProtocolResponseMethodRequest> {
+class HandleRightsProtocolResponseMethodRequest final {
  private:
   struct Storage_;
 
@@ -383,21 +368,19 @@ class HandleRightsProtocolResponseMethodRequest final
   ::zx::socket& h() { return storage_.h; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      HandleRightsProtocolResponseMethodRequest>;
-  friend ::fidl::CodingTraits<HandleRightsProtocolResponseMethodRequest>;
-  HandleRightsProtocolResponseMethodRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::zx::socket h{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::HandleRightsProtocolResponseMethodRequest, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
+          &Storage_::h, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x3})});
 };
 
 #endif  // __Fuchsia__
@@ -407,9 +390,7 @@ class HandleRightsProtocolResponseMethodRequest final
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
 
-class HandleRightsProtocolNoResponseMethodRequest final
-    : public ::fidl::internal::CodableBase<
-          HandleRightsProtocolNoResponseMethodRequest> {
+class HandleRightsProtocolNoResponseMethodRequest final {
  private:
   struct Storage_;
 
@@ -431,21 +412,19 @@ class HandleRightsProtocolNoResponseMethodRequest final
   ::zx::socket& h() { return storage_.h; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      HandleRightsProtocolNoResponseMethodRequest>;
-  friend ::fidl::CodingTraits<HandleRightsProtocolNoResponseMethodRequest>;
-  HandleRightsProtocolNoResponseMethodRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::zx::socket h{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
+          &Storage_::h, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x3})});
 };
 
 #endif  // __Fuchsia__
@@ -455,8 +434,7 @@ class HandleRightsProtocolNoResponseMethodRequest final
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolAnEventRequestTable;
 
-class HandleRightsProtocolAnEventRequest final
-    : public ::fidl::internal::CodableBase<HandleRightsProtocolAnEventRequest> {
+class HandleRightsProtocolAnEventRequest final {
  private:
   struct Storage_;
 
@@ -478,20 +456,19 @@ class HandleRightsProtocolAnEventRequest final
   ::zx::socket& h() { return storage_.h; }
 
  private:
-  friend ::fidl::internal::CodableBase<HandleRightsProtocolAnEventRequest>;
-  friend ::fidl::CodingTraits<HandleRightsProtocolAnEventRequest>;
-  HandleRightsProtocolAnEventRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::zx::socket h{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::HandleRightsProtocolAnEventRequest, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
+          &Storage_::h, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x3})});
 };
 
 #endif  // __Fuchsia__
@@ -501,8 +478,7 @@ class HandleRightsProtocolAnEventRequest final
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolTakeHandleRequestTable;
 
-class ChannelProtocolTakeHandleRequest final
-    : public ::fidl::internal::CodableBase<ChannelProtocolTakeHandleRequest> {
+class ChannelProtocolTakeHandleRequest final {
  private:
   struct Storage_;
 
@@ -524,20 +500,19 @@ class ChannelProtocolTakeHandleRequest final
   ::zx::handle& h() { return storage_.h; }
 
  private:
-  friend ::fidl::internal::CodableBase<ChannelProtocolTakeHandleRequest>;
-  friend ::fidl::CodingTraits<ChannelProtocolTakeHandleRequest>;
-  ChannelProtocolTakeHandleRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::zx::handle h{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ChannelProtocolTakeHandleRequest, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
+          &Storage_::h, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_NONE, .rights = 0x80000000})});
 };
 
 #endif  // __Fuchsia__
@@ -547,9 +522,7 @@ class ChannelProtocolTakeHandleRequest final
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMutateSocketTopResponseTable;
 
-class ChannelProtocolMutateSocketTopResponse final
-    : public ::fidl::internal::CodableBase<
-          ChannelProtocolMutateSocketTopResponse> {
+class ChannelProtocolMutateSocketTopResponse final {
  private:
   struct Storage_;
 
@@ -571,20 +544,19 @@ class ChannelProtocolMutateSocketTopResponse final
   ::zx::socket& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketTopResponse>;
-  friend ::fidl::CodingTraits<ChannelProtocolMutateSocketTopResponse>;
-  ChannelProtocolMutateSocketTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::zx::socket b{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ChannelProtocolMutateSocketTopResponse, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
+          &Storage_::b, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x80000000})});
 };
 
 #endif  // __Fuchsia__
@@ -594,8 +566,7 @@ class ChannelProtocolMutateSocketTopResponse final
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMutateSocketRequestTable;
 
-class ChannelProtocolMutateSocketRequest final
-    : public ::fidl::internal::CodableBase<ChannelProtocolMutateSocketRequest> {
+class ChannelProtocolMutateSocketRequest final {
  private:
   struct Storage_;
 
@@ -617,20 +588,19 @@ class ChannelProtocolMutateSocketRequest final
   ::zx::socket& a() { return storage_.a; }
 
  private:
-  friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketRequest>;
-  friend ::fidl::CodingTraits<ChannelProtocolMutateSocketRequest>;
-  ChannelProtocolMutateSocketRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::zx::socket a{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ChannelProtocolMutateSocketRequest, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
+          &Storage_::a, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x80000000})});
 };
 
 #endif  // __Fuchsia__
@@ -640,9 +610,7 @@ class ChannelProtocolMutateSocketRequest final
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsServerEndsTopResponseTable;
 
-class WithProtocolEndsServerEndsTopResponse final
-    : public ::fidl::internal::CodableBase<
-          WithProtocolEndsServerEndsTopResponse> {
+class WithProtocolEndsServerEndsTopResponse final {
  private:
   struct Storage_;
 
@@ -669,20 +637,21 @@ class WithProtocolEndsServerEndsTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsTopResponse>;
-  friend ::fidl::CodingTraits<WithProtocolEndsServerEndsTopResponse>;
-  WithProtocolEndsServerEndsTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithProtocolEndsServerEndsTopResponse, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>{
+          &Storage_::out, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
 
 #endif  // __Fuchsia__
@@ -692,8 +661,7 @@ class WithProtocolEndsServerEndsTopResponse final
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsServerEndsRequestTable;
 
-class WithProtocolEndsServerEndsRequest final
-    : public ::fidl::internal::CodableBase<WithProtocolEndsServerEndsRequest> {
+class WithProtocolEndsServerEndsRequest final {
  private:
   struct Storage_;
 
@@ -720,20 +688,21 @@ class WithProtocolEndsServerEndsRequest final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsRequest>;
-  friend ::fidl::CodingTraits<WithProtocolEndsServerEndsRequest>;
-  WithProtocolEndsServerEndsRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> in{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithProtocolEndsServerEndsRequest, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>{
+          &Storage_::in, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
 
 #endif  // __Fuchsia__
@@ -743,9 +712,7 @@ class WithProtocolEndsServerEndsRequest final
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsClientEndsTopResponseTable;
 
-class WithProtocolEndsClientEndsTopResponse final
-    : public ::fidl::internal::CodableBase<
-          WithProtocolEndsClientEndsTopResponse> {
+class WithProtocolEndsClientEndsTopResponse final {
  private:
   struct Storage_;
 
@@ -772,20 +739,21 @@ class WithProtocolEndsClientEndsTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsTopResponse>;
-  friend ::fidl::CodingTraits<WithProtocolEndsClientEndsTopResponse>;
-  WithProtocolEndsClientEndsTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithProtocolEndsClientEndsTopResponse, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>{
+          &Storage_::out, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
 
 #endif  // __Fuchsia__
@@ -795,8 +763,7 @@ class WithProtocolEndsClientEndsTopResponse final
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsClientEndsRequestTable;
 
-class WithProtocolEndsClientEndsRequest final
-    : public ::fidl::internal::CodableBase<WithProtocolEndsClientEndsRequest> {
+class WithProtocolEndsClientEndsRequest final {
  private:
   struct Storage_;
 
@@ -823,20 +790,21 @@ class WithProtocolEndsClientEndsRequest final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsRequest>;
-  friend ::fidl::CodingTraits<WithProtocolEndsClientEndsRequest>;
-  WithProtocolEndsClientEndsRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> in{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithProtocolEndsClientEndsRequest, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>{
+          &Storage_::in, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
 
 #endif  // __Fuchsia__
@@ -844,9 +812,7 @@ class WithProtocolEndsClientEndsRequest final
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
-class WithErrorSyntax_ResponseAsStruct_Response final
-    : public ::fidl::internal::CodableBase<
-          WithErrorSyntax_ResponseAsStruct_Response> {
+class WithErrorSyntax_ResponseAsStruct_Response final {
  private:
   struct Storage_;
 
@@ -885,16 +851,6 @@ class WithErrorSyntax_ResponseAsStruct_Response final
   int64_t& c() { return storage_.c; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithErrorSyntax_ResponseAsStruct_Response>;
-  friend ::fidl::CodingTraits<WithErrorSyntax_ResponseAsStruct_Response>;
-  WithErrorSyntax_ResponseAsStruct_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t a{};
     int64_t b{};
@@ -903,6 +859,16 @@ class WithErrorSyntax_ResponseAsStruct_Response final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response, 24, 24>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::b, 8,
+                                                               8},
+      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::c, 16,
+                                                               16});
 };
 
 extern "C" const fidl_type_t
@@ -1011,9 +977,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
 
-class WithErrorSyntaxResponseAsStructTopResponse final
-    : public ::fidl::internal::CodableBase<
-          WithErrorSyntaxResponseAsStructTopResponse> {
+class WithErrorSyntaxResponseAsStructTopResponse final {
  private:
   struct Storage_;
 
@@ -1049,30 +1013,25 @@ class WithErrorSyntaxResponseAsStructTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithErrorSyntaxResponseAsStructTopResponse>;
-  friend ::fidl::CodingTraits<WithErrorSyntaxResponseAsStructTopResponse>;
-  WithErrorSyntaxResponseAsStructTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result result{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse, 24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>{
+          &Storage_::result, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
-class WithErrorSyntax_ErrorAsPrimitive_Response final
-    : public ::fidl::internal::CodableBase<
-          WithErrorSyntax_ErrorAsPrimitive_Response> {
+class WithErrorSyntax_ErrorAsPrimitive_Response final {
  private:
   struct Storage_;
 
@@ -1102,22 +1061,18 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final
   uint8_t& __reserved() { return storage_.__reserved; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithErrorSyntax_ErrorAsPrimitive_Response>;
-  friend ::fidl::CodingTraits<WithErrorSyntax_ErrorAsPrimitive_Response>;
-  WithErrorSyntax_ErrorAsPrimitive_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint8_t __reserved = 0u;
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1, 1>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+          &Storage_::__reserved, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1226,9 +1181,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
 
-class WithErrorSyntaxErrorAsPrimitiveTopResponse final
-    : public ::fidl::internal::CodableBase<
-          WithErrorSyntaxErrorAsPrimitiveTopResponse> {
+class WithErrorSyntaxErrorAsPrimitiveTopResponse final {
  private:
   struct Storage_;
 
@@ -1264,30 +1217,25 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithErrorSyntaxErrorAsPrimitiveTopResponse>;
-  friend ::fidl::CodingTraits<WithErrorSyntaxErrorAsPrimitiveTopResponse>;
-  WithErrorSyntaxErrorAsPrimitiveTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result result{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse, 24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>{
+          &Storage_::result, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
-class WithErrorSyntax_ErrorAsEnum_Response final
-    : public ::fidl::internal::CodableBase<
-          WithErrorSyntax_ErrorAsEnum_Response> {
+class WithErrorSyntax_ErrorAsEnum_Response final {
  private:
   struct Storage_;
 
@@ -1317,29 +1265,24 @@ class WithErrorSyntax_ErrorAsEnum_Response final
   uint8_t& __reserved() { return storage_.__reserved; }
 
  private:
-  friend ::fidl::internal::CodableBase<WithErrorSyntax_ErrorAsEnum_Response>;
-  friend ::fidl::CodingTraits<WithErrorSyntax_ErrorAsEnum_Response>;
-  WithErrorSyntax_ErrorAsEnum_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint8_t __reserved = 0u;
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response, 1, 1>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+          &Storage_::__reserved, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
 
-class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final
-    : public ::fidl::internal::CodableBase<
-          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
+class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final {
  private:
   struct Storage_;
 
@@ -1377,32 +1320,26 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final
   ::std::string& ret() { return storage_.ret; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
-  friend ::fidl::CodingTraits<
-      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
-  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::string ret{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse,
+      16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
+          &Storage_::ret, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 
-class WithAndWithoutRequestResponseWithRequestWithResponseRequest final
-    : public ::fidl::internal::CodableBase<
-          WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
+class WithAndWithoutRequestResponseWithRequestWithResponseRequest final {
  private:
   struct Storage_;
 
@@ -1440,32 +1377,26 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final
   ::std::string& arg() { return storage_.arg; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
-  friend ::fidl::CodingTraits<
-      WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
-  WithAndWithoutRequestResponseWithRequestWithResponseRequest(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::string arg{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseRequest,
+      16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
+          &Storage_::arg, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 
-class WithAndWithoutRequestResponseWithRequestNoResponseRequest final
-    : public ::fidl::internal::CodableBase<
-          WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
+class WithAndWithoutRequestResponseWithRequestNoResponseRequest final {
  private:
   struct Storage_;
 
@@ -1502,32 +1433,26 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final
   ::std::string& arg() { return storage_.arg; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
-  friend ::fidl::CodingTraits<
-      WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
-  WithAndWithoutRequestResponseWithRequestNoResponseRequest(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::string arg{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::
+          WithAndWithoutRequestResponseWithRequestNoResponseRequest,
+      16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
+          &Storage_::arg, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 
-class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final
-    : public ::fidl::internal::CodableBase<
-          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
+class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final {
  private:
   struct Storage_;
 
@@ -1565,32 +1490,26 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final
   ::std::string& arg() { return storage_.arg; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>;
-  friend ::fidl::CodingTraits<
-      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>;
-  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::string arg{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::
+          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest,
+      16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
+          &Storage_::arg, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
-class WithAndWithoutRequestResponseOnWithResponseRequest final
-    : public ::fidl::internal::CodableBase<
-          WithAndWithoutRequestResponseOnWithResponseRequest> {
+class WithAndWithoutRequestResponseOnWithResponseRequest final {
  private:
   struct Storage_;
 
@@ -1622,31 +1541,25 @@ class WithAndWithoutRequestResponseOnWithResponseRequest final
   ::std::string& ret() { return storage_.ret; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithAndWithoutRequestResponseOnWithResponseRequest>;
-  friend ::fidl::CodingTraits<
-      WithAndWithoutRequestResponseOnWithResponseRequest>;
-  WithAndWithoutRequestResponseOnWithResponseRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::string ret{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest, 16,
+      16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
+          &Storage_::ret, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
 
-class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final
-    : public ::fidl::internal::CodableBase<
-          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
+class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final {
  private:
   struct Storage_;
 
@@ -1684,30 +1597,25 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final
   ::std::string& ret() { return storage_.ret; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
-  friend ::fidl::CodingTraits<
-      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::string ret{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::
+          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse,
+      16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
+          &Storage_::ret, 0, 0});
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
 
-class TransitionalRequestTopResponse final
-    : public ::fidl::internal::CodableBase<TransitionalRequestTopResponse> {
+class TransitionalRequestTopResponse final {
  private:
   struct Storage_;
 
@@ -1737,27 +1645,23 @@ class TransitionalRequestTopResponse final
   int64_t& y() { return storage_.y; }
 
  private:
-  friend ::fidl::internal::CodableBase<TransitionalRequestTopResponse>;
-  friend ::fidl::CodingTraits<TransitionalRequestTopResponse>;
-  TransitionalRequestTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t y{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::TransitionalRequestTopResponse, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+          &Storage_::y, 0, 0});
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
 
-class TransitionalRequestRequest final
-    : public ::fidl::internal::CodableBase<TransitionalRequestRequest> {
+class TransitionalRequestRequest final {
  private:
   struct Storage_;
 
@@ -1784,27 +1688,23 @@ class TransitionalRequestRequest final
   int64_t& x() { return storage_.x; }
 
  private:
-  friend ::fidl::internal::CodableBase<TransitionalRequestRequest>;
-  friend ::fidl::CodingTraits<TransitionalRequestRequest>;
-  TransitionalRequestRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t x{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::TransitionalRequestRequest, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+          &Storage_::x, 0, 0});
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
 
-class TransitionalOneWayRequest final
-    : public ::fidl::internal::CodableBase<TransitionalOneWayRequest> {
+class TransitionalOneWayRequest final {
  private:
   struct Storage_;
 
@@ -1831,27 +1731,23 @@ class TransitionalOneWayRequest final
   int64_t& x() { return storage_.x; }
 
  private:
-  friend ::fidl::internal::CodableBase<TransitionalOneWayRequest>;
-  friend ::fidl::CodingTraits<TransitionalOneWayRequest>;
-  TransitionalOneWayRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t x{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::TransitionalOneWayRequest, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+          &Storage_::x, 0, 0});
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
 
-class TransitionalEventRequest final
-    : public ::fidl::internal::CodableBase<TransitionalEventRequest> {
+class TransitionalEventRequest final {
  private:
   struct Storage_;
 
@@ -1878,21 +1774,18 @@ class TransitionalEventRequest final
   int64_t& x() { return storage_.x; }
 
  private:
-  friend ::fidl::internal::CodableBase<TransitionalEventRequest>;
-  friend ::fidl::CodingTraits<TransitionalEventRequest>;
-  TransitionalEventRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t x{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::TransitionalEventRequest, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+          &Storage_::x, 0, 0});
 };
 
 extern "C" const fidl_type_t test_protocols_TheUnionTable;
@@ -1967,8 +1860,7 @@ class TheUnion final {
 extern "C" const fidl_type_t
     test_protocols_MethodWithUnionUnionMethodRequestTable;
 
-class MethodWithUnionUnionMethodRequest final
-    : public ::fidl::internal::CodableBase<MethodWithUnionUnionMethodRequest> {
+class MethodWithUnionUnionMethodRequest final {
  private:
   struct Storage_;
 
@@ -1998,27 +1890,24 @@ class MethodWithUnionUnionMethodRequest final
   ::test_protocols::TheUnion& u() { return storage_.u; }
 
  private:
-  friend ::fidl::internal::CodableBase<MethodWithUnionUnionMethodRequest>;
-  friend ::fidl::CodingTraits<MethodWithUnionUnionMethodRequest>;
-  MethodWithUnionUnionMethodRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_protocols::TheUnion u{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::MethodWithUnionUnionMethodRequest, 24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::test_protocols::TheUnion>{
+          &Storage_::u, 0, 0});
 };
 
 extern "C" const fidl_type_t test_protocols_SyscallProtocolMethodCRequestTable;
 
-class SyscallProtocolMethodCRequest final
-    : public ::fidl::internal::CodableBase<SyscallProtocolMethodCRequest> {
+class SyscallProtocolMethodCRequest final {
  private:
   struct Storage_;
 
@@ -2051,15 +1940,6 @@ class SyscallProtocolMethodCRequest final
   int64_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<SyscallProtocolMethodCRequest>;
-  friend ::fidl::CodingTraits<SyscallProtocolMethodCRequest>;
-  SyscallProtocolMethodCRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t a{};
     int64_t b{};
@@ -2067,13 +1947,21 @@ class SyscallProtocolMethodCRequest final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::SyscallProtocolMethodCRequest, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::b, 8,
+                                                               8});
 };
 
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_protocols_ProtocolEndsTable;
 
-class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
+class ProtocolEnds final {
  private:
   struct Storage_;
 
@@ -2131,15 +2019,6 @@ class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
   }
 
  private:
-  friend ::fidl::internal::CodableBase<ProtocolEnds>;
-  friend ::fidl::CodingTraits<ProtocolEnds>;
-  ProtocolEnds(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> client{};
     ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server{};
@@ -2148,6 +2027,34 @@ class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ProtocolEnds, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>{
+          &Storage_::client, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>{
+          &Storage_::server, 4, 4,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>{
+          &Storage_::client_opt, 8, 8,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>{
+          &Storage_::server_opt, 12, 12,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
 
 #endif  // __Fuchsia__
@@ -2157,9 +2064,7 @@ class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
 
-class WithProtocolEndsStructContainingEndsTopResponse final
-    : public ::fidl::internal::CodableBase<
-          WithProtocolEndsStructContainingEndsTopResponse> {
+class WithProtocolEndsStructContainingEndsTopResponse final {
  private:
   struct Storage_;
 
@@ -2182,21 +2087,19 @@ class WithProtocolEndsStructContainingEndsTopResponse final
   ::test_protocols::ProtocolEnds& out() { return storage_.out; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithProtocolEndsStructContainingEndsTopResponse>;
-  friend ::fidl::CodingTraits<WithProtocolEndsStructContainingEndsTopResponse>;
-  WithProtocolEndsStructContainingEndsTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_protocols::ProtocolEnds out{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse, 16,
+      16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::test_protocols::ProtocolEnds>{
+          &Storage_::out, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -2206,9 +2109,7 @@ class WithProtocolEndsStructContainingEndsTopResponse final
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
 
-class WithProtocolEndsStructContainingEndsRequest final
-    : public ::fidl::internal::CodableBase<
-          WithProtocolEndsStructContainingEndsRequest> {
+class WithProtocolEndsStructContainingEndsRequest final {
  private:
   struct Storage_;
 
@@ -2231,29 +2132,25 @@ class WithProtocolEndsStructContainingEndsRequest final
   ::test_protocols::ProtocolEnds& in() { return storage_.in; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      WithProtocolEndsStructContainingEndsRequest>;
-  friend ::fidl::CodingTraits<WithProtocolEndsStructContainingEndsRequest>;
-  WithProtocolEndsStructContainingEndsRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_protocols::ProtocolEnds in{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithProtocolEndsStructContainingEndsRequest, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::test_protocols::ProtocolEnds>{
+          &Storage_::in, 0, 0});
 };
 
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 
-class ManyParametersFifteenRequest final
-    : public ::fidl::internal::CodableBase<ManyParametersFifteenRequest> {
+class ManyParametersFifteenRequest final {
  private:
   struct Storage_;
 
@@ -2355,15 +2252,6 @@ class ManyParametersFifteenRequest final
   bool& p15() { return storage_.p15; }
 
  private:
-  friend ::fidl::internal::CodableBase<ManyParametersFifteenRequest>;
-  friend ::fidl::CodingTraits<ManyParametersFifteenRequest>;
-  ManyParametersFifteenRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     bool p1{};
     bool p2{};
@@ -2384,6 +2272,40 @@ class ManyParametersFifteenRequest final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ManyParametersFifteenRequest, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p1, 0,
+                                                            0},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p2, 1,
+                                                            1},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p3, 2,
+                                                            2},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p4, 3,
+                                                            3},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p5, 4,
+                                                            4},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p6, 5,
+                                                            5},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p7, 6,
+                                                            6},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p8, 7,
+                                                            7},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p9, 8,
+                                                            8},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p10, 9,
+                                                            9},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p11, 10,
+                                                            10},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p12, 11,
+                                                            11},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p13, 12,
+                                                            12},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p14, 13,
+                                                            13},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p15, 14,
+                                                            14});
 };
 
 extern "C" const fidl_type_t
@@ -2489,9 +2411,7 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
 
-class WithErrorSyntaxErrorAsEnumTopResponse final
-    : public ::fidl::internal::CodableBase<
-          WithErrorSyntaxErrorAsEnumTopResponse> {
+class WithErrorSyntaxErrorAsEnumTopResponse final {
  private:
   struct Storage_;
 
@@ -2526,28 +2446,25 @@ class WithErrorSyntaxErrorAsEnumTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<WithErrorSyntaxErrorAsEnumTopResponse>;
-  friend ::fidl::CodingTraits<WithErrorSyntaxErrorAsEnumTopResponse>;
-  WithErrorSyntaxErrorAsEnumTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result result{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse, 24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>{
+          &Storage_::result, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMethodBTopResponseTable;
 
-class ChannelProtocolMethodBTopResponse final
-    : public ::fidl::internal::CodableBase<ChannelProtocolMethodBTopResponse> {
+class ChannelProtocolMethodBTopResponse final {
  private:
   struct Storage_;
 
@@ -2577,27 +2494,23 @@ class ChannelProtocolMethodBTopResponse final
   int64_t& result() { return storage_.result; }
 
  private:
-  friend ::fidl::internal::CodableBase<ChannelProtocolMethodBTopResponse>;
-  friend ::fidl::CodingTraits<ChannelProtocolMethodBTopResponse>;
-  ChannelProtocolMethodBTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t result{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ChannelProtocolMethodBTopResponse, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+          &Storage_::result, 0, 0});
 };
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
 
-class ChannelProtocolMethodBRequest final
-    : public ::fidl::internal::CodableBase<ChannelProtocolMethodBRequest> {
+class ChannelProtocolMethodBRequest final {
  private:
   struct Storage_;
 
@@ -2630,15 +2543,6 @@ class ChannelProtocolMethodBRequest final
   int64_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<ChannelProtocolMethodBRequest>;
-  friend ::fidl::CodingTraits<ChannelProtocolMethodBRequest>;
-  ChannelProtocolMethodBRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t a{};
     int64_t b{};
@@ -2646,12 +2550,19 @@ class ChannelProtocolMethodBRequest final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ChannelProtocolMethodBRequest, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::b, 8,
+                                                               8});
 };
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
 
-class ChannelProtocolMethodARequest final
-    : public ::fidl::internal::CodableBase<ChannelProtocolMethodARequest> {
+class ChannelProtocolMethodARequest final {
  private:
   struct Storage_;
 
@@ -2684,15 +2595,6 @@ class ChannelProtocolMethodARequest final
   int64_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<ChannelProtocolMethodARequest>;
-  friend ::fidl::CodingTraits<ChannelProtocolMethodARequest>;
-  ChannelProtocolMethodARequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t a{};
     int64_t b{};
@@ -2700,12 +2602,19 @@ class ChannelProtocolMethodARequest final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ChannelProtocolMethodARequest, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::b, 8,
+                                                               8});
 };
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
 
-class ChannelProtocolEventARequest final
-    : public ::fidl::internal::CodableBase<ChannelProtocolEventARequest> {
+class ChannelProtocolEventARequest final {
  private:
   struct Storage_;
 
@@ -2738,15 +2647,6 @@ class ChannelProtocolEventARequest final
   int64_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<ChannelProtocolEventARequest>;
-  friend ::fidl::CodingTraits<ChannelProtocolEventARequest>;
-  ChannelProtocolEventARequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t a{};
     int64_t b{};
@@ -2754,6 +2654,14 @@ class ChannelProtocolEventARequest final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_protocols::ChannelProtocolEventARequest, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::b, 8,
+                                                               8});
 };
 
 }  // namespace test_protocols
@@ -2780,35 +2688,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::WithErrorSyntax_HandleInResult_Response> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithErrorSyntax_HandleInResult_Response* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_NONE,
-                       .rights = 0x80000000,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithErrorSyntax_HandleInResult_Response* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::WithErrorSyntax_HandleInResult_Response>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::WithErrorSyntax_HandleInResult_Response, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2832,31 +2715,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
-    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithErrorSyntaxHandleInResultTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithErrorSyntaxHandleInResultTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
+struct CodingTraits<::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::WithErrorSyntaxHandleInResultTopResponse, 24, 16> {
 };
 #endif  // __Fuchsia__
 
@@ -2884,35 +2746,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::HandleRightsProtocolResponseMethodTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_SOCKET,
-                       .rights = 0x1,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::HandleRightsProtocolResponseMethodTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
-  }
-};
+    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::HandleRightsProtocolResponseMethodTopResponse,
+                8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2936,36 +2773,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
-    ::test_protocols::HandleRightsProtocolResponseMethodRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::HandleRightsProtocolResponseMethodRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_SOCKET,
-                       .rights = 0x3,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::HandleRightsProtocolResponseMethodRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::HandleRightsProtocolResponseMethodRequest>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::HandleRightsProtocolResponseMethodRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2990,34 +2801,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::HandleRightsProtocolNoResponseMethodRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_SOCKET,
-                       .rights = 0x3,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::HandleRightsProtocolNoResponseMethodRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
-  }
+    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 8, 8> {
 };
 #endif  // __Fuchsia__
 
@@ -3042,35 +2829,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::HandleRightsProtocolAnEventRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::HandleRightsProtocolAnEventRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_SOCKET,
-                       .rights = 0x3,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::HandleRightsProtocolAnEventRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::HandleRightsProtocolAnEventRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::HandleRightsProtocolAnEventRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3094,33 +2855,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::ChannelProtocolTakeHandleRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::ChannelProtocolTakeHandleRequest* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_NONE,
-                       .rights = 0x80000000,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::ChannelProtocolTakeHandleRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::ChannelProtocolTakeHandleRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::ChannelProtocolTakeHandleRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3144,35 +2881,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::ChannelProtocolMutateSocketTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_SOCKET,
-                       .rights = 0x80000000,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::ChannelProtocolMutateSocketTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::ChannelProtocolMutateSocketTopResponse, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3196,35 +2908,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::ChannelProtocolMutateSocketRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::ChannelProtocolMutateSocketRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_SOCKET,
-                       .rights = 0x80000000,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::ChannelProtocolMutateSocketRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::ChannelProtocolMutateSocketRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::ChannelProtocolMutateSocketRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3248,34 +2934,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithProtocolEndsServerEndsTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.out, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithProtocolEndsServerEndsTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.out, offset + 0);
-  }
+struct CodingTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::WithProtocolEndsServerEndsTopResponse, 8, 8> {
 };
 #endif  // __Fuchsia__
 
@@ -3300,33 +2961,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::WithProtocolEndsServerEndsRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithProtocolEndsServerEndsRequest* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.in, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::WithProtocolEndsServerEndsRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.in, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::WithProtocolEndsServerEndsRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::WithProtocolEndsServerEndsRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3350,34 +2987,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithProtocolEndsClientEndsTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.out, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithProtocolEndsClientEndsTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.out, offset + 0);
-  }
+struct CodingTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::WithProtocolEndsClientEndsTopResponse, 8, 8> {
 };
 #endif  // __Fuchsia__
 
@@ -3402,33 +3014,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::WithProtocolEndsClientEndsRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithProtocolEndsClientEndsRequest* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.in, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::WithProtocolEndsClientEndsRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.in, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::WithProtocolEndsClientEndsRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::WithProtocolEndsClientEndsRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3449,41 +3037,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
-    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 24;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 16
-                                                                           : 16;
-    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-    ::fidl::Decode(decoder, &value->storage_.c, offset + 16);
-  }
+struct CodingTraits<::test_protocols::WithErrorSyntax_ResponseAsStruct_Response>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response, 24, 24> {
 };
 #endif  // __Fuchsia__
 
@@ -3506,31 +3063,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
-};
+    ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse,
+                24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3551,32 +3087,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
-    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response> {
-  static constexpr size_t inline_size_v1_no_ee = 1;
-  static constexpr size_t inline_size_v2 = 1;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.__reserved, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1, 1> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3598,31 +3112,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
-};
+    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse,
+                24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3643,30 +3136,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::WithErrorSyntax_ErrorAsEnum_Response> {
-  static constexpr size_t inline_size_v1_no_ee = 1;
-  static constexpr size_t inline_size_v2 = 1;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.__reserved, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
-  }
+struct CodingTraits<::test_protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response, 1, 1> {
 };
 #endif  // __Fuchsia__
 
@@ -3693,35 +3165,12 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<
     ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse*
-              value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.ret, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse*
-              value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.ret, offset + 0);
-  }
-};
+        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::
+              WithAndWithoutRequestResponseWithRequestWithResponseTopResponse,
+          16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3747,33 +3196,11 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<
     ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestWithResponseRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.arg, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestWithResponseRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.arg, offset + 0);
-  }
-};
+        WithAndWithoutRequestResponseWithRequestWithResponseRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::
+                    WithAndWithoutRequestResponseWithRequestWithResponseRequest,
+                16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3796,34 +3223,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestNoResponseRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.arg, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestNoResponseRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.arg, offset + 0);
-  }
-};
+    ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::
+                    WithAndWithoutRequestResponseWithRequestNoResponseRequest,
+                16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3849,33 +3253,12 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<
     ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.arg, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::
-          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.arg, offset + 0);
-  }
-};
+        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::
+              WithAndWithoutRequestResponseWithRequestEmptyResponseRequest,
+          16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3898,33 +3281,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest*
-          value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.ret, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest*
-          value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.ret, offset + 0);
-  }
-};
+    ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest,
+          16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3950,33 +3311,12 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<
     ::test_protocols::
-        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::
-          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.ret, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::
-          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.ret, offset + 0);
-  }
-};
+        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::
+              WithAndWithoutRequestResponseNoRequestWithResponseTopResponse,
+          16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3996,29 +3336,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::TransitionalRequestTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::TransitionalRequestTopResponse* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.y, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::TransitionalRequestTopResponse* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.y, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::TransitionalRequestTopResponse> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::TransitionalRequestTopResponse, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4038,29 +3358,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::TransitionalRequestRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_protocols::TransitionalRequestRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.x, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::TransitionalRequestRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::TransitionalRequestRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::TransitionalRequestRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4079,29 +3379,9 @@ struct ::fidl::internal::TypeTraits<::test_protocols::TransitionalOneWayRequest>
 };
 
 template <>
-struct CodingTraits<::test_protocols::TransitionalOneWayRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_protocols::TransitionalOneWayRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.x, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::TransitionalOneWayRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::TransitionalOneWayRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::TransitionalOneWayRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4120,29 +3400,9 @@ struct ::fidl::internal::TypeTraits<::test_protocols::TransitionalEventRequest>
 };
 
 template <>
-struct CodingTraits<::test_protocols::TransitionalEventRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_protocols::TransitionalEventRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.x, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::TransitionalEventRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::TransitionalEventRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::TransitionalEventRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4163,29 +3423,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::MethodWithUnionUnionMethodRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::MethodWithUnionUnionMethodRequest* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.u, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::MethodWithUnionUnionMethodRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.u, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::MethodWithUnionUnionMethodRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::MethodWithUnionUnionMethodRequest, 24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4205,34 +3445,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::SyscallProtocolMethodCRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::SyscallProtocolMethodCRequest* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::SyscallProtocolMethodCRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-  }
-};
+struct CodingTraits<::test_protocols::SyscallProtocolMethodCRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::SyscallProtocolMethodCRequest, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4251,59 +3466,9 @@ struct ::fidl::internal::TypeTraits<::test_protocols::ProtocolEnds> final {
 };
 
 template <>
-struct CodingTraits<::test_protocols::ProtocolEnds> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_protocols::ProtocolEnds* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.client, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
-                                                                           : 4;
-    ::fidl::Encode(encoder, &value->storage_.server, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.client_opt, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 12
-                                                                           : 12;
-    ::fidl::Encode(encoder, &value->storage_.server_opt, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::ProtocolEnds* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.client, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.server, offset + 4);
-    ::fidl::Decode(decoder, &value->storage_.client_opt, offset + 8);
-    ::fidl::Decode(decoder, &value->storage_.server_opt, offset + 12);
-  }
-};
+struct CodingTraits<::test_protocols::ProtocolEnds> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::ProtocolEnds, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4330,31 +3495,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.out, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.out, offset + 0);
-  }
-};
+    ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse, 16,
+          16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4379,31 +3524,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_protocols::WithProtocolEndsStructContainingEndsRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithProtocolEndsStructContainingEndsRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.in, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithProtocolEndsStructContainingEndsRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.in, offset + 0);
-  }
-};
+    ::test_protocols::WithProtocolEndsStructContainingEndsRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::WithProtocolEndsStructContainingEndsRequest,
+                16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4423,99 +3547,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::ManyParametersFifteenRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::ManyParametersFifteenRequest* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.p1, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 1
-                                                                           : 1;
-    ::fidl::Encode(encoder, &value->storage_.p2, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 2
-                                                                           : 2;
-    ::fidl::Encode(encoder, &value->storage_.p3, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 3
-                                                                           : 3;
-    ::fidl::Encode(encoder, &value->storage_.p4, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
-                                                                           : 4;
-    ::fidl::Encode(encoder, &value->storage_.p5, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 5
-                                                                           : 5;
-    ::fidl::Encode(encoder, &value->storage_.p6, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 6
-                                                                           : 6;
-    ::fidl::Encode(encoder, &value->storage_.p7, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 7
-                                                                           : 7;
-    ::fidl::Encode(encoder, &value->storage_.p8, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.p9, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 9
-                                                                           : 9;
-    ::fidl::Encode(encoder, &value->storage_.p10, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 10
-                                                                           : 10;
-    ::fidl::Encode(encoder, &value->storage_.p11, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 11
-                                                                           : 11;
-    ::fidl::Encode(encoder, &value->storage_.p12, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 12
-                                                                           : 12;
-    ::fidl::Encode(encoder, &value->storage_.p13, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 13
-                                                                           : 13;
-    ::fidl::Encode(encoder, &value->storage_.p14, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 14
-                                                                           : 14;
-    ::fidl::Encode(encoder, &value->storage_.p15, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::ManyParametersFifteenRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.p1, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.p2, offset + 1);
-    ::fidl::Decode(decoder, &value->storage_.p3, offset + 2);
-    ::fidl::Decode(decoder, &value->storage_.p4, offset + 3);
-    ::fidl::Decode(decoder, &value->storage_.p5, offset + 4);
-    ::fidl::Decode(decoder, &value->storage_.p6, offset + 5);
-    ::fidl::Decode(decoder, &value->storage_.p7, offset + 6);
-    ::fidl::Decode(decoder, &value->storage_.p8, offset + 7);
-    ::fidl::Decode(decoder, &value->storage_.p9, offset + 8);
-    ::fidl::Decode(decoder, &value->storage_.p10, offset + 9);
-    ::fidl::Decode(decoder, &value->storage_.p11, offset + 10);
-    ::fidl::Decode(decoder, &value->storage_.p12, offset + 11);
-    ::fidl::Decode(decoder, &value->storage_.p13, offset + 12);
-    ::fidl::Decode(decoder, &value->storage_.p14, offset + 13);
-    ::fidl::Decode(decoder, &value->storage_.p15, offset + 14);
-  }
-};
+struct CodingTraits<::test_protocols::ManyParametersFifteenRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::ManyParametersFifteenRequest, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4536,31 +3570,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse, 24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4581,29 +3594,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::ChannelProtocolMethodBTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::ChannelProtocolMethodBTopResponse* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::ChannelProtocolMethodBTopResponse* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
-};
+struct CodingTraits<::test_protocols::ChannelProtocolMethodBTopResponse> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::ChannelProtocolMethodBTopResponse, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4623,34 +3616,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::ChannelProtocolMethodBRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::ChannelProtocolMethodBRequest* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::ChannelProtocolMethodBRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-  }
-};
+struct CodingTraits<::test_protocols::ChannelProtocolMethodBRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::ChannelProtocolMethodBRequest, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4670,34 +3638,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::ChannelProtocolMethodARequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::ChannelProtocolMethodARequest* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::ChannelProtocolMethodARequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-  }
-};
+struct CodingTraits<::test_protocols::ChannelProtocolMethodARequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::ChannelProtocolMethodARequest, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4717,34 +3660,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocols::ChannelProtocolEventARequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_protocols::ChannelProtocolEventARequest* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_protocols::ChannelProtocolEventARequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
-  }
-};
+struct CodingTraits<::test_protocols::ChannelProtocolEventARequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_protocols::ChannelProtocolEventARequest, 16, 16> {};
 #endif  // __Fuchsia__
 
 template <>

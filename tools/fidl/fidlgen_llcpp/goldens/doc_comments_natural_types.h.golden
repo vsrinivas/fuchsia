@@ -5,7 +5,6 @@
 #include <fidl/test.doccomments/cpp/common_types.h>
 #include <fidl/test.doccomments/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -80,7 +79,7 @@ extern "C" const fidl_type_t test_doccomments_StructTable;
 /// struct comment #1
 ///
 /// struct comment #3
-class Struct final : public ::fidl::internal::CodableBase<Struct> {
+class Struct final {
  private:
   struct Storage_;
 
@@ -108,15 +107,6 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
   int32_t& field() { return storage_.field; }
 
  private:
-  friend ::fidl::internal::CodableBase<Struct>;
-  friend ::fidl::CodingTraits<Struct>;
-  Struct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     /// struct member comment #1
     ///
@@ -126,6 +116,12 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_doccomments::Struct, 4, 4>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+          &Storage_::field, 0, 0});
 };
 
 extern "C" const fidl_type_t test_doccomments_StrictUnionTable;
@@ -297,27 +293,9 @@ struct ::fidl::internal::TypeTraits<::test_doccomments::Struct> final {
 };
 
 template <>
-struct CodingTraits<::test_doccomments::Struct> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_doccomments::Struct* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.field, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_doccomments::Struct* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.field, offset + 0);
-  }
-};
+struct CodingTraits<::test_doccomments::Struct> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_doccomments::Struct, 4, 4> {};
 #endif  // __Fuchsia__
 
 template <>

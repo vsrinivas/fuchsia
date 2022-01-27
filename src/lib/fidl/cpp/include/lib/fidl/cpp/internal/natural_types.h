@@ -109,6 +109,59 @@ bool NaturalEnvelopeDecode(::fidl::Decoder* decoder, F* value, size_t offset) {
   }
 }
 
+// This holds metadata about a struct member: a member pointer to the member's value in
+// the struct's Storage_ type, offsets, and optionally handle information.
+template <typename T, typename F>
+struct NaturalStructMember final {
+  F T::*member_ptr;
+  size_t offset_v1;
+  size_t offset_v2;
+  std::optional<fidl::HandleInformation> handle_info;
+  explicit constexpr NaturalStructMember(
+      F T::*member_ptr, size_t offset_v1, size_t offset_v2,
+      std::optional<fidl::HandleInformation> handle_info = std::nullopt) noexcept
+      : member_ptr(member_ptr),
+        offset_v1(offset_v1),
+        offset_v2(offset_v2),
+        handle_info(handle_info) {}
+};
+
+template <typename T, size_t V1, size_t V2>
+struct NaturalStructCodingTraits {
+  static constexpr size_t inline_size_v1_no_ee = V1;
+  static constexpr size_t inline_size_v2 = V2;
+
+  // Visit each of the members of the struct in order.
+  template <typename F, size_t I = 0>
+  static void Visit(T* table, F func) {
+    if constexpr (I < std::tuple_size_v<decltype(T::kMembers)>) {
+      auto member_info = std::get<I>(T::kMembers);
+      auto* member_ptr = &(table->storage_.*(member_info.member_ptr));
+      func(member_ptr, member_info);
+      Visit<F, I + 1>(table, func);
+    }
+  }
+
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder, T* value, size_t offset,
+                     cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    const auto wire_format = encoder->wire_format();
+    Visit(value, [&](auto* member, auto& member_info) {
+      size_t field_offset = wire_format == ::fidl::internal::WireFormatVersion::kV1
+                                ? member_info.offset_v1
+                                : member_info.offset_v2;
+      ::fidl::Encode(encoder, member, offset + field_offset, member_info.handle_info);
+    });
+  }
+
+  template <class DecoderImpl>
+  static void Decode(DecoderImpl* decoder, T* value, size_t offset) {
+    Visit(value, [&](auto* member, auto& member_info) {
+      ::fidl::Decode(decoder, member, offset + member_info.offset_v2);
+    });
+  }
+};
+
 // This holds metadata about a table member: its ordinal, a member pointer to the member's value in
 // the table's Storage_ type, and optionally handle information.
 template <typename T, typename F>

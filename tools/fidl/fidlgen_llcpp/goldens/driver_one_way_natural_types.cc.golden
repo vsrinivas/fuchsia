@@ -4,17 +4,6 @@
 
 #ifdef __Fuchsia__
 
-void ::test_driveroneway::Payload::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_driveroneway::Payload, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_driveroneway::Payload>::Encode(&encoder, this,
-                                                             offset);
-}
-
-::test_driveroneway::Payload::Payload(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<uint32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_driveroneway::Payload::Storage_
@@ -23,18 +12,6 @@ test_driveroneway::Payload::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_driveroneway::OneWaySendRequest::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_driveroneway::OneWaySendRequest,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_driveroneway::OneWaySendRequest>::Encode(
-      &encoder, this, offset);
-}
-
-::test_driveroneway::OneWaySendRequest::OneWaySendRequest(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_driveroneway::Payload>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_driveroneway::OneWaySendRequest::Storage_

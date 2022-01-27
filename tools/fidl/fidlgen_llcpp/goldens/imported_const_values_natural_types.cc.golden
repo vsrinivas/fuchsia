@@ -4,16 +4,6 @@
 
 #ifdef __Fuchsia__
 
-void ::test_importedconstvalues::MyStruct::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<::test_importedconstvalues::MyStruct,
-                                           ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_importedconstvalues::MyStruct>::Encode(
-      &encoder, this, offset);
-}
-
-::test_importedconstvalues::MyStruct::MyStruct(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_importedconstvalues::MyStruct::Storage_

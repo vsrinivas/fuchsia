@@ -4,17 +4,6 @@
 
 #ifdef __Fuchsia__
 
-void ::test_struct::Simple::EncodeWithoutValidating(::fidl::Encoder& encoder,
-                                                    size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_struct::Simple, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_struct::Simple>::Encode(&encoder, this, offset);
-}
-
-::test_struct::Simple::Simple(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0),
-                ::fidl::DecodeAs<bool>(&decoder, 1)}) {}
 #endif  // __Fuchsia__
 
 ::test_struct::Simple::Storage_ test_struct::Simple::CloneStorage_() const {
@@ -23,18 +12,6 @@ void ::test_struct::Simple::EncodeWithoutValidating(::fidl::Encoder& encoder,
 }
 #ifdef __Fuchsia__
 
-void ::test_struct::BasicStruct::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_struct::BasicStruct, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_struct::BasicStruct>::Encode(&encoder, this,
-                                                           offset);
-}
-
-::test_struct::BasicStruct::BasicStruct(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<uint32_t>(&decoder, 0),
-                ::fidl::DecodeAs<::std::string>(&decoder, 8)}) {}
 #endif  // __Fuchsia__
 
 ::test_struct::BasicStruct::Storage_ test_struct::BasicStruct::CloneStorage_()

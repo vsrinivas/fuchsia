@@ -5,7 +5,6 @@
 #include <fidl/test.vectors/cpp/common_types.h>
 #include <fidl/test.vectors/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -20,8 +19,7 @@ class ExampleUseOfVectors;
 
 extern "C" const fidl_type_t test_vectors_ExampleUseOfVectorsTable;
 
-class ExampleUseOfVectors final
-    : public ::fidl::internal::CodableBase<ExampleUseOfVectors> {
+class ExampleUseOfVectors final {
  private:
   struct Storage_;
 
@@ -60,15 +58,6 @@ class ExampleUseOfVectors final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<ExampleUseOfVectors>;
-  friend ::fidl::CodingTraits<ExampleUseOfVectors>;
-  ExampleUseOfVectors(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::vector<uint8_t> vector_of_uint8{};
     ::std::vector<::std::vector<bool>> vector_of_vector_of_bool{};
@@ -76,6 +65,15 @@ class ExampleUseOfVectors final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_vectors::ExampleUseOfVectors, 32, 32>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::vector<uint8_t>>{
+          &Storage_::vector_of_uint8, 0, 0},
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::std::vector<::std::vector<bool>>>{
+          &Storage_::vector_of_vector_of_bool, 16, 16});
 };
 
 }  // namespace test_vectors
@@ -96,37 +94,9 @@ struct ::fidl::internal::TypeTraits<::test_vectors::ExampleUseOfVectors> final {
 };
 
 template <>
-struct CodingTraits<::test_vectors::ExampleUseOfVectors> {
-  static constexpr size_t inline_size_v1_no_ee = 32;
-  static constexpr size_t inline_size_v2 = 32;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_vectors::ExampleUseOfVectors* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.vector_of_uint8,
-                   offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 16
-                                                                           : 16;
-    ::fidl::Encode(encoder, &value->storage_.vector_of_vector_of_bool,
-                   offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_vectors::ExampleUseOfVectors* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.vector_of_uint8, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.vector_of_vector_of_bool,
-                   offset + 16);
-  }
-};
+struct CodingTraits<::test_vectors::ExampleUseOfVectors> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_vectors::ExampleUseOfVectors, 32, 32> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

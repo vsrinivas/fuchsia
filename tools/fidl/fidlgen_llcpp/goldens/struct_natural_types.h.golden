@@ -5,7 +5,6 @@
 #include <fidl/test.struct/cpp/common_types.h>
 #include <fidl/test.struct/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -22,7 +21,7 @@ class BasicStruct;
 
 extern "C" const fidl_type_t test_struct_SimpleTable;
 
-class Simple final : public ::fidl::internal::CodableBase<Simple> {
+class Simple final {
  private:
   struct Storage_;
 
@@ -49,15 +48,6 @@ class Simple final : public ::fidl::internal::CodableBase<Simple> {
   bool& f2() { return storage_.f2; }
 
  private:
-  friend ::fidl::internal::CodableBase<Simple>;
-  friend ::fidl::CodingTraits<Simple>;
-  Simple(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint8_t f1{};
     bool f2{};
@@ -65,11 +55,19 @@ class Simple final : public ::fidl::internal::CodableBase<Simple> {
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_struct::Simple, 2, 2>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::f1, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::f2, 1,
+                                                            1});
 };
 
 extern "C" const fidl_type_t test_struct_BasicStructTable;
 
-class BasicStruct final : public ::fidl::internal::CodableBase<BasicStruct> {
+class BasicStruct final {
  private:
   struct Storage_;
 
@@ -97,15 +95,6 @@ class BasicStruct final : public ::fidl::internal::CodableBase<BasicStruct> {
   ::std::string& y() { return storage_.y; }
 
  private:
-  friend ::fidl::internal::CodableBase<BasicStruct>;
-  friend ::fidl::CodingTraits<BasicStruct>;
-  BasicStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t x{};
     ::std::string y{};
@@ -113,6 +102,14 @@ class BasicStruct final : public ::fidl::internal::CodableBase<BasicStruct> {
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_struct::BasicStruct, 24, 24>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::x, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
+          &Storage_::y, 8, 8});
 };
 
 }  // namespace test_struct
@@ -131,32 +128,9 @@ struct ::fidl::internal::TypeTraits<::test_struct::Simple> final {
 };
 
 template <>
-struct CodingTraits<::test_struct::Simple> {
-  static constexpr size_t inline_size_v1_no_ee = 2;
-  static constexpr size_t inline_size_v2 = 2;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_struct::Simple* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.f1, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 1
-                                                                           : 1;
-    ::fidl::Encode(encoder, &value->storage_.f2, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_struct::Simple* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.f1, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.f2, offset + 1);
-  }
-};
+struct CodingTraits<::test_struct::Simple> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple,
+                                                         2, 2> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -173,32 +147,9 @@ struct ::fidl::internal::TypeTraits<::test_struct::BasicStruct> final {
 };
 
 template <>
-struct CodingTraits<::test_struct::BasicStruct> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 24;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_struct::BasicStruct* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.x, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.y, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_struct::BasicStruct* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.y, offset + 8);
-  }
-};
+struct CodingTraits<::test_struct::BasicStruct> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_struct::BasicStruct, 24, 24> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

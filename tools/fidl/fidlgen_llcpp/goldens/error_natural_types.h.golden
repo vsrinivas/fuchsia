@@ -5,7 +5,6 @@
 #include <fidl/test.error/cpp/common_types.h>
 #include <fidl/test.error/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -28,8 +27,7 @@ class Example_foo_Result;
 
 extern "C" const fidl_type_t test_error_Example_foo_ResponseTable;
 
-class Example_foo_Response final
-    : public ::fidl::internal::CodableBase<Example_foo_Response> {
+class Example_foo_Response final {
  private:
   struct Storage_;
 
@@ -53,21 +51,18 @@ class Example_foo_Response final
   int64_t& y() { return storage_.y; }
 
  private:
-  friend ::fidl::internal::CodableBase<Example_foo_Response>;
-  friend ::fidl::CodingTraits<Example_foo_Response>;
-  Example_foo_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int64_t y{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_error::Example_foo_Response, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+          &Storage_::y, 0, 0});
 };
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
@@ -160,8 +155,7 @@ class Example_foo_Result final {
 
 extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
-class ExampleFooTopResponse final
-    : public ::fidl::internal::CodableBase<ExampleFooTopResponse> {
+class ExampleFooTopResponse final {
  private:
   struct Storage_;
 
@@ -189,27 +183,24 @@ class ExampleFooTopResponse final
   ::test_error::Example_foo_Result& result() { return storage_.result; }
 
  private:
-  friend ::fidl::internal::CodableBase<ExampleFooTopResponse>;
-  friend ::fidl::CodingTraits<ExampleFooTopResponse>;
-  ExampleFooTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_error::Example_foo_Result result{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_error::ExampleFooTopResponse, 24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::test_error::Example_foo_Result>{
+          &Storage_::result, 0, 0});
 };
 
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
 
-class ExampleFooRequest final
-    : public ::fidl::internal::CodableBase<ExampleFooRequest> {
+class ExampleFooRequest final {
  private:
   struct Storage_;
 
@@ -232,21 +223,18 @@ class ExampleFooRequest final
   ::std::string& s() { return storage_.s; }
 
  private:
-  friend ::fidl::internal::CodableBase<ExampleFooRequest>;
-  friend ::fidl::CodingTraits<ExampleFooRequest>;
-  ExampleFooRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::string s{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_error::ExampleFooRequest, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
+          &Storage_::s, 0, 0});
 };
 
 }  // namespace test_error
@@ -267,28 +255,9 @@ struct ::fidl::internal::TypeTraits<::test_error::Example_foo_Response> final {
 };
 
 template <>
-struct CodingTraits<::test_error::Example_foo_Response> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_error::Example_foo_Response* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.y, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_error::Example_foo_Response* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.y, offset + 0);
-  }
-};
+struct CodingTraits<::test_error::Example_foo_Response> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_error::Example_foo_Response, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -306,29 +275,9 @@ struct ::fidl::internal::TypeTraits<::test_error::ExampleFooTopResponse> final {
 };
 
 template <>
-struct CodingTraits<::test_error::ExampleFooTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_error::ExampleFooTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_error::ExampleFooTopResponse* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
-};
+struct CodingTraits<::test_error::ExampleFooTopResponse> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_error::ExampleFooTopResponse, 24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -345,28 +294,9 @@ struct ::fidl::internal::TypeTraits<::test_error::ExampleFooRequest> final {
 };
 
 template <>
-struct CodingTraits<::test_error::ExampleFooRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_error::ExampleFooRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.s, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_error::ExampleFooRequest* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
-  }
-};
+struct CodingTraits<::test_error::ExampleFooRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_error::ExampleFooRequest, 16, 16> {};
 #endif  // __Fuchsia__
 
 template <>

@@ -5,7 +5,6 @@
 #include <fidl/test.byteandbytes/cpp/markers.h>
 #include <fidl/test.byteandbytes/cpp/natural_types.h>
 #include <lib/fidl/cpp/client.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/internal/natural_server_messenger.h>

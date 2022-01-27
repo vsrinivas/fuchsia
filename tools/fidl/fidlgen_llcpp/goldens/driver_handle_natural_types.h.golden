@@ -5,7 +5,6 @@
 #include <fidl/test.driverhandle/cpp/common_types.h>
 #include <fidl/test.driverhandle/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -27,8 +26,7 @@ class ClientEndWrapper;
 
 extern "C" const fidl_type_t test_driverhandle_ServerEndWrapperTable;
 
-class ServerEndWrapper final
-    : public ::fidl::internal::CodableBase<ServerEndWrapper> {
+class ServerEndWrapper final {
  private:
   struct Storage_;
 
@@ -51,20 +49,21 @@ class ServerEndWrapper final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<ServerEndWrapper>;
-  friend ::fidl::CodingTraits<ServerEndWrapper>;
-  ServerEndWrapper(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_driverhandle::ServerEndWrapper, 4, 4>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>>{
+          &Storage_::value, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
 
 #endif  // __Fuchsia__
@@ -73,8 +72,7 @@ class ServerEndWrapper final
 
 extern "C" const fidl_type_t test_driverhandle_ClientEndWrapperTable;
 
-class ClientEndWrapper final
-    : public ::fidl::internal::CodableBase<ClientEndWrapper> {
+class ClientEndWrapper final {
  private:
   struct Storage_;
 
@@ -97,20 +95,21 @@ class ClientEndWrapper final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<ClientEndWrapper>;
-  friend ::fidl::CodingTraits<ClientEndWrapper>;
-  ClientEndWrapper(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_driverhandle::ClientEndWrapper, 4, 4>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>{
+          &Storage_::value, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
 
 #endif  // __Fuchsia__
@@ -137,33 +136,9 @@ struct ::fidl::internal::TypeTraits<::test_driverhandle::ServerEndWrapper>
 };
 
 template <>
-struct CodingTraits<::test_driverhandle::ServerEndWrapper> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_driverhandle::ServerEndWrapper* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.value, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_driverhandle::ServerEndWrapper* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.value, offset + 0);
-  }
-};
+struct CodingTraits<::test_driverhandle::ServerEndWrapper> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_driverhandle::ServerEndWrapper, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -185,33 +160,9 @@ struct ::fidl::internal::TypeTraits<::test_driverhandle::ClientEndWrapper>
 };
 
 template <>
-struct CodingTraits<::test_driverhandle::ClientEndWrapper> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_driverhandle::ClientEndWrapper* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.value, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_driverhandle::ClientEndWrapper* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.value, offset + 0);
-  }
-};
+struct CodingTraits<::test_driverhandle::ClientEndWrapper> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_driverhandle::ClientEndWrapper, 4, 4> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

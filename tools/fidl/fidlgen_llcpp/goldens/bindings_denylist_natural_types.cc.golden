@@ -4,19 +4,6 @@
 
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary::
-    MemberOnlyAppearsInImportingLibrary(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary::Storage_
@@ -26,22 +13,6 @@ test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary::CloneStorage_()
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::OnlyAppearsInImportingLibrary::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_bindingsdenylist::OnlyAppearsInImportingLibrary,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>::Encode(&encoder,
-                                                                      this,
-                                                                      offset);
-}
-
-::test_bindingsdenylist::OnlyAppearsInImportingLibrary::
-    OnlyAppearsInImportingLibrary(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<
-          ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>(
-          &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::OnlyAppearsInImportingLibrary::Storage_
@@ -51,20 +22,6 @@ test_bindingsdenylist::OnlyAppearsInImportingLibrary::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response,
-          ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::
-    DenyEachBinding_OnlyDenySyzkaller_Response(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::Storage_
@@ -74,22 +31,6 @@ test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
-          ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse::
-    DenyEachBindingOnlyDenySyzkallerTopResponse(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<
-          ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>(
-          &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse::Storage_
@@ -99,19 +40,6 @@ test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse::
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::
-    DenyEachBinding_OnlyDenyRust_Response(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::Storage_
@@ -121,21 +49,6 @@ test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::CloneStorage_()
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse::
-    DenyEachBindingOnlyDenyRustTopResponse(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<
-          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>(
-          &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse::Storage_
@@ -145,20 +58,6 @@ test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse::CloneStorage_()
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response,
-          ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::
-    DenyEachBinding_OnlyDenyLibfuzzer_Response(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::Storage_
@@ -168,22 +67,6 @@ test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
-          ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse::
-    DenyEachBindingOnlyDenyLibfuzzerTopResponse(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<
-          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>(
-          &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse::Storage_
@@ -193,19 +76,6 @@ test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse::
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::
-    DenyEachBinding_OnlyDenyGo_Response(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::Storage_
@@ -215,21 +85,6 @@ test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::CloneStorage_()
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse::
-    DenyEachBindingOnlyDenyGoTopResponse(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<
-          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>(&decoder,
-                                                                      0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse::Storage_
@@ -239,19 +94,6 @@ test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse::CloneStorage_()
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::
-    DenyEachBinding_OnlyDenyDart_Response(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::Storage_
@@ -261,21 +103,6 @@ test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::CloneStorage_()
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse::
-    DenyEachBindingOnlyDenyDartTopResponse(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<
-          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>(
-          &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse::Storage_
@@ -285,20 +112,6 @@ test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse::CloneStorage_()
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest,
-          ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest::
-    DenyEachBindingOnlyDenySyzkallerRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest::Storage_
@@ -308,20 +121,6 @@ test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest::CloneStorage_()
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_bindingsdenylist::
-                           DenyEachBindingOnlyDenyRustRequest>::Encode(&encoder,
-                                                                       this,
-                                                                       offset);
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest::
-    DenyEachBindingOnlyDenyRustRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest::Storage_
@@ -331,20 +130,6 @@ test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest::CloneStorage_()
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest,
-          ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>::
-      Encode(&encoder, this, offset);
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest::
-    DenyEachBindingOnlyDenyLibfuzzerRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest::Storage_
@@ -354,20 +139,6 @@ test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest::CloneStorage_()
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_bindingsdenylist::
-                           DenyEachBindingOnlyDenyGoRequest>::Encode(&encoder,
-                                                                     this,
-                                                                     offset);
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest::
-    DenyEachBindingOnlyDenyGoRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest::Storage_
@@ -376,20 +147,6 @@ test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_bindingsdenylist::
-                           DenyEachBindingOnlyDenyDartRequest>::Encode(&encoder,
-                                                                       this,
-                                                                       offset);
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest::
-    DenyEachBindingOnlyDenyDartRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<bool>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest::Storage_

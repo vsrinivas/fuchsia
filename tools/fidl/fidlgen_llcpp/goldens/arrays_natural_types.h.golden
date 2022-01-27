@@ -5,7 +5,6 @@
 #include <fidl/test.arrays/cpp/common_types.h>
 #include <fidl/test.arrays/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -249,8 +248,7 @@ class TableLargeArray final {
 
 extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
 
-class StructSmallArray final
-    : public ::fidl::internal::CodableBase<StructSmallArray> {
+class StructSmallArray final {
  private:
   struct Storage_;
 
@@ -274,27 +272,23 @@ class StructSmallArray final
   ::std::array<uint32_t, 2>& a() { return storage_.a; }
 
  private:
-  friend ::fidl::internal::CodableBase<StructSmallArray>;
-  friend ::fidl::CodingTraits<StructSmallArray>;
-  StructSmallArray(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::array<uint32_t, 2> a{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_arrays::StructSmallArray, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::std::array<uint32_t, 2>>{&Storage_::a, 0, 0});
 };
 
 extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
 
-class StructLargeArray final
-    : public ::fidl::internal::CodableBase<StructLargeArray> {
+class StructLargeArray final {
  private:
   struct Storage_;
 
@@ -318,21 +312,19 @@ class StructLargeArray final
   ::std::array<uint32_t, 100>& a() { return storage_.a; }
 
  private:
-  friend ::fidl::internal::CodableBase<StructLargeArray>;
-  friend ::fidl::CodingTraits<StructLargeArray>;
-  StructLargeArray(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::array<uint32_t, 100> a{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_arrays::StructLargeArray, 400, 400>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::std::array<uint32_t, 100>>{
+          &Storage_::a, 0, 0});
 };
 
 }  // namespace test_arrays
@@ -352,28 +344,9 @@ struct ::fidl::internal::TypeTraits<::test_arrays::StructSmallArray> final {
 };
 
 template <>
-struct CodingTraits<::test_arrays::StructSmallArray> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_arrays::StructSmallArray* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_arrays::StructSmallArray* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-  }
-};
+struct CodingTraits<::test_arrays::StructSmallArray> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_arrays::StructSmallArray, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -390,28 +363,9 @@ struct ::fidl::internal::TypeTraits<::test_arrays::StructLargeArray> final {
 };
 
 template <>
-struct CodingTraits<::test_arrays::StructLargeArray> {
-  static constexpr size_t inline_size_v1_no_ee = 400;
-  static constexpr size_t inline_size_v2 = 400;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_arrays::StructLargeArray* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_arrays::StructLargeArray* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-  }
-};
+struct CodingTraits<::test_arrays::StructLargeArray> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_arrays::StructLargeArray, 400, 400> {};
 #endif  // __Fuchsia__
 
 template <>

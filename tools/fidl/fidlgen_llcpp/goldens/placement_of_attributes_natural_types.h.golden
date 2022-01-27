@@ -5,7 +5,6 @@
 #include <fidl/test.placementofattributes/cpp/common_types.h>
 #include <fidl/test.placementofattributes/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -212,8 +211,7 @@ class ExampleTable final {
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
 
-class ExampleStruct final
-    : public ::fidl::internal::CodableBase<ExampleStruct> {
+class ExampleStruct final {
  private:
   struct Storage_;
 
@@ -237,28 +235,24 @@ class ExampleStruct final
   uint32_t& member() { return storage_.member; }
 
  private:
-  friend ::fidl::internal::CodableBase<ExampleStruct>;
-  friend ::fidl::CodingTraits<ExampleStruct>;
-  ExampleStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t member{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_placementofattributes::ExampleStruct, 4, 4>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          &Storage_::member, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_placementofattributes_ExampleProtocolMethodRequestTable;
 
-class ExampleProtocolMethodRequest final
-    : public ::fidl::internal::CodableBase<ExampleProtocolMethodRequest> {
+class ExampleProtocolMethodRequest final {
  private:
   struct Storage_;
 
@@ -287,21 +281,19 @@ class ExampleProtocolMethodRequest final
   ::test_exampleusing::Empty& arg() { return storage_.arg; }
 
  private:
-  friend ::fidl::internal::CodableBase<ExampleProtocolMethodRequest>;
-  friend ::fidl::CodingTraits<ExampleProtocolMethodRequest>;
-  ExampleProtocolMethodRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_exampleusing::Empty arg{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_placementofattributes::ExampleProtocolMethodRequest, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::test_exampleusing::Empty>{
+          &Storage_::arg, 0, 0});
 };
 
 constexpr uint32_t EXAMPLE_CONST = 0u;
@@ -325,29 +317,9 @@ struct ::fidl::internal::TypeTraits<::test_placementofattributes::ExampleStruct>
 };
 
 template <>
-struct CodingTraits<::test_placementofattributes::ExampleStruct> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_placementofattributes::ExampleStruct* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.member, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_placementofattributes::ExampleStruct* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.member, offset + 0);
-  }
-};
+struct CodingTraits<::test_placementofattributes::ExampleStruct> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_placementofattributes::ExampleStruct, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -368,32 +340,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
-    ::test_placementofattributes::ExampleProtocolMethodRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_placementofattributes::ExampleProtocolMethodRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.arg, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_placementofattributes::ExampleProtocolMethodRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.arg, offset + 0);
-  }
-};
+struct CodingTraits<::test_placementofattributes::ExampleProtocolMethodRequest>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_placementofattributes::ExampleProtocolMethodRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 template <>

@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_TESTS_CONFORMANCE_CONFORMANCE_UTILS_H_
 #define SRC_LIB_FIDL_CPP_TESTS_CONFORMANCE_CONFORMANCE_UTILS_H_
 
-#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/internal.h>
 
 #include <zxtest/zxtest.h>
@@ -15,7 +15,7 @@ namespace conformance_utils {
 template <typename FidlType>
 void EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlType& obj,
                    const std::vector<uint8_t>& bytes) {
-  fidl::internal::EncodeResult result = obj.Internal__Encode();
+  fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(obj);
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
 

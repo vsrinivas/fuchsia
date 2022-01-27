@@ -5,7 +5,6 @@
 #include <fidl/test.union/cpp/common_types.h>
 #include <fidl/test.union/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -253,8 +252,7 @@ class Union final {
 
 extern "C" const fidl_type_t test_union_StructWithNullableXUnionTable;
 
-class StructWithNullableXUnion final
-    : public ::fidl::internal::CodableBase<StructWithNullableXUnion> {
+class StructWithNullableXUnion final {
  private:
   struct Storage_;
 
@@ -286,21 +284,19 @@ class StructWithNullableXUnion final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableXUnion>;
-  friend ::fidl::CodingTraits<StructWithNullableXUnion>;
-  StructWithNullableXUnion(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::unique_ptr<::test_union::OlderSimpleUnion> x1{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_union::StructWithNullableXUnion, 24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::unique_ptr<::test_union::OlderSimpleUnion>>{
+          &Storage_::x1, 0, 0});
 };
 
 extern "C" const fidl_type_t test_union_StrictUnionTable;
@@ -669,9 +665,8 @@ class StrictBoundedXUnion final {
 extern "C" const fidl_type_t
     test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
 
-class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse final
-    : public ::fidl::internal::CodableBase<
-          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
+class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
+    final {
  private:
   struct Storage_;
 
@@ -711,24 +706,21 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse final
   ::test_union::StrictBoundedXUnion& xu() { return storage_.xu; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
-  friend ::fidl::CodingTraits<
-      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
-  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_union::StrictBoundedXUnion xu{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_union::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
+      24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::test_union::StrictBoundedXUnion>{
+          &Storage_::xu, 0, 0});
 };
 
 extern "C" const fidl_type_t test_union_ReverseOrdinalUnionTable;
@@ -819,7 +811,7 @@ class ReverseOrdinalUnion final {
 
 extern "C" const fidl_type_t test_union_PizzaTable;
 
-class Pizza final : public ::fidl::internal::CodableBase<Pizza> {
+class Pizza final {
  private:
   struct Storage_;
 
@@ -844,26 +836,24 @@ class Pizza final : public ::fidl::internal::CodableBase<Pizza> {
   ::std::vector<::std::string>& toppings() { return storage_.toppings; }
 
  private:
-  friend ::fidl::internal::CodableBase<Pizza>;
-  friend ::fidl::CodingTraits<Pizza>;
-  Pizza(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::vector<::std::string> toppings{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza,
+                                                            16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::std::vector<::std::string>>{
+          &Storage_::toppings, 0, 0});
 };
 
 extern "C" const fidl_type_t test_union_PastaTable;
 
-class Pasta final : public ::fidl::internal::CodableBase<Pasta> {
+class Pasta final {
  private:
   struct Storage_;
 
@@ -885,21 +875,18 @@ class Pasta final : public ::fidl::internal::CodableBase<Pasta> {
   ::std::string& sauce() { return storage_.sauce; }
 
  private:
-  friend ::fidl::internal::CodableBase<Pasta>;
-  friend ::fidl::CodingTraits<Pasta>;
-  Pasta(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::string sauce{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta,
+                                                            16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
+          &Storage_::sauce, 0, 0});
 };
 
 extern "C" const fidl_type_t test_union_StrictPizzaOrPastaTable;
@@ -1341,9 +1328,7 @@ extern "C" const fidl_type_t
     test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
 
 class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
-    final
-    : public ::fidl::internal::CodableBase<
-          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
+    final {
  private:
   struct Storage_;
 
@@ -1383,30 +1368,26 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
   ::test_union::OlderSimpleUnion& xu() { return storage_.xu; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
-  friend ::fidl::CodingTraits<
-      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
-  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
-      ::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_union::OlderSimpleUnion xu{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_union::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
+      24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::test_union::OlderSimpleUnion>{
+          &Storage_::xu, 0, 0});
 };
 
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;
 
-class NullableUnionStruct final
-    : public ::fidl::internal::CodableBase<NullableUnionStruct> {
+class NullableUnionStruct final {
  private:
   struct Storage_;
 
@@ -1435,21 +1416,19 @@ class NullableUnionStruct final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<NullableUnionStruct>;
-  friend ::fidl::CodingTraits<NullableUnionStruct>;
-  NullableUnionStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::unique_ptr<::test_union::Union> the_union{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_union::NullableUnionStruct, 24, 16>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::std::unique_ptr<::test_union::Union>>{
+          &Storage_::the_union, 0, 0});
 };
 
 extern "C" const fidl_type_t test_union_NewerSimpleUnionTable;
@@ -1907,8 +1886,7 @@ class ExplicitXUnion final {
 
 extern "C" const fidl_type_t test_union_UnionSandwichTable;
 
-class UnionSandwich final
-    : public ::fidl::internal::CodableBase<UnionSandwich> {
+class UnionSandwich final {
  private:
   struct Storage_;
 
@@ -1940,15 +1918,6 @@ class UnionSandwich final
   uint32_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<UnionSandwich>;
-  friend ::fidl::CodingTraits<UnionSandwich>;
-  UnionSandwich(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint32_t a{};
     ::test_union::ExplicitXUnion u{};
@@ -1957,6 +1926,17 @@ class UnionSandwich final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_union::UnionSandwich, 40, 32>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::a, 0,
+                                                                0},
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::test_union::ExplicitXUnion>{
+          &Storage_::u, 8, 8},
+      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::b,
+                                                                32, 24});
 };
 
 extern "C" const fidl_type_t test_union_ExplicitUnionTable;
@@ -2217,7 +2197,7 @@ class ExplicitFoo final {
 
 extern "C" const fidl_type_t test_union_EmptyTable;
 
-class Empty final : public ::fidl::internal::CodableBase<Empty> {
+class Empty final {
  private:
   struct Storage_;
 
@@ -2240,21 +2220,18 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
   uint8_t& __reserved() { return storage_.__reserved; }
 
  private:
-  friend ::fidl::internal::CodableBase<Empty>;
-  friend ::fidl::CodingTraits<Empty>;
-  Empty(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     uint8_t __reserved = 0u;
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::Empty,
+                                                            1, 1>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+          &Storage_::__reserved, 0, 0});
 };
 
 extern "C" const fidl_type_t test_union_XUnionContainingEmptyStructTable;
@@ -2350,29 +2327,9 @@ struct ::fidl::internal::TypeTraits<::test_union::StructWithNullableXUnion>
 };
 
 template <>
-struct CodingTraits<::test_union::StructWithNullableXUnion> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_union::StructWithNullableXUnion* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.x1, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_union::StructWithNullableXUnion* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.x1, offset + 0);
-  }
-};
+struct CodingTraits<::test_union::StructWithNullableXUnion> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_union::StructWithNullableXUnion, 24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2398,35 +2355,12 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<
     ::test_union::
-        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_union::
-          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
-              value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.xu, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_union::
-          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
-              value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.xu, offset + 0);
-  }
-};
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_union::
+              TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
+          24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2442,27 +2376,9 @@ struct ::fidl::internal::TypeTraits<::test_union::Pizza> final {
 };
 
 template <>
-struct CodingTraits<::test_union::Pizza> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_union::Pizza* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.toppings, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_union::Pizza* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.toppings, offset + 0);
-  }
-};
+struct CodingTraits<::test_union::Pizza> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza,
+                                                         16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2478,27 +2394,9 @@ struct ::fidl::internal::TypeTraits<::test_union::Pasta> final {
 };
 
 template <>
-struct CodingTraits<::test_union::Pasta> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_union::Pasta* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.sauce, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_union::Pasta* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.sauce, offset + 0);
-  }
-};
+struct CodingTraits<::test_union::Pasta> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta,
+                                                         16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2524,35 +2422,12 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<
     ::test_union::
-        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_union::
-          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
-              value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.xu, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_union::
-          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
-              value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.xu, offset + 0);
-  }
-};
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_union::
+              TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
+          24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2569,28 +2444,9 @@ struct ::fidl::internal::TypeTraits<::test_union::NullableUnionStruct> final {
 };
 
 template <>
-struct CodingTraits<::test_union::NullableUnionStruct> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_union::NullableUnionStruct* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.the_union, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_union::NullableUnionStruct* value, size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.the_union, offset + 0);
-  }
-};
+struct CodingTraits<::test_union::NullableUnionStruct> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_union::NullableUnionStruct, 24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2607,37 +2463,9 @@ struct ::fidl::internal::TypeTraits<::test_union::UnionSandwich> final {
 };
 
 template <>
-struct CodingTraits<::test_union::UnionSandwich> {
-  static constexpr size_t inline_size_v1_no_ee = 40;
-  static constexpr size_t inline_size_v2 = 32;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_union::UnionSandwich* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
-                                                                           : 8;
-    ::fidl::Encode(encoder, &value->storage_.u, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 32
-                                                                           : 24;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_union::UnionSandwich* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.u, offset + 8);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 24);
-  }
-};
+struct CodingTraits<::test_union::UnionSandwich> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_union::UnionSandwich, 40, 32> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2653,27 +2481,9 @@ struct ::fidl::internal::TypeTraits<::test_union::Empty> final {
 };
 
 template <>
-struct CodingTraits<::test_union::Empty> {
-  static constexpr size_t inline_size_v1_no_ee = 1;
-  static constexpr size_t inline_size_v2 = 1;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_union::Empty* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.__reserved, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_union::Empty* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
-  }
-};
+struct CodingTraits<::test_union::Empty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Empty, 1,
+                                                         1> {};
 #endif  // __Fuchsia__
 
 template <>

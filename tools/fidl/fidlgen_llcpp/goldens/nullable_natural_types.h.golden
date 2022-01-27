@@ -5,7 +5,6 @@
 #include <fidl/test.nullable/cpp/common_types.h>
 #include <fidl/test.nullable/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -43,8 +42,7 @@ class SimpleUnion;
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableVectorTable;
 
-class StructWithNullableVector final
-    : public ::fidl::internal::CodableBase<StructWithNullableVector> {
+class StructWithNullableVector final {
  private:
   struct Storage_;
 
@@ -74,27 +72,24 @@ class StructWithNullableVector final
   ::cpp17::optional<::std::vector<int32_t>>& val() { return storage_.val; }
 
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableVector>;
-  friend ::fidl::CodingTraits<StructWithNullableVector>;
-  StructWithNullableVector(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::cpp17::optional<::std::vector<int32_t>> val{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_nullable::StructWithNullableVector, 16, 16>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::cpp17::optional<::std::vector<int32_t>>>{
+          &Storage_::val, 0, 0});
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
 
-class StructWithNullableUnion final
-    : public ::fidl::internal::CodableBase<StructWithNullableUnion> {
+class StructWithNullableUnion final {
  private:
   struct Storage_;
 
@@ -126,27 +121,24 @@ class StructWithNullableUnion final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableUnion>;
-  friend ::fidl::CodingTraits<StructWithNullableUnion>;
-  StructWithNullableUnion(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::unique_ptr<::test_nullable::SimpleUnion> val{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_nullable::StructWithNullableUnion, 24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::unique_ptr<::test_nullable::SimpleUnion>>{
+          &Storage_::val, 0, 0});
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
 
-class StructWithNullableStruct final
-    : public ::fidl::internal::CodableBase<StructWithNullableStruct> {
+class StructWithNullableStruct final {
  private:
   struct Storage_;
 
@@ -178,27 +170,24 @@ class StructWithNullableStruct final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableStruct>;
-  friend ::fidl::CodingTraits<StructWithNullableStruct>;
-  StructWithNullableStruct(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::std::unique_ptr<::test_nullable::Int32Wrapper> val{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_nullable::StructWithNullableStruct, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::unique_ptr<::test_nullable::Int32Wrapper>>{
+          &Storage_::val, 0, 0});
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 
-class StructWithNullableString final
-    : public ::fidl::internal::CodableBase<StructWithNullableString> {
+class StructWithNullableString final {
  private:
   struct Storage_;
 
@@ -225,29 +214,26 @@ class StructWithNullableString final
   ::cpp17::optional<::std::string>& val() { return storage_.val; }
 
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableString>;
-  friend ::fidl::CodingTraits<StructWithNullableString>;
-  StructWithNullableString(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::cpp17::optional<::std::string> val{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_nullable::StructWithNullableString, 16, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_,
+                                            ::cpp17::optional<::std::string>>{
+          &Storage_::val, 0, 0});
 };
 
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableRequestTable;
 
-class StructWithNullableRequest final
-    : public ::fidl::internal::CodableBase<StructWithNullableRequest> {
+class StructWithNullableRequest final {
  private:
   struct Storage_;
 
@@ -272,20 +258,21 @@ class StructWithNullableRequest final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableRequest>;
-  friend ::fidl::CodingTraits<StructWithNullableRequest>;
-  StructWithNullableRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::fidl::ServerEnd<::test_nullable::SimpleProtocol> val{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_nullable::StructWithNullableRequest, 4, 4>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fidl::ServerEnd<::test_nullable::SimpleProtocol>>{
+          &Storage_::val, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
 
 #endif  // __Fuchsia__
@@ -294,8 +281,7 @@ class StructWithNullableRequest final
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableProtocolTable;
 
-class StructWithNullableProtocol final
-    : public ::fidl::internal::CodableBase<StructWithNullableProtocol> {
+class StructWithNullableProtocol final {
  private:
   struct Storage_;
 
@@ -320,20 +306,21 @@ class StructWithNullableProtocol final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableProtocol>;
-  friend ::fidl::CodingTraits<StructWithNullableProtocol>;
-  StructWithNullableProtocol(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::fidl::ClientEnd<::test_nullable::SimpleProtocol> val{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_nullable::StructWithNullableProtocol, 4, 4>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::fidl::ClientEnd<::test_nullable::SimpleProtocol>>{
+          &Storage_::val, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_CHANNEL,
+               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
 
 #endif  // __Fuchsia__
@@ -342,8 +329,7 @@ class StructWithNullableProtocol final
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableHandleTable;
 
-class StructWithNullableHandle final
-    : public ::fidl::internal::CodableBase<StructWithNullableHandle> {
+class StructWithNullableHandle final {
  private:
   struct Storage_;
 
@@ -363,20 +349,19 @@ class StructWithNullableHandle final
   ::zx::vmo& val() { return storage_.val; }
 
  private:
-  friend ::fidl::internal::CodableBase<StructWithNullableHandle>;
-  friend ::fidl::CodingTraits<StructWithNullableHandle>;
-  StructWithNullableHandle(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::zx::vmo val{};
   };
 
   Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_nullable::StructWithNullableHandle, 4, 4>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo>{
+          &Storage_::val, 0, 0,
+          std::make_optional<::fidl::HandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})});
 };
 
 #endif  // __Fuchsia__
@@ -467,8 +452,7 @@ class SimpleUnion final {
 
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
 
-class SimpleProtocolAddTopResponse final
-    : public ::fidl::internal::CodableBase<SimpleProtocolAddTopResponse> {
+class SimpleProtocolAddTopResponse final {
  private:
   struct Storage_;
 
@@ -497,27 +481,23 @@ class SimpleProtocolAddTopResponse final
   int32_t& sum() { return storage_.sum; }
 
  private:
-  friend ::fidl::internal::CodableBase<SimpleProtocolAddTopResponse>;
-  friend ::fidl::CodingTraits<SimpleProtocolAddTopResponse>;
-  SimpleProtocolAddTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int32_t sum{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_nullable::SimpleProtocolAddTopResponse, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+          &Storage_::sum, 0, 0});
 };
 
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 
-class SimpleProtocolAddRequest final
-    : public ::fidl::internal::CodableBase<SimpleProtocolAddRequest> {
+class SimpleProtocolAddRequest final {
  private:
   struct Storage_;
 
@@ -548,15 +528,6 @@ class SimpleProtocolAddRequest final
   int32_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<SimpleProtocolAddRequest>;
-  friend ::fidl::CodingTraits<SimpleProtocolAddRequest>;
-  SimpleProtocolAddRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int32_t a{};
     int32_t b{};
@@ -564,11 +535,19 @@ class SimpleProtocolAddRequest final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_nullable::SimpleProtocolAddRequest, 8, 8>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<Storage_, int32_t>{&Storage_::a, 0,
+                                                               0},
+      ::fidl::internal::NaturalStructMember<Storage_, int32_t>{&Storage_::b, 4,
+                                                               4});
 };
 
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
 
-class Int32Wrapper final : public ::fidl::internal::CodableBase<Int32Wrapper> {
+class Int32Wrapper final {
  private:
   struct Storage_;
 
@@ -591,21 +570,18 @@ class Int32Wrapper final : public ::fidl::internal::CodableBase<Int32Wrapper> {
   int32_t& val() { return storage_.val; }
 
  private:
-  friend ::fidl::internal::CodableBase<Int32Wrapper>;
-  friend ::fidl::CodingTraits<Int32Wrapper>;
-  Int32Wrapper(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int32_t val{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_nullable::Int32Wrapper, 4, 4>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+          &Storage_::val, 0, 0});
 };
 
 }  // namespace test_nullable
@@ -627,29 +603,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableVector>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableVector> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_nullable::StructWithNullableVector* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_nullable::StructWithNullableVector* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.val, offset + 0);
-  }
-};
+struct CodingTraits<::test_nullable::StructWithNullableVector> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_nullable::StructWithNullableVector, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -668,29 +624,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableUnion>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableUnion> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_nullable::StructWithNullableUnion* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_nullable::StructWithNullableUnion* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.val, offset + 0);
-  }
-};
+struct CodingTraits<::test_nullable::StructWithNullableUnion> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_nullable::StructWithNullableUnion, 24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -709,29 +645,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableStruct>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableStruct> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_nullable::StructWithNullableStruct* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_nullable::StructWithNullableStruct* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.val, offset + 0);
-  }
-};
+struct CodingTraits<::test_nullable::StructWithNullableStruct> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_nullable::StructWithNullableStruct, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -750,29 +666,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableString>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableString> {
-  static constexpr size_t inline_size_v1_no_ee = 16;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_nullable::StructWithNullableString* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_nullable::StructWithNullableString* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.val, offset + 0);
-  }
-};
+struct CodingTraits<::test_nullable::StructWithNullableString> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_nullable::StructWithNullableString, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -794,33 +690,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableRequest>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_nullable::StructWithNullableRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_nullable::StructWithNullableRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.val, offset + 0);
-  }
-};
+struct CodingTraits<::test_nullable::StructWithNullableRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_nullable::StructWithNullableRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -842,33 +714,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableProtocol>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableProtocol> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_nullable::StructWithNullableProtocol* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_nullable::StructWithNullableProtocol* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.val, offset + 0);
-  }
-};
+struct CodingTraits<::test_nullable::StructWithNullableProtocol> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_nullable::StructWithNullableProtocol, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -890,33 +738,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableHandle>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableHandle> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_nullable::StructWithNullableHandle* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_VMO,
-                       .rights = 0x80000000,
-                   });
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_nullable::StructWithNullableHandle* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.val, offset + 0);
-  }
-};
+struct CodingTraits<::test_nullable::StructWithNullableHandle> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_nullable::StructWithNullableHandle, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -936,29 +760,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_nullable::SimpleProtocolAddTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_nullable::SimpleProtocolAddTopResponse* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.sum, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_nullable::SimpleProtocolAddTopResponse* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.sum, offset + 0);
-  }
-};
+struct CodingTraits<::test_nullable::SimpleProtocolAddTopResponse> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_nullable::SimpleProtocolAddTopResponse, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -977,34 +781,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::SimpleProtocolAddRequest>
 };
 
 template <>
-struct CodingTraits<::test_nullable::SimpleProtocolAddRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_nullable::SimpleProtocolAddRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
-                                                                           : 4;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::test_nullable::SimpleProtocolAddRequest* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
-  }
-};
+struct CodingTraits<::test_nullable::SimpleProtocolAddRequest> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_nullable::SimpleProtocolAddRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1021,27 +800,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::Int32Wrapper> final {
 };
 
 template <>
-struct CodingTraits<::test_nullable::Int32Wrapper> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_nullable::Int32Wrapper* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_nullable::Int32Wrapper* value,
-                     size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.val, offset + 0);
-  }
-};
+struct CodingTraits<::test_nullable::Int32Wrapper> final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_nullable::Int32Wrapper, 4, 4> {};
 #endif  // __Fuchsia__
 
 template <>

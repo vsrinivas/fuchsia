@@ -5,7 +5,6 @@
 #include <fidl/test.bindingsdenylist/cpp/common_types.h>
 #include <fidl/test.bindingsdenylist/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -139,9 +138,7 @@ class OnlyLlcpp final {
 extern "C" const fidl_type_t
     test_bindingsdenylist_MemberOnlyAppearsInImportingLibraryTable;
 
-class MemberOnlyAppearsInImportingLibrary final
-    : public ::fidl::internal::CodableBase<
-          MemberOnlyAppearsInImportingLibrary> {
+class MemberOnlyAppearsInImportingLibrary final {
  private:
   struct Storage_;
 
@@ -171,28 +168,24 @@ class MemberOnlyAppearsInImportingLibrary final
   bool& a() { return storage_.a; }
 
  private:
-  friend ::fidl::internal::CodableBase<MemberOnlyAppearsInImportingLibrary>;
-  friend ::fidl::CodingTraits<MemberOnlyAppearsInImportingLibrary>;
-  MemberOnlyAppearsInImportingLibrary(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     bool a{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1, 1>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+          &Storage_::a, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_OnlyAppearsInImportingLibraryTable;
 
-class OnlyAppearsInImportingLibrary final
-    : public ::fidl::internal::CodableBase<OnlyAppearsInImportingLibrary> {
+class OnlyAppearsInImportingLibrary final {
  private:
   struct Storage_;
 
@@ -230,15 +223,6 @@ class OnlyAppearsInImportingLibrary final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<OnlyAppearsInImportingLibrary>;
-  friend ::fidl::CodingTraits<OnlyAppearsInImportingLibrary>;
-  OnlyAppearsInImportingLibrary(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary
         member_only_appears_in_importing_library{};
@@ -246,14 +230,20 @@ class OnlyAppearsInImportingLibrary final
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1, 1>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_,
+          ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>{
+          &Storage_::member_only_appears_in_importing_library, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenySyzkaller_ResponseTable;
 
-class DenyEachBinding_OnlyDenySyzkaller_Response final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBinding_OnlyDenySyzkaller_Response> {
+class DenyEachBinding_OnlyDenySyzkaller_Response final {
  private:
   struct Storage_;
 
@@ -283,22 +273,19 @@ class DenyEachBinding_OnlyDenySyzkaller_Response final
   int32_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      DenyEachBinding_OnlyDenySyzkaller_Response>;
-  friend ::fidl::CodingTraits<DenyEachBinding_OnlyDenySyzkaller_Response>;
-  DenyEachBinding_OnlyDenySyzkaller_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int32_t b{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response, 4,
+      4>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+          &Storage_::b, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -411,9 +398,7 @@ class DenyEachBinding_OnlyDenySyzkaller_Result final {
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 
-class DenyEachBindingOnlyDenySyzkallerTopResponse final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBindingOnlyDenySyzkallerTopResponse> {
+class DenyEachBindingOnlyDenySyzkallerTopResponse final {
  private:
   struct Storage_;
 
@@ -450,30 +435,27 @@ class DenyEachBindingOnlyDenySyzkallerTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      DenyEachBindingOnlyDenySyzkallerTopResponse>;
-  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenySyzkallerTopResponse>;
-  DenyEachBindingOnlyDenySyzkallerTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result result{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse, 24,
+      16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_,
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>{
+          &Storage_::result, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
 
-class DenyEachBinding_OnlyDenyRust_Response final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBinding_OnlyDenyRust_Response> {
+class DenyEachBinding_OnlyDenyRust_Response final {
  private:
   struct Storage_;
 
@@ -503,21 +485,18 @@ class DenyEachBinding_OnlyDenyRust_Response final
   int32_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<DenyEachBinding_OnlyDenyRust_Response>;
-  friend ::fidl::CodingTraits<DenyEachBinding_OnlyDenyRust_Response>;
-  DenyEachBinding_OnlyDenyRust_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int32_t b{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response, 4, 4>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+          &Storage_::b, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -626,9 +605,7 @@ class DenyEachBinding_OnlyDenyRust_Result final {
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
 
-class DenyEachBindingOnlyDenyRustTopResponse final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBindingOnlyDenyRustTopResponse> {
+class DenyEachBindingOnlyDenyRustTopResponse final {
  private:
   struct Storage_;
 
@@ -665,29 +642,26 @@ class DenyEachBindingOnlyDenyRustTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyRustTopResponse>;
-  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyRustTopResponse>;
-  DenyEachBindingOnlyDenyRustTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result result{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse, 24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_,
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>{
+          &Storage_::result, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfuzzer_ResponseTable;
 
-class DenyEachBinding_OnlyDenyLibfuzzer_Response final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBinding_OnlyDenyLibfuzzer_Response> {
+class DenyEachBinding_OnlyDenyLibfuzzer_Response final {
  private:
   struct Storage_;
 
@@ -717,22 +691,19 @@ class DenyEachBinding_OnlyDenyLibfuzzer_Response final
   int32_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      DenyEachBinding_OnlyDenyLibfuzzer_Response>;
-  friend ::fidl::CodingTraits<DenyEachBinding_OnlyDenyLibfuzzer_Response>;
-  DenyEachBinding_OnlyDenyLibfuzzer_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int32_t b{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response, 4,
+      4>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+          &Storage_::b, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -845,9 +816,7 @@ class DenyEachBinding_OnlyDenyLibfuzzer_Result final {
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
 
-class DenyEachBindingOnlyDenyLibfuzzerTopResponse final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBindingOnlyDenyLibfuzzerTopResponse> {
+class DenyEachBindingOnlyDenyLibfuzzerTopResponse final {
  private:
   struct Storage_;
 
@@ -884,30 +853,27 @@ class DenyEachBindingOnlyDenyLibfuzzerTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<
-      DenyEachBindingOnlyDenyLibfuzzerTopResponse>;
-  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyLibfuzzerTopResponse>;
-  DenyEachBindingOnlyDenyLibfuzzerTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result result{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse, 24,
+      16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_,
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>{
+          &Storage_::result, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
 
-class DenyEachBinding_OnlyDenyGo_Response final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBinding_OnlyDenyGo_Response> {
+class DenyEachBinding_OnlyDenyGo_Response final {
  private:
   struct Storage_;
 
@@ -937,21 +903,18 @@ class DenyEachBinding_OnlyDenyGo_Response final
   int32_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<DenyEachBinding_OnlyDenyGo_Response>;
-  friend ::fidl::CodingTraits<DenyEachBinding_OnlyDenyGo_Response>;
-  DenyEachBinding_OnlyDenyGo_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int32_t b{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response, 4, 4>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+          &Storage_::b, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1059,9 +1022,7 @@ class DenyEachBinding_OnlyDenyGo_Result final {
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
 
-class DenyEachBindingOnlyDenyGoTopResponse final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBindingOnlyDenyGoTopResponse> {
+class DenyEachBindingOnlyDenyGoTopResponse final {
  private:
   struct Storage_;
 
@@ -1098,29 +1059,25 @@ class DenyEachBindingOnlyDenyGoTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyGoTopResponse>;
-  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyGoTopResponse>;
-  DenyEachBindingOnlyDenyGoTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result result{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse, 24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>{
+          &Storage_::result, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_ResponseTable;
 
-class DenyEachBinding_OnlyDenyDart_Response final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBinding_OnlyDenyDart_Response> {
+class DenyEachBinding_OnlyDenyDart_Response final {
  private:
   struct Storage_;
 
@@ -1150,21 +1107,18 @@ class DenyEachBinding_OnlyDenyDart_Response final
   int32_t& b() { return storage_.b; }
 
  private:
-  friend ::fidl::internal::CodableBase<DenyEachBinding_OnlyDenyDart_Response>;
-  friend ::fidl::CodingTraits<DenyEachBinding_OnlyDenyDart_Response>;
-  DenyEachBinding_OnlyDenyDart_Response(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     int32_t b{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response, 4, 4>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+          &Storage_::b, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1273,9 +1227,7 @@ class DenyEachBinding_OnlyDenyDart_Result final {
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
 
-class DenyEachBindingOnlyDenyDartTopResponse final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBindingOnlyDenyDartTopResponse> {
+class DenyEachBindingOnlyDenyDartTopResponse final {
  private:
   struct Storage_;
 
@@ -1312,29 +1264,26 @@ class DenyEachBindingOnlyDenyDartTopResponse final
   }
 
  private:
-  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyDartTopResponse>;
-  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyDartTopResponse>;
-  DenyEachBindingOnlyDenyDartTopResponse(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result result{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse, 24, 16>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_,
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>{
+          &Storage_::result, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
 
-class DenyEachBindingOnlyDenySyzkallerRequest final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBindingOnlyDenySyzkallerRequest> {
+class DenyEachBindingOnlyDenySyzkallerRequest final {
  private:
   struct Storage_;
 
@@ -1364,28 +1313,24 @@ class DenyEachBindingOnlyDenySyzkallerRequest final
   bool& a() { return storage_.a; }
 
  private:
-  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenySyzkallerRequest>;
-  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenySyzkallerRequest>;
-  DenyEachBindingOnlyDenySyzkallerRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     bool a{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+          &Storage_::a, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
 
-class DenyEachBindingOnlyDenyRustRequest final
-    : public ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyRustRequest> {
+class DenyEachBindingOnlyDenyRustRequest final {
  private:
   struct Storage_;
 
@@ -1415,29 +1360,24 @@ class DenyEachBindingOnlyDenyRustRequest final
   bool& a() { return storage_.a; }
 
  private:
-  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyRustRequest>;
-  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyRustRequest>;
-  DenyEachBindingOnlyDenyRustRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     bool a{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+          &Storage_::a, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
 
-class DenyEachBindingOnlyDenyLibfuzzerRequest final
-    : public ::fidl::internal::CodableBase<
-          DenyEachBindingOnlyDenyLibfuzzerRequest> {
+class DenyEachBindingOnlyDenyLibfuzzerRequest final {
  private:
   struct Storage_;
 
@@ -1467,28 +1407,24 @@ class DenyEachBindingOnlyDenyLibfuzzerRequest final
   bool& a() { return storage_.a; }
 
  private:
-  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyLibfuzzerRequest>;
-  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyLibfuzzerRequest>;
-  DenyEachBindingOnlyDenyLibfuzzerRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     bool a{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+          &Storage_::a, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
 
-class DenyEachBindingOnlyDenyGoRequest final
-    : public ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyGoRequest> {
+class DenyEachBindingOnlyDenyGoRequest final {
  private:
   struct Storage_;
 
@@ -1518,28 +1454,24 @@ class DenyEachBindingOnlyDenyGoRequest final
   bool& a() { return storage_.a; }
 
  private:
-  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyGoRequest>;
-  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyGoRequest>;
-  DenyEachBindingOnlyDenyGoRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     bool a{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+          &Storage_::a, 0, 0});
 };
 
 extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
 
-class DenyEachBindingOnlyDenyDartRequest final
-    : public ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyDartRequest> {
+class DenyEachBindingOnlyDenyDartRequest final {
  private:
   struct Storage_;
 
@@ -1569,21 +1501,18 @@ class DenyEachBindingOnlyDenyDartRequest final
   bool& a() { return storage_.a; }
 
  private:
-  friend ::fidl::internal::CodableBase<DenyEachBindingOnlyDenyDartRequest>;
-  friend ::fidl::CodingTraits<DenyEachBindingOnlyDenyDartRequest>;
-  DenyEachBindingOnlyDenyDartRequest(::fidl::Decoder& decoder);
-  template <typename Payload>
-  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-      ::fidl::Encoder& encoder, Payload&& payload)
-      -> ::fidl::HLCPPOutgoingMessage;
-  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
-
   struct Storage_ final {
     bool a{};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 8, 8>;
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+          &Storage_::a, 0, 0});
 };
 
 constexpr uint32_t AllBindings = 0u;
@@ -1610,30 +1539,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary> {
-  static constexpr size_t inline_size_v1_no_ee = 1;
-  static constexpr size_t inline_size_v2 = 1;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-  }
+    ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1, 1> {
 };
 #endif  // __Fuchsia__
 
@@ -1655,34 +1564,9 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_bindingsdenylist::OnlyAppearsInImportingLibrary> {
-  static constexpr size_t inline_size_v1_no_ee = 1;
-  static constexpr size_t inline_size_v2 = 1;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::OnlyAppearsInImportingLibrary* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder,
-                   &value->storage_.member_only_appears_in_importing_library,
-                   offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::OnlyAppearsInImportingLibrary* value,
-      size_t offset) {
-    ::fidl::Decode(decoder,
-                   &value->storage_.member_only_appears_in_importing_library,
-                   offset + 0);
-  }
+struct CodingTraits<::test_bindingsdenylist::OnlyAppearsInImportingLibrary>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1, 1> {
 };
 #endif  // __Fuchsia__
 
@@ -1706,33 +1590,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response*
-          value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response*
-          value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
-  }
-};
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response,
+          4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1755,33 +1617,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse*
-          value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse*
-          value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
-};
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
+          24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1804,31 +1644,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
-  }
-};
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response,
+                4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1851,31 +1670,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
-};
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
+                24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1898,33 +1696,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response*
-          value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response*
-          value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
-  }
-};
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response,
+          4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1947,33 +1723,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse*
-          value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse*
-          value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
-};
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
+          24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1995,30 +1749,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
-  }
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response, 4, 4> {
 };
 #endif  // __Fuchsia__
 
@@ -2041,31 +1775,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
-};
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
+                24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2088,31 +1801,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response> {
-  static constexpr size_t inline_size_v1_no_ee = 4;
-  static constexpr size_t inline_size_v2 = 4;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
-  }
-};
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response,
+                4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2135,31 +1827,10 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
-  }
-};
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
+                24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2182,31 +1853,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-  }
-};
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 8,
+          8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2227,32 +1878,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-  }
-};
+struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2275,31 +1904,11 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-  }
-};
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 8,
+          8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2320,31 +1929,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-  }
-};
+struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2365,32 +1953,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest> {
-  static constexpr size_t inline_size_v1_no_ee = 8;
-  static constexpr size_t inline_size_v2 = 8;
-
-  template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    [[maybe_unused]] uint32_t field_offset;
-    field_offset =
-        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
-                                                                           : 0;
-    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest* value,
-      size_t offset) {
-    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
-  }
-};
+struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 template <>

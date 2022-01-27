@@ -4,36 +4,8 @@
 
 #ifdef __Fuchsia__
 
-void ::test_driverhandle::ServerEndWrapper::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_driverhandle::ServerEndWrapper,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_driverhandle::ServerEndWrapper>::Encode(
-      &encoder, this, offset);
-}
-
-::test_driverhandle::ServerEndWrapper::ServerEndWrapper(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<
-          ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>>(&decoder,
-                                                                 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-void ::test_driverhandle::ClientEndWrapper::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_driverhandle::ClientEndWrapper,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_driverhandle::ClientEndWrapper>::Encode(
-      &encoder, this, offset);
-}
-
-::test_driverhandle::ClientEndWrapper::ClientEndWrapper(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<
-          ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>(&decoder,
-                                                                 0)}) {}
 #endif  // __Fuchsia__

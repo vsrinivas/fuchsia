@@ -5,7 +5,6 @@
 #include <fidl/test.bitsconstants/cpp/common_types.h>
 #include <fidl/test.bitsconstants/cpp/markers.h>
 #include <lib/fidl/cpp/coding_traits.h>
-#include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>

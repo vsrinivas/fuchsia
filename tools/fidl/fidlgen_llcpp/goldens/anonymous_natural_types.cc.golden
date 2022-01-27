@@ -4,17 +4,6 @@
 
 #ifdef __Fuchsia__
 
-void ::test_anonymous::TableData::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_anonymous::TableData, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_anonymous::TableData>::Encode(&encoder, this,
-                                                            offset);
-}
-
-::test_anonymous::TableData::TableData(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_anonymous::TableData::Storage_ test_anonymous::TableData::CloneStorage_()
@@ -23,21 +12,6 @@ void ::test_anonymous::TableData::EncodeWithoutValidating(
 }
 #ifdef __Fuchsia__
 
-void ::test_anonymous::SomeProtocolSomeMethodRequest::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_anonymous::SomeProtocolSomeMethodRequest, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<::test_anonymous::SomeProtocolSomeMethodRequest>::Encode(
-      &encoder, this, offset);
-}
-
-::test_anonymous::SomeProtocolSomeMethodRequest::SomeProtocolSomeMethodRequest(
-    ::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::test_anonymous::UnionMember>(&decoder, 0),
-           ::fidl::DecodeAs<::test_anonymous::TableMember>(&decoder, 16)}) {}
 #endif  // __Fuchsia__
 
 ::test_anonymous::SomeProtocolSomeMethodRequest::Storage_
@@ -47,21 +21,6 @@ test_anonymous::SomeProtocolSomeMethodRequest::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_anonymous::OverrideTest::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<::test_anonymous::OverrideTest,
-                                           ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_anonymous::OverrideTest>::Encode(&encoder, this,
-                                                               offset);
-}
-
-::test_anonymous::OverrideTest::OverrideTest(::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::test_anonymous::Op>(&decoder, 0),
-           ::fidl::DecodeAs<::std::unique_ptr<::test_anonymous::Expression>>(
-               &decoder, 8),
-           ::fidl::DecodeAs<::std::unique_ptr<::test_anonymous::Expression>>(
-               &decoder, 24)}) {}
 #endif  // __Fuchsia__
 
 ::test_anonymous::OverrideTest::Storage_
@@ -72,20 +31,6 @@ test_anonymous::OverrideTest::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_anonymous::SomeProtocol_SomeMethod_Response::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_anonymous::SomeProtocol_SomeMethod_Response, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<
-      ::test_anonymous::SomeProtocol_SomeMethod_Response>::Encode(&encoder,
-                                                                  this, offset);
-}
-
-::test_anonymous::SomeProtocol_SomeMethod_Response::
-    SomeProtocol_SomeMethod_Response(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_anonymous::BitsMember>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_anonymous::SomeProtocol_SomeMethod_Response::Storage_
@@ -94,23 +39,6 @@ test_anonymous::SomeProtocol_SomeMethod_Response::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_anonymous::SomeProtocolSomeMethodTopResponse::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<
-          ::test_anonymous::SomeProtocolSomeMethodTopResponse, ::fidl::Encoder>(
-          &encoder));
-  ::fidl::CodingTraits<
-      ::test_anonymous::SomeProtocolSomeMethodTopResponse>::Encode(&encoder,
-                                                                   this,
-                                                                   offset);
-}
-
-::test_anonymous::SomeProtocolSomeMethodTopResponse::
-    SomeProtocolSomeMethodTopResponse(::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::test_anonymous::SomeProtocol_SomeMethod_Result>(
-              &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_anonymous::SomeProtocolSomeMethodTopResponse::Storage_

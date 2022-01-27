@@ -4,18 +4,6 @@
 
 #ifdef __Fuchsia__
 
-void ::test_placementofattributes::ExampleStruct::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_placementofattributes::ExampleStruct,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_placementofattributes::ExampleStruct>::Encode(
-      &encoder, this, offset);
-}
-
-::test_placementofattributes::ExampleStruct::ExampleStruct(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<uint32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_placementofattributes::ExampleStruct::Storage_
@@ -24,19 +12,6 @@ test_placementofattributes::ExampleStruct::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_placementofattributes::ExampleProtocolMethodRequest::
-    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<
-                ::test_placementofattributes::ExampleProtocolMethodRequest,
-                ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_placementofattributes::
-                           ExampleProtocolMethodRequest>::Encode(&encoder, this,
-                                                                 offset);
-}
-
-::test_placementofattributes::ExampleProtocolMethodRequest::
-    ExampleProtocolMethodRequest(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::test_exampleusing::Empty>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_placementofattributes::ExampleProtocolMethodRequest::Storage_

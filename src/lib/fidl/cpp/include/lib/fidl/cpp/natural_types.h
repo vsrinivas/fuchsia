@@ -129,6 +129,71 @@ class UnionMemberView final {
   }
 };
 
+// |EncodeResult| holds an encoded message along with the required storage.
+// Success/failure information is stored in |message|.
+class EncodeResult {
+ public:
+  EncodeResult(const fidl_type_t* type, ::fidl::Encoder&& storage)
+      : storage_(std::move(storage)),
+        message_(ConvertFromHLCPPOutgoingMessage(type, storage_.GetMessage(), handles_,
+                                                 handle_metadata_)) {}
+
+  ::fidl::OutgoingMessage& message() { return message_; }
+
+ private:
+  zx_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t handle_metadata_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  ::fidl::Encoder storage_;
+  ::fidl::OutgoingMessage message_;
+};
+
+// |DecodeFrom| decodes a non-transactional incoming message to a natural
+// domain object |FidlType|. Supported types are structs, tables, and unions.
+//
+// |message| is always consumed.
+// |metadata| informs the wire format of the encoded message.
+template <typename FidlType>
+::fitx::result<::fidl::Error, FidlType> DecodeFrom(::fidl::IncomingMessage&& message,
+                                                   ::fidl::internal::WireFormatMetadata metadata) {
+  static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
+  const fidl_type_t* coding_table = TypeTraits<FidlType>::kCodingTable;
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  ::fidl::HLCPPIncomingMessage hlcpp_msg =
+      ConvertToHLCPPIncomingMessage(std::move(message), handles);
+  const char* error_msg = nullptr;
+  zx_status_t status = hlcpp_msg.Decode(metadata, coding_table, &error_msg);
+  if (status != ZX_OK) {
+    return ::fitx::error(::fidl::Result::DecodeError(status, error_msg));
+  }
+  ::fidl::Decoder decoder{std::move(hlcpp_msg)};
+  FidlType value{};
+  ::fidl::CodingTraits<FidlType>::Decode(&decoder, &value, 0);
+  return ::fitx::ok(std::move(value));
+}
+
+// Encodes an instance of |FidlType|. Supported types are structs, tables, and
+// unions.
+//
+// Handles in the current instance are moved to the returned |EncodeResult|,
+// if any.
+//
+// Errors during encoding (e.g. constraint validation) are reflected in the
+// |message| of the returned |EncodeResult|.
+//
+// TODO(fxbug.dev/82681): Make this API comply with the requirements in FIDL-at-rest.
+template <typename FidlType>
+::fidl::internal::EncodeResult EncodeIntoResult(FidlType& value) {
+  static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
+  const fidl_type_t* coding_table = TypeTraits<FidlType>::kCodingTable;
+  // Since a majority of the domain objects are HLCPP objects, for now
+  // the wire format version of the encoded message is the same as the one
+  // used in HLCPP.
+  ::fidl::Encoder encoder(::fidl::Encoder::NO_HEADER, DefaultHLCPPEncoderWireFormat());
+  encoder.Alloc(::fidl::EncodingInlineSize<FidlType, ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<FidlType>::Encode(&encoder, &value, 0);
+  return EncodeResult(coding_table, std::move(encoder));
+}
+
 }  // namespace internal
 }  // namespace fidl
 

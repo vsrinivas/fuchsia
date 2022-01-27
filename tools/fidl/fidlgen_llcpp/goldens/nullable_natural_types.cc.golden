@@ -4,19 +4,6 @@
 
 #ifdef __Fuchsia__
 
-void ::test_nullable::StructWithNullableVector::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_nullable::StructWithNullableVector,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_nullable::StructWithNullableVector>::Encode(
-      &encoder, this, offset);
-}
-
-::test_nullable::StructWithNullableVector::StructWithNullableVector(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::cpp17::optional<::std::vector<int32_t>>>(
-          &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_nullable::StructWithNullableVector::Storage_
@@ -25,20 +12,6 @@ test_nullable::StructWithNullableVector::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_nullable::StructWithNullableUnion::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_nullable::StructWithNullableUnion,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_nullable::StructWithNullableUnion>::Encode(
-      &encoder, this, offset);
-}
-
-::test_nullable::StructWithNullableUnion::StructWithNullableUnion(
-    ::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::std::unique_ptr<::test_nullable::SimpleUnion>>(
-              &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_nullable::StructWithNullableUnion::Storage_
@@ -47,20 +20,6 @@ test_nullable::StructWithNullableUnion::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_nullable::StructWithNullableStruct::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_nullable::StructWithNullableStruct,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_nullable::StructWithNullableStruct>::Encode(
-      &encoder, this, offset);
-}
-
-::test_nullable::StructWithNullableStruct::StructWithNullableStruct(
-    ::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::std::unique_ptr<::test_nullable::Int32Wrapper>>(
-              &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_nullable::StructWithNullableStruct::Storage_
@@ -69,19 +28,6 @@ test_nullable::StructWithNullableStruct::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_nullable::StructWithNullableString::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_nullable::StructWithNullableString,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_nullable::StructWithNullableString>::Encode(
-      &encoder, this, offset);
-}
-
-::test_nullable::StructWithNullableString::StructWithNullableString(
-    ::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::cpp17::optional<::std::string>>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_nullable::StructWithNullableString::Storage_
@@ -90,70 +36,18 @@ test_nullable::StructWithNullableString::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_nullable::StructWithNullableRequest::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_nullable::StructWithNullableRequest,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_nullable::StructWithNullableRequest>::Encode(
-      &encoder, this, offset);
-}
-
-::test_nullable::StructWithNullableRequest::StructWithNullableRequest(
-    ::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::fidl::ServerEnd<::test_nullable::SimpleProtocol>>(
-              &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-void ::test_nullable::StructWithNullableProtocol::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_nullable::StructWithNullableProtocol,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_nullable::StructWithNullableProtocol>::Encode(
-      &encoder, this, offset);
-}
-
-::test_nullable::StructWithNullableProtocol::StructWithNullableProtocol(
-    ::fidl::Decoder& decoder)
-    : storage_(
-          {::fidl::DecodeAs<::fidl::ClientEnd<::test_nullable::SimpleProtocol>>(
-              &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-void ::test_nullable::StructWithNullableHandle::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_nullable::StructWithNullableHandle,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_nullable::StructWithNullableHandle>::Encode(
-      &encoder, this, offset);
-}
-
-::test_nullable::StructWithNullableHandle::StructWithNullableHandle(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<::zx::vmo>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-void ::test_nullable::SimpleProtocolAddTopResponse::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_nullable::SimpleProtocolAddTopResponse,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_nullable::SimpleProtocolAddTopResponse>::Encode(
-      &encoder, this, offset);
-}
-
-::test_nullable::SimpleProtocolAddTopResponse::SimpleProtocolAddTopResponse(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_nullable::SimpleProtocolAddTopResponse::Storage_
@@ -162,19 +56,6 @@ test_nullable::SimpleProtocolAddTopResponse::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_nullable::SimpleProtocolAddRequest::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(
-      ::fidl::EncodingInlineSize<::test_nullable::SimpleProtocolAddRequest,
-                                 ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_nullable::SimpleProtocolAddRequest>::Encode(
-      &encoder, this, offset);
-}
-
-::test_nullable::SimpleProtocolAddRequest::SimpleProtocolAddRequest(
-    ::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0),
-                ::fidl::DecodeAs<int32_t>(&decoder, 4)}) {}
 #endif  // __Fuchsia__
 
 ::test_nullable::SimpleProtocolAddRequest::Storage_
@@ -184,16 +65,6 @@ test_nullable::SimpleProtocolAddRequest::CloneStorage_() const {
 }
 #ifdef __Fuchsia__
 
-void ::test_nullable::Int32Wrapper::EncodeWithoutValidating(
-    ::fidl::Encoder& encoder, size_t offset) {
-  encoder.Alloc(::fidl::EncodingInlineSize<::test_nullable::Int32Wrapper,
-                                           ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<::test_nullable::Int32Wrapper>::Encode(&encoder, this,
-                                                              offset);
-}
-
-::test_nullable::Int32Wrapper::Int32Wrapper(::fidl::Decoder& decoder)
-    : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 ::test_nullable::Int32Wrapper::Storage_
