@@ -611,6 +611,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
     builder_proxy.build(run_server_end)?;
     run_reporter.started(Timestamp::Unknown).await?;
     let cancel_fut = cancel_fut.shared();
+    let cancel_fut_clone = cancel_fut.clone();
 
     let handle_suite_fut = async move {
         let mut num_failed = 0;
@@ -747,9 +748,19 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
         }
     };
 
+    // Make sure we stop polling run events on cancel. Since cancellation is expected
+    // ignore cancellation errors.
+    let cancellable_run_events_fut = handle_run_events_fut
+        .boxed_local()
+        .or_cancelled(cancel_fut_clone)
+        .map(|cancelled_result| match cancelled_result {
+            Ok(completed_result) => completed_result,
+            Err(Cancelled) => Ok(()),
+        });
+
     // Use join instead of try_join as we want to poll the futures to completion
     // even if one fails.
-    match futures::future::join(handle_suite_fut, handle_run_events_fut).await {
+    match futures::future::join(handle_suite_fut, cancellable_run_events_fut).await {
         (Ok(outcome), Ok(())) => Ok(outcome),
         (Err(e), _) | (_, Err(e)) => Err(e),
     }
