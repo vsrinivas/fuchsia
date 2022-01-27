@@ -131,11 +131,17 @@ class Login extends StatelessWidget {
                                     TextButton(
                                       onPressed: () =>
                                           _confirmFactoryReset(context),
-                                      child: Text(
-                                        Strings.factoryDataReset,
-                                        style: TextStyle(
-                                          decoration: TextDecoration.underline,
+                                      child: Container(
+                                        padding: EdgeInsets.only(bottom: 1),
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                            bottom: BorderSide(
+                                              color: Colors.white,
+                                              width: 1,
+                                            ),
+                                          ),
                                         ),
+                                        child: Text(Strings.factoryDataReset),
                                       ),
                                     ),
                                   ],
