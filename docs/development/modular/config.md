@@ -17,7 +17,8 @@ The file may contain (non-standard JSON) C-style comments
 ## Reading configuration
 
 The configuration provided to `basemgr` is available through
-the [component inspection][docs-inspect] of the `basemgr` component.
+the [component inspection][docs-inspect] of the `basemgr` and
+`sessionmgr` components.
 
 Use [`ffx inspect`][ffx-inspect] to query the configuration
 of a running `basemgr`:
@@ -26,10 +27,8 @@ of a running `basemgr`:
 ffx inspect show basemgr.cmx:root:config
 ```
 
-When using a session launcher component, the launcher provides a different
-configuration to `sessionmgr` that is used for the launched session.
-For the launched session, you can query a running `sessionmgr` to get
-this configuration:
+Use [`ffx inspect`][ffx-inspect] to query the configuration
+of a running `sessionmgr`:
 
 ```posix-terminal
 ffx inspect show sessionmgr.cmx:root:config
@@ -75,31 +74,6 @@ fx shell basemgr_launcher delete_config
 ```
 
 ## Example
-
-The fields used in the startup configuration depend on whether a session launcher
-component is specified in the `basemgr.session_launcher` field.
-
-If `basemgr.session` is present, all other fields except for
-`basemgr.enable_cobalt` are ignored, and the session launcher component is
-responsible for instructing `basemgr` to launch a session with a complete
-configuration file.
-
-### Session launcher component
-
-```json5
-// Fields not specified here are ignored.
-{
-  "basemgr": {
-    "enable_cobalt": false,
-    "session_launcher": {
-      "url": "fuchsia-pkg://fuchsia.com/custom_session#meta/custom_session.cmx",
-      "args": [ "--foo", "--bar" ]
-    }
-  }
-}
-```
-
-### Typical configuration
 
 ```json5
 {
@@ -190,15 +164,6 @@ configuration file.
     instead of creating separate story shell components. When set,
     `story_shell_url` and any story shell args are ignored.
   - **default**: `false`
-- `session_launcher` **object** _(optional)_
-  - When set, basemgr will launch this component instead of sessionmgr
-    on startup and ignore all other configuration properties, except
-    `basemgr.enable_cobalt`. This component can use the `fuchsia.session.Launcher`
-    protocol to launch sessionmgr.
-    - `url`: **string** _(required)_
-      - The Fuchsia component URL for the session component.
-    - `args` **string[]** _(optional)_
-      - A list of arguments to be passed to the session component specified by `url`.
 
 ## Sessionmgr fields
 

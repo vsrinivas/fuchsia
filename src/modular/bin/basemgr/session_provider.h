@@ -42,7 +42,7 @@ class SessionProvider {
   SessionProvider(Delegate* delegate, fuchsia::sys::Launcher* launcher,
                   fuchsia::hardware::power::statecontrol::Admin* administrator,
                   const modular::ModularConfigAccessor* config_accessor,
-                  fuchsia::sys::ServiceList services_from_session_launcher,
+                  fuchsia::sys::ServiceList services_for_sessionmgr,
                   fit::function<void()> on_zero_sessions);
 
   // Starts a new sessionmgr process if there isn't one already.
@@ -79,10 +79,10 @@ class SessionProvider {
   // Service directory from which services will be served to child |sessionmgr|s.
   vfs::PseudoDir sessionmgr_service_dir_;
 
-  // Names of services passed by session launcher.
-  const std::vector<std::string> session_launcher_service_names_;
-  // Exposes the services passed by session launcher to agents.
-  const sys::ServiceDirectory session_launcher_service_dir_;
+  // Names of services passed to sessionmgr.
+  const std::vector<std::string> services_for_sessionmgr_names_;
+  // Directory of services passed to sessionmgr.
+  const sys::ServiceDirectory services_for_sessionmgr_dir_;
 
   // The number of times that session had to be recovered from a crash, during a
   // given timeout. If the count exceed the max retry limit, a device

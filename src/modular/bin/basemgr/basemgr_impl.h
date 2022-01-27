@@ -17,12 +17,11 @@
 #include <lib/fit/function.h>
 #include <lib/fpromise/promise.h>
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/svc/cpp/service_namespace.h>
+#include <lib/sys/cpp/outgoing_directory.h>
 
 #include <optional>
 
 #include "src/lib/fxl/macros.h"
-#include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/basemgr/inspector.h"
 #include "src/modular/bin/basemgr/presentation_container.h"
 #include "src/modular/bin/basemgr/session_provider.h"
@@ -77,8 +76,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request);
 
-  // Starts either the session launcher component, if configured,
-  // or a session using the configuration read from |config_accessor_|.
+  // Starts a session using the configuration read from |config_accessor_|.
   void Start();
 
   // |fuchsia::modular::Lifecycle|
@@ -89,9 +87,14 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   // Launches sessionmgr with the given |config|.
   void LaunchSessionmgr(fuchsia::modular::session::ModularConfig config,
-                        fuchsia::sys::ServiceList services_from_session_launcher);
+                        fuchsia::sys::ServiceList additional_services);
 
   State state() const { return state_; }
+
+  // Returns a function that connects the request for the |Launcher| protocol.
+  //
+  // The |Launcher| implementation delegates all calls back to this instance of |BasemgrImpl|.
+  fidl::InterfaceRequestHandler<fuchsia::modular::session::Launcher> GetLauncherHandler();
 
  private:
   using StartSessionResult = fpromise::result<void, zx_status_t>;
@@ -116,25 +119,14 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // |SessionProvider::Delegate|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
 
-  // Starts the session launcher component defined in the default basemgr configuration.
-  void StartSessionLauncherComponent();
-
-  // Creates a |session_provider_| that uses the given config. If
-  // |services_from_session_launcher| is populated all listed services will be
-  // provided to agent children of sessionmgr.
+  // Creates a |session_provider_| that uses the given config.
+  //
+  // If |services_for_sessionmgr| is populated all listed services will be provided to
+  // agent children of sessionmgr.
   //
   // |config_accessor| must live for the duration of the session, outliving |session_provider_|.
   void CreateSessionProvider(const ModularConfigAccessor* config_accessor,
-                             fuchsia::sys::ServiceList services_from_session_launcher);
-
-  // Returns a service list for serving |fuchsia.modular.session.Launcher| to the session
-  // launcher component, served from |session_launcher_component_service_dir_|.
-  fuchsia::sys::ServiceListPtr CreateAndServeSessionLauncherComponentServices();
-
-  // Returns a function that connects the request for the |Launcher| protocol.
-  //
-  // The |Launcher| implementation delegates all calls back to this instance of |BasemgrImpl|.
-  fidl::InterfaceRequestHandler<fuchsia::modular::session::Launcher> GetLauncherHandler();
+                             fuchsia::sys::ServiceList services_for_sessionmgr);
 
   // Contains initial basemgr and sessionmgr configuration.
   modular::ModularConfigAccessor config_accessor_;
@@ -168,12 +160,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   fidl::BindingSet<fuchsia::process::lifecycle::Lifecycle> process_lifecycle_bindings_;
 
   AsyncHolder<SessionProvider> session_provider_;
-
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> session_launcher_component_app_;
-
-  // Service directory from which |fuchsia.modular.session.Launcher| is served to
-  // session launcher components.
-  vfs::PseudoDir session_launcher_component_service_dir_;
 
   async::Executor executor_;
 

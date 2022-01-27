@@ -4,7 +4,6 @@
 
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
-#include <fuchsia/modular/session/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
@@ -15,16 +14,14 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 
-#include "src/lib/files/directory.h"
-#include "src/lib/files/path.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
-#include "src/modular/bin/basemgr/inspector.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
+#include "src/modular/bin/basemgr/inspector.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
-#include "zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h"
+// #include "zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h"
 
 // Command-line command to delete the persistent configuration.
 constexpr std::string_view kDeletePersistentConfigCommand = "delete_persistent_config";
@@ -41,14 +38,12 @@ fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatc
 
 std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
     modular::ModularConfigAccessor config_accessor, sys::ComponentContext* component_context,
-    modular::BasemgrInspector* inspector,
-    async::Loop* loop) {
+    modular::BasemgrInspector* inspector, async::Loop* loop) {
   fit::deferred_action<fit::closure> cobalt_cleanup = SetupCobalt(
       config_accessor.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
 
   return std::make_unique<modular::BasemgrImpl>(
-      std::move(config_accessor), component_context->outgoing(),
-      inspector,
+      std::move(config_accessor), component_context->outgoing(), inspector,
       component_context->svc()->Connect<fuchsia::sys::Launcher>(),
       component_context->svc()->Connect<fuchsia::ui::policy::Presenter>(),
       component_context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>(),
@@ -71,7 +66,7 @@ std::string GetUsage() {
 
   --arrested
 
-    Prevents basemgr from starting the session launcher component or a Modular session on launch.
+    Prevents basemgr from starting the Modular session on launch.
     basemgr will continue to serve the fuchsia.modular.session.Launcher protocol that can be
     used to launch a Modular session.
 

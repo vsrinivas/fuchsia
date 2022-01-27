@@ -24,15 +24,15 @@ static constexpr auto kMaxCrashRecoveryDuration = zx::hour(1);
 SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
                                  fuchsia::hardware::power::statecontrol::Admin* const administrator,
                                  const modular::ModularConfigAccessor* const config_accessor,
-                                 fuchsia::sys::ServiceList services_from_session_launcher,
+                                 fuchsia::sys::ServiceList services_for_sessionmgr,
                                  fit::function<void()> on_zero_sessions)
     : delegate_(delegate),
       launcher_(launcher),
       administrator_(administrator),
       config_accessor_(config_accessor),
       on_zero_sessions_(std::move(on_zero_sessions)),
-      session_launcher_service_names_(std::move(services_from_session_launcher.names)),
-      session_launcher_service_dir_(std::move(services_from_session_launcher.host_directory)) {
+      services_for_sessionmgr_names_(std::move(services_for_sessionmgr.names)),
+      services_for_sessionmgr_dir_(std::move(services_for_sessionmgr.host_directory)) {
   last_crash_time_ = zx::clock::get_monotonic();
 }
 
@@ -52,13 +52,14 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
   sessionmgr_app_config.set_url(modular_config::kSessionmgrUrl);
 
   // Session context initializes and holds the sessionmgr process.
-  fuchsia::sys::ServiceList services_from_session_launcher;
-  services_from_session_launcher.names = session_launcher_service_names_;
-  services_from_session_launcher.host_directory =
-      session_launcher_service_dir_.CloneChannel().TakeChannel();
+  fuchsia::sys::ServiceList services_for_sessionmgr;
+  services_for_sessionmgr.names = services_for_sessionmgr_names_;
+  services_for_sessionmgr.host_directory =
+      services_for_sessionmgr_dir_.CloneChannel().TakeChannel();
+
   session_context_ = std::make_unique<SessionContextImpl>(
       launcher_, std::move(sessionmgr_app_config), config_accessor_, std::move(view_token),
-      std::move(view_ref_pair), std::move(services_from_session_launcher),
+      std::move(view_ref_pair), std::move(services_for_sessionmgr),
       /*get_presentation=*/
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));

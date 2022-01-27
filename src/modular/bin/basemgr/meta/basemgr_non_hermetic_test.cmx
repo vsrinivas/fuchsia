@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/basemgr_impl_unittest"
+        "binary": "bin/basemgr_non_hermetic_test"
     },
     "sandbox": {
         "features": [

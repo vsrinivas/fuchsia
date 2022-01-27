@@ -2,139 +2,330 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/process/lifecycle/cpp/fidl.h>
-#include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
-#include <lib/async/default.h>
-#include <lib/fdio/directory.h>
-#include <lib/sys/cpp/file_descriptor.h>
-#include <lib/syslog/cpp/macros.h>
-#include <lib/vfs/cpp/pseudo_dir.h>
-#include <lib/vfs/cpp/pseudo_file.h>
+#include "src/modular/bin/basemgr/basemgr_impl.h"
 
-#include "lib/sys/cpp/testing/test_with_environment_fixture.h"
-#include "src/lib/files/directory.h"
+#include <fuchsia/modular/internal/cpp/fidl_test_base.h>
+#include <fuchsia/testing/modular/cpp/fidl.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/testing/fake_component.h>
+#include <lib/sys/cpp/testing/fake_launcher.h>
+
+#include <utility>
+
 #include "src/lib/files/file.h"
+#include "src/lib/fsl/io/fd.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/modular_config/modular_config.h"
+#include "src/modular/lib/modular_config/modular_config_accessor.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
+#include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
 
-constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
+namespace modular {
 
-class BasemgrImplTest : public gtest::TestWithEnvironmentFixture {
+class FakeComponentWithNamespace {
  public:
-  BasemgrImplTest() {}
+  using NamespaceMap = std::map<std::string, fidl::InterfaceHandle<fuchsia::io::Directory>>;
 
-  void SetUp() override {
-    // Setup an enclosing environment that provides basemgr with a mock of the cobalt logger
-    // factory.
-    auto env_services = CreateServices();
-    env_services->AddServiceWithLaunchInfo(
-        fuchsia::sys::LaunchInfo{.url =
-                                     "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},
-        fuchsia::cobalt::LoggerFactory::Name_);
+  FakeComponentWithNamespace() = default;
 
-    env_services->AddService(std::make_unique<vfs::Service>(
-                                 [presenter_channels = std::vector<zx::channel>()](
-                                     zx::channel channel, async_dispatcher_t* dispatcher) mutable {
-                                   presenter_channels.push_back(std::move(channel));
-                                 }),
-                             fuchsia::ui::policy::Presenter::Name_);
-
-    env_ = CreateNewEnclosingEnvironment("basemgr_impl_unittest_env", std::move(env_services),
-                                         {.inherit_parent_services = true});
-    WaitForEnclosingEnvToStart(env_.get());
+  // Adds specified interface to the set of public interfaces.
+  //
+  // Adds a supported service with the given |service_name|, using the given
+  // |interface_request_handler|, which should remain valid for the lifetime of
+  // this object.
+  //
+  // A typical usage may be:
+  //
+  //   AddPublicService(foobar_bindings_.GetHandler(this));
+  template <typename Interface>
+  zx_status_t AddPublicService(fidl::InterfaceRequestHandler<Interface> handler,
+                               const std::string& service_name = Interface::Name_) {
+    return directory_.AddEntry(service_name, std::make_unique<vfs::Service>(std::move(handler)));
   }
 
-  std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
-    auto dir = std::make_unique<vfs::PseudoDir>();
-    dir->AddEntry(modular_config::kStartupConfigFilePath,
-                  std::make_unique<vfs::PseudoFile>(
-                      config_str.length(), [config_str = std::move(config_str)](
-                                               std::vector<uint8_t>* out, size_t /*unused*/) {
-                        std::copy(config_str.begin(), config_str.end(), std::back_inserter(*out));
-                        return ZX_OK;
-                      }));
-    return dir;
-  }
+  // Registers this component with a FakeLauncher.
+  void Register(std::string url, sys::testing::FakeLauncher& fake_launcher,
+                async_dispatcher_t* dispatcher = nullptr) {
+    fake_launcher.RegisterComponent(
+        std::move(url),
+        [this, dispatcher](fuchsia::sys::LaunchInfo launch_info,
+                           fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+          ctrls_.push_back(std::move(ctrl));
+          zx_status_t status =
+              directory_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                               std::move(launch_info.directory_request), dispatcher);
+          ZX_ASSERT(status == ZX_OK);
 
-  std::string GetTestConfig() {
-    return R"config(
-      {
-      "basemgr": {
-        "enable_cobalt": false,
-        "use_session_shell_for_story_shell_factory": false,
-        "base_shell": {
-          "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
-          "keep_alive_after_login": false,
-          "args": []
-        },
-        "session_shells": [
-          {
-            "name": "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/test_session_shell.cmx",
-            "url": "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/test_session_shell.cmx",
-            "args": []
+          namespace_map_.clear();
+          for (size_t i = 0; i < launch_info.flat_namespace->paths.size(); ++i) {
+            namespace_map_.emplace(launch_info.flat_namespace->paths[i],
+                                   std::move(launch_info.flat_namespace->directories[i]));
           }
-        ]
-      },
-      "sessionmgr": {
-        "enable_cobalt": false,
-        "startup_agents": [],
-        "session_agents": [],
-        "restart_session_on_agent_crash": [],
-        "component_args": [],
-        "agent_service_index": []
-      }
-    }
-    )config";
+          launch_count_++;
+        });
   }
 
-  std::shared_ptr<sys::ServiceDirectory> LaunchBasemgrWithConfigJson(std::string config_str) {
-    // Create the pseudo directory with our config "file"
-    auto config_dir = CreateConfigPseudoDir(config_str);
-    fidl::InterfaceHandle<fuchsia::io::Directory> config_dir_handle;
-    config_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE,
-                      config_dir_handle.NewRequest().TakeChannel());
+  int launch_count() const { return launch_count_; }
+  NamespaceMap& namespace_map() { return namespace_map_; }
 
-    zx::channel svc_request;
-    auto svc_dir = sys::ServiceDirectory::CreateWithRequest(&svc_request);
-    FX_CHECK(svc_request.is_valid());
+ private:
+  int launch_count_ = 0;
+  vfs::PseudoDir directory_;
+  std::vector<fidl::InterfaceRequest<fuchsia::sys::ComponentController>> ctrls_;
+  NamespaceMap namespace_map_;
+};
 
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = kBasemgrUrl;
-    launch_info.flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
-    launch_info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
-    launch_info.flat_namespace->directories.push_back(config_dir_handle.TakeChannel());
-    launch_info.directory_request = std::move(svc_request);
+class FakeSessionmgr : public fuchsia::modular::internal::testing::Sessionmgr_TestBase {
+ public:
+  FakeSessionmgr() { component_.AddPublicService(bindings_.GetHandler(this)); }
 
-    bool on_directory_ready = false;
-    controller_.events().OnDirectoryReady = [&] { on_directory_ready = true; };
-    env_->CreateComponent(std::move(launch_info), controller_.NewRequest());
+  void NotImplemented_(const std::string& name) override {}
 
-    RunLoopUntil([&] { return on_directory_ready; });
-    return svc_dir;
+  void Initialize(
+      std::string session_id,
+      fidl::InterfaceHandle<::fuchsia::modular::internal::SessionContext> session_context,
+      fuchsia::sys::ServiceList additional_services_for_agents,
+      fuchsia::ui::views::ViewToken view_token, fuchsia::ui::views::ViewRefControl control_ref,
+      fuchsia::ui::views::ViewRef view_ref) override {
+    additional_services_for_agents_ = std::move(additional_services_for_agents);
+    initialized_ = true;
+  }
+
+  FakeComponentWithNamespace* component() { return &component_; }
+  bool initialized() const { return initialized_; }
+  std::optional<fuchsia::sys::ServiceList>& additional_services_for_agents() {
+    return additional_services_for_agents_;
+  }
+
+ private:
+  bool initialized_ = false;
+  std::optional<fuchsia::sys::ServiceList> additional_services_for_agents_ = std::nullopt;
+  fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;
+  FakeComponentWithNamespace component_;
+};
+
+class BasemgrImplTest : public gtest::RealLoopFixture {
+ public:
+  BasemgrImplTest() : basemgr_inspector_(&inspector) {}
+
+  void SetUp() override {}
+
+  void CreateBasemgrImpl(fuchsia::modular::session::ModularConfig config) {
+    basemgr_impl_ =
+        std::make_unique<BasemgrImpl>(ModularConfigAccessor(std::move(config)), outgoing_directory_,
+                                      &basemgr_inspector_, GetLauncher(), std::move(presenter_),
+                                      std::move(device_administrator_), std::move(on_shutdown_));
+  }
+
+  fuchsia::modular::session::LauncherPtr GetSessionLauncher() {
+    fuchsia::modular::session::LauncherPtr session_launcher;
+    basemgr_impl_->GetLauncherHandler()(session_launcher.NewRequest());
+    return session_launcher;
   }
 
  protected:
-  std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
-  fuchsia::sys::ComponentControllerPtr controller_;
+  fuchsia::sys::LauncherPtr GetLauncher() {
+    fuchsia::sys::LauncherPtr launcher;
+    fake_launcher_.GetHandler()(launcher.NewRequest());
+    return launcher;
+  }
+
+  static fuchsia::mem::Buffer BufferFromString(std::string_view contents) {
+    fuchsia::mem::Buffer config_buf;
+    ZX_ASSERT(fsl::VmoFromString(contents, &config_buf));
+    return config_buf;
+  }
+
+  bool did_shut_down_ = false;
+  fit::function<void()> on_shutdown_ = [&]() { did_shut_down_ = true; };
+  std::shared_ptr<sys::OutgoingDirectory> outgoing_directory_ =
+      std::make_shared<sys::OutgoingDirectory>();
+  inspect::Inspector inspector;
+  BasemgrInspector basemgr_inspector_;
+  fuchsia::ui::policy::PresenterPtr presenter_;
+  fuchsia::hardware::power::statecontrol::AdminPtr device_administrator_;
+  sys::testing::FakeLauncher fake_launcher_;
+  std::unique_ptr<BasemgrImpl> basemgr_impl_;
 };
 
-TEST_F(BasemgrImplTest, BasemgrImplGracefulShutdown) {
-  auto svc_dir = LaunchBasemgrWithConfigJson(GetTestConfig());
+// Tests that basemgr starts a session with the given configuration when instructed by
+// the session launcher component.
+TEST_F(BasemgrImplTest, StartsSessionWithConfig) {
+  static constexpr auto kTestSessionShellUrl =
+      "fuchsia-pkg://fuchsia.com/test_session_shell#meta/test_session_shell.cmx";
 
-  bool is_terminated = false;
-  controller_.events().OnTerminated = [&](int64_t return_code,
-                                          fuchsia::sys::TerminationReason reason) {
-    EXPECT_EQ(EXIT_SUCCESS, return_code);
-    EXPECT_EQ(fuchsia::sys::TerminationReason::EXITED, reason);
-    is_terminated = true;
-  };
+  FakeSessionmgr sessionmgr{};
+  sessionmgr.component()->Register(modular_config::kSessionmgrUrl, fake_launcher_);
 
-  fuchsia::process::lifecycle::LifecyclePtr process_lifecycle;
-  zx_status_t status = svc_dir->Connect("fuchsia.process.lifecycle.Lifecycle",
-                                        process_lifecycle.NewRequest().TakeChannel());
-  FX_CHECK(ZX_OK == status);
-  process_lifecycle->Stop();
-  RunLoopUntil([&]() { return is_terminated; });
+  CreateBasemgrImpl(DefaultConfig());
+
+  // Create the configuration that the session launcher component passes to basemgr.
+  fuchsia::modular::session::SessionShellMapEntry entry;
+  entry.mutable_config()->mutable_app_config()->set_url(kTestSessionShellUrl);
+  entry.mutable_config()->mutable_app_config()->set_args({});
+  fuchsia::modular::session::ModularConfig config;
+  config.mutable_basemgr_config()->mutable_session_shell_map()->push_back(std::move(entry));
+
+  auto config_json = modular::ConfigToJsonString(config);
+  auto config_buf = BufferFromString(config_json);
+
+  // Launch the session
+  auto session_launcher = GetSessionLauncher();
+  session_launcher->LaunchSessionmgr(std::move(config_buf));
+
+  // sessionmgr should be started and initialized.
+  RunLoopUntil([&]() { return sessionmgr.initialized(); });
+
+  // sessionmgr's namespace should contain the config file at /config_override/data/startup.config.
+  auto config_dir_it =
+      sessionmgr.component()->namespace_map().find(modular_config::kOverriddenConfigDir);
+  ASSERT_TRUE(config_dir_it != sessionmgr.component()->namespace_map().end());
+
+  ASSERT_EQ(ZX_OK, loop().StartThread());
+  async::TaskClosure task([&] {
+    auto dir_fd = fsl::OpenChannelAsFileDescriptor(config_dir_it->second.TakeChannel());
+
+    std::string config_contents;
+    ASSERT_TRUE(files::ReadFileToStringAt(dir_fd.get(), modular_config::kStartupConfigFilePath,
+                                          &config_contents));
+
+    EXPECT_EQ(config_json, config_contents);
+
+    basemgr_impl_->Terminate();
+  });
+  task.Post(dispatcher());
+
+  RunLoopUntil([&]() { return did_shut_down_; });
 }
+
+// Tests that the LaunchSessionmgrWithServices method provide services to sessionmgr.
+TEST_F(BasemgrImplTest, LauncherOffersServices) {
+  FakeSessionmgr sessionmgr{};
+  sessionmgr.component()->Register(modular_config::kSessionmgrUrl, fake_launcher_);
+
+  CreateBasemgrImpl(DefaultConfig());
+
+  // Build a directory to serve services from the session launcher component.
+  int connect_count = 0;
+  auto dir = std::make_unique<vfs::PseudoDir>();
+  dir->AddEntry(
+      fuchsia::testing::modular::TestProtocol::Name_,
+      std::make_unique<vfs::Service>([&](zx::channel, async_dispatcher_t*) { ++connect_count; }));
+  auto dir_server = std::make_unique<modular::PseudoDirServer>(std::move(dir));
+
+  // Construct a ServiceList with the above dir server.
+  fuchsia::sys::ServiceList service_list;
+  service_list.names.push_back(fuchsia::testing::modular::TestProtocol::Name_);
+  service_list.host_directory = dir_server->Serve().Unbind().TakeChannel();
+
+  auto config_buf = BufferFromString(modular::ConfigToJsonString(DefaultConfig()));
+
+  // Launch the session
+  auto session_launcher = GetSessionLauncher();
+  session_launcher->LaunchSessionmgrWithServices(std::move(config_buf), std::move(service_list));
+
+  // sessionmgr should be started and initialized.
+  RunLoopUntil([&]() { return sessionmgr.initialized(); });
+
+  // sessionmgr should have received the service in `additional_services_for_agents`
+  auto& services = sessionmgr.additional_services_for_agents().value();
+  ASSERT_EQ(1u, services.names.size());
+
+  sys::ServiceDirectory service_dir{std::move(services.host_directory)};
+  auto test_protocol = service_dir.Connect<fuchsia::testing::modular::TestProtocol>();
+
+  RunLoopUntil([&] { return connect_count > 0; });
+  EXPECT_EQ(1, connect_count);
+
+  basemgr_impl_->Terminate();
+  RunLoopUntil([&]() { return did_shut_down_; });
+}
+
+// Tests that LaunchSessionmgr closes the channel with an ZX_ERR_INVALID_ARGS epitaph if the
+// config buffer is not readable.
+TEST_F(BasemgrImplTest, LaunchSessionmgrFailsGivenUnreadableBuffer) {
+  FakeSessionmgr sessionmgr{};
+  sessionmgr.component()->Register(modular_config::kSessionmgrUrl, fake_launcher_);
+
+  CreateBasemgrImpl(DefaultConfig());
+
+  // Create a configuration Buffer that has an incorrect size.
+  auto config_buf = BufferFromString("");
+  config_buf.size = 1;
+
+  // Connect to Launcher with a handler that lets us capture the error.
+  auto session_launcher = GetSessionLauncher();
+
+  bool error_handler_called{false};
+  zx_status_t error_status{ZX_OK};
+  session_launcher.set_error_handler([&](zx_status_t status) {
+    error_handler_called = true;
+    error_status = status;
+  });
+
+  session_launcher->LaunchSessionmgr(std::move(config_buf));
+
+  RunLoopUntil([&] { return error_handler_called; });
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, error_status);
+
+  basemgr_impl_->Terminate();
+  RunLoopUntil([&]() { return did_shut_down_; });
+}
+
+// Tests that LaunchSessionmgr closes the channel with an ZX_ERR_INVALID_ARGS epitaph if the
+// config buffer does not contain valid Modular configuration JSON.
+TEST_F(BasemgrImplTest, LaunchSessionmgrFailsGivenInvalidConfigJson) {
+  FakeSessionmgr sessionmgr{};
+  sessionmgr.component()->Register(modular_config::kSessionmgrUrl, fake_launcher_);
+
+  CreateBasemgrImpl(DefaultConfig());
+
+  // Create a configuration that is invalid JSON.
+  auto config_buf = BufferFromString("this is not valid json");
+
+  // Connect to Launcher with a handler that lets us capture the error.
+  auto session_launcher = GetSessionLauncher();
+
+  bool error_handler_called{false};
+  zx_status_t error_status{ZX_OK};
+  session_launcher.set_error_handler([&](zx_status_t status) {
+    error_handler_called = true;
+    error_status = status;
+  });
+
+  session_launcher->LaunchSessionmgr(std::move(config_buf));
+
+  RunLoopUntil([&] { return error_handler_called; });
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, error_status);
+
+  basemgr_impl_->Terminate();
+  RunLoopUntil([&]() { return did_shut_down_; });
+}
+
+// Tests that basemgr starts a new sessionmgr component with a new configuration when instructed
+// to launch a new session.
+TEST_F(BasemgrImplTest, LaunchSessionmgrReplacesExistingSession) {
+  FakeSessionmgr sessionmgr{};
+  sessionmgr.component()->Register(modular_config::kSessionmgrUrl, fake_launcher_);
+
+  CreateBasemgrImpl(DefaultConfig());
+
+  auto config_buf = BufferFromString(modular::ConfigToJsonString(DefaultConfig()));
+
+  // Launch the session
+  auto session_launcher = GetSessionLauncher();
+  session_launcher->LaunchSessionmgr(std::move(config_buf));
+
+  // sessionmgr should be started and initialized.
+  RunLoopUntil([&]() { return sessionmgr.initialized(); });
+
+  EXPECT_EQ(1, sessionmgr.component()->launch_count());
+
+  // Launch the session again
+  config_buf = BufferFromString(modular::ConfigToJsonString(DefaultConfig()));
+  session_launcher->LaunchSessionmgr(std::move(config_buf));
+
+  RunLoopUntil([&] { return sessionmgr.component()->launch_count() == 2; });
+}
+
+}  // namespace modular

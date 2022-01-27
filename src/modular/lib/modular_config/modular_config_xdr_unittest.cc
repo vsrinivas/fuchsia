@@ -77,7 +77,6 @@ TEST(ModularConfigXdr, BasemgrReadDefaultValues) {
   EXPECT_EQ(0, read_config.session_shell_map().at(0).config().screen_height());
   EXPECT_EQ(0, read_config.session_shell_map().at(0).config().screen_width());
   EXPECT_EQ(modular_config::kDefaultStoryShellUrl, read_config.story_shell().app_config().url());
-  EXPECT_FALSE(read_config.has_session_launcher());
 }
 
 // Tests that values are set correctly for BasemgrConfig when reading JSON.
@@ -89,9 +88,6 @@ TEST(ModularConfigXdr, BasemgrReadValues) {
       "fuchsia-pkg://fuchsia.com/test_session_shell#meta/test_session_shell.cmx";
   static constexpr auto kTestStoryShellUrl =
       "fuchsia-pkg://fuchsia.com/test_story_shell#meta/test_story_shell.cmx";
-  static constexpr auto kTestSessionLauncherUrl =
-      "fuchsia-pkg://fuchsia.com/test_session_launcher#meta/test_session_launcher.cmx";
-  static constexpr auto kTestSessionLauncherArg = "--test_session_launcher_arg";
 
   static constexpr auto kJson = R"({
       "enable_cobalt": false,
@@ -108,11 +104,7 @@ TEST(ModularConfigXdr, BasemgrReadValues) {
           "screen_width": 100.0
         }
       ],
-      "story_shell_url": "fuchsia-pkg://fuchsia.com/test_story_shell#meta/test_story_shell.cmx",
-      "session_launcher": {
-        "url": "fuchsia-pkg://fuchsia.com/test_session_launcher#meta/test_session_launcher.cmx",
-        "args": [ "--test_session_launcher_arg" ]
-      }
+      "story_shell_url": "fuchsia-pkg://fuchsia.com/test_story_shell#meta/test_story_shell.cmx"
     })";
   rapidjson::Document json_doc;
   json_doc.Parse(kJson);
@@ -145,11 +137,6 @@ TEST(ModularConfigXdr, BasemgrReadValues) {
   ASSERT_TRUE(read_config.story_shell().has_app_config());
   ASSERT_EQ(kTestStoryShellUrl, read_config.story_shell().app_config().url());
   EXPECT_EQ(0u, read_config.story_shell().app_config().args().size());
-
-  ASSERT_TRUE(read_config.has_session_launcher());
-  ASSERT_EQ(kTestSessionLauncherUrl, read_config.session_launcher().url());
-  ASSERT_EQ(1u, read_config.session_launcher().args().size());
-  EXPECT_EQ(kTestSessionLauncherArg, read_config.session_launcher().args().at(0));
 }
 
 // Tests that default JSON values are set correctly when SessionmgrConfig contains no values.

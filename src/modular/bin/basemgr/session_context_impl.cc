@@ -47,8 +47,13 @@ SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher,
                           std::move(view_ref_pair.control_ref), std::move(view_ref_pair.view_ref));
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {
+    if (!weak_this) {
+      return;
+    }
+
     FX_LOGS(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "
                    << "Calling on_session_shutdown_().";
+
     // This prevents us from receiving any further requests.
     weak_this->session_context_binding_.Unbind();
 

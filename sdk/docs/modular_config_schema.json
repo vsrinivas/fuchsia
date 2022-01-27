@@ -31,14 +31,10 @@
         "story_shell_url": {
           "$ref": "#/definitions/component_url",
           "default": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
-        },
-        "session_launcher": { "$ref": "#/definitions/component_url_and_args" }
+        }
       },
-      "additionalProperties": false,
-      "oneOf": [
-        { "required": ["session_launcher"] },
-        { "required": ["session_shells"] }
-      ]
+      "additionalProperties": true,
+      "required": ["session_shells"]
     },
     "base_shell": {
       "type": "object",

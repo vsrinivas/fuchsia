@@ -11,10 +11,8 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/time.h>
 
-#include <src/lib/fostr/fidl/fuchsia/modular/session/formatting.h>
-
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/modular/lib/common/async_holder.h"
+#include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/clone.h"
@@ -22,9 +20,6 @@
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
-
-// Timeout for tearing down the session launcher component.
-static constexpr auto kSessionLauncherComponentTimeout = zx::sec(1);
 
 using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
 
@@ -68,13 +63,6 @@ class LauncherImpl : public fuchsia::modular::session::Launcher {
       return;
     }
 
-    // The configuration cannot try to override the session launcher component.
-    if (config_result.value().has_basemgr_config() &&
-        config_result.value().basemgr_config().has_session_launcher()) {
-      binding_->Close(ZX_ERR_INVALID_ARGS);
-      return;
-    }
-
     basemgr_impl_->LaunchSessionmgr(config_result.take_value(), std::move(additional_services));
   }
 
@@ -109,10 +97,6 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
   outgoing_services_->AddPublicService(GetLauncherHandler(),
                                        fuchsia::modular::session::Launcher::Name_);
 
-  session_launcher_component_service_dir_.AddEntry(
-      fuchsia::modular::session::Launcher::Name_,
-      std::make_unique<vfs::Service>(GetLauncherHandler()));
-
   ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToBaseMgr);
 }
 
@@ -124,15 +108,11 @@ void BasemgrImpl::Connect(
 }
 
 void BasemgrImpl::Start() {
-  if (config_accessor_.basemgr_config().has_session_launcher()) {
-    StartSessionLauncherComponent();
-  } else {
-    CreateSessionProvider(&config_accessor_, fuchsia::sys::ServiceList());
+  CreateSessionProvider(&config_accessor_, fuchsia::sys::ServiceList());
 
-    auto start_session_result = StartSession();
-    if (start_session_result.is_error()) {
-      FX_PLOGS(FATAL, start_session_result.error()) << "Could not start session";
-    }
+  auto start_session_result = StartSession();
+  if (start_session_result.is_error()) {
+    FX_PLOGS(FATAL, start_session_result.error()) << "Could not start session";
   }
 }
 
@@ -158,24 +138,10 @@ void BasemgrImpl::Shutdown() {
     return bridge.consumer.promise();
   };
 
-  // Teardown the session component if it exists.
-  // Always completes successfully.
-  auto teardown_session_component_app = [this]() {
-    auto bridge = fpromise::bridge();
-    if (session_launcher_component_app_) {
-      session_launcher_component_app_->Teardown(kSessionLauncherComponentTimeout,
-                                                bridge.completer.bind());
-    } else {
-      bridge.completer.complete_ok();
-    }
-    return bridge.consumer.promise();
-  };
-
-  auto shutdown =
-      teardown_session_provider().and_then(teardown_session_component_app()).and_then([this]() {
-        basemgr_debug_bindings_.CloseAll(ZX_OK);
-        on_shutdown_();
-      });
+  auto shutdown = teardown_session_provider().and_then([this]() {
+    basemgr_debug_bindings_.CloseAll(ZX_OK);
+    on_shutdown_();
+  });
 
   executor_.schedule_task(std::move(shutdown));
 }
@@ -185,12 +151,12 @@ void BasemgrImpl::Terminate() { Shutdown(); }
 void BasemgrImpl::Stop() { Shutdown(); }
 
 void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const config_accessor,
-                                        fuchsia::sys::ServiceList services_from_session_launcher) {
+                                        fuchsia::sys::ServiceList services_for_sessionmgr) {
   FX_DCHECK(!session_provider_.get());
 
   session_provider_.reset(new SessionProvider(
       /*delegate=*/this, launcher_.get(), device_administrator_.get(), config_accessor,
-      std::move(services_from_session_launcher),
+      std::move(services_for_sessionmgr),
       /*on_zero_sessions=*/[this] {
         if (state_ == State::SHUTTING_DOWN) {
           return;
@@ -280,52 +246,26 @@ void BasemgrImpl::GetPresentation(
 }
 
 void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig config,
-                                   fuchsia::sys::ServiceList services_from_session_launcher) {
+                                   fuchsia::sys::ServiceList additional_services) {
   // If there is a session provider, tear it down and try again. This stops any running session.
   if (session_provider_.get()) {
-    session_provider_.Teardown(kSessionProviderTimeout,
-                               [this, config = std::move(config),
-                                services = std::move(services_from_session_launcher)]() mutable {
-                                 session_provider_.reset(nullptr);
-                                 LaunchSessionmgr(std::move(config), std::move(services));
-                               });
+    session_provider_.Teardown(
+        kSessionProviderTimeout,
+        [this, config = std::move(config), services = std::move(additional_services)]() mutable {
+          session_provider_.reset(nullptr);
+          LaunchSessionmgr(std::move(config), std::move(services));
+        });
     return;
   }
 
   launch_sessionmgr_config_accessor_ =
       std::make_unique<modular::ModularConfigAccessor>(std::move(config));
 
-  CreateSessionProvider(launch_sessionmgr_config_accessor_.get(),
-                        std::move(services_from_session_launcher));
+  CreateSessionProvider(launch_sessionmgr_config_accessor_.get(), std::move(additional_services));
 
   if (auto result = StartSession(); result.is_error()) {
     FX_PLOGS(ERROR, result.error()) << "Could not start session";
   }
-}
-
-void BasemgrImpl::StartSessionLauncherComponent() {
-  auto app_config = CloneStruct(config_accessor_.basemgr_config().session_launcher());
-
-  auto services = CreateAndServeSessionLauncherComponentServices();
-
-  FX_LOGS(INFO) << "Starting session launcher component: " << app_config.url();
-
-  session_launcher_component_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher_.get(), std::move(app_config), /*data_origin=*/"", std::move(services),
-      /*flat_namespace=*/nullptr);
-}
-
-fuchsia::sys::ServiceListPtr BasemgrImpl::CreateAndServeSessionLauncherComponentServices() {
-  fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  session_launcher_component_service_dir_.Serve(
-      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-      dir_handle.NewRequest().TakeChannel());
-
-  auto services = std::make_unique<fuchsia::sys::ServiceList>();
-  services->names.push_back(fuchsia::modular::session::Launcher::Name_);
-  services->host_directory = dir_handle.TakeChannel();
-
-  return services;
 }
 
 fidl::InterfaceRequestHandler<fuchsia::modular::session::Launcher>
