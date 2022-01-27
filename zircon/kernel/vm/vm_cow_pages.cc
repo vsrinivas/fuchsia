@@ -1735,9 +1735,12 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
       [&pages_to_dirty_start, &pages_to_dirty_len, &dirty_len](const VmPageOrMarker* p,
                                                                uint64_t off) {
         if (p->IsPage()) {
-          DEBUG_ASSERT(is_page_dirty_tracked(p->Page()));
+          vm_page_t* page = p->Page();
+          DEBUG_ASSERT(is_page_dirty_tracked(page));
+          // VMOs that trap dirty transitions should not have loaned pages.
+          DEBUG_ASSERT(!pmm_is_loaned(page));
           // Page is already dirty.
-          if (is_page_dirty(p->Page())) {
+          if (is_page_dirty(page)) {
             // Bail if we were tracking a non-zero run of pages to be dirtied.
             if (pages_to_dirty_len > 0) {
               return ZX_ERR_STOP;
@@ -1915,6 +1918,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       // encounters a loaned page; loaned pages are reclaimed by evicting them and we cannot evict
       // dirty pages.
       if (pmm_is_loaned(p)) {
+        DEBUG_ASSERT(is_page_clean(p));
         zx_status_t status = ReplacePageLocked(p, offset, /*with_loaned=*/false, &p);
         if (status != ZX_OK) {
           return status;
@@ -2395,6 +2399,7 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
         vm_page_t* page = old_page;
         if (pmm_is_loaned(old_page)) {
           DEBUG_ASSERT(!old_page->object.pin_count);
+          DEBUG_ASSERT(!is_page_dirty_tracked(old_page) || is_page_clean(old_page));
           vm_page_t* new_page;
           // It's possible for the old_page to become non-loaned by the time we call
           // pmm_alloc_page(), but that's fine; we'll just replace anyway with new_page which we
@@ -2802,6 +2807,7 @@ void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
     if (is_page_clean(page)) {
       pmm_page_queues()->MoveToPagerBacked(page, this, offset);
     } else {
+      DEBUG_ASSERT(!pmm_is_loaned(page));
       pmm_page_queues()->MoveToPagerBackedDirty(page, this, offset);
     }
   } else {
@@ -2818,6 +2824,7 @@ void VmCowPages::SetNotWiredLocked(vm_page_t* page, uint64_t offset) {
     if (is_page_clean(page)) {
       pmm_page_queues()->SetPagerBacked(page, this, offset);
     } else {
+      DEBUG_ASSERT(!pmm_is_loaned(page));
       pmm_page_queues()->SetPagerBackedDirty(page, this, offset);
     }
   } else {
@@ -2955,6 +2962,7 @@ void VmCowPages::HintAlwaysNeedLocked(vm_page_t* page) {
   }
   vm_page_t* cur_page = page;
   if (pmm_is_loaned(cur_page)) {
+    DEBUG_ASSERT(is_page_clean(cur_page));
     AssertHeld(owner->lock_);
     zx_status_t status = owner->ReplacePageLocked(cur_page, cur_page->object.get_page_offset(),
                                                   /*with_loaned=*/false, &cur_page);
@@ -3698,7 +3706,13 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
 
   return page_list_.ForEveryPageAndContiguousRunInRange(
       [](const VmPageOrMarker* p, uint64_t off) {
-        return p->IsPage() && is_page_dirty_tracked(p->Page()) && !is_page_dirty(p->Page());
+        if (p->IsPage()) {
+          vm_page_t* page = p->Page();
+          DEBUG_ASSERT(is_page_dirty_tracked(page));
+          DEBUG_ASSERT(is_page_clean(page) || !pmm_is_loaned(page));
+          return !is_page_dirty(page);
+        }
+        return false;
       },
       [this](const VmPageOrMarker* p, uint64_t off) {
         ASSERT(p->IsPage());
@@ -3748,13 +3762,21 @@ zx_status_t VmCowPages::EnumerateDirtyRangesLocked(
         // Enumerate both AwaitingClean and Dirty pages, i.e. anything that is not Clean.
         // AwaitingClean pages are "dirty" too for the purposes of this enumeration, since their
         // modified contents are still in the process of being written back.
-        return p->IsPage() && is_page_dirty_tracked(p->Page()) && !is_page_clean(p->Page());
+        if (p->IsPage()) {
+          vm_page_t* page = p->Page();
+          DEBUG_ASSERT(is_page_dirty_tracked(page));
+          DEBUG_ASSERT(is_page_clean(page) || !pmm_is_loaned(page));
+          return !is_page_clean(page);
+        }
+        return false;
       },
       [](const VmPageOrMarker* p, uint64_t off) {
         DEBUG_ASSERT(p->IsPage());
-        DEBUG_ASSERT(is_page_dirty_tracked(p->Page()));
-        DEBUG_ASSERT(!is_page_clean(p->Page()));
-        DEBUG_ASSERT(p->Page()->object.get_page_offset() == off);
+        vm_page_t* page = p->Page();
+        DEBUG_ASSERT(is_page_dirty_tracked(page));
+        DEBUG_ASSERT(!is_page_clean(page));
+        DEBUG_ASSERT(!pmm_is_loaned(page));
+        DEBUG_ASSERT(page->object.get_page_offset() == off);
         return ZX_ERR_NEXT;
       },
       [&dirty_range_fn](uint64_t start, uint64_t end) {
@@ -3785,6 +3807,7 @@ zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
         if (p->IsPage() && is_page_dirty(p->Page())) {
           vm_page_t* page = p->Page();
           DEBUG_ASSERT(page->object.get_page_offset() == off);
+          DEBUG_ASSERT(!pmm_is_loaned(page));
           page->object.dirty_state = static_cast<uint8_t>(DirtyState::AwaitingClean);
           // Leave the page in the Dirty queue for now as it is not clean yet; move it out on
           // WritebackEnd.
@@ -3830,6 +3853,7 @@ zx_status_t VmCowPages::WritebackEndLocked(uint64_t offset, uint64_t len) {
           vm_page_t* page = p->Page();
           DEBUG_ASSERT(page->object.get_object() == this);
           DEBUG_ASSERT(page->object.get_page_offset() == off);
+          DEBUG_ASSERT(!pmm_is_loaned(page));
           page->object.dirty_state = static_cast<uint8_t>(DirtyState::Clean);
           // Move the page back out to the evictable pager queues and start tracking age
           // information.
@@ -3981,9 +4005,12 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
     return false;
   }
 
+  DEBUG_ASSERT(is_page_dirty_tracked(page));
+
   // We cannot evict the page unless it is clean. If the page is dirty, it will already have been
   // moved to the dirty page queue.
   if (!is_page_clean(page)) {
+    DEBUG_ASSERT(!pmm_is_loaned(page));
     return false;
   }
 
@@ -4428,6 +4455,11 @@ bool VmCowPages::DebugValidateVmoPageBorrowingLocked() const {
       }
       if (page->object.always_need) {
         dprintf(INFO, "always_need page is loaned?? - offset: 0x%" PRIx64 "\n", offset);
+        result = false;
+        return ZX_ERR_STOP;
+      }
+      if (is_page_dirty_tracked(page) && !is_page_clean(page)) {
+        dprintf(INFO, "!clean page is loaned?? - offset: 0x%" PRIx64 "\n", offset);
         result = false;
         return ZX_ERR_STOP;
       }
