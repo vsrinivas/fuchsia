@@ -9,6 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/promise.h>
@@ -263,44 +264,50 @@ fpromise::promise<uint32_t> BufferCollage::AddCollection(
 }
 
 void BufferCollage::RemoveCollection(uint32_t id) {
-  auto nonce = TRACE_NONCE();
   TRACE_DURATION("camera", "BufferCollage::RemoveCollection");
-  TRACE_FLOW_BEGIN("camera", "post_remove_collection", nonce);
-  async::PostTask(loop_.dispatcher(), [this, id, nonce]() {
-    TRACE_DURATION("camera", "BufferCollage::RemoveCollection.task");
-    TRACE_FLOW_END("camera", "post_remove_collection", nonce);
-    auto it = collection_views_.find(id);
-    if (it == collection_views_.end()) {
-      FX_LOGS(ERROR) << "Invalid collection ID " << id << ".";
-      Stop();
-      return;
+  if (async_get_default_dispatcher() != loop_.dispatcher()) {
+    // Marshal the task to our own thread if called from elsewhere.
+    auto nonce = TRACE_NONCE();
+    TRACE_FLOW_BEGIN("camera", "post_remove_collection", nonce);
+    async::PostTask(loop_.dispatcher(), [this, id, nonce] {
+      TRACE_DURATION("camera", "BufferCollage::RemoveCollection.task");
+      TRACE_FLOW_END("camera", "post_remove_collection", nonce);
+      RemoveCollection(id);
+    });
+    return;
+  }
+
+  auto it = collection_views_.find(id);
+  if (it == collection_views_.end()) {
+    FX_LOGS(ERROR) << "Invalid collection ID " << id << ".";
+    Stop();
+    return;
+  }
+  auto& collection_view = it->second;
+  auto image_pipe_id = collection_view.image_pipe_id;
+  view_->DetachChild(*collection_view.node);
+  view_->DetachChild(*collection_view.highlight_node);
+  view_->DetachChild(collection_view.description_node->node);
+  session_->ReleaseResource(image_pipe_id);  // De-allocate ImagePipe2 scenic side
+  collection_view.collection->Close();
+
+  // Frame capture: Unmap all buffers.
+  if (frame_capture_) {
+    for (uint32_t buffer_index = 0; buffer_index < collection_view.buffers.buffer_count;
+         buffer_index++) {
+      auto vmo_size = collection_view.buffers.settings.buffer_settings.size_bytes;
+
+      // TODO(b/204456599) - Use VmoMapper helper class instead.
+      auto it = collection_view.buffer_id_to_virt_addr.find(buffer_index);
+      ZX_ASSERT(it != collection_view.buffer_id_to_virt_addr.end());
+      auto vmo_virt_addr = collection_view.buffer_id_to_virt_addr[buffer_index];
+      auto status = zx::vmar::root_self()->unmap(vmo_virt_addr, vmo_size);
+      ZX_ASSERT(status == ZX_OK);
     }
-    auto& collection_view = it->second;
-    auto image_pipe_id = collection_view.image_pipe_id;
-    view_->DetachChild(*collection_view.node);
-    view_->DetachChild(*collection_view.highlight_node);
-    view_->DetachChild(collection_view.description_node->node);
-    session_->ReleaseResource(image_pipe_id);  // De-allocate ImagePipe2 scenic side
-    collection_view.collection->Close();
+  }
 
-    // Frame capture: Unmap all buffers.
-    if (frame_capture_) {
-      for (uint32_t buffer_index = 0; buffer_index < collection_view.buffers.buffer_count;
-           buffer_index++) {
-        auto vmo_size = collection_view.buffers.settings.buffer_settings.size_bytes;
-
-        // TODO(b/204456599) - Use VmoMapper helper class instead.
-        auto it = collection_view.buffer_id_to_virt_addr.find(buffer_index);
-        ZX_ASSERT(it != collection_view.buffer_id_to_virt_addr.end());
-        auto vmo_virt_addr = collection_view.buffer_id_to_virt_addr[buffer_index];
-        auto status = zx::vmar::root_self()->unmap(vmo_virt_addr, vmo_size);
-        ZX_ASSERT(status == ZX_OK);
-      }
-    }
-
-    collection_views_.erase(it);
-    UpdateLayout();
-  });
+  collection_views_.erase(it);
+  UpdateLayout();
 }
 
 void BufferCollage::PostShowBuffer(uint32_t collection_id, uint32_t buffer_index,
