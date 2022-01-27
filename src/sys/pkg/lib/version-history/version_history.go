@@ -15,7 +15,7 @@ import (
 var versionHistoryBytes []byte
 var versions []Version
 
-const versionHistorySchemaId string = "https://fuchsia.dev/schema/version_history-96c19b0c.json"
+const versionHistorySchemaId string = "https://fuchsia.dev/schema/version_history-038fa854.json"
 const versionHistoryName string = "Platform version map"
 const versionHistoryType string = "version_history"
 
@@ -31,7 +31,7 @@ type versionHistory struct {
 
 type versionHistoryData struct {
 	Name     string                  `json:"name"`
-	Type     string                  `json:"element_type"`
+	Type     string                  `json:"type"`
 	Versions []versionHistoryVersion `json:"versions"`
 }
 
