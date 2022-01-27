@@ -9,5 +9,6 @@ group("tests") {
     "conformance",
     "dispatcher",
     "integration",
+    "natural_types",
   ]
 }

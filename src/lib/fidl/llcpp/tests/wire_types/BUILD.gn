@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 
 group("wire_types") {
@@ -16,12 +15,6 @@ group("wire_types") {
   ]
 }
 
-fidl("fidl.llcpp.types.test") {
-  sources = [ "types.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-  host_llcpp = true
-}
-
 test("fidl_llcpp_wire_type_api_tests_bin") {
   output_name = "fidl_llcpp_wire_type_api_tests"
   sources = [
@@ -30,7 +23,7 @@ test("fidl_llcpp_wire_type_api_tests_bin") {
     "enum_test.cc",
   ]
   deps = [
-    ":fidl.llcpp.types.test_llcpp",
+    "//src/lib/fidl/llcpp/tests:fidl.llcpp.types.test_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

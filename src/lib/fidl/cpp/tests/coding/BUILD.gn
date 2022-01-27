@@ -21,7 +21,7 @@ test("fidl_cpp_natural_coding_tests_bin") {
   deps = [
     "//sdk/lib/stdcompat",
     "//src/lib/fidl/cpp",
-    "//src/lib/fidl/llcpp/tests/wire_types:fidl.llcpp.types.test_cpp",
+    "//src/lib/fidl/llcpp/tests:fidl.llcpp.types.test_cpp",
     "//zircon/system/ulib/zxtest",
   ]
 }
