@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <virtio/sound.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
@@ -1410,13 +1411,17 @@ TEST_F(VirtioSoundTest, PcmOutputXferThenRelease) {
   const std::string kPacket = "12345678";
   const uint32_t kPacketSize = static_cast<uint32_t>(kPacket.size());
 
-  // Send multiple packets.
-  constexpr size_t kInitialPackets = 2;
-  constexpr size_t kTotalPackets = kInitialPackets + 2;
+  constexpr size_t kPacketsBeforeRelease = 2;
+  constexpr size_t kPacketsDuringRelease = 2;
+  constexpr size_t kPacketsAfterRelease = 2;
+  constexpr size_t kTotalPackets =
+      kPacketsBeforeRelease + kPacketsDuringRelease + kPacketsAfterRelease;
   virtio_snd_pcm_xfer_t xfer{.stream_id = kOutputStreamId};
   virtio_snd_pcm_status_t* xfer_resp[kTotalPackets];
+
+  // Send multiple packets.
   uint16_t xfer_index[kTotalPackets];
-  for (size_t k = 0; k < kInitialPackets; k++) {
+  for (size_t k = 0; k < kPacketsBeforeRelease; k++) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
     ASSERT_EQ(ZX_OK, DescriptorChainBuilder(txq())
                          .AppendReadableDescriptor(&xfer, sizeof(xfer))
@@ -1427,10 +1432,11 @@ TEST_F(VirtioSoundTest, PcmOutputXferThenRelease) {
     xfer_resp[k]->status = kInvalidStatus;
   }
 
+  // Wait for those packets to arrive.
   auto renderer = audio_service().get_audio_renderer(0);
-  auto packets = WaitForPackets(*renderer, kInitialPackets);
-  ASSERT_EQ(packets.size(), kInitialPackets);
-  for (size_t k = 0; k < kInitialPackets; k++) {
+  auto packets = WaitForPackets(*renderer, kPacketsBeforeRelease);
+  ASSERT_EQ(packets.size(), kPacketsBeforeRelease);
+  for (size_t k = 0; k < kPacketsBeforeRelease; k++) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
     EXPECT_EQ(packets[k].buffer, kPacket);
     EXPECT_EQ(xfer_resp[k]->status, kInvalidStatus);
@@ -1449,8 +1455,10 @@ TEST_F(VirtioSoundTest, PcmOutputXferThenRelease) {
                        .Build(&release_index));
   ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
 
-  // Send more packets after the RELEASE.
-  for (size_t k = kInitialPackets; k < kTotalPackets; k++) {
+  // Send more packets while the RELEASE is in flight.
+  // Since these are sent on a different queue, they may arrive before RELEASE.
+  // This tests how we handle packets that arrive concurrently with RELEASE.
+  for (size_t k = kPacketsBeforeRelease; k < kPacketsBeforeRelease + kPacketsDuringRelease; k++) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
     ASSERT_EQ(ZX_OK, DescriptorChainBuilder(txq())
                          .AppendReadableDescriptor(&xfer, sizeof(xfer))
@@ -1461,19 +1469,44 @@ TEST_F(VirtioSoundTest, PcmOutputXferThenRelease) {
     xfer_resp[k]->status = kInvalidStatus;
   }
 
-  // All of the packets should complete automatically, then the connection should be closed.
-  for (size_t k = 0; k < kTotalPackets; k++) {
+  // All packets we've sent so far should compilete automatically.
+  // Packets sent before RELEASE should completed with IO_ERR, while packets sent
+  // concurrently with RELEASE may be complete with either IO_ERR or BAD_MSG,
+  // depending on how the packet is ordered relative to the RELEASE.
+  for (size_t k = 0; k < kPacketsBeforeRelease + kPacketsDuringRelease; k++) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
     ASSERT_EQ(ZX_OK, WaitForDescriptor(txq(), xfer_index[k]));
-    EXPECT_EQ(xfer_resp[k]->status, VIRTIO_SND_S_IO_ERR);
+    if (k < kPacketsBeforeRelease) {
+      EXPECT_EQ(xfer_resp[k]->status, VIRTIO_SND_S_IO_ERR);
+    } else {
+      using ::testing::AnyOf;
+      using ::testing::Eq;
+      EXPECT_THAT(xfer_resp[k]->status, AnyOf(Eq(VIRTIO_SND_S_BAD_MSG), Eq(VIRTIO_SND_S_IO_ERR)));
+    }
     EXPECT_EQ(xfer_resp[k]->latency_bytes, 0u);
   }
 
+  // Wait for the REELASE.
   ASSERT_EQ(ZX_OK, WaitForDescriptor(controlq(), release_index));
   ASSERT_EQ(release_resp->code, VIRTIO_SND_S_OK);
   auto calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::Disconnect});
   ASSERT_EQ(calls.size(), 1u);
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, calls[FakeAudioRenderer::Method::Disconnect].disconnect_status);
+
+  // Send more packets. Each should fail immediately because we have disconnected.
+  for (size_t k = kPacketsBeforeRelease + kPacketsDuringRelease; k < kTotalPackets; k++) {
+    SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
+    ASSERT_EQ(ZX_OK, DescriptorChainBuilder(txq())
+                         .AppendReadableDescriptor(&xfer, sizeof(xfer))
+                         .AppendReadableDescriptor(&kPacket[0], kPacketSize)
+                         .AppendWritableDescriptor(&xfer_resp[k], sizeof(xfer_resp[k]))
+                         .Build(&xfer_index[k]));
+    xfer_resp[k]->status = kInvalidStatus;
+    ASSERT_EQ(ZX_OK, NotifyQueue(TXQ));
+    ASSERT_EQ(ZX_OK, WaitForDescriptor(txq(), xfer_index[k]));
+    EXPECT_EQ(xfer_resp[k]->status, VIRTIO_SND_S_BAD_MSG);
+    EXPECT_EQ(xfer_resp[k]->latency_bytes, 0u);
+  }
 }
 
 TEST_F(VirtioSoundTest, BadPcmOutputXferBadStreamId) {
@@ -2013,14 +2046,18 @@ TEST_F(VirtioSoundTest, PcmInputXferThenRelease) {
   const std::string kPacket = "12345678";
   const uint32_t kPacketSize = static_cast<uint32_t>(kPacket.size());
 
-  // Send multiple packets.
-  constexpr size_t kInitialPackets = 2;
-  constexpr size_t kTotalPackets = kInitialPackets + 2;
+  constexpr size_t kPacketsBeforeRelease = 2;
+  constexpr size_t kPacketsDuringRelease = 2;
+  constexpr size_t kPacketsAfterRelease = 2;
+  constexpr size_t kTotalPackets =
+      kPacketsBeforeRelease + kPacketsDuringRelease + kPacketsAfterRelease;
   virtio_snd_pcm_xfer_t xfer{.stream_id = kInputStreamId};
   virtio_snd_pcm_status_t* xfer_resp[kTotalPackets];
   char* xfer_data[kTotalPackets];
   uint16_t xfer_index[kTotalPackets];
-  for (size_t k = 0; k < kInitialPackets; k++) {
+
+  // Send multiple packets.
+  for (size_t k = 0; k < kPacketsBeforeRelease; k++) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
     ASSERT_EQ(ZX_OK, DescriptorChainBuilder(rxq())
                          .AppendReadableDescriptor(&xfer, sizeof(xfer))
@@ -2031,10 +2068,11 @@ TEST_F(VirtioSoundTest, PcmInputXferThenRelease) {
     xfer_resp[k]->status = kInvalidStatus;
   }
 
+  // Wait for those packets to arrive.
   auto capturer = audio_service().get_audio_capturer(0);
-  auto packets = WaitForPackets(*capturer, kInitialPackets);
-  ASSERT_EQ(packets.size(), kInitialPackets);
-  for (size_t k = 0; k < kInitialPackets; k++) {
+  auto packets = WaitForPackets(*capturer, kPacketsBeforeRelease);
+  ASSERT_EQ(packets.size(), kPacketsBeforeRelease);
+  for (size_t k = 0; k < kPacketsBeforeRelease; k++) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
     EXPECT_EQ(xfer_resp[k]->status, kInvalidStatus);
   }
@@ -2062,8 +2100,10 @@ TEST_F(VirtioSoundTest, PcmInputXferThenRelease) {
                        .Build(&release_index));
   ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
 
-  // Send more packets after the RELEASE.
-  for (size_t k = kInitialPackets; k < kTotalPackets; k++) {
+  // Send more packets while the RELEASE is in flight.
+  // Since these are sent on a different queue, they may arrive before RELEASE.
+  // This tests how we handle packets that arrive concurrently with RELEASE.
+  for (size_t k = kPacketsBeforeRelease; k < kPacketsBeforeRelease + kPacketsDuringRelease; k++) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
     ASSERT_EQ(ZX_OK, DescriptorChainBuilder(rxq())
                          .AppendReadableDescriptor(&xfer, sizeof(xfer))
@@ -2074,19 +2114,44 @@ TEST_F(VirtioSoundTest, PcmInputXferThenRelease) {
     xfer_resp[k]->status = kInvalidStatus;
   }
 
-  // All of the packets should complete automatically, then the connection should be closed.
-  for (size_t k = 0; k < kTotalPackets; k++) {
+  // All packets we've sent so far should compilete automatically.
+  // Packets sent before RELEASE should completed with IO_ERR, while packets sent
+  // concurrently with RELEASE may be complete with either IO_ERR or BAD_MSG,
+  // depending on how the packet is ordered relative to the RELEASE.
+  for (size_t k = 0; k < kPacketsBeforeRelease + kPacketsDuringRelease; k++) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
     ASSERT_EQ(ZX_OK, WaitForDescriptor(rxq(), xfer_index[k]));
-    EXPECT_EQ(xfer_resp[k]->status, VIRTIO_SND_S_IO_ERR);
+    if (k < kPacketsBeforeRelease) {
+      EXPECT_EQ(xfer_resp[k]->status, VIRTIO_SND_S_IO_ERR);
+    } else {
+      using ::testing::AnyOf;
+      using ::testing::Eq;
+      EXPECT_THAT(xfer_resp[k]->status, AnyOf(Eq(VIRTIO_SND_S_BAD_MSG), Eq(VIRTIO_SND_S_IO_ERR)));
+    }
     EXPECT_EQ(xfer_resp[k]->latency_bytes, 0u);
   }
 
+  // Wait for the REELASE.
   ASSERT_EQ(ZX_OK, WaitForDescriptor(controlq(), release_index));
   ASSERT_EQ(release_resp->code, VIRTIO_SND_S_OK);
   auto calls = WaitForCalls(*capturer, {FakeAudioCapturer::Method::Disconnect});
   ASSERT_EQ(calls.size(), 1u);
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, calls[FakeAudioCapturer::Method::Disconnect].disconnect_status);
+
+  // Send more packets. Each should fail immediately because we have disconnected.
+  for (size_t k = kPacketsBeforeRelease + kPacketsDuringRelease; k < kTotalPackets; k++) {
+    SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
+    ASSERT_EQ(ZX_OK, DescriptorChainBuilder(rxq())
+                         .AppendReadableDescriptor(&xfer, sizeof(xfer))
+                         .AppendWritableDescriptor(&xfer_data[k], kPacketSize)
+                         .AppendWritableDescriptor(&xfer_resp[k], sizeof(xfer_resp[k]))
+                         .Build(&xfer_index[k]));
+    xfer_resp[k]->status = kInvalidStatus;
+    ASSERT_EQ(ZX_OK, NotifyQueue(RXQ));
+    ASSERT_EQ(ZX_OK, WaitForDescriptor(rxq(), xfer_index[k]));
+    EXPECT_EQ(xfer_resp[k]->status, VIRTIO_SND_S_BAD_MSG);
+    EXPECT_EQ(xfer_resp[k]->latency_bytes, 0u);
+  }
 }
 
 TEST_F(VirtioSoundTest, BadPcmInputXferBadStreamId) {

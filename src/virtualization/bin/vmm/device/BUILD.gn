@@ -387,6 +387,7 @@ executable("device_tests") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
     "//third_party/mesa/include:drm-uapi",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
