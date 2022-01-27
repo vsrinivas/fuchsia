@@ -26,6 +26,7 @@ cts_executable("diagnostics-test-bin") {
     # TODO(81398): Include this in the SDK.
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//third_party/rapidjson",
+    "//third_party/re2",
   ]
 }
 

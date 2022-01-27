@@ -15,11 +15,10 @@
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include <regex>
-
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/stringbuffer.h>
+#include <re2/re2.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -290,18 +289,18 @@ TEST_F(AccessorTest, StreamDiagnosticsInspect) {
   auto& data = actual_result.value()[0];
   data.Sort();
   std::string actual = data.PrettyJson();
-  actual = std::regex_replace(actual, std::regex("\"component_url\": \".+\""),
-                              "\"component_url\": \"COMPONENT_URL\"");
-  actual = std::regex_replace(actual, std::regex("        \"errors\": null,\n"), "");
+  re2::RE2::GlobalReplace(&actual, re2::RE2("\"component_url\": \".+\""),
+                          "\"component_url\": \"COMPONENT_URL\"");
+  re2::RE2::GlobalReplace(&actual, re2::RE2("        \"errors\": null,\n"), "");
 
-  std::smatch timestamp_m;
-  EXPECT_TRUE(std::regex_search(actual, timestamp_m, std::regex("\"timestamp\": (\\d+)")));
+  std::string timestamp;
+  EXPECT_TRUE(re2::RE2::PartialMatch(actual, re2::RE2("\"timestamp\": (\\d+)"), &timestamp));
 
   std::string expected = EXPECTED_DATA;
 
   // Replace non-deterministic expected values.
-  expected = std::regex_replace(expected, std::regex("CHILD_NAME"), realm.GetChildName());
-  expected = std::regex_replace(expected, std::regex("TIMESTAMP"), timestamp_m.str(1));
+  re2::RE2::GlobalReplace(&expected, re2::RE2("CHILD_NAME"), realm.GetChildName());
+  re2::RE2::GlobalReplace(&expected, re2::RE2("TIMESTAMP"), timestamp);
 
   EXPECT_EQ(expected, actual);
 }

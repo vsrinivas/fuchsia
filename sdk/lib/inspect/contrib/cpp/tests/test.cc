@@ -7,10 +7,9 @@
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
-#include <regex>
-
 #include <gmock/gmock.h>
 #include <rapidjson/pointer.h>
+#include <re2/re2.h>
 
 #include "lib/zx/time.h"
 
@@ -20,6 +19,12 @@ namespace {
 using sys::testing::EnclosingEnvironment;
 using ::testing::Eq;
 using ::testing::Pointee;
+
+std::string regex_replace(const std::string& input, re2::RE2& reg, const std::string& rewrite) {
+  std::string output = input;
+  re2::RE2::GlobalReplace(&output, reg, rewrite);
+  return output;
+}
 
 constexpr char kTestComponent1[] =
     "fuchsia-pkg://fuchsia.com/archive_reader_integration_tests#meta/"
@@ -200,7 +205,7 @@ TEST_F(ArchiveReaderTest, Sort) {
   value[0].Sort();
   value[1].Sort();
 
-  std::regex reg("\"timestamp\": \\d+");
+  re2::RE2 reg("\"timestamp\": \\d+");
   EXPECT_EQ(CMX1_EXPECTED_DATA,
             regex_replace(value[0].PrettyJson(), reg, "\"timestamp\": TIMESTAMP"));
   EXPECT_EQ(CMX2_EXPECTED_DATA,
