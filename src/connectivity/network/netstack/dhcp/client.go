@@ -613,7 +613,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 	// from the interface the client is performing DHCP on.
 	ep, err := packet.NewEndpoint(c.stack, true /* cooked */, 0 /* netProto */, &c.wq)
 	if err != nil {
-		return Config{}, fmt.Errorf("packet.NewEndpoint(_, true, header.IPv4ProtocolNumber, _): %s", err)
+		return Config{}, fmt.Errorf("packet.NewEndpoint(_, true, 0, _): %w", err)
 	}
 	defer ep.Close()
 
@@ -622,7 +622,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 		Port: uint16(header.IPv4ProtocolNumber),
 	}
 	if err := ep.Bind(recvOn); err != nil {
-		return Config{}, fmt.Errorf("ep.Bind(%+v): %s", recvOn, err)
+		return Config{}, fmt.Errorf("ep.Bind(%+v): %w", recvOn, err)
 	}
 
 	switch info.State {
