@@ -32,11 +32,13 @@ import("//build/json/validate_json.gni")
 #
 #   meta (required if `meta_src` is not set)
 #     Scope describing the element's metadata file.
-#     * This parameter's contents are determined by the schema.
+#     * This parameter's contents are determined by the schema defined by `type`
+#       and `schema_version`.
 #
 #  meta_src (required if `meta` is not set)
 #     Path to the element's metadata file.
-#     * This file's contents are determined by the schema.
+#     * This parameter's contents are determined by the schema defined by `type`
+#       and `schema_version`.
 #
 #  meta_dst (optional)
 #    Destination path of the metadata file in the SDK element, relative to the
@@ -52,7 +54,7 @@ import("//build/json/validate_json.gni")
 #       dst (required)
 #         Destination path of the file relative to the element root.
 #
-#   api (optional) [TODO(b/209828632): implement the api parameter]
+#   api (optional) [TODO(b/204903307): implement the api parameter]
 #     Path to the file representing the API canonically exposed by this element.
 #     * If this attribute is set, "files" or "api_contents" must be set as well.
 #     * An API file is a JSON file containing a map of file paths to canonical
@@ -63,7 +65,7 @@ import("//build/json/validate_json.gni")
 #     * Changes to the API contents are approximated by comparing the MD5 hashes
 #       of the API contents to the ones listed in the API file.
 #
-#   api_contents (optional) [TODO(b/209828632): implement api_contents]
+#   api_contents (optional)
 #     List of scopes representing the files making up the element's API.
 #     * Ignored if `api` is not set.
 #     * By default, this parameter will be equal to the `files` parameter.
@@ -157,7 +159,7 @@ template("sdk_element") {
 
   files += [
     {
-      src = rebase_path(meta_file, root_build_dir)
+      src = rebase_path(meta_file, root_out_dir)
       dst = meta_dst
     },
   ]
@@ -218,7 +220,7 @@ template("sdk_element_adapter") {
 
   # .meta.json file based on _sdk_metadata.json
   meta_in = "${gen_dir}/${element_name}_sdk_metadata.json"
-  meta_out = "${target_gen_dir}/${target_name}.meta.json"
+  meta_out = "${target_gen_dir}/${target_name}_adapter.meta.json"
 
   action(target_name) {
     forward_variables_from(invoker,
