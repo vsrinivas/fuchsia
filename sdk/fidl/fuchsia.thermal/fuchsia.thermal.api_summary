@@ -3,6 +3,10 @@ protocol fuchsia.thermal/Actor
 enum/member fuchsia.thermal/ActorType.AUDIO 2
 enum/member fuchsia.thermal/ActorType.UNSPECIFIED 1
 strict enum fuchsia.thermal/ActorType uint32
+protocol/member fuchsia.thermal/ClientStateConnector.Connect(string:8 client_type,server_end:fuchsia.thermal/ClientStateWatcher watcher)
+protocol fuchsia.thermal/ClientStateConnector
+protocol/member fuchsia.thermal/ClientStateWatcher.Watch() -> (uint64 state)
+protocol fuchsia.thermal/ClientStateWatcher
 protocol/member fuchsia.thermal/Controller.Subscribe(client_end:fuchsia.thermal/Actor actor,fuchsia.thermal/ActorType actor_type,vector<fuchsia.thermal/TripPoint>:100 trip_points) -> (fuchsia.thermal/Controller_Subscribe_Result result)
 protocol fuchsia.thermal/Controller
 struct fuchsia.thermal/Controller_Subscribe_Response

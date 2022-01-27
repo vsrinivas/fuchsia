@@ -6,5 +6,8 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.thermal") {
   sdk_category = "partner"
-  sources = [ "thermal.fidl" ]
+  sources = [
+    "client_state.fidl",
+    "thermal.fidl",
+  ]
 }

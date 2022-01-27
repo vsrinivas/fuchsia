@@ -1,0 +1,74 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.thermal;
+
+/// A string that represents the type of client using the protocol.
+///
+/// `ClientType` is used as a parameter to [`ClientStateConnector.Connect`] to
+/// connect a [`ClientStateWatcher`] to the thermal state of the desired client
+/// type.
+///
+/// A `ClientType` value should describe the type of subsystem a client
+/// represents and must exactly (case-sensitive) match with a client entry found
+/// in the central thermal configuration. Typical examples include "audio",
+/// "wifi", etc.
+alias ClientType = string:8;
+
+/// Allows a client to connect a [`ClientStateWatcher`] to the thermal state of
+/// a given [`ClientType`].
+@discoverable
+protocol ClientStateConnector {
+    /// Connects a [`ClientStateWatcher`] to the thermal state of the specified
+    /// [`ClientType`].
+    ///
+    /// A client may call this method and begin using the [`ClientStateWatcher`]
+    /// client endpoint immediately.
+    ///
+    /// If `client_type` does not exactly (case-sensitive) match with a client
+    /// entry found in the central thermal configuration, then the request will
+    /// fail. On failure, both the `watcher` server endpoint as well as the
+    /// current `ClientStateConnector` connection will be terminated.
+    ///
+    /// + `client_type` specifies the client-specific thermal state to which
+    /// `watcher` should be connected. The value is valid iff it matches with a
+    /// client entry found in the central thermal configuration.
+    ///
+    /// + `watcher` is the server endpoint of a [`ClientStateWatcher`] channel
+    /// that will be connected to the thermal state of `client_type`.
+    Connect(resource struct {
+        client_type ClientType;
+        watcher server_end:ClientStateWatcher;
+    });
+};
+
+/// Allows a client to watch for changes to its thermal state.
+///
+/// This protocol cannot be connected to the service directly. Instead, the
+/// server endpoint of a `ClientStateWatcher` channel must be connected to the
+/// thermal state of the desired client type using the
+/// [`ClientStateConnector.Connect'] method. The client endpoint of a
+/// `ClientStateWatcher` channel is only useful after it has been connected in
+/// this way.
+protocol ClientStateWatcher {
+    /// Watches for changes to a client's thermal state.
+    ///
+    /// A client's thermal state is determined according to the central thermal
+    /// configuration of its specific type. See the
+    /// [README.md](/src/power/power-manager/thermal_config/README.md) for more
+    /// details.
+    ///
+    /// On a given connection, the first call will return immediately with the
+    /// client's current thermal state. Subsequent `Watch` requests will only
+    /// return a new `state` if the client's thermal state has changed. This
+    /// follows the [hanging
+    /// get](https://fuchsia.dev/fuchsia-src/concepts/api/fidl#hanging-get)
+    /// pattern.
+    ///
+    /// - `state` is an unsigned integer representing the client's thermal
+    /// state.
+    Watch() -> (struct {
+        state uint64;
+    });
+};
