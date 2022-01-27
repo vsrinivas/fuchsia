@@ -853,6 +853,7 @@ foreach(_target_type,
                                "script",
                                "testonly",
                                "visibility",
+                               "metadata",
                              ])
 
       forward_variables_from(invoker,
@@ -1071,6 +1072,14 @@ foreach(_target_type,
                   "--",
                   rebase_path(_invoker_script, root_build_dir),
                 ] + _args
+      }
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+
+        # Don't collect rlibs from transitive deps
+        rust_barrier = []
       }
     }
   }
@@ -2516,6 +2525,7 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
                                  [
                                    "testonly",
                                    "visibility",
+                                   "metadata",
                                  ])
           forward_variables_from(invoker,
                                  [
@@ -2524,6 +2534,14 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
                                  ])
           target_name = _target_name
           _variant_shared = toolchain_variant.with_shared
+          metadata = {
+            if (defined(invoker.metadata)) {
+              forward_variables_from(invoker.metadata, "*")
+            }
+
+            # Don't collect rlibs from transitive deps
+            rust_barrier = []
+          }
         }
       }
     } else {
@@ -2667,6 +2685,9 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
               }
             },
           ]
+
+          # Don't collect rlibs from transitive deps
+          rust_barrier = []
         }
       }
     }
@@ -2892,6 +2913,9 @@ template("executable") {
       # Used by link_output_rspfile(), see its documentation for details.
       link_output_path = [ rebased_link_output_file ]
       link_output_barrier = []
+
+      # Don't collect rlibs from transitive deps
+      rust_barrier = []
     }
   }
 }
@@ -3078,6 +3102,7 @@ if (is_fuchsia && zircon_toolchain == false) {
                              [
                                "testonly",
                                "visibility",
+                               "metadata",
                              ])
       forward_variables_from(invoker,
                              [
@@ -3094,6 +3119,14 @@ if (is_fuchsia && zircon_toolchain == false) {
           inputs = []
         }
         inputs += restat_wrapper_inputs
+      }
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+
+        # Don't collect rlibs from transitive deps
+        rust_barrier = []
       }
     }
   }

@@ -31,6 +31,7 @@ config("env") {
 rustc_library("lib") {
   name = "example_lib"
   edition = "2018"
+  disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
 
   configs += [ ":env" ]
 

@@ -9,6 +9,7 @@ import("//build/rust/rustc_library.gni")
 rustc_test("integration") {
   edition = "2018"
   output_name = "overnet_integration_tests"
+  disable_clippy = true  # TODO: debug ICE (fxbug.dev/91347)
   deps = [
     ":triangle-rustc",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
