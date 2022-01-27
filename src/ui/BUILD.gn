@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+import("//src/sys/core/build/core_shard.gni")
+
 group("ui") {
   deps = [
     "a11y",
@@ -31,4 +34,13 @@ group("tests") {
     "tools:tests",
     "wayland:tests",
   ]
+}
+
+fuchsia_component("ui-component") {
+  component_name = "ui"
+  manifest = "meta/ui.cml"
+}
+
+core_shard("ui-core-shard") {
+  shard_file = "meta/ui.core_shard.cml"
 }
