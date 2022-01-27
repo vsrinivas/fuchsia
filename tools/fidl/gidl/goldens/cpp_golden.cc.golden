@@ -274,3 +274,294 @@ var1.v() = std::unique_ptr<test_conformance::GoldenBoolStruct>();
 }
 
 
+
+TEST(Conformance, GoldenBoolStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenBoolStruct{};
+var1.v() = bool(true);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenIntStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenIntStruct{};
+var1.v() = int16_t(1ull);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenUintStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenUintStruct{};
+var1.v() = uint16_t(1ull);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenFloatStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenFloatStruct{};
+var1.v() = float(0);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenDoubleStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenDoubleStruct{};
+var1.v() = double(0);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenStringStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenStringStruct{};
+var1.v() = "abcd";
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenNullableStringStructNull_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenNullableStringStruct{};
+var1.v() = std::optional<std::string>();
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenTableStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenTableStruct{};
+auto var2 = test_conformance::GoldenTable{};
+var2.v() = int16_t(1ull);
+var1.v() = std::move(var2);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenUnionStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenUnionStruct{};
+auto var2 = test_conformance::GoldenUnion(test_conformance::GoldenUnion::WithV(int16_t(1ull)));
+var1.v() = std::move(var2);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenNullableUnionStructNull_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenNullableUnionStruct{};
+var1.v() = std::unique_ptr<test_conformance::GoldenUnion>();
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenByteArrayStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenByteArrayStruct{};
+auto var2 = std::array<uint8_t, 4>();
+var2[0] = uint8_t(1ull);
+var2[1] = uint8_t(2ull);
+var2[2] = uint8_t(3ull);
+var2[3] = uint8_t(4ull);
+var1.v() = std::move(var2);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenStructArrayStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenStructArrayStruct{};
+auto var2 = std::array<test_conformance::GoldenIntStruct, 2>();
+auto var3 = test_conformance::GoldenIntStruct{};
+var3.v() = int16_t(1ull);
+var2[0] = std::move(var3);
+auto var4 = test_conformance::GoldenIntStruct{};
+var4.v() = int16_t(2ull);
+var2[1] = std::move(var4);
+var1.v() = std::move(var2);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenByteVectorStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenByteVectorStruct{};
+auto var2 = std::vector<uint8_t>(12);
+var2[0] = uint8_t(1ull);
+var2[1] = uint8_t(2ull);
+var2[2] = uint8_t(3ull);
+var2[3] = uint8_t(4ull);
+for (size_t offset = 0; offset < var2.size(); offset += 4) {
+memcpy(var2.data() + offset, var2.data(), 4);
+}
+var1.v() = std::move(var2);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x0c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x01,0x02,0x03,0x04,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenNullableByteVectorStructNull_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenNullableByteVectorStruct{};
+var1.v() = std::vector<uint8_t>();
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenStructVectorStruct_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenStructVectorStruct{};
+auto var2 = std::vector<test_conformance::GoldenIntStruct>(2);
+auto var3 = test_conformance::GoldenIntStruct{};
+var3.v() = int16_t(1ull);
+var2[0] = std::move(var3);
+auto var4 = test_conformance::GoldenIntStruct{};
+var4.v() = int16_t(2ull);
+var2[1] = std::move(var4);
+var1.v() = std::move(var2);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenNullableStructNonNull_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenNullableStruct{};
+auto var2 = std::make_unique<test_conformance::GoldenBoolStruct>(test_conformance::GoldenBoolStruct{});
+var2->v() = bool(true);
+var1.v() = std::move(var2);
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+TEST(Conformance, GoldenNullableStructNull_V2_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenNullableStruct{};
+var1.v() = std::unique_ptr<test_conformance::GoldenBoolStruct>();
+
+	auto expected_obj = std::move(var1);
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, bytes, expected_obj);
+}
+
+
+
+TEST(Conformance, GoldenStringWithMaxSize2_V2_EncodeFailure) {
+	const std::vector<zx_handle_t> handle_defs;
+	auto var1 = test_conformance::GoldenStringWithMaxSize2{};
+var1.s() = "abc";
+
+	auto obj = std::move(var1);
+	conformance_utils::EncodeFailure(
+		::fidl::internal::WireFormatVersion::kV2, obj);
+}
+
+
+
+TEST(Conformance, GoldenStringStructNullBody_V2_DecodeFailure) {
+	auto bytes = std::vector<uint8_t>{
+0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	conformance_utils::DecodeFailure<test_conformance::GoldenStringStruct>(
+		::fidl::internal::WireFormatVersion::kV2, bytes);
+}
+

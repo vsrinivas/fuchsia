@@ -34,14 +34,57 @@ TEST(Conformance, {{ .Name }}_Encode) {
 }
 {{ end }}
 
+{{ range .DecodeSuccessCases }}
+TEST(Conformance, {{ .Name }}_Decode) {
+	const std::vector<zx_handle_t> handle_defs;
+	{{ .ValueBuild }}
+	auto expected_obj = {{ .ValueVar }};
+	auto bytes = {{ .Bytes }};
+	conformance_utils::DecodeSuccess(
+		{{ .WireFormatVersion }}, bytes, expected_obj);
+}
+{{ end }}
+
+{{ range .EncodeFailureCases }}
+TEST(Conformance, {{ .Name }}_EncodeFailure) {
+	const std::vector<zx_handle_t> handle_defs;
+	{{ .ValueBuild }}
+	auto obj = {{ .ValueVar }};
+	conformance_utils::EncodeFailure(
+		{{ .WireFormatVersion }}, obj);
+}
+{{ end }}
+
+{{ range .DecodeFailureCases }}
+TEST(Conformance, {{ .Name }}_DecodeFailure) {
+	auto bytes = {{ .Bytes }};
+	conformance_utils::DecodeFailure<{{ .Type }}>(
+		{{ .WireFormatVersion }}, bytes);
+}
+{{ end }}
 `))
 
 type conformanceTmplInput struct {
 	EncodeSuccessCases []encodeSuccessCase
+	DecodeSuccessCases []decodeSuccessCase
+	EncodeFailureCases []encodeFailureCase
+	DecodeFailureCases []decodeFailureCase
 }
 
 type encodeSuccessCase struct {
 	WireFormatVersion, Name, ValueBuild, ValueVar, Bytes string
+}
+
+type decodeSuccessCase struct {
+	WireFormatVersion, Name, ValueBuild, ValueVar, Bytes string
+}
+
+type encodeFailureCase struct {
+	WireFormatVersion, Name, ValueBuild, ValueVar string
+}
+
+type decodeFailureCase struct {
+	WireFormatVersion, Name, Type, Bytes string
 }
 
 func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
@@ -50,9 +93,24 @@ func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlcon
 	if err != nil {
 		return nil, err
 	}
+	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, schema)
+	if err != nil {
+		return nil, err
+	}
+	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, schema)
+	if err != nil {
+		return nil, err
+	}
+	decodeFailureCases, err := decodeFailureCases(gidl.DecodeFailure, schema)
+	if err != nil {
+		return nil, err
+	}
 	var buf bytes.Buffer
 	err = conformanceTmpl.Execute(&buf, conformanceTmplInput{
 		EncodeSuccessCases: encodeSuccessCases,
+		DecodeSuccessCases: decodeSuccessCases,
+		EncodeFailureCases: encodeFailureCases,
+		DecodeFailureCases: decodeFailureCases,
 	})
 	return buf.Bytes(), err
 }
@@ -88,6 +146,90 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 	return encodeSuccessCases, nil
 }
 
+func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlmixer.Schema) ([]decodeSuccessCase, error) {
+	var decodeSuccessCases []decodeSuccessCase
+	for _, decodeSuccess := range gidlDecodeSuccesses {
+		decl, err := schema.ExtractDeclaration(decodeSuccess.Value, decodeSuccess.HandleDefs)
+		if err != nil {
+			return nil, fmt.Errorf("encode success %s: %s", decodeSuccess.Name, err)
+		}
+		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
+			continue
+		}
+		if decl.IsResourceType() {
+			// Handles not yet supported.
+			continue
+		}
+		valueBuild, valueVar := buildValue(decodeSuccess.Value, decl)
+		for _, encoding := range decodeSuccess.Encodings {
+			if !wireFormatSupported(encoding.WireFormat) {
+				continue
+			}
+			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
+				Name:              testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				WireFormatVersion: wireFormatVersionName(encoding.WireFormat),
+				ValueBuild:        valueBuild,
+				ValueVar:          valueVar,
+				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
+			})
+		}
+	}
+	return decodeSuccessCases, nil
+}
+
+func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmixer.Schema) ([]encodeFailureCase, error) {
+	var encodeFailureCases []encodeFailureCase
+	for _, encodeFailure := range gidlEncodeFailures {
+		decl, err := schema.ExtractDeclarationUnsafe(encodeFailure.Value)
+		if err != nil {
+			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
+		}
+		if gidlir.ContainsUnknownField(encodeFailure.Value) {
+			continue
+		}
+		if decl.IsResourceType() {
+			// Handles not yet supported.
+			continue
+		}
+		valueBuild, valueVar := buildValue(encodeFailure.Value, decl)
+		for _, wireFormat := range supportedWireFormats {
+			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
+				Name:              testCaseName(encodeFailure.Name, wireFormat),
+				WireFormatVersion: wireFormatVersionName(wireFormat),
+				ValueBuild:        valueBuild,
+				ValueVar:          valueVar,
+			})
+		}
+	}
+	return encodeFailureCases, nil
+}
+
+func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmixer.Schema) ([]decodeFailureCase, error) {
+	var decodeFailureCases []decodeFailureCase
+	for _, decodeFailure := range gidlDecodeFailures {
+		decl, err := schema.ExtractDeclarationByName(decodeFailure.Type)
+		if err != nil {
+			return nil, fmt.Errorf("encode success %s: %s", decodeFailure.Name, err)
+		}
+		if decl.IsResourceType() {
+			// Handles not yet supported.
+			continue
+		}
+		for _, encoding := range decodeFailure.Encodings {
+			if !wireFormatSupported(encoding.WireFormat) {
+				continue
+			}
+			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
+				Name:              testCaseName(decodeFailure.Name, encoding.WireFormat),
+				WireFormatVersion: wireFormatVersionName(encoding.WireFormat),
+				Type:              conformanceType(decodeFailure.Type),
+				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
+			})
+		}
+	}
+	return decodeFailureCases, nil
+}
+
 var supportedWireFormats = []gidlir.WireFormat{
 	gidlir.V2WireFormat,
 }
@@ -103,6 +245,11 @@ func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
 
 func wireFormatVersionName(wireFormat gidlir.WireFormat) string {
 	return fmt.Sprintf("::fidl::internal::WireFormatVersion::k%s", fidlgen.ToUpperCamelCase(wireFormat.String()))
+}
+
+func conformanceType(gidlTypeString string) string {
+	// Note: only works for domain objects (not protocols & services)
+	return "test_conformance::" + fidlgen.ToUpperCamelCase(gidlTypeString)
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
