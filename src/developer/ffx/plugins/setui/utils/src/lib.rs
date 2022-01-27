@@ -77,3 +77,54 @@ pub async fn handle_mixed_result(label: &str, result: WatchOrSetResult) -> Resul
         Either::Set(output) | Either::Get(output) => println!("{}: {}", label, output),
     })
 }
+
+/// Validate that the results of the call are a successful watch and return the
+/// first result.
+#[macro_export]
+macro_rules! assert_watch {
+    ($expr:expr) => {
+        match $expr.await? {
+            crate::utils::Either::Watch(mut stream) => {
+                stream.try_next().await?.expect("Watch should have a result")
+            }
+            crate::utils::Either::Set(_) => {
+                panic!("Did not expect a set result for a watch call")
+            }
+            crate::utils::Either::Get(_) => {
+                panic!("Did not expect a get result for a watch call")
+            }
+        }
+    };
+}
+
+/// Validate that the results of the call are a successful set and return the result.
+#[macro_export]
+macro_rules! assert_set {
+    ($expr:expr) => {
+        match $expr.await? {
+            crate::utils::Either::Set(output) => output,
+            crate::utils::Either::Watch(_) => {
+                panic!("Did not expect a watch result for a set call")
+            }
+            crate::utils::Either::Get(_) => {
+                panic!("Did not expect a get result for a set call")
+            }
+        }
+    };
+}
+
+/// Validate that the results of the call are a successful get and return the result.
+#[macro_export]
+macro_rules! assert_get {
+    ($expr:expr) => {
+        match $expr.await? {
+            crate::utils::Either::Get(output) => output,
+            crate::utils::Either::Watch(_) => {
+                panic!("Did not expect a watch result for a get call")
+            }
+            crate::utils::Either::Set(_) => {
+                panic!("Did not expect a set result for a get call")
+            }
+        }
+    };
+}
