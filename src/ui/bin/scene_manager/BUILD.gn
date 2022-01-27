@@ -69,11 +69,16 @@ resource("cursor") {
   outputs = [ "data/cursor.png" ]
 }
 
-fuchsia_package_with_single_component("scene_manager") {
+fuchsia_component("scene_manager_component") {
+  component_name = "scene_manager"
   manifest = "meta/scene_manager.cml"
+  deps = [ ":scene_manager_bin" ]
+}
+
+fuchsia_package("scene_manager") {
   deps = [
     ":cursor",
-    ":scene_manager_bin",
+    ":scene_manager_component",
   ]
 }
 
