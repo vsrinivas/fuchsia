@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dist/resource.gni")
 import("//build/json/validate_json.gni")
 
 # Defines an SDK element.
@@ -12,6 +11,9 @@ import("//build/json/validate_json.gni")
 #
 # Outputs
 #
+#   $target_gen_dir/${target_name}_packaging_manifest.json
+#     A manifest describing which files are included in the element.
+#
 #   $target_gen_dir/${target_name}_sdk_metadata.json
 #     A metadata file describing the element.
 #     * This file is included in the final SDK and may be used by tools that
@@ -20,160 +22,155 @@ import("//build/json/validate_json.gni")
 # Parameters
 #
 #   schema (required)
-#     Scope describing the element metadata JSON schema. It contains the
-#     following fields:
-#     * source (required)
-#       A GN label for the JSON schema file constraining this element's
-#       metadata. The schemata can be found under //sdk/schema.
-#     * deps (optional)
-#       A list of GN labels for schemas included by the source. Defaults
-#       to //sdk/schema/common-00000000.json.
+#     JSON schema file for this element type.
+#     * Metadata schema files are hosted under //build/sdk/meta and have
+#       filenames of the form "{type}-{version}.json".
 #
-#   meta (required)
-#     Scope describing the element metadata that is packaged together with
-#     the element contents. See `files`. It contains the following fields:
-#     * contents (required unless `source` is set)
-#       This field structure is dictated by the JSON schema.
-#     * source (required if `contents` is not set)
-#       A source label of the file containing the metadata.
-#     * dest (optional)
-#       A path relative to the root of the SDK element in the package. By
-#       default, this is "${target_name}_sdk_metadata.json".
+#   schema_refs (optional)
+#     List of JSON schemas referenced by the schema file.
+#     * Defaults to [ "//build/sdk/meta/common.json" ]
+#
+#   meta (required if `meta_src` is not set)
+#     Scope describing the element's metadata file.
+#     * This parameter's contents are determined by the schema.
+#
+#  meta_src (required if `meta` is not set)
+#     Path to the element's metadata file.
+#     * This file's contents are determined by the schema.
+#
+#  meta_dst (optional)
+#    Destination path of the metadata file in the SDK element, relative to the
+#    element root.
+#    * By default, this is "${target_name}_sdk_metadata.json"
 #
 #   files (optional)
 #     List of scopes describing the contents of this element.
 #     * A file scope has the following attributes:
-#       source (required)
-#         A GN label representing the source. Must be absolute,
-#         beginning with "//".
-#       dest (required)
-#         Destination path in the SDK relative to the element root.
+#       src (required)
+#         Path to the original file.
+#         Must be the absolute GN path, beginning with "//".
+#       dst (required)
+#         Destination path of the file relative to the element root.
 #
-#   api (optional) [TODO(b/204903307): implement the api parameter]
-#     Scope describing the API surface of the SDK element. If the contents of
-#     the precomputed digest differ from the generated one, the build will
-#     fail and the change will have to be explicitly acknowledged. The scope
-#     api contains the following fields:
-#     * digest (required)
-#       A GN label for a JSON file containing a map of file paths to MD5
-#       hashes. The file paths are source files in the files scope unless the
-#       sources field below is set. The digest can be customized by specifying
-#       a digester tool.
-#     * sources (required if `files` scope is not set)
-#       A list of GN sources labels to use for digest computation. In case of a C++
-#       library, this will be a list of headers, which constitute the element's
-#       API surface. If absent, the `files` scope is used to generate the
-#       digest.
-#     * digester (optional)
-#       A GN label for a custom digester tool.
+#   api (optional) [TODO(b/209828632): implement the api parameter]
+#     Path to the file representing the API canonically exposed by this element.
+#     * If this attribute is set, "files" or "api_contents" must be set as well.
+#     * An API file is a JSON file containing a map of file paths to canonical
+#       MD5 hashes. The file paths correspond to the `dst` field of a file scope
+#       (see "files" above).
+#     * This file is used to ensure modifications to the API are explicitly
+#       acknowledged.
+#     * Changes to the API contents are approximated by comparing the MD5 hashes
+#       of the API contents to the ones listed in the API file.
 #
-#  Metadata
-#    sdk_adapter
-#      The metadata is intended to be consumed only by the
-#      sdk_element_adapter() template. It will re removed once all SDK build
-#      targets have been migrated.
-#    * files
-#      A list of file scope specifying the mapping between the source and
-#      destination.
-#      * source
-#        The absolute label of the source that is mapped into the SDK>
-#      * dest
-#        A path relative to the SDK package root.
-#    * meta
-#      A scope specifying the element metadata mapping. The contents are
-#      identical to the file scope.
+#   api_contents (optional) [TODO(b/209828632): implement api_contents]
+#     List of scopes representing the files making up the element's API.
+#     * Ignored if `api` is not set.
+#     * By default, this parameter will be equal to the `files` parameter.
+#     * Set `api_contents` explicitly if the element's API surface is describe
+#       by only a subset of its files. For example, a C++ library may contain
+#       header and source files, but its API consists of header files only.
+#     * See the "files" section above for the definition of a file scope.
+#
+#   sdk_deps (optional)
+#     List of GN labels for other SDK elements this element depends on at build
+#     time.
+#
+#   sdk_soft_deps (optional)
+#     List of GN labels for other SDK elements this element may depend on to be
+#     useful to SDK users, but that are not build dependencies. For example, a
+#     FIDL library may have a soft dependency on fidlc.
+#
+#   non_sdk_deps (optional)
+#     List of GN labels which this target needs built, but are not SDK elements.
 template("sdk_element") {
-  # Validate the schema scope.
-  assert(defined(invoker.schema), "Must define the schema scope.")
-  schema = invoker.schema
-  assert(defined(schema.source), "The schema scope must define a source.")
-  schema_source = schema.source
-
-  if (defined(schema.deps)) {
-    schema_deps = schema.deps
+  if (defined(invoker.files)) {
+    files = invoker.files
   } else {
-    schema_deps = [ "//build/sdk/meta/common.json" ]
+    files = []
+  }
+  foreach(file, files) {
+    assert(defined(file.src), "File $file does not specify a source.")
+    assert(defined(file.dst), "File $file does not specify a destination.")
   }
 
-  # Validate the file scope.
-  if (defined(invoker.files)) {
-    sdk_files = invoker.files
+  assert(defined(invoker.schema), "Must define element metadata schema")
+  schema = invoker.schema
 
-    foreach(file, sdk_files) {
-      assert(defined(file.source),
-             "A file mapping '$file' must specify a source.")
-      assert(defined(file.dest),
-             "A file mapping '$file must specify a destination.")
+  if (defined(invoker.schema_refs)) {
+    schema_refs = invoker.schema_refs
+  } else {
+    schema_refs = [ "//build/sdk/meta/common.json" ]
+  }
+
+  assert(defined(invoker.meta) || defined(invoker.meta_src),
+         "Must define meta or meta_src")
+  assert(!(defined(invoker.meta) && defined(invoker.meta_src)),
+         "meta and meta_src are mutually exclusive")
+
+  gn_deps = []
+  if (defined(invoker.non_sdk_deps)) {
+    gn_deps += invoker.non_sdk_deps
+  }
+  if (defined(invoker.sdk_deps)) {
+    gn_deps += invoker.sdk_deps
+  }
+  if (defined(invoker.sdk_soft_deps)) {
+    gn_deps += invoker.sdk_soft_deps
+  }
+
+  # The meta file contains the metadata describing the element, according to the
+  # type-specific schema (see //build/sdk/meta).
+  meta_target_name = "${target_name}_sdk_metadata"
+  meta_file = "${target_gen_dir}/${meta_target_name}.json"
+  meta_dst = "${meta_target_name}.json"
+  if (defined(invoker.meta_dst)) {
+    meta_dst = invoker.meta_dst
+  }
+  if (defined(invoker.meta_src)) {
+    copy(meta_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      sources = [ invoker.meta_src ]
+      outputs = [ meta_file ]
     }
   } else {
-    sdk_files = []
-  }
-
-  # Validate the metadata scope.
-  assert(defined(invoker.meta), "Must define the metadata scope.")
-  element_meta = invoker.meta
-  assert(defined(element_meta.contents) || defined(element_meta.source),
-         "Must define either a metadata contents or a source")
-  assert(!(defined(element_meta.contents) && defined(element_meta.source)),
-         "Metadata contents and the source are mutually exclusive")
-
-  # Prepare and validate the element metadata against the schema.
-  meta_target = "${target_name}.metadata_generator"
-  meta_file = "${target_gen_dir}/${target_name}_sdk_metadata.json"
-
-  if (defined(element_meta.contents)) {
-    generated_file(meta_target) {
+    meta_content = invoker.meta
+    generated_file(meta_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
       visibility = [ ":*" ]
       outputs = [ meta_file ]
-      contents = element_meta.contents
+      contents = meta_content
       output_conversion = "json"
     }
-  } else {
-    copy(meta_target) {
-      sources = [ element_meta.source ]
-      outputs = [ meta_file ]
-    }
   }
 
-  # Validate the metadata against the schema.
-  meta_validator_target = "${target_name}.meta_validator"
-  validate_json(meta_validator_target) {
+  validate_target_name = "validate_${meta_target_name}"
+  validate_json(validate_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
-    use_valico = true  # Use rust-based validator
+    use_valico = true
     data = meta_file
-    schema = schema_source
-    sources = schema_deps
-    deps = [ ":${meta_target}" ]
+    schema = schema
+    sources = schema_refs
+    public_deps = [ ":${meta_target_name}" ]
   }
 
-  # Map the metadata file so it is packaged together with other files.
-  element_files = sdk_files
-
-  if (defined(element_meta.dest)) {
-    meta_dest = element_meta.dest
-  } else {
-    meta_dest = "${target_name}_sdk_metadata.json"
-  }
-
-  element_files += [
+  files += [
     {
-      source = meta_file
-      dest = meta_dest
+      src = rebase_path(meta_file, root_build_dir)
+      dst = meta_dst
     },
   ]
 
-  # TODO(b/216398199): Decide whether to include the schemata
-  # with element_files.
-
-  # Create a distribution manifest for the sdk_package() template.
-  manifest_target = "${target_name}.manifest_generator"
-  resource_group(manifest_target) {
+  # The manifest file contains the file mappings needed to package the element.
+  manifest_target_name = "${target_name}_packaging_manifest"
+  manifest_file = "${target_gen_dir}/${manifest_target_name}.json"
+  generated_file(manifest_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
-    files = element_files
-    deps = [ ":${meta_target}" ]
+    outputs = [ manifest_file ]
+    contents = files
+    output_conversion = "json"
   }
 
   # TODO(b/204903307): .api generation/validation
@@ -184,25 +181,10 @@ template("sdk_element") {
                              "testonly",
                              "visibility",
                            ])
-    deps = [ ":${meta_validator_target}" ]
     public_deps = [
-      ":${manifest_target}",
-      ":${meta_target}",
-    ]
-
-    # The metadata is exported for the sole benefit of the sdk_adapter().
-    # No other template should take a dependency on it.
-    metadata = {
-      sdk_adapter = [
-        {
-          meta = {
-            source = meta_file
-            dest = meta_dest
-          }
-          files = sdk_files
-        },
-      ]
-    }
+                    ":${manifest_target_name}",
+                    ":${validate_target_name}",
+                  ] + gn_deps
   }
 }
 
@@ -224,35 +206,19 @@ template("sdk_element") {
 #
 #   sdk_element (required)
 #     Label of the SDK element to adapt.
-#
-#   category (optional)
-#     The SDK atom category. Defaults to `partner`.
 template("sdk_element_adapter") {
   assert(defined(invoker.sdk_element), "Must define sdk_element")
   element_label = get_label_info(invoker.sdk_element, "label_no_toolchain")
+  element_name = get_label_info(invoker.sdk_element, "name")
+  gen_dir = get_label_info(invoker.sdk_element, "target_gen_dir")
 
-  if (defined(invoker.category)) {
-    category = invoker.category
-  } else {
-    category = "partner"
-  }
+  # .sdk manifest file based on _packaging_manifest.json
+  manifest_in = "${gen_dir}/${element_name}_packaging_manifest.json"
+  manifest_out = "${target_gen_dir}/${target_name}.sdk"
 
-  # Collect GN metadata corresponding to the sdk_element.
-  gn_meta_collector_target = "${target_name}.gn_meta_collector"
-  gn_meta_file = "${target_gen_dir}/${target_name}_gn_meta.json"
-
-  # .sdk format manifest
-  atom_manifest_file = "${target_gen_dir}/${target_name}.sdk"
-
-  # .meta.json format metadata
-  atom_meta_file = "${target_gen_dir}/${target_name}_adapter.meta.json"
-
-  generated_file(gn_meta_collector_target) {
-    outputs = [ gn_meta_file ]
-    data_keys = [ "sdk_adapter" ]
-    output_conversion = "json"
-    deps = [ invoker.sdk_element ]
-  }
+  # .meta.json file based on _sdk_metadata.json
+  meta_in = "${gen_dir}/${element_name}_sdk_metadata.json"
+  meta_out = "${target_gen_dir}/${target_name}.meta.json"
 
   action(target_name) {
     forward_variables_from(invoker,
@@ -260,30 +226,27 @@ template("sdk_element_adapter") {
                              "testonly",
                              "visibility",
                            ])
-    depfile = "$target_gen_dir/$target_name.d"
-    deps = [ ":${gn_meta_collector_target}" ]
     public_deps = [ element_label ]
     outputs = [
-      atom_meta_file,
-      atom_manifest_file,
+      manifest_out,
+      meta_out,
     ]
     script = "//build/sdk/sdk_element_adapter.py"
-    sources = [ gn_meta_file ]
+    sources = [
+      manifest_in,
+      meta_in,
+    ]
     args = [
-      "--atom-manifest-path",
-      rebase_path(atom_manifest_file, root_build_dir),
-      "--atom-meta-path",
-      rebase_path(atom_meta_file, root_build_dir),
-      "--depfile-path",
-      rebase_path(depfile, root_build_dir),
+      "--manifest-in",
+      rebase_path(manifest_in, root_build_dir),
+      "--meta-in",
+      rebase_path(meta_in, root_build_dir),
+      "--manifest-out",
+      rebase_path(manifest_out, root_build_dir),
+      "--meta-out",
+      rebase_path(meta_out, root_build_dir),
       "--gn-label",
       get_label_info(":${target_name}", "label_with_toolchain"),
-      "--gn-meta-path",
-      rebase_path(gn_meta_file, root_build_dir),
-      "--root-build-dir",
-      root_build_dir,
-      "--sdk-category",
-      category,
     ]
   }
 }
