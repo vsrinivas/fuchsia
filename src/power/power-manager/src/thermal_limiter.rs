@@ -353,6 +353,7 @@ impl ThermalLimiter {
     fn handle_update_thermal_load(
         &self,
         thermal_load: ThermalLoad,
+        _sensor: &String,
     ) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!(
             "power_manager",
@@ -421,8 +422,8 @@ impl Node for ThermalLimiter {
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
-            Message::UpdateThermalLoad(thermal_load) => {
-                self.handle_update_thermal_load(*thermal_load)
+            Message::UpdateThermalLoad(thermal_load, sensor) => {
+                self.handle_update_thermal_load(*thermal_load, sensor)
             }
             _ => Err(PowerManagerError::Unsupported),
         }
@@ -518,7 +519,7 @@ pub mod tests {
 
     /// Sends a message to the ThermalLimiter node to update its thermal load
     async fn set_thermal_load(node: &Rc<ThermalLimiter>, thermal_load: ThermalLoad) {
-        match node.handle_message(&Message::UpdateThermalLoad(thermal_load)).await {
+        match node.handle_message(&Message::UpdateThermalLoad(thermal_load, String::new())).await {
             Ok(MessageReturn::UpdateThermalLoad) => {}
             _ => panic!("Expected MessageReturn::UpdateThermalLoad"),
         }
@@ -547,7 +548,10 @@ pub mod tests {
     async fn test_invalid_thermal_load() {
         let node = setup_test_node();
         match node
-            .handle_message(&Message::UpdateThermalLoad(ThermalLoad(MAX_THERMAL_LOAD.0 + 1)))
+            .handle_message(&Message::UpdateThermalLoad(
+                ThermalLoad(MAX_THERMAL_LOAD.0 + 1),
+                String::new(),
+            ))
             .await
         {
             Err(PowerManagerError::InvalidArgument(_)) => {}

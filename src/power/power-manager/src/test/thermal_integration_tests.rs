@@ -378,7 +378,7 @@ impl<'a> ThermalPolicyTest<'a> {
             policy_params,
             platform_metrics_node: create_dummy_node(),
         };
-        ThermalPolicyBuilder::new(thermal_config).build(futures).unwrap()
+        ThermalPolicyBuilder::new(thermal_config).build(futures).await.unwrap()
     }
 
     /// Iterates the policy n times.

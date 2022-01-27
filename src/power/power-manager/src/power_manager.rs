@@ -203,7 +203,8 @@ impl PowerManager {
             }
             "ThermalPolicy" => {
                 thermal_policy::ThermalPolicyBuilder::new_from_json(json_data, &self.nodes)
-                    .build(node_futures)?
+                    .build(node_futures)
+                    .await?
             }
             "ThermalShutdown" => {
                 thermal_shutdown::ThermalShutdownBuilder::new_from_json(json_data, &self.nodes)

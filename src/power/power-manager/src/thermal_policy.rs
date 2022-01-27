@@ -128,14 +128,18 @@ impl<'a> ThermalPolicyBuilder<'a> {
         self
     }
 
-    pub fn build<'b>(
+    pub async fn build<'b>(
         self,
         futures_out: &FuturesUnordered<LocalBoxFuture<'b, ()>>,
     ) -> Result<Rc<ThermalPolicy>, Error> {
         // Create default values
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
+        // Query the TemperatureHandler node for its associated driver path
+        let driver_path = query_driver_path(&self.config.temperature_node).await;
+
         let node = Rc::new(ThermalPolicy {
+            driver_path,
             state: ThermalState {
                 temperature_filter: TemperatureFilter::new(
                     self.config.temperature_node.clone(),
@@ -157,7 +161,19 @@ impl<'a> ThermalPolicyBuilder<'a> {
     }
 }
 
+/// Queries the provided `temperature_handler` node for their associated driver path. If any error
+/// or unexpected response is encountered then an empty string is returned.
+async fn query_driver_path(temperature_handler: &Rc<dyn Node>) -> String {
+    match temperature_handler.handle_message(&Message::GetDriverPath).await {
+        Ok(MessageReturn::GetDriverPath(path)) => path,
+        _ => String::new(),
+    }
+}
+
 pub struct ThermalPolicy {
+    /// Topological path to the temperature driver that we're bound to.
+    driver_path: String,
+
     config: ThermalConfig,
     state: ThermalState,
 
@@ -180,9 +196,8 @@ pub struct ThermalConfig {
     /// node responds to the SystemShutdown message.
     pub sys_pwr_handler: Rc<dyn Node>,
 
-    /// The node which will impose thermal limits on external clients according to the thermal
-    /// load of the system. It is expected that this node responds to the UpdateThermalLoad
-    /// message.
+    /// The node which will impose thermal limits on external clients according to the thermal load
+    /// of the system. It is expected that this node responds to the UpdateThermalLoad message.
     pub thermal_limiter_node: Rc<dyn Node>,
 
     /// The node used for filing a crash report. It is expected that this node responds to the
@@ -523,7 +538,7 @@ impl ThermalPolicy {
 
             self.send_message(
                 &self.config.thermal_limiter_node,
-                &Message::UpdateThermalLoad(new_load),
+                &Message::UpdateThermalLoad(new_load, self.driver_path.to_string()),
             )
             .await?;
         }
@@ -1110,7 +1125,7 @@ pub mod tests {
         };
 
         let node_futures = FuturesUnordered::new();
-        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).unwrap();
+        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).await.unwrap();
 
         assert_eq!(node.get_time_delta(Seconds(1.5).into()), Seconds(1.5));
         assert_eq!(node.get_time_delta(Seconds(2.0).into()), Seconds(0.5));
@@ -1136,7 +1151,7 @@ pub mod tests {
             platform_metrics_node: create_dummy_node(),
         };
         let node_futures = FuturesUnordered::new();
-        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).unwrap();
+        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).await.unwrap();
 
         assert_eq!(node.get_temperature_error(Celsius(40.0), Seconds(1.0)), (40.0, 0.0));
         assert_eq!(node.get_temperature_error(Celsius(90.0), Seconds(1.0)), (-10.0, -10.0));
@@ -1199,7 +1214,10 @@ pub mod tests {
         );
 
         let thermal_config = ThermalConfig {
-            temperature_node: mock_maker.make("TemperatureNode", vec![]),
+            temperature_node: mock_maker.make(
+                "TemperatureNode",
+                vec![(msg_eq!(GetDriverPath), msg_ok_return!(GetDriverPath(String::new())))],
+            ),
             cpu_control_nodes: vec![cpu_node_1, cpu_node_2],
             sys_pwr_handler: mock_maker.make("SysPwrNode", vec![]),
             thermal_limiter_node: mock_maker.make("ThermalLimiterNode", vec![]),
@@ -1208,7 +1226,7 @@ pub mod tests {
             platform_metrics_node: create_dummy_node(),
         };
         let node_futures = FuturesUnordered::new();
-        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).unwrap();
+        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).await.unwrap();
 
         // Distribute 1W of total power across the two CPU nodes. The real test logic happens inside
         // the mock node, where we verify that the expected power amounts are granted to both CPU
@@ -1226,7 +1244,10 @@ pub mod tests {
 
         let policy_params = default_policy_params();
         let thermal_config = ThermalConfig {
-            temperature_node: mock_maker.make("TemperatureNode", vec![]),
+            temperature_node: mock_maker.make(
+                "TemperatureNode",
+                vec![(msg_eq!(GetDriverPath), msg_ok_return!(GetDriverPath(String::new())))],
+            ),
             cpu_control_nodes: vec![mock_maker.make("CpuCtrlNode", vec![])],
             sys_pwr_handler: mock_maker.make("SysPwrNode", vec![]),
             thermal_limiter_node: mock_maker.make("ThermalLimiterNode", vec![]),
@@ -1239,6 +1260,7 @@ pub mod tests {
         let _node = ThermalPolicyBuilder::new(thermal_config)
             .with_inspect_root(inspector.root())
             .build(&node_futures)
+            .await
             .unwrap();
 
         assert_data_tree!(
@@ -1323,6 +1345,7 @@ pub mod tests {
         let node = ThermalPolicyBuilder::new(thermal_config)
             .with_inspect_root(inspector.root())
             .build(&node_futures)
+            .await
             .unwrap();
 
         // Causes Inspect to receive throttle_start_time and one reading into thermal_load_hist
@@ -1477,13 +1500,16 @@ pub mod tests {
 
         // The executor's fake time must be set before node creation to ensure the periodic timer's
         // deadline is properly initialized.
-        let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(Seconds(0.0).into());
 
         let mock_metrics = mock_maker.make("MockPlatformMetrics", vec![]);
-        let mock_temperature = mock_maker.make("MockTemperature", vec![]);
+        let mock_temperature = mock_maker.make(
+            "MockTemperature",
+            vec![(msg_eq!(GetDriverPath), msg_ok_return!(GetDriverPath(String::new())))],
+        );
         let node_futures = FuturesUnordered::new();
-        let node = ThermalPolicyBuilder::new(ThermalConfig {
+        let node_builder = ThermalPolicyBuilder::new(ThermalConfig {
             temperature_node: mock_temperature.clone(),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
@@ -1499,8 +1525,12 @@ pub mod tests {
             platform_metrics_node: mock_metrics.clone(),
             policy_params,
         })
-        .build(&node_futures)
-        .unwrap();
+        .build(&node_futures);
+
+        let node = match executor.run_until_stalled(&mut node_builder.boxed_local()) {
+            futures::task::Poll::Ready(Ok(node)) => node,
+            _ => panic!("Failed to create node"),
+        };
 
         // Wrap the executor, node, and futures in a simple struct that drives time steps. This
         // enables the control flow:
@@ -1628,11 +1658,51 @@ pub mod tests {
             platform_metrics_node: create_dummy_node(),
         };
         let node_futures = FuturesUnordered::new();
-        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).unwrap();
+        let node = ThermalPolicyBuilder::new(thermal_config).build(&node_futures).await.unwrap();
 
         // Enter and then exit thermal throttling. The mock crash_report_handler node will assert if
         // it does not receive a FileCrashReport message.
         let _ = node.update_throttling_state(Nanoseconds(0), ThermalLoad(50)).await;
         let _ = node.update_throttling_state(Nanoseconds(0), ThermalLoad(0)).await;
+    }
+
+    /// Tests that the ThermalPolicy node populates the correct temperature sensor driver path in
+    /// its UpdateThermalLoad messages.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_thermal_load_sensor_path() {
+        let mut mock_maker = MockNodeMaker::new();
+
+        // Set up the ThermalPolicy node
+        let thermal_config = ThermalConfig {
+            temperature_node: mock_maker.make(
+                "TemperatureNode",
+                vec![(
+                    msg_eq!(GetDriverPath),
+                    msg_ok_return!(GetDriverPath("Sensor1".to_string())),
+                )],
+            ),
+            cpu_control_nodes: vec![create_dummy_node()],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_limiter_node: mock_maker.make(
+                "ThermalLimiter",
+                vec![(
+                    msg_eq!(UpdateThermalLoad(ThermalLoad(20), "Sensor1".to_string())),
+                    msg_ok_return!(UpdateThermalLoad),
+                )],
+            ),
+            crash_report_handler: create_dummy_node(),
+            policy_params: default_policy_params(),
+            platform_metrics_node: create_dummy_node(),
+        };
+
+        let node = ThermalPolicyBuilder::new(thermal_config)
+            .build(&FuturesUnordered::new())
+            .await
+            .unwrap();
+
+        // When `process_thermal_load` runs, the new ThermalLoad value will be sent to the mock
+        // ThermalLimiter node. The mock will verify the correct sensor path is found in the
+        // UpdateThermalLoad message.
+        assert_eq!(node.process_thermal_load(Nanoseconds(1), ThermalLoad(20)).await.unwrap(), ());
     }
 }

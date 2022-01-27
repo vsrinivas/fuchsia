@@ -136,6 +136,10 @@ pub struct TemperatureHandler {
 }
 
 impl TemperatureHandler {
+    fn handle_get_driver_path(&self) -> Result<MessageReturn, PowerManagerError> {
+        Ok(MessageReturn::GetDriverPath(self.driver_path.clone()))
+    }
+
     async fn handle_read_temperature(&self) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!(
             "power_manager",
@@ -204,6 +208,7 @@ impl Node for TemperatureHandler {
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
             Message::ReadTemperature => self.handle_read_temperature().await,
+            Message::GetDriverPath => self.handle_get_driver_path(),
             _ => Err(PowerManagerError::Unsupported),
         }
     }
@@ -426,6 +431,19 @@ pub mod tests {
             }
         });
         let _ = TemperatureHandlerBuilder::new_from_json(json_data, &HashMap::new());
+    }
+
+    /// Tests that the node correctly reports its driver path.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_driver_path() {
+        let node = setup_test_node(|| Celsius(0.0), zx::Duration::from_millis(0)).await;
+        let driver_path = match node.handle_message(&Message::GetDriverPath).await.unwrap() {
+            MessageReturn::GetDriverPath(driver_path) => driver_path,
+            e => panic!("Unexpected message response: {:?}", e),
+        };
+
+        // "Fake" is the driver path assigned in `setup_test_node`
+        assert_eq!(driver_path, "Fake".to_string());
     }
 }
 
