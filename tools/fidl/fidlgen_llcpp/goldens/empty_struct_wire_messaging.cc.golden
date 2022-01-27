@@ -524,17 +524,6 @@ void ::fidl::WireResponse<
 
 #ifdef __Fuchsia__
 
-fidl::Result fidl::WireEventSender<::test_emptystruct::EmptyProtocol>::Receive(
-    const ::test_emptystruct::wire::Empty& e) const {
-  return ::fidl::WireSendEvent(server_end_)->Receive(e);
-}
-
-fidl::Result fidl::WireEventSender<::test_emptystruct::EmptyProtocol>::Receive(
-    ::fidl::BufferSpan _buffer,
-    const ::test_emptystruct::wire::Empty& e) const {
-  return ::fidl::WireSendEvent(server_end_).buffer(_buffer)->Receive(e);
-}
-
 fidl::Result
 fidl::internal::WireWeakEventSender<::test_emptystruct::EmptyProtocol>::Receive(
     const ::test_emptystruct::wire::Empty& e) {

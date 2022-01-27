@@ -221,11 +221,6 @@ void ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>::_InitHeader() {
 
 #ifdef __Fuchsia__
 
-fidl::Result fidl::WireEventSender<::test_doccomments::Interface>::OnEvent()
-    const {
-  return ::fidl::WireSendEvent(server_end_)->OnEvent();
-}
-
 fidl::Result
 fidl::internal::WireWeakEventSender<::test_doccomments::Interface>::OnEvent() {
   ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> _response{};

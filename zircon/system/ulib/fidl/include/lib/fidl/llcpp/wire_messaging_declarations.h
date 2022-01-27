@@ -46,13 +46,6 @@ class WireAsyncEventHandler;
 template <typename FidlProtocol>
 class WireServer;
 
-// WireEventSender owns a server endpoint and exposes methods for sending
-// events.
-//
-// TODO(fxbug.dev/85688): Replace this with |fidl::WireSendEvent|.
-template <typename FidlProtocol>
-class WireEventSender;
-
 template <typename FidlMethod>
 class WireResponseContext;
 

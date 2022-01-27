@@ -8418,43 +8418,6 @@ namespace fidl {
 
 }  // namespace fidl
 #ifdef __Fuchsia__
-
-// |EventSender| owns a server endpoint of a channel speaking
-// the HandleRightsProtocol protocol, and can send events in that protocol.
-template <>
-class ::fidl::WireEventSender<::test_protocols::HandleRightsProtocol> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::test_protocols::HandleRightsProtocol> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::test_protocols::HandleRightsProtocol>& server_end()
-      const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::test_protocols::HandleRightsProtocol>& server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
-  fidl::Result AnEvent(::zx::socket&& h) const;
-
-  // Caller provides the backing storage for FIDL message via response buffers.
-  fidl::Result AnEvent(::fidl::BufferSpan _buffer, ::zx::socket&& h) const;
-
- private:
-  ::fidl::ServerEnd<::test_protocols::HandleRightsProtocol> server_end_;
-};
-
 template <>
 class ::fidl::internal::WireWeakEventSender<
     ::test_protocols::HandleRightsProtocol>
@@ -8657,50 +8620,6 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-// |EventSender| owns a server endpoint of a channel speaking
-// the WithAndWithoutRequestResponse protocol, and can send events in that
-// protocol.
-template <>
-class ::fidl::WireEventSender<::test_protocols::WithAndWithoutRequestResponse> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::test_protocols::WithAndWithoutRequestResponse>
-          server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::test_protocols::WithAndWithoutRequestResponse>&
-  server_end() const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::test_protocols::WithAndWithoutRequestResponse>&
-  server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
-  fidl::Result OnEmptyResponse() const;
-
-  fidl::Result OnWithResponse(::fidl::StringView ret) const;
-
-  // Caller provides the backing storage for FIDL message via response buffers.
-  fidl::Result OnWithResponse(::fidl::BufferSpan _buffer,
-                              ::fidl::StringView ret) const;
-
- private:
-  ::fidl::ServerEnd<::test_protocols::WithAndWithoutRequestResponse>
-      server_end_;
-};
-
 template <>
 class ::fidl::internal::WireWeakEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>
@@ -8826,42 +8745,6 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::Transitional>
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-// |EventSender| owns a server endpoint of a channel speaking
-// the Transitional protocol, and can send events in that protocol.
-template <>
-class ::fidl::WireEventSender<::test_protocols::Transitional> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::test_protocols::Transitional> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::test_protocols::Transitional>& server_end() const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::test_protocols::Transitional>& server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
-  fidl::Result Event(int64_t x) const;
-
-  // Caller provides the backing storage for FIDL message via response buffers.
-  fidl::Result Event(::fidl::BufferSpan _buffer, int64_t x) const;
-
- private:
-  ::fidl::ServerEnd<::test_protocols::Transitional> server_end_;
-};
-
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_protocols::Transitional>
     : public ::fidl::internal::WeakEventSenderBase {
@@ -8956,38 +8839,6 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-// |EventSender| owns a server endpoint of a channel speaking
-// the MethodWithUnion protocol, and can send events in that protocol.
-template <>
-class ::fidl::WireEventSender<::test_protocols::MethodWithUnion> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::test_protocols::MethodWithUnion> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::test_protocols::MethodWithUnion>& server_end()
-      const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::test_protocols::MethodWithUnion>& server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
- private:
-  ::fidl::ServerEnd<::test_protocols::MethodWithUnion> server_end_;
-};
-
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_protocols::MethodWithUnion>
     : public ::fidl::internal::WeakEventSenderBase {
@@ -9141,38 +8992,6 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-// |EventSender| owns a server endpoint of a channel speaking
-// the WithProtocolEnds protocol, and can send events in that protocol.
-template <>
-class ::fidl::WireEventSender<::test_protocols::WithProtocolEnds> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::test_protocols::WithProtocolEnds> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::test_protocols::WithProtocolEnds>& server_end()
-      const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::test_protocols::WithProtocolEnds>& server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
- private:
-  ::fidl::ServerEnd<::test_protocols::WithProtocolEnds> server_end_;
-};
-
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_protocols::WithProtocolEnds>
     : public ::fidl::internal::WeakEventSenderBase {
@@ -9264,38 +9083,6 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::ManyParameters>
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-// |EventSender| owns a server endpoint of a channel speaking
-// the ManyParameters protocol, and can send events in that protocol.
-template <>
-class ::fidl::WireEventSender<::test_protocols::ManyParameters> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::test_protocols::ManyParameters> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::test_protocols::ManyParameters>& server_end()
-      const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::test_protocols::ManyParameters>& server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
- private:
-  ::fidl::ServerEnd<::test_protocols::ManyParameters> server_end_;
-};
-
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_protocols::ManyParameters>
     : public ::fidl::internal::WeakEventSenderBase {
@@ -9458,38 +9245,6 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-// |EventSender| owns a server endpoint of a channel speaking
-// the WithErrorSyntax protocol, and can send events in that protocol.
-template <>
-class ::fidl::WireEventSender<::test_protocols::WithErrorSyntax> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::test_protocols::WithErrorSyntax> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::test_protocols::WithErrorSyntax>& server_end()
-      const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::test_protocols::WithErrorSyntax>& server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
- private:
-  ::fidl::ServerEnd<::test_protocols::WithErrorSyntax> server_end_;
-};
-
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_protocols::WithErrorSyntax>
     : public ::fidl::internal::WeakEventSenderBase {
@@ -9577,38 +9332,6 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-// |EventSender| owns a server endpoint of a channel speaking
-// the DiscoverableProtocol protocol, and can send events in that protocol.
-template <>
-class ::fidl::WireEventSender<::test_protocols::DiscoverableProtocol> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>& server_end()
-      const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>& server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
- private:
-  ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server_end_;
-};
-
 template <>
 class ::fidl::internal::WireWeakEventSender<
     ::test_protocols::DiscoverableProtocol>
@@ -9768,43 +9491,6 @@ class ::fidl::internal::WireWeakSyncClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-// |EventSender| owns a server endpoint of a channel speaking
-// the ChannelProtocol protocol, and can send events in that protocol.
-template <>
-class ::fidl::WireEventSender<::test_protocols::ChannelProtocol> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::test_protocols::ChannelProtocol> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::test_protocols::ChannelProtocol>& server_end()
-      const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::test_protocols::ChannelProtocol>& server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
-  fidl::Result EventA(int64_t a, int64_t b) const;
-
-  // Caller provides the backing storage for FIDL message via response buffers.
-  fidl::Result EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const;
-
- private:
-  ::fidl::ServerEnd<::test_protocols::ChannelProtocol> server_end_;
-};
-
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_protocols::ChannelProtocol>
     : public ::fidl::internal::WeakEventSenderBase {

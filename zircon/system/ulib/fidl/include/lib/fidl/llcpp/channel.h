@@ -136,17 +136,6 @@ class ServerBindingRef : public internal::ServerBindingRefBase {
       binding->Close(std::move(binding), epitaph);
   }
 
-  // Return the interface for sending FIDL events. If the server has been unbound, calls on the
-  // interface return error with status ZX_ERR_CANCELED.
-  // TODO(fxbug.dev/85688): Migrate to |fidl::WireSendEvent| and remove this function.
-  auto operator->() const {
-    return internal::Arrow<internal::WireWeakEventSender<Protocol>>(
-        ServerBindingRefBase::binding());
-  }
-  auto operator*() const {
-    return internal::WireWeakEventSender<Protocol>(ServerBindingRefBase::binding());
-  }
-
  private:
   // This is so that only |BindServerTypeErased| will be able to construct a
   // new instance of |ServerBindingRef|.

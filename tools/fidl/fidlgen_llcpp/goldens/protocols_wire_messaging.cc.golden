@@ -586,19 +586,6 @@ void ::fidl::WireEvent<
 
 #ifdef __Fuchsia__
 
-fidl::Result fidl::WireEventSender<
-    ::test_protocols::HandleRightsProtocol>::AnEvent(::zx::socket&& h) const {
-  return ::fidl::WireSendEvent(server_end_)->AnEvent(std::move(h));
-}
-
-fidl::Result
-fidl::WireEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
-    ::fidl::BufferSpan _buffer, ::zx::socket&& h) const {
-  return ::fidl::WireSendEvent(server_end_)
-      .buffer(_buffer)
-      ->AnEvent(std::move(h));
-}
-
 fidl::Result fidl::internal::WireWeakEventSender<
     ::test_protocols::HandleRightsProtocol>::AnEvent(::zx::socket&& h) {
   ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> _response{
@@ -2234,11 +2221,6 @@ void ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::
 
 #ifdef __Fuchsia__
 
-fidl::Result fidl::WireEventSender<
-    ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() const {
-  return ::fidl::WireSendEvent(server_end_)->OnEmptyResponse();
-}
-
 fidl::Result fidl::internal::WireWeakEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
   ::fidl::WireEvent<
@@ -2312,20 +2294,6 @@ fidl::Result fidl::internal::WireBufferEventSender<
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
   return ::fidl::Result{_message};
-}
-
-fidl::Result
-fidl::WireEventSender<::test_protocols::WithAndWithoutRequestResponse>::
-    OnWithResponse(::fidl::StringView ret) const {
-  return ::fidl::WireSendEvent(server_end_)->OnWithResponse(ret);
-}
-
-fidl::Result
-fidl::WireEventSender<::test_protocols::WithAndWithoutRequestResponse>::
-    OnWithResponse(::fidl::BufferSpan _buffer, ::fidl::StringView ret) const {
-  return ::fidl::WireSendEvent(server_end_)
-      .buffer(_buffer)
-      ->OnWithResponse(ret);
 }
 
 fidl::Result fidl::internal::WireWeakEventSender<
@@ -2901,16 +2869,6 @@ void ::fidl::WireEvent<::test_protocols::Transitional::Event>::_InitHeader() {
 }
 
 #ifdef __Fuchsia__
-
-fidl::Result fidl::WireEventSender<::test_protocols::Transitional>::Event(
-    int64_t x) const {
-  return ::fidl::WireSendEvent(server_end_)->Event(x);
-}
-
-fidl::Result fidl::WireEventSender<::test_protocols::Transitional>::Event(
-    ::fidl::BufferSpan _buffer, int64_t x) const {
-  return ::fidl::WireSendEvent(server_end_).buffer(_buffer)->Event(x);
-}
 
 fidl::Result fidl::internal::WireWeakEventSender<
     ::test_protocols::Transitional>::Event(int64_t x) {
@@ -6863,16 +6821,6 @@ void ::fidl::WireResponse<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-fidl::Result fidl::WireEventSender<::test_protocols::ChannelProtocol>::EventA(
-    int64_t a, int64_t b) const {
-  return ::fidl::WireSendEvent(server_end_)->EventA(a, b);
-}
-
-fidl::Result fidl::WireEventSender<::test_protocols::ChannelProtocol>::EventA(
-    ::fidl::BufferSpan _buffer, int64_t a, int64_t b) const {
-  return ::fidl::WireSendEvent(server_end_).buffer(_buffer)->EventA(a, b);
-}
 
 fidl::Result fidl::internal::WireWeakEventSender<
     ::test_protocols::ChannelProtocol>::EventA(int64_t a, int64_t b) {

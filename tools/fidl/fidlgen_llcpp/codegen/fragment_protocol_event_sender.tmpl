@@ -7,44 +7,6 @@
 {{- define "Protocol:EventSender:WireMessagingHeader" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
-{{- /* TODO(fxbug.dev/85688): Remove this class. */}}
-// |EventSender| owns a server endpoint of a channel speaking
-// the {{ .Name }} protocol, and can send events in that protocol.
-template<>
-class {{ .WireEventSender }} {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(::{{ .Transport.Namespace }}::ServerEnd<{{ . }}> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::{{ .Transport.Namespace }}::ServerEnd<{{ . }}>& server_end() const { return server_end_; }
-  ::{{ .Transport.Namespace }}::ServerEnd<{{ . }}>& server_end() { return server_end_; }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-{{ "" }}
-  {{- /* Events have no "request" part of the call; they are unsolicited. */}}
-  {{- range .Events }}
-    {{- .Docs }}
-    fidl::Result {{ .Name }}({{ RenderParams .ResponseArgs }}) const;
-
-    {{- if .ResponseArgs }}
-      {{ .Docs }}
-      // Caller provides the backing storage for FIDL message via response buffers.
-      fidl::Result {{ .Name }}({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const;
-    {{- end }}
-{{ "" }}
-  {{- end }}
- private:
-  ::{{ .Transport.Namespace }}::ServerEnd<{{ . }}> server_end_;
-};
-
 template<>
 class {{ .WireWeakEventSender }} : public ::fidl::internal::WeakEventSenderBase {
  public:
@@ -74,8 +36,8 @@ class {{ .WireWeakBufferEventSender }} : public ::fidl::internal::WeakBufferEven
 };
 
 template<>
-class {{ .InternalWireEventSender }}
-    : public ::fidl::internal::SyncEndpointManagedVeneer<{{ .InternalWireEventSender }}> {
+class {{ .WireEventSender }}
+    : public ::fidl::internal::SyncEndpointManagedVeneer<{{ .WireEventSender }}> {
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 {{ "" }}
@@ -110,22 +72,6 @@ class {{ .InternalWireBufferEventSender }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
   {{- range .Events }}
-    {{- /* Managed */}}
-fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
-    {{- RenderParams .ResponseArgs }}) const {
-  return ::fidl::WireSendEvent(server_end_)->{{ .Name }}({{ RenderForwardParams .ResponseArgs }});
-}
-
-    {{- /* Caller-allocated */}}
-    {{- if .ResponseArgs }}
-{{ "" }}
-fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
-    {{- RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
-  return ::fidl::WireSendEvent(server_end_)
-      .buffer(_buffer)->{{ .Name }}({{ RenderForwardParams .ResponseArgs }});
-}
-    {{- end }}
-{{ "" }}
 
     {{- /* Weak, managed */}}
 fidl::Result {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
@@ -158,7 +104,7 @@ fidl::Result {{ $.WireWeakBufferEventSender.NoLeading }}::{{ .Name }}(
 {{ "" }}
 
     {{- /* Managed */}}
-fidl::Result {{ $.InternalWireEventSender.NoLeading }}::{{ .Name }}(
+fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) {
   {{ .WireEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT

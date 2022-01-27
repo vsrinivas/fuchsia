@@ -565,38 +565,6 @@ namespace fidl {
 
 }  // namespace fidl
 #ifdef __Fuchsia__
-
-// |EventSender| owns a server endpoint of a channel speaking
-// the Top protocol, and can send events in that protocol.
-template <>
-class ::fidl::WireEventSender<::test_transitivedependenciescompose::Top> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::test_transitivedependenciescompose::Top> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::test_transitivedependenciescompose::Top>&
-  server_end() const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::test_transitivedependenciescompose::Top>& server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
- private:
-  ::fidl::ServerEnd<::test_transitivedependenciescompose::Top> server_end_;
-};
-
 template <>
 class ::fidl::internal::WireWeakEventSender<
     ::test_transitivedependenciescompose::Top>
