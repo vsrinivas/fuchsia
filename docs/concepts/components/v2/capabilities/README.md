@@ -88,29 +88,28 @@ component instance tree:
 
 <br>![Capability routing example](/docs/concepts/components/v2/images/capability_routing_example.png)<br>
 
-In this example, the `echo` component instance provides an `fuchsia.Echo`
-protocol in its outgoing directory. This protocol is routed to the `echo_tool`
-component instance, which uses it. It is necessary for each component instance
-in the routing path to propagate `fuchsia.Echo` to the next component instance.
+In this example:
 
-The routing sequence is:
+-   The `echo` component instance provides the `fuchsia.Echo` protocol as one
+    of its declared *capabilities*.
+-   The `echo_tool` component instance requires the *use* of the
+    `fuchsia.Echo` protocol capability.
 
--   `echo` hosts the `fuchsia.Echo` protocol in its outgoing directory. Also, it
-    exposes `fuchsia.Echo` from `self` so the protocol is visible to its parent,
-    `services`.
--   `services` exposes `fuchsia.Echo` from its child `echo` to its parent,
+Each intermediate component cooperates to explicitly route `fuchsia.Echo`
+from `echo` to `echo_tool`:
+
+1.  `echo` *exposes* `fuchsia.Echo` from `self` so the protocol is visible to
+    its parent, `services`.
+1.  `services` *exposes* `fuchsia.Echo` from its child `echo` to its parent,
     `shell`.
--   `shell` offers `fuchsia.Echo` from its child `services` to its other child
+1.  `shell` *offers* `fuchsia.Echo` from its child `services` to another child,
     `tools`.
--   `tools` offers `fuchsia.Echo` from `parent` (i.e., its parent) to its child
-    `echo_tool`.
--   `echo_tool` uses `fuchsia.Echo`. When `echo_tool` runs, it will find
-    `fuchsia.Echo` in its namespace.
+1.  `tools` *offers* `fuchsia.Echo` from `parent` to its child, `echo_tool`.
 
-For a more detailed example of capability routing, see
-[`//examples/components/routing`][examples-routing].
+Component Framework grants the request from `echo_tool` to use `fuchsia.Echo`
+because a valid route is found to a component providing that protocol capability.
 
-For more information on what happens when connecting to a capability, see
+For more information on how components connect to capabilities at runtime, see
 [Life of a protocol open][doc-protocol-open].
 
 [capability-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
@@ -126,7 +125,6 @@ For more information on what happens when connecting to a capability, see
 [doc-outgoing-directory]: /docs/concepts/packages/system.md#outgoing_directory
 [doc-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
-[examples-routing]: /examples/components/routing
 [glossary.capability]: /docs/glossary#capability
 [glossary.capability-routing]: /docs/glossary#capability-routing
 [glossary.child]: /docs/glossary#child-component-instance
