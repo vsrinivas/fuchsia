@@ -9,6 +9,7 @@ import("//build/go/go_test.gni")
 go_library("main") {
   source_dir = "cmd"
   deps = [
+    ":synckeys",
     "//third_party/golibs:github.com/google/subcommands",
     "//tools/lib/color",
     "//tools/lib/logger",
@@ -40,8 +41,34 @@ install_host_tools("fssh-host") {
   outputs = [ "fssh" ]
 }
 
+go_library("synckeys") {
+  name = "go.fuchsia.dev/fuchsia/tools/sdk-tools/fssh/synckeys"
+  source_dir = "synckeys"
+  deps = [
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//tools/lib/logger",
+  ]
+  sources = [
+    "synckeys.go",
+    "synckeys_test.go",
+  ]
+}
+
+go_test("synckeys-tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fssh/synckeys" ]
+  deps = [ ":synckeys" ]
+}
+
 sdk_host_tool("fssh_sdk") {
   category = "partner"
   output_name = "fssh"
   deps = [ ":fssh" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fssh-test($host_toolchain)",
+    ":synckeys-tests($host_toolchain)",
+  ]
 }
