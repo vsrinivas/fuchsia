@@ -136,7 +136,8 @@ void GfxBufferCollectionImporter::ReleaseBufferCollection(
   vk_device.destroyBufferCollectionFUCHSIA(itr->second.vk_buffer_collection, nullptr, vk_loader);
 
   zx_status_t status = itr->second.buffer_collection_sync_ptr->Close();
-  FX_DCHECK(status == ZX_OK) << "failed to close buffer collection ptr, status: " << status;
+  FX_DCHECK(status == ZX_OK || status == ZX_ERR_PEER_CLOSED)
+      << "failed to close buffer collection ptr, status: " << status;
 
   buffer_collection_infos_.erase(itr);
 }
