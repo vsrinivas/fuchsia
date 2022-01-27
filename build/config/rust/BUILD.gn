@@ -168,6 +168,7 @@ config("allow_unused_results") {
     "//src/connectivity/lowpan/*",
     "//src/connectivity/network/net-cli/ffx:*",
     "//src/connectivity/network/netstack:networking_metrics_rustlib",
+    "//src/connectivity/network/testing/network-test-realm/ffx:*",
     "//src/connectivity/openthread/*",
     "//src/connectivity/overnet/*",
     "//src/connectivity/ppp/*",

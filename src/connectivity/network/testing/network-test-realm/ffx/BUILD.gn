@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_net_test_realm") {
+  with_unit_tests = true
+  args_deps = [
+    "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm-rustc",
+    "//src/lib/network/fidl_fuchsia_net_ext",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/connectivity/lib/net-declare",
+    "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm-rustc",
+  ]
+  args_sources = [ "src/args.rs" ]
+  sources = [ "src/lib.rs" ]
+}
+
+group("tests") {
+  deps = [ ":ffx_net_test_realm_tests" ]
+  testonly = true
+}

@@ -26,6 +26,7 @@ if (is_host) {
 
     plugin_deps = [
       "//src/connectivity/network/net-cli/ffx:ffx_net",
+      "//src/connectivity/network/testing/network-test-realm/ffx:ffx_net_test_realm",
       "//src/developer/ffx/plugins/agis:ffx_agis",
       "//src/developer/ffx/plugins/assembly:ffx_assembly",
       "//src/developer/ffx/plugins/component:ffx_component",
