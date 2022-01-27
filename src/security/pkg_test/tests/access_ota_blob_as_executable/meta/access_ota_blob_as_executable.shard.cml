@@ -87,6 +87,22 @@
             protocol: "test.security.pkg.PackageServer",
             from: "#pkg_server",
         },
+
+        // Manually trigger OTA system update.
+        {
+            protocol: "fuchsia.update.installer.Installer",
+            from: "#system-updater",
+        },
+
+        // Parse repository URLs from `pkg-resolver` config to determine update
+        // URL.
+        {
+            directory: "pkgfs",
+            from: "#fshost",
+            rights: [ "r*" ],
+            path: "/pkg-resolver-repositories",
+            subdir: "packages/config-data/0/meta/data/pkg-resolver/repositories",
+        },
     ],
     offer: [
         {
