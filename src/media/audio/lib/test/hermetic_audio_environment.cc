@@ -21,6 +21,15 @@
 #include <zircon/device/vfs.h>
 #include <zircon/status.h>
 
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
 #include <test/thermal/cpp/fidl.h>
 
 #include "src/lib/files/directory.h"
@@ -56,7 +65,7 @@ std::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
     }
 
     zx::channel config_data;
-    if (config_data_path != "") {
+    if (!config_data_path.empty()) {
       FX_LOGS(INFO) << "Using path '" << config_data_path << "' for /config/data directory for "
                     << url << ".";
       zx::channel remote;
@@ -78,7 +87,7 @@ std::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
   };
 }
 
-std::string ComponentManifestFromURL(std::string component_url) {
+std::string ComponentManifestFromURL(const std::string& component_url) {
   const char* kMeta = "#meta/";
   auto k = component_url.find(kMeta);
   FX_CHECK(k != std::string::npos);
@@ -102,7 +111,7 @@ void HermeticAudioEnvironment::EnvironmentMain(HermeticAudioEnvironment* env) {
   loop.Run();
 }
 
-HermeticAudioEnvironment::HermeticAudioEnvironment(Options options) : options_(options) {
+HermeticAudioEnvironment::HermeticAudioEnvironment(Options options) : options_(std::move(options)) {
   TRACE_DURATION("audio", "HermeticAudioEnvironment::Create");
 
   // Create the thread here to ensure the rest of the class has fully initialized before starting
@@ -155,7 +164,7 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
   // The '_nodevfs' cmx files are needed to allow us to map in our isolated devmgr under /dev for
   // each component, otherwise these components would still be provided the shared/global devmgr.
   std::string audio_core_url = options_.audio_core_base_url;
-  if (options_.audio_core_config_data_path != "") {
+  if (!options_.audio_core_config_data_path.empty()) {
     // When a custom config is specified, don't bother loading the default config data.
     audio_core_url += "#meta/audio_core_nodevfs_noconfigdata.cmx";
   } else {
@@ -269,6 +278,11 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
   services->AllowParentService(fuchsia::scheduler::ProfileProvider::Name_);
   for (const auto& service : options_.extra_allowed_parent_services) {
     services->AllowParentService(service);
+  }
+
+  if (options_.install_additional_services_fn) {
+    zx_status_t status = options_.install_additional_services_fn(*services);
+    FX_CHECK(status == ZX_OK) << status;
   }
 
   std::unique_lock<std::mutex> lock(mutex_);

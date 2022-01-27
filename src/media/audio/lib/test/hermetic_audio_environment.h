@@ -15,10 +15,16 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
+#include <zircon/types.h>
 
 #include <condition_variable>
+#include <functional>
+#include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
+#include <unordered_map>
+#include <vector>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
@@ -43,6 +49,7 @@ class HermeticAudioEnvironment {
     std::vector<TestEffectsV2::Effect> test_effects_v2;
     std::string processor_creator_url;
     std::string processor_creator_config_data_path;
+    std::function<zx_status_t(sys::testing::EnvironmentServices&)> install_additional_services_fn;
   };
   HermeticAudioEnvironment(Options options);
   ~HermeticAudioEnvironment();
@@ -59,6 +66,11 @@ class HermeticAudioEnvironment {
     fidl::InterfacePtr<Interface> ptr;
     ConnectToService(ptr.NewRequest(), service_name);
     return ptr;
+  }
+
+  sys::testing::EnclosingEnvironment& GetEnvironment() const {
+    FX_CHECK(hermetic_environment_ && hermetic_environment_->is_running());
+    return *hermetic_environment_;
   }
 
   // Components started by this environment.
