@@ -48,6 +48,9 @@ void main(List args) async {
     Incoming.fromSvcPath().connectToService(viewRefInstalled);
     await viewRefInstalled.watch(viewRef.duplicate());
 
+    // Set focus on the root view.
+    await sceneManager.requestFocus(viewRef.duplicate());
+
     // Hook up focus chain to IME and shortcut manager.
     final focusChainRegistry = FocusChainListenerRegistryProxy();
     Incoming.fromSvcPath().connectToService(focusChainRegistry);
