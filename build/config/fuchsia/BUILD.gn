@@ -13,8 +13,6 @@ import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
 import("//zircon/public/sysroot/rust.gni")
 
-assert(current_os == "fuchsia")
-
 # Deprecated.
 # TODO(fxbug.dev/44795): Remove once none of the petals depend on this.
 config("werror") {
@@ -185,8 +183,12 @@ config("integer-paranoia") {
   ]
 }
 
-config("libunwind") {
-  libs = [ clang_libunwind ]
+# clang_libunwind is only available on fuchsia.
+# See the definition in //build/config/clang/clang.gni.
+if (is_fuchsia) {
+  config("libunwind") {
+    libs = [ clang_libunwind ]
+  }
 }
 
 # NOTE: This config's label is hard-coded in //build/config/BUILDCONFIG.gn
