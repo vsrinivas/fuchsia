@@ -48,10 +48,13 @@ class IsolatedFFXRunner {
     _env['ASCENDD'] = socketPath;
 
     final config = {
-      'overnet.socket': socketPath,
-      'log.dir': path.join(_ffxDir.path, 'logs'),
-      'fastboot.usb.disabled': true,
-      'ssh.priv': Platform.environment['FUCHSIA_SSH_KEY']
+      'overnet': {'socket': socketPath},
+      'log': {'dir': path.join(_ffxDir.path, 'logs')},
+      'fastboot': {
+        'usb': {'disabled': true},
+        'flash': {'min_timeout_secs': 60, 'timeout_rate': 5}
+      },
+      'ssh': {'priv': Platform.environment['FUCHSIA_SSH_KEY']}
     };
 
     await File(_configPath).writeAsString(json.encode(config));
