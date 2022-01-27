@@ -691,10 +691,9 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     let state = &mut ctx.get_state_mut_with(device_id).ip;
 
     #[ipv4addr]
-    let exists = state.ipv4.ip_state.iter_addrs().find(|a| a.addr().get() == addr).is_some();
+    let exists = state.ipv4.ip_state.iter_addrs().any(|a| a.addr().get() == addr);
     #[ipv6addr]
-    let exists =
-        state.ipv6.ip_state.iter_addrs().find(|a| a.addr_sub().addr().get() == addr).is_some();
+    let exists = state.ipv6.ip_state.iter_addrs().any(|a| a.addr_sub().addr().get() == addr);
 
     if exists {
         return Err(AddressError::AlreadyExists);
