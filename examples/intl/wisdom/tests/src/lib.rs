@@ -6,7 +6,7 @@ use {
     anyhow::{self, Error},
     diagnostics_reader::{ArchiveReader, Logs},
     fidl_fuchsia_data as fdata,
-    fuchsia_component_test::{ChildOptions, Moniker, RealmBuilder},
+    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     futures::StreamExt,
     std::fs::File,
     std::io::{self, BufRead},
@@ -14,15 +14,35 @@ use {
 
 #[fuchsia::test]
 async fn wisdom_integration_test() -> Result<(), Error> {
-    // Create the test realm,
+    // Create the test realm.
     let builder = RealmBuilder::new().await?;
-    builder.add_child(Moniker::root(), "#meta/intl_wisdom_realm.cm", ChildOptions::new()).await?;
-
-    // Mark echo_client as eager so it starts automatically.
-    builder.mark_as_eager("wisdom_client").await?;
+    let wisdom_server =
+        builder.add_child("wisdom_server", "#meta/wisdom_server.cm", ChildOptions::new()).await?;
+    let wisdom_client = builder
+        .add_child("wisdom_client", "#meta/wisdom_client.cm", ChildOptions::new().eager())
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.examples.intl.wisdom.IntlWisdomServer",
+                ))
+                .from(&wisdom_server)
+                .to(&wisdom_client),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&wisdom_server)
+                .to(&wisdom_client),
+        )
+        .await?;
 
     // Inject the program.args of the manifest
-    let mut client_decl = builder.get_decl("wisdom_client").await?;
+    let mut client_decl = builder.get_component_decl(&wisdom_client).await?;
     let program = client_decl.program.as_mut().unwrap();
     program.info.entries.as_mut().unwrap().push(fdata::DictionaryEntry {
         key: "args".into(),
@@ -31,7 +51,7 @@ async fn wisdom_integration_test() -> Result<(), Error> {
             "--timezone=America/Los_Angeles".to_string(),
         ]))),
     });
-    builder.set_decl("wisdom_client", client_decl).await?;
+    builder.replace_component_decl(&wisdom_client, client_decl).await?;
 
     // Create the realm instance
     let realm_instance = builder.build().await?;
