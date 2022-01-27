@@ -65,6 +65,10 @@ group("tools") {
   deps = [ "//build/validate:non_production_tag" ]
 }
 
+group("system-update-configurator") {
+  public_deps = [ "bin/system-update-configurator" ]
+}
+
 group("system-update-checker") {
   public_deps = [ "bin/system-update-checker" ]
   deps = [ "//build/validate:non_production_tag" ]

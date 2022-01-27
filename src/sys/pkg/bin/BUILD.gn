@@ -9,6 +9,7 @@ group("bin") {
     "pkgctl:pkgctl-bin",
     "pm",
     "pm:host",
+    "system-update-configurator",
     "update:update-bin",
   ]
 }
@@ -26,6 +27,7 @@ group("tests") {
     "pm:tests",
     "system-update-checker:tests",
     "system-update-committer:tests",
+    "system-update-configurator:tests",
     "system-updater:tests",
     "update:tests",
     "usb-system-update-checker:tests",

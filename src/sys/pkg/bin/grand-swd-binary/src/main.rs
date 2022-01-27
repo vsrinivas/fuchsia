@@ -11,6 +11,7 @@ fn main() -> Result<(), anyhow::Error> {
     match program {
         Program::PkgResolver => pkg_resolver::main(),
         Program::SystemUpdateCommitter => system_update_committer::main(),
+        Program::SystemUpdateConfigurator => system_update_configurator::main(),
     }
 }
 
@@ -27,6 +28,7 @@ fn find_program(mut args: impl Iterator<Item = OsString>) -> Result<Program, Fin
     match name.as_str() {
         "pkg_resolver" => Ok(Program::PkgResolver),
         "system_update_committer" => Ok(Program::SystemUpdateCommitter),
+        "system_update_configurator" => Ok(Program::SystemUpdateConfigurator),
         _ => Err(FindProgramError::UnknownProgram(name)),
     }
 }
@@ -35,6 +37,7 @@ fn find_program(mut args: impl Iterator<Item = OsString>) -> Result<Program, Fin
 enum Program {
     PkgResolver,
     SystemUpdateCommitter,
+    SystemUpdateConfigurator,
 }
 
 #[derive(Debug, PartialEq, Eq, thiserror::Error)]
