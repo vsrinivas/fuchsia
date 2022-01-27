@@ -1,0 +1,102 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(fxbug.dev/91760): This abstracts the logic in `//build/info/BUILD.gn`.
+# The logic is going to be migrated to a different phase of the assembly
+# process. When that migration takes place, this code should be deleted and
+# security package delivery tests should use the new assembly process.
+
+import("//build/board.gni")
+import("//build/components/fuchsia_package.gni")
+import("//build/dist/resource.gni")
+import("//build/info/info.gni")
+
+template("build_info") {
+  assert(defined(invoker.latest_commit_date),
+         "latest_commit_date must be defined for $target_name")
+  assert(defined(invoker.minimum_utc_stamp),
+         "minimum_utc_stamp must be defined for $target_name")
+  assert(defined(invoker.product), "product must be defined for $target_name")
+  assert(defined(invoker.board), "board must be defined for $target_name")
+  assert(defined(invoker.version), "version must be defined for $target_name")
+  assert(defined(invoker.jiri_snapshot),
+         "jiri_snapshot must be defined for $target_name")
+  assert(defined(invoker.latest_commit_date),
+         "latest_commit_date must be defined for $target_name")
+
+  build_info_name = target_name
+
+  labels = {
+    latest_commit_date = "${build_info_name}-latest-commit-date"
+    resource_group = "${build_info_name}-resources"
+    build_info = build_info_name
+    bootfs = "${build_info_name}-bootfs"
+  }
+
+  if (current_toolchain == default_toolchain) {
+    action(labels.latest_commit_date) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      # NOTE: Using a depfile instead of explicit sources is intentional
+      # See https://fxbug.dev/77607 for context.
+      outputs = [
+        invoker.latest_commit_date,
+        invoker.minimum_utc_stamp,
+      ]
+      depfile = "$target_gen_dir/$target_name.d"
+      script = "//build/info/gen-latest-commit-date.sh"
+      args = rebase_path([ "//integration/" ] + outputs + [ depfile ],
+                         root_build_dir)
+    }
+  } else {
+    group(labels.latest_commit_date) {
+      forward_variables_from(invoker, [ "testonly" ])
+      public_deps = [ ":${labels.latest_commit_date}($default_toolchain)" ]
+    }
+  }
+
+  resource_group(labels.resource_group) {
+    forward_variables_from(invoker, [ "testonly" ])
+    files = [
+      {
+        source = invoker.product
+        dest = "data/product"
+      },
+      {
+        source = invoker.board
+        dest = "data/board"
+      },
+      {
+        source = invoker.version
+        dest = "data/version"
+      },
+      {
+        source = invoker.jiri_snapshot
+        dest = "data/snapshot"
+      },
+      {
+        source = invoker.latest_commit_date
+        dest = "data/latest-commit-date"
+      },
+      {
+        source = invoker.minimum_utc_stamp
+        dest = "data/minimum-utc-stamp"
+      },
+    ]
+    deps = [ ":${labels.latest_commit_date}" ]
+  }
+
+  fuchsia_package(labels.build_info) {
+    package_name = "build-info"
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [ ":${labels.resource_group}" ]
+  }
+
+  resource(labels.bootfs) {
+    forward_variables_from(invoker, [ "testonly" ])
+    sources = [ invoker.minimum_utc_stamp ]
+    outputs = [ "config/build_info/minimum_utc_stamp" ]
+    deps = [ ":${labels.latest_commit_date}" ]
+  }
+}

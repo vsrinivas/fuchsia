@@ -26,7 +26,7 @@ template("access_ota_blob_as_executable") {
     board_name = board_name
     base_packages = [ "//src/security/pkg_test/assemblies/hello_world_v0:hello_world-package" ] + assembly_base_packages
     packaged_assembly_directory = "access_ota_blob_as_executable_v0"
-    update_version_file = "//src/security/pkg_test/assemblies/v0_version.txt"
+    system_version_file = "//src/security/pkg_test/assemblies/v0_version.txt"
   }
 
   # System assembly for system version to OTA from package server.
@@ -34,7 +34,7 @@ template("access_ota_blob_as_executable") {
     board_name = board_name
     base_packages = [ "//src/security/pkg_test/assemblies/hello_world_v1:hello_world-package" ] + assembly_base_packages
     packaged_assembly_directory = "access_ota_blob_as_executable_v1"
-    update_version_file = "//src/security/pkg_test/assemblies/v1_version.txt"
+    system_version_file = "//src/security/pkg_test/assemblies/v1_version.txt"
   }
 
   # Filesystem host for base system.
