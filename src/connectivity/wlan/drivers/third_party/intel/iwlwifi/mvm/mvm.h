@@ -2016,7 +2016,7 @@ int iwl_mvm_fm_unregister(struct iwl_mvm* mvm);
 zx_status_t iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* alpha2, enum iwl_mcc_source src_id,
                                struct iwl_mcc_update_resp** out_resp_cp);
 
-int iwl_mvm_init_mcc(struct iwl_mvm* mvm);
+zx_status_t iwl_mvm_init_mcc(struct iwl_mvm* mvm);
 void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 
 zx_status_t iwl_mvm_get_regdomain(struct iwl_mvm* mvm, const char* alpha2,

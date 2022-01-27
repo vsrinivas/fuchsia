@@ -524,12 +524,11 @@ exit:
   return ret;
 }
 
-#if 0   // NEEDS_PORTING
-int iwl_mvm_init_mcc(struct iwl_mvm* mvm) {
+zx_status_t iwl_mvm_init_mcc(struct iwl_mvm* mvm) {
   bool tlv_lar;
   bool nvm_lar;
-  int retval;
-  struct ieee80211_regdomain* regd;
+  zx_status_t retval;
+  wlanphy_country_t country;
   char mcc[3];
 
   if (mvm->cfg->nvm_type == IWL_NVM_EXT) {
@@ -541,17 +540,19 @@ int iwl_mvm_init_mcc(struct iwl_mvm* mvm) {
   }
 
   if (!iwl_mvm_is_lar_supported(mvm)) {
-    return 0;
+    return ZX_OK;
   }
 
+#if 0   // NEEDS_PORTING
   /*
    * try to replay the last set MCC to FW. If it doesn't exist,
    * queue an update to cfg80211 to retrieve the default alpha2 from FW.
    */
   retval = iwl_mvm_init_fw_regd(mvm);
-  if (retval != -ENOENT) {
+  if (retval != ZX_ERR_NO_RESOURCES) {
     return retval;
   }
+#endif  // NEEDS_PORTING
 
   /*
    * Driver regulatory hint for initial update, this also informs the
@@ -561,24 +562,27 @@ int iwl_mvm_init_mcc(struct iwl_mvm* mvm) {
    */
   mvm->lar_regdom_set = false;
 
-  regd = iwl_mvm_get_current_regdomain(mvm, NULL);
-  if (IS_ERR_OR_NULL(regd)) {
-    return -EIO;
+  retval = iwl_mvm_get_current_regdomain(mvm, NULL, &country);
+  if (retval != ZX_OK) {
+    return ZX_ERR_BAD_STATE;
   }
 
   if (iwl_mvm_is_wifi_mcc_supported(mvm) && !iwl_acpi_get_mcc(mvm->dev, mcc)) {
-    kfree(regd);
-    regd = iwl_mvm_get_regdomain(mvm->hw->wiphy, mcc, MCC_SOURCE_BIOS, NULL);
-    if (IS_ERR_OR_NULL(regd)) {
-      return -EIO;
+    retval = iwl_mvm_get_regdomain(mvm, mcc, MCC_SOURCE_BIOS, NULL, &country);
+    if (retval != ZX_OK) {
+      return ZX_ERR_BAD_STATE;
     }
   }
 
+#if 0   // NEEDS_PORTING
   retval = regulatory_set_wiphy_regd_sync_rtnl(mvm->hw->wiphy, regd);
   kfree(regd);
+#endif  // NEEDS_PORTING
+
   return retval;
 }
 
+#if 0   // NEEDS_PORTING
 void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
   struct iwl_rx_packet* pkt = rxb_addr(rxb);
   struct iwl_mcc_chub_notif* notif = (void*)pkt->data;

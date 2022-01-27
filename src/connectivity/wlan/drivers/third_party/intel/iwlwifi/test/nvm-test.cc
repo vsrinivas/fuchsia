@@ -74,5 +74,14 @@ TEST_F(NvmTest, UpdateMcc) {
   free(resp);
 }
 
+TEST_F(NvmTest, InitMcc) {
+  auto mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+
+  mtx_lock(&mvm->mutex);
+  EXPECT_EQ(ZX_OK, iwl_mvm_init_mcc(mvm));
+  mtx_unlock(&mvm->mutex);
+  EXPECT_EQ(true, mvm->lar_regdom_set);
+}
+
 }  // namespace
 }  // namespace wlan::testing

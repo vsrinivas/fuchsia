@@ -1235,17 +1235,16 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
     goto error;
   }
 
-#if 0   // NEEDS_PORTING
-    /*
-    * RTNL is not taken during Ct-kill, but we don't need to scan/Tx
-    * anyway, so don't init MCC.
-    */
-    // TODO(42213): port this function.
-    if (!test_bit(IWL_MVM_STATUS_HW_CTKILL, &mvm->status)) {
-        ret = iwl_mvm_init_mcc(mvm);
-        if (ret) { goto error; }
+  /*
+   * RTNL is not taken during Ct-kill, but we don't need to scan/Tx
+   * anyway, so don't init MCC.
+   */
+  if (!test_bit(IWL_MVM_STATUS_HW_CTKILL, &mvm->status)) {
+    ret = iwl_mvm_init_mcc(mvm);
+    if (ret != ZX_OK) {
+      goto error;
     }
-#endif  // NEEDS_PORTING
+  }
 
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
     mvm->scan_type = IWL_SCAN_TYPE_NOT_SET;
