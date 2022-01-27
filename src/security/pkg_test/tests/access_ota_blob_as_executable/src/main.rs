@@ -10,7 +10,6 @@ use {
     },
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_pkg::{BlobId, PackageCacheMarker, PackageResolverMarker, PackageUrl},
-    fidl_fuchsia_pkg_ext::RepositoryConfigs,
     fidl_fuchsia_sys2::{StorageAdminMarker, StorageIteratorMarker},
     fidl_fuchsia_update_installer::{
         Initiator, InstallerMarker, MonitorMarker, Options, RebootControllerMarker,
@@ -22,14 +21,10 @@ use {
     fuchsia_hash::Hash,
     fuchsia_merkle::MerkleTree,
     fuchsia_syslog::fx_log_info,
-    fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::{AsHandleRef, Rights, Status},
     futures::{channel::oneshot::channel, join},
-    io_util::{
-        directory::{open_file, open_in_namespace},
-        file::read,
-    },
-    serde_json::from_slice,
+    io_util::directory::{open_file, open_in_namespace},
+    security_pkg_test_util::hostname_from_pkg_resolver_directory,
     std::{convert::TryInto, fs::File},
 };
 
@@ -140,45 +135,10 @@ async fn get_hello_world_v1_update_merkle() -> Hash {
     receiver.await.unwrap()
 }
 
-async fn get_repository_url() -> RepoUrl {
+async fn get_repository_hostname() -> String {
     let pkg_resolver_repositories_dir =
         open_in_namespace(PKG_RESOLVER_REPOSITORIES_CONFIG_PATH, OPEN_RIGHT_READABLE).unwrap();
-    let mut pkg_resolver_repositories_entries =
-        readdir(&pkg_resolver_repositories_dir).await.unwrap();
-
-    assert!(pkg_resolver_repositories_entries.len() > 0);
-
-    // By convention, use first entry in lexicographical order by file name. The
-    // choice of repository does not matter so long as name lookup resolves to
-    // the test's package server.
-    pkg_resolver_repositories_entries.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
-    let pkg_resolver_repository_file = &pkg_resolver_repositories_entries[0].name;
-    let repository_config_file = open_file(
-        &pkg_resolver_repositories_dir,
-        pkg_resolver_repository_file,
-        OPEN_RIGHT_READABLE,
-    )
-    .await
-    .unwrap();
-    let repository_config_contents = read(&repository_config_file).await.unwrap();
-
-    fx_log_info!(
-        "Loaded repository configuration {}: {}",
-        pkg_resolver_repository_file,
-        std::str::from_utf8(repository_config_contents.as_slice()).unwrap()
-    );
-
-    match from_slice::<RepositoryConfigs>(repository_config_contents.as_slice()).unwrap() {
-        RepositoryConfigs::Version1(mut repository_configs) => {
-            assert!(repository_configs.len() > 0);
-
-            // By convention, use first entry in lexicographical order by URL.
-            // The choice of repository does not matter so long as name lookup
-            // resolves to the test's package server.
-            repository_configs.sort_by(|a, b| a.repo_url().partial_cmp(b.repo_url()).unwrap());
-            repository_configs[0].repo_url().clone()
-        }
-    }
+    hostname_from_pkg_resolver_directory(&pkg_resolver_repositories_dir).await
 }
 
 #[fuchsia::test]
@@ -191,10 +151,10 @@ async fn access_ota_blob_as_executable() {
 
     fx_log_info!("Gathering data and connecting to package server");
 
-    let (_, update_merkle, repository_url, package_server_url) = join!(
+    let (_, update_merkle, repository_hostname, package_server_url) = join!(
         check_v0_cache_resolver_results(),
         get_hello_world_v1_update_merkle(),
-        get_repository_url(),
+        get_repository_hostname(),
         get_local_package_server_url()
     );
 
@@ -206,7 +166,8 @@ async fn access_ota_blob_as_executable() {
     // URL to configure network connection for `pkg-resolver`.
     assert!(package_server_url.starts_with("http://localhost"));
 
-    let update_url = format!("{}/update/0?hash={}", repository_url, update_merkle);
+    let update_url =
+        format!("fuchsia-pkg://{}/update/0?hash={}", repository_hostname, update_merkle);
 
     fx_log_info!("Initiating update: {}", update_url);
 
