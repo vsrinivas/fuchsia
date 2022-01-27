@@ -1,0 +1,39 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("chromiumos") {
+  deps = [ ":chromiumos_system_image" ]
+}
+
+group("tests") {
+  testonly = true
+  if (target_cpu == "x64") {
+    deps = [ ":test_chromiumos_distro" ]
+  }
+}
+
+resource("chromiumos_system_image") {
+  sources = [ "//prebuilt/starnix/chromiumos-image-amd64/system.img" ]
+  outputs = [ "data/system.img" ]
+}
+
+fuchsia_component("sh_test") {
+  testonly = true
+  check_references = false
+  deps = [ ":chromiumos_system_image" ]
+  manifest = "meta/sh_test.cml"
+}
+
+fuchsia_test_package("test_chromiumos_distro") {
+  deps = [ ":chromiumos_system_image" ]
+
+  test_components = [ ":sh_test" ]
+
+  # This package intentionally contains many non-Fuchia ELF binaries that
+  # are not under /data/, and some of them are even unstripped, so disable
+  # theses checks to build successfully.
+  disable_elf_binaries_checks = true
+}

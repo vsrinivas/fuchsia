@@ -1,0 +1,12 @@
+{
+    program: {
+        runner: "starnix",
+        binary: "bin/sh",
+        args: [ "-i" ],
+        mounts: [
+            "/:ext4:data/system.img",
+            "/dev:devfs",
+            "/tmp:tmpfs",
+        ],
+    },
+}

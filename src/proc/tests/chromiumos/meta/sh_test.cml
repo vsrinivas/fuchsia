@@ -1,0 +1,15 @@
+{
+    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    program: {
+        binary: "bin/sh",
+        args: [
+            "-c",
+            "ls && ls",
+        ],
+        mounts: [
+            "/:ext4:data/system.img",
+            "/dev:devfs",
+            "/tmp:tmpfs",
+        ],
+    },
+}
