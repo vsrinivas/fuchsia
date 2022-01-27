@@ -488,7 +488,7 @@ fn start_component(
     let mut argv = vec![binary_path];
     argv.extend(args.into_iter());
 
-    current_task.exec(&argv[0], &argv, &environ)?;
+    current_task.exec(argv[0].clone(), argv, environ)?;
 
     spawn_task(current_task, |result| {
         // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to

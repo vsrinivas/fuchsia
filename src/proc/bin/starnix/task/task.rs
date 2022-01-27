@@ -7,7 +7,7 @@ use parking_lot::{Mutex, RwLock};
 use std::cmp;
 use std::collections::HashSet;
 use std::convert::TryFrom;
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::fmt;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -819,12 +819,16 @@ impl CurrentTask {
 
     pub fn exec(
         &mut self,
-        path: &CStr,
-        argv: &Vec<CString>,
-        environ: &Vec<CString>,
+        path: CString,
+        argv: Vec<CString>,
+        environ: Vec<CString>,
     ) -> Result<(), Errno> {
         let executable = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
-        if let Err(err) = self.finish_exec(path, executable, argv, environ) {
+
+        // TODO: Implement #!interpreter [optional-arg]
+
+        let resolved_elf = resolve_executable(self, executable, argv, environ)?;
+        if let Err(err) = self.finish_exec(path, resolved_elf) {
             // TODO(tbodt): Replace this panic with a log and force a SIGSEGV.
             panic!("{:?} unrecoverable error in exec: {}", self, err);
         }
@@ -834,17 +838,12 @@ impl CurrentTask {
     /// After the memory is unmapped, any failure in exec is unrecoverable and results in the
     /// process crashing. This function is for that second half; any error returned from this
     /// function will be considered unrecoverable.
-    fn finish_exec(
-        &mut self,
-        path: &CStr,
-        executable: FileHandle,
-        argv: &Vec<CString>,
-        environ: &Vec<CString>,
-    ) -> Result<(), Errno> {
-        // TODO: Implement #!interpreter [optional-arg]
-
-        self.mm.exec(executable.name.clone()).map_err(|status| from_status_like_fdio!(status))?;
-        let start_info = load_executable(self, executable, argv, environ)?;
+    fn finish_exec(&mut self, path: CString, resolved_elf: ResolvedElf) -> Result<(), Errno> {
+        *self.argv.write() = resolved_elf.argv.clone();
+        self.mm
+            .exec(resolved_elf.file.name.clone())
+            .map_err(|status| from_status_like_fdio!(status))?;
+        let start_info = load_executable(self, resolved_elf)?;
         self.registers = start_info.to_registers();
         self.dt_debug_address = start_info.dt_debug_address;
 
@@ -870,8 +869,8 @@ impl CurrentTask {
 
         // TODO: The termination signal is reset to SIGCHLD.
 
-        self.thread_group.set_name(path)?;
-        *self.command.write() = path.to_owned();
+        self.thread_group.set_name(&path)?;
+        *self.command.write() = path;
         Ok(())
     }
 }

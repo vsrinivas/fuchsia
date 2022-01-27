@@ -70,10 +70,18 @@ pub fn sys_execve(
     let path = CString::new(current_task.mm.read_c_string(user_path, &mut buf)?)
         .map_err(|_| errno!(EINVAL))?;
     // TODO: What is the maximum size for an argument?
-    let argv = read_c_string_vector(&current_task.mm, user_argv, &mut buf)?;
-    let environ = read_c_string_vector(&current_task.mm, user_environ, &mut buf)?;
+    let argv = if user_argv.is_null() {
+        Vec::new()
+    } else {
+        read_c_string_vector(&current_task.mm, user_argv, &mut buf)?
+    };
+    let environ = if user_environ.is_null() {
+        Vec::new()
+    } else {
+        read_c_string_vector(&current_task.mm, user_environ, &mut buf)?
+    };
     strace!(current_task, "execve({:?}, argv={:?}, environ={:?})", path, argv, environ);
-    current_task.exec(&path, &argv, &environ)?;
+    current_task.exec(path, argv, environ)?;
     Ok(SUCCESS)
 }
 

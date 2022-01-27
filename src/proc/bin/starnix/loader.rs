@@ -140,13 +140,8 @@ impl elf_load::Mapper for Mapper<'_> {
     }
 }
 
-fn load_elf(
-    current_task: &CurrentTask,
-    elf: &FileHandle,
-    mm: &MemoryManager,
-) -> Result<LoadedElf, Errno> {
-    let vmo = elf.get_vmo(current_task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
-    let headers = elf_parse::Elf64Headers::from_vmo(&vmo).map_err(elf_parse_error_to_errno)?;
+fn load_elf(elf: FileHandle, elf_vmo: zx::Vmo, mm: &MemoryManager) -> Result<LoadedElf, Errno> {
+    let headers = elf_parse::Elf64Headers::from_vmo(&elf_vmo).map_err(elf_parse_error_to_errno)?;
     let elf_info = elf_load::loaded_elf_info(&headers);
     let file_base = match headers.file_header().elf_type() {
         Ok(elf_parse::ElfType::SharedObject) => {
@@ -157,9 +152,9 @@ fn load_elf(
     };
     let vaddr_bias = file_base.wrapping_sub(elf_info.low);
     let mapper = Mapper { file: &elf, mm };
-    elf_load::map_elf_segments(&vmo, &headers, &mapper, mm.base_addr.ptr(), vaddr_bias)
+    elf_load::map_elf_segments(&elf_vmo, &headers, &mapper, mm.base_addr.ptr(), vaddr_bias)
         .map_err(elf_load_error_to_errno)?;
-    Ok(LoadedElf { headers, file_base, vaddr_bias, vmo })
+    Ok(LoadedElf { headers, file_base, vaddr_bias, vmo: elf_vmo })
 }
 
 pub struct ThreadStartInfo {
@@ -179,35 +174,71 @@ impl ThreadStartInfo {
     }
 }
 
-pub fn load_executable(
+/// Holds a resolved ELF VMO and associated parameters necessary for an execve call.
+pub struct ResolvedElf {
+    /// A file handle to the resolved ELF executable.
+    pub file: FileHandle,
+    /// A VMO to the resolved ELF executable.
+    pub vmo: zx::Vmo,
+    /// An ELF interpreter, if specified in the ELF executable header.
+    pub interp: Option<ResolvedInterpElf>,
+    /// Arguments to be passed to the new process.
+    pub argv: Vec<CString>,
+    /// The environment to initialize for the new process.
+    pub environ: Vec<CString>,
+}
+
+/// Holds a resolved ELF interpreter VMO.
+pub struct ResolvedInterpElf {
+    /// A file handle to the resolved ELF interpreter.
+    file: FileHandle,
+    /// A VMO to the resolved ELF interpreter.
+    vmo: zx::Vmo,
+}
+
+/// Resolves a file handle into a validated executable ELF.
+pub fn resolve_executable(
     current_task: &CurrentTask,
     executable: FileHandle,
-    argv: &Vec<CString>,
-    environ: &Vec<CString>,
-) -> Result<ThreadStartInfo, Errno> {
-    *current_task.argv.write() = argv.clone();
-    let main_elf = load_elf(current_task, &executable, &current_task.mm)?;
-    let interp_elf = if let Some(interp_hdr) = main_elf
-        .headers
+    argv: Vec<CString>,
+    environ: Vec<CString>,
+) -> Result<ResolvedElf, Errno> {
+    let vmo =
+        executable.get_vmo(current_task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
+    let elf_headers = elf_parse::Elf64Headers::from_vmo(&vmo).map_err(elf_parse_error_to_errno)?;
+    let interp = if let Some(interp_hdr) = elf_headers
         .program_header_with_type(elf_parse::SegmentType::Interp)
         .map_err(|_| errno!(EINVAL))?
     {
+        // The ELF header specified an ELF interpreter.
+        // Read the path and load this ELF as well.
         let mut interp = vec![0; interp_hdr.filesz as usize];
-        main_elf
-            .vmo
-            .read(&mut interp, interp_hdr.offset as u64)
+        vmo.read(&mut interp, interp_hdr.offset as u64)
             .map_err(|status| from_status_like_fdio!(status))?;
-        let interp = CStr::from_bytes_with_nul(&interp)
-            .map_err(|_| errno!(EINVAL))?
-            .to_str()
-            .map_err(|_| errno!(EINVAL))?;
-        let interp_file = current_task.open_file(interp.as_bytes(), OpenFlags::RDONLY)?;
-        Some(load_elf(current_task, &interp_file, &current_task.mm)?)
+        let interp = CStr::from_bytes_with_nul(&interp).map_err(|_| errno!(EINVAL))?;
+        let interp_file = current_task.open_file(interp.to_bytes(), OpenFlags::RDONLY)?;
+        let interp_vmo = interp_file
+            .get_vmo(current_task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
+        Some(ResolvedInterpElf { file: interp_file, vmo: interp_vmo })
     } else {
         None
     };
+    Ok(ResolvedElf { file: executable, vmo, interp, argv, environ })
+}
 
-    let entry_elf = (&interp_elf).as_ref().unwrap_or(&main_elf);
+/// Loads a resolved ELF into memory, along with an interpreter if one is defined, and initializes
+/// the stack.
+pub fn load_executable(
+    current_task: &CurrentTask,
+    resolved_elf: ResolvedElf,
+) -> Result<ThreadStartInfo, Errno> {
+    let main_elf = load_elf(resolved_elf.file, resolved_elf.vmo, &current_task.mm)?;
+    let interp_elf = resolved_elf
+        .interp
+        .map(|interp| load_elf(interp.file, interp.vmo, &current_task.mm))
+        .transpose()?;
+
+    let entry_elf = interp_elf.as_ref().unwrap_or(&main_elf);
     let entry = UserAddress::from_ptr(
         entry_elf.headers.file_header().entry.wrapping_add(entry_elf.vaddr_bias),
     );
@@ -246,8 +277,14 @@ pub fn load_executable(
         (AT_ENTRY, main_elf.vaddr_bias.wrapping_add(main_elf.headers.file_header().entry) as u64),
         (AT_SECURE, 0),
     ];
-
-    let stack = populate_initial_stack(&stack_vmo, argv, environ, auxv, stack_base, stack)?;
+    let stack = populate_initial_stack(
+        &stack_vmo,
+        &resolved_elf.argv,
+        &resolved_elf.environ,
+        auxv,
+        stack_base,
+        stack,
+    )?;
 
     let mut mm_state = current_task.mm.state.write();
     mm_state.stack_base = stack_base;
@@ -333,7 +370,7 @@ mod tests {
 
     fn exec_hello_starnix(current_task: &mut CurrentTask) -> Result<(), Errno> {
         let argv = vec![CString::new("bin/hello_starnix").unwrap()];
-        current_task.exec(&argv[0], &argv, &&vec![])?;
+        current_task.exec(argv[0].clone(), argv, vec![])?;
         Ok(())
     }
 
