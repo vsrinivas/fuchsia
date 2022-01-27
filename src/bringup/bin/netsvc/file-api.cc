@@ -71,7 +71,7 @@ tftp_status FileApi::OpenWrite(const char* filename, size_t size) {
     return TFTP_ERR_SHOULD_WAIT;
   }
   if (paver_->exit_code() != ZX_OK) {
-    fprintf(stderr, "paver exited with error: %d\n", paver_->exit_code());
+    fprintf(stderr, "paver exited with error: %s\n", zx_status_get_string(paver_->exit_code()));
     paver_->reset_exit_code();
     return TFTP_ERR_IO;
   }

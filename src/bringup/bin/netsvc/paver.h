@@ -61,6 +61,8 @@ class Paver : public PaverInterface {
   void set_timeout(zx::duration timeout) { timeout_ = timeout; }
 
  private:
+  static constexpr uint32_t kBufferRefWorker = 1 << 0;
+  static constexpr uint32_t kBufferRefApi = 1 << 1;
   // Refer to //zircon/system/fidl/fuchsia.paver/paver.fidl for a list of what
   // these commands translate to.
   enum class Command {
@@ -94,6 +96,8 @@ class Paver : public PaverInterface {
 
   tftp_status ProcessAsFirmwareImage(std::string_view host_filename);
 
+  void ClearBufferRef(uint32_t ref);
+
   std::atomic<bool> in_progress_ = false;
   std::atomic<zx_status_t> exit_code_ = ZX_OK;
 
@@ -123,7 +127,7 @@ class Paver : public PaverInterface {
   fzl::ResizeableVmoMapper buffer_mapper_;
   // Buffer write offset.
   std::atomic<size_t> write_offset_ = 0;
-  std::atomic<unsigned int> buf_refcount_ = 0;
+  std::atomic<uint32_t> buffer_refs_ = 0;
   thrd_t buf_thrd_ = 0;
   sync_completion_t data_ready_;
   std::atomic<bool> aborted_;

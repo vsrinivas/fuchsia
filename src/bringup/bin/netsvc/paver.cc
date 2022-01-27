@@ -58,7 +58,6 @@ int Paver::StreamBuffer() {
       *actual = 0;
       return ZX_OK;
     }
-    sync_completion_reset(&data_ready_);
     size_t write_offset = write_offset_.load();
     while (write_offset == read_offset) {
       // Wait for more data to be written -- we are allowed up to 3 tftp timeouts before
@@ -70,13 +69,13 @@ int Paver::StreamBuffer() {
         result = TFTP_ERR_TIMED_OUT;
         return ZX_ERR_TIMED_OUT;
       }
+      sync_completion_reset(&data_ready_);
       if (aborted_) {
         printf("netsvc: 1 paver aborted, exiting copy thread\n");
         exit_code_.store(ZX_ERR_CANCELED);
         result = TFTP_ERR_BAD_STATE;
         return ZX_ERR_CANCELED;
       }
-      sync_completion_reset(&data_ready_);
       write_offset = write_offset_.load();
     };
     size = std::min(size, write_offset - read_offset);
@@ -109,10 +108,7 @@ int Paver::StreamBuffer() {
   };
 
   auto cleanup = fit::defer([this, &result]() {
-    unsigned int refcount = std::atomic_fetch_sub(&buf_refcount_, 1u);
-    if (refcount == 1) {
-      buffer_mapper_.Reset();
-    }
+    ClearBufferRef(kBufferRefWorker);
 
     paver_svc_ = {};
 
@@ -416,11 +412,7 @@ int Paver::MonitorBuffer() {
   int result = TFTP_NO_ERROR;
 
   auto cleanup = fit::defer([this, &result]() {
-    unsigned int refcount = std::atomic_fetch_sub(&buf_refcount_, 1u);
-    if (refcount == 1) {
-      buffer_mapper_.Reset();
-    }
-
+    ClearBufferRef(kBufferRefWorker);
     paver_svc_ = {};
 
     if (result != 0) {
@@ -441,13 +433,13 @@ int Paver::MonitorBuffer() {
       result = TFTP_ERR_TIMED_OUT;
       return result;
     }
+    sync_completion_reset(&data_ready_);
     if (aborted_) {
       printf("netsvc: 2 paver aborted, exiting copy thread\n");
       exit_code_.store(ZX_ERR_CANCELED);
       result = TFTP_ERR_BAD_STATE;
       return result;
     }
-    sync_completion_reset(&data_ready_);
     write_ndx = write_offset_.load();
   } while (write_ndx < size_);
 
@@ -663,7 +655,7 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
 
   size_ = size;
 
-  buf_refcount_.store(2u);
+  buffer_refs_.store(kBufferRefWorker | kBufferRefApi);
   write_offset_.store(0ul);
   exit_code_.store(0);
   in_progress_.store(true);
@@ -705,17 +697,17 @@ tftp_status Paver::Write(const void* data, size_t* length, off_t offset) {
   return TFTP_NO_ERROR;
 }
 
-void Paver::Close() {
-  unsigned int refcount = std::atomic_fetch_sub(&buf_refcount_, 1u);
-  if (refcount == 1) {
-    buffer_mapper_.Reset();
-  }
-}
+void Paver::Close() { ClearBufferRef(kBufferRefApi); }
 
 void Paver::Abort() {
-  Close();
   aborted_ = true;
   sync_completion_signal(&data_ready_);
+}
+
+void Paver::ClearBufferRef(uint32_t ref) {
+  if (buffer_refs_.fetch_and(~ref) == ref) {
+    buffer_mapper_.Reset();
+  }
 }
 
 }  // namespace netsvc

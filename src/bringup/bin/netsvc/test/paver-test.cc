@@ -606,4 +606,25 @@ TEST_F(PaverTest, BootloaderUsesWriteFirmware) {
   EXPECT_EQ(fake_svc_.fake_paver().last_firmware_type(), "");
 }
 
+TEST_F(PaverTest, DoubleClose) {
+  size_t size = sizeof(kFakeData);
+  fake_svc_.fake_paver().set_expected_payload_size(size);
+  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
+  paver_.Close();
+  paver_.Close();
+  Wait();
+  ASSERT_OK(paver_.exit_code());
+}
+
+TEST_F(PaverTest, AbortFvm) {
+  size_t size = sizeof(kFakeData);
+  fake_svc_.fake_paver().set_expected_payload_size(size * 2);
+  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, size * 2), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
+  paver_.Abort();
+  Wait();
+  ASSERT_STATUS(paver_.exit_code(), ZX_ERR_CANCELED);
+}
+
 }  // namespace
