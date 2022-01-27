@@ -89,7 +89,6 @@ impl<D, I: Ip> RecvIpFrameMeta<D, I> {
 /// implementation.
 pub(crate) trait IpDeviceContext<D: LinkDevice, TimerId, State>:
     DeviceIdContext<D>
-    + NdpHandler<D>
     + CounterContext
     + RngContext
     + DualStateContext<
