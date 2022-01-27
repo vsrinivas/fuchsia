@@ -221,6 +221,14 @@ func (f *Fuzzer) Prepare(conn Connector) error {
 		return fmt.Errorf("error resolving fuzzer package %q: %s", f.pkgUrl, err)
 	}
 
+	// Kill any prior running instances of this fuzzer that may have gotten stuck
+	if err := conn.Command("killall", f.pkgUrl).Run(); err != nil {
+		// `killall` will return -1 if no matching task is found, but this is fine
+		if cmderr, ok := err.(*InstanceCmdError); !ok || cmderr.ReturnCode != 255 {
+			return fmt.Errorf("error killing any existing instances of %q: %s", f.pkgUrl, err)
+		}
+	}
+
 	// Clear any persistent data in the fuzzer's namespace, resetting its state
 	dataPath := f.AbsPath("data/*")
 	if err := conn.Command("rm", "-rf", dataPath).Run(); err != nil {

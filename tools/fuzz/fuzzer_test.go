@@ -65,7 +65,7 @@ func TestPrepare(t *testing.T) {
 		t.Fatalf("failed to prepare fuzzer: %s", err)
 	}
 
-	if !reflect.DeepEqual(conn.CmdHistory, []string{"pkgctl", "rm"}) {
+	if !reflect.DeepEqual(conn.CmdHistory, []string{"pkgctl", "killall", "rm"}) {
 		t.Fatalf("incorrect command history: %v", conn.CmdHistory)
 	}
 }
