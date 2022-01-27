@@ -225,10 +225,13 @@ impl ThermalLoadDriver {
                     "Failed to send shutdown request"
                 );
             } else {
+                // TODO(fxbug.dev/90157, pshickel): Correctly populate driver path
+                let driver_path = String::new();
+
                 let results = self
                     .send_message_to_many(
                         &self.thermal_load_notify_nodes,
-                        &Message::UpdateThermalLoad(new_thermal_load),
+                        &Message::UpdateThermalLoad(new_thermal_load, driver_path),
                     )
                     .await;
 
@@ -551,7 +554,7 @@ mod tests {
         fake_setter_1.set_fake_temperature(Celsius(20.0));
         fake_setter_2.set_fake_temperature(Celsius(40.0));
         mock_thermal_load_receiver.add_msg_response_pair((
-            msg_eq!(UpdateThermalLoad(ThermalLoad(40))),
+            msg_eq!(UpdateThermalLoad(ThermalLoad(40), String::new())),
             msg_ok_return!(UpdateThermalLoad),
         ));
         assert!(thermal_load_driver.update_thermal_load().await.is_ok());
@@ -561,7 +564,7 @@ mod tests {
         fake_setter_1.set_fake_temperature(Celsius(60.0));
         fake_setter_2.set_fake_temperature(Celsius(50.0));
         mock_thermal_load_receiver.add_msg_response_pair((
-            msg_eq!(UpdateThermalLoad(ThermalLoad(60))),
+            msg_eq!(UpdateThermalLoad(ThermalLoad(60), String::new())),
             msg_ok_return!(UpdateThermalLoad),
         ));
         assert!(thermal_load_driver.update_thermal_load().await.is_ok());
@@ -571,7 +574,7 @@ mod tests {
         fake_setter_1.set_fake_temperature(Celsius(80.0));
         fake_setter_2.set_fake_temperature(Celsius(80.0));
         mock_thermal_load_receiver.add_msg_response_pair((
-            msg_eq!(UpdateThermalLoad(ThermalLoad(80))),
+            msg_eq!(UpdateThermalLoad(ThermalLoad(80), String::new())),
             msg_ok_return!(UpdateThermalLoad),
         ));
         assert!(thermal_load_driver.update_thermal_load().await.is_ok());

@@ -37,9 +37,10 @@ pub enum Message {
     /// Arg: a ShutdownRequest indicating the requested shutdown state and reason
     SystemShutdown(ShutdownRequest),
 
-    /// Instruct a node to update its thermal load value
-    /// Arg: a ThermalLoad value which represents the severity of thermal load in the system
-    UpdateThermalLoad(ThermalLoad),
+    /// Communicate a new thermal load value for the given sensor
+    /// Arg0: a ThermalLoad value which represents the severity of thermal load on the given sensor
+    /// Arg1: the topological path which uniquely identifies a specific temperature sensor
+    UpdateThermalLoad(ThermalLoad, String),
 
     /// Get the current performance state
     GetPerformanceState,
@@ -76,6 +77,9 @@ pub enum Message {
     /// Log the end of throttling (due to critical shutdown) with the Platform Metrics node
     /// Arg: timestamp of the event
     LogThrottleEndShutdown(Nanoseconds),
+
+    /// Gets the topological path of the driver associated with the target node
+    GetDriverPath,
 }
 
 /// Defines the return values for each of the Message types from above
@@ -137,6 +141,9 @@ pub enum MessageReturn {
 
     /// There is no arg in this MessageReturn type. It only serves as an ACK.
     LogThrottleEndShutdown,
+
+    /// Arg: the topological path of the driver associated with the target node
+    GetDriverPath(String),
 }
 
 pub type MessageResult = Result<MessageReturn, crate::error::PowerManagerError>;
