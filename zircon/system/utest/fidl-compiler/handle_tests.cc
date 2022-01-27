@@ -335,7 +335,7 @@ type MyStruct = resource struct {
 };
 )FIDL");
 
-  // TODO(fxbug.dev/75112): should include ErrResourceMissingSubtypeProperty
+  // TODO(fxbug.dev/75112): should include ErrResourceRightsPropertyMustReferToBits
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 

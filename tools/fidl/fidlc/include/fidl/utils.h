@@ -19,6 +19,12 @@
 
 namespace fidl::utils {
 
+// Compares pointers by the values they point to.
+template <typename T>
+struct PtrCompare {
+  bool operator()(const T* left, const T* right) const { return *left < *right; }
+};
+
 // Identity function for types, equivalent to C++20 std::type_identity. Often
 // used to prevent arguments from participating in template argument deduction.
 // https://en.cppreference.com/w/cpp/language/template_argument_deduction#Non-deduced_contexts

@@ -10,8 +10,6 @@ namespace fidl::flat {
 
 constexpr std::string_view kChannelTransport = "Channel";
 
-using namespace diagnostics;
-
 bool Typespace::Create(const LibraryMediator& lib, const flat::Name& name,
                        const std::unique_ptr<LayoutParameterList>& parameters,
                        const std::unique_ptr<TypeConstraints>& constraints, const Type** out_type,

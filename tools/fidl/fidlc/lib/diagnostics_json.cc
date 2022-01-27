@@ -8,9 +8,6 @@
 
 namespace fidl {
 
-using diagnostics::Diagnostic;
-using diagnostics::DiagnosticKind;
-
 void DiagnosticsJson::Generate(const Diagnostic* diagnostic) {
   GenerateObject([&]() {
     std::string category = diagnostic->kind == DiagnosticKind::kError ? "error" : "warning";

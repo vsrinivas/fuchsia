@@ -10,8 +10,6 @@
 
 namespace fidl::flat {
 
-using namespace diagnostics;
-
 namespace {
 
 // Compares decls by name lexicographically.
@@ -325,7 +323,7 @@ void SortStep::RunImpl() {
     // so the list should always end up with at least two elements.
     assert(cycle.size() > 1);
 
-    library_->Fail(ErrIncludeCycle, cycle.front()->name.span().value(), cycle);
+    Fail(ErrIncludeCycle, cycle.front()->name.span().value(), cycle);
   }
 }
 

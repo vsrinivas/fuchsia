@@ -14,8 +14,6 @@
 
 namespace fidl::flat {
 
-using namespace diagnostics;
-
 // See RFC-0132 for the origin of this table limit.
 constexpr size_t kMaxTableOrdinals = 64;
 
@@ -211,7 +209,7 @@ bool CompileStep::ResolveOrOperatorConstant(Constant* constant, std::optional<co
   assert(left_operand.kind == right_operand.kind &&
          "left and right operands of or operator must be of the same kind");
   assert(opt_type && "compiler bug: type inference not implemented for or operator");
-  const auto type = TypeResolve(opt_type.value());
+  const auto type = UnderlyingType(opt_type.value());
   if (type == nullptr)
     return false;
   if (type->kind != Type::Kind::kPrimitive) {
@@ -648,7 +646,7 @@ void CompileStep::CompileAttributeEarly(Library* library, Attribute* attribute) 
   CompileStep(library).CompileAttribute(attribute, /* early = */ true);
 }
 
-const Type* CompileStep::TypeResolve(const Type* type) {
+const Type* CompileStep::UnderlyingType(const Type* type) {
   if (type->kind != Type::Kind::kIdentifier) {
     return type;
   }
@@ -993,17 +991,23 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
   // protocol's methods, including those that were composed from transitive
   // child protocols.  This means that child protocols must be compiled prior to
   // this one, or they will not have generated_ordinal64s on their methods, and
-  // will fail the scope check.
+  // will fail the scope check.  Also check for duplicate composed protocols.
+  Scope<const Protocol*> scope;
   for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
     CompileAttributeList(composed_protocol.attributes.get());
+    auto span = composed_protocol.name.span().value();
     auto decl = library_->LookupDeclByName(composed_protocol.name);
     if (!decl) {
-      Fail(ErrUnknownType, composed_protocol.name.span().value(), composed_protocol.name);
+      Fail(ErrUnknownType, span, composed_protocol.name);
       continue;
     }
     if (decl->kind != Decl::Kind::kProtocol) {
-      Fail(ErrComposingNonProtocol, composed_protocol.name.span().value());
+      Fail(ErrComposingNonProtocol, span);
       continue;
+    }
+    auto result = scope.Insert(static_cast<const Protocol*>(decl), span);
+    if (!result.ok()) {
+      Fail(ErrProtocolComposedMultipleTimes, span, result.previous_occurrence());
     }
     CompileDecl(decl);
   }

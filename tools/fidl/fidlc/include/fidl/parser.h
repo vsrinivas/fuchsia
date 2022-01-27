@@ -17,8 +17,6 @@
 
 namespace fidl {
 
-using namespace diagnostics;
-using reporter::Reporter;
 using utils::identity_t;
 
 // See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#_parsing
@@ -27,9 +25,11 @@ class Parser {
  public:
   Parser(Lexer* lexer, Reporter* reporter, ExperimentalFlags experimental_flags);
 
+  // Returns the parsed raw AST, or null if there were unrecoverable errors.
   std::unique_ptr<raw::File> Parse() { return ParseFile(); }
 
-  bool Success() const { return reporter_->errors().size() == 0; }
+  // Returns true if there were no errors, not even recovered ones.
+  bool Success() const { return checkpoint_.NoNewErrors(); }
 
  private:
   // currently the only usecase for this enum is to identify the case where the parser
@@ -370,13 +370,14 @@ class Parser {
   // from".
   // Not to be confused with Parser::Success, which is called after parsing to
   // check if any errors were reported during parsing, regardless of recovery.
-  bool Ok() const { return reporter_->errors().size() == recovered_errors_; }
+  bool Ok() const { return checkpoint_.NumNewErrors() == recovered_errors_; }
   void RecoverOneError() { recovered_errors_++; }
-  void RecoverAllErrors() { recovered_errors_ = reporter_->errors().size(); }
+  void RecoverAllErrors() { recovered_errors_ = checkpoint_.NumNewErrors(); }
   size_t recovered_errors_ = 0;
 
   Lexer* lexer_;
   Reporter* reporter_;
+  const Reporter::Counts checkpoint_;
   const ExperimentalFlags experimental_flags_;
 
   // The stack of information interesting to the currently active ASTScope

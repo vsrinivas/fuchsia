@@ -27,7 +27,8 @@ class ConsumeStep : public StepBase {
  private:
   void RunImpl() override;
 
-  bool RegisterDecl(std::unique_ptr<Decl> decl, Decl** out_decl);
+  // Returns a pointer to the registered decl, or null on failure.
+  Decl* RegisterDecl(std::unique_ptr<Decl> decl);
 
   // Top level declarations
   void ConsumeAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> alias_declaration);
@@ -85,7 +86,8 @@ class ConsumeStep : public StepBase {
   // Attempts to resolve the compound identifier to a name within the context of
   // a library. On failure, reports an errro and returns null.
   std::optional<Name> CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier);
-  bool CreateMethodResult(const std::shared_ptr<NamingContext>& err_variant_context,
+  bool CreateMethodResult(const std::shared_ptr<NamingContext>& success_variant_context,
+                          const std::shared_ptr<NamingContext>& err_variant_context,
                           SourceSpan response_span, raw::ProtocolMethod* method,
                           std::unique_ptr<TypeConstructor> success_variant,
                           std::unique_ptr<TypeConstructor>* out_payload);
@@ -94,7 +96,7 @@ class ConsumeStep : public StepBase {
 
   // This map contains a subset of library_->declarations_ (no imported decls)
   // keyed by `utils::canonicalize(name.decl_name())` rather than `name.key()`.
-  std::map<std::string, Decl*> declarations_by_canonical_name_;
+  std::map<std::string, const Decl*> declarations_by_canonical_name_;
 };
 
 }  // namespace fidl::flat

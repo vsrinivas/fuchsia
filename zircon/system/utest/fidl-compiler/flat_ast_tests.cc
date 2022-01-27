@@ -41,19 +41,18 @@ TEST(FlatAstTests, GoodCompareHandles) {
   rights2Constant->ResolveTo(std::make_unique<HandleRights>(2), nullptr);
   auto rights2Value = static_cast<const HandleRights*>(&rights2Constant->Value());
   fidl::flat::Resource* resource_decl_not_needed = nullptr;
-  HandleType nonnullable_channel_rights1(name_not_important, resource_decl_not_needed, 4,
-                                         HandleSubtype::kChannel, rights1Value,
-                                         Nullability::kNonnullable);
-  HandleType nullable_channel_rights1(name_not_important, resource_decl_not_needed, 4,
-                                      HandleSubtype::kChannel, rights1Value,
-                                      Nullability::kNullable);
-  HandleType nonnullable_event_rights1(name_not_important, resource_decl_not_needed, 5,
-                                       HandleSubtype::kEvent, rights1Value,
-                                       Nullability::kNonnullable);
-  HandleType nullable_event_rights1(name_not_important, resource_decl_not_needed, 5,
-                                    HandleSubtype::kEvent, rights1Value, Nullability::kNullable);
-  HandleType nullable_event_rights2(name_not_important, resource_decl_not_needed, 5,
-                                    HandleSubtype::kEvent, rights2Value, Nullability::kNullable);
+  uint32_t channel_obj_type = 4;
+  uint32_t event_obj_type = 5;
+  HandleType nonnullable_channel_rights1(name_not_important, resource_decl_not_needed,
+                                         channel_obj_type, rights1Value, Nullability::kNonnullable);
+  HandleType nullable_channel_rights1(name_not_important, resource_decl_not_needed,
+                                      channel_obj_type, rights1Value, Nullability::kNullable);
+  HandleType nonnullable_event_rights1(name_not_important, resource_decl_not_needed, event_obj_type,
+                                       rights1Value, Nullability::kNonnullable);
+  HandleType nullable_event_rights1(name_not_important, resource_decl_not_needed, event_obj_type,
+                                    rights1Value, Nullability::kNullable);
+  HandleType nullable_event_rights2(name_not_important, resource_decl_not_needed, event_obj_type,
+                                    rights2Value, Nullability::kNullable);
 
   // Comparison is nullability, then type.
   EXPECT_TRUE(nullable_channel_rights1 < nonnullable_channel_rights1);

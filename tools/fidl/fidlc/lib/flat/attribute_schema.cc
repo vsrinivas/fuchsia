@@ -10,8 +10,6 @@
 
 namespace fidl::flat {
 
-using namespace diagnostics;
-
 AttributeSchema& AttributeSchema::RestrictTo(std::set<Element::Kind> placements) {
   assert(!placements.empty() && "must allow some placements");
   assert(kind_ == AttributeSchema::Kind::kValidateOnly ||

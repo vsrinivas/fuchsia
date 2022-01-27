@@ -22,11 +22,11 @@ namespace fidl {
 // partway through.
 // See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#_lexing
 // for additional context
-class Lexer : private reporter::ReporterMixin {
+class Lexer : private ReporterMixin {
  public:
   // The Lexer assumes the final character is 0. This substantially
   // simplifies advancing to the next character.
-  Lexer(const SourceFile& source_file, reporter::Reporter* reporter)
+  Lexer(const SourceFile& source_file, Reporter* reporter)
       : ReporterMixin(reporter), source_file_(source_file) {
     token_subkinds = {
 #define TOKEN_SUBKIND(Name, Spelling) {Spelling, Token::Subkind::k##Name},

@@ -78,12 +78,12 @@ class CodedTypesGenerator {
   std::vector<FlattenedStructMember> FlattenedStructMembers(const flat::Struct& input);
 
   template <typename FlatType, typename CodedType>
-  using TypeMap = std::map<const FlatType*, const CodedType*, flat::PtrCompare<const FlatType>>;
+  using TypeMap = std::map<const FlatType*, const CodedType*, utils::PtrCompare<const FlatType>>;
 
   template <typename T, typename P = const T*>
   struct MaybeCodedTypeCompare {
     bool operator()(const std::pair<bool, P>& lhs, const std::pair<bool, P>& rhs) const {
-      flat::PtrCompare<T> comparator;
+      utils::PtrCompare<T> comparator;
       bool a_less_b = comparator(lhs.second, rhs.second);
       bool b_less_a = comparator(rhs.second, lhs.second);
       if (!a_less_b && !b_less_a) {

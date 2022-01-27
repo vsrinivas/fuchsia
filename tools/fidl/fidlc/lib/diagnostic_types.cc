@@ -9,7 +9,7 @@
 #include "fidl/raw_ast.h"
 #include "fidl/source_span.h"
 
-namespace fidl::diagnostics::internal {
+namespace fidl::internal {
 
 std::string Display(const std::string& s) { return s; }
 
@@ -133,4 +133,4 @@ std::string Display(const flat::TypeTemplate* t) { return NameFlatName(t->name()
 
 std::string Display(const flat::Name& n) { return std::string(n.full_name()); }
 
-}  // namespace fidl::diagnostics::internal
+}  // namespace fidl::internal

@@ -32,7 +32,6 @@ class TypeTemplate;
 class Name;
 }  // namespace flat
 
-namespace diagnostics {
 namespace internal {
 
 constexpr std::string_view kFormatMarker = "{}";
@@ -173,7 +172,6 @@ struct Diagnostic {
   std::string msg;
 };
 
-}  // namespace diagnostics
 }  // namespace fidl
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_DIAGNOSTIC_TYPES_H_

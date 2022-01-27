@@ -17,8 +17,7 @@ namespace fidl::fmt {
 
 class NewFormatter final {
  public:
-  explicit NewFormatter(size_t cols, reporter::Reporter* reporter)
-      : cols_(cols), reporter_(reporter) {}
+  explicit NewFormatter(size_t cols, Reporter* reporter) : cols_(cols), reporter_(reporter) {}
 
   std::optional<std::string> Format(const fidl::SourceFile& source_file,
                                     const fidl::ExperimentalFlags& experimental_flags) const;
@@ -27,7 +26,7 @@ class NewFormatter final {
   std::string Print(std::unique_ptr<raw::File> ast, size_t original_file_size) const;
 
   const size_t cols_;
-  reporter::Reporter* reporter_;
+  Reporter* reporter_;
 };
 
 }  // namespace fidl::fmt

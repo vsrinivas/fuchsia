@@ -13,8 +13,6 @@
 
 namespace fidl::flat {
 
-using namespace diagnostics;
-
 uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
   switch (subtype) {
     case types::PrimitiveSubtype::kBool:
@@ -834,13 +832,9 @@ void Decl::ForEachMember(const fit::function<void(Element*)>& fn) {
 }
 
 std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
-  std::vector<std::unique_ptr<LayoutParameter>> no_params;
-  std::vector<std::unique_ptr<Constant>> no_constraints;
   return std::make_unique<TypeConstructor>(
-      Name::CreateIntrinsic("uint32"),
-      std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt /* span */),
-      std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt /* span */),
-      std::nullopt);
+      Name::CreateIntrinsic("uint32"), std::make_unique<LayoutParameterList>(),
+      std::make_unique<TypeConstraints>(), /*span=*/std::nullopt);
 }
 
 bool LibraryMediator::ResolveParamAsType(const flat::TypeTemplate* layout,
@@ -979,11 +973,9 @@ TypeConstructor* LiteralLayoutParameter::AsTypeCtor() const { return nullptr; }
 TypeConstructor* TypeLayoutParameter::AsTypeCtor() const { return type_ctor.get(); }
 TypeConstructor* IdentifierLayoutParameter::AsTypeCtor() const {
   if (!as_type_ctor) {
-    std::vector<std::unique_ptr<LayoutParameter>> no_params;
-    std::vector<std::unique_ptr<Constant>> no_constraints;
-    as_type_ctor = std::make_unique<TypeConstructor>(
-        name, std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt),
-        std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt), std::nullopt);
+    as_type_ctor = std::make_unique<TypeConstructor>(name, std::make_unique<LayoutParameterList>(),
+                                                     std::make_unique<TypeConstraints>(),
+                                                     /*span=*/std::nullopt);
   }
 
   return as_type_ctor.get();

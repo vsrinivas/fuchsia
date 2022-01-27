@@ -17,12 +17,6 @@
 
 namespace fidl {
 
-namespace {
-
-using diagnostics::Diagnostic;
-
-}  // namespace
-
 // |JsonWriter| requires the derived type as a template parameter so it can
 // match methods declared with parameter overrides in the derived class.
 //

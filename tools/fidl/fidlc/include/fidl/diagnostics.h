@@ -7,7 +7,7 @@
 
 #include "diagnostic_types.h"
 
-namespace fidl::diagnostics {
+namespace fidl {
 
 // ---------------------------------------------------------------------------
 // Lexer
@@ -26,23 +26,16 @@ constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedId
 constexpr ErrorDef<std::string_view> ErrInvalidIdentifier("invalid identifier '{}'");
 constexpr ErrorDef<std::string_view> ErrInvalidLibraryNameComponent(
     "Invalid library name component {}");
-
-// start new_syntax
-constexpr ErrorDef ErrEmptyConstraints("no constraints specified");
 constexpr ErrorDef ErrInvalidLayoutClass(
     "layouts must be of the class: bits, enum, struct, table, or union.");
 constexpr ErrorDef ErrInvalidWrappedType("wrapped type for bits/enum must be an identifier");
-constexpr ErrorDef ErrEmptyLayoutParameterList("no layout parameters specified");
 constexpr ErrorDef ErrAttributeWithEmptyParens(
     "attributes without arguments must omit the trailing empty parentheses");
 constexpr ErrorDef ErrAttributeArgsMustAllBeNamed(
     "attributes that take multiple arguments must name all of them explicitly");
-// end new_syntax
-
 constexpr ErrorDef ErrMissingOrdinalBeforeMember("missing ordinal before member");
 constexpr ErrorDef ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef ErrOrdinalsMustStartAtOne("ordinals must start at 1");
-constexpr ErrorDef ErrCompoundAliasIdentifier("alias identifiers cannot contain '.'");
 constexpr ErrorDef ErrMustHaveOneMember("must have at least one member");
 constexpr ErrorDef ErrUnrecognizedProtocolMember("unrecognized protocol member");
 constexpr ErrorDef ErrExpectedProtocolMember("expected protocol member");
@@ -56,9 +49,6 @@ constexpr ErrorDef ErrMustHaveNonReservedMember(
     "must have at least one non reserved member; you can use an empty struct to "
     "define a placeholder variant");
 constexpr ErrorDef ErrDocCommentOnParameters("cannot have doc comment on parameters");
-constexpr ErrorDef ErrXunionDeprecated("xunion is deprecated, please use `flexible union` instead");
-constexpr ErrorDef ErrStrictXunionDeprecated(
-    "strict xunion is deprecated, please use `strict union` instead");
 constexpr ErrorDef ErrLibraryImportsMustBeGroupedAtTopOfFile(
     "library imports must be grouped at top-of-file");
 constexpr WarningDef WarnCommentWithinDocCommentBlock(
@@ -104,21 +94,14 @@ constexpr ErrorDef<const raw::AttributeList *> ErrAttributesNotAllowedOnLibraryI
     "no attributes allowed on library import, found: {}");
 constexpr ErrorDef<std::vector<std::string_view>> ErrUnknownLibrary(
     "Could not find library named {}. Did you include its sources with --files?");
-constexpr ErrorDef ErrProtocolComposedMultipleTimes("protocol composed multiple times");
-constexpr ErrorDef ErrDefaultsOnTablesNotSupported("Defaults on table members are not supported.");
-constexpr ErrorDef ErrDefaultsOnUnionsNotSupported("Defaults on union members are not supported.");
+constexpr ErrorDef<SourceSpan> ErrProtocolComposedMultipleTimes(
+    "protocol composed multiple times; previous was at {}");
 constexpr ErrorDef ErrNullableTableMember("Table members cannot be nullable");
 constexpr ErrorDef ErrNullableUnionMember("Union members cannot be nullable");
 
 // ---------------------------------------------------------------------------
 // Library::Compile: SortDeclarations
 // ---------------------------------------------------------------------------
-// NOTE: currently, ErrFailedConstantLookup will never be thrown because
-// ErrCannotResolveConstantValue is caught first.
-// We still keep this error so that SortDeclarations can work "standalone" and
-// does not depend on whether compilation occurs first. This makes it easier to
-// move/reorder later if needed.
-constexpr ErrorDef<flat::Name> ErrFailedConstantLookup("Unable to find the constant named: {}");
 // ErrIncludeCycle is thrown either as part of SortDeclarations or as part of
 // CompileStep, depending on the type of the cycle, because SortDeclarations
 // understands the support for boxed recursive structs, while CompileStep
@@ -143,9 +126,6 @@ constexpr ErrorDef<std::string_view> ErrUnknownBitsMember("unknown bits member '
 constexpr ErrorDef<flat::Name, std::string_view> ErrNewTypesNotAllowed(
     "newtypes not allowed: type declaration {} defines a new type of the existing {} type, which "
     "is not yet supported");
-constexpr ErrorDef ErrAnonymousTypesNotAllowed(
-    "anonymous layouts are not yet supported: layouts must be specified in a `type MyLayout = ...` "
-    "layout introduction statement.");
 constexpr ErrorDef<flat::Name> ErrExpectedValueButGotType("{} is a type, but a value was expected");
 constexpr ErrorDef<flat::Name, flat::Name> ErrMismatchedNameTypeAssignment(
     "mismatched named type assignment: cannot define a constant or default value of type {} "
@@ -320,8 +300,6 @@ constexpr ErrorDef ErrInvalidErrorType(
     "invalid error type: must be int32, uint32 or an enum thereof");
 constexpr ErrorDef<std::string_view, std::set<std::string>> ErrInvalidTransportType(
     "invalid transport type: got {} expected one of {}");
-constexpr ErrorDef<const flat::Attribute *> ErrInvalidAttributeType(
-    "attribute '{}' has an invalid type");
 constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrBoundIsTooBig(
     "'{}' bound of '{}' is too big");
 constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrUnableToParseBound(
@@ -335,22 +313,11 @@ constexpr ErrorDef ErrInvalidGeneratedName("generated name must be a valid ident
 // ---------------------------------------------------------------------------
 constexpr ErrorDef<flat::Name> ErrUnknownType("unknown type {}");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeNullable("{} cannot be nullable");
-
-// old style
 constexpr ErrorDef<const flat::TypeTemplate *> ErrMustBeAProtocol("{} must be a protocol");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotParameterizeAlias(
-    "{}: aliases cannot be parameterized");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBoundTwice("{} cannot bound twice");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotIndicateNullabilityTwice(
     "{} cannot indicate nullability twice");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrMustBeParameterized("{} must be parametrized");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrMustHaveSize("{} must have size");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrMustHaveNonZeroSize("{} must have non-zero size");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeParameterized(
-    "{} cannot be parametrized");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotHaveSize("{} cannot have size");
-
-// new style
 constexpr ErrorDef<const flat::TypeTemplate *, size_t, size_t> ErrWrongNumberOfLayoutParameters(
     "{} expected {} layout parameter(s), but got {}");
 constexpr ErrorDef<const flat::TypeTemplate *, size_t, size_t> ErrTooManyConstraints(
@@ -371,8 +338,6 @@ constexpr ErrorDef ErrBoxedTypeCannotBeNullable(
     "no double optionality, boxes are already optional");
 constexpr ErrorDef<flat::Name> ErrCannotBeBoxed(
     "type {} cannot be boxed, try using optional instead");
-
-// other
 constexpr ErrorDef<flat::Name> ErrResourceMustBeUint32Derived("resource {} must be uint32");
 // TODO(fxbug.dev/75112): add these errors back by adding support in ResolveAs for
 // storing errors
@@ -386,11 +351,10 @@ constexpr ErrorDef ErrHandleSubtypeMustReferToResourceSubtype(
     "the subtype must be a constant referring to the resource's subtype enum");
 constexpr ErrorDef<flat::Name> ErrResourceRightsPropertyMustReferToBits(
     "the rights property must be a bits, but wasn't in resource {}");
-
 constexpr ErrorDef<std::vector<std::string_view>, std::vector<std::string_view>,
                    std::vector<std::string_view>>
     ErrUnusedImport("Library {} imports {} but does not use it. Either use {}, or remove import.");
 
-}  // namespace fidl::diagnostics
+}  // namespace fidl
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_DIAGNOSTICS_H_

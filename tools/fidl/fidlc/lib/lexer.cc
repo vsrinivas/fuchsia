@@ -10,8 +10,6 @@
 
 namespace fidl {
 
-using namespace diagnostics;
-
 namespace {
 
 bool IsIdentifierBody(char c) {

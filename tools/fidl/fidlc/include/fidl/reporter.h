@@ -19,15 +19,9 @@
 #include "token.h"
 #include "utils.h"
 
-namespace fidl::reporter {
+namespace fidl {
 
-using diagnostics::Diagnostic;
-using diagnostics::ErrorDef;
-using diagnostics::WarningDef;
 using utils::identity_t;
-
-std::string Format(std::string_view qualifier, std::optional<SourceSpan> span,
-                   std::string_view message, bool color, size_t squiggle_size = 0u);
 
 class Reporter {
  public:
@@ -38,16 +32,13 @@ class Reporter {
   class Counts {
    public:
     explicit Counts(const Reporter* reporter)
-        : reporter_(reporter),
-          num_errors_(reporter->errors().size()),
-          num_warnings_(reporter->warnings().size()) {}
-    bool NoNewErrors() { return num_errors_ == reporter_->errors().size(); }
-    bool NoNewWarnings() { return num_warnings_ == reporter_->warnings().size(); }
+        : reporter_(reporter), num_errors_(reporter->errors().size()) {}
+    bool NoNewErrors() const { return NumNewErrors() == 0; }
+    size_t NumNewErrors() const { return reporter_->errors().size() - num_errors_; }
 
    private:
     const Reporter* reporter_;
     const size_t num_errors_;
-    const size_t num_warnings_;
   };
 
   template <typename... Args>
@@ -71,13 +62,20 @@ class Reporter {
   void PrintReports(bool enable_color) const;
   // Prints a report based on Diagnostics() in JSON format.
   void PrintReportsJson() const;
-  // Creates a checkpoint. This lets you detect if new errors or warnings have
-  // been added since the checkpoint.
+  // Creates a checkpoint. This lets you detect how many new errors
+  // have been added since the checkpoint.
   Counts Checkpoint() const { return Counts(this); }
 
   const std::vector<std::unique_ptr<Diagnostic>>& errors() const { return errors_; }
   const std::vector<std::unique_ptr<Diagnostic>>& warnings() const { return warnings_; }
   void set_warnings_as_errors(bool value) { warnings_as_errors_ = value; }
+
+  // Formats a diagnostic message for the command line, displaying the filename,
+  // line, column, diagnostic kind, and the full line where the span occurs,
+  // with the span indicated by an ASCII "squiggle" below it. Optionally adds
+  // color via ANSI escape codes.
+  static std::string Format(std::string_view qualifier, std::optional<SourceSpan> span,
+                            std::string_view message, bool color);
 
  private:
   void AddError(std::unique_ptr<Diagnostic> error);
@@ -127,6 +125,6 @@ class ReporterMixin {
   Reporter* reporter_;
 };
 
-}  // namespace fidl::reporter
+}  // namespace fidl
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_REPORTER_H_

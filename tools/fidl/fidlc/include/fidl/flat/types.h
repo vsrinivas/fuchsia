@@ -6,6 +6,7 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_TYPES_H_
 
 #include <any>
+#include <utility>
 
 #include "../types.h"
 #include "name.h"
@@ -25,7 +26,7 @@ struct TypeConstraints;
 struct TypeDecl;
 
 struct Type : public Object {
-  virtual ~Type() {}
+  virtual ~Type() = default;
 
   enum struct Kind {
     kArray,
@@ -39,8 +40,8 @@ struct Type : public Object {
     kIdentifier,
   };
 
-  explicit Type(const Name& name, Kind kind, types::Nullability nullability)
-      : name(name), kind(kind), nullability(nullability) {}
+  explicit Type(Name name, Kind kind, types::Nullability nullability)
+      : name(std::move(name)), kind(kind), nullability(nullability) {}
 
   const Name name;
   const Kind kind;
@@ -71,7 +72,7 @@ struct Type : public Object {
     bool IsLessThan() const { return result_ < 0; }
 
    private:
-    Comparison(int result) : result_(result) {}
+    explicit Comparison(int result) : result_(result) {}
 
     const int result_ = 0;
   };
@@ -191,24 +192,18 @@ struct StringType final : public Type, public VectorBaseType {
 
 struct HandleType final : public Type {
   HandleType(const Name& name, Resource* resource_decl)
-      : Type(name, Kind::kHandle, types::Nullability::kNonnullable),
-        resource_decl(resource_decl),
-        // TODO(fxbug.dev/64629): When we are ready to create handle types, we
-        // should have an object type (and/or subtype) determined and not require
-        // these hardcoded defaults.
-        // We need to allow setting a default obj_type in resource_definition
-        // declarations rather than hard-coding.
-        obj_type(static_cast<uint32_t>(types::HandleSubtype::kHandle)),
-        subtype(types::HandleSubtype::kHandle),
-        rights(&kSameRights) {}
+      // TODO(fxbug.dev/64629): The default obj_type and rights should be
+      // determined by the resource_definition, not hardcoded here.
+      : HandleType(name, resource_decl, static_cast<uint32_t>(types::HandleSubtype::kHandle),
+                   &kSameRights, types::Nullability::kNonnullable) {}
 
   HandleType(const Name& name, Resource* resource_decl, uint32_t obj_type,
-             types::HandleSubtype subtype, const HandleRights* rights,
-             types::Nullability nullability)
+             const HandleRights* rights, types::Nullability nullability)
       : Type(name, Kind::kHandle, nullability),
         resource_decl(resource_decl),
         obj_type(obj_type),
-        subtype(subtype),
+        // TODO(fxbug.dev/64629): Remove the subtype field.
+        subtype(static_cast<types::HandleSubtype>(obj_type)),
         rights(rights) {}
 
   Resource* resource_decl;
@@ -287,13 +282,13 @@ enum class TransportSide {
 struct TransportSideType final : public Type {
   TransportSideType(const Name& name, TransportSide end, std::string_view protocol_transport)
       : TransportSideType(name, nullptr, types::Nullability::kNonnullable, end,
-                          std::move(protocol_transport)) {}
+                          protocol_transport) {}
   TransportSideType(const Name& name, const Decl* protocol_decl, types::Nullability nullability,
                     TransportSide end, std::string_view protocol_transport)
       : Type(name, Kind::kTransportSide, nullability),
         protocol_decl(protocol_decl),
         end(end),
-        protocol_transport(std::move(protocol_transport)) {}
+        protocol_transport(protocol_transport) {}
 
   const Decl* protocol_decl;
   const TransportSide end;
@@ -336,7 +331,7 @@ struct BoxType final : public Type {
 };
 
 struct UntypedNumericType final : public Type {
-  UntypedNumericType(const Name& name)
+  explicit UntypedNumericType(const Name& name)
       : Type(name, Kind::kUntypedNumeric, types::Nullability::kNonnullable) {}
   std::any AcceptAny(VisitorAny* visitor) const override;
   bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,

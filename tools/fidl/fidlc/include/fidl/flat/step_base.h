@@ -18,12 +18,12 @@ class Library;
 // first error. For certain major steps, we abort compilation if the step fails,
 // meaning later steps can rely on invariants from that step succeeding. See
 // Library::Compile for the logic.
-class StepBase : protected reporter::ReporterMixin {
+class StepBase : protected ReporterMixin {
  public:
   explicit StepBase(Library* library);
   // TODO(fxbug.dev/90281): Remove this constructor. It is currently needed
   // because in types_tests.cc sometimes the library is null.
-  explicit StepBase(Library* library, reporter::Reporter* reporter)
+  explicit StepBase(Library* library, Reporter* reporter)
       : ReporterMixin(reporter), library_(library) {}
   StepBase(const StepBase&) = delete;
 

@@ -27,6 +27,7 @@
 #include "flat/types.h"
 #include "flat/typespace.h"
 #include "flat/values.h"
+#include "ordinals.h"
 #include "reporter.h"
 #include "type_shape.h"
 #include "types.h"
@@ -43,14 +44,7 @@ class SourceElement;
 
 namespace fidl::flat {
 
-using reporter::Reporter;
-using reporter::ReporterMixin;
 using utils::identity_t;
-
-template <typename T>
-struct PtrCompare {
-  bool operator()(const T* left, const T* right) const { return *left < *right; }
-};
 
 class Typespace;
 struct Decl;
@@ -163,7 +157,7 @@ struct TypeDecl : public Decl, public Object {
 
 struct TypeConstructor;
 struct TypeAlias;
-class Protocol;
+struct Protocol;
 
 // This is a struct used to group together all data produced during compilation
 // that might be used by consumers that are downstream from type compilation
@@ -325,6 +319,7 @@ struct IdentifierLayoutParameter final : public LayoutParameter {
 };
 
 struct LayoutParameterList {
+  LayoutParameterList() = default;
   explicit LayoutParameterList(std::vector<std::unique_ptr<LayoutParameter>> items,
                                std::optional<SourceSpan> span)
       : items(std::move(items)), span(span) {}
@@ -335,6 +330,7 @@ struct LayoutParameterList {
 };
 
 struct TypeConstraints {
+  TypeConstraints() = default;
   explicit TypeConstraints(std::vector<std::unique_ptr<Constant>> items,
                            std::optional<SourceSpan> span)
       : items(std::move(items)), span(span) {}
@@ -632,8 +628,7 @@ struct Union final : public TypeDecl {
   std::any AcceptAny(VisitorAny* visitor) const override;
 };
 
-class Protocol final : public TypeDecl {
- public:
+struct Protocol final : public TypeDecl {
   struct Method : public Element {
     Method(Method&&) = default;
     Method& operator=(Method&&) = default;
@@ -931,10 +926,6 @@ class Libraries {
   std::map<std::string, AttributeSchema, std::less<>> attribute_schemas_;
 };
 
-using MethodHasher = fit::function<raw::Ordinal64(
-    const std::vector<std::string_view>& library_name, const std::string_view& protocol_name,
-    const std::string_view& selector_name, const raw::SourceElement& source_element)>;
-
 class Library : public Element, private ReporterMixin {
   friend class StepBase;
   friend class ConsumeStep;
@@ -948,8 +939,8 @@ class Library : public Element, private ReporterMixin {
 
  public:
   Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace,
-          MethodHasher method_hasher, ExperimentalFlags experimental_flags)
-      : Element(Element::Kind::kLibrary, nullptr),
+          ordinals::MethodHasher method_hasher, ExperimentalFlags experimental_flags)
+      : Element(Element::Kind::kLibrary, std::make_unique<AttributeList>()),
         ReporterMixin(reporter),
         all_libraries_(all_libraries),
         typespace_(typespace),
@@ -1013,7 +1004,7 @@ class Library : public Element, private ReporterMixin {
   Dependencies dependencies_;
   const Libraries* all_libraries_;
   Typespace* typespace_;
-  const MethodHasher method_hasher_;
+  const ordinals::MethodHasher method_hasher_;
   const ExperimentalFlags experimental_flags_;
   VirtualSourceFile generated_source_file_{"generated"};
 };

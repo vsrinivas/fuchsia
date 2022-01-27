@@ -143,9 +143,7 @@ class TestLibrary final {
       std::string_view beginning(source_file->data().data(), 0);
       fidl::SourceSpan span(beginning, *source_file);
       const auto& error = reporter_->errors().at(0);
-      size_t squiggle_size = error->span.data().size();
-      auto error_msg =
-          fidl::reporter::Format("error", error->span, error->msg, false, squiggle_size);
+      auto error_msg = fidl::Reporter::Format("error", error->span, error->msg, /*color=*/false);
       findings->emplace_back(span, "parser-error", error_msg + "\n");
       return false;
     }

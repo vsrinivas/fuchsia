@@ -79,26 +79,23 @@ TEST(ReporterTests, MakeWarningThenReportIt) {
                 "This test warning has one string param 'param1' and another 'param2'.");
 }
 
-TEST(ReporterTests, CheckpointNoNewErrors) {
+TEST(ReporterTests, CheckpointNumNewErrors) {
   Reporter reporter;
   VirtualSourceFile file("fake");
   SourceSpan span("span text", file);
   reporter.Fail(ErrTest, span, "1", "");
-  auto checkpoint = reporter.Checkpoint();
-  EXPECT_TRUE(checkpoint.NoNewErrors());
-  reporter.Fail(ErrTest, span, "2", "");
-  EXPECT_FALSE(checkpoint.NoNewErrors());
-}
 
-TEST(ReporterTests, CheckpointNoNewWarnings) {
-  Reporter reporter;
-  VirtualSourceFile file("fake");
-  SourceSpan span("span text", file);
-  reporter.Warn(WarnTest, span, "1", "");
   auto checkpoint = reporter.Checkpoint();
-  EXPECT_TRUE(checkpoint.NoNewWarnings());
-  reporter.Warn(WarnTest, span, "2", "");
-  EXPECT_FALSE(checkpoint.NoNewWarnings());
+  EXPECT_EQ(checkpoint.NumNewErrors(), 0);
+  EXPECT_TRUE(checkpoint.NoNewErrors());
+
+  reporter.Fail(ErrTest, span, "2", "");
+  EXPECT_EQ(checkpoint.NumNewErrors(), 1);
+  EXPECT_FALSE(checkpoint.NoNewErrors());
+
+  reporter.Fail(ErrTest, span, "3", "");
+  EXPECT_EQ(checkpoint.NumNewErrors(), 2);
+  EXPECT_FALSE(checkpoint.NoNewErrors());
 }
 
 }  // namespace

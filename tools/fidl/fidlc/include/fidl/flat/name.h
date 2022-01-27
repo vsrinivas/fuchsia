@@ -202,10 +202,7 @@ class Name final {
     return Name(nullptr, IntrinsicNameContext(std::move(name)), std::nullopt);
   }
 
-  Name(const Name& other) noexcept
-      : library_(other.library_),
-        name_context_(other.name_context_),
-        member_name_(other.member_name_) {}
+  Name(const Name& other) noexcept = default;
 
   Name(Name&& other) noexcept
       : library_(other.library_),

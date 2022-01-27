@@ -12,8 +12,6 @@
 
 namespace fidl::flat {
 
-using reporter::Reporter;
-
 class CompileStep;
 
 // AttributeArgSchema defines a schema for a single argument in an attribute.

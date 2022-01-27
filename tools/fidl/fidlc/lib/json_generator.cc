@@ -739,17 +739,16 @@ void JSONGenerator::Generate(const flat::TypeConstructor& value) {
       Indent();
       EmitNewlineWithIndent();
       if (server_end) {
-        // TODO(fxbug.dev/70186): We need to emit a "fake" arg for server
-        // ends - create a TypeConstructor to simulate this argument
-        std::vector<std::unique_ptr<flat::LayoutParameter>> no_params;
-        std::vector<std::unique_ptr<flat::Constant>> no_constraints;
-        flat::TypeConstructor type_ctor(server_end->protocol_decl->name,
-                                        std::make_unique<flat::LayoutParameterList>(
-                                            std::move(no_params), std::nullopt /* span */),
-                                        std::make_unique<flat::TypeConstraints>(
-                                            std::move(no_constraints), std::nullopt /* span */),
-                                        std::nullopt);
-        Generate(type_ctor);
+        // TODO(fxbug.dev/70186): Because the JSON IR still uses request<P>
+        // instead of server_end:P, we have to hardcode the P argument here.
+        GenerateObject([&]() {
+          GenerateObjectMember("name", server_end->protocol_decl->name, Position::kFirst);
+          GenerateObjectPunctuation(Position::kSubsequent);
+          EmitObjectKey("args");
+          EmitArrayBegin();
+          EmitArrayEnd();
+          GenerateObjectMember("nullable", types::Nullability::kNonnullable);
+        });
       } else {
         Generate(*invocation.element_type_raw);
       }

@@ -10,9 +10,7 @@
 #include <cassert>
 #include <sstream>
 
-namespace fidl::reporter {
-
-using diagnostics::DiagnosticKind;
+namespace fidl {
 
 static std::string MakeSquiggle(std::string_view surrounding_line, int column) {
   std::string squiggle;
@@ -28,8 +26,9 @@ static std::string MakeSquiggle(std::string_view surrounding_line, int column) {
   return squiggle;
 }
 
-std::string Format(std::string_view qualifier, std::optional<SourceSpan> span,
-                   std::string_view message, bool color, size_t squiggle_size) {
+// static
+std::string Reporter::Format(std::string_view qualifier, std::optional<SourceSpan> span,
+                             std::string_view message, bool color) {
   const std::string_view bold = color ? "\033[1m" : "";
   const std::string_view bold_red = color ? "\033[1;31m" : "";
   const std::string_view bold_green = color ? "\033[1;32m" : "";
@@ -48,10 +47,8 @@ std::string Format(std::string_view qualifier, std::optional<SourceSpan> span,
          "A single line should not contain a newline character");
 
   std::string squiggle = MakeSquiggle(surrounding_line, position.column);
-  if (squiggle_size != 0u) {
-    --squiggle_size;
-  }
-  squiggle += std::string(squiggle_size, '~');
+  assert(!span->data().empty() && "span should not be empty");
+  squiggle += std::string(span->data().size() - 1, '~');
 
   // Some tokens (like string literals) can span multiple lines. Truncate the
   // string to just one line at most.
@@ -136,9 +133,8 @@ std::vector<Diagnostic*> Reporter::Diagnostics() const {
 void Reporter::PrintReports(bool enable_color) const {
   const auto diags = Diagnostics();
   for (const auto& diag : diags) {
-    size_t squiggle_size = diag->span.data().size();
     std::string qualifier = diag->kind == DiagnosticKind::kError ? "error" : "warning";
-    auto msg = Format(qualifier, diag->span, diag->msg, enable_color, squiggle_size);
+    auto msg = Format(qualifier, diag->span, diag->msg, enable_color);
     fprintf(stderr, "%s\n", msg.c_str());
   }
 
@@ -156,4 +152,4 @@ void Reporter::PrintReportsJson() const {
   fprintf(stderr, "%s", fidl::DiagnosticsJson(Diagnostics()).Produce().str().c_str());
 }
 
-}  // namespace fidl::reporter
+}  // namespace fidl

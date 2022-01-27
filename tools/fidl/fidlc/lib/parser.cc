@@ -57,6 +57,7 @@ void add(std::vector<std::unique_ptr<T>>* elements, Fn producer_fn) {
 Parser::Parser(Lexer* lexer, Reporter* reporter, ExperimentalFlags experimental_flags)
     : lexer_(lexer),
       reporter_(reporter),
+      checkpoint_(reporter->Checkpoint()),
       experimental_flags_(experimental_flags),
       state_(State::kNormal) {
   last_token_ = Lex();

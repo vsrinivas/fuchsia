@@ -9,8 +9,6 @@
 
 namespace fidl::flat {
 
-using namespace diagnostics;
-
 void VerifyResourcenessStep::RunImpl() {
   for (const Decl* decl : library_->declaration_order_) {
     VerifyDecl(decl);

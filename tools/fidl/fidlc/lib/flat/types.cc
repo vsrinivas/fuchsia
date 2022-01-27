@@ -9,8 +9,6 @@
 
 namespace fidl::flat {
 
-using namespace diagnostics;
-
 bool ArrayType::ApplyConstraints(const flat::LibraryMediator& lib,
                                  const TypeConstraints& constraints, const TypeTemplate* layout,
                                  std::unique_ptr<Type>* out_type,
@@ -222,8 +220,7 @@ bool HandleType::ApplyConstraints(const flat::LibraryMediator& lib,
     merged_rights = out_params->rights_resolved;
   }
 
-  *out_type = std::make_unique<HandleType>(name, resource_decl, merged_obj_type,
-                                           types::HandleSubtype(merged_obj_type), merged_rights,
+  *out_type = std::make_unique<HandleType>(name, resource_decl, merged_obj_type, merged_rights,
                                            merged_nullability);
   return true;
 }

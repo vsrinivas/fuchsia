@@ -82,7 +82,7 @@ class CompileStep : public StepBase {
   // Type methods
   bool TypeCanBeConst(const Type* type);
   bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
-  const Type* TypeResolve(const Type* type);
+  const Type* UnderlyingType(const Type* type);
   const Type* InferType(Constant* constant);
   ConstantValue::Kind ConstantValuePrimitiveKind(types::PrimitiveSubtype primitive_subtype);
   bool VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
@@ -91,7 +91,7 @@ class CompileStep : public StepBase {
   // Validates a single member of a bits or enum. On success, returns nullptr,
   // and on failure returns an error. The caller will set the diagnostic span.
   template <typename MemberType>
-  using MemberValidator = fit::function<std::unique_ptr<diagnostics::Diagnostic>(
+  using MemberValidator = fit::function<std::unique_ptr<Diagnostic>(
       const MemberType& member, const AttributeList* attributes, SourceSpan span)>;
 
   // Validation methods
