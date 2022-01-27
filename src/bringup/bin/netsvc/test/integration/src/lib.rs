@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async_utils::stream::FlattenUnorderedExt as _;
 use fidl::endpoints::ProtocolMarker as _;
 use fixture::fixture;
-use fuchsia_zircon as zx;
+use fuchsia_zircon::{self as zx, HandleBased as _};
 use futures::{Future, FutureExt as _, StreamExt as _, TryStreamExt as _};
 use itertools::Itertools as _;
 use net_types::Witness as _;
@@ -15,6 +14,7 @@ use netsvc_proto::{debuglog, netboot, tftp};
 use packet::{FragmentedBuffer as _, InnerPacketBuilder as _, ParseBuffer as _, Serializer};
 use std::borrow::Cow;
 use std::convert::{TryFrom as _, TryInto as _};
+use test_case::test_case;
 use zerocopy::{FromBytes, LayoutVerified, NativeEndian, Unaligned, U32};
 
 const NETSVC_URL: &str = "#meta/netsvc.cm";
@@ -114,23 +114,37 @@ where
                 let () = rs
                     // NB: Extracted into separate function because rustfmt was
                     // getting confused by deep indentation.
-                    .map(|r| process_paver_request(r.expect("paver request stream error")))
-                    .flatten_unordered()
-                    .collect()
+                    .for_each_concurrent(None, |r| {
+                        process_paver_request(r.expect("paver request stream error"))
+                    })
                     .await;
             }
         }
     });
 
-    fn process_paver_request(
-        req: fidl_fuchsia_paver::PaverRequest,
-    ) -> impl futures::Stream<Item = ()> {
+    fn validate_image(payload: &[u8]) {
+        let bytes = IntoIterator::into_iter(payload).tuples().enumerate().fold(
+            0,
+            |bytes, (index, (a, b, c, d))| {
+                let value = u32::from_ne_bytes([*a, *b, *c, *d]);
+                let index = u32::try_from(index).expect("index doesn't fit u32");
+                assert_eq!(value, index);
+                bytes + std::mem::size_of::<u32>()
+            },
+        );
+        // Ensure we consumed all bytes. This fails if
+        // the image length is not a multiple of
+        // `size_of::<u32>()`.
+        assert_eq!(bytes, PAVE_IMAGE_LEN_USIZE);
+    }
+
+    async fn process_paver_request(req: fidl_fuchsia_paver::PaverRequest) {
         match req {
             fidl_fuchsia_paver::PaverRequest::FindDataSink { data_sink, control_handle: _ } => {
                 data_sink
                     .into_stream()
                     .expect("failed to get request stream")
-                    .map(|r| {
+                    .for_each(|r| async move {
                         match r.expect("data sink request error") {
                             fidl_fuchsia_paver::DataSinkRequest::WriteAsset {
                                 responder,
@@ -146,54 +160,101 @@ where
                                 assert_eq!(size, PAVE_IMAGE_LEN);
                                 let mut payload = [0u8; PAVE_IMAGE_LEN_USIZE];
                                 vmo.read(&mut payload[..], 0).expect("failed to read payload");
-                                let bytes = IntoIterator::into_iter(payload)
-                                    .tuples()
-                                    .enumerate()
-                                    .fold(0, |bytes, (index, (a, b, c, d))| {
-                                        let value = u32::from_ne_bytes([a, b, c, d]);
-                                        let index =
-                                            u32::try_from(index).expect("index doesn't fit u32");
-                                        assert_eq!(value, index);
-                                        bytes + std::mem::size_of::<u32>()
-                                    });
-                                // Ensure we consumed all bytes. This fails if
-                                // the image length is not a multiple of
-                                // `size_of::<u32>()`.
-                                assert_eq!(bytes, PAVE_IMAGE_LEN_USIZE);
-
+                                let () = validate_image(&payload[..]);
+                                responder.send(zx::Status::OK.into_raw())
+                            }
+                            fidl_fuchsia_paver::DataSinkRequest::WriteVolumes {
+                                payload,
+                                responder,
+                            } => {
+                                let () = process_streamed_payload(
+                                    payload.into_proxy().expect("failed to get proxy"),
+                                )
+                                .await;
                                 responder.send(zx::Status::OK.into_raw())
                             }
                             r => panic!("unexpected request {:?}", r),
                         }
                         .expect("failed to send response")
                     })
-                    .left_stream()
+                    .await
             }
             fidl_fuchsia_paver::PaverRequest::FindBootManager {
                 boot_manager,
                 control_handle: _,
-            } => boot_manager
-                .into_stream()
-                .expect("failed to get request stream")
-                .map(|r| {
-                    match r.expect("boot manager request error") {
-                        fidl_fuchsia_paver::BootManagerRequest::QueryActiveConfiguration {
-                            responder,
-                        } => {
-                            // Return an error so netsvc thinks there's no
-                            // active configuration.
-                            responder.send(&mut Err(zx::Status::NOT_FOUND.into_raw()))
+            } => {
+                boot_manager
+                    .into_stream()
+                    .expect("failed to get request stream")
+                    .for_each(|r| {
+                        match r.expect("boot manager request error") {
+                            fidl_fuchsia_paver::BootManagerRequest::QueryActiveConfiguration {
+                                responder,
+                            } => {
+                                // Return an error so netsvc thinks there's no
+                                // active configuration.
+                                responder.send(&mut Err(zx::Status::NOT_FOUND.into_raw()))
+                            }
+                            fidl_fuchsia_paver::BootManagerRequest::Flush { responder } => {
+                                responder.send(zx::Status::OK.into_raw())
+                            }
+                            r => panic!("unexpected request {:?}", r),
                         }
-                        fidl_fuchsia_paver::BootManagerRequest::Flush { responder } => {
-                            responder.send(zx::Status::OK.into_raw())
-                        }
-                        r => panic!("unexpected request {:?}", r),
-                    }
-                    .expect("failed to send response")
-                })
-                .right_stream(),
+                        .expect("failed to send response");
+                        futures::future::ready(())
+                    })
+                    .await
+            }
             r => panic!("unexpected request {:?}", r),
         }
+    }
+
+    async fn process_streamed_payload(payload_stream: fidl_fuchsia_paver::PayloadStreamProxy) {
+        let vmo = zx::Vmo::create(PAVE_IMAGE_LEN).expect("failed to create VMO");
+        let dup = vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("failed to duplicate VMO");
+        let () =
+            zx::Status::ok(payload_stream.register_vmo(dup).await.expect("calling register_vmo"))
+                .expect("register_vmo failed");
+
+        let stream = futures::stream::unfold(payload_stream, |proxy| async move {
+            let read_result = proxy.read_data().await.expect("calling read data");
+            Some((read_result, proxy))
+        });
+        let mut payload = [0u8; PAVE_IMAGE_LEN_USIZE];
+        let payload = async_utils::fold::fold_while(
+            stream,
+            (0, &mut payload[..], vmo),
+            |(payload_offset, payload, vmo), read_result| {
+                futures::future::ready(match read_result {
+                    fidl_fuchsia_paver::ReadResult::Eof(eof) => {
+                        assert!(eof);
+                        async_utils::fold::FoldWhile::Done(&payload[..payload_offset])
+                    }
+                    fidl_fuchsia_paver::ReadResult::Err(err) => {
+                        panic!("error streaming payload {}", zx::Status::from_raw(err))
+                    }
+                    fidl_fuchsia_paver::ReadResult::Info(fidl_fuchsia_paver::ReadInfo {
+                        size,
+                        offset,
+                    }) => {
+                        let size = usize::try_from(size).expect("convert to usize");
+                        let () = vmo
+                            .read(&mut payload[payload_offset..payload_offset + size], offset)
+                            .expect("failed to read VMO");
+                        async_utils::fold::FoldWhile::Continue((
+                            payload_offset + size,
+                            payload,
+                            vmo,
+                        ))
+                    }
+                })
+            },
+        )
+        .await
+        .short_circuited()
+        .expect("stream ended unexpectedly");
+        assert_eq!(payload.len(), PAVE_IMAGE_LEN_USIZE);
+        let () = validate_image(payload);
     }
 
     let realm = sandbox
@@ -722,10 +783,7 @@ async fn get_board_info(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
     }
 }
 
-#[fixture(with_netsvc_and_netstack)]
-#[fuchsia_async::run_singlethreaded(test)]
-async fn pave(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
-    const IMAGE_FILE: &str = "<<image>>zirconr.img";
+async fn pave(image_name: &str, sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
     let device = discover(&sock, scope_id).await;
 
     const TIMEOUT_OPTION_SECS: u8 = std::u8::MAX;
@@ -733,6 +791,7 @@ async fn pave(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
     const WINDOW_SIZE: u16 = 4;
 
     async fn start_transfer(
+        image_name: &str,
         sock: &fuchsia_async::net::UdpSocket,
         addr: std::net::Ipv6Addr,
         scope_id: u32,
@@ -740,7 +799,7 @@ async fn pave(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
         let () = send_message(
             tftp::TransferRequestBuilder::new_with_options(
                 tftp::TransferDirection::Write,
-                IMAGE_FILE,
+                image_name,
                 tftp::TftpMode::OCTET,
                 [
                     tftp::TftpOption::TransferSize(PAVE_IMAGE_LEN).not_forced(),
@@ -766,7 +825,7 @@ async fn pave(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
         .await;
     }
 
-    let () = start_transfer(&sock, device, scope_id).await;
+    let () = start_transfer(image_name, &sock, device, scope_id).await;
 
     let socket_addr = std::net::SocketAddrV6::new(
         device,
@@ -850,7 +909,7 @@ async fn pave(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
     // The best way to observe the paver terminating is to attempt to start a
     // new transfer.
     loop {
-        let () = start_transfer(&sock, device, scope_id).await;
+        let () = start_transfer(image_name, &sock, device, scope_id).await;
         let mut pb = &mut buffer[..];
         let pkt = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr).await;
         match pkt {
@@ -868,6 +927,16 @@ async fn pave(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
             p => panic!("unexpected packet {:?}", p),
         }
     }
+}
+
+#[test_case("zirconr.img"; "recovery")]
+#[test_case("sparse.fvm"; "fvm")]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn pave_image(image: &str) {
+    with_netsvc_and_netstack(&format!("pave-{}", image), |sock, scope_id| async move {
+        let () = pave(&format!("<<image>>{}", image), sock, scope_id).await;
+    })
+    .await;
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
