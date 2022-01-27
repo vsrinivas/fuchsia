@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     fuchsia_component::server as fserver,
-    fuchsia_component_test::mock::MockHandles,
+    fuchsia_component_test::new::LocalComponentHandles,
     futures::{Future, StreamExt},
 };
 
@@ -27,7 +27,7 @@ use {
 /// * We might add a `serve_clients_concurrently()` method, if a
 ///   need arises.
 async fn serve_clients<RequestStreamType, ServiceParamType, ServiceFutureType, ServiceFuncType>(
-    mock_handles: MockHandles,
+    handles: LocalComponentHandles,
     service_func: ServiceFuncType,
     service_param: ServiceParamType,
 ) -> Result<(), Error>
@@ -41,14 +41,14 @@ where
 {
     let mut fs = fserver::ServiceFs::new();
     fs.dir("svc").add_fidl_service(|stream| stream);
-    fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.for_each(|stream| service_func(service_param.clone(), stream)).await;
     Ok(())
 }
 
 /// Implements `TestRealComponent` for a mock.
 ///
-/// Requires that the mock has a `moniker` field, and a `serve_one_client()`
+/// Requires that the mock has a `name` field, and a `serve_one_client()`
 /// method.
 ///
 /// If the component is instantiated multiple times, the instances of the
@@ -58,18 +58,18 @@ macro_rules! impl_test_realm_component {
     ($component_type:ty) => {
         #[async_trait::async_trait]
         impl crate::traits::test_realm_component::TestRealmComponent for $component_type {
-            fn moniker(&self) -> &Moniker {
-                &self.moniker
+            fn ref_(&self) -> fuchsia_component_test::new::Ref {
+                fuchsia_component_test::new::Ref::child(&self.name)
             }
 
             async fn add_to_builder(&self, builder: &RealmBuilder) {
                 let slf = self.clone();
                 builder
-                    .add_mock_child(
-                        self.moniker().clone(),
-                        move |mock_handles| {
+                    .add_local_child(
+                        &self.name,
+                        move |handles| {
                             Box::pin(crate::mocks::serve_clients(
-                                mock_handles,
+                                handles,
                                 Self::serve_one_client,
                                 slf.clone(),
                             ))

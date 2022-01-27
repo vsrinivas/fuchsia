@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_media_sounds::{PlaySoundError, PlayerRequest, PlayerRequestStream},
-    fuchsia_component_test::{ChildOptions, Moniker, RealmBuilder},
+    fuchsia_component_test::new::{ChildOptions, RealmBuilder},
     futures::{channel::mpsc::UnboundedSender, TryStreamExt},
 };
 
@@ -32,18 +32,18 @@ pub(crate) enum SoundPlayerRequestName {
 /// same `UnbounderSender`.
 #[derive(Clone)]
 pub(crate) struct SoundPlayerMock {
-    moniker: Moniker,
+    name: String,
     behavior: SoundPlayerBehavior,
     request_relay_write_end: Option<UnboundedSender<SoundPlayerRequestName>>,
 }
 
 impl SoundPlayerMock {
-    pub(crate) fn new<M: Into<Moniker>>(
-        moniker: M,
+    pub(crate) fn new<M: Into<String>>(
+        name: M,
         behavior: SoundPlayerBehavior,
         request_relay_write_end: Option<UnboundedSender<SoundPlayerRequestName>>,
     ) -> Self {
-        Self { moniker: moniker.into(), behavior, request_relay_write_end }
+        Self { name: name.into(), behavior, request_relay_write_end }
     }
 
     fn add_sound_from_file(&self) -> Result<i64, i32> {

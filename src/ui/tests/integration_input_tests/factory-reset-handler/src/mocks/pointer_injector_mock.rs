@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_ui_pointerinjector_configuration::{
         SetupRequest, SetupRequestStream, SetupWatchViewportResponder,
     },
-    fuchsia_component_test::{ChildOptions, Moniker, RealmBuilder},
+    fuchsia_component_test::new::{ChildOptions, RealmBuilder},
     futures::TryStreamExt,
 };
 
@@ -18,13 +18,13 @@ use {
 /// c) lets the second 'WatchViewport' hang indefinitely.
 #[derive(Clone)]
 pub(crate) struct PointerInjectorMock {
-    moniker: Moniker,
+    name: String,
     viewport: pointerinjector::Viewport,
 }
 
 impl PointerInjectorMock {
-    pub(crate) fn new<M: Into<Moniker>>(moniker: M, viewport: pointerinjector::Viewport) -> Self {
-        Self { moniker: moniker.into(), viewport }
+    pub(crate) fn new<M: Into<String>>(name: M, viewport: pointerinjector::Viewport) -> Self {
+        Self { name: name.into(), viewport }
     }
 
     async fn serve_one_client(self, mut request_stream: SetupRequestStream) {

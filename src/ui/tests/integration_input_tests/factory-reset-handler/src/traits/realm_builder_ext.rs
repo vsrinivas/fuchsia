@@ -5,7 +5,7 @@
 use {
     crate::traits::test_realm_component::TestRealmComponent,
     fidl::endpoints::DiscoverableProtocolMarker,
-    fuchsia_component_test::{RealmBuilder, RouteBuilder, RouteEndpoint},
+    fuchsia_component_test::new::{Capability, RealmBuilder, Ref, Route},
 };
 
 /// Ergonomic extension of RealmBuilder.
@@ -62,9 +62,10 @@ impl RealmBuilderExt for RealmBuilder {
     ) {
         RealmBuilder::add_route(
             &self,
-            RouteBuilder::protocol_marker::<D>()
-                .source(RouteEndpoint::above_root())
-                .targets(vec![RouteEndpoint::component(destination.moniker().to_string())]),
+            Route::new()
+                .capability(Capability::protocol::<D>())
+                .from(Ref::parent())
+                .to(destination.ref_()),
         )
         .await
         .unwrap();
@@ -76,9 +77,10 @@ impl RealmBuilderExt for RealmBuilder {
     ) {
         RealmBuilder::add_route(
             &self,
-            RouteBuilder::protocol_marker::<D>()
-                .source(RouteEndpoint::component(source.moniker().to_string()))
-                .targets(vec![RouteEndpoint::above_root()]),
+            Route::new()
+                .capability(Capability::protocol::<D>())
+                .from(source.ref_())
+                .to(Ref::parent()),
         )
         .await
         .unwrap();
@@ -91,9 +93,10 @@ impl RealmBuilderExt for RealmBuilder {
     ) {
         RealmBuilder::add_route(
             &self,
-            RouteBuilder::protocol_marker::<D>()
-                .source(RouteEndpoint::component(source.moniker().to_string()))
-                .targets(vec![RouteEndpoint::component(destination.moniker().to_string())]),
+            Route::new()
+                .capability(Capability::protocol::<D>())
+                .from(source.ref_())
+                .to(destination.ref_()),
         )
         .await
         .unwrap();

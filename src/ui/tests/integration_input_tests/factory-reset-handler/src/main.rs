@@ -13,7 +13,7 @@ use {
         traits::realm_builder_ext::RealmBuilderExt as _,
     },
     fidl_fuchsia_ui_pointerinjector as pointerinjector,
-    fuchsia_component_test::{Moniker, RealmBuilder, RealmInstance},
+    fuchsia_component_test::new::{RealmBuilder, RealmInstance},
     futures::StreamExt,
     input_synthesis::{modern_backend, synthesizer},
 };
@@ -31,19 +31,14 @@ async fn assemble_realm(
 
     // Declare packaged components.
     let scenic = PackagedComponent::new_from_legacy_url(
-        Moniker::from("scenic"),
+        "scenic",
         "fuchsia-pkg://fuchsia.com/factory-reset-handler-test#meta/scenic.cmx",
     );
-    let display_provider = PackagedComponent::new_from_modern_url(
-        Moniker::from("fake_display_provider"),
-        "#meta/hdcp.cm",
-    );
-    let cobalt = PackagedComponent::new_from_modern_url(
-        Moniker::from("mock_cobalt"),
-        "#meta/mock_cobalt.cm",
-    );
+    let display_provider =
+        PackagedComponent::new_from_modern_url("fake_display_provider", "#meta/hdcp.cm");
+    let cobalt = PackagedComponent::new_from_modern_url("mock_cobalt", "#meta/mock_cobalt.cm");
     let input_pipeline = PackagedComponent::new_from_legacy_url(
-        Moniker::from("input_pipeline"),
+        "input_pipeline",
         "fuchsia-pkg://fuchsia.com/factory-reset-handler-test#meta/input-pipeline.cmx",
     );
 
@@ -115,9 +110,9 @@ const DEFAULT_VIEWPORT: pointerinjector::Viewport = pointerinjector::Viewport {
     ..pointerinjector::Viewport::EMPTY
 };
 
-const SOUND_PLAYER_MONIKER: &'static str = "mock_sound_player";
-const POINTER_INJECTOR_MONIKER: &'static str = "mock_pointer_injector";
-const FACTORY_RESET_MONIKER: &'static str = "mock_factory_reset";
+const SOUND_PLAYER_NAME: &'static str = "mock_sound_player";
+const POINTER_INJECTOR_NAME: &'static str = "mock_pointer_injector";
+const FACTORY_RESET_NAME: &'static str = "mock_factory_reset";
 
 #[fuchsia::test]
 async fn sound_is_played_during_factory_reset() {
@@ -126,14 +121,13 @@ async fn sound_is_played_during_factory_reset() {
     let (reset_request_relay_write_end, mut reset_request_relay_read_end) =
         futures::channel::mpsc::unbounded();
     let sound_player_mock = SoundPlayerMock::new(
-        SOUND_PLAYER_MONIKER,
+        SOUND_PLAYER_NAME,
         SoundPlayerBehavior::Succeed,
         Some(sound_request_relay_write_end),
     );
-    let pointer_injector_mock =
-        PointerInjectorMock::new(POINTER_INJECTOR_MONIKER, DEFAULT_VIEWPORT);
+    let pointer_injector_mock = PointerInjectorMock::new(POINTER_INJECTOR_NAME, DEFAULT_VIEWPORT);
     let factory_reset_mock =
-        FactoryResetMock::new(FACTORY_RESET_MONIKER, reset_request_relay_write_end);
+        FactoryResetMock::new(FACTORY_RESET_NAME, reset_request_relay_write_end);
     let realm = assemble_realm(sound_player_mock, pointer_injector_mock, factory_reset_mock).await;
 
     // Press buttons for factory reset, and verify that `factory_reset_mock`
@@ -161,11 +155,10 @@ async fn failure_to_load_sound_doesnt_block_factory_reset() {
     let (reset_request_relay_write_end, mut reset_request_relay_read_end) =
         futures::channel::mpsc::unbounded();
     let sound_player_mock =
-        SoundPlayerMock::new(SOUND_PLAYER_MONIKER, SoundPlayerBehavior::FailAddSound, None);
-    let pointer_injector_mock =
-        PointerInjectorMock::new(POINTER_INJECTOR_MONIKER, DEFAULT_VIEWPORT);
+        SoundPlayerMock::new(SOUND_PLAYER_NAME, SoundPlayerBehavior::FailAddSound, None);
+    let pointer_injector_mock = PointerInjectorMock::new(POINTER_INJECTOR_NAME, DEFAULT_VIEWPORT);
     let factory_reset_mock =
-        FactoryResetMock::new(FACTORY_RESET_MONIKER, reset_request_relay_write_end);
+        FactoryResetMock::new(FACTORY_RESET_NAME, reset_request_relay_write_end);
     let realm = assemble_realm(sound_player_mock, pointer_injector_mock, factory_reset_mock).await;
 
     // Press buttons for factory reset, and verify that `factory_reset_mock`
@@ -183,11 +176,10 @@ async fn failure_to_play_sound_doesnt_block_factory_reset() {
     let (reset_request_relay_write_end, mut reset_request_relay_read_end) =
         futures::channel::mpsc::unbounded();
     let sound_player_mock =
-        SoundPlayerMock::new(SOUND_PLAYER_MONIKER, SoundPlayerBehavior::FailPlaySound, None);
-    let pointer_injector_mock =
-        PointerInjectorMock::new(POINTER_INJECTOR_MONIKER, DEFAULT_VIEWPORT);
+        SoundPlayerMock::new(SOUND_PLAYER_NAME, SoundPlayerBehavior::FailPlaySound, None);
+    let pointer_injector_mock = PointerInjectorMock::new(POINTER_INJECTOR_NAME, DEFAULT_VIEWPORT);
     let factory_reset_mock =
-        FactoryResetMock::new(FACTORY_RESET_MONIKER, reset_request_relay_write_end);
+        FactoryResetMock::new(FACTORY_RESET_NAME, reset_request_relay_write_end);
     let realm = assemble_realm(sound_player_mock, pointer_injector_mock, factory_reset_mock).await;
 
     // Press buttons for factory reset, and verify that `factory_reset_mock`

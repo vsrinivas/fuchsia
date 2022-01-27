@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_recovery::{FactoryResetRequest, FactoryResetRequestStream},
-    fuchsia_component_test::{ChildOptions, Moniker, RealmBuilder},
+    fuchsia_component_test::new::{ChildOptions, RealmBuilder},
     fuchsia_zircon as zx,
     futures::{channel::mpsc::UnboundedSender, TryStreamExt},
 };
@@ -17,16 +17,16 @@ use {
 /// same `UnbounderSender`.
 #[derive(Clone)]
 pub(crate) struct FactoryResetMock {
-    moniker: Moniker,
+    name: String,
     request_relay_write_end: UnboundedSender<()>,
 }
 
 impl FactoryResetMock {
-    pub(crate) fn new<M: Into<Moniker>>(
-        moniker: M,
+    pub(crate) fn new<M: Into<String>>(
+        name: M,
         request_relay_write_end: UnboundedSender<()>,
     ) -> Self {
-        Self { moniker: moniker.into(), request_relay_write_end }
+        Self { name: name.into(), request_relay_write_end }
     }
 
     async fn serve_one_client(self, mut request_stream: FactoryResetRequestStream) {
