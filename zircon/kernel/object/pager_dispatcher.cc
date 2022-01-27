@@ -90,7 +90,8 @@ fbl::RefPtr<PagerProxy> PagerDispatcher::ReleaseProxy(PagerProxy* proxy) {
   // proxy might not be in the container since we could be racing with a call to on_zero_handles,
   // but that should only happen if we have triggered_zero_handles_. In particular the caller should
   // not be trying to release a proxy that it knows is not here.
-  DEBUG_ASSERT(proxy->InContainer() != triggered_zero_handles_);
+  DEBUG_ASSERT_MSG(proxy->InContainer() != triggered_zero_handles_, "triggered_zero_handles_ is %d",
+                   triggered_zero_handles_);
   return proxy->InContainer() ? proxies_.erase(*proxy) : nullptr;
 }
 
