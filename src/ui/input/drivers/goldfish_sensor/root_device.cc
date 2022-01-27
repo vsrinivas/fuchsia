@@ -136,7 +136,9 @@ void RootDevice::OnReadSensor(PipeIo::ReadResult result) {
   input_devices_.DispatchReportToDevice(report.name, report);
 }
 
-zx_status_t RootDevice::Bind() { return DdkAdd(ddk::DeviceAddArgs("goldfish-sensor")); }
+zx_status_t RootDevice::Bind() {
+  return DdkAdd(ddk::DeviceAddArgs("goldfish-sensor").set_flags(DEVICE_ADD_NON_BINDABLE));
+}
 
 void RootDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
