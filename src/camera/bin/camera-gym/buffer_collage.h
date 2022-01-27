@@ -159,9 +159,14 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   // Disconnects all channels, quits the loop, and calls the stop callback.
   void Stop();
 
-  // Registers the provider interface's error handler to invoke Stop.
+  // Registers the provided interface's error handler to invoke Stop.
   template <typename T>
   void SetStopOnError(fidl::InterfacePtr<T>& p, std::string name = T::Name_);
+
+  // Registers the provided interface's error handler to invoke normal tear down upon any error.
+  // Primarily designed to handle respond to any BufferCollection errors by removing CollectionView.
+  template <typename T>
+  void SetRemoveCollectionViewOnError(fidl::InterfacePtr<T>& p, uint32_t view_id, std::string name);
 
   // See PostShowBuffer.
   void ShowBuffer(uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence,

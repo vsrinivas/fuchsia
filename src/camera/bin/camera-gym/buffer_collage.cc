@@ -168,7 +168,8 @@ fpromise::promise<uint32_t> BufferCollage::AddCollection(
     auto& view = collection_views_[collection_id];
     std::ostringstream oss;
     oss << " (" << collection_id << ")";
-    SetStopOnError(view.collection, "Collection" + oss.str());
+    auto name = "Collection (" + std::to_string(collection_id) + ")";
+    SetRemoveCollectionViewOnError(view.collection, collection_id, name);
     SetStopOnError(view.image_pipe, "Image Pipe" + oss.str());
     view.image_format = image_format;
     constexpr uint32_t kTitleWidth = 768;
@@ -289,7 +290,9 @@ void BufferCollage::RemoveCollection(uint32_t id) {
   view_->DetachChild(*collection_view.highlight_node);
   view_->DetachChild(collection_view.description_node->node);
   session_->ReleaseResource(image_pipe_id);  // De-allocate ImagePipe2 scenic side
-  collection_view.collection->Close();
+  if (collection_view.collection.is_bound()) {
+    collection_view.collection->Close();
+  }
 
   // Frame capture: Unmap all buffers.
   if (frame_capture_) {
@@ -379,6 +382,19 @@ void BufferCollage::SetStopOnError(fidl::InterfacePtr<T>& p, std::string name) {
     FX_PLOGS(ERROR, status) << name << " disconnected unexpectedly.";
     p = nullptr;
     Stop();
+  });
+}
+
+template <typename T>
+void BufferCollage::SetRemoveCollectionViewOnError(fidl::InterfacePtr<T>& p, uint32_t view_id,
+                                                   std::string name) {
+  p.set_error_handler([this, view_id, name](zx_status_t status) {
+    FX_PLOGS(WARNING, status) << name << " view_id=" << view_id << " disconnected unexpectedly.";
+    if (collection_views_.find(view_id) == collection_views_.end()) {
+      FX_LOGS(INFO) << name << " view_id=" << view_id << " already removed.";
+      return;
+    }
+    RemoveCollection(view_id);
   });
 }
 
