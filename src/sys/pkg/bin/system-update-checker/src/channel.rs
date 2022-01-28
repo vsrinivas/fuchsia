@@ -205,12 +205,19 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         self.target_channel.lock().clone()
     }
 
-    /// Returns the update URL for the current target channel, if the channel exists.
+    /// Returns the update URL for the current target channel, if the channel exists and is not
+    /// empty.
     pub fn get_target_channel_update_url(&self) -> Option<String> {
         let target_channel = self.get_target_channel()?;
         match self.channel_package_map.get(&target_channel) {
             Some(url) => Some(url.to_string()),
-            None => Some(format!("fuchsia-pkg://{}/update", target_channel)),
+            None => {
+                if target_channel.is_empty() {
+                    None
+                } else {
+                    Some(format!("fuchsia-pkg://{}/update", target_channel))
+                }
+            }
         }
     }
 
@@ -901,6 +908,9 @@ mod tests {
             channel_manager.get_target_channel_update_url(),
             Some("fuchsia-pkg://qwertyuiop.example.com/update".to_owned())
         );
+
+        channel_manager.set_target_channel(String::new()).await.unwrap();
+        assert_eq!(channel_manager.get_target_channel_update_url(), None);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
