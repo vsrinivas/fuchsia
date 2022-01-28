@@ -8,8 +8,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_FILE,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_POSIX_DEPRECATED,
-        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
@@ -48,8 +47,6 @@ impl vfs::directory::entry::DirectoryEntry for MetaAsFile {
             return;
         }
 
-        let flags = flags
-            & !(OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE | OPEN_FLAG_POSIX_DEPRECATED);
         if flags
             & (OPEN_RIGHT_WRITABLE
                 | OPEN_RIGHT_EXECUTABLE
@@ -196,22 +193,6 @@ mod tests {
             Some(Ok(fidl_fuchsia_io::FileEvent::OnOpen_{ s, info: None}))
                 if s == zx::Status::NOT_DIR.into_raw()
         );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn directory_entry_open_unsets_posix_flags() {
-        let (_env, meta_as_file) = TestEnv::new().await;
-        let meta_as_file = Arc::new(meta_as_file);
-
-        let () = crate::verify_open_adjusts_flags(
-            &(meta_as_file as Arc<dyn DirectoryEntry>),
-            OPEN_RIGHT_READABLE
-                | OPEN_FLAG_POSIX_WRITABLE
-                | OPEN_FLAG_POSIX_EXECUTABLE
-                | OPEN_FLAG_POSIX_DEPRECATED,
-            OPEN_RIGHT_READABLE,
-        )
-        .await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

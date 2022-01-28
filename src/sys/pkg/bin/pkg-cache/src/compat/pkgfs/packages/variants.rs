@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    super::super::BitFlags as _,
     anyhow::anyhow,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_POSIX_DEPRECATED,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_WRITABLE,
     },
     fuchsia_hash::Hash,
@@ -45,21 +47,6 @@ impl PkgfsPackagesVariants {
         Self { contents, blobfs }
     }
 
-    #[cfg(test)]
-    fn proxy(self: &Arc<Self>) -> fidl_fuchsia_io::DirectoryProxy {
-        let (proxy, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-
-        let () = ImmutableConnection::create_connection(
-            ExecutionScope::new(),
-            self.clone(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-            server_end.into_channel().into(),
-        );
-
-        proxy
-    }
-
     fn variants(&self) -> BTreeSet<PackageVariant> {
         self.contents.keys().cloned().collect()
     }
@@ -78,15 +65,21 @@ impl DirectoryEntry for PkgfsPackagesVariants {
         mut path: Path,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        let flags = flags.unset(OPEN_FLAG_POSIX_WRITABLE);
+        let flags = if flags.is_any_set(OPEN_FLAG_POSIX_DEPRECATED) {
+            flags.unset(OPEN_FLAG_POSIX_DEPRECATED).set(OPEN_FLAG_POSIX_EXECUTABLE)
+        } else {
+            flags
+        };
+
         // This directory and all child nodes are read-only
-        if flags
-            & (OPEN_RIGHT_WRITABLE
+        if flags.is_any_set(
+            OPEN_RIGHT_WRITABLE
                 | OPEN_FLAG_CREATE
                 | OPEN_FLAG_CREATE_IF_ABSENT
                 | OPEN_FLAG_TRUNCATE
-                | OPEN_FLAG_APPEND)
-            != 0
-        {
+                | OPEN_FLAG_APPEND,
+        ) {
             return send_on_open_with_error(flags, server_end, zx::Status::NOT_SUPPORTED);
         }
 
@@ -207,7 +200,7 @@ mod tests {
         super::*,
         crate::compat::pkgfs::testing::FakeSink,
         assert_matches::assert_matches,
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        fidl_fuchsia_io::{OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         maplit::{btreeset, convert_args, hashmap},
         std::str::FromStr,
@@ -218,6 +211,22 @@ mod tests {
             let (blobfs, _) = blobfs::Client::new_mock();
 
             Arc::new(PkgfsPackagesVariants::new(contents, blobfs))
+        }
+
+        fn proxy(self: &Arc<Self>, flags: u32) -> fidl_fuchsia_io::DirectoryProxy {
+            let (proxy, server_end) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+
+            vfs::directory::entry::DirectoryEntry::open(
+                Arc::clone(&self),
+                ExecutionScope::new(),
+                flags,
+                0,
+                Path::dot(),
+                server_end.into_channel().into(),
+            );
+
+            proxy
         }
     }
 
@@ -389,7 +398,7 @@ mod tests {
     async fn open_rejects_invalid_name() {
         let pkgfs_packages_variants = PkgfsPackagesVariants::new_test(package_variant_hashmap! {});
 
-        let proxy = pkgfs_packages_variants.proxy();
+        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE);
 
         assert_matches!(
             io_util::directory::open_directory(
@@ -406,12 +415,54 @@ mod tests {
     async fn open_rejects_missing_package() {
         let pkgfs_packages_variants = PkgfsPackagesVariants::new_test(package_variant_hashmap! {});
 
-        let proxy = pkgfs_packages_variants.proxy();
+        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE);
 
         assert_matches!(
             io_util::directory::open_directory(&proxy, "missing", OPEN_RIGHT_READABLE).await,
             Err(io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn open_unsets_posix_writable() {
+        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
+        let (metafar_blob, _) = package.contents();
+        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
+        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
+
+        let pkgfs_packages_variants = Arc::new(PkgfsPackagesVariants::new(
+            package_variant_hashmap! {
+                "0" => metafar_blob.merkle,
+            },
+            blobfs_client,
+        ));
+
+        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_WRITABLE);
+
+        let (status, flags) = proxy.node_get_flags().await.unwrap();
+        let () = zx::Status::ok(status).unwrap();
+        assert_eq!(flags, OPEN_RIGHT_READABLE);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn open_converts_posix_deprecated_to_posix_exec() {
+        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
+        let (metafar_blob, _) = package.contents();
+        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
+        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
+
+        let pkgfs_packages_variants = Arc::new(PkgfsPackagesVariants::new(
+            package_variant_hashmap! {
+                "0" => metafar_blob.merkle,
+            },
+            blobfs_client,
+        ));
+
+        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_DEPRECATED);
+
+        let (status, flags) = proxy.node_get_flags().await.unwrap();
+        let () = zx::Status::ok(status).unwrap();
+        assert_eq!(flags, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -428,7 +479,7 @@ mod tests {
             blobfs_client,
         ));
 
-        let proxy = pkgfs_packages_variants.proxy();
+        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE);
 
         let dir =
             io_util::directory::open_directory(&proxy, "0", OPEN_RIGHT_READABLE).await.unwrap();
@@ -453,7 +504,7 @@ mod tests {
             blobfs_client,
         ));
 
-        let proxy = pkgfs_packages_variants.proxy();
+        let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE);
 
         let file = io_util::directory::open_file(&proxy, "0/meta/message", OPEN_RIGHT_READABLE)
             .await
