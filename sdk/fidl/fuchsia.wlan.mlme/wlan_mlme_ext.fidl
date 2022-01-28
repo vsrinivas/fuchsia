@@ -22,12 +22,6 @@ type EapolIndication = struct {
     data bytes;
 };
 
-type MacRole = strict enum {
-    CLIENT = 1;
-    AP = 2;
-    MESH = 3;
-};
-
 // BandInfo groups capabilities defined per band.
 // This grouping is the industry's de factor standard.
 type BandCapabilities = struct {
@@ -43,7 +37,7 @@ type BandCapabilities = struct {
 
 type DeviceInfo = struct {
     sta_addr ieee80211.MacAddr;
-    role MacRole;
+    role fuchsia.wlan.common.MacRole;
     bands vector<BandCapabilities>;
     driver_features vector<fuchsia.wlan.common.DriverFeature>:32;
     qos_capable bool;

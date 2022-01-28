@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.wlan.device/cpp/wire.h>
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <lib/ddk/device.h>
@@ -108,23 +109,22 @@ void Device::Unbind() {
   dispatcher_.InitiateShutdown([this] { device_async_remove(zxdev_); });
 }
 
-void ConvertSupportedMacRoles(::std::vector<wlan_device::MacRole>* fidl_supported_mac_roles,
-                              wlan_info_mac_role_t banjo_supported_mac_roles) {
+void ConvertSupportedMacRoles(::std::vector<wlan_common::MacRole>* fidl_supported_mac_roles,
+                              const mac_role_t* banjo_supported_mac_roles_list,
+                              size_t banjo_supported_mac_roles_count) {
   fidl_supported_mac_roles->resize(0);
-  if (banjo_supported_mac_roles & WLAN_INFO_MAC_ROLE_CLIENT) {
-    fidl_supported_mac_roles->push_back(wlan_device::MacRole::CLIENT);
-  }
-  if (banjo_supported_mac_roles & WLAN_INFO_MAC_ROLE_AP) {
-    fidl_supported_mac_roles->push_back(wlan_device::MacRole::AP);
-  }
-  if (banjo_supported_mac_roles & WLAN_INFO_MAC_ROLE_MESH) {
-    fidl_supported_mac_roles->push_back(wlan_device::MacRole::MESH);
+  for (size_t i = 0; i < banjo_supported_mac_roles_count; i++) {
+    mac_role_t mac_role = banjo_supported_mac_roles_list[i];
+    if (mac_role == MAC_ROLE_CLIENT || mac_role == MAC_ROLE_AP || mac_role == MAC_ROLE_MESH) {
+      fidl_supported_mac_roles->push_back(static_cast<wlan_common::MacRole>(mac_role));
+    }
+    lwarn("encountered unknown MAC role: %u", mac_role);
   }
 }
 
 static void ConvertPhyInfo(wlan_device::PhyInfo* fidl_info, const wlanphy_impl_info_t* banjo_info) {
-  // supported_mac_roles
-  ConvertSupportedMacRoles(&fidl_info->supported_mac_roles, banjo_info->supported_mac_roles);
+  ConvertSupportedMacRoles(&fidl_info->supported_mac_roles, banjo_info->supported_mac_roles_list,
+                           banjo_info->supported_mac_roles_count);
 }
 
 void Device::Query(QueryCallback callback) {
@@ -133,6 +133,12 @@ void Device::Query(QueryCallback callback) {
   wlanphy_impl_info_t phy_impl_info;
   resp.status = wlanphy_impl_.ops->query(wlanphy_impl_.ctx, &phy_impl_info);
   ConvertPhyInfo(&resp.info, &phy_impl_info);
+
+  // Free the dynamically allocated parts of fuchsia.hardware.wlanphyimpl/WlanphyImplInfo
+  if (nullptr != phy_impl_info.supported_mac_roles_list) {
+    free(static_cast<void*>(const_cast<mac_role_t*>(phy_impl_info.supported_mac_roles_list)));
+  }
+
   callback(std::move(resp));
 }
 
@@ -142,16 +148,16 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallbac
   ltrace_fn();
   wlan_device::CreateIfaceResponse resp;
 
-  wlan_info_mac_role_t role = 0;
+  mac_role_t role = 0;
   switch (req.role) {
-    case wlan_device::MacRole::CLIENT:
-      role = WLAN_INFO_MAC_ROLE_CLIENT;
+    case wlan_common::MacRole::CLIENT:
+      role = MAC_ROLE_CLIENT;
       break;
-    case wlan_device::MacRole::AP:
-      role = WLAN_INFO_MAC_ROLE_AP;
+    case wlan_common::MacRole::AP:
+      role = MAC_ROLE_AP;
       break;
-    case wlan_device::MacRole::MESH:
-      role = WLAN_INFO_MAC_ROLE_MESH;
+    case wlan_common::MacRole::MESH:
+      role = MAC_ROLE_MESH;
       break;
   }
 

@@ -171,7 +171,7 @@ pub(crate) struct ClientStatusResponseWrapper(
 );
 
 #[derive(Serialize)]
-#[serde(remote = "fidl_fuchsia_wlan_device::MacRole")]
+#[serde(remote = "fidl_fuchsia_wlan_common::MacRole")]
 pub(crate) enum MacRoleDef {
     Client = 1,
     Ap = 2,
@@ -200,7 +200,7 @@ pub(crate) struct DriverFeatureWrapper(
 #[derive(Serialize)]
 pub(crate) struct QueryIfaceResponseDef {
     #[serde(with = "MacRoleDef")]
-    pub role: fidl_fuchsia_wlan_device::MacRole,
+    pub role: fidl_fuchsia_wlan_common::MacRole,
     pub id: u16,
     pub phy_id: u16,
     pub phy_assigned_id: u16,

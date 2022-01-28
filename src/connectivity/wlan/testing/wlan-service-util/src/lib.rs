@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_wlan_device::MacRole,
+    fidl_fuchsia_wlan_common::MacRole,
     fidl_fuchsia_wlan_device_service::{
         DestroyIfaceRequest, DeviceMonitorProxy, DeviceServiceProxy,
     },
@@ -79,7 +79,7 @@ pub async fn get_wlan_sta_addr(
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_wlan_device::MacRole,
+        fidl_fuchsia_wlan_common::MacRole,
         fidl_fuchsia_wlan_device_service::{
             DeviceServiceMarker, DeviceServiceRequest, DeviceServiceRequestStream, IfaceListItem,
             ListIfacesResponse, QueryIfaceResponse,
@@ -99,7 +99,7 @@ mod tests {
 
     fn fake_iface_query_response(
         sta_addr: [u8; 6],
-        role: fidl_fuchsia_wlan_device::MacRole,
+        role: fidl_fuchsia_wlan_common::MacRole,
     ) -> QueryIfaceResponse {
         QueryIfaceResponse {
             role,
@@ -129,7 +129,7 @@ mod tests {
     pub fn respond_to_query_iface_request(
         exec: &mut TestExecutor,
         req_stream: &mut DeviceServiceRequestStream,
-        role: fidl_fuchsia_wlan_device::MacRole,
+        role: fidl_fuchsia_wlan_common::MacRole,
         fake_mac_addr: Option<[u8; 6]>,
     ) {
         use fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK};

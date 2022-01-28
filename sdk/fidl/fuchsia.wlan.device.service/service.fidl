@@ -35,7 +35,7 @@ type IfaceListItem = struct {
 
 type QueryIfaceResponse = struct {
     /// The role the iface is currently operating in, e.g., client role.
-    role fuchsia.wlan.device.MacRole;
+    role fuchsia.wlan.common.MacRole;
     /// The iface's global ID.
     id uint16;
     /// Iface's PHY ID.
@@ -54,7 +54,7 @@ type ListIfacesResponse = struct {
 
 type CreateIfaceRequest = struct {
     phy_id uint16;
-    role fuchsia.wlan.device.MacRole;
+    role fuchsia.wlan.common.MacRole;
     sta_addr ieee80211.MacAddr;
 };
 
@@ -209,7 +209,8 @@ protocol DeviceMonitor {
     GetSupportedMacRoles(struct {
         phy_id uint16;
     }) -> (struct {
-        supported_mac_roles vector<fuchsia.wlan.device.MacRole>:<8, optional>;
+        supported_mac_roles
+                vector<fuchsia.wlan.common.MacRole>:<fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES, optional>;
     });
     WatchDevices(resource struct {
         watcher server_end:DeviceWatcher;

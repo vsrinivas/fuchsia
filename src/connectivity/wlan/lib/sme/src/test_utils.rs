@@ -117,7 +117,7 @@ pub fn wpa1_cipher() -> Cipher {
 pub fn fake_device_info(sta_addr: MacAddr) -> fidl_mlme::DeviceInfo {
     fidl_mlme::DeviceInfo {
         sta_addr,
-        role: fidl_mlme::MacRole::Client,
+        role: fidl_common::MacRole::Client,
         bands: vec![
             fake_2ghz_band_capabilities_vht(),
             fake_band_capabilities_5ghz_vht(ChanWidthSet::TWENTY_FORTY),

@@ -193,8 +193,7 @@ void ArpTest::ScheduleNonArpFrameTx(zx::duration when) {
 void ArpTest::StartAndStopSoftAP() {
   common::MacAddr ap_mac({0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff});
   GenericIfc softap_ifc;
-  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc, std::nullopt, ap_mac),
-            ZX_OK);
+  ASSERT_EQ(SimTest::StartInterface(MAC_ROLE_AP, &softap_ifc, std::nullopt, ap_mac), ZX_OK);
   softap_ifc.StartSoftAp();
   softap_ifc.StopSoftAp();
 }
@@ -203,8 +202,7 @@ void ArpTest::StartAndStopSoftAP() {
 // promiscuous mode is enabled.
 TEST_F(ArpTest, SoftApArpOffload) {
   Init();
-  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_AP, &sim_ifc_, std::nullopt, kOurMac),
-            ZX_OK);
+  ASSERT_EQ(SimTest::StartInterface(MAC_ROLE_AP, &sim_ifc_, std::nullopt, kOurMac), ZX_OK);
   sim_ifc_.StartSoftAp();
 
   // Have the test associate with the AP
@@ -238,8 +236,7 @@ TEST_F(ArpTest, SoftApArpOffload) {
 TEST_F(ArpTest, ClientArpOffload) {
   Init();
 
-  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &sim_ifc_, std::nullopt, kOurMac),
-            ZX_OK);
+  ASSERT_EQ(SimTest::StartInterface(MAC_ROLE_CLIENT, &sim_ifc_, std::nullopt, kOurMac), ZX_OK);
 
   // Start a fake AP
   simulation::FakeAp ap(env_.get(), kTheirMac, SimInterface::kDefaultSoftApSsid,
@@ -274,8 +271,7 @@ TEST_F(ArpTest, ClientArpOffload) {
 TEST_F(ArpTest, SoftAPStartStopDoesNotAffectArpOl) {
   Init();
 
-  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &sim_ifc_, std::nullopt, kOurMac),
-            ZX_OK);
+  ASSERT_EQ(SimTest::StartInterface(MAC_ROLE_CLIENT, &sim_ifc_, std::nullopt, kOurMac), ZX_OK);
 
   // Start a fake AP
   simulation::FakeAp ap(env_.get(), kTheirMac, SimInterface::kDefaultSoftApSsid,
@@ -315,8 +311,7 @@ TEST_F(ArpTest, ClientArpOffloadNoSoftApFeat) {
   // We disable SoftAP feature, so that our driver enabled Arp offload.
   device_->GetSim()->drvr->feat_flags &= (!BIT(BRCMF_FEAT_AP));
 
-  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &sim_ifc_, std::nullopt, kOurMac),
-            ZX_OK);
+  ASSERT_EQ(SimTest::StartInterface(MAC_ROLE_CLIENT, &sim_ifc_, std::nullopt, kOurMac), ZX_OK);
 
   // Start a fake AP
   simulation::FakeAp ap(env_.get(), kTheirMac, SimInterface::kDefaultSoftApSsid,

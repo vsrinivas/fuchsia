@@ -76,7 +76,7 @@ class MvmTest : public SingleApTest {
     mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;
-    mvmvif_->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    mvmvif_->mac_role = MAC_ROLE_CLIENT;
     mvmvif_->ifc.ops = reinterpret_cast<wlan_softmac_ifc_protocol_ops_t*>(
         calloc(1, sizeof(wlan_softmac_ifc_protocol_ops_t)));
     mvm_->mvmvif[0] = mvmvif_;
@@ -365,7 +365,7 @@ class PassiveScanTest : public MvmTest {
     };
 
     mvmvif_sta.mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
-    mvmvif_sta.mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    mvmvif_sta.mac_role = MAC_ROLE_CLIENT;
     mvmvif_sta.ifc.ops = &ops;
     mvmvif_sta.ifc.ctx = &scan_result;
 
@@ -397,7 +397,7 @@ class PassiveUmacScanTest : public FakeUcodeTest {
     mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;
-    mvmvif_->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    mvmvif_->mac_role = MAC_ROLE_CLIENT;
     mvmvif_->ifc.ops = reinterpret_cast<wlan_softmac_ifc_protocol_ops_t*>(
         calloc(1, sizeof(wlan_softmac_ifc_protocol_ops_t)));
     mvm_->mvmvif[0] = mvmvif_;
@@ -415,7 +415,7 @@ class PassiveUmacScanTest : public FakeUcodeTest {
     };
 
     mvmvif_sta_.mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
-    mvmvif_sta_.mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    mvmvif_sta_.mac_role = MAC_ROLE_CLIENT;
     mvmvif_sta_.ifc.ops = &ops_;
     mvmvif_sta_.ifc.ctx = &scan_result_;
 

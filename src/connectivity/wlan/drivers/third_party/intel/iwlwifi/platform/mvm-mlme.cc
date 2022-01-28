@@ -554,11 +554,14 @@ zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
   struct iwl_nvm_data* nvm_data = mvm->nvm_data;
   ZX_ASSERT(nvm_data);
 
-  memset(info, 0, sizeof(*info));
+  *info = {};
 
   // TODO(fxbug.dev/36677): supports AP role
-  info->supported_mac_roles = WLAN_INFO_MAC_ROLE_CLIENT;
+  mac_role_t* supported_mac_roles_list = static_cast<mac_role_t*>(calloc(1, sizeof(mac_role_t)));
+  supported_mac_roles_list[0] = MAC_ROLE_CLIENT;
 
+  info->supported_mac_roles_list = supported_mac_roles_list;
+  info->supported_mac_roles_count = 1;
   return ZX_OK;
 }
 

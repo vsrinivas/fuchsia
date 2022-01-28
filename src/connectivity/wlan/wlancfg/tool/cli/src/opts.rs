@@ -6,7 +6,6 @@
 use clap::arg_enum;
 use eui48::MacAddress;
 use fidl_fuchsia_wlan_common as wlan_common;
-use fidl_fuchsia_wlan_device as wlan;
 use fidl_fuchsia_wlan_policy as wlan_policy;
 use structopt::StructOpt;
 
@@ -46,11 +45,11 @@ arg_enum! {
     }
 }
 
-impl From<RoleArg> for wlan::MacRole {
+impl From<RoleArg> for wlan_common::MacRole {
     fn from(arg: RoleArg) -> Self {
         match arg {
-            RoleArg::Client => wlan::MacRole::Client,
-            RoleArg::Ap => wlan::MacRole::Ap,
+            RoleArg::Client => wlan_common::MacRole::Client,
+            RoleArg::Ap => wlan_common::MacRole::Ap,
         }
     }
 }

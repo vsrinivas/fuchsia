@@ -4,7 +4,6 @@
 library fuchsia.hardware.wlanphyimpl;
 
 using fuchsia.wlan.common;
-using fuchsia.hardware.wlan.phyinfo;
 using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
 
@@ -12,7 +11,7 @@ using zx;
 type WlanphyImplCreateIfaceReq = resource struct {
     /// The station role for this interface. A device may support multiple roles,
     /// but an interface is instantiated with a single role.
-    role fuchsia.hardware.wlan.phyinfo.WlanInfoMacRole;
+    role fuchsia.wlan.common.MacRole;
 
     /// A handle to the direct MLME channel, if supported by the driver.
     mlme_channel zx.handle:CHANNEL;
@@ -26,9 +25,9 @@ type WlanphyImplCreateIfaceReq = resource struct {
 
 /// Info about this WLAN PHY.
 type WlanphyImplInfo = struct {
-    /// Bitmask for MAC roles supported. For an interface, this will be a single
-    /// value.
-    supported_mac_roles fuchsia.hardware.wlan.phyinfo.WlanInfoMacRole;
+    /// MAC roles supported. For an interface, this will be a single value.
+    supported_mac_roles
+            vector<fuchsia.wlan.common.MacRole>:fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES;
 };
 
 const WLANPHY_ALPHA2_LEN uint8 = 2;

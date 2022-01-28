@@ -489,14 +489,14 @@ wlan_mlme::EapolResultCode ConvertEapolResultCode(uint8_t code) {
   }
 }
 
-wlan_mlme::MacRole ConvertMacRole(wlan_info_mac_role_t role) {
+wlan_common::MacRole ConvertMacRole(mac_role_t role) {
   switch (role) {
-    case WLAN_INFO_MAC_ROLE_CLIENT:
-      return wlan_mlme::MacRole::CLIENT;
-    case WLAN_INFO_MAC_ROLE_AP:
-      return wlan_mlme::MacRole::AP;
-    case WLAN_INFO_MAC_ROLE_MESH:
-      return wlan_mlme::MacRole::MESH;
+    case MAC_ROLE_CLIENT:
+      return wlan_common::MacRole::CLIENT;
+    case MAC_ROLE_AP:
+      return wlan_common::MacRole::AP;
+    case MAC_ROLE_MESH:
+      return wlan_common::MacRole::MESH;
     default:
       ZX_ASSERT(0);
   }

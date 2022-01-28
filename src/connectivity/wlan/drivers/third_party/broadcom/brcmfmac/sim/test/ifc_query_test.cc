@@ -25,8 +25,7 @@ TEST_F(SimTest, ClientIfcQuery) {
   ASSERT_EQ(Init(), ZX_OK);
 
   SimInterface client_ifc;
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc, std::nullopt, kDefaultMac),
-            ZX_OK);
+  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc, std::nullopt, kDefaultMac), ZX_OK);
 
   wlan_fullmac_query_info_t ifc_query_result;
   env_->ScheduleNotification(std::bind(&SimInterface::Query, &client_ifc, &ifc_query_result),
@@ -38,7 +37,7 @@ TEST_F(SimTest, ClientIfcQuery) {
   EXPECT_EQ(
       0, memcmp(kDefaultMac.byte, ifc_query_result.sta_addr, fuchsia_wlan_ieee80211_MAC_ADDR_LEN));
 
-  EXPECT_EQ(ifc_query_result.role, WLAN_INFO_MAC_ROLE_CLIENT);
+  EXPECT_EQ(ifc_query_result.role, MAC_ROLE_CLIENT);
 
   // Number of bands shouldn't exceed the maximum allowable
   ASSERT_LE(ifc_query_result.num_bands, (size_t)WLAN_INFO_MAX_BANDS);
@@ -63,7 +62,7 @@ TEST_F(SimTest, BadNchainIovar) {
   ASSERT_EQ(Init(), ZX_OK);
 
   SimInterface client_ifc;
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
 
   // This invalid value of rxchain data has the potential to overflow the driver's internal
   // data structures

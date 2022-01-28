@@ -618,8 +618,8 @@ TEST_F(DeviceTestFixture, SetKeysTooLarge) {
 }
 
 struct EthernetTestFixture : public DeviceTestFixture {
-  void TestEthernetAgainstRole(wlan_info_mac_role_t role);
-  void InitDeviceWithRole(wlan_info_mac_role_t role);
+  void TestEthernetAgainstRole(mac_role_t role);
+  void InitDeviceWithRole(mac_role_t role);
   void SetEthernetOnline(uint32_t expected_status = ETHERNET_STATUS_ONLINE) {
     device_->SetControlledPort(::fuchsia::wlan::mlme::SetControlledPortRequest{
         .state = ::fuchsia::wlan::mlme::ControlledPortState::OPEN});
@@ -639,7 +639,7 @@ struct EthernetTestFixture : public DeviceTestFixture {
 
   ethernet_ifc_protocol_ops_t eth_ops_{};
   ethernet_ifc_protocol_t eth_proto_ = {.ops = &eth_ops_, .ctx = this};
-  wlan_info_mac_role_t role_ = WLAN_INFO_MAC_ROLE_CLIENT;
+  mac_role_t role_ = MAC_ROLE_CLIENT;
   uint32_t ethernet_status_{0};
   uint32_t driver_features_{0};
   std::optional<bool> link_state_;
@@ -664,7 +664,7 @@ static void hook_start_req(void* ctx, const wlan_fullmac_start_req_t* req) {
   }
 }
 
-void EthernetTestFixture::InitDeviceWithRole(wlan_info_mac_role_t role) {
+void EthernetTestFixture::InitDeviceWithRole(mac_role_t role) {
   role_ = role;
   proto_ops_.start = hook_start;
   proto_ops_.query = hook_query;
@@ -674,41 +674,41 @@ void EthernetTestFixture::InitDeviceWithRole(wlan_info_mac_role_t role) {
   ASSERT_EQ(device_->Bind(), ZX_OK);
 }
 
-void EthernetTestFixture::TestEthernetAgainstRole(wlan_info_mac_role_t role) {
+void EthernetTestFixture::TestEthernetAgainstRole(mac_role_t role) {
   InitDeviceWithRole(role);
   device_->EthStart(&eth_proto_);
 
   SetEthernetOnline();
   wlan_fullmac_deauth_indication_t deauth_ind{.reason_code = REASON_CODE_AP_INITIATED};
   device_->DeauthenticateInd(&deauth_ind);
-  ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
+  ASSERT_EQ(ethernet_status_, role_ == MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
   SetEthernetOnline();
   wlan_fullmac_deauth_confirm_t deauth_conf{};
   device_->DeauthenticateConf(&deauth_conf);
-  ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
+  ASSERT_EQ(ethernet_status_, role_ == MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
   SetEthernetOnline();
   wlan_fullmac_disassoc_indication_t disassoc_ind{.reason_code = REASON_CODE_AP_INITIATED};
   device_->DisassociateInd(&disassoc_ind);
-  ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
+  ASSERT_EQ(ethernet_status_, role_ == MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 
   SetEthernetOnline();
   wlan_fullmac_disassoc_confirm_t disassoc_conf{};
   device_->DisassociateConf(&disassoc_conf);
-  ASSERT_EQ(ethernet_status_, role_ == WLAN_INFO_MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
+  ASSERT_EQ(ethernet_status_, role_ == MAC_ROLE_CLIENT ? 0u : ETHERNET_STATUS_ONLINE);
 }
 
 TEST_F(EthernetTestFixture, ClientIfaceDisablesEthernetOnDisconnect) {
-  TestEthernetAgainstRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  TestEthernetAgainstRole(MAC_ROLE_CLIENT);
 }
 
 TEST_F(EthernetTestFixture, ApIfaceDoesNotAffectEthernetOnClientDisconnect) {
-  TestEthernetAgainstRole(WLAN_INFO_MAC_ROLE_AP);
+  TestEthernetAgainstRole(MAC_ROLE_AP);
 }
 
 TEST_F(EthernetTestFixture, StartThenSetOnline) {
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);  // role doesn't matter
+  InitDeviceWithRole(MAC_ROLE_AP);  // role doesn't matter
   device_->EthStart(&eth_proto_);
   ASSERT_EQ(ethernet_status_, 0u);
   SetEthernetOnline();
@@ -716,7 +716,7 @@ TEST_F(EthernetTestFixture, StartThenSetOnline) {
 }
 
 TEST_F(EthernetTestFixture, OnlineThenStart) {
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);  // role doesn't matter
+  InitDeviceWithRole(MAC_ROLE_AP);  // role doesn't matter
   SetEthernetOnline(0);
   ASSERT_EQ(ethernet_status_, 0u);
   device_->EthStart(&eth_proto_);
@@ -724,7 +724,7 @@ TEST_F(EthernetTestFixture, OnlineThenStart) {
 }
 
 TEST_F(EthernetTestFixture, EthernetDataPlane) {
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  InitDeviceWithRole(MAC_ROLE_CLIENT);
 
   // The device added should support the ethernet impl protocol
   auto children = parent_->children();
@@ -736,7 +736,7 @@ TEST_F(EthernetTestFixture, EthernetDataPlane) {
 
 TEST_F(EthernetTestFixture, SeparateDataPlane) {
   driver_features_ = WLAN_INFO_DRIVER_FEATURE_SEPARATE_DATA_PLANE;
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  InitDeviceWithRole(MAC_ROLE_CLIENT);
 
   // The device added should NOT support the ethernet impl protocol
   auto children = parent_->children();
@@ -753,7 +753,7 @@ TEST_F(EthernetTestFixture, ApOfflineUntilStartConf) {
     wlan_fullmac_start_confirm_t response{.result_code = WLAN_START_RESULT_SUCCESS};
     wlan_fullmac_impl_ifc_start_conf(&wlan_fullmac_impl_ifc_, &response);
   };
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);
+  InitDeviceWithRole(MAC_ROLE_AP);
   device_->EthStart(&eth_proto_);
 
   // Provide our own callback for StartConf to verify the result.
@@ -779,7 +779,7 @@ TEST_F(EthernetTestFixture, ApOfflineOnFailedStartConf) {
     wlan_fullmac_start_confirm_t response{.result_code = WLAN_START_RESULT_NOT_SUPPORTED};
     wlan_fullmac_impl_ifc_start_conf(&wlan_fullmac_impl_ifc_, &response);
   };
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);
+  InitDeviceWithRole(MAC_ROLE_AP);
   device_->EthStart(&eth_proto_);
 
   // Provide our own callback for StartConf to verify  theresult.
@@ -807,7 +807,7 @@ TEST_F(EthernetTestFixture, ApSecondStartDoesNotCallImpl) {
     wlan_fullmac_start_confirm_t response{.result_code = WLAN_START_RESULT_SUCCESS};
     wlan_fullmac_impl_ifc_start_conf(&wlan_fullmac_impl_ifc_, &response);
   };
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_AP);
+  InitDeviceWithRole(MAC_ROLE_AP);
   device_->EthStart(&eth_proto_);
 
   // Provide our own callback for StartConf to verify results.
@@ -841,7 +841,7 @@ TEST_F(EthernetTestFixture, NotifyOnline) {
     reinterpret_cast<EthernetTestFixture*>(ctx)->link_state_ = online;
   };
 
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  InitDeviceWithRole(MAC_ROLE_CLIENT);
   device_->EthStart(&eth_proto_);
 
   // Setting the device to online should result in a link state change.
@@ -874,7 +874,7 @@ TEST_F(EthernetTestFixture, GetIfaceCounterStatsReqDoesNotDeadlockWithEthRecv) {
     ETH_DEV(ctx)->CallDataRecv();
     return ZX_OK;
   };
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  InitDeviceWithRole(MAC_ROLE_CLIENT);
   device_->EthStart(&eth_proto_);
 
   device_->GetIfaceCounterStats([](auto resp) {});
@@ -887,7 +887,7 @@ TEST_F(EthernetTestFixture, GetIfaceHistogramStatsReqDoesNotDeadlockWithEthRecv)
     ETH_DEV(ctx)->CallDataRecv();
     return ZX_OK;
   };
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  InitDeviceWithRole(MAC_ROLE_CLIENT);
   device_->EthStart(&eth_proto_);
 
   device_->GetIfaceHistogramStats([](auto resp) {});
@@ -898,7 +898,7 @@ TEST_F(EthernetTestFixture, JoinReqDoesNotDeadlockWithEthRecv) {
   proto_ops_.join_req = [](void* ctx, const wlan_fullmac_join_req_t* req) {
     ETH_DEV(ctx)->CallDataRecv();
   };
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  InitDeviceWithRole(MAC_ROLE_CLIENT);
   device_->EthStart(&eth_proto_);
 
   device_->JoinReq(wlan_fullmac_test::CreateJoinReq());
@@ -909,7 +909,7 @@ TEST_F(EthernetTestFixture, AuthReqDoesNotDeadlockWithEthRecv) {
   proto_ops_.auth_req = [](void* ctx, const wlan_fullmac_auth_req_t* req) {
     ETH_DEV(ctx)->CallDataRecv();
   };
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  InitDeviceWithRole(MAC_ROLE_CLIENT);
   device_->EthStart(&eth_proto_);
 
   device_->AuthenticateReq(wlan_fullmac_test::CreateAuthenticateReq());
@@ -920,7 +920,7 @@ TEST_F(EthernetTestFixture, DeauthReqDoesNotDeadlockWithEthRecv) {
   proto_ops_.deauth_req = [](void* ctx, const wlan_fullmac_deauth_req_t* req) {
     ETH_DEV(ctx)->CallDataRecv();
   };
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  InitDeviceWithRole(MAC_ROLE_CLIENT);
   device_->EthStart(&eth_proto_);
 
   device_->DeauthenticateReq(wlan_fullmac_test::CreateDeauthenticateReq());
@@ -931,7 +931,7 @@ TEST_F(EthernetTestFixture, DisassociateReqDoesNotDeadlockWithEthRecv) {
   proto_ops_.disassoc_req = [](void* ctx, const wlan_fullmac_disassoc_req_t* req) {
     ETH_DEV(ctx)->CallDataRecv();
   };
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  InitDeviceWithRole(MAC_ROLE_CLIENT);
   device_->EthStart(&eth_proto_);
 
   wlan_mlme::DisassociateRequest disassoc_req;
@@ -941,7 +941,7 @@ TEST_F(EthernetTestFixture, DisassociateReqDoesNotDeadlockWithEthRecv) {
 
 TEST_F(EthernetTestFixture, StartReqDoesNotDeadlockWithEthRecv) {
   start_req_cb_ = [this](const wlan_fullmac_start_req_t* req) { this->CallDataRecv(); };
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  InitDeviceWithRole(MAC_ROLE_CLIENT);
   device_->EthStart(&eth_proto_);
 
   device_->StartReq(wlan_fullmac_test::CreateStartReq());
@@ -952,7 +952,7 @@ TEST_F(EthernetTestFixture, StopReqDoesNotDeadlockWithEthRecv) {
   proto_ops_.stop_req = [](void* ctx, const wlan_fullmac_stop_req_t* req) {
     ETH_DEV(ctx)->CallDataRecv();
   };
-  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  InitDeviceWithRole(MAC_ROLE_CLIENT);
   device_->EthStart(&eth_proto_);
 
   device_->StopReq(wlan_fullmac_test::CreateStopReq());

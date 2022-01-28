@@ -7,7 +7,6 @@
 use clap::arg_enum;
 use fidl_fuchsia_wlan_common as wlan_common;
 use fidl_fuchsia_wlan_common::PowerSaveType;
-use fidl_fuchsia_wlan_device as wlan;
 use structopt::StructOpt;
 
 arg_enum! {
@@ -53,11 +52,11 @@ arg_enum! {
     }
 }
 
-impl ::std::convert::From<RoleArg> for wlan::MacRole {
+impl ::std::convert::From<RoleArg> for wlan_common::MacRole {
     fn from(arg: RoleArg) -> Self {
         match arg {
-            RoleArg::Client => wlan::MacRole::Client,
-            RoleArg::Ap => wlan::MacRole::Ap,
+            RoleArg::Client => wlan_common::MacRole::Client,
+            RoleArg::Ap => wlan_common::MacRole::Ap,
         }
     }
 }

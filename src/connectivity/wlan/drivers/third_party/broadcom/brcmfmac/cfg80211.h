@@ -456,7 +456,7 @@ static inline struct net_device* cfg_to_ndev(struct brcmf_cfg80211_info* cfg) {
 static inline struct net_device* cfg_to_softap_ndev(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_cfg80211_vif* vif;
   list_for_every_entry (&cfg->vif_list, vif, struct brcmf_cfg80211_vif, list) {
-    if (vif->wdev.iftype == WLAN_INFO_MAC_ROLE_AP) {
+    if (vif->wdev.iftype == MAC_ROLE_AP) {
       return vif->wdev.netdev;
     }
   }

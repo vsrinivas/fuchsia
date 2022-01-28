@@ -824,7 +824,7 @@ mod tests {
         },
         fidl::endpoints::{create_proxy, create_proxy_and_stream},
         fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
-        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker},
         fidl_fuchsia_wlan_sme as fidl_sme,
         fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter},
@@ -1887,7 +1887,7 @@ mod tests {
 
     fn fake_device_info() -> fidl_mlme::DeviceInfo {
         fidl_mlme::DeviceInfo {
-            role: fidl_mlme::MacRole::Client,
+            role: fidl_common::MacRole::Client,
             bands: vec![],
             sta_addr: [0xAC; 6],
             driver_features: vec![],

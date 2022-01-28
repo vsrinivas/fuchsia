@@ -10,6 +10,7 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <limits.h>
 #include <netinet/if_ether.h>
 #include <stdint.h>
@@ -151,7 +152,7 @@ struct wait_queue_head {
 };
 
 struct wireless_dev {
-  wlan_info_mac_role_t iftype;
+  mac_role_t iftype;
 };
 
 ////

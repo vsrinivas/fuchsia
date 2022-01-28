@@ -37,7 +37,7 @@ wlan_fullmac_impl_ifc_protocol_ops_t WmmStatusTest::sme_ops_ = {
 
 void WmmStatusTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
+  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
   on_wmm_status_resp_called_ = false;
 }
 

@@ -21,7 +21,8 @@ class PhyQueryTest : public SimTest {
   void Init();
   void PhyQuery(wlanphy_impl_info_t* info);
 
-  static void VerifyMacRoleBitfield(wlan_info_mac_role_t mac_role_bitfield);
+  static void VerifyMacRoles(const mac_role_t* supported_mac_roles_list,
+                             size_t supported_mac_roles_count);
   static void VerifyHardwareCapabilityBitfield(
       wlan_info_hardware_capability_t hardware_capability_bitfield);
 };
@@ -35,9 +36,11 @@ void PhyQueryTest::PhyQuery(wlanphy_impl_info_t* info) {
 }
 
 // static
-void PhyQueryTest::VerifyMacRoleBitfield(wlan_info_mac_role_t mac_role_bitfield) {
-  EXPECT_NE(0U, mac_role_bitfield & WLAN_INFO_MAC_ROLE_CLIENT);
-  EXPECT_NE(0U, mac_role_bitfield & WLAN_INFO_MAC_ROLE_AP);
+void PhyQueryTest::VerifyMacRoles(const mac_role_t* supported_mac_roles_list,
+                                  size_t supported_mac_roles_count) {
+  EXPECT_EQ(2U, supported_mac_roles_count);
+  EXPECT_EQ(MAC_ROLE_CLIENT, supported_mac_roles_list[0]);
+  EXPECT_EQ(MAC_ROLE_AP, supported_mac_roles_list[1]);
 }
 
 TEST_F(PhyQueryTest, VerifyQueryData) {
@@ -45,7 +48,8 @@ TEST_F(PhyQueryTest, VerifyQueryData) {
   wlanphy_impl_info_t info;
   PhyQuery(&info);
 
-  VerifyMacRoleBitfield(info.supported_mac_roles);
+  VerifyMacRoles(info.supported_mac_roles_list, info.supported_mac_roles_count);
+  free(static_cast<void*>(const_cast<mac_role_t*>(info.supported_mac_roles_list)));
 }
 
 }  // namespace wlan::brcmfmac

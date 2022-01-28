@@ -324,7 +324,7 @@ void AssocTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
 // Create our device instance and hook up the callbacks
 void AssocTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
+  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
   context_.assoc_resp_count = 0;
   context_.disassoc_conf_count = 0;
   context_.deauth_ind_count = 0;

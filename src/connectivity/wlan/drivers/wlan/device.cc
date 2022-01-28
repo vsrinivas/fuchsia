@@ -94,18 +94,16 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
 
   state_->set_address(common::MacAddr(wlan_softmac_info_.sta_addr));
 
-  // mac_role is a bitfield, but only a single value is supported for an
-  // interface
   switch (wlan_softmac_info_.mac_role) {
-    case WLAN_INFO_MAC_ROLE_CLIENT:
+    case MAC_ROLE_CLIENT:
       infof("Initialize a client MLME.\n");
       mlme_.reset(new ClientMlme(this, ClientMlmeDefaultConfig()));
       break;
-    case WLAN_INFO_MAC_ROLE_AP:
+    case MAC_ROLE_AP:
       infof("Initialize an AP MLME.\n");
       mlme_.reset(new ApMlme(this));
       break;
-    // TODO(fxbug.dev/44485): Add support for WLAN_INFO_MAC_ROLE_MESH.
+    // TODO(fxbug.dev/44485): Add support for MAC_ROLE_MESH.
     default:
       errorf("unsupported MAC role: %u\n", wlan_softmac_info_.mac_role);
       return ZX_ERR_NOT_SUPPORTED;

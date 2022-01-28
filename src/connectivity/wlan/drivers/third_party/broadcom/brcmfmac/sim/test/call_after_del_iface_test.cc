@@ -17,7 +17,7 @@ TEST_F(SimTest, ScanResultAfterIfaceStop) {
 
   SimInterface client_ifc;
 
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
 
   client_ifc.StartScan(0, true);
   client_ifc.StopInterface();
@@ -33,7 +33,7 @@ TEST_F(SimTest, DeleteIfaceTwice) {
   ASSERT_EQ(Init(), ZX_OK);
 
   SimInterface softap_ifc;
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc), ZX_OK);
+  ASSERT_EQ(StartInterface(MAC_ROLE_AP, &softap_ifc), ZX_OK);
 
   // Inject firmware error to "interface_remove" iovar.
   brcmf_simdev* sim = device_->GetSim();

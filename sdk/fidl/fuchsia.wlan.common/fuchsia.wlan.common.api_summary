@@ -23,6 +23,11 @@ strict enum fuchsia.wlan.common/DriverFeature uint32
 enum/member fuchsia.wlan.common/GuardInterval.LONG_GI 1
 enum/member fuchsia.wlan.common/GuardInterval.SHORT_GI 2
 strict enum fuchsia.wlan.common/GuardInterval uint8
+const fuchsia.wlan.common/MAX_SUPPORTED_MAC_ROLES uint8 3
+enum/member fuchsia.wlan.common/MacRole.AP 2
+enum/member fuchsia.wlan.common/MacRole.CLIENT 1
+enum/member fuchsia.wlan.common/MacRole.MESH 3
+strict enum fuchsia.wlan.common/MacRole uint32
 enum/member fuchsia.wlan.common/PHY.ERP 2
 enum/member fuchsia.wlan.common/PHY.HEW 5
 enum/member fuchsia.wlan.common/PHY.HR 1
