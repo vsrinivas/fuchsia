@@ -88,8 +88,6 @@ async fn launch_and_run_sample_test_internal(parallel: u16) {
     .into_iter()
     .group_by_test_case_unordered();
 
-    assert_eq!(events.last().unwrap(), &RunEvent::suite_stopped(SuiteStatus::Failed));
-
     let (failing_test_logs, events_without_failing_test_logs): (Vec<RunEvent>, Vec<RunEvent>) =
         events.into_iter().partition(|x| match x {
             RunEvent::CaseStderr { name, stderr_message: _ } => name == "my_tests::failing_test",
