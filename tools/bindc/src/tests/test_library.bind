@@ -1,0 +1,52 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.lib;
+
+// Enum with a single value.
+enum KINGFISHER {
+    BELTED,
+};
+
+// Multiple enum definitions.
+enum Mimid {
+  Catbird,
+  Thrasher,
+  Trembler,
+  Mockingbird,
+};
+
+// Single string definition.
+string Phainopepla;
+
+// Multiple string definitions.
+string THRUSH {
+  HERMIT = "hermit_thrush",
+  ROBIN = "robin",
+  SOLITAIRE = "solitaire",
+};
+
+// Single integer definition.
+uint WAXWING;
+
+// Multiple integer definitions.
+uint PICIDAE {
+  FLICKER = 0x10,
+  SAPSUCKER = 200,
+};
+
+// Single boolean definition.
+bool NUTHATCH;
+
+// Multiple boolean definitions.
+bool FLYCATCHER {
+    PHOEBE = true,
+    KESTREL = false,
+};
+
+// Extending from an existing property key.
+extend uint fuchsia.BIND_PROTOCOL {
+  DEVICE = 10,
+  IMPL = 15,
+};

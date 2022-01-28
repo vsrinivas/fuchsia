@@ -382,8 +382,17 @@ fn generate_declaration_name(name: &String, value: &bind_library::Value) -> Stri
 /// generated names are duplicates.
 fn check_names(declarations: &Vec<bind_library::Declaration>) -> Result<(), Error> {
     let mut names: HashSet<String> = HashSet::new();
+    let mut keys: HashSet<String> = HashSet::new();
 
+    // Check key values.
     for declaration in declarations.into_iter() {
+        // Check if there is a duplicate key name.
+        let fidl_key_name = declaration.identifier.name.to_uppercase();
+        if keys.contains(&fidl_key_name) {
+            return Err(anyhow!("Name \"{}\" generated for more than one key", fidl_key_name));
+        }
+        keys.insert(fidl_key_name);
+
         for value in &declaration.values {
             let name = generate_declaration_name(&declaration.identifier.name, value);
 
@@ -431,7 +440,7 @@ fn convert_to_fidl_constant(
                 format!("const {} fdf.NodePropertyValueBool = {};", name, val)
             }
             bind_library::Value::Enum(_) => {
-                format!("const {}; fdf.NodePropertyValueEnum", name)
+                format!("const {} fdf.NodePropertyValueEnum = \"{}.{}\";", name, path, name)
             }
         };
         writeln!(&mut result, "{}", property_output)?;
@@ -440,7 +449,13 @@ fn convert_to_fidl_constant(
     Ok(result)
 }
 
-fn write_fidl_template(syntax_tree: bind_library::Ast) -> Result<String, Error> {
+fn generate_fidl_library(input: String, lint: bool) -> Result<String, Error> {
+    let syntax_tree = bind_library::Ast::try_from(input.as_str())
+        .map_err(compiler::CompilerError::BindParserError)?;
+    if lint {
+        linter::lint_library(&syntax_tree).map_err(compiler::CompilerError::LinterError)?;
+    }
+
     // Use the bind library name as the FIDL library name and give it "bind" as a top level
     // namespace.
     let bind_name = &syntax_tree.name.to_string();
@@ -478,12 +493,7 @@ fn handle_generate(
     let input_content = read_file(&input)?;
 
     // Generate the FIDL library.
-    let keys = bind_library::Ast::try_from(input_content.as_str())
-        .map_err(compiler::CompilerError::BindParserError)?;
-    if lint {
-        linter::lint_library(&keys).map_err(compiler::CompilerError::LinterError)?;
-    }
-    let template = write_fidl_template(keys)?;
+    let generated_content = generate_fidl_library(input_content, lint)?;
 
     // Create and open output file.
     let mut output_writer: Box<dyn io::Write> = if let Some(output) = output {
@@ -494,7 +504,9 @@ fn handle_generate(
     };
 
     // Write FIDL library to output.
-    output_writer.write_all(template.as_bytes()).context("Failed to write to output file")?;
+    output_writer
+        .write_all(generated_content.as_bytes())
+        .context("Failed to write to output file")?;
 
     Ok(())
 }
@@ -506,8 +518,8 @@ mod tests {
     use matches::assert_matches;
     use std::collections::HashMap;
 
-    fn get_test_fidl_template(ast: bind_library::Ast) -> Vec<String> {
-        write_fidl_template(ast)
+    fn get_test_generated_fidl(input: String) -> Vec<String> {
+        generate_fidl_library(input.to_string(), false)
             .unwrap()
             .split("\n")
             .map(|s| s.to_string())
@@ -700,8 +712,8 @@ mod tests {
 
     #[test]
     fn zero_keys() {
-        let empty_ast = bind_library::Ast::try_from("library fuchsia.platform;").unwrap();
-        let template: Vec<String> = get_test_fidl_template(empty_ast);
+        let generated: Vec<String> =
+            get_test_generated_fidl("library fuchsia.platform;".to_string());
 
         let expected = vec![
             "@no_doc".to_string(),
@@ -709,16 +721,16 @@ mod tests {
             "using fuchsia.driver.framework as fdf;".to_string(),
         ];
 
-        assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
+        assert!(generated.into_iter().zip(expected).all(|(a, b)| (a == b)));
     }
 
     #[test]
     fn one_key() {
-        let ast = bind_library::Ast::try_from(
-            "library fuchsia.platform;\nstring A_KEY {\nA_VALUE = \"a string value\",\n};",
-        )
-        .unwrap();
-        let template: Vec<String> = get_test_fidl_template(ast);
+        let test_str = "library fuchsia.platform;\n
+            string A_KEY {\n
+                A_VALUE = \"a string value\",\n
+            };";
+        let generated: Vec<String> = get_test_generated_fidl(test_str.to_string());
 
         let expected = vec![
             "@no_doc".to_string(),
@@ -728,16 +740,16 @@ mod tests {
             "const A_KEY_A_VALUE fdf.NodePropertyValueString = \"a string value\";".to_string(),
         ];
 
-        assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
+        assert!(generated.into_iter().zip(expected).all(|(a, b)| (a == b)));
     }
 
     #[test]
     fn one_key_extends() {
-        let ast = bind_library::Ast::try_from(
-            "library fuchsia.platform;\nextend uint fuchsia.BIND_PROTOCOL {\nBUS = 84,\n};",
-        )
-        .unwrap();
-        let template: Vec<String> = get_test_fidl_template(ast);
+        let test_str = "library fuchsia.platform;\n
+            extend uint fuchsia.BIND_PROTOCOL {\n
+                BUS = 84,\n
+            };";
+        let generated: Vec<String> = get_test_generated_fidl(test_str.to_string());
 
         let expected = vec![
             "@no_doc".to_string(),
@@ -746,16 +758,14 @@ mod tests {
             "const BIND_PROTOCOL_BUS fdf.NodePropertyValueUint = 84;".to_string(),
         ];
 
-        assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
+        assert!(generated.into_iter().zip(expected).all(|(a, b)| (a == b)));
     }
 
     #[test]
     fn lower_snake_case() {
-        let ast = bind_library::Ast::try_from(
-            "library fuchsia.platform;\nstring a_key {\na_value = \"a string value\",\n};",
-        )
-        .unwrap();
-        let template: Vec<String> = get_test_fidl_template(ast);
+        let test_str =
+            "library fuchsia.platform;\nstring a_key {\na_value = \"a string value\",\n};";
+        let generated: Vec<String> = get_test_generated_fidl(test_str.to_string());
 
         let expected = vec![
             "@no_doc".to_string(),
@@ -765,43 +775,65 @@ mod tests {
             "const A_KEY_A_VALUE fdf.NodePropertyValueString = \"a string value\";".to_string(),
         ];
 
-        assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
+        assert!(generated.into_iter().zip(expected).all(|(a, b)| (a == b)));
     }
 
     #[test]
     fn duplicate_key_value() {
-        let ast = bind_library::Ast::try_from(
-            "library fuchsia.platform;\nstring A_KEY {\nA_VALUE = \"a string value\",\n};
-            \nstring A_KEY_A {\nVALUE = \"a string value\",\n};",
-        )
-        .unwrap();
-        let template = write_fidl_template(ast);
-
-        assert!(template.is_err());
+        let test_str = "library fuchsia.platform;\n
+            string A_KEY {\n
+                A_VALUE = \"a string value\",\n
+            };\n
+            string A_KEY_A {\n
+                VALUE = \"a string value\",\n
+            };";
+        assert!(generate_fidl_library(test_str.to_string(), false).is_err());
     }
 
     #[test]
-    fn duplicate_values_one_key() {
-        let ast = bind_library::Ast::try_from(
-            "library fuchsia.platform;\nstring A_KEY {\nA_VALUE = \"a string value\",\n
-            A_VALUE = \"a string value\",\n};",
-        )
-        .unwrap();
-        let template = write_fidl_template(ast);
+    fn duplicate_keys() {
+        let test_str = "library fuchsia.platform;\n
+            string A_KEY {\n
+                A_VALUE = \"a string value\",\n
+            };\n
+            string A_KEY {\n
+                VALUE = \"a string value\",\n
+            };";
+        assert!(generate_fidl_library(test_str.to_string(), false).is_err());
+    }
 
-        assert!(template.is_err());
+    #[test]
+    fn duplicate_keys_mixed_cases() {
+        let test_str = "library fuchsia.platform;\n
+            string A_KEY {\n
+                A_VALUE = \"a string value\",\n
+            };\n
+            string a_key {\n
+                VALUE = \"a string value\",\n
+            };";
+        assert!(generate_fidl_library(test_str.to_string(), false).is_err());
+    }
+
+    #[test]
+    fn duplicate_values_in_a_key() {
+        let test_str = "library fuchsia.platform;\n
+            string A_KEY {\n
+                A_VALUE = \"a string value\",\n
+                A_VALUE = \"a string value\",\n
+            };";
+        assert!(generate_fidl_library(test_str.to_string(), false).is_err());
     }
 
     #[test]
     fn duplicate_values_two_keys() {
-        let ast = bind_library::Ast::try_from(
-            "library fuchsia.platform;\nstring KEY {\nA_VALUE = \"a string value\",\n};\n
-            string KEY_A {\nVALUE = \"a string value\",\n};\n",
-        )
-        .unwrap();
-        let template = write_fidl_template(ast);
-
-        assert!(template.is_err());
+        let test_str = "library fuchsia.platform;\n
+            string KEY {\n
+                A_VALUE = \"a string value\",\n
+            };\n
+            string KEY_A {\n
+                VALUE = \"a string value\",\n
+            };\n";
+        assert!(generate_fidl_library(test_str.to_string(), false).is_err());
     }
 
     #[test]
@@ -868,5 +900,14 @@ mod tests {
                 write_composite_bind_template(bind_rules).unwrap()
             );
         }
+    }
+
+    #[test]
+    fn test_code_generation() {
+        assert_eq!(
+            include_str!("tests/expected_code_gen"),
+            generate_fidl_library(include_str!("tests/test_library.bind").to_string(), false)
+                .unwrap()
+        );
     }
 }

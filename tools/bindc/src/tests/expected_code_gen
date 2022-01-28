@@ -1,0 +1,36 @@
+@no_doc
+library bind.test.lib;
+
+using fuchsia.driver.framework as fdf;
+
+const KINGFISHER fdf.NodePropertyKeyString = "test.lib.KINGFISHER";
+const KINGFISHER_BELTED fdf.NodePropertyValueEnum = "test.lib.KINGFISHER_BELTED";
+
+const MIMID fdf.NodePropertyKeyString = "test.lib.MIMID";
+const MIMID_CATBIRD fdf.NodePropertyValueEnum = "test.lib.MIMID_CATBIRD";
+const MIMID_THRASHER fdf.NodePropertyValueEnum = "test.lib.MIMID_THRASHER";
+const MIMID_TREMBLER fdf.NodePropertyValueEnum = "test.lib.MIMID_TREMBLER";
+const MIMID_MOCKINGBIRD fdf.NodePropertyValueEnum = "test.lib.MIMID_MOCKINGBIRD";
+
+const PHAINOPEPLA fdf.NodePropertyKeyString = "test.lib.PHAINOPEPLA";
+
+const THRUSH fdf.NodePropertyKeyString = "test.lib.THRUSH";
+const THRUSH_HERMIT fdf.NodePropertyValueString = "hermit_thrush";
+const THRUSH_ROBIN fdf.NodePropertyValueString = "robin";
+const THRUSH_SOLITAIRE fdf.NodePropertyValueString = "solitaire";
+
+const WAXWING fdf.NodePropertyKeyString = "test.lib.WAXWING";
+
+const PICIDAE fdf.NodePropertyKeyString = "test.lib.PICIDAE";
+const PICIDAE_FLICKER fdf.NodePropertyValueUint = 16;
+const PICIDAE_SAPSUCKER fdf.NodePropertyValueUint = 200;
+
+const NUTHATCH fdf.NodePropertyKeyString = "test.lib.NUTHATCH";
+
+const FLYCATCHER fdf.NodePropertyKeyString = "test.lib.FLYCATCHER";
+const FLYCATCHER_PHOEBE fdf.NodePropertyValueBool = true;
+const FLYCATCHER_KESTREL fdf.NodePropertyValueBool = false;
+
+const BIND_PROTOCOL_DEVICE fdf.NodePropertyValueUint = 10;
+const BIND_PROTOCOL_IMPL fdf.NodePropertyValueUint = 15;
+
