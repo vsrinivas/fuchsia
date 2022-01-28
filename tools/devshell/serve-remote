@@ -216,7 +216,7 @@ until ssh -q -O check ${ssh_base_args[@]} "${host}"; do
 done
 
 if "${serve}"; then
-  if is_feature_enabled "legacy_serve"; then
+  if use-legacy-package-server; then
     # If the user requested serving, then we'll check to see if there's a
     # remote server already running and kill it, this prevents most cases where
     # signal propagation seems to sometimes not make it to "pm".
