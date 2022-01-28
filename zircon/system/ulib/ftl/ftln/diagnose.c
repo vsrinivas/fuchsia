@@ -61,7 +61,7 @@ bool PrematureBlockRecycle(FTLN ftl) {
   memset(reverse_mapping, 0xff, sizeof(uint32_t) * phys_pages);
 
   bool overlap = false;
-  for (uint32_t vpn = 0; vpn < ftl->mappings_per_mpg * ftl->num_map_pgs; ++vpn) {
+  for (uint32_t vpn = 0; vpn < ftl->num_vpages; ++vpn) {
     uint32_t ppn;
     if (FtlnMapGetPpn(ftl, vpn, &ppn) < 0 || ppn == UINT32_MAX) {
       continue;
