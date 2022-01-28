@@ -111,6 +111,7 @@ rustc_library("wlan-common") {
     "src/security/wep.rs",
     "src/security/wpa.rs",
     "src/sequence.rs",
+    "src/signal_velocity.rs",
     "src/sink.rs",
     "src/stats/mod.rs",
     "src/stats/signal.rs",

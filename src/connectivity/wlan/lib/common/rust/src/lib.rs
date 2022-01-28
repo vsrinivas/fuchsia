@@ -29,6 +29,7 @@ pub mod organization;
 pub mod scan;
 pub mod security;
 pub mod sequence;
+pub mod signal_velocity;
 pub mod sink;
 #[allow(unused)]
 pub mod stats;

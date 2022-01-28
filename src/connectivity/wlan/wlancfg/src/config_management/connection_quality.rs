@@ -2,13 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::client::types as client_types, fuchsia_zircon as zx};
+use {
+    crate::client::types as client_types,
+    fuchsia_zircon as zx,
+    log::error,
+    wlan_common::{
+        energy::DecibelMilliWatt, ewma_signal::EwmaSignalStrength,
+        signal_velocity::calculate_dbm_linear_velocity,
+    },
+};
+
+// Number of previous RSSI measurements to exponentially weigh into average.
+// TODO(fxbug.dev/84870): Tune smoothing factor.
+pub const EWMA_SMOOTHING_FACTOR: usize = 10;
 
 /// Connection quality data related to signal
 #[derive(Clone, Debug, PartialEq)]
 pub struct SignalData {
-    pub rssi: f32,
-    pub rssi_velocity: f32,
+    pub ewma_rssi: EwmaSignalStrength,
+    pub rssi_velocity: DecibelMilliWatt,
+}
+
+impl SignalData {
+    pub fn update_with_new_measurement(&mut self, rssi: DecibelMilliWatt) {
+        let prev_rssi = self.ewma_rssi.dbm();
+        self.ewma_rssi.update_average(rssi);
+        self.rssi_velocity =
+            match calculate_dbm_linear_velocity(vec![prev_rssi, self.ewma_rssi.dbm()]) {
+                Ok(velocity) => velocity,
+                Err(e) => {
+                    error!("Failed to update SignalData velocity: {:?}", e);
+                    self.rssi_velocity
+                }
+            };
+    }
 }
 
 /// Data points related to a particular connection

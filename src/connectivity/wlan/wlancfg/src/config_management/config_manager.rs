@@ -4,7 +4,7 @@
 
 use {
     super::{
-        connection_quality::SignalData,
+        connection_quality::{SignalData, EWMA_SMOOTHING_FACTOR},
         network_config::{
             Credential, FailureReason, HiddenProbEvent, NetworkConfig, NetworkConfigError,
             NetworkIdentifier, SecurityType,
@@ -27,6 +27,7 @@ use {
         fs,
         path::Path,
     },
+    wlan_common::{energy::DecibelMilliWatt, ewma_signal::EwmaSignalStrength},
     wlan_metrics_registry::{
         SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations,
         SavedNetworksMetricDimensionSavedNetworks,
@@ -36,9 +37,6 @@ use {
 };
 
 const MAX_CONFIGS_PER_SSID: usize = 1;
-// Number of previous RSSI measurements to exponentially weigh into average.
-// TODO(fxbug.dev/84870): Tune smoothing factor.
-const EWMA_SMOOTHING_FACTOR: u8 = 25;
 
 pub const LEGACY_KNOWN_NETWORKS_PATH: &str = "/data/known_networks.json";
 
@@ -62,33 +60,6 @@ pub enum ScanResultType {
     #[allow(dead_code)]
     Undirected,
     Directed(Vec<types::NetworkIdentifier>), // Contains list of target SSIDs
-}
-
-/// Calculates the expontentially weighted moving average RSSI value after a new RSSI measurement,
-/// using the previous average and a smoothing factor, which is the number of previous measurements
-/// to weigh into the average.
-fn calculate_ewma_rssi(previous_ewma: f32, measured_rssi: f32, smoothing_factor: u8) -> f32 {
-    (2.0 / (1.0 + smoothing_factor as f32) * measured_rssi)
-        + ((1.0 - (2.0 / (1.0 + smoothing_factor as f32))) * previous_ewma)
-}
-
-/// Calculates RSSI velocity across vector of RSSI measurements by determining
-/// the slope of the line of best fit using least squares regression.
-fn calculate_rssi_velocity(historical_rssis: Vec<f32>) -> f32 {
-    let n = historical_rssis.len() as f32;
-    let mut sum_x = 0.0;
-    let mut sum_y = 0.0;
-    let mut sum_xy = 0.0;
-    let mut sum_x2 = 0.0;
-
-    for (i, y) in historical_rssis.iter().enumerate() {
-        let x = i as f32;
-        sum_x += x;
-        sum_y += y;
-        sum_xy += x * y;
-        sum_x2 += x.powf(2.0);
-    }
-    (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x.powf(2.0))
 }
 
 #[async_trait]
@@ -173,7 +144,7 @@ pub trait SavedNetworksManagerApi: Send + Sync {
         id: &NetworkIdentifier,
         credential: &Credential,
         bssid: types::Bssid,
-        connection_data: f32,
+        connection_data: i8,
     ) -> Option<SignalData>;
 }
 
@@ -549,7 +520,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         id: &NetworkIdentifier,
         credential: &Credential,
         bssid: types::Bssid,
-        connection_data: f32,
+        connection_data: i8,
     ) -> Option<SignalData> {
         // Find saved networks matching network id.
         let mut saved_networks = self.saved_networks.lock().await;
@@ -563,22 +534,27 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         // Find network matching credential
         for network in networks.iter_mut() {
             if &network.credential == credential {
-                let signal_data = match network.perf_stats.rssi_data_by_bssid.get(&bssid) {
+                match network.perf_stats.rssi_data_by_bssid.get_mut(&bssid) {
+                    // Update connection data for BSS
                     Some(signal_data) => {
-                        let ewma_rssi = calculate_ewma_rssi(
-                            signal_data.rssi,
-                            connection_data,
-                            EWMA_SMOOTHING_FACTOR,
-                        );
-                        // TODO(fxbug.dev/84872): Use historical RSSI values to calculate smoothed
-                        // velocity.
-                        let velocity = calculate_rssi_velocity(vec![signal_data.rssi, ewma_rssi]);
-                        SignalData { rssi: ewma_rssi, rssi_velocity: velocity }
+                        signal_data.update_with_new_measurement(DecibelMilliWatt(connection_data));
+                        return Some(signal_data.clone());
                     }
-                    None => SignalData { rssi: connection_data, rssi_velocity: 0.0 },
+                    // Add connection quality data for BSS
+                    None => {
+                        let ewma_rssi = EwmaSignalStrength::new(
+                            EWMA_SMOOTHING_FACTOR,
+                            DecibelMilliWatt(connection_data),
+                        );
+                        let signal_data =
+                            SignalData { ewma_rssi: ewma_rssi, rssi_velocity: DecibelMilliWatt(0) };
+                        let _ = network
+                            .perf_stats
+                            .rssi_data_by_bssid
+                            .insert(bssid, signal_data.clone());
+                        return Some(signal_data);
+                    }
                 };
-                let _ = network.perf_stats.rssi_data_by_bssid.insert(bssid, signal_data.clone());
-                return Some(signal_data);
             }
         }
         error!("Failed to find matching network to record connection quality data.");
@@ -726,7 +702,7 @@ mod tests {
         std::{convert::TryFrom, io::Write},
         tempfile::TempDir,
         test_case::test_case,
-        test_util::{assert_gt, assert_lt},
+        test_util::{assert_geq, assert_leq},
         wlan_common::assert_variant,
     };
 
@@ -2019,22 +1995,6 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn test_ewma_rssi_calculations() {
-        assert_eq!(calculate_ewma_rssi(-25.0, -35.0, 25), -25.769232);
-        assert_eq!(calculate_ewma_rssi(-90.0, -65.0, 12), -86.153846);
-        assert_eq!(calculate_ewma_rssi(-50.4524, -41.2564, 45), -50.052578);
-    }
-
-    #[fuchsia::test]
-    fn test_rssi_velocity_calculations() {
-        assert_eq!(calculate_rssi_velocity(vec![-45.0, -48.0]), -3.0);
-        assert_eq!(calculate_rssi_velocity(vec![-48.0, -45.0]), 3.0);
-        assert_eq!(calculate_rssi_velocity(vec![-60.256, -55.128, -57.512, -60.256]), -0.23840332);
-        assert_eq!(calculate_rssi_velocity(vec![-30.0, -32.0, -30.0, -30.0]), 0.2);
-        assert_eq!(calculate_rssi_velocity(vec![-25.0, -25.0, -25.0, -25.0, -25.0, -25.0]), 0.0);
-    }
-
-    #[fuchsia::test]
     async fn test_record_connection_quality_data() {
         let saved_networks = SavedNetworksManager::new_for_test()
             .await
@@ -2058,7 +2018,7 @@ mod tests {
 
         // Record connection quality data
         let response = saved_networks
-            .record_connection_quality_data(&net_id, &credential, bssid, -50.0)
+            .record_connection_quality_data(&net_id, &credential, bssid, -50)
             .await
             .expect("failed to get RSSI data response.");
 
@@ -2075,12 +2035,12 @@ mod tests {
             .get(&bssid)
             .expect("failed to get rssi data.");
         assert_eq!(response, *signal_data);
-        assert_eq!(signal_data.rssi, -50.0);
-        assert_eq!(signal_data.rssi_velocity, 0.0);
+        assert_eq!(signal_data.ewma_rssi.dbm(), DecibelMilliWatt(-50));
+        assert_eq!(signal_data.rssi_velocity, DecibelMilliWatt(0));
 
         // Record second quality connection data
         let response = saved_networks
-            .record_connection_quality_data(&net_id, &credential, bssid, -51.0)
+            .record_connection_quality_data(&net_id, &credential, bssid, -80)
             .await
             .expect("failed to get RSSI data response.");
 
@@ -2095,9 +2055,9 @@ mod tests {
             .get(&bssid)
             .expect("failed to get rssi data.");
         assert_eq!(response, *signal_data);
-        assert_lt!(signal_data.rssi, -50.0);
-        assert_gt!(signal_data.rssi, -51.0);
-        assert_lt!(signal_data.rssi_velocity, 0.0);
+        assert_leq!(signal_data.ewma_rssi.dbm(), DecibelMilliWatt(-50));
+        assert_geq!(signal_data.ewma_rssi.dbm(), DecibelMilliWatt(-80));
+        assert_leq!(signal_data.rssi_velocity, DecibelMilliWatt(0));
     }
 
     fn fake_successful_connect_result() -> fidl_sme::ConnectResult {

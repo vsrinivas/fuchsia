@@ -232,7 +232,7 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
         _id: &NetworkIdentifier,
         _credential: &Credential,
         _bssid: client_types::Bssid,
-        _connection_data: f32,
+        _connection_data: i8,
     ) -> Option<SignalData> {
         // The mutex allows us to use the receiver mutably even though self is borrowed immutably.
         self.record_connection_quality_channel

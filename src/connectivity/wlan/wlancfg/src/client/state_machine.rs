@@ -32,7 +32,7 @@ use {
     log::{debug, error, info},
     std::{convert::TryInto, sync::Arc},
     void::ResultVoidErrExt,
-    wlan_common::{bss::BssDescription, RadioConfig},
+    wlan_common::{bss::BssDescription, energy::DecibelMilliWatt, RadioConfig},
     wlan_metrics_registry::{
         POLICY_CONNECTION_ATTEMPT_METRIC_ID as CONNECTION_ATTEMPT_METRIC_ID,
         POLICY_DISCONNECTION_METRIC_ID as DISCONNECTION_METRIC_ID,
@@ -190,7 +190,7 @@ struct CommonStateOptions {
 pub struct PeriodicConnectionStats {
     pub id: types::NetworkIdentifier,
     pub iface_id: u16,
-    pub ewma_rssi: f32,
+    pub ewma_rssi: DecibelMilliWatt,
 }
 
 pub type ConnectionStatsSender = mpsc::UnboundedSender<PeriodicConnectionStats>;
@@ -853,12 +853,13 @@ async fn handle_connection_stats(
     ind: fidl_internal::SignalReportIndication,
 ) {
     let signal_data = saved_network_manager
-        .record_connection_quality_data(&id.clone().into(), &credential, bssid, ind.rssi_dbm.into())
+        .record_connection_quality_data(&id.clone().into(), &credential, bssid, ind.rssi_dbm)
         .await;
     // Send RSSI and RSSI velocity metrics
     let rssi_velocity = signal_data.map(|data| {
         // Send periodic connection quality data to IfaceManager
-        let connection_stats = PeriodicConnectionStats { id, ewma_rssi: data.rssi, iface_id };
+        let connection_stats =
+            PeriodicConnectionStats { id, ewma_rssi: data.ewma_rssi.dbm(), iface_id };
         stats_sender.unbounded_send(connection_stats).unwrap_or_else(|e| {
             error!("Failed to send periodic connection stats from the connected state: {}", e);
         });
@@ -873,7 +874,7 @@ mod tests {
         super::*,
         crate::{
             config_management::{
-                connection_quality::SignalData,
+                connection_quality::{SignalData, EWMA_SMOOTHING_FACTOR},
                 network_config::{self, Credential, FailureReason},
                 SavedNetworksManager,
             },
@@ -901,7 +902,8 @@ mod tests {
         std::convert::TryFrom,
         test_case::test_case,
         wlan_common::{
-            assert_variant, bss::Protection, random_bss_description, random_fidl_bss_description,
+            assert_variant, bss::Protection, ewma_signal::EwmaSignalStrength,
+            random_bss_description, random_fidl_bss_description,
         },
         wlan_metrics_registry::PolicyDisconnectionMetricDimensionReason,
     };
@@ -3721,17 +3723,18 @@ mod tests {
         let sme_fut = test_values.sme_req_stream.into_future();
         pin_mut!(sme_fut);
 
-        let rssi = -40;
-        let velocity = -1.2;
+        let rssi = DecibelMilliWatt(-40);
+        let ewma_rssi = EwmaSignalStrength::new(EWMA_SMOOTHING_FACTOR, rssi);
+        let velocity = DecibelMilliWatt(-1);
         // Tell the FakeSavedNetworksManager what to respond to record_connection_quality_data
-        let signal_data = SignalData { rssi: rssi.into(), rssi_velocity: velocity };
+        let signal_data = SignalData { ewma_rssi: ewma_rssi, rssi_velocity: velocity };
         test_values
             .record_connection_quality_channel
             .unbounded_send(Some(signal_data))
             .expect("failed to send expected connection quality data");
         // Send the signal report from SME
         let mut fidl_signal_report =
-            fidl_internal::SignalReportIndication { rssi_dbm: rssi, snr_db: 30 };
+            fidl_internal::SignalReportIndication { rssi_dbm: rssi.into(), snr_db: 30 };
         connect_txn_handle
             .send_on_signal_report(&mut fidl_signal_report)
             .expect("failed to send signal report");
@@ -3755,7 +3758,7 @@ mod tests {
         };
         // Test setup always use iface ID 1.
         let expected_connection_stats =
-            PeriodicConnectionStats { id, iface_id: 1, ewma_rssi: rssi.into() };
+            PeriodicConnectionStats { id, iface_id: 1, ewma_rssi: rssi };
         let stats = test_values.stats_receiver.try_next().expect("failed to get connection stats");
         assert_eq!(stats, Some(expected_connection_stats));
     }

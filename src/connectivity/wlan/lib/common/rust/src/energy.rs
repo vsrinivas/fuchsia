@@ -4,7 +4,7 @@
 
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
-#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
+#[derive(PartialEq, PartialOrd, Eq, Hash, Debug, Clone, Copy)]
 pub struct DecibelMilliWatt(pub i8);
 
 // In the past dBm values were simply added up when computing a moving average rather than first
@@ -79,6 +79,12 @@ impl From<FemtoWatt> for DecibelMilliWatt {
             let dbm = 10.0 * ((fw.0 as f64).log10() - 12.0);
             DecibelMilliWatt(dbm.round() as i8)
         }
+    }
+}
+
+impl From<DecibelMilliWatt> for i8 {
+    fn from(dbm: DecibelMilliWatt) -> i8 {
+        dbm.0
     }
 }
 
