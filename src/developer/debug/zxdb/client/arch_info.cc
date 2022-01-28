@@ -11,8 +11,12 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/InitLLVM.h"
+#if defined(LLVM_USING_OLD_PREBUILT)
 #include "llvm/Support/TargetRegistry.h"
+#else
+#include "llvm/MC/TargetRegistry.h"
+#endif
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 #include "src/developer/debug/zxdb/expr/abi_arm64.h"
 #include "src/developer/debug/zxdb/expr/abi_x64.h"

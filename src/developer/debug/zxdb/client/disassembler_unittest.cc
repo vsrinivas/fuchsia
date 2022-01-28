@@ -235,9 +235,11 @@ TEST(Disassembler, Arm64Many) {
   ASSERT_EQ(3u, out.size());
   EXPECT_EQ(Row(0x123456780, &data[0], 4, "str", "x19, [sp, #-0x20]!", ""), out[0]);
   EXPECT_EQ(Row(0x123456784, &data[4], 4, "stp", "x29, x30, [sp, #0x10]", ""), out[1]);
-  // LLVM emits a comment "=0x10" here which isn't very helpful. If this
-  // changes in a future LLVM update, it's fine.
+#if defined(LLVM_USING_OLD_PREBUILT)
   EXPECT_EQ(Row(0x123456788, &data[8], 4, "add", "x29, sp, #0x10", "// =0x10"), out[2]);
+#else
+  EXPECT_EQ(Row(0x123456788, &data[8], 4, "add", "x29, sp, #0x10", ""), out[2]);
+#endif
 
   // Test an instruction off the end.
   out.clear();

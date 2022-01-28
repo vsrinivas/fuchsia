@@ -2,7 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# To achieve a soft transition when rolling LLVM with API changes, clients could use the
+# LLVM_USING_OLD_PREBUILT macro to detect the LLVM version.
+prebuilt_cipd_version = read_file(
+        "//prebuilt/third_party/llvm/${host_platform}/.versions/llvm.cipd_version",
+        "json")
+prebuilt_instance_id = prebuilt_cipd_version.instance_id
+
+# Update the instance_ids when the current LLVM version becomes "old".
+old_prebuilt_instance_ids = [
+  "f531SvuJUjzy9dI7zNjbwlWmVus4fNa-HA7u7yr33zIC",  # linux-amd64
+  "WWEnoLXWYSYUEaUWkU75ZClguF0dX2VGPzrq6IGJKmkC",  # linux-arm64
+  "1Uub4mhrP2lN_GO6jlHHrs8aUSc_0PvhC1sooMNCb6EC",  # mac-amd64
+]
+using_old_prebuilt = old_prebuilt_instance_ids + [ prebuilt_instance_id ] -
+                     [ prebuilt_instance_id ] != old_prebuilt_instance_ids
+
 config("LLVM_config") {
+  visibility = [ ":*" ]
+
   include_dirs = [ "//prebuilt/third_party/llvm/${current_platform}/include" ]
   if (current_os == "linux") {
     libs = [ "//prebuilt/third_party/llvm/${current_platform}/lib/libLLVM.so" ]
@@ -10,8 +28,13 @@ config("LLVM_config") {
     libs =
         [ "//prebuilt/third_party/llvm/${current_platform}/lib/libLLVM.dylib" ]
   }
+
+  if (using_old_prebuilt) {
+    defines = [ "LLVM_USING_OLD_PREBUILT" ]
+  }
 }
 
+# Shared library
 group("LLVM") {
   public_configs = [ ":LLVM_config" ]
 }
@@ -26,6 +49,10 @@ config("LLVMHeader_config") {
   cflags = [ "-isystem" +
              rebase_path("//prebuilt/third_party/llvm/${host_platform}/include",
                          root_build_dir) ]
+
+  if (using_old_prebuilt) {
+    defines = [ "LLVM_USING_OLD_PREBUILT" ]
+  }
 }
 
 group("LLVMHeaderOnly") {

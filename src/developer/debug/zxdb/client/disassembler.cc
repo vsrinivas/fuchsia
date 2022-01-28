@@ -13,7 +13,11 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInstPrinter.h"
+#if defined(LLVM_USING_OLD_PREBUILT)
 #include "llvm/Support/TargetRegistry.h"
+#else
+#include "llvm/MC/TargetRegistry.h"
+#endif
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
@@ -133,7 +137,12 @@ Disassembler::~Disassembler() = default;
 Err Disassembler::Init(const ArchInfo* arch) {
   arch_ = arch;
 
+#if defined(LLVM_USING_OLD_PREBUILT)
   context_ = std::make_unique<llvm::MCContext>(arch_->asm_info(), arch_->register_info(), nullptr);
+#else
+  context_ = std::make_unique<llvm::MCContext>(*arch_->triple(), arch_->asm_info(),
+                                               arch_->register_info(), nullptr);
+#endif
   disasm_.reset(arch_->target()->createMCDisassembler(*arch_->subtarget_info(), *context_));
   if (!disasm_)
     return Err("Couldn't create LLVM disassembler.");

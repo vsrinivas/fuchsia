@@ -133,9 +133,8 @@ size_t RecursiveCountDies(const IndexNode& node) {
 // reallocating for each call.
 //
 // Indexing is two passes. In the first pass we scan the DIEs in the unit. We identify which ones
-// will need indexing and save information on the nesting. The parent chain information (stored in
-// the DwarfDieScanner) is important because we need to go from a DIE to its parent chain, and
-// normally walking up the parent chain is a linear search in the LLVM library.
+// will need indexing and save information on the nesting. The parent chain information is important
+// because we need to go from a DIE to its parent chain.
 //
 // In the second pass we actually index the items identified, using the saved parent and name
 // information from the scan pass.
