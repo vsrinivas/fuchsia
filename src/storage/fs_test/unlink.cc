@@ -177,7 +177,7 @@ TEST_P(UnlinkTest, SpaceReturned) {
     if (free_space(statfs_buf) >= free_space_after_deleting_one_file + kBufSize - kMetadataSize) {
       break;
     }
-    usleep(100);
+    sleep(1);
   }
 }
 

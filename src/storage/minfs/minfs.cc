@@ -1523,7 +1523,7 @@ zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
     if (size_info.is_ok()) {
       info.free_shared_pool_bytes = size_info->available_space_bytes;
     } else {
-      FX_LOGS(WARNING) << "Unable to obtain available space: " << size_info.status_string();
+      FX_LOGS(DEBUG) << "Unable to obtain available space: " << size_info.status_string();
     }
   }
 
