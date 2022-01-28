@@ -163,27 +163,6 @@ func (ni *netstackImpl) RemoveInterfaceAddress(_ fidl.Context, nicid uint32, add
 	}
 }
 
-// SetInterfaceMetric changes the metric for an interface and updates all
-// routes tracking that interface metric. This takes the lock.
-func (ni *netstackImpl) SetInterfaceMetric(_ fidl.Context, nicid uint32, metric uint32) (result netstack.NetErr, err error) {
-	_ = syslog.Infof("update interface metric for NIC %d to metric=%d", nicid, metric)
-
-	nic := tcpip.NICID(nicid)
-	m := routes.Metric(metric)
-
-	nicInfo, ok := ni.ns.stack.NICInfo()[nic]
-	if !ok {
-		return netstack.NetErr{Status: netstack.StatusUnknownInterface}, nil
-	}
-
-	ifState := nicInfo.Context.(*ifState)
-	ifState.updateMetric(m)
-
-	ni.ns.routeTable.UpdateMetricByInterface(nic, m)
-	ni.ns.routeTable.UpdateStack(ni.ns.stack)
-	return netstack.NetErr{Status: netstack.StatusOk}, nil
-}
-
 func (ni *netstackImpl) BridgeInterfaces(_ fidl.Context, nicids []uint32) (netstack.NetErr, uint32, error) {
 	nics := make([]tcpip.NICID, len(nicids))
 	for i, n := range nicids {

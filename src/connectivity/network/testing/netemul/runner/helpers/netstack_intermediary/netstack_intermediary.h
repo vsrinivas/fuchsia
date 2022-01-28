@@ -64,9 +64,6 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack,
   void RemoveInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
                               RemoveInterfaceAddressCallback callback) override {}
 
-  void SetInterfaceMetric(uint32_t nicid, uint32_t metric,
-                          SetInterfaceMetricCallback callback) override {}
-
   void GetDhcpClient(uint32_t nicid, ::fidl::InterfaceRequest<::fuchsia::net::dhcp::Client> client,
                      GetDhcpClientCallback callback) override {}
 

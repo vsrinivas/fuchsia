@@ -110,9 +110,6 @@ pub async fn do_root<C: NetCliDepsConnector>(
         CommandEnum::Log(opts::Log { log_cmd: cmd }) => {
             do_log(cmd, connector).await.context("failed during log command")
         }
-        CommandEnum::Metric(opts::Metric { metric_cmd: cmd }) => {
-            do_metric(cmd, connector).await.context("failed during metric command")
-        }
         CommandEnum::Dhcp(opts::Dhcp { dhcp_cmd: cmd }) => {
             do_dhcp(cmd, connector).await.context("failed during dhcp command")
         }
@@ -600,24 +597,6 @@ async fn do_log<C: NetCliDepsConnector>(cmd: opts::LogEnum, connector: &C) -> Re
         }
     }
     Ok(())
-}
-
-async fn do_metric<C: NetCliDepsConnector>(
-    cmd: opts::MetricEnum,
-    connector: &C,
-) -> Result<(), Error> {
-    match cmd {
-        opts::MetricEnum::Set(opts::MetricSet { id, metric }) => {
-            let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
-            let result = netstack.set_interface_metric(id, metric).await?;
-            if result.status != fnetstack::Status::Ok {
-                Err(anyhow::anyhow!("{:?}: {}", result.status, result.message))
-            } else {
-                info!("interface {} metric set to {}", id, metric);
-                Ok(())
-            }
-        }
-    }
 }
 
 async fn do_dhcp<C: NetCliDepsConnector>(cmd: opts::DhcpEnum, connector: &C) -> Result<(), Error> {
@@ -1728,47 +1707,6 @@ mac             -
                 trim_whitespace_for_comparison(&wanted_output),
             );
         }
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn metric_set() {
-        async fn next_request(
-            requests: &mut fnetstack::NetstackRequestStream,
-        ) -> (u32, u32, fnetstack::NetstackSetInterfaceMetricResponder) {
-            requests
-                .try_next()
-                .await
-                .expect("set interface metric FIDL error")
-                .expect("request stream should not have ended")
-                .into_set_interface_metric()
-                .expect("request should be of type SetInterfaceMetric")
-        }
-
-        let (netstack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector { netstack: Some(netstack), ..Default::default() };
-
-        // both test values have been arbitrarily selected
-        let expected_id = 1;
-        let expected_metric = 64;
-        let succeeds = do_metric(
-            opts::MetricEnum::Set(opts::MetricSet { id: expected_id, metric: expected_metric }),
-            &connector,
-        );
-        let response = async move {
-            // Verify that the request is as expected and return OK.
-            let (id, metric, responder) = next_request(&mut requests).await;
-            assert_eq!(id, expected_id);
-            assert_eq!(metric, expected_metric);
-            responder
-                .send(&mut fnetstack::NetErr {
-                    status: fnetstack::Status::Ok,
-                    message: String::from(""),
-                })
-                .map_err(anyhow::Error::new)
-        };
-        let ((), ()) =
-            futures::future::try_join(succeeds, response).await.expect("metric set should succeed");
     }
 
     async fn test_do_dhcp(cmd: opts::DhcpEnum) {

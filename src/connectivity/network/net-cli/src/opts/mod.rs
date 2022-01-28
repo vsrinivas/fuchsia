@@ -34,7 +34,6 @@ pub enum CommandEnum {
     Log(Log),
     Neigh(Neigh),
     Route(Route),
-    Metric(Metric),
     Dhcp(Dhcp),
     Dhcpd(dhcpd::Dhcpd),
 }
@@ -632,32 +631,6 @@ macro_rules! route_struct {
 // TODO(https://github.com/google/argh/issues/48): do this more sanely.
 route_struct!(RouteAdd, "add", "adds a route to the route table");
 route_struct!(RouteDel, "del", "deletes a route from the route table");
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand, name = "metric")]
-/// commands for interface route metrics
-pub struct Metric {
-    #[argh(subcommand)]
-    pub metric_cmd: MetricEnum,
-}
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand)]
-pub enum MetricEnum {
-    Set(MetricSet),
-}
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand, name = "set")]
-/// assigns a route metric to the network interface
-pub struct MetricSet {
-    #[argh(positional)]
-    // NOTE: id is a u32 because fuchsia.netstack interfaces take u32 interface ids.
-    // TODO: change id to u64 once fuchsia.netstack is no longer in use.
-    pub id: u32,
-    #[argh(positional)]
-    pub metric: u32,
-}
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "dhcp")]

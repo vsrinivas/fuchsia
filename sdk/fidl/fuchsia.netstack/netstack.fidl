@@ -63,14 +63,6 @@ protocol Netstack {
         result NetErr;
     });
 
-    /// Sets the route metric for the interface with the given nicid.
-    SetInterfaceMetric(struct {
-        nicid uint32;
-        metric uint32;
-    }) -> (struct {
-        result NetErr;
-    });
-
     /// Creates a bridge and returns the newly created nicid or an
     /// error if the creation fails.
     BridgeInterfaces(struct {
