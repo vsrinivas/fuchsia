@@ -87,12 +87,12 @@ impl<D, I: Ip> RecvIpFrameMeta<D, I> {
 
 /// The context provided by the device layer to a particular IP device
 /// implementation.
-pub(crate) trait IpDeviceContext<D: LinkDevice, TimerId, State>:
+pub(crate) trait IpDeviceContext<D: LinkDevice, TimerId>:
     DeviceIdContext<D>
     + CounterContext
     + RngContext
     + DualStateContext<
-        IpLinkDeviceState<<Self as InstantContext>::Instant, State>,
+        IpLinkDeviceState<<Self as InstantContext>::Instant, D::State>,
         <Self as RngContext>::Rng,
         <Self as DeviceIdContext<D>>::DeviceId,
     > + TimerContext<TimerId>
@@ -113,8 +113,7 @@ pub(crate) trait IpDeviceContext<D: LinkDevice, TimerId, State>:
     fn is_device_usable(&self, device: <Self as DeviceIdContext<D>>::DeviceId) -> bool;
 }
 
-impl<D: EventDispatcher>
-    IpDeviceContext<EthernetLinkDevice, EthernetTimerId<EthernetDeviceId>, EthernetDeviceState>
+impl<D: EventDispatcher> IpDeviceContext<EthernetLinkDevice, EthernetTimerId<EthernetDeviceId>>
     for Ctx<D>
 {
     fn is_router<I: Ip>(&self) -> bool {
@@ -129,8 +128,8 @@ impl<D: EventDispatcher>
 /// `IpDeviceContext` with an extra `B: BufferMut` parameter.
 ///
 /// `BufferIpDeviceContext` is used when sending a frame is required.
-trait BufferIpDeviceContext<D: LinkDevice, TimerId, State, B: BufferMut>:
-    IpDeviceContext<D, TimerId, State>
+trait BufferIpDeviceContext<D: LinkDevice, TimerId, B: BufferMut>:
+    IpDeviceContext<D, TimerId>
     + FrameContext<B, <Self as DeviceIdContext<D>>::DeviceId>
     + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
     + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>
@@ -140,13 +139,12 @@ trait BufferIpDeviceContext<D: LinkDevice, TimerId, State, B: BufferMut>:
 impl<
         D: LinkDevice,
         TimerId,
-        State,
         B: BufferMut,
-        C: IpDeviceContext<D, TimerId, State>
+        C: IpDeviceContext<D, TimerId>
             + FrameContext<B, <Self as DeviceIdContext<D>>::DeviceId>
             + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
             + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>,
-    > BufferIpDeviceContext<D, TimerId, State, B> for C
+    > BufferIpDeviceContext<D, TimerId, B> for C
 {
 }
 

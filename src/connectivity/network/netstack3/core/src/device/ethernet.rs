@@ -73,7 +73,6 @@ pub(crate) trait EthernetIpDeviceContext:
     IpDeviceContext<
     EthernetLinkDevice,
     EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    EthernetDeviceState,
 >
 {
 }
@@ -82,7 +81,6 @@ impl<
         C: IpDeviceContext<
             EthernetLinkDevice,
             EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-            EthernetDeviceState,
         >,
     > EthernetIpDeviceContext for C
 {
@@ -94,7 +92,6 @@ pub(super) trait BufferEthernetIpDeviceContext<B: BufferMut>:
     BufferIpDeviceContext<
     EthernetLinkDevice,
     EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    EthernetDeviceState,
     B,
 >
 {
@@ -105,7 +102,6 @@ impl<
         C: BufferIpDeviceContext<
             EthernetLinkDevice,
             EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-            EthernetDeviceState,
             B,
         >,
     > BufferEthernetIpDeviceContext<B> for C
@@ -1460,6 +1456,7 @@ pub(crate) struct EthernetLinkDevice;
 
 impl LinkDevice for EthernetLinkDevice {
     type Address = Mac;
+    type State = EthernetDeviceState;
 }
 
 /// Sends out any pending frames that are waiting for link layer address
@@ -1611,9 +1608,7 @@ mod tests {
         type DeviceId = DummyDeviceId;
     }
 
-    impl IpDeviceContext<EthernetLinkDevice, EthernetTimerId<DummyDeviceId>, EthernetDeviceState>
-        for DummyCtx
-    {
+    impl IpDeviceContext<EthernetLinkDevice, EthernetTimerId<DummyDeviceId>> for DummyCtx {
         fn is_router<I: Ip>(&self) -> bool {
             unimplemented!()
         }
