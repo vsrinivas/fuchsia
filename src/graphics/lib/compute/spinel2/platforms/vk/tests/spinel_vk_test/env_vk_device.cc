@@ -65,7 +65,7 @@ env_vk_device::SetUp()
   //
   float const qps[] = { 1.0f };
 
-  VkDeviceQueueCreateInfo dqcis[1] = {
+  VkDeviceQueueCreateInfo dqcis[] = {
     {
       .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
       .pNext            = NULL,

@@ -38,16 +38,8 @@ source_set("find_target") {
       #  defines = [ "SPN_VK_TARGET_ARM_BIFROST8" ]
       #  deps = [ "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/arm/bifrost8:spinel_vk_arm_bifrost8_resource" ]
     } else {  # Default assumes an Intel GEN GPU (x86) board_name
-      defines = [
-        # "SPN_VK_TARGET_INTEL_GEN8",
-        "SPN_VK_TARGET_NVIDIA_SM35",  # FIXME(allanmac): Delete NVIDIA target
-                                      # from Fuchsia
-      ]
-      deps = [
-        # "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/intel/gen8:spinel_vk_intel_gen8_resource",
-        "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/nvidia/sm35:spinel_vk_nvidia_sm35_resource",
-        # FIXME(allanmac): Delete NVIDIA target from Fuchsia
-      ]
+      defines = [ "SPN_VK_TARGET_INTEL_GEN8" ]
+      deps = [ "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/intel/gen8:spinel_vk_intel_gen8_resource" ]
     }
   } else {  # Otherwise, this is a host build
     #
@@ -57,18 +49,14 @@ source_set("find_target") {
     defines = [
       "SPN_VK_TARGET_ARCHIVE_LINKABLE",
 
-      # "SPN_VK_TARGET_ARCHIVE_AMD_GCN3",
-      # "SPN_VK_TARGET_ARM_BIFROST4",
-      # "SPN_VK_TARGET_ARM_BIFROST8",
-      # "SPN_VK_TARGET_INTEL_GEN8",
+      # "SPN_VK_TARGET_AMD_GCN3",
+      "SPN_VK_TARGET_INTEL_GEN8",
       "SPN_VK_TARGET_NVIDIA_SM35",
       "SPN_VK_TARGET_NVIDIA_SM75",
     ]
     deps = [
       # "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/amd/gcn3:spinel_vk_amd_gcn3_linkable",
-      # "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/arm/bifrost4:spinel_vk_arm_bifrost4_linkable",
-      # "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/arm/bifrost8:spinel_vk_arm_bifrost8_linkable",
-      # "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/intel/gen8:spinel_vk_intel_gen8_linkable",
+      "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/intel/gen8:spinel_vk_intel_gen8_linkable",
       "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/nvidia/sm35:spinel_vk_nvidia_sm35_linkable",
       "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/nvidia/sm75:spinel_vk_nvidia_sm75_linkable",
     ]

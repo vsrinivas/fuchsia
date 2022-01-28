@@ -43,9 +43,6 @@ struct env_spinel_vk_target : public ::testing::Environment
   SetUp() override;
 
   void
-  TargetDispose();
-
-  void
   TearDown() override;
 };
 

@@ -96,6 +96,7 @@ spinel_vk_target_get_requirements(struct spinel_vk_target const *        target,
   // EXTENSIONS
   //
   // Compute number of required extensions
+  //
   for (uint32_t ii = 0; ii < ARRAY_LENGTH_MACRO(spinel_header_data.header->extensions.bitmap); ii++)
     {
       ext_name_count += __builtin_popcount(spinel_header_data.header->extensions.bitmap[ii]);
@@ -246,8 +247,6 @@ spinel_vk_target_get_requirements(struct spinel_vk_target const *        target,
 
       bool const rs_is_ok = radix_sort_vk_target_get_requirements(rs_target_data.target, &rs_tr);
       is_ok               = is_ok && rs_is_ok;
-
-      requirements->ext_name_count += rs_tr.ext_name_count;
     }
 
   //

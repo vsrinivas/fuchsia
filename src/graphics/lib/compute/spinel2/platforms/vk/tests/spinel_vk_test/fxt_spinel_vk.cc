@@ -60,18 +60,13 @@ fxt_spinel_vk::SetUp()
                                  .count        = 1 } } },
 
     .target          = shared_env->target->spinel,
-    .block_pool_size = 1 << 25,  // 32 MB (128K x 128-dword blocks)
+    .block_pool_size = 1 << 25,  // 32 MB
     .handle_count    = 1 << 15,  // 32K handles
   };
 
   context = spinel_vk_context_create(&cci);
 
   EXPECT_NE(context, nullptr);
-
-  //
-  // Dispose of target blob
-  //
-  shared_env->target->TargetDispose();
 }
 
 //

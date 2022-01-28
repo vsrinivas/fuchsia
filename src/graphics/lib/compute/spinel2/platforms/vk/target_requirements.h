@@ -74,8 +74,7 @@ union spinel_target_extensions
 
 #define SPN_TARGET_FEATURES_VK10()                                                                 \
   SPN_TARGET_FEATURE_VK10(shaderInt16)                                                             \
-  SPN_TARGET_FEATURE_VK10(shaderInt64)                                                             \
-  SPN_TARGET_FEATURE_VK10(shaderStorageImageWriteWithoutFormat)
+  SPN_TARGET_FEATURE_VK10(shaderInt64)
 
 #define SPN_TARGET_FEATURES_VK11()                                                                 \
   SPN_TARGET_FEATURE_VK11(storageBuffer16BitAccess)                                                \

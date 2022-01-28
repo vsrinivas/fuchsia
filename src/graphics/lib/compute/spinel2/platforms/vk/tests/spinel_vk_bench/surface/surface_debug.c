@@ -384,6 +384,22 @@ surface_debug_surface_formats(FILE *                     file,
 //
 
 void
+surface_debug_image_view_format(FILE * file, VkFormat image_view_format)
+{
+  fprintf(file, "VkImageViewCreateInfo.format: {\n");
+
+  char const * const f = SURFACE_DEBUG_FIND(surface_debug_vk_formats, &image_view_format);
+
+  fprintf(file, "\t%s\n", f);
+
+  fprintf(file, "}\n");
+}
+
+//
+//
+//
+
+void
 surface_debug_surface_transforms(FILE * file, VkSurfaceTransformFlagsKHR transform_flags)
 {
   fprintf(file, "{\n");

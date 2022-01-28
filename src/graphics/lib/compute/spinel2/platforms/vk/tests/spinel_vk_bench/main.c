@@ -64,12 +64,12 @@
 // LINUX
 //
 // clang-format off
-
+//
 #if defined(__linux__)
 
 #include "surface/surface_xcb.h"
 
-#define SPN_PLATFORM_EXTENSION_NAMES         VK_KHR_SWAPCHAIN_MUTABLE_FORMAT_EXTENSION_NAME
+#define SPN_PLATFORM_EXTENSION_NAMES         // For example: VK_KHR_SWAPCHAIN_MUTABLE_FORMAT_EXTENSION_NAME
 
 #define SPN_PLATFORM_MIN_IMAGE_COUNT         3
 
@@ -93,47 +93,35 @@
 
 #define SPN_PLATFORM_EXTENSION_NAMES
 
-#define SPN_PLATFORM_MIN_IMAGE_COUNT         2
+#define SPN_PLATFORM_MIN_IMAGE_COUNT         3
 
 #define SPN_PLATFORM_PRESENT_MODE            VK_PRESENT_MODE_FIFO_KHR
                                              // VK_PRESENT_MODE_MAILBOX_KHR
                                              // VK_PRESENT_MODE_IMMEDIATE_KHR
                                              // VK_PRESENT_MODE_FIFO_RELAXED_KHR
 
-#if defined(__arm__)
-#define SPN_PLATFORM_IMAGE_VIEW_FORMAT       VK_FORMAT_B8G8R8A8_SRGB
-#else
-#define SPN_PLATFORM_IMAGE_VIEW_FORMAT       VK_FORMAT_B8G8R8A8_UNORM
-#endif
+#define SPN_PLATFORM_IMAGE_VIEW_FORMAT       VK_FORMAT_R8G8B8A8_UNORM
 
 #define SPN_PLATFORM_SURFACE_FORMAT          (VkSurfaceFormatKHR){ .format     = SPN_PLATFORM_IMAGE_VIEW_FORMAT, \
-                                                                   .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
-
-//
-// FUCHSIA/INTEL is RGBA and UNORM for now but eventually BGRA write-only once Mesa updates land
-//
-
-#define SPN_PLATFORM_IMAGE_VIEW_FORMAT_INTEL VK_FORMAT_R8G8B8A8_UNORM
-
-#define SPN_PLATFORM_SURFACE_FORMAT_INTEL    (VkSurfaceFormatKHR){ .format     = SPN_PLATFORM_IMAGE_VIEW_FORMAT_INTEL, \
                                                                    .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 
 //////////////////////////////////////////////
 //
 // UNSUPPORTED
 //
-
 #else
 #error "Unsupported WSI platform"
 #endif
+
+//
 // clang-format on
+//
 
 //
 // What are the max number of queues?
 //
 // FIXME(allanmac): There should be no limits.
 //
-
 #define SPN_VK_Q_COMPUTE_MAX_QUEUES UINT32_MAX
 #define SPN_VK_Q_PRESENT_MAX_QUEUES 1
 
@@ -262,20 +250,6 @@ spinel_usage(char * const argv[])
   // clang-format on
   //
 }
-
-//
-// Don't report "VUID-VkImageViewCreateInfo-usage-02275" on Intel
-// devices because this is not a validation error:
-//
-//   | vkCreateImageView(): pCreateInfo->format VK_FORMAT_B8G8R8A8_UNORM
-//   | with tiling VK_IMAGE_TILING_OPTIMAL does not support usage that
-//   | includes VK_IMAGE_USAGE_STORAGE_BIT.
-//
-//   if (strstr(pMessage, "VUID-VkImageViewCreateInfo-usage-02275") != NULL)
-//     {
-//       return VK_FALSE;
-//     }
-//
 
 //
 //
@@ -796,7 +770,7 @@ main(int argc, char * const argv[])
     //
     // additional extensions here...
     //
-    VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+    VK_EXT_DEBUG_UTILS_EXTENSION_NAME,  // keep this instance name last
   };
 
   uint32_t const instance_layer_count = ARRAY_LENGTH_MACRO(instance_layers) -  //
@@ -1230,24 +1204,8 @@ main(int argc, char * const argv[])
   //
   // create surface presentables
   //
-  VkSurfaceFormatKHR surface_format;
-  VkFormat           image_view_format;
-
-#if defined(__Fuchsia__)
-  //
-  // NOTE(allanmac): Intel is special-cased while we wait for a Mesa patch
-  //
-  if (pdp.vendorID == 0x8086)
-    {
-      surface_format    = SPN_PLATFORM_SURFACE_FORMAT_INTEL;
-      image_view_format = SPN_PLATFORM_IMAGE_VIEW_FORMAT_INTEL;
-    }
-  else
-#endif
-    {
-      surface_format    = SPN_PLATFORM_SURFACE_FORMAT;
-      image_view_format = SPN_PLATFORM_IMAGE_VIEW_FORMAT;
-    }
+  VkSurfaceFormatKHR const surface_format    = SPN_PLATFORM_SURFACE_FORMAT;
+  VkFormat const           image_view_format = SPN_PLATFORM_IMAGE_VIEW_FORMAT;
 
   VkImageUsageFlags const image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |  //
                                         VK_IMAGE_USAGE_TRANSFER_DST_BIT |  //

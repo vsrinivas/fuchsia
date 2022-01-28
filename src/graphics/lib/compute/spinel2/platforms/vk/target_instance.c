@@ -5,8 +5,6 @@
 //
 // Load the Spinel target and creating pipelines and pipeline layouts.
 //
-// TODO(allanmac): (Re)support descriptor sets in the `render` pipeline.
-//
 
 //
 // clang -I $VULKAN_SDK/include  -I ../.. -I ../../.. -I ../../include -I . -I ../../../tools/target_archive/include -E  spinel_vk.c | clang-format > spinel_vk_clang.c
@@ -245,14 +243,12 @@ spinel_target_instance_create(struct spinel_target_instance * ti,
     //
     // If necessary, set the expected subgroup size
     //
-    // clang-format off
-#define SPN_SUBGROUP_SIZE_CREATE_INFO_SET(size_)                                                            \
-  {                                                                                                         \
-    .sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT, \
-    .pNext                = NULL,                                                                           \
-    .requiredSubgroupSize = (size_)                                                                         \
+#define SPN_SUBGROUP_SIZE_CREATE_INFO_SET(size_)                                                   \
+  {                                                                                                \
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT,       \
+    .pNext = NULL,                                                                                 \
+    .requiredSubgroupSize = size_,                                                                 \
   }
-    // clang-format on
 
 #define SPN_SUBGROUP_SIZE_CREATE_INFO_NAME(name_)                                                  \
   SPN_SUBGROUP_SIZE_CREATE_INFO_SET(                                                               \
@@ -300,10 +296,7 @@ spinel_target_instance_create(struct spinel_target_instance * ti,
         {
           if (rsscis[ii].requiredSubgroupSize > 1)
             {
-              // clang-format off
               cpcis[ii].stage.pNext = rsscis + ii;
-              cpcis[ii].stage.flags = VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT_EXT;
-              // clang-format on
             }
         }
     }

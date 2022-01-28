@@ -36,21 +36,6 @@ env_spinel_vk_target::SetUp()
   spinel = spinel_vk_find_target(instance->vk.pdp.vendorID, instance->vk.pdp.deviceID);
 
   ASSERT_TRUE(spinel != NULL);
-
-#ifdef __Fuchsia__
-
-#else
-
-#endif
-}
-
-//
-//
-//
-void
-env_spinel_vk_target::TargetDispose()
-{
-  spinel_vk_target_dispose(spinel);
 }
 
 //
@@ -60,11 +45,7 @@ env_spinel_vk_target::TargetDispose()
 void
 env_spinel_vk_target::TearDown()
 {
-#ifdef __Fuchsia__
-
-#else
-
-#endif
+  spinel_vk_target_dispose(spinel);
 }
 
 //

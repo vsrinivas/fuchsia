@@ -50,6 +50,7 @@ graphics_compute_unittests("spinel-vk-svg-unittests") {
 }
 
 graphics_compute_unittests_package("spinel2-vk-test") {
+  needs_vulkan = true
   testonly = true
   deps = [
     ":spinel-vk-api-unittests",  # basic API tests

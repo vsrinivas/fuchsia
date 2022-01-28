@@ -21,13 +21,16 @@ extern "C" {
 #endif
 
 //
-// Pretty print surface formats
+// Pretty print formats
 //
 
 void
 surface_debug_surface_formats(FILE *                     file,
                               uint32_t                   surface_format_count,
                               VkSurfaceFormatKHR const * surface_formats);
+
+void
+surface_debug_image_view_format(FILE * stderr, VkFormat image_view_format);
 
 //
 //

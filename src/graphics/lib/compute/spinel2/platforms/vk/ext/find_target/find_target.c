@@ -46,10 +46,17 @@
 //
 //
 #ifndef NDEBUG
-#define SPN_VK_TARGET_LOG(name_) fprintf(stderr, "Loading target: \"" #name_ "\"\n");
+#define SPN_VK_TARGET_LOG(name_) fprintf(stderr, "Loading Spinel target: \"" name_ "\"\n");
 #else
 #define SPN_VK_TARGET_LOG(name_)
 #endif
+
+//
+//
+//
+#define SPN_VK_TARGET_STRINGIFY_2(name_) #name_
+
+#define SPN_VK_TARGET_STRINGIFY(name_) SPN_VK_TARGET_STRINGIFY_2(name_)
 
 //
 //
@@ -72,8 +79,8 @@ union spinel_vk_header_target
   }
 
 #define SPN_VK_TARGET_ASSIGN(header_, name_)                                                       \
-  header_ = SPN_VK_TARGET_GET(name_);                                                              \
-  SPN_VK_TARGET_LOG(name_)
+  SPN_VK_TARGET_LOG(SPN_VK_TARGET_STRINGIFY(name_));                                               \
+  header_ = SPN_VK_TARGET_GET(name_)
 
 //
 // RESOURCE?
@@ -134,12 +141,10 @@ spinel_vk_load_target(char const * filename)
 }
 
 // clang-format off
-#define SPN_VK_TARGET_STRINGIFY(name_)       #name_
-#define SPN_VK_TARGET_RESOURCE(name_)        SPN_VK_TARGET_STRINGIFY(name_##_resource)
-#define SPN_VK_TARGET_FILENAME(name_)        "pkg/data/targets/" SPN_VK_TARGET_RESOURCE(name_)
+#define SPN_VK_TARGET_FILENAME(name_)        "pkg/data/targets/" SPN_VK_TARGET_STRINGIFY(name_) "_resource.ar"
 #define SPN_VK_TARGET_LOAD(name_)            spinel_vk_load_target(SPN_VK_TARGET_FILENAME(name_))
 #define SPN_VK_TARGET_GET(name_)             (union spinel_vk_header_target){ .target = SPN_VK_TARGET_LOAD(name_) }
-#define SPN_VK_TARGET_ASSIGN(header_, name_) header_ = SPN_VK_TARGET_GET(name_); SPN_VK_TARGET_LOG(name_)
+#define SPN_VK_TARGET_ASSIGN(header_, name_) SPN_VK_TARGET_LOG(SPN_VK_TARGET_FILENAME(name_)); header_ = SPN_VK_TARGET_GET(name_)
 // clang-format on
 
 #endif

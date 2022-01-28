@@ -46,22 +46,22 @@ env_vk_instance::SetUp()
   //
   // programmatically enable tracing
   //
-  char const * const instance_enabled_layers[] = {
+  char const * const instance_layers[] = {
     //
     // additional layers here...
     //
     "VK_LAYER_KHRONOS_validation"  // keep this name last
   };
 
-  char const * const instance_enabled_extensions[] = {
+  char const * const instance_extensions[] = {
     //
     // additional extensions here...
     //
     VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
   };
 
-  uint32_t const instance_enabled_layer_count     = ARRAY_LENGTH_MACRO(instance_enabled_layers);
-  uint32_t const instance_enabled_extension_count = ARRAY_LENGTH_MACRO(instance_enabled_extensions);
+  uint32_t const instance_layer_count     = ARRAY_LENGTH_MACRO(instance_layers);
+  uint32_t const instance_extension_count = ARRAY_LENGTH_MACRO(instance_extensions);
 
   VkInstanceCreateInfo const instance_info = {
 
@@ -69,10 +69,10 @@ env_vk_instance::SetUp()
     .pNext                   = NULL,
     .flags                   = 0,
     .pApplicationInfo        = &app_info,
-    .enabledLayerCount       = instance_enabled_layer_count,
-    .ppEnabledLayerNames     = instance_enabled_layers,
-    .enabledExtensionCount   = instance_enabled_extension_count,
-    .ppEnabledExtensionNames = instance_enabled_extensions
+    .enabledLayerCount       = instance_layer_count,
+    .ppEnabledLayerNames     = instance_layers,
+    .enabledExtensionCount   = instance_extension_count,
+    .ppEnabledExtensionNames = instance_extensions
   };
 
   vk(CreateInstance(&instance_info, NULL, &vk.i));

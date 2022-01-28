@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#undef NDEBUG
-
 #include "surface_default.h"
 
 #include <assert.h>
@@ -92,6 +90,8 @@ surface_default_to_vk(struct surface * surface)
 //
 //
 
+#ifndef NDEBUG
+
 static bool
 surface_verify_surface_format(VkSurfaceKHR               surface,
                               VkPhysicalDevice           vk_pd,
@@ -133,6 +133,8 @@ surface_verify_surface_format(VkSurfaceKHR               surface,
 
   return is_match;
 }
+
+#endif
 
 //
 //
@@ -300,10 +302,6 @@ surface_default_regen(struct surface * surface, VkExtent2D * extent, uint32_t * 
   };
 
   bool const is_mutable_reqd = (device->image_view.format != device->surface_format.format);
-
-#ifndef NDEBUG
-  fprintf(stderr, "is_mutable_reqd = %s\n", is_mutable_reqd ? "true" : "false");
-#endif
 
   //
   // create VkSwapchainKHR
@@ -496,6 +494,8 @@ surface_default_detach(struct surface * const surface)
 //
 //
 
+#ifndef NDEBUG
+
 static bool
 surface_verify_present_mode(VkPresentModeKHR         present_mode,
                             uint32_t                 present_mode_count,
@@ -511,6 +511,8 @@ surface_verify_present_mode(VkPresentModeKHR         present_mode,
 
   return false;
 }
+
+#endif
 
 //
 //
@@ -529,14 +531,13 @@ surface_default_attach(struct surface *           surface,
                        VkComponentMapping const * image_view_components,
                        VkPresentModeKHR           present_mode)
 {
-  // TODO(allanmac): replace with returned error
   assert(surface->device == NULL);
 
   //
   // NOTE(allanmac): These cursory checks shouldn't be performed
   // here. They're the responsibility of the caller.
   //
-
+#ifndef NDEBUG
   //
   // verify physical device surface support
   //
@@ -547,7 +548,7 @@ surface_default_attach(struct surface *           surface,
                                         surface->vk.surface,
                                         &is_pd_supported));
 
-  assert(is_pd_supported);  // TODO(allanmac): replace with returned error
+  assert(is_pd_supported);
 
   //
   // verify that the requested surface format is supported
@@ -556,7 +557,7 @@ surface_default_attach(struct surface *           surface,
                                                                          vk_pd,
                                                                          surface_format);
 
-  assert(is_surface_format_supported);  // TODO(allanmac): replace with returned error
+  assert(is_surface_format_supported);
 
   //
   // verify surface supports desired usage
@@ -565,9 +566,7 @@ surface_default_attach(struct surface *           surface,
 
   vk(GetPhysicalDeviceSurfaceCapabilitiesKHR(vk_pd, surface->vk.surface, &sc));
 
-#ifndef NDEBUG
   surface_debug_surface_capabilities(stderr, &sc);
-#endif
 
   assert(sc.minImageCount <= min_image_count);
 
@@ -582,19 +581,22 @@ surface_default_attach(struct surface *           surface,
                                              &present_mode_count,
                                              present_modes));
 
-#ifndef NDEBUG
   surface_debug_surface_present_modes(stderr, present_mode_count, present_modes);
-#endif
 
   assert(surface_verify_present_mode(present_mode, present_mode_count, present_modes));
 
   //
+  // verify imaged usage is supported
   //
-  //
-
   bool const is_usage_supported = (sc.supportedUsageFlags & image_usage) == image_usage;
 
-  assert(is_usage_supported);  // TODO(allanmac): replace with returned error
+  assert(is_usage_supported);
+
+  //
+  // report image_view_format
+  //
+  surface_debug_image_view_format(stderr, image_view_format);
+#endif
 
   //
   // otherwise, create the device
