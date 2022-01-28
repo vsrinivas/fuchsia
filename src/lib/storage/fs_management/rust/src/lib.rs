@@ -66,6 +66,18 @@ pub use error::{
     BindError, CommandError, KillError, LaunchProcessError, QueryError, ServeError, ShutdownError,
 };
 
+/// Constants for fuchsia.io/FilesystemInfo.fs_type
+/// Keep in sync with VFS_TYPE_* types in //zircon/system/public/zircon/device/vfs.h
+pub mod vfs_type {
+    pub const BLOBFS: u32 = 0x9e694d21;
+    pub const FATFS: u32 = 0xce694d21;
+    pub const MINFS: u32 = 0x6e694d21;
+    pub const MEMFS: u32 = 0x3e694d21;
+    pub const FACTORYFS: u32 = 0x1e694d21;
+    pub const FXFS: u32 = 0x73667866;
+    pub const F2FS: u32 = 0xfe694d21;
+}
+
 /// Stores state of the mounted filesystem instance
 struct FSInstance {
     process: zx::Process,
