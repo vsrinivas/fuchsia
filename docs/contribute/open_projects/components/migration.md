@@ -205,7 +205,7 @@ Reach out for questions or for status updates:
 [intro]: /docs/concepts/components/v2/introduction.md
 [label-cf-v2-migration]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=label%3Acf-v2-migration
 [lib-fuchsia-component]: /src/lib/fuchsia-component/README.md
-[migrating-sys-components]: /docs/development/components/v2/migration.md
+[migrating-sys-components]: /docs/development/components/v2/migration/README.md
 [session-framework]: /docs/concepts/session/introduction.md
 [sdk-components]: /sdk/lib/sys/cpp
 [sdk-test-with-environment]: /sdk/lib/sys/cpp/testing/test_with_environment.h

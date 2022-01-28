@@ -245,7 +245,7 @@ Due to the above, always prefer using `resource()` if possible.
 
 [additional-packaged-resources]: /docs/development/components/build.md#additional-packaged-resources
 [build-components]: /docs/development/components/build.md
-[config-migration]: /docs/development/components/v2/migration.md#config-data
+[config-migration]: /docs/development/components/v2/migration/features.md#config-data
 [gn-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders
 [icu-data]: /docs/development/internationalization/icu_data.md
 [icu-data-configs]: /src/lib/icu/tzdata/BUILD.gn

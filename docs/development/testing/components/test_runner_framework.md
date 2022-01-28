@@ -616,5 +616,4 @@ Components in the test realm may play various roles in the test, as follows:
 [loader-service]: /docs/concepts/process/program_loading.md#the_loader_service
 [caching-loader-service]: /src/sys/test_runners/src/elf/elf_component.rs
 [framework-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md#framework
-[sys-migration-guide]: /docs/development/components/v2/migration.md
-[sys-migration-guide-system-services]: /docs/development/components/v2/migration.md#system-services
+[sys-migration-guide]: /docs/development/components/v2/migration/tests.md

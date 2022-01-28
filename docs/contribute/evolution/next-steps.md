@@ -216,8 +216,8 @@ even if CTS coverage never reaches 100% of the platform surface.
 [cf-design-isolation]: /docs/concepts/components/v2/design_principles.md#isolation
 [cf-intro]: /docs/concepts/components/v2/introduction.md
 [cfv2-migration]: /docs/contribute/open_projects/components/migration.md
-[cfv2-sys-migration]: /docs/development/components/v2/migration.md
-[cfv2-sys-migration-build-info]: /docs/development/components/v2/migration.md#build-info
+[cfv2-sys-migration]: /docs/development/components/v2/migration/README.md
+[cfv2-sys-migration-build-info]: /docs/development/components/v2/migration/features.md#build-info
 [cmx-sandbox]: /docs/concepts/components/v1/component_manifests.md#sandbox
 [cpu-trace]: /docs/development/tracing/advanced/recording-a-cpu-performance-trace.md
 [cts]: /docs/development/testing/cts/overview.md

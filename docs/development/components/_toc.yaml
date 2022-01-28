@@ -16,7 +16,6 @@ toc:
   path: /docs/development/components/data.md
 - title: "Component storage index"
   path: /docs/development/components/component_id_index.md
-- title: "Migration guides"
+- title: "Migrating legacy components"
   section:
-  - title: "Migrating system components"
-    path: /docs/development/components/v2/migration.md
+  - include: /docs/development/components/v2/migration/_toc.yaml

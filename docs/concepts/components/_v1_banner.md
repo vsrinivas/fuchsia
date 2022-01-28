@@ -5,4 +5,4 @@ the modern component framework.
 
 [legacy-components]: /docs/concepts/components/v1/README.md
 [glossary.component manifest source]: /docs/glossary/README.md#component-manifest-source
-[migration]: /docs/development/components/v2/migration.md
+[migration]: /docs/development/components/v2/migration/README.md
