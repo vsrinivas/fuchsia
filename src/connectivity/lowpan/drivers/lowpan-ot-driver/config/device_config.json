@@ -1,0 +1,6 @@
+{
+    "is_integration_test": false,
+    "max_auto_restarts": 10,
+    "name": "lowpan0",
+    "ot_radio_path": "/dev/class/ot-radio/000"
+}

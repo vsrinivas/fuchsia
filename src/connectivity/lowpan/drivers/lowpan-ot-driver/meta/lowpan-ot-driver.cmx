@@ -1,0 +1,28 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/lowpan_ot_driver"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ot-radio"
+        ],
+        "features": [
+            "config-data",
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.factory.lowpan.FactoryRegister",
+            "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            "fuchsia.lowpan.device.Register",
+            "fuchsia.lowpan.spinel.Device",
+            "fuchsia.net.interfaces.State",
+            "fuchsia.net.interfaces.admin.Installer",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.net.tun.Control",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ]
+    },
+    "program": {
+        "binary": "bin/lowpan_ot_driver_bin_test"
+    }
+}

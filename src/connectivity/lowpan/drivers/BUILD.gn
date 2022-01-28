@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 
 group("drivers") {
-  deps = [ "lowpan-spinel-driver" ]
+  deps = [
+    "lowpan-ot-driver",
+    "lowpan-spinel-driver",
+  ]
 }
 
 group("tests") {
@@ -11,6 +14,7 @@ group("tests") {
   deps = [
     "lowpan-dummy-driver",
     "lowpan-dummy-driver:tests",
+    "lowpan-ot-driver:tests",
     "lowpan-spinel-driver:tests",
   ]
 }
