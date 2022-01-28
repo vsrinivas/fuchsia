@@ -1311,14 +1311,20 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
       }
 
       v += PAGE_SIZE;
-      total_mapped += ret / PAGE_SIZE;
+      if (ret > 0) {
+        total_mapped += ret / PAGE_SIZE;
+      }
     }
     undo.cancel();
   }
   DEBUG_ASSERT(total_mapped <= count);
+  DEBUG_ASSERT(existing_action != ExistingEntryAction::Error || total_mapped == count);
 
   if (mapped) {
-    *mapped = total_mapped;
+    // For ExistingEntryAction::Error, we should have mapped all the addresses we were asked to.
+    // For ExistingEntryAction::Skip, we might have mapped less if we encountered existing entries,
+    // but skipped entries contribute towards the total as well.
+    *mapped = count;
   }
 
 #if __has_feature(address_sanitizer)
