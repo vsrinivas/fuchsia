@@ -105,7 +105,7 @@ config("panic_abort") {
 
 config("v0_symbol_mangling") {
   if (rust_v0_symbol_mangling) {
-    rustflags = [ "-Zsymbol-mangling-version=v0" ]
+    rustflags = [ "-Csymbol-mangling-version=v0" ]
   }
 }
 
