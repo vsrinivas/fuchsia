@@ -26,16 +26,7 @@ dart_test("workstation_chrome_smoke_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  # TODO(fxbug.dev/92334): Switch back to [ atlas_env ] with no "e2e-fyi" tag
-  # after the test is fixed.
-  environments = [
-    {
-      dimensions = {
-        device_type = "Atlas"
-      }
-      tags = [ "e2e-fyi" ]
-    },
-  ]
+  environments = [ atlas_env ]
 }
 
 dart_test("workstation_chrome_advanced_smoke_test") {
