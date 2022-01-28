@@ -24,6 +24,20 @@ type RealOrPresentationTime = flexible union {
     3: presentation_time zx.duration;
 };
 
+/// Type returned by `Consumer.WatchPacketLeadTime` and `Producer.WatchBufferLeadTime`.
+type WatchLeadTimeResult = flexible union {
+    /// A lead time value. Negative values indicate starvation.
+    1: value zx.duration;
+
+    /// Indicates starvation. This value is used when the service cannot determine how late the
+    /// packet/buffer arrival is.
+    2: underflow struct {};
+
+    /// Indicates that no arrival value has ever been reported for the service. This may be returned
+    /// when a new request causes a old request to respond before any value has been reported.
+    3: no_value struct {};
+};
+
 type StartError = flexible enum {
     CANCELED = 1;
     ALREADY_STARTED = 2;

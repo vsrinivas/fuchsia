@@ -151,8 +151,10 @@ protocol ActiveProducerStream {
     /// the specified limits or when a new `WatchBufferLeadTime` request arrives. Buffer lead
     /// time is the interval between the time the producer becomes aware that a buffer is no
     /// longer is in use and the time at which the producer needs to allocate that buffer.
-    /// Overflow (when no buffer is available when one is needed) is indicated by a lead time
-    /// of -1ns.
+    /// Underflow (when no buffer is available when one is needed) is indicated by a negative lead
+    /// time value, if the value is known, or `WatchLeadTimeResult.underflow` if it is not.
+    /// For the purposes of filtering, `WatchLeadTimeResult.underflow` is equivalent to a lead time
+    /// value of -1.
     ///
     /// + request `min` the margin below which buffer availability
     ///   lead time must fall in order for the reply to be sent.  For example, passing zero
@@ -163,11 +165,14 @@ protocol ActiveProducerStream {
     ///   lead time measured when the response was generated. This value will only be within
     ///   the specified limits if the response is generated due to
     ///   the arrival of a new `WatchBufferLeadTime` request.
+    /// * error `NO_LEAD_TIME_REPORTED` indicates a new `WatchBufferLeadTime` request arrived before
+    ///   any lead time values were reported.
     ///
     /// Only one `WatchBufferLeadTime` operation may be pending at any
     /// given time. If a `WatchBufferLeadTime` request is received
     /// when another such request is pending, the producer responds
-    /// to the older request with the current buffer lead time value.
+    /// to the older request with the current buffer lead time value or the error
+    /// `NO_LEAD_TIME_REPORTED`.
     ///
     /// Implementation note:
     /// Because buffers may be allocated out of order with respect to their release, producers
@@ -182,6 +187,6 @@ protocol ActiveProducerStream {
         min zx.duration;
         max zx.duration;
     }) -> (struct {
-        buffer_lead_time zx.duration;
+        result WatchLeadTimeResult;
     });
 };

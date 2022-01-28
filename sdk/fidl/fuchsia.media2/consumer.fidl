@@ -215,7 +215,9 @@ protocol ActiveConsumerStream {
     /// `WatchPacketLeadTime` request arrives. Packet lead time is the interval between the arrival
     /// of a packet at the consumer and the packet's arrival deadline. A lead time of zero indicates
     /// that a packet arrived at the consumer just in time. Underflow (late packet arrival) is
-    /// indicated by a lead time value of -1ns.
+    /// indicated by a negative lead time value, if the value is known, or
+    /// `WatchLeadTimeResult.underflow` if it is not. For the purposes of filtering,
+    /// `WatchLeadTimeResult.underflow` is equivalent to a lead time value of -1.
     ///
     /// + request `min` the margin below which packet arrival lead
     ///   time must fall in order for the reply to be sent. For example, passing zero indicates
@@ -227,16 +229,19 @@ protocol ActiveConsumerStream {
     ///   response was generated. This value will only be within
     ///   the specified limits if the response is generated due to
     ///   the arrival of a new `WatchPacketLeadTime` request.
+    /// * error `NO_LEAD_TIME_REPORTED` indicates a new `WatchPacketLeadTime` request arrived before
+    ///   any lead time values were reported.
     ///
     /// Only one `WatchPacketLeadTime` operation may be pending at any
     /// given time. If a `WatchPacketLeadTime` request is received
     /// when another such request is pending, the consumer responds
-    /// to the older request with the latest packet lead time value.
+    /// to the older request with the latest packet lead time value or the error
+    /// `NO_LEAD_TIME_REPORTED`.
     WatchPacketLeadTime(struct {
         min zx.duration;
         max zx.duration;
     }) -> (struct {
-        packet_lead_time zx.duration;
+        result WatchLeadTimeResult;
     });
 };
 
