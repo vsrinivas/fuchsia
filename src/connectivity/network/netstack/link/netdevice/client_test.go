@@ -39,23 +39,20 @@ import (
 )
 
 type DeliverNetworkPacketArgs struct {
-	SrcLinkAddr, DstLinkAddr tcpip.LinkAddress
-	Protocol                 tcpip.NetworkProtocolNumber
-	Pkt                      *stack.PacketBuffer
+	Protocol tcpip.NetworkProtocolNumber
+	Pkt      *stack.PacketBuffer
 }
 
 type dispatcherChan chan DeliverNetworkPacketArgs
 
 var _ stack.NetworkDispatcher = (dispatcherChan)(nil)
 
-func (ch dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+func (ch dispatcherChan) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	pkt.IncRef()
 
 	ch <- DeliverNetworkPacketArgs{
-		SrcLinkAddr: srcLinkAddr,
-		DstLinkAddr: dstLinkAddr,
-		Protocol:    protocol,
-		Pkt:         pkt,
+		Protocol: protocol,
+		Pkt:      pkt,
 	}
 }
 
@@ -401,10 +398,12 @@ func TestClient_WritePackets(t *testing.T) {
 	func() {
 		var pkts stack.PacketBufferList
 		defer pkts.DecRef()
-		pkts.PushBack(stack.NewPacketBuffer(stack.PacketBufferOptions{
+		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
-		}))
+		})
+		pkts.PushBack(pkt)
 
+		linkEndpoint.AddHeader(pkt)
 		if n, err := linkEndpoint.WritePackets(pkts); err != nil {
 			t.Fatalf("WritePackets(_): %s", err)
 		} else if n != 1 {
@@ -493,9 +492,11 @@ func TestWritePackets(t *testing.T) {
 					ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
 					Data:               buffer.View(pktBody).ToVectorisedView(),
 				})
+				pkt.EgressRoute.LocalLinkAddress = tcpip.LinkAddress(tunMac.Octets[:])
 				pkt.EgressRoute.RemoteLinkAddress = tcpip.LinkAddress(otherMac.Octets[:])
 				pkt.NetworkProtocolNumber = protocol
 				pkts.PushBack(pkt)
+				linkEndpoint.AddHeader(pkt)
 
 				if n, err := linkEndpoint.WritePackets(pkts); err != nil {
 					t.Fatalf("WritePackets(_): %s", err)
@@ -659,10 +660,8 @@ func TestReceivePacket(t *testing.T) {
 				t.Fatalf("failed to consume %d bytes for link header", header.EthernetMinimumSize)
 			}
 			if diff := cmp.Diff(args, DeliverNetworkPacketArgs{
-				SrcLinkAddr: tcpip.LinkAddress(otherMac.Octets[:]),
-				DstLinkAddr: tcpip.LinkAddress(tunMac.Octets[:]),
-				Protocol:    protocol,
-				Pkt:         pkt,
+				Protocol: protocol,
+				Pkt:      pkt,
 			}, testutil.PacketBufferCmpTransformer); diff != "" {
 				t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 			}

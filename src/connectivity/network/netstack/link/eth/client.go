@@ -190,13 +190,6 @@ func (c *Client) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	return c.write(pkts)
 }
 
-func (c *Client) WriteRawPacket(pkt *stack.PacketBuffer) tcpip.Error {
-	var pkts stack.PacketBufferList
-	pkts.PushBack(pkt)
-	_, err := c.write(pkts)
-	return err
-}
-
 func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	c.dispatcher = dispatcher
 
@@ -249,8 +242,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				})
 				defer pkt.DecRef()
 
-				var emptyLinkAddress tcpip.LinkAddress
-				dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, 0, pkt)
+				dispatcher.DeliverNetworkPacket(0, pkt)
 			}()
 			// This entry is going back to the driver; it can be reused.
 			entry.SetLength(bufferSize)
@@ -301,8 +293,7 @@ func (*Client) ARPHardwareType() header.ARPHardwareType {
 }
 
 // AddHeader implements stack.LinkEndpoint.
-func (*Client) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
-}
+func (*Client) AddHeader(*stack.PacketBuffer) {}
 
 // GSOMaxSize implements stack.GSOEndpoint.
 func (*Client) GSOMaxSize() uint32 {

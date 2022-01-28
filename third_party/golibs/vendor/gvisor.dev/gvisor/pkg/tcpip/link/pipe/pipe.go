@@ -53,20 +53,11 @@ func (e *Endpoint) deliverPackets(pkts stack.PacketBufferList) {
 		return
 	}
 
-	// Note that the local address from the perspective of this endpoint is the
-	// remote address from the perspective of the other end of the pipe
-	// (e.linked). Similarly, the remote address from the perspective of this
-	// endpoint is the local address on the other end.
-	//
-	// Deliver the packet in a new goroutine to escape this goroutine's stack and
-	// avoid a deadlock when a packet triggers a response which leads the stack to
-	// try and take a lock it already holds.
 	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
 		newPkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			Data: buffer.NewVectorisedView(pkt.Size(), pkt.Views()),
 		})
-		r := pkt.EgressRoute
-		e.linked.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress /* remote */, r.RemoteLinkAddress /* local */, pkt.NetworkProtocolNumber, newPkt)
+		e.linked.dispatcher.DeliverNetworkPacket(pkt.NetworkProtocolNumber, newPkt)
 		newPkt.DecRef()
 	}
 }
@@ -117,13 +108,4 @@ func (*Endpoint) ARPHardwareType() header.ARPHardwareType {
 }
 
 // AddHeader implements stack.LinkEndpoint.
-func (*Endpoint) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
-}
-
-// WriteRawPacket implements stack.LinkEndpoint.
-func (e *Endpoint) WriteRawPacket(pkt *stack.PacketBuffer) tcpip.Error {
-	var pkts stack.PacketBufferList
-	pkts.PushBack(pkt)
-	_, err := e.WritePackets(pkts)
-	return err
-}
+func (*Endpoint) AddHeader(*stack.PacketBuffer) {}

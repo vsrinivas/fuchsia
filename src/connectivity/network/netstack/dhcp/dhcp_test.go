@@ -115,6 +115,8 @@ func (e *endpoint) IsAttached() bool {
 
 func (*endpoint) ARPHardwareType() header.ARPHardwareType { return header.ARPHardwareNone }
 
+func (*endpoint) AddHeader(*stack.PacketBuffer) {}
+
 func (e *endpoint) writePacket(pkt *stack.PacketBuffer) tcpip.Error {
 	newBuf := false
 	if pkt.NetworkProtocolNumber == ipv4.ProtocolNumber {
@@ -157,8 +159,6 @@ func (e *endpoint) writePacket(pkt *stack.PacketBuffer) tcpip.Error {
 				newPkt.PktType = tcpip.PacketBroadcast
 
 				remote.dispatcher.DeliverNetworkPacket(
-					pkt.EgressRoute.LocalLinkAddress,
-					pkt.EgressRoute.RemoteLinkAddress,
 					pkt.NetworkProtocolNumber,
 					newPkt,
 				)

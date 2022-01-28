@@ -36,23 +36,20 @@ import (
 )
 
 type DeliverNetworkPacketArgs struct {
-	SrcLinkAddr, DstLinkAddr tcpip.LinkAddress
-	Protocol                 tcpip.NetworkProtocolNumber
-	Pkt                      *stack.PacketBuffer
+	Protocol tcpip.NetworkProtocolNumber
+	Pkt      *stack.PacketBuffer
 }
 
 type dispatcherChan chan DeliverNetworkPacketArgs
 
 var _ stack.NetworkDispatcher = (dispatcherChan)(nil)
 
-func (ch dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+func (ch dispatcherChan) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	pkt.IncRef()
 
 	ch <- DeliverNetworkPacketArgs{
-		SrcLinkAddr: srcLinkAddr,
-		DstLinkAddr: dstLinkAddr,
-		Protocol:    protocol,
-		Pkt:         pkt,
+		Protocol: protocol,
+		Pkt:      pkt,
 	}
 }
 

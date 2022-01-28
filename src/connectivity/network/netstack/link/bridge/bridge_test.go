@@ -116,7 +116,7 @@ func (t *testNetworkDispatcher) takePkt() *stack.PacketBuffer {
 	return pkt
 }
 
-func (t *testNetworkDispatcher) DeliverNetworkPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+func (t *testNetworkDispatcher) DeliverNetworkPacket(_ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	t.count++
 
 	if pkt := t.pkt; pkt != nil {
@@ -168,23 +168,21 @@ func (*stubEndpoint) ARPHardwareType() header.ARPHardwareType {
 	panic("ARPHardwareType unimplemented")
 }
 
-func (*stubEndpoint) AddHeader(local, remote tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
-	panic("AddHeader unimplemented")
-}
+func (*stubEndpoint) AddHeader(*stack.PacketBuffer) {}
 
-func (*stubEndpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
-	panic("WritePackets unimplemented")
-}
-
-func (e *stubEndpoint) WriteRawPacket(pkt *stack.PacketBuffer) tcpip.Error {
-	select {
-	case e.c <- pkt:
-		pkt.IncRef()
-	default:
-		return &tcpip.ErrWouldBlock{}
+func (e *stubEndpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
+	i := 0
+	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
+		select {
+		case e.c <- pkt:
+			pkt.IncRef()
+			i++
+		default:
+			return i, &tcpip.ErrWouldBlock{}
+		}
 	}
 
-	return nil
+	return i, nil
 }
 
 func (e *stubEndpoint) release() {
@@ -238,7 +236,10 @@ func expectPacket(t *testing.T, name string, pkt *stack.PacketBuffer, wantSrc, w
 func TestBridgeWithoutDispatcher(t *testing.T) {
 	ep := makeStubEndpoint(linkAddr1, 0)
 	defer ep.release()
-	bep := bridge.NewEndpoint(&ep)
+	// DeliverNetworkPacketToBridge reads link addresses from the ethernet
+	// header so make sure we are able to populate one by wrapping the
+	// stub endpoint with an ethernet link endpoint.
+	bep := bridge.NewEndpoint(ethernet.New(&ep))
 	bridgeEP, err := bridge.New([]*bridge.BridgeableEndpoint{bep})
 	if err != nil {
 		t.Fatalf("failed to create bridge: %s", err)
@@ -258,13 +259,18 @@ func TestBridgeWithoutDispatcher(t *testing.T) {
 		},
 	}
 
-	pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-		ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
-	})
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			bridgeEP.DeliverNetworkPacketToBridge(nil /* rxEP */, linkAddr2 /* srcLinkAddr */, test.dstLinkAddr, 0 /* protocol */, pkt)
+			pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+				ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
+			})
+			defer pkt.DecRef()
+
+			pkt.EgressRoute.LocalLinkAddress = linkAddr2
+			pkt.EgressRoute.RemoteLinkAddress = test.dstLinkAddr
+			bridgeEP.AddHeader(pkt)
+
+			bridgeEP.DeliverNetworkPacketToBridge(nil /* rxEP */, 0 /* protocol */, pkt)
 		})
 	}
 }
@@ -307,8 +313,10 @@ func TestBridgeWritePackets(t *testing.T) {
 					ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
 					Data:               buffer.View(data[j]).ToVectorisedView(),
 				})
+				pkt.EgressRoute.LocalLinkAddress = baddr
 				pkt.EgressRoute.RemoteLinkAddress = dstAddr
 				pkt.NetworkProtocolNumber = fakeNetworkProtocol
+				bridgeEP.AddHeader(pkt)
 				pkts.PushBack(pkt)
 			}
 
@@ -426,7 +434,7 @@ func TestDeliverNetworkPacketToBridge(t *testing.T) {
 						Type:    fakeNetworkProtocol,
 					}
 					eth.Encode(&fields)
-					bridgeEP.DeliverNetworkPacketToBridge(test.rxEP, srcAddr, subtest.dstAddr, fakeNetworkProtocol, pkt)
+					bridgeEP.DeliverNetworkPacketToBridge(test.rxEP, fakeNetworkProtocol, pkt)
 
 					for i, ep := range eps {
 						// An endpoint on the bridge should receive all packets that do not come
@@ -560,7 +568,7 @@ func TestBridge(t *testing.T) {
 				"s1": s1, "s2": s2, "sb": sb,
 			}
 
-			ep2.onWriteRawPacket = func(pkt *stack.PacketBuffer) {
+			ep2.onWritePacket = func(pkt *stack.PacketBuffer) {
 				for i, view := range pkt.Data().Views() {
 					if bytes.Contains(view, []byte(payload)) {
 						t.Errorf("did not expect payload %x to be sent back to ep1 in view %d: %x", payload, i, view)
@@ -720,7 +728,7 @@ func TestBridgeableEndpointDetach(t *testing.T) {
 	func() {
 		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{})
 		defer pkt.DecRef()
-		bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, pkt)
+		bep1.DeliverNetworkPacket(header.IPv4ProtocolNumber, pkt)
 		if disp.count != 1 {
 			t.Fatalf("got disp.count = %d, want = 1", disp.count)
 		}
@@ -737,7 +745,7 @@ func TestBridgeableEndpointDetach(t *testing.T) {
 	func() {
 		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{})
 		defer pkt.DecRef()
-		bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, pkt)
+		bep1.DeliverNetworkPacket(header.IPv4ProtocolNumber, pkt)
 		if disp.count != 1 {
 			t.Fatalf("got disp.count = %d, want = 1", disp.count)
 		}
@@ -757,14 +765,16 @@ var _ stack.LinkEndpoint = (*endpoint)(nil)
 // Make endpoints using `makePipe()`, not using endpoint literals.
 type endpoint struct {
 	stack.LinkEndpoint
-	onWriteRawPacket func(*stack.PacketBuffer)
+	onWritePacket func(*stack.PacketBuffer)
 }
 
-func (e *endpoint) WriteRawPacket(pkt *stack.PacketBuffer) tcpip.Error {
-	if fn := e.onWriteRawPacket; fn != nil {
-		fn(pkt)
+func (e *endpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
+	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
+		if fn := e.onWritePacket; fn != nil {
+			fn(pkt)
+		}
 	}
-	return e.LinkEndpoint.WriteRawPacket(pkt)
+	return e.LinkEndpoint.WritePackets(pkts)
 }
 
 func makeStackWithEndpoint(nicID tcpip.NICID, ep stack.LinkEndpoint, protocolFactory stack.NetworkProtocolFactory, protocolNumber tcpip.NetworkProtocolNumber, addr tcpip.Address) (*stack.Stack, error) {

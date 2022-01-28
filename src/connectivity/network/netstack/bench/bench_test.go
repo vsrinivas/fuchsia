@@ -39,13 +39,11 @@ func (*nullEndpoint) LinkAddress() tcpip.LinkAddress {
 func (*nullEndpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
 	return pkts.Len(), nil
 }
-func (*nullEndpoint) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }
-func (*nullEndpoint) Attach(dispatcher stack.NetworkDispatcher)      {}
-func (*nullEndpoint) IsAttached() bool                               { return false }
-func (*nullEndpoint) Wait()                                          {}
-func (*nullEndpoint) ARPHardwareType() header.ARPHardwareType        { return header.ARPHardwareNone }
-func (*nullEndpoint) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
-}
+func (*nullEndpoint) Attach(dispatcher stack.NetworkDispatcher) {}
+func (*nullEndpoint) IsAttached() bool                          { return false }
+func (*nullEndpoint) Wait()                                     {}
+func (*nullEndpoint) ARPHardwareType() header.ARPHardwareType   { return header.ARPHardwareNone }
+func (*nullEndpoint) AddHeader(*stack.PacketBuffer)             {}
 
 type nullChecksumOffloadEndpoint struct {
 	nullEndpoint

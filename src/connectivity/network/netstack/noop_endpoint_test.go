@@ -48,8 +48,6 @@ func (*noopEndpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error
 	return pkts.Len(), nil
 }
 
-func (*noopEndpoint) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }
-
 func (ep *noopEndpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	if dispatcher != nil {
 		ep.attached = make(chan struct{})
@@ -75,8 +73,7 @@ func (ep *noopEndpoint) ARPHardwareType() header.ARPHardwareType {
 	return header.ARPHardwareNone
 }
 
-func (*noopEndpoint) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
-}
+func (*noopEndpoint) AddHeader(*stack.PacketBuffer) {}
 
 var _ link.Controller = (*noopController)(nil)
 

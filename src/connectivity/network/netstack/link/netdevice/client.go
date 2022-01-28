@@ -359,7 +359,7 @@ func (c *Client) Run(ctx context.Context) {
 							})
 							defer pkt.DecRef()
 
-							dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, pkt)
+							dispatcher.DeliverNetworkPacket(protocolNumber, pkt)
 						}()
 					}
 				} else {
@@ -399,8 +399,7 @@ func (*Port) ARPHardwareType() header.ARPHardwareType {
 	return header.ARPHardwareNone
 }
 
-func (*Port) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
-}
+func (*Port) AddHeader(*stack.PacketBuffer) {}
 
 // GSOMaxSize implements stack.GSOEndpoint.
 func (*Port) GSOMaxSize() uint32 {
