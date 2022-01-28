@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_tpm_cr50::{
-    InsertLeafParams, PinWeaverError, TryAuthParams, DELAY_SCHEDULE_MAX_COUNT, HASH_SIZE,
-    HE_SECRET_MAX_SIZE, LE_SECRET_MAX_SIZE, MAC_SIZE,
+    InsertLeafParams, PinWeaverError, RemoveLeafParams, TryAuthParams, DELAY_SCHEDULE_MAX_COUNT,
+    HASH_SIZE, HE_SECRET_MAX_SIZE, LE_SECRET_MAX_SIZE, MAC_SIZE,
 };
 use fuchsia_syslog::fx_log_warn;
 use std::{convert::TryInto, marker::PhantomData};
@@ -406,6 +406,50 @@ impl Deserializable for PinweaverTryAuthResponse {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+/// Remove a leaf.
+/// https://source.chromium.org/chromiumos/chromiumos/codesearch/+/main:src/platform/cr50/include/pinweaver_types.h;l=284;drc=1c95cff7463ef29bd0c6d087ce8c3d7e17f94c6a
+pub struct PinweaverRemoveLeaf {
+    /// Label of the leaf to remove.
+    label: u64,
+    /// HMAC used in merkle tree calculation.
+    hmac: [u8; MAC_SIZE as usize],
+    /// Auxiliary hashes, from bottom left to top right.
+    h_aux: Vec<[u8; HASH_SIZE as usize]>,
+}
+
+impl Serializable for PinweaverRemoveLeaf {
+    fn serialize(&self, serializer: &mut Serializer) {
+        serializer.put_le_u16(
+            (std::mem::size_of::<u64>()
+                + MAC_SIZE as usize
+                + (self.h_aux.len() * HASH_SIZE as usize))
+                .try_into()
+                .unwrap_or(0),
+        );
+        serializer.put_le_u64(self.label);
+        serializer.put(&self.hmac);
+        for item in self.h_aux.iter() {
+            item.as_slice().serialize(serializer);
+        }
+    }
+}
+
+impl PinweaverRemoveLeaf {
+    pub fn new(
+        params: RemoveLeafParams,
+    ) -> Result<PinweaverRequest<PinweaverRemoveLeaf, ()>, PinWeaverError> {
+        Ok(PinweaverRequest::new(
+            PinweaverMessageType::RemoveLeaf,
+            PinweaverRemoveLeaf {
+                label: params.label.ok_or(PinWeaverError::LabelInvalid)?,
+                hmac: params.mac.ok_or(PinWeaverError::HmacAuthFailed)?,
+                h_aux: params.h_aux.ok_or(PinWeaverError::PathAuthFailed)?,
+            },
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -644,5 +688,38 @@ mod tests {
             ]
         );
         assert_eq!(data.unimported_leaf_data.payload, vec![0xaa, 0xbb, 0xcc]);
+    }
+
+    #[test]
+    fn test_remove_leaf() {
+        let mut serializer = Serializer::new();
+        let mut params = RemoveLeafParams::EMPTY;
+        params.label = Some(0x11d1f);
+        params.mac = Some([0xab; MAC_SIZE as usize]);
+        params.h_aux = Some(vec![[0xcc; HASH_SIZE as usize], [0xab; HASH_SIZE as usize]]);
+
+        PinweaverRemoveLeaf::new(params).expect("create remove leaf ok").serialize(&mut serializer);
+        let vec = serializer.into_vec();
+        assert_eq!(
+            vec,
+            vec![
+                0x00, 0x25, /* Subcommand::Pinweaver */
+                0x01, 0x03, /* Protocol version and message type */
+                0x68, 0x00, /* Data length (LE) */
+                /* Leaf label: 8 bytes */
+                0x1f, 0x1d, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, //
+                /* MAC: 32 bytes */
+                0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab,
+                0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab,
+                0xab, 0xab, 0xab, 0xab, //
+                /* h_aux: 2*32 bytes */
+                0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+                0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc,
+                0xcc, 0xcc, 0xcc, 0xcc, //
+                0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab,
+                0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab,
+                0xab, 0xab, 0xab, 0xab, //
+            ]
+        );
     }
 }

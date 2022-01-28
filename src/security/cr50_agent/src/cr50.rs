@@ -13,7 +13,8 @@ use crate::{
                 CcdRequest,
             },
             pinweaver::{
-                PinweaverInsertLeaf, PinweaverResetTree, PinweaverTryAuth, PROTOCOL_VERSION,
+                PinweaverInsertLeaf, PinweaverRemoveLeaf, PinweaverResetTree, PinweaverTryAuth,
+                PROTOCOL_VERSION,
             },
             wp::WpInfoRequest,
             Serializable, TpmCommand,
@@ -155,7 +156,21 @@ impl Cr50 {
 
                     responder.send(&mut fidl_result).context("Replying to request")?;
                 }
-                PinWeaverRequest::RemoveLeaf { .. } => todo!(),
+                PinWeaverRequest::RemoveLeaf { params, responder } => {
+                    let request = match PinweaverRemoveLeaf::new(params) {
+                        Ok(req) => req,
+                        Err(e) => {
+                            responder.send(&mut Err(e)).context("Replying to request")?;
+                            continue;
+                        }
+                    };
+
+                    let result =
+                        request.execute(&self.proxy).await.context("Executing TPM command")?;
+                    responder
+                        .send(&mut result.ok().map(|_| result.root))
+                        .context("Replying to request")?;
+                }
                 PinWeaverRequest::TryAuth { params, responder } => {
                     let request = match PinweaverTryAuth::new(params) {
                         Ok(req) => req,
