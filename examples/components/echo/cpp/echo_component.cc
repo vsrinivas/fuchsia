@@ -8,9 +8,9 @@
 
 namespace echo {
 
-static std::string join(std::vector<std::string>& input_list, std::string separator) {
+static std::string join(std::vector<std::string>& input_list, const std::string& separator) {
   return std::accumulate(std::begin(input_list), std::end(input_list), std::string(""),
-                         [separator](std::string current, std::string& next) {
+                         [&separator](std::string current, std::string& next) {
                            return current.empty() ? next : (std::move(current) + separator + next);
                          });
 }
