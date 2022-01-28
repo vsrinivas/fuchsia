@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Error},
     component_events::{events::*, matcher::*},
-    fuchsia_component_test::{ChildOptions, Moniker, RealmBuilder},
+    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
 };
 
 #[fuchsia::test]
@@ -20,12 +20,41 @@ async fn launch_realm_components() -> Result<(), Error> {
         .await
         .context("failed to subscribe to EventSource")?;
 
-    // Create the test realm,
+    // Create a new empty test realm
     let builder = RealmBuilder::new().await?;
-    builder.add_child(Moniker::root(), "#meta/echo_realm.cm", ChildOptions::new()).await?;
 
-    // Mark echo_client as eager so it starts automatically.
-    builder.mark_as_eager("echo_client").await?;
+    // Add the echo server to the realm
+    let echo_server =
+        builder.add_child("echo_server", "#meta/echo_server.cm", ChildOptions::new()).await?;
+
+    // Add the echo client to the realm, and make the echo_client eager so that it starts
+    // automatically
+    let echo_client = builder
+        .add_child("echo_client", "#meta/echo_client.cm", ChildOptions::new().eager())
+        .await?;
+
+    // Route the echo capabilities from the server to the client
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.examples.Echo"))
+                .capability(Capability::protocol_by_name("fuchsia.examples.EchoLauncher"))
+                .capability(Capability::service_by_name("fuchsia.examples.EchoService"))
+                .from(&echo_server)
+                .to(&echo_client),
+        )
+        .await?;
+
+    // Route the LogSink to the server and client, so that both are able to send us logs
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&echo_server)
+                .to(&echo_client),
+        )
+        .await?;
 
     // Create the realm instance
     let realm_instance = builder.build().await?;
