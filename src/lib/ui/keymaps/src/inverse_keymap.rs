@@ -77,6 +77,15 @@ impl InverseKeymap {
             }
         }
 
+        // Additionally, insert some convenience keystrokes.  This is not intended to be
+        // complete, but to allow simple keyboard navigation such as confirming text input
+        // or focus change to the next element.
+
+        // Based on //sdk/fidl/fuchsia.input/key.fidl.
+        // Assumes the usage page is 0x7.
+        map.insert('\n', KeyStroke { usage: 0x28, shift: Shift::No });
+        map.insert('\t', KeyStroke { usage: 0x2b, shift: Shift::No });
+
         Self { map }
     }
 
@@ -103,5 +112,12 @@ mod tests {
         assert_matches!(keymap.get(&'a'), Some(KeyStroke { usage: 0x04, .. }));
         // Numeric character: maps to main keyboard, not keypad.
         assert_matches!(keymap.get(&'1'), Some(KeyStroke { usage: 0x1e, .. }));
+    }
+
+    #[test]
+    fn returns_special_keys() {
+        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
+        assert_matches!(keymap.get(&'\n'), Some(KeyStroke { usage: 0x28, shift: Shift::No }));
+        assert_matches!(keymap.get(&'\t'), Some(KeyStroke { usage: 0x2b, shift: Shift::No }));
     }
 }
