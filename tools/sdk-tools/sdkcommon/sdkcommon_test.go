@@ -1181,6 +1181,29 @@ func TestMapToDeviceConfig(t *testing.T) {
 	}
 }
 
+func TestWriteTempFile(t *testing.T) {
+	var tests = []struct {
+		content []byte
+	}{
+		{
+			content: []byte("hello, world."),
+		},
+	}
+	for _, test := range tests {
+		path, err := WriteTempFile(test.content)
+		if err != nil {
+			t.Errorf("WriteTempFile(%v): got unexpected error %s", test.content, err)
+		}
+		dat, err := ioutil.ReadFile(path)
+		if err != nil {
+			t.Errorf("Error reading temp file: %s", err)
+		}
+		if string(dat) != string(test.content) {
+			t.Errorf("File content diff got %s, want %s", string(dat), string(test.content))
+		}
+	}
+}
+
 func helperCommandForGetFuchsiaProperty(command string, s ...string) (cmd *exec.Cmd) {
 	cs := []string{"-test.run=TestFakeFfx", "--"}
 	cs = append(cs, command)
