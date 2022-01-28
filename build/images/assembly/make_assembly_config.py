@@ -39,7 +39,13 @@ def main():
 
     if args.cache_packages_list is not None:
         cache_packages_list = json.load(args.cache_packages_list)
-        config["cache"] = cache_packages_list
+
+        # Strip all base pkgs from the cache pkgs set, so there are no
+        # duplicates across the two sets.
+        cache_packages_set = set(cache_packages_list)
+        cache_packages_set.difference_update(config["base"])
+
+        config["cache"] = list(sorted(cache_packages_set))
 
     extra_packages = []
     if args.extra_files_packages_list is not None:
