@@ -4,7 +4,6 @@
 library fuchsia.modular.session;
 
 using fuchsia.io;
-using fuchsia.ui.policy;
 using fuchsia.sys;
 
 /// Descriptions and defaults for these configurations are echoed in
@@ -22,8 +21,7 @@ type BasemgrConfig = table {
     /// Default: false
     3: use_session_shell_for_story_shell_factory bool;
 
-    /// Launch configurations specific to base shell.
-    4: base_shell BaseShellConfig;
+    4: reserved;
 
     /// A map of launch configurations specific to session shells.
     5: session_shell_map vector<SessionShellMapEntry>;
@@ -43,17 +41,6 @@ type BasemgrConfig = table {
     8: session_launcher AppConfig;
 };
 
-type BaseShellConfig = table {
-    /// Contains the fuchsia package url and arguments to pass to the shell.
-    1: app_config AppConfig;
-
-    /// When set to true, the base shell is kept alive after a log in. This is
-    /// used for testing because current integration tests expect base shell
-    /// to always be running.
-    /// Optional, if absent presumed to be false.
-    2: keep_alive_after_login bool;
-};
-
 type SessionShellMapEntry = table {
     /// The name of the session shell represented by its url.
     1: name string:fuchsia.io.MAX_PATH;
@@ -66,20 +53,11 @@ type SessionShellConfig = table {
     /// Contains the fuchsia package url and arguments to pass to the shell.
     1: app_config AppConfig;
 
-    /// The display usage policy for this session shell.
-    ///
-    /// Optional, if absent presumed to be [`fuchsia.ui.policy/DisplayUsage.UNKNOWN`].
-    2: display_usage fuchsia.ui.policy.DisplayUsage;
+    2: reserved;
 
-    /// The screen height in millimeters for the session shell's display.
-    ///
-    /// Optional, if absent presumed to be full screen.
-    3: screen_height float32;
+    3: reserved;
 
-    /// The screen width in millimeters for the session shell's display.
-    ///
-    /// Optional, if absent presumed to be full screen.
-    4: screen_width float32;
+    4: reserved;
 };
 
 type StoryShellConfig = table {

@@ -33,8 +33,6 @@ namespace {
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 
 // Defaut shell URLs which are used if not specified.
-constexpr char kBaseShellDefaultUrl[] =
-    "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/test_base_shell.cmx";
 constexpr char kSessionShellDefaultUrl[] =
     "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/"
     "test_session_shell.cmx";
@@ -413,13 +411,7 @@ std::unique_ptr<vfs::PseudoDir> TestHarnessImpl::MakeBasemgrConfigDir(
   const_spec.Clone(&spec);
 
   auto* basemgr_config = spec.mutable_basemgr_config();
-  // 1. Give base & story shell a default.
-  if (!basemgr_config->has_base_shell() ||
-      !basemgr_config->mutable_base_shell()->has_app_config()) {
-    basemgr_config->mutable_base_shell()->set_app_config(
-        MakeAppConfigWithUrl(kBaseShellDefaultUrl));
-  }
-
+  // 1. Give story shell a default.
   if (!basemgr_config->has_story_shell() ||
       !basemgr_config->mutable_story_shell()->has_app_config()) {
     basemgr_config->mutable_story_shell()->set_app_config(
@@ -427,7 +419,7 @@ std::unique_ptr<vfs::PseudoDir> TestHarnessImpl::MakeBasemgrConfigDir(
   }
 
   // 1.1. Give session shell a default if not specified.
-  if (!basemgr_config->has_session_shell_map() || basemgr_config->session_shell_map().size() == 0) {
+  if (!basemgr_config->has_session_shell_map() || basemgr_config->session_shell_map().empty()) {
     basemgr_config->mutable_session_shell_map()->push_back(MakeDefaultSessionShellMapEntry());
   }
 

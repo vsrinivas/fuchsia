@@ -4,10 +4,6 @@ table fuchsia.modular.session/AgentServiceIndexEntry
 table/member fuchsia.modular.session/AppConfig.args vector<string>
 table/member fuchsia.modular.session/AppConfig.url string:4096
 table fuchsia.modular.session/AppConfig
-table/member fuchsia.modular.session/BaseShellConfig.app_config fuchsia.modular.session/AppConfig
-table/member fuchsia.modular.session/BaseShellConfig.keep_alive_after_login bool
-table fuchsia.modular.session/BaseShellConfig
-table/member fuchsia.modular.session/BasemgrConfig.base_shell fuchsia.modular.session/BaseShellConfig
 table/member fuchsia.modular.session/BasemgrConfig.enable_cobalt bool
 table/member fuchsia.modular.session/BasemgrConfig.session_launcher fuchsia.modular.session/AppConfig
 table/member fuchsia.modular.session/BasemgrConfig.session_shell_map vector<fuchsia.modular.session/SessionShellMapEntry>
@@ -21,9 +17,6 @@ table/member fuchsia.modular.session/ModularConfig.basemgr_config fuchsia.modula
 table/member fuchsia.modular.session/ModularConfig.sessionmgr_config fuchsia.modular.session/SessionmgrConfig
 table fuchsia.modular.session/ModularConfig
 table/member fuchsia.modular.session/SessionShellConfig.app_config fuchsia.modular.session/AppConfig
-table/member fuchsia.modular.session/SessionShellConfig.display_usage fuchsia.ui.policy/DisplayUsage
-table/member fuchsia.modular.session/SessionShellConfig.screen_height float32
-table/member fuchsia.modular.session/SessionShellConfig.screen_width float32
 table fuchsia.modular.session/SessionShellConfig
 table/member fuchsia.modular.session/SessionShellMapEntry.config fuchsia.modular.session/SessionShellConfig
 table/member fuchsia.modular.session/SessionShellMapEntry.name string:4096

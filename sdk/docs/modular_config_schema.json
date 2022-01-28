@@ -22,7 +22,6 @@
           "type": "boolean",
           "default": false
         },
-        "base_shell": { "$ref": "#/definitions/base_shell" },
         "session_shells": {
           "type": "array",
           "items": { "$ref": "#/definitions/session_shell" },
@@ -35,22 +34,6 @@
       },
       "additionalProperties": true,
       "required": ["session_shells"]
-    },
-    "base_shell": {
-      "type": "object",
-      "properties": {
-        "url": {
-          "$ref": "#/definitions/component_url",
-          "default": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx"
-        },
-        "keep_alive_after_login": { "type": "boolean", "default": false },
-        "args": {
-          "type": "array",
-          "items": { "type": "string" }
-        }
-      },
-      "additionalProperties": false,
-      "required": ["url"]
     },
     "component_args": {
       "type": "object",
@@ -81,12 +64,9 @@
         "url": {
           "$ref": "#/definitions/component_url",
           "default": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx"
-        },
-        "display_usage": { "type": "string" },
-        "screen_height": { "type": "number" },
-        "screen_width": { "type": "number" }
+        }
       },
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["url"]
     },
     "sessionmgr": {

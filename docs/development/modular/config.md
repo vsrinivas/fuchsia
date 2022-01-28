@@ -86,9 +86,6 @@ fx shell basemgr_launcher delete_config
     "session_shells": [
       {
         "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
-        "display_usage": "near",
-        "screen_height": 50.0,
-        "screen_width": 100.0
       }
     ]
   },
@@ -120,39 +117,13 @@ fx shell basemgr_launcher delete_config
 
 ## Basemgr fields
 
-- `base_shell` **object** _(optional)_
-  - **WARNING:** Basemgr no longer launches base shells. This section is unused.
-  - `url`: **string** _(optional)_
-    - **This field is unused.**
-    - **default**: `fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx`
-  - `keep_alive_after_login` **boolean** _(optional)_
-    - **This field is unused.**
-    - **default**: `false`
-  - `args` **string[]** _(optional)_
-    - **This field is unused.**
-    - **default**: []
 - `session_shells` **array** _(optional)_
   - List of exactly one session shell containing the following
     fields (is an Array type for backwards compatibility):
     - `url`: **string** _(required)_
       - The fuchsia component url for which session shell to use.
-    - `display_usage`: **string** _(optional)_
-      - The display usage policy for this session shell.
-      - Options:
-        - `handheld`: the display is used well within arm's reach.
-        - `close`: the display is used at arm's reach.
-        - `near`: the display is used beyond arm's reach.
-        - `midrange`: the display is used beyond arm's reach.
-        - `far`: the display is used well beyond arm's reach.
-    - `screen_height`: **float** _(optional)_
-      - The screen height in millimeters for the session shell's display.
-    - `screen_width`: **float** _(optional)_
-      - The screen width in millimeters for the session shell's display.
   - **default**: A single session shell with the following properties:
     - `url`: `fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_session_shell.cmx`
-    - `display_usage`: `unknown`
-    - `screen_height`: `0`
-    - `screen_width`: `0`
 - `story_shell_url`: **string** _(optional)_
   - The fuchsia component url for which story shell to use.
   - **default**: `fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx`

@@ -24,17 +24,8 @@ TEST(ModularConfigXdr, BasemgrWriteDefaultValues) {
   static constexpr auto kExpectedJson = R"({
       "enable_cobalt": true,
       "use_session_shell_for_story_shell_factory": false,
-      "base_shell": {
-        "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
-        "keep_alive_after_login": false,
-        "args": []
-      },
       "session_shells": [
         {
-          "name": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
-          "display_usage": "unknown",
-          "screen_height": 0.0,
-          "screen_width": 0.0,
           "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
           "args": []
         }
@@ -64,26 +55,16 @@ TEST(ModularConfigXdr, BasemgrReadDefaultValues) {
   EXPECT_TRUE(read_config.enable_cobalt());
   EXPECT_FALSE(read_config.use_session_shell_for_story_shell_factory());
 
-  EXPECT_EQ(modular_config::kDefaultBaseShellUrl, read_config.base_shell().app_config().url());
-  EXPECT_FALSE(read_config.base_shell().keep_alive_after_login());
-  EXPECT_EQ(0u, read_config.base_shell().app_config().args().size());
-
   ASSERT_EQ(1u, read_config.session_shell_map().size());
   EXPECT_EQ(modular_config::kDefaultSessionShellUrl, read_config.session_shell_map().at(0).name());
   EXPECT_EQ(modular_config::kDefaultSessionShellUrl,
             read_config.session_shell_map().at(0).config().app_config().url());
-  EXPECT_EQ(fuchsia::ui::policy::DisplayUsage::kUnknown,
-            read_config.session_shell_map().at(0).config().display_usage());
-  EXPECT_EQ(0, read_config.session_shell_map().at(0).config().screen_height());
-  EXPECT_EQ(0, read_config.session_shell_map().at(0).config().screen_width());
   EXPECT_EQ(modular_config::kDefaultStoryShellUrl, read_config.story_shell().app_config().url());
 }
 
 // Tests that values are set correctly for BasemgrConfig when reading JSON.
 // All of the fields are set to a non-default value.
 TEST(ModularConfigXdr, BasemgrReadValues) {
-  static constexpr auto kTestBaseShellUrl =
-      "fuchsia-pkg://fuchsia.com/test_base_shell#meta/test_base_shell.cmx";
   static constexpr auto kTestSessionShellUrl =
       "fuchsia-pkg://fuchsia.com/test_session_shell#meta/test_session_shell.cmx";
   static constexpr auto kTestStoryShellUrl =
@@ -92,16 +73,9 @@ TEST(ModularConfigXdr, BasemgrReadValues) {
   static constexpr auto kJson = R"({
       "enable_cobalt": false,
       "use_session_shell_for_story_shell_factory": true,
-      "base_shell": {
-        "url": "fuchsia-pkg://fuchsia.com/test_base_shell#meta/test_base_shell.cmx",
-        "keep_alive_after_login": true
-      },
       "session_shells": [
         {
-          "url": "fuchsia-pkg://fuchsia.com/test_session_shell#meta/test_session_shell.cmx",
-          "display_usage": "near",
-          "screen_height": 50.0,
-          "screen_width": 100.0
+          "url": "fuchsia-pkg://fuchsia.com/test_session_shell#meta/test_session_shell.cmx"
         }
       ],
       "story_shell_url": "fuchsia-pkg://fuchsia.com/test_story_shell#meta/test_story_shell.cmx"
@@ -117,21 +91,12 @@ TEST(ModularConfigXdr, BasemgrReadValues) {
   EXPECT_FALSE(read_config.enable_cobalt());
   EXPECT_TRUE(read_config.use_session_shell_for_story_shell_factory());
 
-  ASSERT_TRUE(read_config.has_base_shell());
-  ASSERT_TRUE(read_config.base_shell().has_app_config());
-  EXPECT_EQ(kTestBaseShellUrl, read_config.base_shell().app_config().url());
-  EXPECT_TRUE(read_config.base_shell().keep_alive_after_login());
-
   ASSERT_EQ(1u, read_config.session_shell_map().size());
   const auto& session_shell = read_config.session_shell_map().at(0);
-  EXPECT_EQ("", session_shell.name());
   ASSERT_TRUE(session_shell.has_config());
   ASSERT_TRUE(session_shell.config().has_app_config());
   EXPECT_EQ(kTestSessionShellUrl, session_shell.config().app_config().url());
   EXPECT_EQ(0u, session_shell.config().app_config().args().size());
-  EXPECT_EQ(fuchsia::ui::policy::DisplayUsage::kNear, session_shell.config().display_usage());
-  EXPECT_EQ(50.f, session_shell.config().screen_height());
-  EXPECT_EQ(100.f, session_shell.config().screen_width());
 
   ASSERT_TRUE(read_config.has_story_shell());
   ASSERT_TRUE(read_config.story_shell().has_app_config());
@@ -277,17 +242,8 @@ TEST(ModularConfigXdr, ModularWriteDefaultValues) {
       "basemgr": {
         "enable_cobalt": true,
         "use_session_shell_for_story_shell_factory": false,
-        "base_shell": {
-          "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
-          "keep_alive_after_login": false,
-          "args": []
-        },
         "session_shells": [
           {
-            "name": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
-            "display_usage": "unknown",
-            "screen_height": 0.0,
-            "screen_width": 0.0,
             "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
             "args": []
           }
@@ -324,17 +280,8 @@ TEST(ModularConfigXdr, ModularReadWriteValues) {
       "basemgr": {
         "enable_cobalt": false,
         "use_session_shell_for_story_shell_factory": false,
-        "base_shell": {
-          "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
-          "keep_alive_after_login": false,
-          "args": []
-        },
         "session_shells": [
           {
-            "name": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
-            "display_usage": "unknown",
-            "screen_height": 0.0,
-            "screen_width": 0.0,
             "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
             "args": []
           }

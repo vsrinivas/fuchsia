@@ -58,37 +58,6 @@ class BasemgrNonHermeticTest : public gtest::TestWithEnvironmentFixture {
     return dir;
   }
 
-  std::string GetTestConfig() {
-    return R"config(
-      {
-      "basemgr": {
-        "enable_cobalt": false,
-        "use_session_shell_for_story_shell_factory": false,
-        "base_shell": {
-          "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
-          "keep_alive_after_login": false,
-          "args": []
-        },
-        "session_shells": [
-          {
-            "name": "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/test_session_shell.cmx",
-            "url": "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/test_session_shell.cmx",
-            "args": []
-          }
-        ]
-      },
-      "sessionmgr": {
-        "enable_cobalt": false,
-        "startup_agents": [],
-        "session_agents": [],
-        "restart_session_on_agent_crash": [],
-        "component_args": [],
-        "agent_service_index": []
-      }
-    }
-    )config";
-  }
-
   std::shared_ptr<sys::ServiceDirectory> LaunchBasemgrWithConfigJson(std::string config_str) {
     // Create the pseudo directory with our config "file"
     auto config_dir = CreateConfigPseudoDir(config_str);
@@ -121,7 +90,7 @@ class BasemgrNonHermeticTest : public gtest::TestWithEnvironmentFixture {
 };
 
 TEST_F(BasemgrNonHermeticTest, BasemgrImplGracefulShutdown) {
-  auto svc_dir = LaunchBasemgrWithConfigJson(GetTestConfig());
+  auto svc_dir = LaunchBasemgrWithConfigJson(modular::ConfigToJsonString(modular::DefaultConfig()));
 
   bool is_terminated = false;
   controller_.events().OnTerminated = [&](int64_t return_code,

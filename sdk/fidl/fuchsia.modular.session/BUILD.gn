@@ -21,6 +21,5 @@ fidl("fuchsia.modular.session") {
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.policy",
   ]
 }

@@ -190,6 +190,7 @@ executable("basemgr_non_hermetic_test") {
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.process.lifecycle",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/lib/fxl/test:gtest_main",

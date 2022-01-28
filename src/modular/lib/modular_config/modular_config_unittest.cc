@@ -124,8 +124,6 @@ TEST_F(ModularConfigReaderTest, ProvideAgentServiceIndex) {
 
   std::string config_contents = fxl::Substitute(
       R"({
-        "basemgr": {
-        },
         "sessionmgr": {
           "agent_service_index": [
             {
@@ -156,7 +154,6 @@ TEST_F(ModularConfigReaderTest, ProvideAgentServiceIndex) {
 }
 
 TEST_F(ModularConfigReaderTest, GetConfigAsString) {
-  std::string base_shell_url = "fuchsia-pkg://fuchsia.com/test_base_shell#meta/test_base_shell.cmx";
   std::string startup_agent = "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx";
   std::string agent_service_name = "fuchsia.modular.ModularConfigReaderTest";
   std::string agent_url =
@@ -165,25 +162,19 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
 
   std::string config_contents = fxl::Substitute(
       R"({
-        "basemgr": {
-          "base_shell": {
-            "url": "$0",
-            "keep_alive_after_login": true
-          }
-        },
         "sessionmgr": {
           "startup_agents": [
-            "$1"
+            "$0"
           ],
           "agent_service_index": [
             {
-              "service_name": "$2",
-              "agent_url": "$3"
+              "service_name": "$1",
+              "agent_url": "$2"
             }
           ]
         }
       })",
-      base_shell_url, startup_agent, agent_service_name, agent_url);
+      startup_agent, agent_service_name, agent_url);
 
   // Host |config_contents|, parse it into |first_reader|, and write configs into |read_config_str|
   modular::PseudoDirServer server(modular::MakeFilePathWithContents(
@@ -202,10 +193,6 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
   modular::ModularConfigReader second_reader(server_after_read.OpenAt("."));
 
   // Verify that the second reader has the same config values as the original |config_contents|
-  basemgr_config = second_reader.GetBasemgrConfig();
-  EXPECT_EQ(base_shell_url, basemgr_config.base_shell().app_config().url());
-  EXPECT_TRUE(basemgr_config.base_shell().keep_alive_after_login());
-
   sessionmgr_config = second_reader.GetSessionmgrConfig();
   EXPECT_EQ(startup_agent, sessionmgr_config.startup_agents().at(0));
   EXPECT_EQ(agent_service_name, sessionmgr_config.agent_service_index().at(0).service_name());
@@ -213,7 +200,6 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
 }
 
 TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
-  std::string base_shell_url = "fuchsia-pkg://fuchsia.com/test_base_shell#meta/test_base_shell.cmx";
   std::string startup_agent = "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx";
   std::string session_agent = "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx";
   std::string agent_service_name = "fuchsia.modular.ModularConfigReaderTest";
@@ -226,13 +212,8 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
   fuchsia::modular::session::BasemgrConfig basemgr_config;
   basemgr_config.set_enable_cobalt(false);
   basemgr_config.set_use_session_shell_for_story_shell_factory(true);
-  basemgr_config.mutable_base_shell()->mutable_app_config()->set_url(base_shell_url);
-  basemgr_config.mutable_base_shell()->set_keep_alive_after_login(true);
   fuchsia::modular::session::SessionShellConfig session_shell_config;
   session_shell_config.mutable_app_config()->set_url(session_shell_url);
-  session_shell_config.set_display_usage(fuchsia::ui::policy::DisplayUsage::kHandheld);
-  session_shell_config.set_screen_height(20.f);
-  session_shell_config.set_screen_width(30.f);
   fuchsia::modular::session::SessionShellMapEntry session_shell_map_entry;
   session_shell_map_entry.set_name(session_shell_url);
   session_shell_map_entry.set_config(std::move(session_shell_config));
@@ -263,17 +244,10 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
   // Check that none of the configs were modified as part of GetConfigAsString
   EXPECT_FALSE(basemgr_config.enable_cobalt());
   EXPECT_TRUE(basemgr_config.use_session_shell_for_story_shell_factory());
-  EXPECT_EQ(base_shell_url, basemgr_config.base_shell().app_config().url());
-  EXPECT_TRUE(basemgr_config.base_shell().keep_alive_after_login());
   ASSERT_EQ(1u, basemgr_config.session_shell_map().size());
   EXPECT_EQ(session_shell_url, basemgr_config.session_shell_map().at(0).name());
   EXPECT_EQ(session_shell_url,
             basemgr_config.session_shell_map().at(0).config().app_config().url());
-  EXPECT_TRUE(basemgr_config.session_shell_map().at(0).config().has_display_usage());
-  EXPECT_EQ(fuchsia::ui::policy::DisplayUsage::kHandheld,
-            basemgr_config.session_shell_map().at(0).config().display_usage());
-  EXPECT_EQ(20.f, basemgr_config.session_shell_map().at(0).config().screen_height());
-  EXPECT_EQ(30.f, basemgr_config.session_shell_map().at(0).config().screen_width());
   EXPECT_EQ(story_shell_url, basemgr_config.story_shell().app_config().url());
   ASSERT_EQ(1u, basemgr_config.story_shell().app_config().args().size());
   EXPECT_EQ("arg1", basemgr_config.story_shell().app_config().args().at(0));
@@ -370,7 +344,7 @@ TEST_F(ModularConfigReaderTest, DefaultConfig) {
   EXPECT_TRUE(config.basemgr_config().enable_cobalt());
   ASSERT_EQ(1u, config.basemgr_config().session_shell_map().size());
   EXPECT_EQ(modular_config::kDefaultSessionShellUrl,
-            config.basemgr_config().session_shell_map().at(0).name());
+            config.basemgr_config().session_shell_map().at(0).config().app_config().url());
 
   ASSERT_TRUE(config.has_sessionmgr_config());
   EXPECT_TRUE(config.sessionmgr_config().enable_cobalt());
@@ -382,17 +356,8 @@ TEST_F(ModularConfigReaderTest, ConfigToJsonString) {
       "basemgr": {
         "enable_cobalt": true,
         "use_session_shell_for_story_shell_factory": false,
-        "base_shell": {
-          "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
-          "keep_alive_after_login": false,
-          "args": []
-        },
         "session_shells": [
           {
-            "name": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
-            "display_usage": "unknown",
-            "screen_height": 0.0,
-            "screen_width": 0.0,
             "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
             "args": []
           }

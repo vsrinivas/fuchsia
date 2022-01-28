@@ -209,31 +209,7 @@ void BasemgrImpl::StartSessionWithRandomId() {
   }
   FX_CHECK(!session_provider_.get());
 
-  // The new session uses a configuration based on its existing configuration,
-  // with an argument set that ensures it starts with a random session ID.
-  //
-  // Create a copy of the configuration that ensures a random session ID is used.
-  // TODO(fxbug.dev/51752): Create a config field for use_random_session_id and remove base shell
-  auto new_config = CloneStruct(config_accessor_.config());
-  new_config.mutable_basemgr_config()
-      ->mutable_base_shell()
-      ->mutable_app_config()
-      ->mutable_args()
-      ->push_back(modular_config::kPersistUserArg);
-
-  // Set the new config and create a session provider.
-  //
-  // Overwrite the config accessor that was the source for the original configuration,
-  // and which will be used to launch sessions in the future.
-  //
-  // This method, StartSessionWithRandomId(), is defined on the BasemgrDebug interface.
-  // It only ever launches a new session, and thus will use the default config.
-  config_accessor_ = ModularConfigAccessor(std::move(new_config));
-  CreateSessionProvider(&config_accessor_, fuchsia::sys::ServiceList());
-
-  if (auto result = StartSession(); result.is_error()) {
-    FX_PLOGS(ERROR, result.error()) << "Could not start session";
-  }
+  Start();
 }
 
 void BasemgrImpl::GetPresentation(

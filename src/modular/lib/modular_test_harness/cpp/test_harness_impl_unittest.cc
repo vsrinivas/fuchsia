@@ -296,14 +296,9 @@ TEST_F(TestHarnessImplTest, EnvironmentServiceDirectory) {
 TEST_F(TestHarnessImplTest, ParseConfigFromString) {
   auto config = R"({
   "basemgr": {
-    "base_shell": {
-      "url": "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
-      "keep_alive_after_login": true
-    },
     "session_shells": [
       {
-        "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
-        "display_usage": "near"
+        "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx"
       }
     ]
   },
@@ -326,8 +321,7 @@ TEST_F(TestHarnessImplTest, ParseConfigFromString) {
       });
 
   RunLoopUntil([&] { return done; });
-  EXPECT_EQ("fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
-            basemgr_config.base_shell().app_config().url());
+
   ASSERT_EQ(1u, basemgr_config.session_shell_map().size());
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
             basemgr_config.session_shell_map().at(0).config().app_config().url());
