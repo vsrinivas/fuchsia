@@ -80,11 +80,12 @@ TEST_F(VmoFileNonZeroOffsetTest, Basic) {
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_flags_get(io, &flags));
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_flags_set(io, flags));
 
+  constexpr std::string_view name("hello");
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED,
-                zxio_open_async(io, 0u, 0u, "hello", strlen("hello"), ZX_HANDLE_INVALID));
+                zxio_open_async(io, 0u, 0u, name.data(), name.length(), ZX_HANDLE_INVALID));
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED,
-                zxio_add_inotify_filter(io, "hello", strlen("hello"), 0u, 0, ZX_HANDLE_INVALID));
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_unlink(io, "hello", 0));
+                zxio_add_inotify_filter(io, name.data(), name.length(), 0u, 0, ZX_HANDLE_INVALID));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_unlink(io, name.data(), name.length(), 0));
 }
 
 TEST_F(VmoFileNonZeroOffsetTest, GetCopy) {

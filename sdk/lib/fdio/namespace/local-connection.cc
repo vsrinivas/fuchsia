@@ -109,9 +109,7 @@ struct local_connection : public base {
     free(dir_iterator->buffer);
   }
 
-  zx_status_t unlink(const char* name, size_t len, int flags) override {
-    return ZX_ERR_UNAVAILABLE;
-  }
+  zx_status_t unlink(std::string_view name, int flags) override { return ZX_ERR_UNAVAILABLE; }
 
   bool is_local_dir() override { return true; }
 

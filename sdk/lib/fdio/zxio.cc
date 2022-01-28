@@ -209,8 +209,8 @@ zx_status_t zxio::watch_directory(zxio_watch_directory_cb cb, zx_time_t deadline
   return zxio_watch_directory(&zxio_storage().io, cb, deadline, context);
 }
 
-zx_status_t zxio::unlink(const char* name, size_t len, int flags) {
-  return zxio_unlink(&zxio_storage().io, name, flags);
+zx_status_t zxio::unlink(std::string_view name, int flags) {
+  return zxio_unlink(&zxio_storage().io, name.data(), name.length(), flags);
 }
 
 zx_status_t zxio::truncate(uint64_t off) { return zxio_truncate(&zxio_storage().io, off); }

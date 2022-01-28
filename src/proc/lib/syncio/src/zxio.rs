@@ -400,6 +400,7 @@ extern "C" {
     pub fn zxio_unlink(
         directory: *mut zxio_t,
         name: *const ::std::os::raw::c_char,
+        name_len: usize,
         flags: ::std::os::raw::c_int,
     ) -> zx_status_t;
 }

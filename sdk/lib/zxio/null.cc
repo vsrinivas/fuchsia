@@ -106,7 +106,7 @@ zx_status_t zxio_default_add_inotify_filter(zxio_t* io, const char* path, size_t
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_unlink(zxio_t* io, const char* name, int flags) {
+zx_status_t zxio_default_unlink(zxio_t* io, const char* name, size_t name_len, int flags) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

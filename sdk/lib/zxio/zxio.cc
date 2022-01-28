@@ -367,12 +367,12 @@ zx_status_t zxio_add_inotify_filter(zxio_t* directory, const char* path, size_t 
   return zio->ops->add_inotify_filter(directory, path, path_len, mask, watch_descriptor, socket);
 }
 
-zx_status_t zxio_unlink(zxio_t* directory, const char* name, int flags) {
+zx_status_t zxio_unlink(zxio_t* directory, const char* name, size_t name_len, int flags) {
   if (!zxio_is_valid(directory)) {
     return ZX_ERR_BAD_HANDLE;
   }
   zxio_internal_t* zio = to_internal(directory);
-  return zio->ops->unlink(directory, name, flags);
+  return zio->ops->unlink(directory, name, name_len, flags);
 }
 
 zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path, size_t old_path_len,

@@ -33,7 +33,7 @@ struct zxio : public base {
   void dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) override;
   zx_status_t watch_directory(zxio_watch_directory_cb cb, zx_time_t deadline,
                               void* context) override;
-  zx_status_t unlink(const char* name, size_t len, int flags) override;
+  zx_status_t unlink(std::string_view name, int flags) override;
   zx_status_t truncate(uint64_t off) override;
   zx_status_t rename(std::string_view src, zx_handle_t dst_token, std::string_view dst) override;
   zx_status_t link(std::string_view src, zx_handle_t dst_token, std::string_view dst) override;

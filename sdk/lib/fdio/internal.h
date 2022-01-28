@@ -178,7 +178,7 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   virtual void dirent_iterator_destroy(zxio_dirent_iterator_t* iterator);
   virtual zx_status_t watch_directory(zxio_watch_directory_cb cb, zx_time_t deadline,
                                       void* context);
-  virtual zx_status_t unlink(const char* name, size_t len, int flags);
+  virtual zx_status_t unlink(std::string_view name, int flags);
   virtual zx_status_t truncate(uint64_t off);
   virtual two_path_op rename;
   virtual two_path_op link;

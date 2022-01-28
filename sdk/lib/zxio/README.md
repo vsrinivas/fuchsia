@@ -165,13 +165,12 @@ of the zxio library.
 
 ## Strings
 
-The zxio library currently uses a mix of null-terminated C style strings and
-buffer-and-length strings. Please read the function documentation carefully to
-know which is in use and null-terminate any strings if necessary before passing
-to functions expecting C style strings.
+The zxio library represents path components as strings with a pointer to a
+buffer and an length. Path components cannot contain embedded nulls. The zxio library
+does not require or set a null terminator.
 
-TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=91672): Update all APIs
-to use buffer-and-length strings and update this documentation.
+When interfacing with C-style strings, compute a string length explicitly for
+input parameters and allocate space for a null terminator for output parameters.
 
 # Linkage
 

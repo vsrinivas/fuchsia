@@ -815,7 +815,7 @@ zx_status_t zxio_remote_add_inotify_filter(zxio_t* io, const char* path, size_t 
   return result.status();
 }
 
-zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, int flags) {
+zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, size_t name_len, int flags) {
   Remote rio(io);
   fidl::Arena allocator;
   fuchsia_io2::wire::UnlinkOptions options(allocator);
@@ -824,7 +824,7 @@ zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, int flags) {
     options.set_flags(fidl::ObjectView<decltype(io_flags)>::FromExternal(&io_flags));
   }
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    ->Unlink(fidl::StringView::FromExternal(name), options);
+                    ->Unlink(fidl::StringView::FromExternal(name, name_len), options);
   if (result.status() != ZX_OK) {
     return result.status();
   }

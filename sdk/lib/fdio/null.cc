@@ -52,7 +52,7 @@ zx_status_t fdio::watch_directory(zxio_watch_directory_cb cb, zx_time_t deadline
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio::unlink(const char* name, size_t len, int flags) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t fdio::unlink(std::string_view name, int flags) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t fdio::truncate(uint64_t off) { return ZX_ERR_NOT_SUPPORTED; }
 

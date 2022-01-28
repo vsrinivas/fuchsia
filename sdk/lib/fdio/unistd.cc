@@ -621,7 +621,7 @@ int unlinkat(int dirfd, const char* path, int flags) {
   if (is_dir) {
     flags |= AT_REMOVEDIR;
   }
-  return STATUS(io->unlink(name.data(), name.length(), flags));
+  return STATUS(io->unlink(name, flags));
 }
 
 __EXPORT

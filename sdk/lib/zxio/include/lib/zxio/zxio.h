@@ -389,7 +389,8 @@ ZXIO_EXPORT zx_status_t zxio_add_inotify_filter(zxio_t* io, const char* path, si
 
 // Remove a file relative to the given directory.  |flags| has the same values and semantics as
 // POSIX's unlinkat |flags| argument.
-ZXIO_EXPORT zx_status_t zxio_unlink(zxio_t* directory, const char* name, int flags);
+ZXIO_EXPORT zx_status_t zxio_unlink(zxio_t* directory, const char* name, size_t name_len,
+                                    int flags);
 
 // Attempts to rename |old_path| relative to |old_directory| to |new_path|
 // relative to the directory represented by |new_directory_token|.

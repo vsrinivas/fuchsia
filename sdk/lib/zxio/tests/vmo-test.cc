@@ -99,11 +99,12 @@ TEST_F(VmoTest, Basic) {
   ASSERT_OK(zxio_write_at(io, 0u, buffer, sizeof(buffer), 0, &actual));
   EXPECT_EQ(actual, sizeof(buffer));
 
+  constexpr std::string_view name("hello");
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED,
-                zxio_open_async(io, 0u, 0u, "hello", strlen("hello"), ZX_HANDLE_INVALID));
+                zxio_open_async(io, 0u, 0u, name.data(), name.length(), ZX_HANDLE_INVALID));
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED,
-                zxio_add_inotify_filter(io, "hello", strlen("hello"), 0u, 0, ZX_HANDLE_INVALID));
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_unlink(io, "hello", 0));
+                zxio_add_inotify_filter(io, name.data(), name.length(), 0u, 0, ZX_HANDLE_INVALID));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_unlink(io, name.data(), name.length(), 0));
 }
 
 TEST_F(VmoTest, GetCopy) {

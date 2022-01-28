@@ -82,6 +82,13 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
     completer.Reply(ZX_OK, std::move(dup));
   }
 
+  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) final {
+    unlinks_.push_back(std::string(request->name.get()));
+    completer.ReplySuccess();
+  }
+
+  const std::vector<std::string>& unlinks() const { return unlinks_; }
+
   void Link(LinkRequestView request, LinkCompleter::Sync& completer) final {
     links_.push_back({std::string(request->src.get()), std::string(request->dst.get())});
     completer.Reply(ZX_OK);
@@ -99,6 +106,7 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
   int open_calls_ = 0;
+  std::vector<std::string> unlinks_;
   std::vector<std::pair<std::string, std::string>> links_;
   std::vector<std::pair<std::string, std::string>> renames_;
   zx::event token_;
@@ -172,6 +180,26 @@ TEST_F(Directory, Open) {
   EXPECT_BYTES_EQ(buffer, zxio_tests::TestReadFileServer::kTestData, sizeof(buffer));
 
   ASSERT_OK(zxio_close(file));
+}
+
+TEST_F(Directory, Unlink) {
+  constexpr std::string_view name = "full_name";
+  ASSERT_OK(zxio_unlink(directory(), name.data(), name.length(), 0));
+
+  // Test that a name length shorter than the null-terminated length of the string is interpreted
+  // correctly.
+  ASSERT_OK(zxio_unlink(directory(), name.data(), 2, 0));
+
+  ASSERT_OK(zxio_close(directory()));
+
+  StopServerThread();
+
+  const auto& unlinks = directory_server().unlinks();
+
+  ASSERT_EQ(unlinks.size(), 2);
+
+  EXPECT_EQ(unlinks[0], name);
+  EXPECT_EQ(unlinks[1], "fu");
 }
 
 TEST_F(Directory, Link) {
