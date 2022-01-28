@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate proc_macro;
-
 use {
     proc_macro2::TokenStream as TokenStream2,
     quote::{quote, ToTokens, TokenStreamExt},

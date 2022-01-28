@@ -594,8 +594,7 @@ set_defaults("rustc_dylib") {
 }
 
 set_defaults("rustc_macro") {
-  configs = default_shared_library_configs + default_rust_configs +
-            [ "//build/config/rust:allow_unused_extern_crates" ]
+  configs = default_shared_library_configs + default_rust_configs
 }
 
 set_defaults("rustc_staticlib") {

@@ -4,8 +4,6 @@
 
 #![recursion_limit = "128"]
 
-extern crate proc_macro;
-
 use heck::CamelCase;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;

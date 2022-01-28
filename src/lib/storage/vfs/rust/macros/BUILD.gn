@@ -36,6 +36,8 @@ if (is_host) {
       "src/lib.rs",
       "src/tests.rs",
     ]
+
+    configs += [ "//build/config/rust:proc_macro_test" ]
   }
 } else {
   group("tests") {

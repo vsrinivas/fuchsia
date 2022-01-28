@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate proc_macro;
-
 use {
     crate::common::{extract_expected, gen_visit_str, ident_from_path},
     maplit::hashset,

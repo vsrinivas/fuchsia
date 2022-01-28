@@ -222,6 +222,7 @@ template("rustc_macro") {
         }
 
         forward_variables_from(invoker, "*", [ "name" ])
+        configs += [ "//build/config/rust:proc_macro_test" ]
       }
     } else {
       # For convenience, create a forwarding target that points to the on-host

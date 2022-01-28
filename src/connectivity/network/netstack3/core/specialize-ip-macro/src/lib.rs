@@ -6,7 +6,6 @@
 extern crate quote;
 #[macro_use]
 extern crate syn;
-extern crate proc_macro;
 
 use core::fmt::Display;
 

@@ -83,6 +83,13 @@ config("netstack3_only_specialization_feature") {
   ]
 }
 
+config("proc_macro_test") {
+  rustflags = [
+    "--extern",
+    "proc_macro",
+  ]
+}
+
 config("2018_idioms") {
   rustflags = [ "-Wrust-2018-idioms" ]
 }
@@ -121,11 +128,6 @@ config("allow_unknown_lints") {
 # TODO(fxbug.dev/67118) remove this allowance
 config("allow_redundant_semicolons") {
   rustflags = [ "-Aredundant-semicolons" ]
-}
-
-# TODO(fxbug.dev/68148) remove this allowance
-config("allow_unused_extern_crates") {
-  rustflags = [ "-Aunused-extern-crates" ]
 }
 
 # TODO(fxbug.dev/69442) remove this allowance

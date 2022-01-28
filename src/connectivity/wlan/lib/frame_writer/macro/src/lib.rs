@@ -4,8 +4,6 @@
 
 //! A procedural macro for writing frames into buffers.
 
-extern crate proc_macro;
-
 mod frame_writer;
 mod header;
 mod ie;

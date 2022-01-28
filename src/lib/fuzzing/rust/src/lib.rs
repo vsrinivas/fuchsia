@@ -4,8 +4,6 @@
 
 //! Rust/LibFuzzer integration for Fuchsia
 
-extern crate proc_macro;
-
 use {
     proc_macro::TokenStream,
     quote::{quote, quote_spanned},

@@ -9,8 +9,6 @@
 #[cfg(test)]
 mod tests;
 
-extern crate proc_macro;
-
 use {
     proc_macro2::{Span, TokenStream},
     quote::{quote, quote_spanned, ToTokens},

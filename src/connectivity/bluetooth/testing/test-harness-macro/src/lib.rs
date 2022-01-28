@@ -8,8 +8,6 @@
 //! currently the only attribute available, further attributes could be defined for other execution
 //! environments.
 
-extern crate proc_macro;
-
 use {
     proc_macro::TokenStream,
     quote::quote_spanned,
