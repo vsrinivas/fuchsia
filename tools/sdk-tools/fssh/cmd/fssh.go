@@ -61,9 +61,9 @@ func (c *fsshCmd) SetFlags(f *flag.FlagSet) {
 	c.logLevel = logger.InfoLevel // Default that may be overridden.
 	f.StringVar(&c.privateKey, privateKeyFlag, "", "Uses additional private key when using ssh to access the device.")
 	f.StringVar(&c.deviceName, deviceNameFlag, "", `Serves packages to a device with the given device hostname. Cannot be used with --device-ip."
-			  If neither --device-name nor --device-ip are specified, the device-name configured using ffx is used.`)
+If neither --device-name nor --device-ip are specified, the device-name configured using ffx is used.`)
 	f.StringVar(&c.deviceIP, deviceIPFlag, "", `Serves packages to a device with the given device ip address. Cannot be used with --device-name."
-			  If neither --device-name nor --device-ip are specified, the device-name configured using ffx is used.`)
+If neither --device-name nor --device-ip are specified, the device-name configured using ffx is used.`)
 	f.StringVar(&c.sshConfig, sshConfigFlag, "", "Use the specified sshconfig file instead of fssh's version.")
 	f.StringVar(&c.dataPath, dataPathFlag, "", "Specifies the data path for SDK tools. Defaults to $HOME/.fuchsia")
 	f.Var(&c.logLevel, logLevelFlag, "Output verbosity, can be fatal, error, warning, info, debug or trace.")

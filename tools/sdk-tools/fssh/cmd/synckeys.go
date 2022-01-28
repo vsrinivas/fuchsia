@@ -31,7 +31,6 @@ func (*syncKeysCmd) Synopsis() string {
 
 func (*syncKeysCmd) Usage() string {
 	return fmt.Sprintf(`fssh sync-keys [-%s remote-host]
-
 Sync SSH key files associated with Fuchsia between a local and remote workstation. If no SSH key files associated with Fuchsia are found Fuchsia key files are generated locally and copied to the remote.
 Inspects the SSH private/public key pair and authorized keys file in $HOME/.ssh/fuchsia_*. These files are used by all Fuchsia development tools to access target devices.
 `, remoteHostFlag)

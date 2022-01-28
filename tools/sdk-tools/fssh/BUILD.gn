@@ -10,6 +10,7 @@ go_library("main") {
   source_dir = "cmd"
   deps = [
     ":synckeys",
+    ":tunnel",
     "//third_party/golibs:github.com/google/subcommands",
     "//tools/lib/color",
     "//tools/lib/logger",
@@ -21,6 +22,7 @@ go_library("main") {
     "main.go",
     "synckeys.go",
     "tunnel.go",
+    "tunnel_test.go",
   ]
 }
 
@@ -59,6 +61,21 @@ go_test("synckeys-tests") {
   deps = [ ":synckeys" ]
 }
 
+go_library("tunnel") {
+  name = "go.fuchsia.dev/fuchsia/tools/sdk-tools/fssh/tunnel"
+  source_dir = "tunnel"
+  deps = [ "//tools/lib/logger" ]
+  sources = [
+    "tunnel.go",
+    "tunnel_test.go",
+  ]
+}
+
+go_test("tunnel-tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fssh/tunnel" ]
+  deps = [ ":tunnel" ]
+}
+
 sdk_host_tool("fssh_sdk") {
   category = "partner"
   output_name = "fssh"
@@ -70,5 +87,6 @@ group("tests") {
   deps = [
     ":fssh-test($host_toolchain)",
     ":synckeys-tests($host_toolchain)",
+    ":tunnel-tests($host_toolchain)",
   ]
 }
