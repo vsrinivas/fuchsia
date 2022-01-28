@@ -93,12 +93,27 @@ pub enum ParsePackageError {
     VersionNotSupported(String),
 }
 
+/// SerializePackageError represents any error which might occur while writing
+/// `packages.json` for an update package.
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+pub enum SerializePackageError {
+    #[error("serialization error while constructing `packages.json`")]
+    JsonError(#[source] serde_json::error::Error),
+}
+
 /// Returns structured `packages.json` data based on file contents string.
 pub fn parse_packages_json(contents: &[u8]) -> Result<Vec<PkgUrl>, ParsePackageError> {
     match serde_json::from_slice(&contents).map_err(ParsePackageError::JsonError)? {
         Packages { ref version, content } if version == "1" => Ok(content),
         Packages { version, .. } => Err(ParsePackageError::VersionNotSupported(version)),
     }
+}
+
+/// Returns serialized `packages.json` contents based package URLs.
+pub fn serialize_packages_json(pkg_urls: &[PkgUrl]) -> Result<Vec<u8>, SerializePackageError> {
+    serde_json::to_vec(&Packages { version: "1".to_string(), content: pkg_urls.into() })
+        .map_err(SerializePackageError::JsonError)
 }
 
 /// Returns the list of package urls that go in the universe of this update package.
@@ -135,6 +150,18 @@ mod tests {
         };
         let packages_json = serde_json::to_vec(&packages).unwrap();
         assert_eq!(parse_packages_json(&packages_json).unwrap(), packages.content);
+    }
+
+    #[test]
+    fn smoke_test_serialize_packages_json() {
+        let input = pkg_urls(vec![
+            "fuchsia-pkg://fuchsia.com/ls/0?hash=71bad1a35b87a073f72f582065f6b6efec7b6a4a129868f37f6131f02107f1ea",
+            "fuchsia-pkg://fuchsia.com/pkg-resolver/0?hash=26d43a3fc32eaa65e6981791874b6ab80fae31fbfca1ce8c31ab64275fd4e8c0",
+        ]);
+        let output =
+            parse_packages_json(serialize_packages_json(input.as_slice()).unwrap().as_slice())
+                .unwrap();
+        assert_eq!(input, output);
     }
 
     #[test]
