@@ -11,7 +11,8 @@ constexpr char kBasemgrConfigName[] = "basemgr";
 constexpr char kSessionmgrConfigName[] = "sessionmgr";
 constexpr char kSessionmgrUrl[] = "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx";
 
-constexpr char kDefaultConfigDir[] = "/config/data";
+constexpr char kConfigDataDir[] = "/config/data";
+constexpr char kPackageDataDir[] = "/pkg/data";
 constexpr char kOverriddenConfigDir[] = "/config_override/data";
 constexpr char kPersistentConfigDir[] = "/cache";
 

@@ -42,8 +42,8 @@ bool CreateFileAt(int root_fd, const std::string& path, std::string_view data) {
 class ModularConfigReaderTest : public gtest::RealLoopFixture {};
 class ModularConfigWriterTest : public gtest::RealLoopFixture {};
 
-// Test that ModularConfigReader finds and reads the startup.config file given a
-// root directory that contains config data.
+// Test that ModularConfigReader finds and reads the startup.config file from the overridden
+// config directory.
 TEST_F(ModularConfigReaderTest, OverrideConfigDir) {
   constexpr char kSessionShellForTest[] =
       "fuchsia-pkg://example.com/ModularConfigReaderTest#meta/"
@@ -62,8 +62,35 @@ TEST_F(ModularConfigReaderTest, OverrideConfigDir) {
       kSessionShellForTest);
 
   modular::PseudoDirServer server(modular::MakeFilePathWithContents(
-      files::JoinPath(modular_config::kOverriddenConfigDir, modular_config::kStartupConfigFilePath),
-      config_contents));
+      modular::ModularConfigReader::GetOverriddenConfigPath(), config_contents));
+
+  modular::ModularConfigReader reader(server.OpenAt("."));
+  auto config = reader.GetBasemgrConfig();
+
+  // Verify that ModularConfigReader parsed the config value we gave it.
+  EXPECT_EQ(kSessionShellForTest, config.session_shell_map().at(0).config().app_config().url());
+}
+
+// Test that ModularConfigReader finds and reads the startup.config file in the package directory.
+TEST_F(ModularConfigReaderTest, PackagedConfigDir) {
+  constexpr char kSessionShellForTest[] =
+      "fuchsia-pkg://example.com/ModularConfigReaderTest#meta/"
+      "ModularConfigReaderTest.cmx";
+
+  std::string config_contents = fxl::Substitute(
+      R"({
+        "basemgr": {
+          "session_shells": [
+            {
+              "url": "$0"
+            }
+          ]
+        }
+      })",
+      kSessionShellForTest);
+
+  modular::PseudoDirServer server(modular::MakeFilePathWithContents(
+      modular::ModularConfigReader::GetPackagedConfigPath(), config_contents));
 
   modular::ModularConfigReader reader(server.OpenAt("."));
   auto config = reader.GetBasemgrConfig();
@@ -160,8 +187,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
 
   // Host |config_contents|, parse it into |first_reader|, and write configs into |read_config_str|
   modular::PseudoDirServer server(modular::MakeFilePathWithContents(
-      files::JoinPath(modular_config::kDefaultConfigDir, modular_config::kStartupConfigFilePath),
-      config_contents));
+      modular::ModularConfigReader::GetConfigDataConfigPath(), config_contents));
 
   modular::ModularConfigReader first_reader(server.OpenAt("."));
   auto basemgr_config = first_reader.GetBasemgrConfig();
@@ -171,8 +197,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
 
   // Host the new config string and parse it into |second_reader|
   modular::PseudoDirServer server_after_read(modular::MakeFilePathWithContents(
-      files::JoinPath(modular_config::kDefaultConfigDir, modular_config::kStartupConfigFilePath),
-      read_config_str));
+      modular::ModularConfigReader::GetConfigDataConfigPath(), read_config_str));
 
   modular::ModularConfigReader second_reader(server_after_read.OpenAt("."));
 
@@ -436,7 +461,7 @@ TEST_F(ModularConfigReaderTest, ReadPersistentConfig) {
 
   // The /config/data/startup.config file contains an empty config.
   ASSERT_TRUE(
-      CreateFileAt(root_fd.get(), modular::ModularConfigReader::GetDefaultConfigPath(), "{}"));
+      CreateFileAt(root_fd.get(), modular::ModularConfigReader::GetConfigDataConfigPath(), "{}"));
 
   // Allow persistent config_override.
   ASSERT_TRUE(CreateFileAt(root_fd.get(),

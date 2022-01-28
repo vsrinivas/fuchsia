@@ -69,8 +69,8 @@ class ModularConfigReader {
   // incoming namespace.
   static ModularConfigReader CreateFromNamespace();
 
-  // Returns the path to the default config file.
-  static std::string GetDefaultConfigPath();
+  // Returns the path to the config file in the /config/data directory.
+  static std::string GetConfigDataConfigPath();
 
   // Returns the path to the overridden config file.
   static std::string GetOverriddenConfigPath();
@@ -78,14 +78,20 @@ class ModularConfigReader {
   // Returns the path to the persistent config file.
   static std::string GetPersistentConfigPath();
 
+  // Returns the path to the config file in the current package.
+  static std::string GetPackagedConfigPath();
+
   // Returns the path to the allow_persistent_config_override marker file.
   static std::string GetAllowPersistentConfigOverridePath();
 
-  // Returns true if configurations exist at the overridden config path.
+  // Returns true if a configuration file exists at the overridden config path.
   bool OverriddenConfigExists();
 
-  // Returns true if configuration exists at the persistent config path.
+  // Returns true if a configuration file exists at the persistent config path.
   bool PersistentConfigExists();
+
+  // Returns true if a configuration file exists in the current package.
+  bool PackagedConfigExists();
 
   // Returns true if the allow_persistent_config_override marker file exists.
   bool PersistentConfigOverrideAllowed();

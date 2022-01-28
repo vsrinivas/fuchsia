@@ -94,13 +94,16 @@ ModularConfigReader::ModularConfigReader(fbl::unique_fd root_dir) : root_dir_(st
   FX_CHECK(root_dir_.is_valid());
 
   // 1. Figure out where the config file is.
-  std::string config_path = GetDefaultConfigPath();
+  std::string config_path = GetConfigDataConfigPath();
   if (OverriddenConfigExists()) {
     config_path = GetOverriddenConfigPath();
   } else if (PersistentConfigOverrideAllowed() && PersistentConfigExists()) {
     config_path = GetPersistentConfigPath();
-    FX_LOGS(INFO) << "Reading persistent configuration from /" << config_path;
+  } else if (PackagedConfigExists()) {
+    config_path = GetPackagedConfigPath();
   }
+
+  FX_LOGS(INFO) << "Reading configuration from /" << config_path;
 
   // 2. Read the file
   std::string config;
@@ -120,8 +123,8 @@ ModularConfigReader ModularConfigReader::CreateFromNamespace() {
 }
 
 // static
-std::string ModularConfigReader::GetDefaultConfigPath() {
-  return files::JoinPath(StripLeadingSlash(modular_config::kDefaultConfigDir),
+std::string ModularConfigReader::GetConfigDataConfigPath() {
+  return files::JoinPath(StripLeadingSlash(modular_config::kConfigDataDir),
                          modular_config::kStartupConfigFilePath);
 }
 
@@ -138,8 +141,14 @@ std::string ModularConfigReader::GetPersistentConfigPath() {
 }
 
 // static
+std::string ModularConfigReader::GetPackagedConfigPath() {
+  return files::JoinPath(StripLeadingSlash(modular_config::kPackageDataDir),
+                         modular_config::kStartupConfigFilePath);
+}
+
+// static
 std::string ModularConfigReader::GetAllowPersistentConfigOverridePath() {
-  return files::JoinPath(StripLeadingSlash(modular_config::kDefaultConfigDir),
+  return files::JoinPath(StripLeadingSlash(modular_config::kConfigDataDir),
                          modular_config::kAllowPersistentConfigOverrideFilePath);
 }
 
@@ -149,6 +158,10 @@ bool ModularConfigReader::OverriddenConfigExists() {
 
 bool ModularConfigReader::PersistentConfigExists() {
   return files::IsFileAt(root_dir_.get(), GetPersistentConfigPath());
+}
+
+bool ModularConfigReader::PackagedConfigExists() {
+  return files::IsFileAt(root_dir_.get(), GetPackagedConfigPath());
 }
 
 bool ModularConfigReader::PersistentConfigOverrideAllowed() {
