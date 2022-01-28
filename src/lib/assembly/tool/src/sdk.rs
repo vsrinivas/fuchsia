@@ -4,7 +4,7 @@
 
 use crate::{Tool, ToolCommand, ToolCommandLog, ToolProvider};
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use assembly_util::PathToStringExt;
 use ffx_config::{get_sdk, sdk::Sdk};
 use futures::executor::block_on;
@@ -70,7 +70,10 @@ impl Tool for SdkTool {
             .output()
             .context(format!("Failed to run the tool: {}", path))?;
         if !output.status.success() {
-            anyhow::bail!(format!("{} exited with status: {}", path, output.status));
+            let command = format!("{} {}", path, args.join(" "));
+            return Err(anyhow!("{} exited with status: {}", path, output.status)
+                .context(format!("stderr: {}", String::from_utf8_lossy(&output.stderr)))
+                .context(command));
         }
         Ok(())
     }
@@ -93,6 +96,7 @@ mod test {
             &tool_path,
             r#"#!/bin/bash
                if [[ "$1" != "pass" ]]; then
+                 echo "error message" 1>&2
                  exit 1
                fi
                exit 0
@@ -105,7 +109,13 @@ mod test {
 
         // Test a few scenarios.
         assert!(tool.run(&[]).is_err());
-        assert!(tool.run(&["fail".into()]).is_err());
         assert!(tool.run(&["pass".into()]).is_ok());
+        let err = tool.run(&["fail".into(), "with".into(), "args".into()]).unwrap_err();
+        let expected =
+            vec!["tool.sh fail with args", "stderr: error message", "tool.sh exited with status:"];
+        expected.iter().zip(err.chain()).for_each(|(exp, act)| {
+            let act = act.to_string();
+            assert!(act.contains(exp), "expected: {}, actual: {}", exp, act);
+        });
     }
 }
