@@ -10,6 +10,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
@@ -55,6 +56,7 @@ class DataRegisterTest : public UnitTestFixture {
   }
 
   files::ScopedTempDir tmp_dir_;
+  feedback::AnnotationManager annotation_manager_;
   feedback::RemoteDeviceIdProvider device_id_provider_;
   Datastore datastore_;
   std::unique_ptr<DataRegister> data_register_;

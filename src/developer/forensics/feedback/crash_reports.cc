@@ -14,7 +14,7 @@ CrashReports::CrashReports(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services,
                            timekeeper::Clock* clock, inspect::Node* inspect_root,
                            DeviceIdProvider* device_id_provider,
-                           const std::map<std::string, ErrorOr<std::string>>& startup_annotations,
+                           feedback::AnnotationManager* annotation_manager,
                            fuchsia::feedback::DataProvider* data_provider, const Options options)
     : dispatcher_(dispatcher),
       info_context_(
@@ -26,10 +26,11 @@ CrashReports::CrashReports(async_dispatcher_t* dispatcher,
                         options.snapshot_manager_max_annotations_size,
                         options.snapshot_manager_max_archives_size),
       crash_register_(dispatcher, services, info_context_,
-                      crash_reports::GetBuildVersion(startup_annotations), kCrashRegisterPath),
+                      crash_reports::GetBuildVersion(annotation_manager->ImmediatelyAvailable()),
+                      kCrashRegisterPath),
       crash_reporter_(dispatcher, services, clock, info_context_, options.config,
-                      crash_reports::BuildDefaultAnnotations(startup_annotations), &crash_register_,
-                      &tags_, &snapshot_manager_, &crash_server_, device_id_provider),
+                      annotation_manager, &crash_register_, &tags_, &snapshot_manager_,
+                      &crash_server_, device_id_provider),
       info_(info_context_) {
   info_.ExposeConfig(options.config);
 }

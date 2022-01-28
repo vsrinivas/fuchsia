@@ -29,6 +29,7 @@
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/keys.h"
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/testing/fakes/privacy_settings.h"
@@ -80,6 +81,9 @@ constexpr CrashServer::UploadStatus kUploadThrottled = CrashServer::UploadStatus
 constexpr char kProgramName[] = "crashing_program";
 
 constexpr char kBuildVersion[] = "some-version";
+constexpr char kBuildBoard[] = "some-board";
+constexpr char kBuildProduct[] = "some-product";
+constexpr char kBuildLatestCommitDate[] = "some-date";
 constexpr char kDefaultChannel[] = "some-channel";
 constexpr char kDefaultDeviceId[] = "some-device-id";
 
@@ -155,6 +159,12 @@ class CrashReporterTest : public UnitTestFixture {
   void SetUpCrashReporter(
       Config config, const std::vector<CrashServer::UploadStatus>& upload_attempt_results = {}) {
     FX_CHECK(data_provider_server_);
+    annotation_manager_ = std::make_unique<feedback::AnnotationManager>(feedback::Annotations{
+        {feedback::kBuildVersionKey, kBuildVersion},
+        {feedback::kBuildBoardKey, kBuildBoard},
+        {feedback::kBuildProductKey, kBuildProduct},
+        {feedback::kBuildLatestCommitDateKey, kBuildLatestCommitDate},
+    });
     snapshot_manager_ = std::make_unique<SnapshotManager>(
         dispatcher(), &clock_, data_provider_server_.get(), kSnapshotSharedRequestWindow,
         kGarbageCollectedSnapshotsPath, StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u)),
@@ -163,12 +173,10 @@ class CrashReporterTest : public UnitTestFixture {
     device_id_provider_ =
         std::make_unique<feedback::RemoteDeviceIdProvider>(dispatcher(), services());
 
-    crash_reporter_ =
-        std::make_unique<CrashReporter>(dispatcher(), services(), &clock_, info_context_, config,
-                                        AnnotationMap({{feedback::kOSNameKey, "Fuchsia"},
-                                                       {feedback::kOSVersionKey, kBuildVersion}}),
-                                        crash_register_.get(), &tags_, snapshot_manager_.get(),
-                                        crash_server_.get(), device_id_provider_.get());
+    crash_reporter_ = std::make_unique<CrashReporter>(
+        dispatcher(), services(), &clock_, info_context_, config, annotation_manager_.get(),
+        crash_register_.get(), &tags_, snapshot_manager_.get(), crash_server_.get(),
+        device_id_provider_.get());
     FX_CHECK(crash_reporter_);
   }
 
@@ -233,6 +241,10 @@ class CrashReporterTest : public UnitTestFixture {
         {"ptype", testing::StartsWith("crashing_program")},
         {feedback::kOSNameKey, "Fuchsia"},
         {feedback::kOSVersionKey, kBuildVersion},
+        {feedback::kBuildVersionKey, kBuildVersion},
+        {feedback::kBuildBoardKey, kBuildBoard},
+        {feedback::kBuildProductKey, kBuildProduct},
+        {feedback::kBuildLatestCommitDateKey, kBuildLatestCommitDate},
         {"reportTimeMillis", Not(IsEmpty())},
         {"guid", kDefaultDeviceId},
         {"channel", kDefaultChannel},
@@ -420,6 +432,7 @@ class CrashReporterTest : public UnitTestFixture {
   std::shared_ptr<InfoContext> info_context_;
 
  protected:
+  std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
   std::unique_ptr<SnapshotManager> snapshot_manager_;
   std::unique_ptr<CrashRegister> crash_register_;
   std::unique_ptr<feedback::DeviceIdProvider> device_id_provider_;

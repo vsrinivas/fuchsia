@@ -9,6 +9,21 @@ import("//src/hwinfo/hwinfo_config.gni")
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
+executable("annotation_manager_unittest_exe") {
+  testonly = true
+
+  sources = [ "annotation_manager_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback/annotations",
+    "//src/developer/forensics/testing:gmatchers",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("config_unittest_exe") {
   testonly = true
 
@@ -272,6 +287,14 @@ config_data("fake_hwinfo_board_config") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
+fuchsia_component("annotation_manager_unittest") {
+  testonly = true
+
+  manifest = "meta/annotation_manager_unittest.cml"
+
+  deps = [ ":annotation_manager_unittest_exe" ]
+}
+
 fuchsia_component("config_unittest") {
   testonly = true
 
@@ -382,6 +405,7 @@ fuchsia_test_package("feedback-tests") {
     "//src/sys/pkg/bin/fake-channel-control:fake-channel-control",
   ]
   test_components = [
+    ":annotation_manager_unittest",
     ":config_unittest",
     ":device_id_provider_unittest",
     ":feedback_integration_test",
@@ -402,7 +426,7 @@ fuchsia_test_package("feedback-tests") {
 
   test_specs = {
     log_settings = {
-      max_severity = "ERROR"
+      max_severity = "FATAL"
     }
   }
 }

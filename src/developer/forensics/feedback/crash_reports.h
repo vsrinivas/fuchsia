@@ -18,6 +18,7 @@
 #include "src/developer/forensics/crash_reports/info/main_service_info.h"
 #include "src/developer/forensics/crash_reports/log_tags.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/storage_size.h"
@@ -36,7 +37,7 @@ class CrashReports {
   CrashReports(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                timekeeper::Clock* clock, inspect::Node* inspect_root,
                DeviceIdProvider* device_id_provider,
-               const std::map<std::string, ErrorOr<std::string>>& startup_annotations,
+               feedback::AnnotationManager* annotation_manager,
                fuchsia::feedback::DataProvider* data_provider, Options options);
 
   void Handle(::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request,

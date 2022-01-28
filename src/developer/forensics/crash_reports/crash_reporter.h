@@ -25,6 +25,8 @@
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/utc_time_provider.h"
@@ -39,8 +41,8 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashReporter(async_dispatcher_t* dispatcher,
                 const std::shared_ptr<sys::ServiceDirectory>& services, timekeeper::Clock* clock,
                 const std::shared_ptr<InfoContext>& info_context, Config config,
-                AnnotationMap default_annotations, CrashRegister* crash_register, LogTags* tags,
-                SnapshotManager* snapshot_manager, CrashServer* crash_server,
+                feedback::AnnotationManager* annotation_manager, CrashRegister* crash_register,
+                LogTags* tags, SnapshotManager* snapshot_manager, CrashServer* crash_server,
                 feedback::DeviceIdProvider* device_id_provider);
 
   // The crash reporter should stop uploading crash reports and persist any future and pending crash
@@ -58,7 +60,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   LogTags* tags_;
-  AnnotationMap default_annotations_;
+  feedback::AnnotationManager* annotation_manager_;
   CrashRegister* crash_register_;
   const UtcTimeProvider utc_provider_;
   SnapshotManager* snapshot_manager_;

@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/crash_reports.h"
 #include "src/developer/forensics/feedback/feedback_data.h"
 #include "src/developer/forensics/feedback/last_reboot.h"
@@ -42,8 +43,7 @@ class MainService {
 
   MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
               timekeeper::Clock* clock, inspect::Node* inspect_root, cobalt::Logger* cobalt,
-              const std::map<std::string, ErrorOr<std::string>>& startup_annotations,
-              Options options);
+              const Annotations& startup_annotations, Options options);
 
   template <typename Protocol>
   ::fidl::InterfaceRequestHandler<Protocol> GetHandler();
@@ -61,6 +61,8 @@ class MainService {
   inspect::Node* inspect_root_;
   cobalt::Logger* cobalt_;
   std::unique_ptr<DeviceIdProvider> device_id_provider_;
+
+  AnnotationManager annotation_manager_;
 
   FeedbackData feedback_data_;
   CrashReports crash_reports_;

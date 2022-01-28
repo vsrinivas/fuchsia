@@ -17,6 +17,7 @@
 
 #include <memory>
 
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/constants.h"
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/config.h"
@@ -44,7 +45,7 @@ class FeedbackData {
 
   FeedbackData(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                timekeeper::Clock* clock, inspect::Node* inspect_root, cobalt::Logger* cobalt,
-               const std::map<std::string, ErrorOr<std::string>>& startup_annotations,
+               feedback::AnnotationManager* annotation_manager,
                DeviceIdProvider* device_id_provider, Options options);
 
   void Handle(::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request,

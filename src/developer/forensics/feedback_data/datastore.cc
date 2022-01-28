@@ -30,7 +30,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
                      const AnnotationKeys& annotation_allowlist,
                      const AttachmentKeys& attachment_allowlist,
-                     const feedback::Annotations& startup_annotations,
+                     feedback::AnnotationManager* annotation_manager_,
                      feedback::DeviceIdProvider* device_id_provider,
                      InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
@@ -38,8 +38,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      static_annotations_(
-          feedback_data::GetStaticAnnotations(annotation_allowlist_, startup_annotations)),
+      static_annotations_(feedback_data::GetStaticAnnotations(
+          annotation_allowlist_, annotation_manager_->ImmediatelyAvailable())),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
       reusable_annotation_providers_(
           GetReusableProviders(dispatcher_, services_, device_id_provider, cobalt_)),

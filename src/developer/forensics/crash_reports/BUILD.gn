@@ -94,6 +94,7 @@ source_set("crash_reporter") {
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/feedback:device_id_provider",
+    "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils:utc_time_provider",
     "//src/lib/timekeeper",
@@ -103,6 +104,7 @@ source_set("crash_reporter") {
 
   deps = [
     ":constants",
+    ":default_annotations",
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils/cobalt",

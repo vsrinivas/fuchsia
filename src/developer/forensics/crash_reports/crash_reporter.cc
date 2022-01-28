@@ -26,9 +26,11 @@
 #include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/crash_server.h"
+#include "src/developer/forensics/crash_reports/default_annotations.h"
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/errors.h"
@@ -87,15 +89,15 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
                              const std::shared_ptr<sys::ServiceDirectory>& services,
                              timekeeper::Clock* clock,
                              const std::shared_ptr<InfoContext>& info_context, Config config,
-                             AnnotationMap default_annotations, CrashRegister* crash_register,
-                             LogTags* tags, SnapshotManager* snapshot_manager,
-                             CrashServer* crash_server,
+                             feedback::AnnotationManager* annotation_manager,
+                             CrashRegister* crash_register, LogTags* tags,
+                             SnapshotManager* snapshot_manager, CrashServer* crash_server,
                              feedback::DeviceIdProvider* device_id_provider)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
       tags_(tags),
-      default_annotations_(std::move(default_annotations)),
+      annotation_manager_(annotation_manager),
       crash_register_(crash_register),
       utc_provider_(dispatcher_, zx::unowned_clock(zx_utc_reference_get()), clock),
       snapshot_manager_(snapshot_manager),
@@ -207,7 +209,8 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
             std::optional<Report> final_report = MakeReport(
                 std::move(report), report_id, snapshot_uuid,
                 snapshot_manager_->GetSnapshot(snapshot_uuid), utc_provider_.CurrentTime(),
-                device_id, default_annotations_, product, is_hourly_snapshot);
+                device_id, BuildDefaultAnnotations(annotation_manager_->ImmediatelyAvailable()), product,
+                is_hourly_snapshot);
             if (!final_report.has_value()) {
               return ::fpromise::error(
                   CrashReporterError{cobalt::CrashState::kDropped, "failed MakeReport()"});

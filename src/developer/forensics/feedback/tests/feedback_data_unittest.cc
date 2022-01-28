@@ -48,9 +48,10 @@ TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
   ASSERT_TRUE(files::WriteFile(kPreviousLogsFilePath, "previous boot logs"));
 
   const auto kDeletePreviousBootLogsTime = zx::min(10);
+  AnnotationManager annotation_manager;
   {
     FeedbackData feedback_data(dispatcher(), services(), Clock(), &InspectRoot(), Cobalt(),
-                               /*startup_annotations=*/{}, DeviceIdProvider(),
+                               &annotation_manager, DeviceIdProvider(),
                                FeedbackData::Options{
                                    .config = {},
                                    .is_first_instance = true,
@@ -66,7 +67,7 @@ TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
 
   {
     FeedbackData feedback_data(dispatcher(), services(), Clock(), &InspectRoot(), Cobalt(),
-                               /*startup_annotations=*/{}, DeviceIdProvider(),
+                               &annotation_manager, DeviceIdProvider(),
                                FeedbackData::Options{
                                    .config = {},
                                    .is_first_instance = true,

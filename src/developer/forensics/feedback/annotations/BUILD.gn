@@ -6,7 +6,16 @@
 # SOURCES
 ###############################################################################
 source_set("annotations") {
+  public = [
+    "annotation_manager.h",
+    "keys.h",
+    "startup_annotations.h",
+    "types.h",
+  ]
+
   sources = [
+    "annotation_manager.cc",
+    "annotation_manager.h",
     "keys.h",
     "startup_annotations.cc",
     "startup_annotations.h",

@@ -20,6 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
@@ -91,9 +92,10 @@ class DatastoreTest : public UnitTestFixture {
   void SetUpDatastore(const AnnotationKeys& annotation_allowlist,
                       const AttachmentKeys& attachment_allowlist,
                       const std::map<std::string, ErrorOr<std::string>>& startup_annotations = {}) {
+    annotation_manager_ = std::make_unique<feedback::AnnotationManager>(startup_annotations);
     datastore_ = std::make_unique<Datastore>(
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
-        startup_annotations, device_id_provider_.get(), inspect_data_budget_.get());
+        annotation_manager_.get(), device_id_provider_.get(), inspect_data_budget_.get());
   }
 
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {
@@ -173,6 +175,7 @@ class DatastoreTest : public UnitTestFixture {
  private:
   async::Executor executor_;
   timekeeper::TestClock clock_;
+  std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
   std::unique_ptr<feedback::DeviceIdProvider> device_id_provider_;
   std::unique_ptr<cobalt::Logger> cobalt_;
 

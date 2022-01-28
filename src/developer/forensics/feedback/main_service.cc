@@ -33,8 +33,7 @@ std::unique_ptr<DeviceIdProvider> MakeDeviceIdProvider(
 MainService::MainService(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
                          inspect::Node* inspect_root, cobalt::Logger* cobalt,
-                         const std::map<std::string, ErrorOr<std::string>>& startup_annotations,
-                         Options options)
+                         const Annotations& startup_annotations, Options options)
     : dispatcher_(dispatcher),
       services_(services),
       clock_(clock),
@@ -42,10 +41,11 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       device_id_provider_(
           MakeDeviceIdProvider(options.local_device_id_path, dispatcher_, services_)),
-      feedback_data_(dispatcher_, services_, clock_, inspect_root_, cobalt_, startup_annotations,
+      annotation_manager_(startup_annotations),
+      feedback_data_(dispatcher_, services_, clock_, inspect_root_, cobalt_, &annotation_manager_,
                      device_id_provider_.get(), options.feedback_data_options),
       crash_reports_(dispatcher_, services_, clock_, inspect_root_, device_id_provider_.get(),
-                     startup_annotations, feedback_data_.DataProvider(),
+                     &annotation_manager_, feedback_data_.DataProvider(),
                      options.crash_reports_options),
 
       last_reboot_(dispatcher_, services_, cobalt_, crash_reports_.CrashReporter(),
