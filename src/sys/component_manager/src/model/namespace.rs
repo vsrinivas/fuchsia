@@ -363,7 +363,7 @@ impl IncomingNamespace {
             // await on it directly. This is wrapped in an async move {.await;}` block to drop
             // the unused return value.
             fasync::Task::spawn(async move {
-                future.await.unwrap_or_else(|e| error!("directory waiter aborted: {}", e));
+                future.await.unwrap_or_else(|e| warn!("directory waiter aborted: {}", e));
             })
             .detach();
         }

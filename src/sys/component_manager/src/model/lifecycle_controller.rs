@@ -153,19 +153,19 @@ impl LifecycleController {
                     let mut res = self.resolve(moniker).await;
                     responder
                         .send(&mut res)
-                        .unwrap_or_else(|e| error!("response send failed: {}", e));
+                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
                 }
                 fsys::LifecycleControllerRequest::Start { moniker, responder } => {
                     let mut res = self.start(moniker).await;
                     responder
                         .send(&mut res)
-                        .unwrap_or_else(|e| error!("response send failed: {}", e));
+                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
                 }
                 fsys::LifecycleControllerRequest::Stop { moniker, responder, is_recursive } => {
                     let mut res = self.stop(moniker, is_recursive).await;
                     responder
                         .send(&mut res)
-                        .unwrap_or_else(|e| error!("response send failed: {}", e));
+                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
                 }
                 fsys::LifecycleControllerRequest::CreateChild {
                     parent_moniker,
@@ -177,7 +177,7 @@ impl LifecycleController {
                     let mut res = self.create_child(parent_moniker, collection, decl, args).await;
                     responder
                         .send(&mut res)
-                        .unwrap_or_else(|e| error!("response send failed: {}", e));
+                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
                 }
                 fsys::LifecycleControllerRequest::DestroyChild {
                     parent_moniker,
@@ -187,7 +187,7 @@ impl LifecycleController {
                     let mut res = self.destroy_child(parent_moniker, child).await;
                     responder
                         .send(&mut res)
-                        .unwrap_or_else(|e| error!("response send failed: {}", e));
+                        .unwrap_or_else(|e| warn!("response send failed: {}", e));
                 }
             }
         }
