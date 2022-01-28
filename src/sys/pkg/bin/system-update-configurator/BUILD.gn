@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/sys/core/build/core_shard.gni")
 import("//src/sys/pkg/bin/grand-swd-binary/gsb.gni")
 
 # `system-update-configurator` is conceptually a binary, but it built as a lib here so
@@ -57,6 +58,10 @@ fuchsia_component("component") {
 
 fuchsia_package("system-update-configurator") {
   deps = [ ":component" ]
+}
+
+core_shard("core-shard") {
+  shard_file = "meta/core-shard.cml"
 }
 
 fuchsia_unittest_package("system-update-configurator-tests") {
