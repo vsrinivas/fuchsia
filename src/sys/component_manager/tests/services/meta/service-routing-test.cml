@@ -19,9 +19,18 @@
     use: [
         { protocol: "fuchsia.sys2.EventSource" },
         {
-            event: [ "started" ],
+            event: [
+                "discovered",
+                "started",
+            ],
             from: "framework",
             modes: [ "async" ],
+        },
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
         },
     ],
     offer: [
