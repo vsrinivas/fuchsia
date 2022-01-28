@@ -306,7 +306,8 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const UpdateArgsType& _arg
       affine::Ratio new_t2s_ratio;
       if (do_rate) {
         new_m2s_ratio = {static_cast<uint32_t>(1'000'000 + args.rate_adjust()), 1'000'000};
-        new_t2s_ratio = ticks_to_mono_ratio * new_m2s_ratio;
+        new_t2s_ratio =
+            affine::Ratio::Product(ticks_to_mono_ratio, new_m2s_ratio, affine::Ratio::Exact::No);
       } else if (is_started()) {
         new_m2s_ratio = mono_to_synthetic_.ratio();
         new_t2s_ratio = ticks_to_synthetic_.ratio();
