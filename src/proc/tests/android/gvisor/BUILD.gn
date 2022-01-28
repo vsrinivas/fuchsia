@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/zip_resource.gni")
 import("//src/proc/tests/android/build/starnix_test_component.gni")
 
 group("gvisor") {
@@ -124,9 +125,15 @@ foreach(test_name, gvisor_tests) {
   }
 }
 
+zip_resource("gvisor_runfiles") {
+  file = "${gvisor_prebuilt_test_root}/gvisor_runfiles"
+  dest_prefix = "data/tests"
+}
+
 fuchsia_test_package("starnix_gvisor_tests") {
   package_deps_for_infra_only = [ "//src/proc/bin/starnix:pkg" ]
   deps = [
+    ":gvisor_runfiles",
     "//src/proc/tests/android:android_system_image",
     "//src/proc/tests/android:starnix_data_tmp_placeholder",
   ]

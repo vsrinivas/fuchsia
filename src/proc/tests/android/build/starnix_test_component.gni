@@ -4,11 +4,14 @@
 
 import("//build/components.gni")
 
+gvisor_prebuilt_test_root = "//prebuilt/starnix/tests/syscalls/linux-amd64"
+
 template("starnix_test_component") {
   test_name = target_name
 
   resource("${test_name}_bin") {
-    sources = [ "//prebuilt/starnix/tests/syscalls/linux-amd64/${invoker.test_dir}/${test_name}" ]
+    sources =
+        [ "${gvisor_prebuilt_test_root}/${invoker.test_dir}/${test_name}" ]
     outputs = [ "data/tests/${test_name}" ]
   }
 
@@ -18,7 +21,12 @@ template("starnix_test_component") {
     testonly = true
     check_references = false
     manifest = "${invoker.meta_dir}/${test_name}.cml"
-    deps = [
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    deps += [
       ":${test_name}_bin",
       "//src/proc/tests/android:android_system_image",
     ]

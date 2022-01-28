@@ -1,0 +1,78 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/distribution_manifest.gni")
+import("//build/python/python_action.gni")
+
+# Declare data files contained within a zip file to be bundled into a package.
+#
+# The contents of the zip file are extracted and included in any package that depends on this
+# rule.
+#
+# File paths in the zip are preserved in the final destination.
+#
+# Parameters
+#
+#   file
+#     Required: Path to a zip file.
+#     Type: path
+#
+#   dest_prefix
+#     Optional: The path prefix to apply to each file in the zip. This prefix is relative to the
+#     root of the destination package. It must not begin with '/'.
+#     Type: path
+#
+#   deps
+#   testonly
+#   visibility
+template("zip_resource") {
+  assert(defined(invoker.file), "Must specify file")
+
+  manifest_path = "$target_gen_dir/${target_name}.dist.partial"
+  unzip_path = "$target_gen_dir/${target_name}.unzipped"
+
+  # Extract the runfiles bundled inside the zip.
+  unzip_target = "${target_name}.unzip"
+  python_action(unzip_target) {
+    binary_label = "//build/dist:zip_helper"
+    sources = [ invoker.file ]
+
+    # Outputs a partial distribution file, which lists the contents of the zip.
+    outputs = [ manifest_path ]
+
+    depfile = "$target_out_dir/${target_name}.d"
+
+    args = [
+      rebase_path(invoker.file, root_build_dir),
+      "--output-dir",
+      rebase_path(unzip_path, root_build_dir),
+      "--output-manifest",
+      rebase_path(manifest_path, root_build_dir),
+      "--output-depfile",
+      rebase_path(depfile, root_build_dir),
+    ]
+
+    if (defined(invoker.dest_prefix)) {
+      args += [
+        "--dest-path-prefix",
+        invoker.dest_prefix,
+      ]
+    }
+  }
+
+  # Add the partial distribution file to the target's metadata, to get picked
+  # up by the packaging rules.
+  distribution_entries_file(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    file = manifest_path
+    deps = [ ":${unzip_target}" ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+  }
+}
