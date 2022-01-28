@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1645
+From //build/config/BUILDCONFIG.gn:1654
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -1358,7 +1358,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1392
+From //build/config/BUILDCONFIG.gn:1401
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
@@ -2391,7 +2391,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1223
+From //build/config/BUILDCONFIG.gn:1232
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3713,7 +3713,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1635
+From //build/config/BUILDCONFIG.gn:1644
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3722,7 +3722,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1640
+From //build/config/BUILDCONFIG.gn:1649
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3772,7 +3772,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1438
+From //build/config/BUILDCONFIG.gn:1447
 
 ### size_checker_input
 The input to the size checker.
@@ -4097,7 +4097,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1422
+From //build/config/BUILDCONFIG.gn:1431
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -4562,7 +4562,7 @@ From //build/images/args.gni:91
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:140
+From //build/config/fuchsia/BUILD.gn:138
 
 ### zircon_b_partition
 
