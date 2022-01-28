@@ -15,6 +15,7 @@ dart_library("ermine_utils") {
     "src/mobx_extensions.dart",
     "src/themes.dart",
     "src/view_handle.dart",
+    "src/widget_extension.dart",
     "src/widget_factory.dart",
   ]
   deps = [

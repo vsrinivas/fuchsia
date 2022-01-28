@@ -7,4 +7,5 @@ export 'src/mobx_disposable.dart';
 export 'src/mobx_extensions.dart';
 export 'src/themes.dart';
 export 'src/view_handle.dart';
+export 'src/widget_extension.dart';
 export 'src/widget_factory.dart';

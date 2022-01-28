@@ -79,22 +79,40 @@ class _ListSettings extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                // Logout button.
+                OutlinedButton(
+                  child: Icon(Icons.logout),
+                  onPressed: appState.logout,
+                  style: ErmineButtonStyle.outlinedButton(Theme.of(context))
+                      .copyWith(
+                    padding: MaterialStateProperty.all(EdgeInsets.zero),
+                    minimumSize: MaterialStateProperty.all(Size(40, 40)),
+                  ),
+                ).tooltip(Strings.logout),
+                SizedBox(width: 8),
+
                 // Restart button.
-                OutlinedButton.icon(
-                  style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
+                OutlinedButton(
+                  child: Icon(Icons.restart_alt),
                   onPressed: appState.restart,
-                  icon: Icon(Icons.restart_alt),
-                  label: Text(Strings.restart.toUpperCase()),
-                ),
+                  style: ErmineButtonStyle.outlinedButton(Theme.of(context))
+                      .copyWith(
+                    padding: MaterialStateProperty.all(EdgeInsets.zero),
+                    minimumSize: MaterialStateProperty.all(Size(36, 36)),
+                  ),
+                ).tooltip(Strings.restart),
                 SizedBox(width: 8),
 
                 // Power off button.
-                OutlinedButton.icon(
-                  style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
+                OutlinedButton(
+                  child: Icon(Icons.power_settings_new_rounded),
                   onPressed: appState.shutdown,
-                  icon: Icon(Icons.power_settings_new_rounded),
-                  label: Text(Strings.shutdown.toUpperCase()),
-                ),
+                  style: ErmineButtonStyle.outlinedButton(Theme.of(context))
+                      .copyWith(
+                    padding: MaterialStateProperty.all(EdgeInsets.zero),
+                    minimumSize: MaterialStateProperty.all(Size(36, 36)),
+                  ),
+                ).tooltip(Strings.powerOff),
 
                 Spacer(),
                 // Date time.
