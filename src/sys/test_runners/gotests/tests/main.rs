@@ -9,7 +9,6 @@ use {
     fuchsia_async as fasync,
     pretty_assertions::assert_eq,
     regex::Regex,
-    std::collections::HashMap,
     test_manager_test_lib::{GroupRunEventByTestCase, RunEvent},
 };
 
@@ -73,202 +72,112 @@ async fn launch_and_test_file_with_no_test() {
 
 async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/sample_go_test.cm";
-    let mut events =
-        run_test(test_url, false, parallel, vec!["-my_custom_flag_2".to_owned()]).await.unwrap();
-
-    assert_eq!(events.remove(0), RunEvent::suite_started());
-    assert_eq!(events.pop(), Some(RunEvent::suite_stopped(SuiteStatus::Failed)));
-
-    #[derive(Debug)]
-    enum RunEventMatch {
-        Found,
-        Started,
-        Stopped(CaseStatus),
-        Finished,
-        StdoutMatch(&'static str),
-        StderrMatch(&'static str),
-        AnyStderr,
-    }
-
-    let mut expectations = vec![
-        (
-            "TestFailing",
-            vec![
-                RunEventMatch::Found,
-                RunEventMatch::Started,
-                RunEventMatch::StdoutMatch("    sample_go_test.go:25: This will fail"),
-                RunEventMatch::Stopped(CaseStatus::Failed),
-                RunEventMatch::Finished,
-            ],
-        ),
-        (
-            "TestPassing",
-            vec![
-                RunEventMatch::Found,
-                RunEventMatch::Started,
-                RunEventMatch::StdoutMatch("This test will pass"),
-                RunEventMatch::StdoutMatch("It will also print this line"),
-                RunEventMatch::StdoutMatch("And this line"),
-                RunEventMatch::Stopped(CaseStatus::Passed),
-                RunEventMatch::Finished,
-            ],
-        ),
-        (
-            "TestPrefix",
-            vec![
-                RunEventMatch::Found,
-                RunEventMatch::Started,
-                RunEventMatch::StdoutMatch("Testing that given two tests where one test is prefix of another can execute independently."),
-                RunEventMatch::Stopped(CaseStatus::Passed),
-                RunEventMatch::Finished,
-            ],
-        ),
-        (
-            "TestSkipped",
-            vec![
-                RunEventMatch::Found,
-                RunEventMatch::Started,
-                RunEventMatch::StdoutMatch("    sample_go_test.go:33: Skipping this test"),
-                RunEventMatch::Stopped(CaseStatus::Skipped),
-                RunEventMatch::Finished,
-            ],
-        ),
-        (
-            "TestSubtests",
-            vec![
-                RunEventMatch::Found,
-                RunEventMatch::Started,
-                RunEventMatch::StdoutMatch("=== RUN   TestSubtests/Subtest1"),
-                RunEventMatch::StdoutMatch("=== RUN   TestSubtests/Subtest2"),
-                RunEventMatch::StdoutMatch("=== RUN   TestSubtests/Subtest3"),
-                RunEventMatch::StdoutMatch("    --- PASS: TestSubtests/Subtest1"),
-                RunEventMatch::StdoutMatch("    --- PASS: TestSubtests/Subtest2"),
-                RunEventMatch::StdoutMatch("    --- PASS: TestSubtests/Subtest3"),
-                RunEventMatch::Stopped(CaseStatus::Passed),
-                RunEventMatch::Finished,
-            ],
-        ),
-        (
-            "TestPrefixExtra",
-            vec![
-                RunEventMatch::Found,
-                RunEventMatch::Started,
-                RunEventMatch::StdoutMatch("Testing that given two tests where one test is prefix of another can execute independently."),
-                RunEventMatch::Stopped(CaseStatus::Passed),
-                RunEventMatch::Finished,
-            ],
-        ),
-        (
-            "TestPrintMultiline",
-            vec![
-                RunEventMatch::Found,
-                RunEventMatch::Started,
-                RunEventMatch::StdoutMatch("This test will print the msg in multi-line."),
-                RunEventMatch::Stopped(CaseStatus::Passed),
-                RunEventMatch::Finished,
-            ],
-        ),
-        (
-            "TestCustomArg",
-            vec![
-                RunEventMatch::Found,
-                RunEventMatch::Started,
-                RunEventMatch::Stopped(CaseStatus::Passed),
-                RunEventMatch::Finished,
-            ],
-        ),
-        (
-            "TestCustomArg2",
-            vec![
-                RunEventMatch::Found,
-                RunEventMatch::Started,
-                RunEventMatch::Stopped(CaseStatus::Passed),
-                RunEventMatch::Finished,
-            ],
-        ),
-        (
-            "TestEnviron",
-            vec![
-                RunEventMatch::Found,
-                RunEventMatch::Started,
-                RunEventMatch::Stopped(CaseStatus::Passed),
-                RunEventMatch::Finished,
-            ],
-        ),
-        (
-            "TestCrashing",
-            vec![
-                RunEventMatch::Found,
-                RunEventMatch::Started,
-                RunEventMatch::StderrMatch("panic: This will crash"),
-                RunEventMatch::StderrMatch(" [recovered]"),
-                RunEventMatch::StderrMatch("\tpanic: This will crash"),
-                RunEventMatch::StderrMatch(""),
-                RunEventMatch::StderrMatch(""),
-                // This test will print a stack trace, we avoid matching on it.
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::AnyStderr,
-                RunEventMatch::StderrMatch("Test exited abnormally"),
-                RunEventMatch::Stopped(CaseStatus::Failed),
-                RunEventMatch::Finished,
-            ],
-        ),
-    ]
-    .into_iter()
-    .collect::<HashMap<_, _>>();
-
-    // Walk through all the events and match against expectations based on test case.
-    for event in events {
-        let test_case = event
-            .test_case_name()
-            .unwrap_or_else(|| panic!("unexpected event {:?} without a test case", event));
-        let expect = expectations
-            .get_mut(test_case.as_str())
-            .unwrap_or_else(|| {
-                panic!("test case {} from event {:?} not covered by expectations", test_case, event)
-            })
-            .drain(0..1)
-            .next()
-            .unwrap_or_else(|| panic!("unexpected event {:?}", event));
-        match expect {
-            RunEventMatch::Found => assert_eq!(event, RunEvent::case_found(test_case)),
-            RunEventMatch::Started => assert_eq!(event, RunEvent::case_started(test_case)),
-            RunEventMatch::Stopped(result) => {
-                assert_eq!(event, RunEvent::case_stopped(test_case, result))
-            }
-            RunEventMatch::Finished => {
-                assert_eq!(event, RunEvent::case_finished(test_case))
-            }
-            RunEventMatch::StdoutMatch(msg) => {
-                assert_eq!(event, RunEvent::case_stdout(test_case, msg))
-            }
-            RunEventMatch::StderrMatch(msg) => {
-                assert_eq!(event, RunEvent::case_stderr(test_case, msg))
-            }
-            RunEventMatch::AnyStderr => {
-                assert_matches::assert_matches!(event, RunEvent::CaseStderr { .. })
-            }
-        }
-    }
-
-    // Check that we have no leftovers in expectations:
-    let leftovers = expectations
+    let mut events = run_test(test_url, false, parallel, vec!["-my_custom_flag_2".to_owned()])
+        .await
+        .unwrap()
         .into_iter()
-        .map(|(test, expect)| expect.into_iter().map(move |e| (test, e)))
-        .flatten()
-        .collect::<Vec<_>>();
-    assert!(leftovers.is_empty(), "leftover expectations: {:?}", leftovers);
+        .group_by_test_case_unordered();
+
+    // handle crashing test case separately, as it contains a stack trace we can't match on.
+    let run_events_for_crashing = events
+        .remove(&Some("TestCrashing".to_string()))
+        .expect("Expect run events for TestCrashing test case");
+    assert_eq!(
+        run_events_for_crashing.non_artifact_events,
+        vec![
+            RunEvent::case_found("TestCrashing"),
+            RunEvent::case_started("TestCrashing"),
+            RunEvent::case_stopped("TestCrashing", CaseStatus::Failed),
+            RunEvent::case_finished("TestCrashing"),
+        ]
+    );
+    assert!(run_events_for_crashing.stdout_events.is_empty());
+    assert_eq!(
+        &run_events_for_crashing.stderr_events[..5],
+        &vec![
+            RunEvent::case_stderr("TestCrashing", "panic: This will crash"),
+            RunEvent::case_stderr("TestCrashing", " [recovered]"),
+            RunEvent::case_stderr("TestCrashing", "\tpanic: This will crash"),
+            RunEvent::case_stderr("TestCrashing", ""),
+            RunEvent::case_stderr("TestCrashing", ""),
+        ]
+    );
+    assert_eq!(
+        run_events_for_crashing.stderr_events.last().unwrap(),
+        &RunEvent::case_stderr("TestCrashing", "Test exited abnormally"),
+    );
+
+    let expected_events = vec![
+        RunEvent::suite_started(),
+
+        RunEvent::case_found("TestFailing"),
+        RunEvent::case_started("TestFailing"),
+        RunEvent::case_stdout("TestFailing", "    sample_go_test.go:25: This will fail"),
+        RunEvent::case_stopped("TestFailing", CaseStatus::Failed),
+        RunEvent::case_finished("TestFailing"),
+
+        RunEvent::case_found("TestPassing"),
+        RunEvent::case_started("TestPassing"),
+        RunEvent::case_stdout("TestPassing", "This test will pass"),
+        RunEvent::case_stdout("TestPassing", "It will also print this line"),
+        RunEvent::case_stdout("TestPassing", "And this line"),
+        RunEvent::case_stopped("TestPassing", CaseStatus::Passed),
+        RunEvent::case_finished("TestPassing"),
+
+        RunEvent::case_found("TestPrefix"),
+        RunEvent::case_started("TestPrefix"),
+        RunEvent::case_stdout("TestPrefix", "Testing that given two tests where one test is prefix of another can execute independently."),
+        RunEvent::case_stopped("TestPrefix", CaseStatus::Passed),
+        RunEvent::case_finished("TestPrefix"),
+
+        RunEvent::case_found("TestSkipped"),
+        RunEvent::case_started("TestSkipped"),
+        RunEvent::case_stdout("TestSkipped", "    sample_go_test.go:33: Skipping this test"),
+        RunEvent::case_stopped("TestSkipped", CaseStatus::Skipped),
+        RunEvent::case_finished("TestSkipped"),
+
+        RunEvent::case_found("TestSubtests"),
+        RunEvent::case_started("TestSubtests"),
+        RunEvent::case_stdout("TestSubtests", "=== RUN   TestSubtests/Subtest1"),
+        RunEvent::case_stdout("TestSubtests", "=== RUN   TestSubtests/Subtest2"),
+        RunEvent::case_stdout("TestSubtests", "=== RUN   TestSubtests/Subtest3"),
+        RunEvent::case_stdout("TestSubtests", "    --- PASS: TestSubtests/Subtest1"),
+        RunEvent::case_stdout("TestSubtests", "    --- PASS: TestSubtests/Subtest2"),
+        RunEvent::case_stdout("TestSubtests", "    --- PASS: TestSubtests/Subtest3"),
+        RunEvent::case_stopped("TestSubtests", CaseStatus::Passed),
+        RunEvent::case_finished("TestSubtests"),
+
+        RunEvent::case_found("TestPrefixExtra"),
+        RunEvent::case_started("TestPrefixExtra"),
+        RunEvent::case_stdout("TestPrefixExtra", "Testing that given two tests where one test is prefix of another can execute independently."),
+        RunEvent::case_stopped("TestPrefixExtra", CaseStatus::Passed),
+        RunEvent::case_finished("TestPrefixExtra"),
+
+        RunEvent::case_found("TestPrintMultiline"),
+        RunEvent::case_started("TestPrintMultiline"),
+        RunEvent::case_stdout("TestPrintMultiline", "This test will print the msg in multi-line."),
+        RunEvent::case_stopped("TestPrintMultiline", CaseStatus::Passed),
+        RunEvent::case_finished("TestPrintMultiline"),
+
+        RunEvent::case_found("TestCustomArg"),
+        RunEvent::case_started("TestCustomArg"),
+        RunEvent::case_stopped("TestCustomArg", CaseStatus::Passed),
+        RunEvent::case_finished("TestCustomArg"),
+
+        RunEvent::case_found("TestCustomArg2"),
+        RunEvent::case_started("TestCustomArg2"),
+        RunEvent::case_stopped("TestCustomArg2", CaseStatus::Passed),
+        RunEvent::case_finished("TestCustomArg2"),
+
+        RunEvent::case_found("TestEnviron"),
+        RunEvent::case_started("TestEnviron"),
+        RunEvent::case_stopped("TestEnviron", CaseStatus::Passed),
+        RunEvent::case_finished("TestEnviron"),
+
+        RunEvent::suite_stopped(SuiteStatus::Failed)
+    ].into_iter().group_by_test_case_unordered();
+
+    assert_eq!(events, expected_events);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
