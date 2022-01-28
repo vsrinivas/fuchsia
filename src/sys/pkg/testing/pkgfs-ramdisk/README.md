@@ -37,7 +37,7 @@ test_package("example-test-package") {
   deps = [
     ":blobfs.manifest",
     "//src/go/grand_unified_binary",
-    "//src/storage/blobfs-corrupt",
+    "//src/storage/tools/blobfs-corrupt",
     ...
   ]
   binaries = [

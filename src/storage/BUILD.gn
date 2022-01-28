@@ -11,7 +11,6 @@ group("tests") {
   deps = [
     "bin:tests",
     "blobfs:tests",
-    "blobfs-corrupt:tests",
     "conformance:tests",
     "ext4:tests",
     "extractor:tests",
@@ -28,7 +27,7 @@ group("tests") {
     "memfs:tests",
     "minfs:tests",
     "stress-tests",
-    "tools/blobfs-compression/test:tests",
+    "tools:tests",
     "volume_image:tests",
   ]
 }
@@ -39,7 +38,7 @@ group("tools") {
     "extractor:tools",
     "factory/export_ffs:export-ffs",
     "fxfs/tools",
-    "tools/blobfs-compression:blobfs-compression",
+    "tools",
     "volume_image/ftl:ftl-volume-extractor-host",
     "volume_image/ftl:nandoob-converter-host",
   ]

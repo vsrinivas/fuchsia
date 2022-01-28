@@ -35,7 +35,7 @@ test_package("example-test-package") {
   extra = [ blobfs_manifest ]
   deps = [
     ":blobfs.manifest",
-    "//src/storage/blobfs-corrupt",
+    "//src/storage/tools/blobfs-corrupt",
     ...
   ]
   binaries = [

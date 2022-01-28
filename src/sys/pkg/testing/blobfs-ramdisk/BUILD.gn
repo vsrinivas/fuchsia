@@ -48,7 +48,7 @@ fuchsia_component("test-component") {
     ":blobfs-ramdisk_test",
     ":driver_test_realm",
     "//src/storage/bin/blobfs",
-    "//src/storage/blobfs-corrupt",
+    "//src/storage/tools/blobfs-corrupt",
   ]
 }
 

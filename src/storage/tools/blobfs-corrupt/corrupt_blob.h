@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOBFS_CORRUPT_CORRUPT_BLOB_H_
-#define SRC_STORAGE_BLOBFS_CORRUPT_CORRUPT_BLOB_H_
+#ifndef SRC_STORAGE_TOOLS_BLOBFS_CORRUPT_CORRUPT_BLOB_H_
+#define SRC_STORAGE_TOOLS_BLOBFS_CORRUPT_CORRUPT_BLOB_H_
 
 #include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/storage/blobfs/common.h"
@@ -17,4 +17,4 @@ struct BlobCorruptOptions {
 zx_status_t CorruptBlob(std::unique_ptr<block_client::BlockDevice> device,
                         BlobCorruptOptions* options);
 
-#endif  // SRC_STORAGE_BLOBFS_CORRUPT_CORRUPT_BLOB_H_
+#endif  // SRC_STORAGE_TOOLS_BLOBFS_CORRUPT_CORRUPT_BLOB_H_

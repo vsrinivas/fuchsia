@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOBFS_CORRUPT_FS_BLOCK_CLIENT_H_
-#define SRC_STORAGE_BLOBFS_CORRUPT_FS_BLOCK_CLIENT_H_
+#ifndef SRC_STORAGE_TOOLS_BLOBFS_CORRUPT_FS_BLOCK_CLIENT_H_
+#define SRC_STORAGE_TOOLS_BLOBFS_CORRUPT_FS_BLOCK_CLIENT_H_
 
 #include <lib/zx/vmo.h>
 
@@ -50,4 +50,4 @@ class FsBlockClient {
   storage::Vmoid vmoid_;
 };
 
-#endif  // SRC_STORAGE_BLOBFS_CORRUPT_FS_BLOCK_CLIENT_H_
+#endif  // SRC_STORAGE_TOOLS_BLOBFS_CORRUPT_FS_BLOCK_CLIENT_H_
