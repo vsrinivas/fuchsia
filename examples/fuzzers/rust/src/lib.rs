@@ -6,12 +6,12 @@ use {arbitrary::Arbitrary, fuzz::fuzz};
 
 // This is the "library code" tested in this example.
 #[derive(Arbitrary)]
-struct ToyStruct {
+pub struct ToyStruct {
     n: u8,
     s: String,
 }
 
-fn toy_example(input: ToyStruct) -> Result<u8, &'static str> {
+pub fn toy_example(input: ToyStruct) -> Result<u8, &'static str> {
     if input.n != 42 {
         return Err("n must be 42");
     }
