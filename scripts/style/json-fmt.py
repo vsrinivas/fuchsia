@@ -24,7 +24,10 @@ def sort(data):
                 ] else value) for key, value in data.items()
         }
     elif isinstance(data, list):
-        return sorted(sort(datum) for datum in data)
+        inner = (sort(datum) for datum in data)
+        if any(isinstance(datum, dict) for datum in data):
+            return list(inner)
+        return sorted(inner)
     else:
         return data
 
@@ -46,7 +49,8 @@ def main():
         action='store_true',
         dest='sort_keys',
         help=
-        'Indicates whether object keys should be sorted. Specify --no-sort-keys to disable.')
+        'Indicates whether object keys should be sorted. Specify --no-sort-keys to disable.'
+    )
     parser.add_argument(
         '--no-sort-keys',
         action='store_false',
