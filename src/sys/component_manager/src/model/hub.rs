@@ -623,7 +623,6 @@ impl Hub {
     /// provide a hub directory.
     async fn on_capability_routed_async(
         self: Arc<Self>,
-        _target_moniker: &AbsoluteMoniker,
         source: CapabilitySource,
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     ) -> Result<(), ModelError> {
@@ -665,12 +664,8 @@ impl Hook for Hub {
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
             Ok(EventPayload::CapabilityRouted { source, capability_provider }) => {
-                self.on_capability_routed_async(
-                    target_moniker,
-                    source.clone(),
-                    capability_provider.clone(),
-                )
-                .await?;
+                self.on_capability_routed_async(source.clone(), capability_provider.clone())
+                    .await?;
             }
             Ok(EventPayload::Purged) => {
                 self.on_purged_async(target_moniker).await?;

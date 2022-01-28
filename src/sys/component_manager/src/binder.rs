@@ -19,7 +19,7 @@ use {
     cm_util::channel,
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
+    moniker::{AbsoluteMonikerBase, ExtendedMoniker, PartialAbsoluteMoniker},
     routing::capability_source::{ComponentCapability, InternalCapability},
     std::{
         path::PathBuf,
@@ -115,7 +115,7 @@ impl BinderCapabilityHost {
     async fn on_scoped_framework_capability_routed_async<'a>(
         self: Arc<Self>,
         source: WeakComponentInstance,
-        target_moniker: AbsoluteMoniker,
+        target_moniker: PartialAbsoluteMoniker,
         capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
@@ -123,8 +123,7 @@ impl BinderCapabilityHost {
         // do here.
         if capability_provider.is_none() && capability.matches_protocol(&BINDER_SERVICE) {
             let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
-            let target =
-                WeakComponentInstance::new(&model.look_up(&target_moniker.to_partial()).await?);
+            let target = WeakComponentInstance::new(&model.look_up(&target_moniker).await?);
             Ok(Some(Box::new(BinderCapabilityProvider::new(source, target))
                 as Box<dyn CapabilityProvider>))
         } else {
@@ -151,7 +150,7 @@ impl Hook for BinderCapabilityHost {
             *capability_provider = self
                 .on_scoped_framework_capability_routed_async(
                     component.clone(),
-                    target_moniker.clone(),
+                    target_moniker.to_partial().clone(),
                     &capability,
                     capability_provider.take(),
                 )

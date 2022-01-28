@@ -15,7 +15,7 @@ use {
     },
     async_trait::async_trait,
     cm_rust::CapabilityTypeName,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
+    moniker::{AbsoluteMonikerBase, ExtendedMoniker, PartialAbsoluteMoniker},
     routing::capability_source::{AggregateCapability, AggregateCapabilityProvider},
     std::sync::{Arc, Weak},
 };
@@ -42,7 +42,7 @@ impl CollectionCapabilityHost {
     async fn on_collection_capability_routed_async(
         self: Arc<Self>,
         source: WeakComponentInstance,
-        target_moniker: AbsoluteMoniker,
+        target_moniker: PartialAbsoluteMoniker,
         aggregate_capability_provider: Box<dyn AggregateCapabilityProvider<ComponentInstance>>,
         capability: &AggregateCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
@@ -50,8 +50,7 @@ impl CollectionCapabilityHost {
         // If some other capability has already been installed, then there's nothing to do here.
         if capability_provider.is_none() && capability.type_name() == CapabilityTypeName::Service {
             let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
-            let target =
-                WeakComponentInstance::new(&model.look_up(&target_moniker.to_partial()).await?);
+            let target = WeakComponentInstance::new(&model.look_up(&target_moniker).await?);
 
             Ok(Some(Box::new(
                 CollectionServiceDirectoryProvider::create(
@@ -91,7 +90,7 @@ impl Hook for CollectionCapabilityHost {
             *capability_provider = self
                 .on_collection_capability_routed_async(
                     component.clone(),
-                    target_moniker.clone(),
+                    target_moniker.to_partial().clone(),
                     aggregate_capability_provider.clone_boxed(),
                     &capability,
                     capability_provider.take(),
