@@ -589,14 +589,11 @@ impl XdgSurface {
                                     (info.presentation_time.expect("no presentation time")
                                         / 1_000_000) as u32;
                                 if let Some(surface) = surface_ref.try_get_mut(client) {
-                                    // TODO: Remove this check when OnNextFrameBegin is only sent as a
-                                    // result of Present.
-                                    if let Some(callbacks) = surface.next_callbacks() {
-                                        callbacks.iter().try_for_each(|callback| {
-                                            Callback::done(*callback, client, time_in_ms)?;
-                                            client.delete_id(callback.id())
-                                        })?;
-                                    }
+                                    let callbacks = surface.take_on_next_frame_begin_callbacks();
+                                    callbacks.iter().try_for_each(|callback| {
+                                        Callback::done(*callback, client, time_in_ms)?;
+                                        client.delete_id(callback.id())
+                                    })?;
                                 }
                                 Surface::add_present_credits(
                                     surface_ref,

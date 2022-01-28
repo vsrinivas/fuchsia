@@ -18,10 +18,7 @@ use {
     fuchsia_async as fasync, fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
     fuchsia_zircon::{self as zx, HandleBased},
     std::mem,
-    std::{
-        collections::VecDeque,
-        sync::atomic::{AtomicUsize, Ordering},
-    },
+    std::sync::atomic::{AtomicUsize, Ordering},
     wayland::{
         WlBufferEvent, WlCompositor, WlCompositorRequest, WlRegion, WlRegionRequest, WlSurface,
         WlSurfaceRequest,
@@ -217,12 +214,8 @@ pub struct Surface {
     parent: Option<ObjectRef<Surface>>,
     offset: Option<(i32, i32)>,
 
-    /// Queue of frame callbacks.
-    ///
-    /// The client can request multiple frame callbacks for each frame. The inner
-    /// vector is the callbacks requested for a frame. The outer deque is the
-    /// queue of frames.
-    callbacks: VecDeque<Vec<ObjectRef<Callback>>>,
+    /// Frame callbacks for next present.
+    present_callbacks: Vec<ObjectRef<Callback>>,
 
     /// Present credits that determine if we are allowed to present.
     present_credits: u32,
@@ -230,6 +223,9 @@ pub struct Surface {
     /// Set after we tried to Present but had no remaining credits. This is used
     /// to trigger a present as soon as we a credit.
     present_needed: bool,
+
+    /// Frame callbacks for OnNextFrameBegin event.
+    on_next_frame_begin_callbacks: Vec<ObjectRef<Callback>>,
 
     /// Global identifier for image instances used by this surface.
     image_instance_id: ImageInstanceId,
@@ -369,9 +365,10 @@ impl Surface {
             offset: None,
             pending_commands: Vec::new(),
             subsurfaces: vec![(id.into(), None)],
-            callbacks: VecDeque::new(),
+            present_callbacks: vec![],
             present_credits: 1,
             present_needed: false,
+            on_next_frame_begin_callbacks: vec![],
             image_instance_id: NEXT_IMAGE_INSTANCE_ID.fetch_add(1, Ordering::Relaxed),
             content: None,
         }
@@ -411,8 +408,8 @@ impl Surface {
         self.node.as_ref().map(|n| &n.transform_id)
     }
 
-    pub fn next_callbacks(&mut self) -> Option<Vec<ObjectRef<Callback>>> {
-        self.callbacks.pop_front()
+    pub fn take_on_next_frame_begin_callbacks(&mut self) -> Vec<ObjectRef<Callback>> {
+        mem::replace(&mut self.on_next_frame_begin_callbacks, vec![])
     }
 
     /// Updates the current surface state by applying a single `SurfaceCommand`.
@@ -630,6 +627,8 @@ impl Surface {
         flatland.borrow_mut().present(0);
         self.present_credits -= 1;
         self.present_needed = false;
+        let mut callbacks = mem::replace(&mut self.present_callbacks, vec![]);
+        self.on_next_frame_begin_callbacks.append(&mut callbacks);
         Ok(())
     }
 
@@ -652,14 +651,11 @@ impl Surface {
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::present");
         if let Some(surface) = this.try_get_mut(client) {
+            surface.present_callbacks.append(&mut callbacks);
             if surface.present_credits == 0 {
-                // Drop frame by adding callbacks to previous frame. There must be at least
-                // one set of pending callbacks when we enter this state.
-                surface.callbacks.back_mut().expect("no pending frame").append(&mut callbacks);
                 surface.present_needed = true;
             } else {
                 surface.present_now()?;
-                surface.callbacks.push_back(callbacks);
             }
         }
         Ok(())
