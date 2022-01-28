@@ -205,7 +205,7 @@ struct TestRunBuilder {
 
 impl TestRunBuilder {
     async fn run_controller(
-        mut controller: RunControllerRequestStream,
+        controller: &mut RunControllerRequestStream,
         run_task: fasync::Task<()>,
         stop_sender: oneshot::Sender<()>,
         event_recv: mpsc::Receiver<RunEvent>,
@@ -261,7 +261,7 @@ impl TestRunBuilder {
 
     async fn run(
         self,
-        controller: RunControllerRequestStream,
+        mut controller: RunControllerRequestStream,
         debug_controller: ftest_internal::DebugDataSetControllerProxy,
         debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
         test_map: Arc<TestMap>,
@@ -301,7 +301,16 @@ impl TestRunBuilder {
             futures::future::join(debug_event_fut, run_suites_fut).await;
         });
 
-        Self::run_controller(controller, task, stop_sender, event_recv).await;
+        Self::run_controller(&mut controller, task, stop_sender, event_recv).await;
+        // Workaround to prevent zx_peer_closed error
+        // TODO(fxbug.dev/87976) once fxbug.dev/87890 is fixed, the controller should be dropped
+        // as soon as all events are drained.
+        let (inner, _) = controller.into_inner();
+        if let Err(e) =
+            fasync::OnSignals::new(inner.channel(), zx::Signals::CHANNEL_PEER_CLOSED).await
+        {
+            warn!("Error waiting for the RunController channel to close: {:?}", e);
+        }
     }
 }
 
