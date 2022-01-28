@@ -11,14 +11,14 @@ use {
     std::path::Path,
 };
 
-/// Returns `"{output_dir}/test_data/font_info/sample_font.ttf"`.
+/// Returns `"{output_dir}/test_data/font_info/SampleFont-Regular.ttf"`.
 #[cfg(not(target_os = "fuchsia"))]
 fn font_path() -> Result<String, Error> {
     use std::env;
 
     assert!(!Path::new("/pkg/data").exists(), "/pkg/data should not exist on host");
 
-    let relative_font_path = "test_data/font_info/sample_font.ttf";
+    let relative_font_path = "test_data/font_info/SampleFont-Regular.ttf";
     let mut path = env::current_exe().unwrap();
 
     // We don't know exactly where the binary is in the out directory (varies by target platform and
@@ -41,7 +41,7 @@ fn font_path() -> Result<String, Error> {
 
 #[cfg(target_os = "fuchsia")]
 fn font_path() -> Result<String, Error> {
-    let font_path = "/pkg/data/sample_font.ttf";
+    let font_path = "/pkg/data/SampleFont-Regular.ttf";
     if Path::new(font_path).exists() {
         Ok(font_path.to_string())
     } else {
@@ -61,6 +61,8 @@ fn test_load_font_info_from_file() -> Result<(), Error> {
         char_set: CharSet::new(vec![
             0x0, 0x0d, 0x20, 0x28, 0x29, 0x2c, 0x30, 0x31, 0x32, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46,
         ]),
+        postscript_name: Some("SampleFont-Regular".to_string()),
+        full_name: Some("Sample Font Regular".to_string()),
     };
 
     assert_eq!(actual, expected);

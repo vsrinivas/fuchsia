@@ -6,12 +6,12 @@ use {
     anyhow::{format_err, Error},
     char_set::CharSet,
     font_info::{FontAssetSource, FontInfo, FontInfoLoader},
-    std::{collections::BTreeSet, convert::TryInto},
+    std::{collections::BTreeSet, convert::TryInto, path::PathBuf},
 };
 
 /// An implementation of [`FakeFontInfoLoader`] that doesn't read the font file, but instead claims
 /// that the font file contains exactly the code points that appear in the file name, plus the
-/// `index`.
+/// `index`. For `postscript_name`, it returns the name of the file without the extension.
 pub(crate) struct FakeFontInfoLoaderImpl {}
 
 impl FakeFontInfoLoaderImpl {
@@ -31,17 +31,26 @@ impl FontInfoLoader for FakeFontInfoLoaderImpl {
             FontAssetSource::Stream(_) => {
                 return Err(format_err!("FakeFontInfoLoaderImpl only supports file paths"));
             }
-            FontAssetSource::FilePath(path) => path,
+            FontAssetSource::FilePath(path) => PathBuf::from(path),
         };
 
-        let file_name = path.split('/').last().unwrap();
+        let file_name = path
+            .file_name()
+            .and_then(|x| x.to_str())
+            .ok_or_else(|| format_err!("Couldn't get file name from {:?}", path))?;
         let mut chars: BTreeSet<u32> = file_name.chars().map(|c| c as u32).collect();
         chars.insert(index);
         let chars: Vec<u32> = chars.into_iter().collect();
 
         let char_set = CharSet::new(chars);
+        let postscript_name = file_name.split('.').next().unwrap_or("Postscript-Name").to_string();
+        let full_name = postscript_name.replace("-", " ");
 
-        Ok(FontInfo { char_set })
+        Ok(FontInfo {
+            char_set,
+            postscript_name: Some(postscript_name),
+            full_name: Some(full_name),
+        })
     }
 }
 
@@ -57,8 +66,11 @@ mod tests {
         );
 
         let actual = loader.load_font_info(source, 0x999)?;
-        let expected =
-            FontInfo { char_set: char_collect!('a'..='z', '0'..='9', '-', '.', '\u{999}').into() };
+        let expected = FontInfo {
+            char_set: char_collect!('a'..='z', '0'..='9', '-', '.', '\u{999}').into(),
+            postscript_name: Some("abcdefghijklmnopqrstuvwxyz-0123456789".to_string()),
+            full_name: Some("abcdefghijklmnopqrstuvwxyz 0123456789".to_string()),
+        };
 
         assert_eq!(actual, expected);
         Ok(())

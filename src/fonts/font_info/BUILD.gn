@@ -15,6 +15,7 @@ rustc_library("font_info") {
     "//src/fonts/char_set",
     "//src/fonts/freetype_ffi",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:thiserror",
   ]
@@ -61,7 +62,7 @@ fuchsia_component("font_info_tests_cmp") {
 }
 
 resource("testdata") {
-  sources = [ "//src/fonts/test_data/sample_font.ttf" ]
+  sources = [ "//src/fonts/test_data/SampleFont-Regular.ttf" ]
   outputs = [ "data/{{source_file_part}}" ]
 }
 
@@ -72,7 +73,7 @@ fuchsia_test_package("font_info_tests") {
 
 if (is_host) {
   host_test_data("test_data") {
-    sources = [ "//src/fonts/test_data/sample_font.ttf" ]
+    sources = [ "//src/fonts/test_data/SampleFont-Regular.ttf" ]
     outputs = [ "$root_out_dir/test_data/font_info/{{source_file_part}}" ]
   }
 }

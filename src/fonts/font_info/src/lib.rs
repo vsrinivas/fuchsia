@@ -7,21 +7,29 @@ mod vmo_stream;
 
 use {
     anyhow::{format_err, Error},
+    byteorder::{BigEndian, ReadBytesExt},
     char_set::CharSet,
     freetype_ffi::{
         FT_Add_Default_Modules, FT_Done_Face, FT_Done_Library, FT_Err_Ok, FT_Face,
-        FT_Get_First_Char, FT_Get_Next_Char, FT_Library, FT_New_Library, FT_Open_Face, FT_MEMORY,
+        FT_Get_First_Char, FT_Get_Next_Char, FT_Get_Postscript_Name, FT_Get_Sfnt_Name,
+        FT_Get_Sfnt_Name_Count, FT_Library, FT_New_Library, FT_Open_Face, FT_SfntName, FT_MEMORY,
+        TT_MS_ID_SYMBOL_CS, TT_MS_ID_UNICODE_CS, TT_MS_LANGID_ENGLISH_UNITED_STATES,
+        TT_NAME_ID_FULL_NAME, TT_PLATFORM_MICROSOFT,
     },
-    std::{convert::TryInto, ptr},
+    std::{convert::TryInto, ffi::CStr, io::Cursor, ops::Range, ptr},
 };
 
 pub use crate::sources::FTOpenArgs;
 pub use crate::sources::FontAssetSource;
 
 /// Contains information parsed from a font file.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Default, Clone, Debug, Eq, PartialEq)]
 pub struct FontInfo {
     pub char_set: CharSet,
+    /// The "Postscript name" of the font face.
+    pub postscript_name: Option<String>,
+    /// The user-friendly "full name" of the font face.
+    pub full_name: Option<String>,
 }
 
 /// An object that can load a `FontInfo` from a `FontAssetSource`.
@@ -41,7 +49,9 @@ pub trait FontInfoLoader {
         E: Sync + Send + Into<Error>;
 }
 
-/// Reads information from font files using FreeType library.
+/// Reads information from font files using the FreeType library.
+///
+/// This class is tested in `../tests/tests.rs`.
 #[derive(Debug)]
 pub struct FontInfoLoaderImpl {
     library: FTLibrary,
@@ -63,8 +73,10 @@ impl FontInfoLoaderImpl {
 
         let face = self.library.open_face(open_args, index)?;
         let code_points = face.code_points().collect();
+        let postscript_name = face.postscript_name().ok().filter(|x| !x.is_empty());
+        let full_name = face.full_name()?.filter(|x| !x.is_empty());
 
-        Ok(FontInfo { char_set: CharSet::new(code_points) })
+        Ok(FontInfo { char_set: CharSet::new(code_points), postscript_name, full_name })
     }
 }
 
@@ -145,6 +157,91 @@ impl FTFace {
     pub fn code_points<'f>(&'f self) -> CodePointsIterator<'f> {
         CodePointsIterator { face: self, state: CodePointsIteratorState::Uninitialized }
     }
+
+    /// Returns the face's Postscript name.
+    pub fn postscript_name(&self) -> Result<String, Error> {
+        // Unsafe to call FreeType FFI.
+        let postscript_name = unsafe {
+            // According to the FT docs, this is supposed to be an ASCII string, so it should
+            // trivially convert to UTF-8.
+            //
+            // Note: Must use c_char, not i8 or u8, because c_char's definition depends on the 
+            // architecture.
+            let postscript_name =
+                FT_Get_Postscript_Name(self.ft_face) as *const std::os::raw::c_char;
+            let postscript_name = CStr::from_ptr(postscript_name);
+            postscript_name
+                .to_str()
+                .map_err(|e| format_err!("Failed to decode Postscript name. Error: {:?}", e))?
+                .to_string()
+        };
+        Ok(postscript_name)
+    }
+
+    /// Returns the face's "full name", if present.
+    pub fn full_name(&self) -> Result<Option<String>, Error> {
+        self.get_name(TT_NAME_ID_FULL_NAME)
+    }
+
+    /// Finds and decodes the first supported name entry that has the given name ID.
+    ///
+    /// A "name ID" is a record identifier in the `name` TrueType table, which can also contain
+    /// items like copyright info, URLs, etc. See
+    /// https://docs.microsoft.com/en-us/typography/opentype/spec/name#name-ids.
+    fn get_name(&self, name_id: u16) -> Result<Option<String>, Error> {
+        for name_entry in self.sfnt_names() {
+            let name_entry = name_entry?;
+            if let Some(name) = FTFace::decode_name_if_matches(&name_entry, name_id)? {
+                return Ok(Some(name));
+            }
+        }
+        Ok(None)
+    }
+
+    fn sfnt_name_count(&self) -> u32 {
+        unsafe { FT_Get_Sfnt_Name_Count(self.ft_face) }
+    }
+
+    fn sfnt_names<'a>(&'a self) -> SfntNamesIterator<'a> {
+        SfntNamesIterator { face: self, iter: 0..self.sfnt_name_count() }
+    }
+
+    /// If the given `FT_SfntName` contains the requested `name_id` and the encoding is in a
+    /// supported format, returns the decoded name string. Otherwise, returns `None`.
+    ///
+    /// Presently, this only looks at en-US name entries.
+    fn decode_name_if_matches(
+        name_entry: &FT_SfntName,
+        name_id: u16,
+    ) -> Result<Option<String>, Error> {
+        if name_entry.name_id != name_id {
+            return Ok(None);
+        }
+        match (name_entry.platform_id, name_entry.encoding_id, name_entry.language_id) {
+            (TT_PLATFORM_MICROSOFT, TT_MS_ID_SYMBOL_CS, TT_MS_LANGID_ENGLISH_UNITED_STATES)
+            | (TT_PLATFORM_MICROSOFT, TT_MS_ID_UNICODE_CS, TT_MS_LANGID_ENGLISH_UNITED_STATES) => {
+                let name = FTFace::decode_name_utf16_be(name_entry)?;
+                Ok(Some(name))
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// Decodes the the given `FT_SfntName` as a UTF-16 Big Endian string.
+    fn decode_name_utf16_be(name_entry: &FT_SfntName) -> Result<String, Error> {
+        let as_u8 = unsafe {
+            std::slice::from_raw_parts(name_entry.string, name_entry.string_len as usize)
+        };
+        // FT_SfntName.string_len is in bytes. One UTF-16 code unit is two bytes.
+        let num_code_units = (name_entry.string_len / 2) as usize;
+        let mut reader = Cursor::new(as_u8);
+        let mut as_u16 = Vec::with_capacity(num_code_units);
+        for _i in 0..num_code_units {
+            let ch = reader.read_u16::<BigEndian>()?;
+            as_u16.push(ch);
+        }
+        Ok(String::from_utf16(as_u16.as_slice())?)
+    }
 }
 
 impl std::ops::Drop for FTFace {
@@ -213,3 +310,35 @@ impl<'f> std::iter::Iterator for CodePointsIterator<'f> {
 }
 
 impl<'f> std::iter::FusedIterator for CodePointsIterator<'f> {}
+
+/// Iterator over the `name` table in a font face.
+pub struct SfntNamesIterator<'f> {
+    face: &'f FTFace,
+    iter: Range<u32>,
+}
+
+impl<'f> SfntNamesIterator<'f> {
+    fn get(&self, idx: u32) -> Result<FT_SfntName, Error> {
+        let mut entry = FT_SfntName::default();
+        let err_code = unsafe { FT_Get_Sfnt_Name(self.face.ft_face, idx, &mut entry) };
+        if err_code == FT_Err_Ok {
+            Ok(entry)
+        } else {
+            Err(format_err!("FreeType error while getting name {}: {}", idx, err_code))
+        }
+    }
+}
+
+impl<'f> Iterator for SfntNamesIterator<'f> {
+    type Item = Result<FT_SfntName, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|idx| self.get(idx))
+    }
+}
+
+impl<'f> ExactSizeIterator for SfntNamesIterator<'f> {
+    fn len(&self) -> usize {
+        self.iter.len()
+    }
+}
