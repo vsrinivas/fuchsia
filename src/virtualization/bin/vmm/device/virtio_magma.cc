@@ -389,34 +389,37 @@ zx_status_t VirtioMagma::Handle_internal_release_handle(
 // Poll items are after the request struct, and they are updated to reflect status.
 zx_status_t VirtioMagma::Handle_poll(VirtioDescriptor* request_desc,
                                      VirtioDescriptor* response_desc, uint32_t* used_out) {
-  std::vector<uint8_t> request_bytes(request_desc->len);
-  memcpy(request_bytes.data(), request_desc->addr, request_bytes.size());
+  auto request_ptr = reinterpret_cast<uint8_t*>(request_desc->addr);
 
-  auto request = reinterpret_cast<const virtio_magma_poll_ctrl_t*>(request_bytes.data());
+  auto request = *reinterpret_cast<virtio_magma_poll_ctrl_t*>(request_ptr);
 
-  if (request_bytes.size() < sizeof(virtio_magma_poll_ctrl_t) + request->count) {
+  // request.count is a byte count
+  if (request_desc->len < sizeof(virtio_magma_poll_ctrl_t) + request.count) {
     FX_LOGS(ERROR) << "VIRTIO_MAGMA_CMD_POLL: request descriptor too small";
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (request->count % sizeof(magma_poll_item_t) != 0) {
+  if (request.count % sizeof(magma_poll_item_t) != 0) {
     FX_LOGS(ERROR) << "VIRTIO_MAGMA_CMD_POLL: count is not a multiple of sizeof(magma_poll_item_t)";
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // The actual items immediately follow the request struct.
-  auto request_copy = *request;
-  request_copy.items = reinterpret_cast<uint64_t>(&request[1]);
   // Transform byte count back to item count
-  request_copy.count /= sizeof(magma_poll_item_t);
+  request.count /= sizeof(magma_poll_item_t);
+
+  // The actual items immediately follow the request struct.
+  std::vector<magma_poll_item_t> items(request.count);
+  memcpy(items.data(), request_ptr + sizeof(request), items.size() * sizeof(magma_poll_item_t));
+
+  request.items = reinterpret_cast<uint64_t>(items.data());
 
   virtio_magma_poll_resp_t response{};
 
-  zx_status_t status = VirtioMagmaGeneric::Handle_poll(&request_copy, &response);
+  zx_status_t status = VirtioMagmaGeneric::Handle_poll(&request, &response);
 
   if (status == ZX_OK) {
     // Copy the items back into the request descriptor.
-    memcpy(request_desc->addr, request_bytes.data(), request_desc->len);
+    memcpy(request_ptr + sizeof(request), items.data(), items.size() * sizeof(magma_poll_item_t));
   }
 
   memcpy(response_desc->addr, &response, sizeof(response));
@@ -542,39 +545,44 @@ zx_status_t VirtioMagma::Handle_import(const virtio_magma_import_ctrl_t* request
 // Command buffer comes after the request struct.
 zx_status_t VirtioMagma::Handle_execute_command_buffer_with_resources2(
     VirtioDescriptor* request_desc, VirtioDescriptor* response_desc, uint32_t* used_out) {
-  std::vector<uint8_t> request_bytes(request_desc->len);
-  memcpy(request_bytes.data(), request_desc->addr, request_bytes.size());
+  auto request_ptr = reinterpret_cast<uint8_t*>(request_desc->addr);
 
-  auto request = reinterpret_cast<virtio_magma_execute_command_buffer_with_resources2_ctrl_t*>(
-      request_bytes.data());
+  auto request =
+      *reinterpret_cast<virtio_magma_execute_command_buffer_with_resources2_ctrl_t*>(request_ptr);
 
   // Command buffer payload comes immediately after the request
-  auto command_buffer = reinterpret_cast<magma_command_buffer*>(request + 1);
-  auto exec_resources = reinterpret_cast<magma_exec_resource*>(command_buffer + 1);
-  auto semaphore_ids = reinterpret_cast<uint64_t*>(exec_resources + command_buffer->resource_count);
+  auto command_buffer = *reinterpret_cast<magma_command_buffer*>(request_ptr + sizeof(request));
 
-  uint64_t required_bytes =
-      reinterpret_cast<uint8_t*>(semaphore_ids + command_buffer->wait_semaphore_count +
-                                 command_buffer->signal_semaphore_count) -
-      reinterpret_cast<uint8_t*>(request);
+  size_t resources_size = sizeof(magma_exec_resource) * command_buffer.resource_count;
+  size_t semaphore_ids_size = sizeof(uint64_t) * (command_buffer.wait_semaphore_count +
+                                                  command_buffer.signal_semaphore_count);
 
-  if (request_bytes.size() < required_bytes) {
-    FX_LOGS(ERROR)
-        << "VIRTIO_MAGMA_CMD_EXECUTE_COMMAND_BUFFER_WITH_RESOURCES2: request descriptor too small";
+  size_t required_bytes =
+      sizeof(request) + sizeof(command_buffer) + resources_size + semaphore_ids_size;
+  if (request_desc->len < required_bytes) {
+    FX_LOGS(ERROR) << "VIRTIO_MAGMA_CMD_EXECUTE_COMMAND_BUFFER_WITH_RESOURCES2: request "
+                      "descriptor too small";
     return ZX_ERR_INVALID_ARGS;
   }
 
-  virtio_magma_execute_command_buffer_with_resources2_ctrl_t request_copy;
-  memcpy(&request_copy, request, sizeof(request_copy));
+  std::vector<magma_exec_resource> exec_resources(command_buffer.resource_count);
+  memcpy(exec_resources.data(), request_ptr + sizeof(request) + sizeof(command_buffer),
+         resources_size);
 
-  request_copy.command_buffer = reinterpret_cast<uintptr_t>(command_buffer);
-  request_copy.resources = reinterpret_cast<uintptr_t>(exec_resources);
-  request_copy.semaphore_ids = reinterpret_cast<uintptr_t>(semaphore_ids);
+  std::vector<uint64_t> semaphore_ids(command_buffer.wait_semaphore_count +
+                                      command_buffer.signal_semaphore_count);
+  memcpy(semaphore_ids.data(),
+         request_ptr + sizeof(request) + sizeof(command_buffer) + resources_size,
+         semaphore_ids_size);
+
+  request.command_buffer = reinterpret_cast<uintptr_t>(&command_buffer);
+  request.resources = reinterpret_cast<uintptr_t>(exec_resources.data());
+  request.semaphore_ids = reinterpret_cast<uintptr_t>(semaphore_ids.data());
 
   virtio_magma_execute_command_buffer_with_resources2_resp_t response{};
 
   zx_status_t status =
-      VirtioMagmaGeneric::Handle_execute_command_buffer_with_resources2(&request_copy, &response);
+      VirtioMagmaGeneric::Handle_execute_command_buffer_with_resources2(&request, &response);
 
   if (status == ZX_OK) {
     memcpy(response_desc->addr, &response, sizeof(response));
