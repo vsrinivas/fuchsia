@@ -81,6 +81,7 @@ class LoaderApp {
   std::optional<zx::vmo> GetMatchingIcd(const std::string& system_lib_name);
 
   size_t device_count() const { return devices_.size(); }
+  const std::vector<std::unique_ptr<GpuDevice>>& devices() const { return devices_; }
 
   async_dispatcher_t* fdio_loop_dispatcher() { return fdio_loop_.dispatcher(); }
 

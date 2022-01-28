@@ -68,7 +68,7 @@ bool MagmaDevice::Initialize(int dir_fd, const std::string& name, inspect::Node*
       data.node = node().CreateChild(std::to_string(i++));
       data.node.CreateString("component_url", icd.component_url(), &data.values);
       data.node.CreateUint("flags", static_cast<uint32_t>(icd.flags()), &data.values);
-      if (icd.flags().SUPPORTS_OPENCL) {
+      if (icd.flags() & fuchsia::gpu::magma::IcdFlags::SUPPORTS_OPENCL) {
         icd_list_.Add(app()->CreateIcdComponent(icd.component_url()));
       }
 

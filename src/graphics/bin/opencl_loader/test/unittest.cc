@@ -42,6 +42,9 @@ class FakeMagmaDevice : public fuchsia::gpu::magma::testing::Device_TestBase {
     info.set_flags(fuchsia::gpu::magma::IcdFlags::SUPPORTS_OPENCL);
     std::vector<fuchsia::gpu::magma::IcdInfo> vec;
     vec.push_back(std::move(info));
+    info.set_component_url("b");
+    info.set_flags(fuchsia::gpu::magma::IcdFlags::SUPPORTS_VULKAN);
+    vec.push_back(std::move(info));
     callback(std::move(vec));
   }
   fidl::InterfaceRequestHandler<fuchsia::gpu::magma::Device> GetHandler() {
@@ -79,6 +82,9 @@ TEST_F(LoaderUnittest, MagmaDevice) {
   app.AddDevice(std::move(device));
   RunLoopUntil([&device_ptr]() { return device_ptr->icd_count() > 0; });
   EXPECT_EQ(1u, app.device_count());
+
+  // Only 1 ICD listed supports OpenCL.
+  EXPECT_EQ(1u, static_cast<MagmaDevice*>(app.devices()[0].get())->icd_list().ComponentCount());
 
   async::PostTask(vfs_loop.dispatcher(), [&magma_device]() { magma_device.CloseAll(); });
   RunLoopUntil([&app]() { return app.device_count() == 0; });

@@ -26,6 +26,8 @@ class IcdList {
   // Finds an ICD in the list with a `library_path` matching this string.
   std::optional<zx::vmo> GetVmoMatchingSystemLib(const std::string& library_path) const;
 
+  size_t ComponentCount() const { return components_.size(); }
+
  private:
   inspect::StringProperty active_icd_;
   std::vector<std::shared_ptr<IcdComponent>> components_;
