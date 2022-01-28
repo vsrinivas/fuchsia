@@ -407,6 +407,17 @@ TEST_F(VirtMagmaTest, BasicCompute) {
       }
     }
     EXPECT_EQ(correct_data_count, num_elements) << "Buffer does not contain the correct data";
+
+    vkUnmapMemory(device, device_memory);
+    vkDestroyCommandPool(device, command_pool, nullptr);
+    vkDestroyPipeline(device, pipeline, nullptr);
+    vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
+    vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
+    vkDestroyDescriptorSetLayout(device, descriptor_set_layout, nullptr);
+    vkDestroyShaderModule(device, shader_module, nullptr);
+    vkDestroyBuffer(device, buffer, nullptr);
+    vkFreeMemory(device, device_memory, nullptr);
+    vkDestroyDevice(device, nullptr);
   }
 }
 
