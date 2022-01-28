@@ -258,8 +258,8 @@ mod tests {
     use fidl_fuchsia_ui_views as ui_views;
     use fidl_fuchsia_ui_views::ViewToken;
     use fuchsia_async as fasync;
-    use fuchsia_component_test::{
-        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    use fuchsia_component_test::new::{
+        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
     };
     use fuchsia_scenic as scenic;
     use futures::TryStreamExt;
@@ -275,162 +275,109 @@ mod tests {
     async fn setup_realm() -> Result<RealmInstance, anyhow::Error> {
         let builder = RealmBuilder::new().await?;
 
-        builder.add_child("mock_cobalt", MOCK_COBALT_URL, ChildOptions::new().eager()).await?;
+        let mock_cobalt =
+            builder.add_child("mock_cobalt", MOCK_COBALT_URL, ChildOptions::new().eager()).await?;
 
+        let hdcp = builder.add_child("hdcp", FAKE_HDCP_URL, ChildOptions::new().eager()).await?;
         builder
-            .add_child("hdcp", FAKE_HDCP_URL, ChildOptions::new().eager())
-            .await?
             .add_route(
-                RouteBuilder::protocol("fuchsia.sysmem.Allocator")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component("hdcp")]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.tracing.provider.Registry")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component("hdcp")]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.sysmem.Allocator"))
+                    .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
+                    .from(Ref::parent())
+                    .to(&hdcp),
             )
             .await?;
 
-        builder
+        let scenic = builder
             .add_legacy_child("scenic", SCENIC_URL, ChildOptions::new().eager())
             .await
-            .expect("Failed to start scenic")
+            .expect("Failed to start scenic");
+        builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.hardware.display.Provider")
-                    .source(RouteEndpoint::component("hdcp"))
-                    .targets(vec![RouteEndpoint::component("scenic")]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.hardware.display.Provider"))
+                    .from(&hdcp)
+                    .to(&scenic),
             )
-            .await?
+            .await?;
+        builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.scheduler.ProfileProvider")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component("scenic")]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.scheduler.ProfileProvider"))
+                    .capability(Capability::protocol_by_name("fuchsia.sysmem.Allocator"))
+                    .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
+                    .capability(Capability::protocol_by_name("fuchsia.ui.input.ImeService"))
+                    .capability(Capability::protocol_by_name("fuchsia.vulkan.loader.Loader"))
+                    .from(Ref::parent())
+                    .to(&scenic),
             )
-            .await?
+            .await?;
+        builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.sysmem.Allocator")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component("scenic")]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
+                    .from(&mock_cobalt)
+                    .to(&scenic),
             )
-            .await?
+            .await?;
+        builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.tracing.provider.Registry")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component("scenic")]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.ui.input.ImeService")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component("scenic")]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.sysmem.Allocator")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component("scenic")]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.vulkan.loader.Loader")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component("scenic")]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.cobalt.LoggerFactory")
-                    .source(RouteEndpoint::component("mock_cobalt"))
-                    .targets(vec![RouteEndpoint::component("scenic")]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.ui.views.ViewRefFocused")
-                    .source(RouteEndpoint::component("scenic"))
-                    .targets(vec![RouteEndpoint::AboveRoot]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.ui.views.ViewRefFocused"))
+                    .from(&scenic)
+                    .to(Ref::parent()),
             )
             .await?;
 
-        builder
+        let scene_manager = builder
             .add_child("scene_manager", SCENE_MANAGER_URL, ChildOptions::new().eager())
-            .await?
+            .await?;
+        builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.ui.accessibility.view.Registry")
-                    .source(RouteEndpoint::component("scene_manager"))
-                    .targets(vec![RouteEndpoint::above_root()]),
+                Route::new()
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.ui.accessibility.view.Registry",
+                    ))
+                    .capability(Capability::protocol_by_name("fuchsia.session.scene.Manager"))
+                    .from(&scene_manager)
+                    .to(Ref::parent()),
             )
-            .await?
+            .await?;
+        builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.session.scene.Manager")
-                    .source(RouteEndpoint::component("scene_manager"))
-                    .targets(vec![RouteEndpoint::above_root()]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.ui.app.ViewProvider")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![RouteEndpoint::component("scene_manager")]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.ui.app.ViewProvider"))
+                    .from(Ref::parent())
+                    .to(&scene_manager),
             )
             .await?;
 
         builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.ui.views.ViewRefInstalled")
-                    .source(RouteEndpoint::component("scenic"))
-                    .targets(vec![
-                        RouteEndpoint::AboveRoot,
-                        RouteEndpoint::component("scene_manager"),
-                    ]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.ui.scenic.Scenic")
-                    .source(RouteEndpoint::component("scenic"))
-                    .targets(vec![
-                        RouteEndpoint::AboveRoot,
-                        RouteEndpoint::component("scene_manager"),
-                    ]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.ui.scenic.Session")
-                    .source(RouteEndpoint::component("scenic"))
-                    .targets(vec![
-                        RouteEndpoint::AboveRoot,
-                        RouteEndpoint::component("scene_manager"),
-                    ]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.ui.composition.Flatland")
-                    .source(RouteEndpoint::component("scenic"))
-                    .targets(vec![
-                        RouteEndpoint::AboveRoot,
-                        RouteEndpoint::component("scene_manager"),
-                    ]),
-            )
-            .await?
-            .add_route(
-                RouteBuilder::protocol("fuchsia.ui.composition.FlatlandDisplay")
-                    .source(RouteEndpoint::component("scenic"))
-                    .targets(vec![
-                        RouteEndpoint::AboveRoot,
-                        RouteEndpoint::component("scene_manager"),
-                    ]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.ui.views.ViewRefInstalled"))
+                    .capability(Capability::protocol_by_name("fuchsia.ui.scenic.Scenic"))
+                    .capability(Capability::protocol_by_name("fuchsia.ui.scenic.Session"))
+                    .capability(Capability::protocol_by_name("fuchsia.ui.composition.Flatland"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.ui.composition.FlatlandDisplay",
+                    ))
+                    .from(&scenic)
+                    .to(Ref::parent())
+                    .to(&scene_manager),
             )
             .await?;
 
         builder
             .add_route(
-                RouteBuilder::protocol("fuchsia.logger.LogSink")
-                    .source(RouteEndpoint::AboveRoot)
-                    .targets(vec![
-                        RouteEndpoint::component("hdcp"),
-                        RouteEndpoint::component("mock_cobalt"),
-                        RouteEndpoint::component("scene_manager"),
-                        RouteEndpoint::component("scenic"),
-                    ]),
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(Ref::parent())
+                    .to(&hdcp)
+                    .to(&mock_cobalt)
+                    .to(&scene_manager)
+                    .to(&scenic),
             )
             .await?;
 
