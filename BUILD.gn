@@ -1038,11 +1038,16 @@ group("default") {
   deps = [
     "//:create-all-drivers-doc",
     "//:host",
-    "//:zbi_tests",
     "//build/images:packages",
     "//build/input:build_only",
     "//sdk",
   ]
+
+  # TODO(fxbug.dev/92417): This caused the build to fail on coverage bot builder.
+  # Reenable when the issue is fixed.
+  if (!is_coverage) {
+    deps += [ "//:zbi_tests" ]
+  }
 
   # SDK-only builds must not attempt to build images.
   if (bootfs_only || base_package_labels + cache_package_labels +
