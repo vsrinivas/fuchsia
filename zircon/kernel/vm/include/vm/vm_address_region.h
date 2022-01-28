@@ -818,7 +818,13 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   // Map in pages from the underlying vm object, optionally committing pages as it goes
   zx_status_t MapRange(size_t offset, size_t len, bool commit) TA_EXCL(lock());
-  zx_status_t MapRangeLocked(size_t offset, size_t len, bool commit) TA_REQ(lock());
+  // Locked version of MapRange. Takes an additional argument |ignore_existing| which controls
+  // whether existing hardware mappings in the specified range should be ignored or treated as an
+  // error. MapRange calls into this function with |ignore_existing| always set to false; only VMAR
+  // internal usages should ever need to ignore existing entries in certain scenarios, all external
+  // usages (which come in through MapRange) should treat existing entries as an error.
+  zx_status_t MapRangeLocked(size_t offset, size_t len, bool commit, bool ignore_existing)
+      TA_REQ(lock());
 
   // Unmap a subset of the region of memory in the containing address space,
   // returning it to the parent region to allocate.  If all of the memory is unmapped,

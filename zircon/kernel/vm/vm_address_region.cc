@@ -766,7 +766,8 @@ zx_status_t VmAddressRegion::RangeOpInternal(RangeOpType op, vaddr_t base, size_
     case RangeOpType::MapRange:
       return process_range([](VmMapping* mapping, size_t mapping_offset, size_t size) {
         AssertHeld(mapping->lock_ref());
-        const auto result = mapping->MapRangeLocked(mapping_offset, size, false);
+        const auto result = mapping->MapRangeLocked(mapping_offset, size, /*commit=*/false,
+                                                    /*ignore_existing=*/true);
         if (result != ZX_OK) {
           // TODO(fxbug.dev/46881): ZX_ERR_INTERNAL is not meaningful to userspace.
           // For now, translate to ZX_ERR_NOT_FOUND.
@@ -809,7 +810,7 @@ zx_status_t VmAddressRegion::RangeOpInternal(RangeOpType op, vaddr_t base, size_
               // can avoid that by leaning on hints being best effort.
               mapping->MapRangeLocked(
                   mapping->object_offset_locked() + (orig_start_offset - mapping->base()), size,
-                  /*commit=*/false);
+                  /*commit=*/false, /*ignore_existing=*/true);
             });
             {  // scope guard
               Guard<Mutex> guard{vmop->lock()};

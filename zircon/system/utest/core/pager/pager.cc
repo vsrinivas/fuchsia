@@ -3119,6 +3119,9 @@ TEST(Pager, EvictionHintsVmar) {
 
   ASSERT_TRUE(t1.Wait());
 
+  // This is redundant, but hinting again is harmless and should succeed.
+  ASSERT_OK(vmar.op_range(ZX_VMAR_OP_ALWAYS_NEED, base_addr, 3 * kVmoSize, nullptr, 0));
+
   ASSERT_OK(vmar.op_range(ZX_VMAR_OP_DONT_NEED, base_addr, 3 * kVmoSize, nullptr, 0));
 
   // Can't hint on gaps in the VMAR.

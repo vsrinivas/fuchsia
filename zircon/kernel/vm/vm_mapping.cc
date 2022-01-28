@@ -482,7 +482,9 @@ namespace {
 
 class VmMappingCoalescer {
  public:
-  VmMappingCoalescer(VmMapping* mapping, vaddr_t base, uint mmu_flags) TA_REQ(mapping->lock());
+  VmMappingCoalescer(VmMapping* mapping, vaddr_t base, uint mmu_flags,
+                     ArchVmAspace::ExistingEntryAction existing_entry_action)
+      TA_REQ(mapping->lock());
   ~VmMappingCoalescer();
 
   // Add a page to the mapping run.  If this fails, the VmMappingCoalescer is
@@ -520,10 +522,17 @@ class VmMappingCoalescer {
   size_t count_;
   bool aborted_;
   const uint mmu_flags_;
+  const ArchVmAspace::ExistingEntryAction existing_entry_action_;
 };
 
-VmMappingCoalescer::VmMappingCoalescer(VmMapping* mapping, vaddr_t base, uint mmu_flags)
-    : mapping_(mapping), base_(base), count_(0), aborted_(false), mmu_flags_(mmu_flags) {}
+VmMappingCoalescer::VmMappingCoalescer(VmMapping* mapping, vaddr_t base, uint mmu_flags,
+                                       ArchVmAspace::ExistingEntryAction existing_entry_action)
+    : mapping_(mapping),
+      base_(base),
+      count_(0),
+      aborted_(false),
+      mmu_flags_(mmu_flags),
+      existing_entry_action_(existing_entry_action) {}
 
 VmMappingCoalescer::~VmMappingCoalescer() {
   // Make sure we've flushed or aborted
@@ -539,14 +548,14 @@ zx_status_t VmMappingCoalescer::Flush() {
 
   if (mmu_flags_ & ARCH_MMU_FLAG_PERM_RWX_MASK) {
     size_t mapped;
-    zx_status_t ret = mapping_->aspace()->arch_aspace().Map(
-        base_, phys_, count_, mmu_flags_, ArchVmAspace::ExistingEntryAction::Error, &mapped);
+    zx_status_t ret = mapping_->aspace()->arch_aspace().Map(base_, phys_, count_, mmu_flags_,
+                                                            existing_entry_action_, &mapped);
     if (ret != ZX_OK) {
       TRACEF("error %d mapping %zu pages starting at va %#" PRIxPTR "\n", ret, count_, base_);
       aborted_ = true;
       return ret;
     }
-    DEBUG_ASSERT(mapped == count_);
+    DEBUG_ASSERT_MSG(mapped == count_, "mapped %zu, count %zu\n", mapped, count_);
   }
   base_ += count_ * PAGE_SIZE;
   count_ = 0;
@@ -557,10 +566,11 @@ zx_status_t VmMappingCoalescer::Flush() {
 
 zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
   Guard<Mutex> aspace_guard{aspace_->lock()};
-  return MapRangeLocked(offset, len, commit);
+  return MapRangeLocked(offset, len, commit, false);
 }
 
-zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
+zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit,
+                                      bool ignore_existing) {
   canary_.Assert();
 
   len = ROUNDUP(len, PAGE_SIZE);
@@ -596,7 +606,8 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
   // The region to map could have multiple different current arch mmu flags, so we need to iterate
   // over them to ensure we install mappings with the correct permissions.
   return EnumerateProtectionRangesLocked(
-      base_ + offset, len, [this, commit, dirty_tracked](vaddr_t base, size_t len, uint mmu_flags) {
+      base_ + offset, len,
+      [this, commit, dirty_tracked, ignore_existing](vaddr_t base, size_t len, uint mmu_flags) {
         AssertHeld(object_->lock_ref());
         AssertHeld(aspace_->lock_ref());
         // Remove the write permission if this maps a vmo that supports dirty tracking, in order to
@@ -625,7 +636,9 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
 
         // iterate through the range, grabbing a page from the underlying object and
         // mapping it in
-        VmMappingCoalescer coalescer(this, base, mmu_flags);
+        VmMappingCoalescer coalescer(this, base, mmu_flags,
+                                     ignore_existing ? ArchVmAspace::ExistingEntryAction::Skip
+                                                     : ArchVmAspace::ExistingEntryAction::Error);
         __UNINITIALIZED VmObject::LookupInfo pages;
         for (size_t offset = 0; offset < len;) {
           const uint64_t vmo_offset = object_offset_ + (base - base_) + offset;

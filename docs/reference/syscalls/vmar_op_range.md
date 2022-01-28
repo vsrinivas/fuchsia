@@ -45,7 +45,7 @@ mappings. The operation's semantics are otherwise as described by
 
 **ZX_VMAR_OP_MAP_RANGE** - Populates entries in the CPU page tables (or architectural equivalent)
 for committed pages in the given range. Entries for uncommitted pages in the range are not
-populated. Fails if entries already exist for any page in the range (this may change in the future).
+populated. Skips entries that already exist for any page in the range.
 
 **ZX_VMAR_OP_DONT_NEED** - Hints that pages in the specified range are not needed anymore and should
 be considered for memory reclamation. Intended to be used on mappings for VMOs created with
