@@ -10,7 +10,7 @@ delivery system itself.
 """
 import json
 import os
-from typing import Dict, List, Set, TextIO
+from typing import Dict, List, Set, TextIO, Union
 
 from depfile.depfile import FilePath
 
@@ -86,6 +86,7 @@ class AssemblyInputBundle(ImageAssemblyConfig):
     def __init__(self) -> None:
         super().__init__()
         self.config_data: ConfigDataEntries = {}
+        self.blobs: Union[None, Set[FilePath]] = None
 
     @classmethod
     def from_dict(cls, dict: Dict) -> 'AssemblyInputBundle':
@@ -124,7 +125,7 @@ class AssemblyInputBundle(ImageAssemblyConfig):
 
     def intersection(
             self, other: 'AssemblyInputBundle') -> 'AssemblyInputBundle':
-        """Return the intersection of the two ImageAssemblyConfiguration's
+        """Return the intersection of the two 'ImageAssemblyConfiguration's
         """
         result = super().intersection(other)
         config_data: ConfigDataEntries = {}
@@ -139,7 +140,7 @@ class AssemblyInputBundle(ImageAssemblyConfig):
         return result
 
     def difference(self, other: 'AssemblyInputBundle') -> 'AssemblyInputBundle':
-        """Return the difference of the two ImageAssemblyConfiguration's
+        """Return the difference of the two 'ImageAssemblyConfiguration's
         """
         result = super().difference(other)
         for (package, entries) in self.config_data.items():
@@ -163,6 +164,8 @@ class AssemblyInputBundle(ImageAssemblyConfig):
             file_paths.append(self.kernel.path)
         for entries in self.config_data.values():
             file_paths.extend([entry.source for entry in entries])
+        if self.blobs is not None:
+            file_paths.extend(self.blobs)
         return file_paths
 
     def write_fini_manifest(

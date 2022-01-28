@@ -91,8 +91,9 @@ def copy_to_assembly_input_bundle(
         all_blobs[merkle] = source
 
     # Copy all the blobs to their dir in the out-of-tree layout
-    blob_deps = copy_blobs(all_blobs, outdir)
+    (all_blobs, blob_deps) = copy_blobs(all_blobs, outdir)
     deps.update(blob_deps)
+    result.blobs = set([os.path.relpath(blob_path, outdir) for blob_path in all_blobs])
 
     # Copy the bootfs entries
     (bootfs,
@@ -179,12 +180,13 @@ def copy_packages(
     return (packages, blobs, deps)
 
 
-def copy_blobs(blobs: Dict[Merkle, FilePath], outdir: FilePath) -> DepSet:
+def copy_blobs(blobs: Dict[Merkle, FilePath], outdir: FilePath) -> Tuple[List[FilePath], DepSet]:
+    blob_paths: List[FilePath] = []
     deps: DepSet = set()
 
     # Bail early if empty
     if len(blobs) == 0:
-        return deps
+        return (blob_paths, deps)
 
     # Create the directory for the blobs, now that we know it will exist.
     blobs_dir = os.path.join(outdir, "blobs")
@@ -193,10 +195,12 @@ def copy_blobs(blobs: Dict[Merkle, FilePath], outdir: FilePath) -> DepSet:
     # Copy all blobs
     for (merkle, source) in blobs.items():
         blob_destination = os.path.join(blobs_dir, merkle)
+        blob_paths.append(blob_destination)
         fast_copy(source, blob_destination)
         deps.add(source)
 
-    return deps
+    return (blob_paths, deps)
+
 
 
 def copy_file_entries(entries: FileEntrySet, outdir: FilePath,
