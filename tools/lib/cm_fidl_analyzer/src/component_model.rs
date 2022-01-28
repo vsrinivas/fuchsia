@@ -16,7 +16,7 @@ use {
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     futures::FutureExt,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker, RelativeMoniker},
+    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker, RelativeMoniker},
     routing::{
         capability_source::{
             CapabilitySourceInterface, ComponentCapability, StorageCapabilitySource,
@@ -301,11 +301,11 @@ impl ComponentModelForAnalyzer {
         self: &Arc<Self>,
         id: &NodePath,
     ) -> Result<Arc<ComponentInstanceForAnalyzer>, ComponentInstanceError> {
-        let abs_moniker = AbsoluteMoniker::parse_string_without_instances(&id.to_string())
+        let abs_moniker = PartialAbsoluteMoniker::parse_string_without_instances(&id.to_string())
             .expect("failed to parse moniker from id");
         match self.instances.get(id) {
             Some(instance) => Ok(Arc::clone(instance)),
-            None => Err(ComponentInstanceError::instance_not_found(abs_moniker.to_partial())),
+            None => Err(ComponentInstanceError::instance_not_found(abs_moniker)),
         }
     }
 
@@ -829,7 +829,7 @@ mod tests {
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
         fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
-        moniker::PartialAbsoluteMoniker,
+        moniker::{AbsoluteMoniker, PartialAbsoluteMoniker},
         routing::{
             component_instance::WeakExtendedInstanceInterface, environment::EnvironmentInterface,
         },
@@ -886,9 +886,8 @@ mod tests {
         assert_eq!(
             get_other_result.err().unwrap().to_string(),
             ComponentInstanceError::instance_not_found(
-                AbsoluteMoniker::parse_string_without_instances(&other_id.to_string())
+                PartialAbsoluteMoniker::parse_string_without_instances(&other_id.to_string())
                     .expect("failed to parse moniker from id")
-                    .to_partial()
             )
             .to_string()
         );
