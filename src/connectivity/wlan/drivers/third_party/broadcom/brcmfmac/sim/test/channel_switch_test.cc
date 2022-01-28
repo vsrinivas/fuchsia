@@ -60,7 +60,7 @@ void ChannelSwitchTest::SendFakeCSABeacon(wlan_channel_t& dst_channel) {
 // Create our device instance and hook up the callbacks
 void ChannelSwitchTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 }
 
 // This function schedules a Setchannel() event for the first AP in AP list.

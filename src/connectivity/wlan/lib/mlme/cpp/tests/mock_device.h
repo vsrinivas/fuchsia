@@ -100,7 +100,7 @@ struct MockDevice : public DeviceInterface {
     state->set_address(addr);
 
     memcpy(wlan_softmac_info.sta_addr, addr.byte, 6);
-    wlan_softmac_info.mac_role = MAC_ROLE_CLIENT;
+    wlan_softmac_info.mac_role = WLAN_MAC_ROLE_CLIENT;
     wlan_softmac_info.supported_phys =
         WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT | WLAN_INFO_PHY_TYPE_VHT;
     wlan_softmac_info.driver_features = 0;

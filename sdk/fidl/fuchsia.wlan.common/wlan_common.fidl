@@ -29,7 +29,7 @@ type PHY = strict enum {
 
 // Numbers defined to guarantee consistent numbering between all code bindings
 // to ease conversion.
-type MacRole = strict enum {
+type WlanMacRole = strict enum {
     CLIENT = 1;
     AP = 2;
     MESH = 3;

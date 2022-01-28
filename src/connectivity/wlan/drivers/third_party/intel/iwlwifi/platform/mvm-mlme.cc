@@ -557,8 +557,9 @@ zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
   *info = {};
 
   // TODO(fxbug.dev/36677): supports AP role
-  mac_role_t* supported_mac_roles_list = static_cast<mac_role_t*>(calloc(1, sizeof(mac_role_t)));
-  supported_mac_roles_list[0] = MAC_ROLE_CLIENT;
+  wlan_mac_role_t* supported_mac_roles_list =
+      static_cast<wlan_mac_role_t*>(calloc(1, sizeof(wlan_mac_role_t)));
+  supported_mac_roles_list[0] = WLAN_MAC_ROLE_CLIENT;
 
   info->supported_mac_roles_list = supported_mac_roles_list;
   info->supported_mac_roles_count = 1;

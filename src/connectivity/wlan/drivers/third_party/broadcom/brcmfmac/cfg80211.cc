@@ -199,7 +199,8 @@ static zx_status_t brcmf_vif_change_validate(struct brcmf_cfg80211_info* cfg,
   return ret;
 }
 
-static zx_status_t brcmf_vif_add_validate(struct brcmf_cfg80211_info* cfg, mac_role_t new_type) {
+static zx_status_t brcmf_vif_add_validate(struct brcmf_cfg80211_info* cfg,
+                                          wlan_mac_role_t new_type) {
   struct brcmf_cfg80211_vif* pos;
   struct iface_combination_params params = {
       .num_different_channels = 1,
@@ -248,7 +249,7 @@ static void brcmf_cfg80211_update_proto_addr_mode(struct wireless_dev* wdev) {
   vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
   ifp = vif->ifp;
 
-  if (wdev->iftype == MAC_ROLE_AP) {
+  if (wdev->iftype == WLAN_MAC_ROLE_AP) {
     brcmf_proto_configure_addr_mode(ifp->drvr, ifp->ifidx, ADDR_DIRECT);
   } else {
     brcmf_proto_configure_addr_mode(ifp->drvr, ifp->ifidx, ADDR_INDIRECT);
@@ -401,7 +402,7 @@ static zx_status_t brcmf_set_ap_macaddr(struct brcmf_if* ifp,
 
 static zx_status_t brcmf_cfg80211_change_iface_mac_role(struct brcmf_cfg80211_info* cfg,
                                                         struct net_device* ndev,
-                                                        mac_role_t mac_role) {
+                                                        wlan_mac_role_t mac_role) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_vif* vif = ifp->vif;
   const char* mac_role_str = "OTHER";
@@ -416,7 +417,7 @@ static zx_status_t brcmf_cfg80211_change_iface_mac_role(struct brcmf_cfg80211_in
     return err;
   }
   switch (mac_role) {
-    case MAC_ROLE_CLIENT:
+    case WLAN_MAC_ROLE_CLIENT:
       err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, 1, &fw_err);
       if (err != ZX_OK) {
         BRCMF_ERR("WLC_SET_INFRA error: %s, fw err %s", zx_status_get_string(err),
@@ -426,7 +427,7 @@ static zx_status_t brcmf_cfg80211_change_iface_mac_role(struct brcmf_cfg80211_in
       }
       mac_role_str = const_cast<char*>("CLIENT");
       break;
-    case MAC_ROLE_AP:
+    case WLAN_MAC_ROLE_AP:
       mac_role_str = const_cast<char*>("AP");
       break;
     default:
@@ -466,7 +467,7 @@ static zx_status_t brcmf_ap_add_vif(struct brcmf_cfg80211_info* cfg, const char*
 
     BRCMF_INFO("Adding vif \"%s\"", name);
 
-    err = brcmf_alloc_vif(cfg, MAC_ROLE_AP, &vif);
+    err = brcmf_alloc_vif(cfg, WLAN_MAC_ROLE_AP, &vif);
     if (err != ZX_OK) {
       if (dev_out) {
         *dev_out = nullptr;
@@ -493,7 +494,7 @@ static zx_status_t brcmf_ap_add_vif(struct brcmf_cfg80211_info* cfg, const char*
     // Else reuse the existing IF itself but change its type
     vif = ifp->vif;
     vif->ifp = ifp;
-    err = brcmf_cfg80211_change_iface_mac_role(cfg, ifp->ndev, MAC_ROLE_AP);
+    err = brcmf_cfg80211_change_iface_mac_role(cfg, ifp->ndev, WLAN_MAC_ROLE_AP);
     if (err != ZX_OK) {
       BRCMF_ERR("failed to change iface mac role to AP: %s", zx_status_get_string(err));
       err = ZX_ERR_IO;
@@ -540,7 +541,7 @@ static bool brcmf_is_apmode(struct brcmf_cfg80211_vif* vif) {
   uint16_t iftype;
 
   iftype = vif->wdev.iftype;
-  return iftype == MAC_ROLE_AP;
+  return iftype == WLAN_MAC_ROLE_AP;
 }
 
 static bool brcmf_is_existing_macaddr(brcmf_pub* drvr, const uint8_t mac_addr[ETH_ALEN],
@@ -553,7 +554,7 @@ static bool brcmf_is_existing_macaddr(brcmf_pub* drvr, const uint8_t mac_addr[ET
     }
   } else {
     for (const auto& iface : drvr->iflist) {
-      if (iface != nullptr && iface->vif->wdev.iftype != MAC_ROLE_CLIENT &&
+      if (iface != nullptr && iface->vif->wdev.iftype != WLAN_MAC_ROLE_CLIENT &&
           !memcmp(iface->mac_addr, mac_addr, ETH_ALEN)) {
         return true;
       }
@@ -592,7 +593,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
   }
 
   switch (req->role) {
-    case MAC_ROLE_AP:
+    case WLAN_MAC_ROLE_AP:
       iface_role_name = "ap";
 
       if (mac_addr && brcmf_is_existing_macaddr(drvr, mac_addr->byte, true)) {
@@ -611,7 +612,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       ndev->mlme_channel = zx::channel(req->mlme_channel);
 
       break;
-    case MAC_ROLE_CLIENT: {
+    case WLAN_MAC_ROLE_CLIENT: {
       iface_role_name = "client";
 
       if (mac_addr && brcmf_is_existing_macaddr(drvr, mac_addr->byte, false)) {
@@ -633,7 +634,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
         // Since a single IF is shared when operating with manufacturing FW, change
         // IF type.
-        err = brcmf_cfg80211_change_iface_mac_role(drvr->config, ifp->ndev, MAC_ROLE_CLIENT);
+        err = brcmf_cfg80211_change_iface_mac_role(drvr->config, ifp->ndev, WLAN_MAC_ROLE_CLIENT);
         if (err != ZX_OK) {
           BRCMF_ERR("failed to change iface mac role to CLIENT: %s", zx_status_get_string(err));
           return err;
@@ -1335,7 +1336,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::Reas
       BRCMF_ERR("WLC_DISASSOC failed: %s, fw err %s", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fwerr));
     }
-    if (vif->wdev.iftype == MAC_ROLE_CLIENT) {
+    if (vif->wdev.iftype == WLAN_MAC_ROLE_CLIENT) {
       cfg80211_disconnected(vif, reason_code, event_code);
     }
   }
@@ -4115,9 +4116,9 @@ static void brcmf_dump_if_band_caps(wlan_fullmac_band_capabilities_t* band) {
 static void brcmf_dump_if_query_info(wlan_fullmac_query_info_t* info) {
   BRCMF_DBG_UNFILTERED(" Device capabilities as reported to wlanif:");
   BRCMF_DBG_UNFILTERED("   sta_addr: " FMT_MAC, FMT_MAC_ARGS(info->sta_addr));
-  BRCMF_DBG_UNFILTERED("   role(s): %s%s%s", info->role & MAC_ROLE_CLIENT ? "client " : "",
-                       info->role & MAC_ROLE_AP ? "ap " : "",
-                       info->role & MAC_ROLE_MESH ? "mesh " : "");
+  BRCMF_DBG_UNFILTERED("   role(s): %s%s%s", info->role & WLAN_MAC_ROLE_CLIENT ? "client " : "",
+                       info->role & WLAN_MAC_ROLE_AP ? "ap " : "",
+                       info->role & WLAN_MAC_ROLE_MESH ? "mesh " : "");
   BRCMF_DBG_UNFILTERED("   feature(s): %s%s",
                        info->features & WLAN_FULLMAC_FEATURE_DMA ? "DMA " : "",
                        info->features & WLAN_FULLMAC_FEATURE_SYNTH ? "SYNTH " : "");
@@ -4525,7 +4526,7 @@ void brcmf_if_stats_query_req(net_device* ndev) {
 
   // TODO(cphoenix): Fill in all the stats fields.
   switch (wdev->iftype) {
-    case MAC_ROLE_CLIENT: {
+    case WLAN_MAC_ROLE_CLIENT: {
       zx_status_t status;
       brcmf_pktcnt_le pktcnt;
       wlan_fullmac_mlme_stats_t* mlme_stats;
@@ -4628,7 +4629,7 @@ void brcmf_if_stats_query_req(net_device* ndev) {
       return;
       break;
     }
-    case MAC_ROLE_AP:
+    case WLAN_MAC_ROLE_AP:
       // Not supported for AP, send back an empty response.
       break;
     default:
@@ -4961,10 +4962,10 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
 
   brcmf_init_prof(&vif->profile);
 
-  if (type == MAC_ROLE_AP) {
+  if (type == WLAN_MAC_ROLE_AP) {
     mbss = false;
     list_for_every_entry (&cfg->vif_list, vif_walk, struct brcmf_cfg80211_vif, list) {
-      if (vif_walk->wdev.iftype == MAC_ROLE_AP) {
+      if (vif_walk->wdev.iftype == WLAN_MAC_ROLE_AP) {
         mbss = true;
         break;
       }
@@ -5109,7 +5110,7 @@ zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf
   wdev = ndev_to_wdev(ndev);
 
   // For client IF, ensure it is connected.
-  if (wdev->iftype == MAC_ROLE_CLIENT) {
+  if (wdev->iftype == WLAN_MAC_ROLE_CLIENT) {
     // Status should be connected.
     if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
       BRCMF_ERR("CSA on %s. Not associated.", ndev->name);
@@ -6110,7 +6111,7 @@ uint16_t brcmf_cfg80211_get_iftype(struct brcmf_if* ifp) {
 }
 
 const char* brcmf_cfg80211_get_iface_str(struct net_device* ndev) {
-  if (ndev_to_vif(ndev)->wdev.iftype == MAC_ROLE_CLIENT)
+  if (ndev_to_vif(ndev)->wdev.iftype == WLAN_MAC_ROLE_CLIENT)
     return "Client";
   else
     return "SoftAP";
@@ -6191,12 +6192,12 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
   }
 
   switch (wdev->iftype) {
-    case MAC_ROLE_AP:
+    case WLAN_MAC_ROLE_AP:
       // Stop the AP in an attempt to exit gracefully.
       brcmf_cfg80211_stop_ap(ndev);
       ndev->mlme_channel.reset();
       return brcmf_cfg80211_del_ap_iface(cfg, wdev);
-    case MAC_ROLE_CLIENT:
+    case WLAN_MAC_ROLE_CLIENT:
       // Dissconnect the client in an attempt to exit gracefully.
       brcmf_link_down(ifp->vif, wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON, false);
       // The default client iface 0 is always assumed to exist by the driver, and is never
@@ -6233,7 +6234,7 @@ zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   cfg->pub = drvr;
   init_vif_event(&cfg->vif_event);
   list_initialize(&cfg->vif_list);
-  err = brcmf_alloc_vif(cfg, MAC_ROLE_CLIENT, &vif);
+  err = brcmf_alloc_vif(cfg, WLAN_MAC_ROLE_CLIENT, &vif);
   if (err != ZX_OK) {
     goto cfg80211_info_out;
   }

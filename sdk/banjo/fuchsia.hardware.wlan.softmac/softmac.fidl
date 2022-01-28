@@ -15,7 +15,7 @@ type WlanSoftmacInfo = struct {
     sta_addr ieee80211.MacAddr;
 
     /// MAC role
-    mac_role fuchsia.wlan.common.MacRole;
+    mac_role fuchsia.wlan.common.WlanMacRole;
 
     /// Bitmask indicating WlanInfoPhyType values supported by the hardware.
     supported_phys fuchsia.hardware.wlan.phyinfo.WlanInfoPhyType;

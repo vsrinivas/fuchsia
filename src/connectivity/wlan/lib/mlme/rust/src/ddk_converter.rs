@@ -122,8 +122,8 @@ pub fn device_info_from_wlan_softmac_info(
     info: banjo_wlan_softmac::WlanSoftmacInfo,
 ) -> Result<fidl_mlme::DeviceInfo, Error> {
     let sta_addr = info.sta_addr;
-    let role = fidl_common::MacRole::from_primitive(info.mac_role.0)
-        .ok_or(format_err!("Unknown WlanMacRole: {}", info.mac_role.0))?;
+    let role = fidl_common::WlanMacRole::from_primitive(info.mac_role.0)
+        .ok_or(format_err!("Unknown WlanWlanMacRole: {}", info.mac_role.0))?;
     let cap = wlan_common::mac::CapabilityInfo::from(info.caps).0;
     let bands = info.bands[0..info.bands_count as usize]
         .to_vec()
@@ -379,7 +379,7 @@ mod tests {
         let device_info = device_info_from_wlan_softmac_info(wlan_softmac_info)
             .expect("Failed to conver wlan-softmac info");
         assert_eq!(device_info.sta_addr, wlan_softmac_info.sta_addr);
-        assert_eq!(device_info.role, fidl_common::MacRole::Client);
+        assert_eq!(device_info.role, fidl_common::WlanMacRole::Client);
         assert_eq!(device_info.bands.len(), 2);
         assert_eq!(
             device_info.driver_features,

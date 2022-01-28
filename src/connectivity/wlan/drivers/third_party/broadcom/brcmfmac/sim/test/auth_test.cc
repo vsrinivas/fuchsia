@@ -206,7 +206,7 @@ wlan_fullmac_impl_ifc_protocol_ops_t AuthTest::sme_ops_ = {
 
 void AuthTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
   sim_fw_ = device_->GetSim()->sim_fw.get();
   ap_.EnableBeacon(zx::msec(100));
 }

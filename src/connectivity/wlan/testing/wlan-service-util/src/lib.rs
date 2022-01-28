@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_wlan_common::MacRole,
+    fidl_fuchsia_wlan_common::WlanMacRole,
     fidl_fuchsia_wlan_device_service::{
         DestroyIfaceRequest, DeviceMonitorProxy, DeviceServiceProxy,
     },
@@ -25,8 +25,11 @@ pub async fn get_iface_list(wlan_svc: &DeviceServiceProxy) -> Result<Vec<u16>, E
 ///
 /// # Arguments: 2
 /// * `wlan_svc`: a DeviceServiceProxy
-/// * 'role' : requested MacRole (client or ap)
-pub async fn get_first_iface(wlan_svc: &DeviceServiceProxy, role: MacRole) -> Result<u16, Error> {
+/// * 'role' : requested WlanMacRole (client or ap)
+pub async fn get_first_iface(
+    wlan_svc: &DeviceServiceProxy,
+    role: WlanMacRole,
+) -> Result<u16, Error> {
     let wlan_iface_ids =
         get_iface_list(wlan_svc).await.context("Connect: failed to get wlan iface list")?;
 
@@ -79,7 +82,7 @@ pub async fn get_wlan_sta_addr(
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_wlan_common::MacRole,
+        fidl_fuchsia_wlan_common::WlanMacRole,
         fidl_fuchsia_wlan_device_service::{
             DeviceServiceMarker, DeviceServiceRequest, DeviceServiceRequestStream, IfaceListItem,
             ListIfacesResponse, QueryIfaceResponse,
@@ -99,7 +102,7 @@ mod tests {
 
     fn fake_iface_query_response(
         sta_addr: [u8; 6],
-        role: fidl_fuchsia_wlan_common::MacRole,
+        role: fidl_fuchsia_wlan_common::WlanMacRole,
     ) -> QueryIfaceResponse {
         QueryIfaceResponse {
             role,
@@ -129,7 +132,7 @@ mod tests {
     pub fn respond_to_query_iface_request(
         exec: &mut TestExecutor,
         req_stream: &mut DeviceServiceRequestStream,
-        role: fidl_fuchsia_wlan_common::MacRole,
+        role: fidl_fuchsia_wlan_common::WlanMacRole,
         fake_mac_addr: Option<[u8; 6]>,
     ) {
         use fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK};
@@ -160,7 +163,7 @@ mod tests {
         respond_to_query_iface_request(
             &mut exec,
             &mut req_stream,
-            MacRole::Client,
+            WlanMacRole::Client,
             Some([1, 2, 3, 4, 5, 6]),
         );
 
@@ -176,7 +179,7 @@ mod tests {
 
         assert_variant!(exec.run_until_stalled(&mut mac_addr_fut), Poll::Pending);
 
-        respond_to_query_iface_request(&mut exec, &mut req_stream, MacRole::Client, None);
+        respond_to_query_iface_request(&mut exec, &mut req_stream, WlanMacRole::Client, None);
 
         let err = exec.run_singlethreaded(&mut mac_addr_fut).expect_err("should be an error");
         assert_eq!("No valid iface response", format!("{}", err));

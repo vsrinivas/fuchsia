@@ -163,9 +163,9 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
     let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
 
     let role = match iface.device_info.role {
-        fidl_common::MacRole::Client => fidl_common::MacRole::Client,
-        fidl_common::MacRole::Ap => fidl_common::MacRole::Ap,
-        fidl_common::MacRole::Mesh => fidl_common::MacRole::Mesh,
+        fidl_common::WlanMacRole::Client => fidl_common::WlanMacRole::Client,
+        fidl_common::WlanMacRole::Ap => fidl_common::WlanMacRole::Ap,
+        fidl_common::WlanMacRole::Mesh => fidl_common::WlanMacRole::Mesh,
     };
 
     let phy_id = iface.phy_ownership.phy_id;
@@ -451,7 +451,7 @@ mod tests {
 
         let response = super::query_iface(&iface_map, 10).expect("querying iface failed");
         let expected = fake_device_info();
-        assert_eq!(response.role, fidl_common::MacRole::Client);
+        assert_eq!(response.role, fidl_common::WlanMacRole::Client);
         assert_eq!(response.sta_addr, expected.sta_addr);
         assert_eq!(response.id, 10);
         assert_eq!(response.driver_features, expected.driver_features);
@@ -1021,7 +1021,7 @@ mod tests {
 
     fn fake_device_info() -> fidl_mlme::DeviceInfo {
         fidl_mlme::DeviceInfo {
-            role: fidl_common::MacRole::Client,
+            role: fidl_common::WlanMacRole::Client,
             bands: vec![],
             sta_addr: [0xAC; 6],
             driver_features: vec![

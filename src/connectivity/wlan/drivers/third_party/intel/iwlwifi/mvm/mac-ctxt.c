@@ -512,10 +512,10 @@ static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm_vif* mvmvif, wlan_info_ba
   cmd->action = cpu_to_le32(action);
 
   switch (mvmvif->mac_role) {
-    case MAC_ROLE_CLIENT:
+    case WLAN_MAC_ROLE_CLIENT:
       cmd->mac_type = cpu_to_le32(FW_MAC_TYPE_BSS_STA);
       break;
-    case MAC_ROLE_AP:
+    case WLAN_MAC_ROLE_AP:
       cmd->mac_type = cpu_to_le32(FW_MAC_TYPE_GO);
       break;
 #if 0   // NEEDS_PORTING
@@ -598,7 +598,7 @@ static zx_status_t iwl_mvm_mac_ctxt_cmd_sta(struct iwl_mvm_vif* mvmvif, uint32_t
   struct iwl_mac_ctx_cmd cmd = {};
   struct iwl_mac_data_sta* ctxt_sta;
 
-  WARN_ON(mvmvif->mac_role != MAC_ROLE_CLIENT);
+  WARN_ON(mvmvif->mac_role != WLAN_MAC_ROLE_CLIENT);
 
   /* Fill the common data for all mac context types */
   iwl_mvm_mac_ctxt_cmd_common(mvmvif, WLAN_INFO_BAND_TWO_GHZ,  // Use default value.
@@ -1123,7 +1123,7 @@ static int iwl_mvm_mac_ctxt_cmd_go(struct iwl_mvm* mvm, struct ieee80211_vif* vi
 static zx_status_t iwl_mvm_mac_ctx_send(struct iwl_mvm_vif* mvmvif, uint32_t action,
                                         bool force_assoc_off, const uint8_t* bssid_override) {
   switch (mvmvif->mac_role) {
-    case MAC_ROLE_CLIENT:
+    case WLAN_MAC_ROLE_CLIENT:
       return iwl_mvm_mac_ctxt_cmd_sta(mvmvif, action, force_assoc_off, bssid_override);
       break;
 #if 0   // NEEDS_PORTING

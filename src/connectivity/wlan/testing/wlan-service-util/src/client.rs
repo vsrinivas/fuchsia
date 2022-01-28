@@ -5,7 +5,7 @@
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_common::MacRole;
+use fidl_fuchsia_wlan_common::WlanMacRole;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
 use fidl_fuchsia_wlan_internal as fidl_internal;
@@ -39,8 +39,9 @@ pub async fn get_sme_proxy(
 }
 
 pub async fn get_first_sme(wlan_svc: &WlanService) -> Result<fidl_sme::ClientSmeProxy, Error> {
-    let iface_id =
-        super::get_first_iface(wlan_svc, MacRole::Client).await.context("failed to get iface")?;
+    let iface_id = super::get_first_iface(wlan_svc, WlanMacRole::Client)
+        .await
+        .context("failed to get iface")?;
     get_sme_proxy(&wlan_svc, iface_id).await
 }
 
@@ -171,7 +172,7 @@ pub async fn disconnect_all(wlan_svc: &WlanService) -> Result<(), Error> {
             continue;
         }
         let resp = resp.unwrap();
-        if resp.role == MacRole::Client {
+        if resp.role == WlanMacRole::Client {
             let sme_proxy = get_sme_proxy(&wlan_svc, iface_id)
                 .await
                 .context("Disconnect all: failed to get iface sme proxy")?;
@@ -373,7 +374,7 @@ mod tests {
         }
     }
 
-    fn test_get_first_sme(iface_list: &[MacRole]) -> Result<(), Error> {
+    fn test_get_first_sme(iface_list: &[WlanMacRole]) -> Result<(), Error> {
         let (mut exec, proxy, mut req_stream) =
             crate::tests::setup_fake_service::<DeviceServiceMarker>();
         let fut = get_first_sme(&proxy);
@@ -396,7 +397,7 @@ mod tests {
                 Some([1, 2, 3, 4, 5, 6]),
             );
 
-            if *mac_role == MacRole::Client {
+            if *mac_role == WlanMacRole::Client {
                 // client sme proxy
                 assert!(exec.run_until_stalled(&mut fut).is_pending());
                 respond_to_get_client_sme_request(&mut exec, &mut req_stream, zx::Status::OK);
@@ -408,7 +409,7 @@ mod tests {
         Ok(())
     }
 
-    fn test_disconnect_all(iface_list: &[(MacRole, StatusResponse)]) -> Result<(), Error> {
+    fn test_disconnect_all(iface_list: &[(WlanMacRole, StatusResponse)]) -> Result<(), Error> {
         let (mut exec, proxy, mut req_stream) =
             crate::tests::setup_fake_service::<DeviceServiceMarker>();
         let fut = disconnect_all(&proxy);
@@ -430,7 +431,7 @@ mod tests {
                 Some([1, 2, 3, 4, 5, 6]),
             );
 
-            if *mac_role == MacRole::Client {
+            if *mac_role == WlanMacRole::Client {
                 // Get the Client SME server (to send the responses for the following 2 SME requests)
                 assert!(exec.run_until_stalled(&mut fut).is_pending());
                 let mut fake_sme_server_stream =
@@ -460,21 +461,21 @@ mod tests {
     // iface list contains an AP and a client. Test should pass
     #[test]
     fn check_get_client_sme_success() {
-        let iface_list: Vec<MacRole> = vec![MacRole::Ap, MacRole::Client];
+        let iface_list: Vec<WlanMacRole> = vec![WlanMacRole::Ap, WlanMacRole::Client];
         test_get_first_sme(&iface_list).expect("expect success but failed");
     }
 
     // iface list is empty. Test should fail
     #[test]
     fn check_get_client_sme_no_devices() {
-        let iface_list: Vec<MacRole> = Vec::new();
+        let iface_list: Vec<WlanMacRole> = Vec::new();
         test_get_first_sme(&iface_list).expect_err("expect fail but succeeded");
     }
 
     // iface list does not contain a client. Test should fail
     #[test]
     fn check_get_client_sme_no_clients() {
-        let iface_list: Vec<MacRole> = vec![MacRole::Ap, MacRole::Ap];
+        let iface_list: Vec<WlanMacRole> = vec![WlanMacRole::Ap, WlanMacRole::Ap];
         test_get_first_sme(&iface_list).expect_err("expect fail but succeeded");
     }
 
@@ -482,8 +483,10 @@ mod tests {
     // as AP IF will be ignored and Client IF delete should succeed.
     #[test]
     fn check_disconnect_all_client_and_ap_success() {
-        let iface_list: Vec<(MacRole, StatusResponse)> =
-            vec![(MacRole::Ap, StatusResponse::Idle), (MacRole::Client, StatusResponse::Idle)];
+        let iface_list: Vec<(WlanMacRole, StatusResponse)> = vec![
+            (WlanMacRole::Ap, StatusResponse::Idle),
+            (WlanMacRole::Client, StatusResponse::Idle),
+        ];
         test_disconnect_all(&iface_list).expect("Expect success but failed")
     }
 
@@ -491,17 +494,19 @@ mod tests {
     // IFs are clients and both deletes should succeed.
     #[test]
     fn check_disconnect_all_all_clients_success() {
-        let iface_list: Vec<(MacRole, StatusResponse)> =
-            vec![(MacRole::Client, StatusResponse::Idle), (MacRole::Client, StatusResponse::Idle)];
+        let iface_list: Vec<(WlanMacRole, StatusResponse)> = vec![
+            (WlanMacRole::Client, StatusResponse::Idle),
+            (WlanMacRole::Client, StatusResponse::Idle),
+        ];
         test_disconnect_all(&iface_list).expect("Expect success but failed");
     }
 
     // test disconnect_all with 2 Clients, one disconnect failure
     #[test]
     fn check_disconnect_all_all_clients_fail() {
-        let iface_list: Vec<(MacRole, StatusResponse)> = vec![
-            (MacRole::Ap, StatusResponse::Connected),
-            (MacRole::Client, StatusResponse::Connected),
+        let iface_list: Vec<(WlanMacRole, StatusResponse)> = vec![
+            (WlanMacRole::Ap, StatusResponse::Connected),
+            (WlanMacRole::Client, StatusResponse::Connected),
         ];
         test_disconnect_all(&iface_list).expect_err("Expect fail but succeeded");
     }
@@ -509,8 +514,8 @@ mod tests {
     // test disconnect_all with no Clients
     #[test]
     fn check_disconnect_all_no_clients_success() {
-        let iface_list: Vec<(MacRole, StatusResponse)> =
-            vec![(MacRole::Ap, StatusResponse::Idle), (MacRole::Ap, StatusResponse::Idle)];
+        let iface_list: Vec<(WlanMacRole, StatusResponse)> =
+            vec![(WlanMacRole::Ap, StatusResponse::Idle), (WlanMacRole::Ap, StatusResponse::Idle)];
         test_disconnect_all(&iface_list).expect("Expect success but failed");
     }
 

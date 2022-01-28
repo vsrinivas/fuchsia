@@ -3126,7 +3126,7 @@ void ath10k_pci_fill_wlanphy_impl_info(struct ath10k* ar, wlanphy_impl_info_t* p
   *phy_info = (wlanphy_impl_info_t){};
 
   // mac_role
-  mac_role_t* supported_mac_roles_list = (mac_role_t*)calloc(1, sizeof(mac_role_t));
+  wlan_mac_role_t* supported_mac_roles_list = (wlan_mac_role_t*)calloc(1, sizeof(wlan_mac_role_t));
   supported_mac_roles_list[0] = ar->mac_role;
 
   phy_info->supported_mac_roles_list = supported_mac_roles_list;

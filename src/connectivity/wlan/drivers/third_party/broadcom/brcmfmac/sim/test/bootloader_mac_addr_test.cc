@@ -33,7 +33,7 @@ TEST_F(BootloaderMacAddrTest, GetMacAddrFromBootloader) {
   Init(mac_addr);
 
   SimInterface client_ifc;
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
 
   // Verify that the client interface was assigned the value provided by the simulated bootloader
   common::MacAddr actual_mac_addr;
@@ -47,7 +47,7 @@ TEST_F(BootloaderMacAddrTest, ZeroMacAddr) {
   Init(common::kZeroMac);
 
   SimInterface client_ifc;
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
 
   common::MacAddr actual_mac_addr;
   client_ifc.GetMacAddr(&actual_mac_addr);
@@ -60,7 +60,7 @@ TEST_F(BootloaderMacAddrTest, BroadcastMacAddr) {
   Init(common::kBcastMac);
 
   SimInterface client_ifc;
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
 
   common::MacAddr actual_mac_addr;
   client_ifc.GetMacAddr(&actual_mac_addr);

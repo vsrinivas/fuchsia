@@ -32,7 +32,7 @@ class MacContextTest : public SingleApTest {
 TEST_F(MacContextTest, Init) {
   struct iwl_mvm_vif mvmvif = {
       .mvm = mvm_,
-      .mac_role = MAC_ROLE_CLIENT,
+      .mac_role = WLAN_MAC_ROLE_CLIENT,
   };
 
   ASSERT_OK(iwl_mvm_mac_ctxt_init(&mvmvif));
@@ -41,7 +41,7 @@ TEST_F(MacContextTest, Init) {
 TEST_F(MacContextTest, AddModifyRemove) {
   struct iwl_mvm_vif mvmvif = {
       .mvm = mvm_,
-      .mac_role = MAC_ROLE_CLIENT,
+      .mac_role = WLAN_MAC_ROLE_CLIENT,
   };
 
   ASSERT_OK(iwl_mvm_mac_ctxt_init(&mvmvif));

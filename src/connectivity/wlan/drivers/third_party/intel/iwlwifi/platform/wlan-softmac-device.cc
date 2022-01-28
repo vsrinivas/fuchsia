@@ -109,7 +109,7 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureBss(uint32_t options,
     return status;
   }
 
-  ZX_DEBUG_ASSERT(mvmvif_->mac_role == MAC_ROLE_CLIENT);
+  ZX_DEBUG_ASSERT(mvmvif_->mac_role == WLAN_MAC_ROLE_CLIENT);
   std::unique_ptr<MvmSta> ap_mvm_sta;
   if ((status = MvmSta::Create(mvmvif_, config->bssid, &ap_mvm_sta)) != ZX_OK) {
     return status;

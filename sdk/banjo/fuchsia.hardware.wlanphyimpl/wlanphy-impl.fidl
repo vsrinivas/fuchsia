@@ -11,7 +11,7 @@ using zx;
 type WlanphyImplCreateIfaceReq = resource struct {
     /// The station role for this interface. A device may support multiple roles,
     /// but an interface is instantiated with a single role.
-    role fuchsia.wlan.common.MacRole;
+    role fuchsia.wlan.common.WlanMacRole;
 
     /// A handle to the direct MLME channel, if supported by the driver.
     mlme_channel zx.handle:CHANNEL;
@@ -27,7 +27,7 @@ type WlanphyImplCreateIfaceReq = resource struct {
 type WlanphyImplInfo = struct {
     /// MAC roles supported. For an interface, this will be a single value.
     supported_mac_roles
-            vector<fuchsia.wlan.common.MacRole>:fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES;
+            vector<fuchsia.wlan.common.WlanMacRole>:fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES;
 };
 
 const WLANPHY_ALPHA2_LEN uint8 = 2;

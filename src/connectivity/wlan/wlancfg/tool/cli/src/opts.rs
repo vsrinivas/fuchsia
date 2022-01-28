@@ -45,11 +45,11 @@ arg_enum! {
     }
 }
 
-impl From<RoleArg> for wlan_common::MacRole {
+impl From<RoleArg> for wlan_common::WlanMacRole {
     fn from(arg: RoleArg) -> Self {
         match arg {
-            RoleArg::Client => wlan_common::MacRole::Client,
-            RoleArg::Ap => wlan_common::MacRole::Ap,
+            RoleArg::Client => wlan_common::WlanMacRole::Client,
+            RoleArg::Ap => wlan_common::WlanMacRole::Ap,
         }
     }
 }

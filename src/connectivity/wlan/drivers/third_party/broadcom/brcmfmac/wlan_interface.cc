@@ -202,13 +202,13 @@ void WlanInterface::DdkAsyncRemove() {
 void WlanInterface::DdkRelease() { delete this; }
 
 // static
-std::vector<mac_role_t> WlanInterface::GetMacRoles(struct brcmf_pub* drvr) {
-  std::vector<mac_role_t> mac_roles;
+std::vector<wlan_mac_role_t> WlanInterface::GetMacRoles(struct brcmf_pub* drvr) {
+  std::vector<wlan_mac_role_t> mac_roles;
   if (brcmf_feat_is_enabled(drvr, BRCMF_FEAT_STA)) {
-    mac_roles.push_back(MAC_ROLE_CLIENT);
+    mac_roles.push_back(WLAN_MAC_ROLE_CLIENT);
   }
   if (brcmf_feat_is_enabled(drvr, BRCMF_FEAT_AP)) {
-    mac_roles.push_back(MAC_ROLE_AP);
+    mac_roles.push_back(WLAN_MAC_ROLE_AP);
   }
   return mac_roles;
 }
@@ -223,10 +223,10 @@ zx_status_t WlanInterface::Query(brcmf_pub* drvr, wlanphy_impl_info_t* info) {
     return false;
   }
 
-  const std::vector<mac_role_t> roles_list = GetMacRoles(drvr);
+  const std::vector<wlan_mac_role_t> roles_list = GetMacRoles(drvr);
   size_t roles_count = roles_list.size();
-  mac_role_t* supported_mac_roles_list =
-      static_cast<mac_role_t*>(calloc(roles_count, sizeof(mac_role_t)));
+  wlan_mac_role_t* supported_mac_roles_list =
+      static_cast<wlan_mac_role_t*>(calloc(roles_count, sizeof(wlan_mac_role_t)));
   for (size_t i = 0; i < roles_count; i++) {
     supported_mac_roles_list[i] = roles_list[i];
   }

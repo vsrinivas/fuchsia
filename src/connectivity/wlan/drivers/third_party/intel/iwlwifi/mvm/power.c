@@ -576,7 +576,7 @@ static void iwl_mvm_power_get_vifs_iterator(void* _data, struct iwl_mvm_vif* mvm
       break;
 #endif  // NEEDS_PORTING
 
-    case MAC_ROLE_CLIENT:
+    case WLAN_MAC_ROLE_CLIENT:
       power_iterator->bss_vif = mvmvif;
       if (active) {
         power_iterator->bss_active = true;
@@ -776,7 +776,7 @@ static zx_status_t _iwl_mvm_enable_beacon_filter(struct iwl_mvm_vif* mvmvif,
   struct iwl_mvm* mvm = mvmvif->mvm;
 
   if (mvmvif != mvm->bf_allowed_vif || !mvmvif->bss_conf.dtim_period ||
-      mvmvif->mac_role != MAC_ROLE_CLIENT || mvmvif->p2p) {
+      mvmvif->mac_role != WLAN_MAC_ROLE_CLIENT || mvmvif->p2p) {
     return ZX_OK;
   }
 
@@ -809,7 +809,7 @@ static zx_status_t _iwl_mvm_disable_beacon_filter(struct iwl_mvm_vif* mvmvif, ui
                                                   bool d0i3) {
   struct iwl_beacon_filter_cmd cmd = {};
 
-  if (mvmvif->mac_role != MAC_ROLE_CLIENT || mvmvif->p2p) {
+  if (mvmvif->mac_role != WLAN_MAC_ROLE_CLIENT || mvmvif->p2p) {
     return ZX_OK;
   }
 

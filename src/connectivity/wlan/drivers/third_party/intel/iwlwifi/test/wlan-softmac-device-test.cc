@@ -67,7 +67,7 @@ class WlanSoftmacDeviceTest : public SingleApTest {
     mvmvif_.reset(reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif))));
     mvmvif_->mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     mvmvif_->mlme_channel = kDummyMlmeChannel;
-    mvmvif_->mac_role = MAC_ROLE_CLIENT;
+    mvmvif_->mac_role = WLAN_MAC_ROLE_CLIENT;
     mvmvif_->bss_conf = {.beacon_int = kListenInterval};
 
     device_ = std::make_unique<::wlan::iwlwifi::WlanSoftmacDevice>(nullptr, sim_trans_.iwl_trans(),
@@ -184,7 +184,7 @@ TEST_F(WlanSoftmacDeviceTest, Query) {
 
   wlan_softmac_info_t info = {};
   ASSERT_EQ(ZX_OK, device_->WlanSoftmacQuery(options, &info));
-  EXPECT_EQ(MAC_ROLE_CLIENT, info.mac_role);
+  EXPECT_EQ(WLAN_MAC_ROLE_CLIENT, info.mac_role);
 
   //
   // The below code assumes the test/sim-default-nvm.cc contains 2 bands.
@@ -543,7 +543,7 @@ TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {
       MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),  // for change_chanctx
   }));
 
-  mvmvif_->mac_role = MAC_ROLE_AP;
+  mvmvif_->mac_role = WLAN_MAC_ROLE_AP;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, SetChannel(&kChannel));
 }
 
@@ -873,7 +873,7 @@ TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {
   BIND_TEST(sim_trans_.iwl_trans());
 
   // Set to an unsupported role.
-  mvmvif_->mac_role = MAC_ROLE_AP;
+  mvmvif_->mac_role = WLAN_MAC_ROLE_AP;
 
   bindTx(tx_wrapper);
   WlanPktBuilder builder;

@@ -88,7 +88,7 @@ class DynamicIfTest : public SimTest {
   simulation::FakeAp ap_;
   SimInterface client_ifc_;
   SimInterface softap_ifc_;
-  void CheckAddIfaceWritesWdev(mac_role_t role, const char iface_name[], SimInterface& ifc);
+  void CheckAddIfaceWritesWdev(wlan_mac_role_t role, const char iface_name[], SimInterface& ifc);
 };
 
 void DynamicIfTest::Init() {
@@ -265,7 +265,7 @@ static zx_status_t validate_not_invoked_on_del(struct brcmf_if* ifp,
 TEST_F(DynamicIfTest, CreateDestroy) {
   Init();
 
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
 
   // Verify whether the provided MAC addr is used when creating the client iface.
   common::MacAddr client_mac;
@@ -275,7 +275,7 @@ TEST_F(DynamicIfTest, CreateDestroy) {
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
   EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 0u);
 
-  ASSERT_EQ(StartInterface(MAC_ROLE_AP, &softap_ifc_, std::nullopt, kDefaultBssid), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_, std::nullopt, kDefaultBssid), ZX_OK);
 
   // Verify whether the default bssid is correctly set to sim-fw when creating softAP iface.
   common::MacAddr soft_ap_mac;
@@ -296,7 +296,7 @@ TEST_F(DynamicIfTest, EventHandlingOnSoftAPDel) {
 
   // We manually start the AP interface to avoid the additional logic within
   // StartInterface(). This allows us to keep the interface removal simple.
-  mac_role_t ap_role = MAC_ROLE_AP;
+  wlan_mac_role_t ap_role = WLAN_MAC_ROLE_AP;
   EXPECT_EQ(ZX_OK, softap_ifc_.Init(env_, ap_role));
 
   wlanphy_impl_create_iface_req_t req = {
@@ -312,7 +312,7 @@ TEST_F(DynamicIfTest, EventHandlingOnSoftAPDel) {
 
   struct net_device* ndev = wdev->netdev;
   struct brcmf_if* ifp = ndev_to_if(ndev);
-  EXPECT_EQ(wdev->iftype, MAC_ROLE_AP);
+  EXPECT_EQ(wdev->iftype, WLAN_MAC_ROLE_AP);
   EXPECT_EQ(ZX_OK, brcmf_fil_bsscfg_data_set(ifp, "interface_remove", nullptr, 0));
 }
 
@@ -382,7 +382,7 @@ TEST_F(DynamicIfTest, CheckClientInitParams) {
 
   // Complete initialization.
   Init();
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
 
   // Get the client ifp to check iovars
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
@@ -401,12 +401,12 @@ TEST_F(DynamicIfTest, CheckClientInitParams) {
 // client iface will return an error.
 TEST_F(DynamicIfTest, CreateApWithSameMacAsClient) {
   Init();
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 
   // Create AP iface with the same mac addr.
   common::MacAddr client_mac;
   client_ifc_.GetMacAddr(&client_mac);
-  EXPECT_EQ(StartInterface(MAC_ROLE_AP, &softap_ifc_, std::nullopt, client_mac),
+  EXPECT_EQ(StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_, std::nullopt, client_mac),
             ZX_ERR_ALREADY_EXISTS);
   EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 1u);
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
@@ -427,7 +427,7 @@ TEST_F(DynamicIfTest, CreateApWithNoMACAddress) {
   EXPECT_EQ(brcmf_gen_ap_macaddr(ifp, expected_mac_addr), ZX_OK);
 
   // Ensure passing nullopt for mac_addr results in use of auto generated MAC address.
-  EXPECT_EQ(StartInterface(MAC_ROLE_AP, &softap_ifc_, std::nullopt, std::nullopt), ZX_OK);
+  EXPECT_EQ(StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_, std::nullopt, std::nullopt), ZX_OK);
   common::MacAddr softap_mac;
   softap_ifc_.GetMacAddr(&softap_mac);
   EXPECT_EQ(softap_mac, expected_mac_addr);
@@ -448,7 +448,7 @@ TEST_F(DynamicIfTest, CreateClientWithPreAllocMac) {
       brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", pre_set_mac.byte, ETH_ALEN, nullptr);
   EXPECT_EQ(status, ZX_OK);
 
-  EXPECT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, pre_set_mac), ZX_OK);
+  EXPECT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, pre_set_mac), ZX_OK);
   EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 1u);
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
   EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 0u);
@@ -473,10 +473,10 @@ TEST_F(DynamicIfTest, CreateClientWithRandomMac) {
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
             brcmf_bus_get_bootloader_macaddr(sim->drvr->bus_if, bootloader_macaddr));
 
-  EXPECT_EQ(ZX_OK, client_ifc_.Init(env_, MAC_ROLE_CLIENT));
+  EXPECT_EQ(ZX_OK, client_ifc_.Init(env_, WLAN_MAC_ROLE_CLIENT));
   wireless_dev* wdev = nullptr;
   wlanphy_impl_create_iface_req_t req = {
-      .role = MAC_ROLE_CLIENT,
+      .role = WLAN_MAC_ROLE_CLIENT,
       .mlme_channel = client_ifc_.ch_mlme_,
       .has_init_sta_addr = false,
   };
@@ -494,7 +494,7 @@ TEST_F(DynamicIfTest, CreateIfaceMustProvideWdevOut) {
   Init();
   brcmf_simdev* sim = device_->GetSim();
 
-  mac_role_t client_role = MAC_ROLE_CLIENT;
+  wlan_mac_role_t client_role = WLAN_MAC_ROLE_CLIENT;
   EXPECT_EQ(ZX_OK, client_ifc_.Init(env_, client_role));
   wlanphy_impl_create_iface_req_t req = {
       .role = client_role,
@@ -507,7 +507,7 @@ TEST_F(DynamicIfTest, CreateIfaceMustProvideWdevOut) {
   EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 0u);
 }
 
-void DynamicIfTest::CheckAddIfaceWritesWdev(mac_role_t role, const char iface_name[],
+void DynamicIfTest::CheckAddIfaceWritesWdev(wlan_mac_role_t role, const char iface_name[],
                                             SimInterface& ifc) {
   brcmf_simdev* sim = device_->GetSim();
   wireless_dev* wdev = nullptr;
@@ -532,14 +532,14 @@ void DynamicIfTest::CheckAddIfaceWritesWdev(mac_role_t role, const char iface_na
 // the wdev_out argument and the client role.
 TEST_F(DynamicIfTest, CreateClientWritesWdev) {
   Init();
-  CheckAddIfaceWritesWdev(MAC_ROLE_CLIENT, kFakeClientName, client_ifc_);
+  CheckAddIfaceWritesWdev(WLAN_MAC_ROLE_CLIENT, kFakeClientName, client_ifc_);
 }
 
 // This test verifies brcmf_cfg80211_add_iface() behavior with respect to
 // the wdev_out argument and the AP role.
 TEST_F(DynamicIfTest, CreateApWritesWdev) {
   Init();
-  CheckAddIfaceWritesWdev(MAC_ROLE_AP, kFakeApName, softap_ifc_);
+  CheckAddIfaceWritesWdev(WLAN_MAC_ROLE_AP, kFakeApName, softap_ifc_);
 }
 
 // This test verifies new client interface names are assigned, and that the default for the
@@ -550,7 +550,7 @@ TEST_F(DynamicIfTest, CreateClientWithCustomName) {
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, 0);
   wireless_dev* wdev = nullptr;
 
-  mac_role_t client_role = MAC_ROLE_CLIENT;
+  wlan_mac_role_t client_role = WLAN_MAC_ROLE_CLIENT;
   EXPECT_EQ(ZX_OK, client_ifc_.Init(env_, client_role));
 
   wlanphy_impl_create_iface_req_t req = {
@@ -574,7 +574,7 @@ TEST_F(DynamicIfTest, CreateApWithCustomName) {
   brcmf_simdev* sim = device_->GetSim();
   wireless_dev* wdev = nullptr;
 
-  mac_role_t ap_role = MAC_ROLE_AP;
+  wlan_mac_role_t ap_role = WLAN_MAC_ROLE_AP;
   EXPECT_EQ(ZX_OK, softap_ifc_.Init(env_, ap_role));
 
   wlanphy_impl_create_iface_req_t req = {
@@ -595,7 +595,7 @@ TEST_F(DynamicIfTest, CreateClientWithLongName) {
   brcmf_simdev* sim = device_->GetSim();
   wireless_dev* wdev = nullptr;
 
-  mac_role_t client_role = MAC_ROLE_CLIENT;
+  wlan_mac_role_t client_role = WLAN_MAC_ROLE_CLIENT;
   EXPECT_EQ(ZX_OK, client_ifc_.Init(env_, client_role));
 
   size_t really_long_name_len = NET_DEVICE_NAME_MAX_LEN + 1;
@@ -630,7 +630,7 @@ TEST_F(DynamicIfTest, CreateClientWithCustomMac) {
   common::MacAddr retrieved_mac;
   brcmf_simdev* sim = device_->GetSim();
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, 0);
-  EXPECT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
+  EXPECT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
   EXPECT_EQ(ZX_OK,
             brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", retrieved_mac.byte, ETH_ALEN, nullptr));
   EXPECT_EQ(retrieved_mac, kFakeMac);
@@ -653,7 +653,7 @@ TEST_F(DynamicIfTest, ClientDefaultMacFallback) {
             brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", pre_set_mac.byte, ETH_ALEN, nullptr));
 
   // Create a client with a custom MAC address
-  EXPECT_EQ(ZX_OK, StartInterface(MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac));
+  EXPECT_EQ(ZX_OK, StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac));
   EXPECT_EQ(ZX_OK,
             brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", retrieved_mac.byte, ETH_ALEN, nullptr));
   EXPECT_EQ(retrieved_mac, kFakeMac);
@@ -663,7 +663,7 @@ TEST_F(DynamicIfTest, ClientDefaultMacFallback) {
   EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 0u);
 
   // Create a client without a custom MAC address
-  EXPECT_EQ(ZX_OK, StartInterface(MAC_ROLE_CLIENT, &client_ifc_));
+  EXPECT_EQ(ZX_OK, StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_));
   EXPECT_EQ(ZX_OK,
             brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", retrieved_mac.byte, ETH_ALEN, nullptr));
   EXPECT_EQ(retrieved_mac, pre_set_mac);
@@ -686,7 +686,7 @@ TEST_F(DynamicIfTest, CheckIfDownUpCalled) {
 
   // Complete initialization.
   Init();
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
   c_down_cnt = 0;
   c_up_cnt = 0;
   // Associate to FakeAp
@@ -709,8 +709,8 @@ TEST_F(DynamicIfTest, CheckIfDownUpCalled) {
 
 TEST_F(DynamicIfTest, DualInterfaces) {
   Init();
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
-  StartInterface(MAC_ROLE_AP, &softap_ifc_);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_);
   EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 2u);
 
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
@@ -724,8 +724,8 @@ TEST_F(DynamicIfTest, DualInterfaces) {
 TEST_F(DynamicIfTest, ConnectBothInterfaces) {
   // Create our device instances
   Init();
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
-  StartInterface(MAC_ROLE_AP, &softap_ifc_);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_);
 
   // Start our SoftAP
   softap_ifc_.StartSoftAp();
@@ -748,8 +748,8 @@ TEST_F(DynamicIfTest, ConnectBothInterfaces) {
 void DynamicIfTest::TestApStop(bool use_cdown) {
   // Create our device instances
   Init();
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
-  StartInterface(MAC_ROLE_AP, &softap_ifc_);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_);
 
   // Start our SoftAP
   softap_ifc_.StartSoftAp();
@@ -785,7 +785,7 @@ void DynamicIfTest::TestApStop(bool use_cdown) {
 TEST_F(DynamicIfTest, PM_ModeDoesNotGetAffected) {
   // Create our device instances
   Init();
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_);
   brcmf_simdev* sim = device_->GetSim();
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   uint32_t pm_mode = PM_FAST;
@@ -795,7 +795,7 @@ TEST_F(DynamicIfTest, PM_ModeDoesNotGetAffected) {
   err = brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_PM, &cur_pm_mode, nullptr);
   EXPECT_EQ(err, ZX_OK);
   EXPECT_EQ(cur_pm_mode, pm_mode);
-  StartInterface(MAC_ROLE_AP, &softap_ifc_);
+  StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_);
 
   // Start our SoftAP
   softap_ifc_.StartSoftAp();
@@ -841,7 +841,7 @@ TEST_F(DynamicIfTest, SetClientChanspecAfterAPStarted) {
 
   uint16_t chanspec;
   // Create softAP iface and start
-  StartInterface(MAC_ROLE_AP, &softap_ifc_);
+  StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_);
   softap_ifc_.StartSoftAp(SimInterface::kDefaultSoftApSsid, kDefaultChannel);
 
   // The chanspec of softAP iface should be set to default one.
@@ -850,7 +850,7 @@ TEST_F(DynamicIfTest, SetClientChanspecAfterAPStarted) {
 
   // After creating client iface and setting a different chanspec to it, chanspec of softAP will
   // change as a result of this operation.
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_);
   chanspec = kTestChanspec;
   SetChanspec(false, &chanspec, ZX_OK);
 
@@ -865,11 +865,11 @@ TEST_F(DynamicIfTest, SetAPChanspecAfterClientCreated) {
 
   // Create client iface and set chanspec
   uint16_t chanspec = kTestChanspec;
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_);
   SetChanspec(false, &chanspec, ZX_OK);
 
   // Create and start softAP iface to and set another chanspec
-  StartInterface(MAC_ROLE_AP, &softap_ifc_);
+  StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_);
   softap_ifc_.StartSoftAp();
   // When we call StartSoftAP, the kDefaultCh will be transformed into chanspec(in this case the
   // value is 53397) and set to softAP iface, but since there is already a client iface activated,
@@ -887,8 +887,8 @@ TEST_F(DynamicIfTest, SetAPChanspecAfterClientCreated) {
 TEST_F(DynamicIfTest, CheckSoftAPChannel) {
   // Create our device instances
   Init();
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
-  StartInterface(MAC_ROLE_AP, &softap_ifc_);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_);
 
   zx::duration delay = zx::msec(10);
   // Associate to FakeAp
@@ -916,8 +916,8 @@ TEST_F(DynamicIfTest, StartApIfaceTimeoutWithReqSpamAndFwIgnore) {
   // Create both ifaces, client iface is not needed in test, but created to keep the consistent
   // context.
   Init();
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
-  StartInterface(MAC_ROLE_AP, &softap_ifc_);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_);
 
   // Make firmware ignore the start AP req.
   InjectStartAPIgnore();
@@ -951,8 +951,8 @@ TEST_F(DynamicIfTest, StartApIfaceTimeoutWithReqSpamAndFwIgnore) {
 TEST_F(DynamicIfTest, RejectScanWhenApStartReqIsPending) {
   constexpr uint64_t kScanId = 0x18c5f;
   Init();
-  StartInterface(MAC_ROLE_CLIENT, &client_ifc_);
-  StartInterface(MAC_ROLE_AP, &softap_ifc_);
+  StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_MAC_ROLE_AP, &softap_ifc_);
 
   InjectStartAPIgnore();
   env_->ScheduleNotification(std::bind(&SimInterface::StartSoftAp, &softap_ifc_,

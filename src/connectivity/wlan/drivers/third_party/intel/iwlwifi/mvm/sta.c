@@ -67,7 +67,7 @@ static inline int iwl_mvm_add_sta_cmd_size(struct iwl_mvm* mvm) {
 // Note that in order to avoid race condition, the mvm->mutex must be hold before calling this
 // function, and cannot be released before adding new STA to mvm->fw_id_to_mac_id[].
 //
-static int iwl_mvm_find_free_sta_id(struct iwl_mvm* mvm, mac_role_t mac_role) {
+static int iwl_mvm_find_free_sta_id(struct iwl_mvm* mvm, wlan_mac_role_t mac_role) {
   uint32_t reserved_ids = 0;
 
   BUILD_BUG_ON(IWL_MVM_STATION_COUNT > 32);
@@ -76,7 +76,7 @@ static int iwl_mvm_find_free_sta_id(struct iwl_mvm* mvm, mac_role_t mac_role) {
   iwl_assert_lock_held(&mvm->mutex);
 
   /* d0i3/d3 assumes the AP's sta_id (of sta vif) is 0. reserve it. */
-  if (mac_role != MAC_ROLE_CLIENT) {
+  if (mac_role != WLAN_MAC_ROLE_CLIENT) {
     reserved_ids = BIT(0);
   }
 
@@ -1675,7 +1675,7 @@ update_fw:
     goto err;
   }
 
-  if (mvmvif->mac_role == MAC_ROLE_CLIENT) {
+  if (mvmvif->mac_role == WLAN_MAC_ROLE_CLIENT) {
     if (!mvm_sta->tdls) {
       if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
         IWL_WARN(mvmvif, "mvmvif->ap_sta_id is invalid\n");
@@ -1876,7 +1876,7 @@ zx_status_t iwl_mvm_rm_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_s
     *status = IWL_MVM_QUEUE_FREE;
   }
 
-  if (mvmvif->mac_role == MAC_ROLE_CLIENT && mvmvif->ap_sta_id == sta_id) {
+  if (mvmvif->mac_role == WLAN_MAC_ROLE_CLIENT && mvmvif->ap_sta_id == sta_id) {
     /* if associated - we can't remove the AP STA now */
     if (mvmvif->bss_conf.assoc) {
       IWL_WARN(mvmvif, "Ignore the AP station removal since it is still associated\n");
@@ -3221,7 +3221,7 @@ static zx_status_t __iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif
   if (mvmsta) {
     sta_id = mvmsta->sta_id;
     mfp = (keyconf->key_type == WLAN_KEY_TYPE_IGTK);
-  } else if (mvmvif->mac_role == MAC_ROLE_AP && keyconf->key_type != WLAN_KEY_TYPE_PAIRWISE) {
+  } else if (mvmvif->mac_role == WLAN_MAC_ROLE_AP && keyconf->key_type != WLAN_KEY_TYPE_PAIRWISE) {
     sta_id = mvmvif->mcast_sta.sta_id;
   } else {
     IWL_ERR(mvm, "Failed to find station id\n");
@@ -3300,7 +3300,7 @@ zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
 
   iwl_assert_lock_held(&mvm->mutex);
 
-  if (mvmvif->mac_role != MAC_ROLE_AP || keyconf->key_type == WLAN_KEY_TYPE_PAIRWISE) {
+  if (mvmvif->mac_role != WLAN_MAC_ROLE_AP || keyconf->key_type == WLAN_KEY_TYPE_PAIRWISE) {
     sta_id = mvmsta->sta_id;
 
   } else {

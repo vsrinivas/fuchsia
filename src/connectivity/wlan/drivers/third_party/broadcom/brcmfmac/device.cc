@@ -110,10 +110,10 @@ zx_status_t Device::WlanphyImplQuery(wlanphy_impl_info_t* out_info) {
 zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,
                                            uint16_t* out_iface_id) {
   std::lock_guard<std::mutex> lock(lock_);
-  const char* role = req->role == MAC_ROLE_CLIENT ? "client"
-                     : req->role == MAC_ROLE_AP   ? "ap"
-                     : req->role == MAC_ROLE_MESH ? "mesh"
-                                                  : "unknown type";
+  const char* role = req->role == WLAN_MAC_ROLE_CLIENT ? "client"
+                     : req->role == WLAN_MAC_ROLE_AP   ? "ap"
+                     : req->role == WLAN_MAC_ROLE_MESH ? "mesh"
+                                                       : "unknown type";
 
   if (req->has_init_sta_addr) {
     BRCMF_DBG(WLANPHY, "Creating %s interface", role);
@@ -128,7 +128,7 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
   uint16_t iface_id = 0;
 
   switch (req->role) {
-    case MAC_ROLE_CLIENT: {
+    case WLAN_MAC_ROLE_CLIENT: {
       if (client_interface_ != nullptr) {
         BRCMF_ERR("Device::WlanphyImplCreateIface() client interface already exists");
         return ZX_ERR_NO_RESOURCES;
@@ -158,7 +158,7 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
       iface_id = kClientInterfaceId;
       break;
     }
-    case MAC_ROLE_AP: {
+    case WLAN_MAC_ROLE_AP: {
       if (ap_interface_ != nullptr) {
         BRCMF_ERR("Device::WlanphyImplCreateIface() AP interface already exists");
         return ZX_ERR_NO_RESOURCES;

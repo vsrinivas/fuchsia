@@ -152,7 +152,7 @@ struct wait_queue_head {
 };
 
 struct wireless_dev {
-  mac_role_t iftype;
+  wlan_mac_role_t iftype;
 };
 
 ////

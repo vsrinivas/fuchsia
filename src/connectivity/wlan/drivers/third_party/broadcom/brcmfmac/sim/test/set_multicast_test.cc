@@ -30,8 +30,8 @@ TEST_F(SimTest, SetMulticastPromisc) {
 
   SimInterface client_ifc;
   SimInterface ap_ifc;
-  ASSERT_EQ(StartInterface(MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
-  ASSERT_EQ(StartInterface(MAC_ROLE_AP, &ap_ifc), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_AP, &ap_ifc), ZX_OK);
 
   VerifySetAllmulti(device_, client_ifc, true);
   VerifySetAllmulti(device_, client_ifc, false);

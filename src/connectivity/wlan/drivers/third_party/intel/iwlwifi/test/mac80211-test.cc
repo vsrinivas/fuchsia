@@ -36,7 +36,7 @@ class ClientInterfaceHelper {
 
     // Initialize the interface data and add it to the mvm.
     mvmvif_.mvm = mvm_;
-    mvmvif_.mac_role = MAC_ROLE_CLIENT;
+    mvmvif_.mac_role = WLAN_MAC_ROLE_CLIENT;
     mvmvif_.bss_conf.beacon_int = 16;
     iwl_mvm_mac_add_interface(&mvmvif_);
 
@@ -107,7 +107,7 @@ class Mac80211UcodeTest : public FakeUcodeTest {
 TEST_F(Mac80211Test, AddThenRemove) {
   struct iwl_mvm_vif mvmvif = {
       .mvm = mvm_,
-      .mac_role = MAC_ROLE_CLIENT,
+      .mac_role = WLAN_MAC_ROLE_CLIENT,
   };
 
   ASSERT_OK(iwl_mvm_mac_add_interface(&mvmvif));
@@ -132,15 +132,15 @@ TEST_F(Mac80211Test, MultipleAddsRemoves) {
   struct iwl_mvm_vif mvmvif[] = {
       {
           .mvm = mvm_,
-          .mac_role = MAC_ROLE_CLIENT,
+          .mac_role = WLAN_MAC_ROLE_CLIENT,
       },
       {
           .mvm = mvm_,
-          .mac_role = MAC_ROLE_CLIENT,
+          .mac_role = WLAN_MAC_ROLE_CLIENT,
       },
       {
           .mvm = mvm_,
-          .mac_role = MAC_ROLE_CLIENT,
+          .mac_role = WLAN_MAC_ROLE_CLIENT,
       },
   };
 
@@ -352,7 +352,7 @@ TEST_F(McastFilterTestWithoutIface, McastFilterNoActiveInterface) {
 }
 
 TEST_F(McastFilterTest, McastFilterAp) {
-  helper_.mvmvif()->mac_role = MAC_ROLE_AP;  // overwrite to AP.
+  helper_.mvmvif()->mac_role = WLAN_MAC_ROLE_AP;  // overwrite to AP.
 
   // mock function after the testing environment had been set.
   bindSendCmd(send_cmd_wrapper);

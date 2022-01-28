@@ -592,7 +592,7 @@ zx_status_t iwl_mvm_mac_tx(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmst
                            struct ieee80211_mac_packet* pkt) {
   iwl_assert_lock_held(&mvmvif->mvm->mutex);
 
-  if (mvmvif->mac_role != MAC_ROLE_CLIENT) {
+  if (mvmvif->mac_role != WLAN_MAC_ROLE_CLIENT) {
     IWL_ERR(mvmvif, "%s(): not supported MAC role %d yet\n", __func__, mvmvif->mac_role);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -1593,9 +1593,9 @@ static void iwl_mvm_mc_iface_iterator(void* _data, struct iwl_mvm_vif* mvmvif) {
   }
 
   // Only client interface can continue. Other interfaces will be ignored.
-  if (mvmvif->mac_role != MAC_ROLE_CLIENT || !mvmvif->bss_conf.assoc) {
+  if (mvmvif->mac_role != WLAN_MAC_ROLE_CLIENT || !mvmvif->bss_conf.assoc) {
     IWL_ERR(mvmvif, "unexpected state while setting mcast filter. role: %d!=%d or assoc: %d!=%d\n",
-            mvmvif->mac_role, MAC_ROLE_CLIENT, mvmvif->bss_conf.assoc, true);
+            mvmvif->mac_role, WLAN_MAC_ROLE_CLIENT, mvmvif->bss_conf.assoc, true);
     return;
   }
 
@@ -2807,7 +2807,7 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
      * attempts to connect to this AP, and eventually wpa_s will
      * blacklist the AP...
      */
-    if (mvmvif->mac_role == MAC_ROLE_CLIENT && mvmvif->bss_conf.beacon_int < 16) {
+    if (mvmvif->mac_role == WLAN_MAC_ROLE_CLIENT && mvmvif->bss_conf.beacon_int < 16) {
       IWL_ERR(mvm, "AP %pM beacon interval is %d, refusing due to firmware bug!\n", mvm_sta->addr,
               mvmvif->bss_conf.beacon_int);
       ret = ZX_ERR_INVALID_ARGS;
@@ -2847,7 +2847,7 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
   } else if (old_state == IWL_STA_AUTH && new_state == IWL_STA_ASSOC) {
 #if 0  // NEEDS_PORTING
        // TODO(36677): Supports AP role
-        if (mvmvif->mac_role == MAC_ROLE_AP) {
+        if (mvmvif->mac_role == WLAN_MAC_ROLE_AP) {
             mvmvif->ap_assoc_sta_count++;
             iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
             if (vif->bss_conf.he_support && !iwlwifi_mod_params.disable_11ax) {
@@ -2881,7 +2881,7 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
 
         // TODO(36677): Supports AP role
         /* if wep is used, need to set the key for the station now */
-        if (mvmvif->mac_role == MAC_ROLE_AP && mvmvif->ap_wep_key) {
+        if (mvmvif->mac_role == WLAN_MAC_ROLE_AP && mvmvif->ap_wep_key) {
             ret = iwl_mvm_set_sta_key(mvm, vif, sta, mvmvif->ap_wep_key, STA_KEY_IDX_INVALID);
         } else {
             ret = ZX_OK;
@@ -2896,7 +2896,7 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
   } else if (old_state == IWL_STA_ASSOC && new_state == IWL_STA_AUTH) {
 #if 0   // NEEDS_PORTING
         // TODO(36677): Supports AP role
-        if (mvmvif->mac_role == MAC_ROLE_AP) {
+        if (mvmvif->mac_role == WLAN_MAC_ROLE_AP) {
             mvmvif->ap_assoc_sta_count--;
             iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
         }
@@ -3153,7 +3153,7 @@ zx_status_t iwl_mvm_mac_add_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
 
   mtx_lock(&mvm->mutex);
 
-  if ((mvmvif->mac_role == MAC_ROLE_MESH || mvmvif->mac_role == MAC_ROLE_AP) && !mvmsta) {
+  if ((mvmvif->mac_role == WLAN_MAC_ROLE_MESH || mvmvif->mac_role == WLAN_MAC_ROLE_AP) && !mvmsta) {
     /*
      * GTK on AP interface is a TX-only key, return 0;
      * on IBSS they're per-station and because we're lazy
@@ -3674,7 +3674,7 @@ static zx_status_t __iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif,
         ret = 0;
         goto out;
 #endif  // NEEDS_PORTING
-    case MAC_ROLE_CLIENT:
+    case WLAN_MAC_ROLE_CLIENT:
       mvmvif->csa_bcn_pending = false;
       break;
 #if 0   // NEEDS_PORTING
@@ -3726,7 +3726,7 @@ static zx_status_t __iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif,
     }
 #endif  // NEEDS_PORTING
 
-  if (switching_chanctx && mvmvif->mac_role == MAC_ROLE_CLIENT) {
+  if (switching_chanctx && mvmvif->mac_role == WLAN_MAC_ROLE_CLIENT) {
     uint32_t duration = 3 * mvmvif->bss_conf.beacon_int;
 
     /* iwl_mvm_protect_session() reads directly from the
@@ -3808,7 +3808,7 @@ static zx_status_t __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm_vif* mvmvif,
         mvmvif->ap_ibss_active = false;
         break;
 #endif  // NEEDS_PORTING
-    case MAC_ROLE_CLIENT:
+    case WLAN_MAC_ROLE_CLIENT:
       if (!switching_chanctx) {
         break;
       }

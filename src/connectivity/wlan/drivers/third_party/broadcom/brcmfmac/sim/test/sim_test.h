@@ -76,7 +76,7 @@ class SimInterface {
   SimInterface() = default;
   SimInterface(const SimInterface&) = delete;
 
-  zx_status_t Init(std::shared_ptr<simulation::Environment> env, mac_role_t role);
+  zx_status_t Init(std::shared_ptr<simulation::Environment> env, wlan_mac_role_t role);
 
   ~SimInterface() {
     if (if_impl_ops_)
@@ -173,7 +173,7 @@ class SimInterface {
   Stats stats_ = {};
 
  private:
-  mac_role_t role_ = 0;
+  wlan_mac_role_t role_ = 0;
 
   // Track scan results
   struct ScanStatus {
@@ -211,7 +211,7 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
   // Create a new interface on the simulated device, providing the specified role and function
   // callbacks
   zx_status_t StartInterface(
-      mac_role_t role, SimInterface* sim_ifc,
+      wlan_mac_role_t role, SimInterface* sim_ifc,
       std::optional<const wlan_fullmac_impl_ifc_protocol*> sme_protocol = std::nullopt,
       std::optional<common::MacAddr> mac_addr = std::nullopt);
 
