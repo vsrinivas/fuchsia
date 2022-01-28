@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/python/python_host_test.gni")
+import("//sdk/cts/build/cts_signature_tests.gni")
 
 if (is_host) {
   _testdata_path = "$target_gen_dir/testdata"
@@ -42,6 +43,9 @@ if (is_host) {
     main_source = "verify_cts_deps_test.py"
     sources = [ "verify_cts_deps.py" ]
   }
+
+  cts_signature_tests("plasa_differ_test") {
+  }
 }
 
 group("tests") {
@@ -49,6 +53,7 @@ group("tests") {
   public_deps = [
     ":fidl_api_mapper_test($host_toolchain)",
     ":gather_package_deps_test($host_toolchain)",
+    ":plasa_differ_test($host_toolchain)",
     ":verify_cts_deps_test($host_toolchain)",
     "verify_release:tests",
   ]

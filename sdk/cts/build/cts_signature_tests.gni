@@ -1,0 +1,187 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/toolchain.gni")
+import("//build/python/python_host_test.gni")
+import("//sdk/cts/build/cts_copy_to_sdk.gni")
+import("//sdk/cts/build/write_cts_file.gni")
+
+# A template used to run signature tests on the platform surface area (plasa).
+#
+# These tests are designed to detect changes in interface definitions.
+# Certain changes to the platform surface area (like renames or removals of
+# API elements) can be directly identified by comparing the plasa manifest file
+# in the given CTS release with the one in the target SDK.
+#
+# For more information on the Fuchsia PlaSA, see:
+#   https://fuchsia.dev/fuchsia-src/development/testing/cts/plasa_overview
+#
+# There only needs to be 1 instance of this test target for each fragment type.
+# That test will verify all API surface elements for that type in the SDK.
+#
+# Example: //sdk/cts/tests/fidl/BUILD.gn
+# ```
+# cts_signature_tests("fidl_signature_test") {
+#  kinds = ["api_fidl"]
+# }
+# ```
+#
+# Parameters
+#   kinds
+#     Optional: List of API types to verify in this test.
+#     Will run the test on all kinds if it is not provided.
+#     Current options: [ "api_fidl", "api_cc" ].
+#     An updated list of all supported PlaSA element kinds can be found here:
+#     https://fuchsia.dev/fuchsia-src/development/testing/cts/plasa_manifest?hl=en#manifest_file_format
+#     Type: list(string)
+#
+template("cts_signature_tests") {
+  not_needed(invoker, [ "kinds" ])
+  forward_variables_from(invoker, "*")
+  all_deps = []
+
+  # Signature tests are run on the host machine.
+  if (is_host) {
+    current_dir = get_label_info(":${target_name}", "dir")
+    is_cts_build_dir =
+        string_replace(current_dir, "//sdk/cts/build/", "") != current_dir
+
+    # If this is being run from the //cts/sdk/build/... directory,
+    # run plasa_differ_test.py and prepare the cts_artifacts for release.
+    if (is_cts_build_dir) {
+      # Copy the plasa manifest and fragment files to the CTS archive.
+      copy_manifest_target_name = "${target_name}_copy_manifest"
+      action(copy_manifest_target_name) {
+        testonly = true
+        outputs = [ "$root_build_dir/cts/plasa/manifest.plasa.json" ]
+        depfile = "${target_out_dir}/${copy_manifest_target_name}.d"
+        script = "//sdk/cts/build/scripts/plasa_differ_release.py"
+        sources = [
+          "$root_build_dir/manifest.plasa.json",
+          "//sdk/cts/build/scripts/plasa_differ.py",
+        ]
+        deps = [ "//sdk:plasa($target_toolchain)" ]
+        inputs = [ "$root_build_dir/manifest.plasa.json" ]
+        args = [
+          "--plasa_manifest",
+          rebase_path("$root_build_dir/manifest.plasa.json"),
+          "--plasa_root",
+          rebase_path("$root_build_dir/cts/plasa"),
+          "--fragments_root",
+          rebase_path("$root_build_dir/cts/plasa/fragments"),
+          "--build_root",
+          rebase_path("$root_build_dir"),
+          "--depfile",
+          rebase_path(depfile, root_build_dir),
+        ]
+        metadata = {
+          cts_artifacts = [ "cts/plasa/manifest.plasa.json" ]
+        }
+      }
+      all_deps += [ ":$copy_manifest_target_name" ]
+
+      # Copy the diffing tools to the CTS archive.
+      copy_tools_target_name = "${target_name}_copy_tools"
+      copy(copy_tools_target_name) {
+        testonly = true
+        sources = [ "$root_build_dir/host_x64/fidl_api_diff" ]
+        outputs = [ "$root_build_dir/cts/plasa/utils/{{source_file_part}}" ]
+        deps = [ "//tools/fidl/fidl_api_diff($host_toolchain)" ]
+        metadata = {
+          cts_artifacts = [ "cts/plasa/utils/{{source_file_part}}" ]
+        }
+      }
+      all_deps += [ ":$copy_tools_target_name" ]
+
+      # Run the plasa_differ unit tests.
+      _testdata_path = "$target_gen_dir/testdata"
+      example_fidl_target =
+          "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_sdk($fidl_toolchain)"
+      example_fidl_target_gen_dir =
+          get_label_info(example_fidl_target, "target_gen_dir")
+      example_api_summary =
+          "$example_fidl_target_gen_dir/fuchsia.hwinfo.api_summary.json"
+      test_target_name = "${target_name}_pytest"
+
+      test_fragments_dir = "${_testdata_path}/cts/plasa/fragments/"
+      test_fidl_data_target_name = "${target_name}_pytest_data"
+      host_test_data(test_fidl_data_target_name) {
+        sources = [ example_api_summary ]
+        outputs = [ test_fragments_dir + "fidl/fidl.json" ]
+        deps = [ example_fidl_target ]
+      }
+
+      test_utils_target_name = "${target_name}_pytest_utils"
+      test_utils_dir = "${_testdata_path}/cts/plasa/utils/"
+      host_test_data(test_utils_target_name) {
+        sources = [ "$root_build_dir/host_x64/fidl_api_diff" ]
+        outputs = [ test_utils_dir + "{{source_file_part}}" ]
+        deps = [ "//tools/fidl/fidl_api_diff($host_toolchain)" ]
+      }
+
+      python_host_test(test_target_name) {
+        main_source = "plasa_differ_test.py"
+        sources = [ "plasa_differ.py" ]
+        extra_args = [
+          "--utils_dir",
+          rebase_path(test_utils_dir, root_build_dir),
+          "--fragments_dir",
+          rebase_path(test_fragments_dir + "fidl/", root_build_dir),
+          "--out_dir",
+          rebase_path("${_testdata_path}/cts/plasa/out", root_build_dir),
+        ]
+        deps = [
+          ":$test_fidl_data_target_name",
+          ":$test_utils_target_name",
+          "//sdk:plasa($target_toolchain)",
+        ]
+      }
+      all_deps += [ ":${test_target_name}" ]
+    } else {
+      if (!defined(kinds) || len(kinds) == 0) {
+        kinds = [
+          "api_fidl",
+          "api_cc",
+        ]
+      }
+
+      kinds_list = ""
+      foreach(i, kinds) {
+        kinds_list += i + ","
+      }
+
+      # If this is running from a CTS release:
+      # Run the below python_host_test with the correct flags
+      # to point it to the old and new manifest files.
+      test_target_name = "${target_name}_py_test"
+      python_host_test("${test_target_name}") {
+        main_source = "//sdk/cts/build/scripts/plasa_differ_release.py"
+        sources = [ "plasa_differ.py" ]
+        extra_args = [
+          "--left_manifest",
+          rebase_path("manifest.plasa.json"),
+          "--left_fragments_root",
+          rebase_path("fragments"),
+          "--right_manifest",
+          rebase_path("${root_build_dir}/manifest.plasa.json"),
+          "--right_fragments_root",
+          rebase_path("${root_build_dir}"),
+          "--kinds",
+          kinds_list,
+          "--tools_dir",
+          rebase_path("${root_build_dir}/host_x64"),
+        ]
+        deps = [
+          "//sdk:plasa($target_toolchain)",
+          "//tools/fidl/fidl_api_diff:host",
+        ]
+      }
+      all_deps += [ ":${test_target_name}" ]
+    }
+  }
+  group(target_name) {
+    testonly = true
+    deps = all_deps
+  }
+}
