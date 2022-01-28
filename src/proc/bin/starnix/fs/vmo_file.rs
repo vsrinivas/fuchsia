@@ -81,7 +81,7 @@ impl FsNodeOps for VmoFileNode {
 }
 
 pub struct VmoFileObject {
-    vmo: Arc<zx::Vmo>,
+    pub vmo: Arc<zx::Vmo>,
 }
 
 impl VmoFileObject {

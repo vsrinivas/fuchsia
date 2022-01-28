@@ -23,6 +23,11 @@ use crate::syscalls::*;
 use crate::task::{CurrentTask, EventHandler, Waiter};
 use crate::types::*;
 
+pub enum MagmaBuffer {
+    Default,
+    Image(ImageInfo),
+}
+
 pub struct MagmaNode {}
 impl FsNodeOps for MagmaNode {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
@@ -33,15 +38,91 @@ impl FsNodeOps for MagmaNode {
 pub struct MagmaFile {
     channel: Arc<Mutex<Option<zx::Channel>>>,
 
-    infos: Arc<Mutex<HashMap<magma_buffer_t, ImageInfo>>>,
+    buffers: Arc<Mutex<HashMap<magma_buffer_t, MagmaBuffer>>>,
 }
 
 impl MagmaFile {
     pub fn new() -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(Self {
             channel: Arc::new(Mutex::new(None)),
-            infos: Arc::new(Mutex::new(HashMap::new())),
+            buffers: Arc::new(Mutex::new(HashMap::new())),
         }))
+    }
+
+    /// Creates a new `FileHandle` containing the `MagmaBuffer` at `buffer`.
+    ///
+    /// If the buffer is managed by magma (i.e., it's not a `MagmaBuffer::Image`),
+    /// `get_buffer_handle` is called. This way the caller can choose which `magma` function to use
+    /// to get the buffer handle.
+    fn create_new_file_for_buffer<F>(
+        &self,
+        current_task: &CurrentTask,
+        buffer: &magma_buffer_t,
+        get_buffer_handle: F,
+    ) -> Result<FileHandle, magma_status_t>
+    where
+        F: FnOnce(&mut magma_handle_t) -> magma_status_t,
+    {
+        let buffers = self.buffers.lock();
+        match buffers.get(buffer) {
+            Some(MagmaBuffer::Image(image_info)) => {
+                Ok(ImageFile::new(current_task.kernel(), image_info.clone()))
+            }
+            Some(MagmaBuffer::Default) => {
+                let mut buffer_handle_out = 0;
+                let status = get_buffer_handle(&mut buffer_handle_out);
+                if status != MAGMA_STATUS_OK as i32 {
+                    return Err(status);
+                }
+                let vmo = unsafe { zx::Vmo::from(zx::Handle::from_raw(buffer_handle_out)) };
+                Ok(Anon::new_file(
+                    anon_fs(current_task.kernel()),
+                    Box::new(VmoFileObject::new(Arc::new(vmo))),
+                    OpenFlags::RDWR,
+                ))
+            }
+            _ => Err(MAGMA_STATUS_INVALID_ARGS),
+        }
+    }
+
+    /// Returns the image info associated with the `image` buffer.
+    ///
+    /// Returns an error if the buffer is not an image, or there is no such buffer.
+    fn get_image_info(&self, image: &magma_buffer_t) -> Result<ImageInfo, Errno> {
+        let buffers = self.buffers.lock();
+        match buffers.get(&image) {
+            Some(MagmaBuffer::Image(image_info)) => Ok(image_info.clone()),
+            _ => Err(EINVAL),
+        }
+    }
+
+    /// Returns a duplicate of the VMO associated with the file at `fd`, as well as a `MagmaBuffer`
+    /// of the correct type for that file.
+    ///
+    /// Returns an error if the file does not contain a buffer.
+    fn get_vmo_and_magma_buffer(
+        current_task: &CurrentTask,
+        fd: FdNumber,
+    ) -> Result<(zx::Vmo, MagmaBuffer), Errno> {
+        let file = current_task.files.get(fd)?;
+        if let Some(file) = file.downcast_file::<ImageFile>() {
+            let buffer = MagmaBuffer::Image(file.info.clone());
+            Ok((
+                file.info
+                    .vmo
+                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                    .map_err(impossible_error)?,
+                buffer,
+            ))
+        } else if let Some(file) = file.downcast_file::<VmoFileObject>() {
+            let buffer = MagmaBuffer::Default;
+            Ok((
+                file.vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(impossible_error)?,
+                buffer,
+            ))
+        } else {
+            error!(EINVAL)
+        }
     }
 }
 
@@ -154,7 +235,9 @@ impl FileOps for MagmaFile {
                         &mut buffer_out,
                     ) as u64
                 };
-                self.infos.lock().insert(buffer_out, ImageInfo { info, token, vmo });
+                self.buffers
+                    .lock()
+                    .insert(buffer_out, MagmaBuffer::Image(ImageInfo { info, token, vmo }));
 
                 response.image_out = buffer_out;
                 response.hdr.type_ =
@@ -169,18 +252,15 @@ impl FileOps for MagmaFile {
 
                 // TODO(fxb/90145): Store images per connection.
                 let _connection = control.connection;
-                let image = control.image as usize;
 
-                let mut image_info_ptr: u64 = 0;
-                let image_info_address = UserAddress::from(control.image_info_out as u64);
-                current_task
-                    .mm
-                    .read_object(UserRef::new(image_info_address), &mut image_info_ptr)?;
+                let image_info_address_ref =
+                    UserRef::new(UserAddress::from(control.image_info_out as u64));
+                let mut image_info_ptr = UserAddress::default();
+                current_task.mm.read_object(image_info_address_ref, &mut image_info_ptr)?;
 
-                let infos = self.infos.lock();
-                let image_info = infos.get(&image).ok_or(errno!(EINVAL))?;
-                let image_info_out = UserAddress::from(image_info_ptr as u64);
-                current_task.mm.write_object(UserRef::new(image_info_out), &image_info.info)?;
+                let image_info = self.get_image_info(&(control.image as magma_buffer_t))?;
+                let image_info_ref = UserRef::new(image_info_ptr);
+                current_task.mm.write_object(image_info_ref, &image_info.info)?;
 
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_VIRT_GET_IMAGE_INFO as u32;
@@ -248,16 +328,24 @@ impl FileOps for MagmaFile {
                     virtio_magma_get_buffer_handle2_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                let infos = self.infos.lock();
-                // Note that this only stores handles for images. Once other buffer types are
-                // supported this will need to be updated if they aren't stored in the same
-                // collection.
-                let image_info = infos.get(&(control.buffer as usize)).ok_or(errno!(EINVAL))?;
-                let file = ImageFile::new(current_task.kernel(), image_info.clone());
-                let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
+                match self.create_new_file_for_buffer(
+                    current_task,
+                    &(control.buffer as magma_buffer_t),
+                    |handle_out| unsafe {
+                        // Create new non-image buffer files using `get_buffer_handle`.
+                        magma_get_buffer_handle2(control.buffer as magma_buffer_t, handle_out)
+                    },
+                ) {
+                    Ok(file) => {
+                        let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
+                        response.handle_out = fd.raw() as usize;
+                        response.result_return = MAGMA_STATUS_OK as u64;
+                    }
+                    Err(status) => {
+                        response.result_return = status as u64;
+                    }
+                }
 
-                response.handle_out = fd.raw() as usize;
-                response.result_return = MAGMA_STATUS_OK as u64;
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2 as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
@@ -268,7 +356,19 @@ impl FileOps for MagmaFile {
                     virtio_magma_release_buffer_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                self.infos.lock().remove(&(control.buffer as usize));
+                let mut buffers = self.buffers.lock();
+                let buffer_handle = control.buffer as usize;
+                match buffers.remove(&buffer_handle) {
+                    Some(_) => unsafe {
+                        magma_release_buffer(
+                            control.connection as magma_connection_t,
+                            control.buffer as magma_buffer_t,
+                        );
+                    },
+                    _ => {
+                        log::error!("Calling magma_release_buffer with an invalid buffer.");
+                    }
+                };
 
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_RELEASE_BUFFER as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
@@ -279,13 +379,28 @@ impl FileOps for MagmaFile {
                     virtio_magma_export_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                let infos = self.infos.lock();
-                let image_info = infos.get(&(control.buffer as usize)).ok_or(errno!(EINVAL))?;
-                let file = ImageFile::new(current_task.kernel(), image_info.clone());
-                let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
+                match self.create_new_file_for_buffer(
+                    current_task,
+                    &(control.buffer as magma_buffer_t),
+                    |handle_out| unsafe {
+                        // Create new non-image buffer files using `magma_export`.
+                        magma_export(
+                            control.connection as magma_connection_t,
+                            control.buffer as magma_buffer_t,
+                            handle_out,
+                        )
+                    },
+                ) {
+                    Ok(file) => {
+                        let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
+                        response.buffer_handle_out = fd.raw() as usize;
+                        response.result_return = MAGMA_STATUS_OK as u64;
+                    }
+                    Err(status) => {
+                        response.result_return = status as u64;
+                    }
+                }
 
-                response.buffer_handle_out = fd.raw() as usize;
-                response.result_return = MAGMA_STATUS_OK as u64;
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXPORT as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
@@ -295,14 +410,8 @@ impl FileOps for MagmaFile {
                     virtio_magma_import_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                let file =
-                    current_task.files.get(FdNumber::from_raw(control.buffer_handle as i32))?;
-                let file = file.downcast_file::<ImageFile>().ok_or(errno!(EINVAL))?;
-                let vmo = file
-                    .info
-                    .vmo
-                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
-                    .map_err(impossible_error)?;
+                let buffer_fd = FdNumber::from_raw(control.buffer_handle as i32);
+                let (vmo, buffer) = MagmaFile::get_vmo_and_magma_buffer(current_task, buffer_fd)?;
 
                 let mut buffer_out = magma_buffer_t::default();
                 response.result_return = unsafe {
@@ -312,9 +421,9 @@ impl FileOps for MagmaFile {
                         &mut buffer_out,
                     ) as u64
                 };
-
-                let _ = current_task.files.close(FdNumber::from_raw(control.buffer_handle as i32));
-                self.infos.lock().insert(buffer_out, file.info.clone());
+                self.buffers.lock().insert(buffer_out, buffer);
+                // Import is expected to close the file that was imported.
+                let _ = current_task.files.close(buffer_fd);
 
                 response.buffer_out = buffer_out;
                 response.result_return = MAGMA_STATUS_OK as u64;
@@ -403,6 +512,7 @@ impl FileOps for MagmaFile {
                 };
                 response.size_out = size_out as usize;
                 response.buffer_out = buffer_out as usize;
+                self.buffers.lock().insert(buffer_out, MagmaBuffer::Default);
 
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_CREATE_BUFFER as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
