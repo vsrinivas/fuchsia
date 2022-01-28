@@ -143,6 +143,7 @@ pub enum KnownServiceProvider {
     DnsResolver,
     Reachability,
     NetworkTestRealm,
+    FakeClock,
 }
 
 /// Constant properties of components used in networking integration tests, such
@@ -182,16 +183,19 @@ pub mod constants {
     }
     pub mod dns_resolver {
         pub const COMPONENT_NAME: &str = "dns_resolver";
-        pub const COMPONENT_URL: &str = "#meta/dns_resolver.cm";
+        pub const COMPONENT_URL: &str = "#meta/dns_resolver_with_fake_time.cm";
     }
     pub mod reachability {
         pub const COMPONENT_NAME: &str = "reachability";
         pub const COMPONENT_URL: &str = "#meta/reachability.cm";
     }
-
     pub mod network_test_realm {
         pub const COMPONENT_NAME: &str = "controller";
         pub const COMPONENT_URL: &str = "#meta/controller.cm";
+    }
+    pub mod fake_clock {
+        pub const COMPONENT_NAME: &str = "fake_clock";
+        pub const COMPONENT_URL: &str = "#meta/fake_clock.cm";
     }
 }
 
@@ -430,6 +434,11 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                     fnetemul::Capability::ChildDep(protocol_dep::<fposix_socket::ProviderMarker>(
                         constants::netstack::COMPONENT_NAME,
                     )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<
+                        fidl_fuchsia_testing::FakeClockMarker,
+                    >(
+                        constants::fake_clock::COMPONENT_NAME
+                    )),
                 ])),
                 ..fnetemul::ChildDef::EMPTY
             },
@@ -479,6 +488,20 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                         ..fnetemul::DevfsDep::EMPTY
                     }),
                 ])),
+                ..fnetemul::ChildDef::EMPTY
+            },
+            KnownServiceProvider::FakeClock => fnetemul::ChildDef {
+                name: Some(constants::fake_clock::COMPONENT_NAME.to_string()),
+                source: Some(fnetemul::ChildSource::Component(
+                    constants::fake_clock::COMPONENT_URL.to_string(),
+                )),
+                exposes: Some(vec![
+                    fidl_fuchsia_testing::FakeClockMarker::PROTOCOL_NAME.to_string(),
+                    fidl_fuchsia_testing::FakeClockControlMarker::PROTOCOL_NAME.to_string(),
+                ]),
+                uses: Some(fnetemul::ChildUses::Capabilities(vec![fnetemul::Capability::LogSink(
+                    fnetemul::Empty {},
+                )])),
                 ..fnetemul::ChildDef::EMPTY
             },
         }

@@ -296,6 +296,7 @@ async fn virtualization<E: netemul::Endpoint>(name: &str, sub_name: &str, steps:
                     enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
             ],
         )
         .expect("failed to create host netstack realm");
@@ -524,6 +525,7 @@ async fn dhcpv4_client_started<E: netemul::Endpoint>(name: &str) {
                     enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
             ],
         )
         .expect("failed to create host netstack realm");

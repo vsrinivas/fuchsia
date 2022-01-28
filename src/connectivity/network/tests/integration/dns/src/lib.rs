@@ -24,7 +24,7 @@ use net_types::{ethernet::Mac, ip as net_types_ip, Witness as _};
 use netemul::{RealmTcpListener as _, RealmUdpSocket as _};
 use netstack_testing_common::{
     constants::{eth as eth_consts, ipv6 as ipv6_consts},
-    interfaces,
+    interfaces, pause_fake_clock,
     realms::{KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _},
     wait_for_component_stopped, write_ndp_message, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
@@ -111,6 +111,7 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
             &[
                 KnownServiceProvider::DnsResolver,
                 KnownServiceProvider::DhcpServer { persistent: false },
+                KnownServiceProvider::FakeClock,
                 KnownServiceProvider::SecureStash,
             ],
         )
@@ -130,6 +131,7 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
                     enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
             ],
         )
         .expect("failed to create client realm");
@@ -279,6 +281,7 @@ async fn discovered_dhcpv6_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
                 },
                 KnownServiceProvider::Dhcpv6Client,
                 KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
             ],
         )
         .expect("failed to create realm");
@@ -512,9 +515,12 @@ async fn fallback_on_error_response_code() {
         let realm = sandbox
             .create_netstack_realm_with::<Netstack2, _, _>(
                 "realm",
-                &[KnownServiceProvider::DnsResolver],
+                &[KnownServiceProvider::DnsResolver, KnownServiceProvider::FakeClock],
             )
             .expect("failed to create realm");
+        // The DNS resolver contains a timeout after which any in-flight queries are dropped, which
+        // can cause test flakes.
+        pause_fake_clock(&realm).await.expect("failed to pause fake clock");
 
         // Mock name servers in priority order.
         let erroring_dns_server: std::net::SocketAddr = std_socket_addr!("127.0.0.1:1234");
@@ -685,9 +691,12 @@ async fn no_fallback_to_tcp_on_failed_udp() {
     let realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
             "realm",
-            &[KnownServiceProvider::DnsResolver],
+            &[KnownServiceProvider::DnsResolver, KnownServiceProvider::FakeClock],
         )
         .expect("create realm");
+    // The DNS resolver contains a timeout after which any in-flight queries are dropped, which can
+    // cause test flakes.
+    pause_fake_clock(&realm).await.expect("failed to pause fake clock");
 
     let name_lookup =
         realm.connect_to_protocol::<net_name::LookupMarker>().expect("connect to protocol");
@@ -743,9 +752,12 @@ async fn fallback_to_tcp_on_truncated_response() {
     let realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
             "realm",
-            &[KnownServiceProvider::DnsResolver],
+            &[KnownServiceProvider::DnsResolver, KnownServiceProvider::FakeClock],
         )
         .expect("create realm");
+    // The DNS resolver contains a timeout after which any in-flight queries are dropped, which can
+    // cause test flakes.
+    pause_fake_clock(&realm).await.expect("failed to pause fake clock");
 
     let name_lookup =
         realm.connect_to_protocol::<net_name::LookupMarker>().expect("connect to protocol");

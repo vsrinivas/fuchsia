@@ -329,3 +329,12 @@ where
 
     Ok((network, realm, netstack, iface, fake_ep))
 }
+
+/// Pauses the fake clock in the given realm.
+pub async fn pause_fake_clock(realm: &netemul::TestRealm<'_>) -> Result<()> {
+    let fake_clock_control = realm
+        .connect_to_protocol::<fidl_fuchsia_testing::FakeClockControlMarker>()
+        .context("failed to connect to FakeClockControl")?;
+    let () = fake_clock_control.pause().await.context("failed to pause time")?;
+    Ok(())
+}

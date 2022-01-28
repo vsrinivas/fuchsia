@@ -46,6 +46,7 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
                     enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
             ],
         )
         .expect("create netstack realm");
@@ -90,6 +91,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
                     enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
             ],
         )
         .expect("create netstack realm");
@@ -471,6 +473,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
                 },
                 KnownServiceProvider::DnsResolver,
                 KnownServiceProvider::DhcpServer { persistent: false },
+                KnownServiceProvider::FakeClock,
                 KnownServiceProvider::SecureStash,
             ],
         )
@@ -513,6 +516,7 @@ async fn observes_stop_events<M: Manager>(name: &str) {
                     enable_dhcpv6: false,
                 },
                 KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
             ],
         )
         .expect("create netstack realm");

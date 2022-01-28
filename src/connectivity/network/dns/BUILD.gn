@@ -50,9 +50,7 @@ fuchsia_test_package("dns-tests") {
   deps = [ "//src/connectivity/network/netstack:component-debug" ]
 }
 
-rustc_binary("bin") {
-  name = "dns_resolver"
-  with_unit_tests = true
+bin_base = {
   edition = "2018"
 
   deps = [
@@ -91,7 +89,25 @@ rustc_binary("bin") {
 
   sources = [ "src/main.rs" ]
 
+  non_rust_deps = []
+}
+
+rustc_binary("bin") {
+  forward_variables_from(bin_base, "*")
+
+  name = "dns_resolver"
+  with_unit_tests = true
   configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+rustc_binary("bin_with_fake_time") {
+  forward_variables_from(bin_base, "*")
+
+  name = "dns_resolver_with_fake_time"
+  testonly = true
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+
+  non_rust_deps += [ "//src/lib/fake-clock/lib" ]
 }
 
 fuchsia_unittest_package("dns-resolver-tests") {
@@ -112,6 +128,13 @@ fuchsia_component("component") {
   component_name = "dns_resolver"
   manifest = "meta/dns_resolver.cml"
   deps = [ ":bin" ]
+}
+
+fuchsia_component("component_with_fake_time") {
+  component_name = "dns_resolver_with_fake_time"
+  manifest = "meta/dns_resolver_with_fake_time.cml"
+  deps = [ ":bin_with_fake_time" ]
+  testonly = true
 }
 
 group("tests") {

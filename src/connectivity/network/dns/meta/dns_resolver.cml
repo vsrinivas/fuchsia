@@ -2,37 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [
-        "inspect/client.shard.cml",
-        "syslog/client.shard.cml",
-    ],
+    include: [ "//src/connectivity/network/dns/meta/dns_resolver_base.shard.cml" ],
     program: {
-        runner: "elf",
         binary: "bin/dns_resolver",
     },
-    capabilities: [
-        {
-            protocol: [
-                "fuchsia.net.name.Lookup",
-                "fuchsia.net.name.LookupAdmin",
-            ],
-        },
-    ],
-    use: [
-        {
-            protocol: [
-                "fuchsia.net.routes.State",
-                "fuchsia.posix.socket.Provider",
-            ],
-        },
-    ],
-    expose: [
-        {
-            protocol: [
-                "fuchsia.net.name.Lookup",
-                "fuchsia.net.name.LookupAdmin",
-            ],
-            from: "self",
-        },
-    ],
 }

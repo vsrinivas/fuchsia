@@ -489,6 +489,7 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                         &[
                             KnownServiceProvider::DhcpServer { persistent: false },
                             KnownServiceProvider::DnsResolver,
+                            KnownServiceProvider::FakeClock,
                             KnownServiceProvider::SecureStash,
                         ],
                     )
@@ -770,6 +771,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                     }
                 },
                 KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
                 KnownServiceProvider::SecureStash,
             ],
         )
@@ -939,6 +941,7 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
                     }
                 },
                 KnownServiceProvider::DnsResolver,
+                KnownServiceProvider::FakeClock,
                 KnownServiceProvider::SecureStash,
             ],
         )
