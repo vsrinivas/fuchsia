@@ -102,6 +102,43 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalWeakEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
+        ::test_protocols::HandleRightsProtocolAnEventRequest payload) {
+  ::fidl::Encoder _encoder{
+      ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_protocols::
+          test_protocols_HandleRightsProtocolAnEventEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      [this](fidl::OutgoingMessage outgoing) {
+        return _inner().SendEvent(outgoing);
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
+        ::test_protocols::HandleRightsProtocolAnEventRequest payload) {
+  ::fidl::Encoder _encoder{
+      ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_protocols::
+          test_protocols_HandleRightsProtocolAnEventEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      [this](fidl::OutgoingMessage outgoing) {
+        outgoing.Write(_transport());
+        return ::fidl::Result{outgoing};
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+#endif  // __Fuchsia__
+
 void fidl::internal::NaturalCompleterBase<
     ::test_protocols::HandleRightsProtocol::ResponseMethod>::
     Reply(::test_protocols::HandleRightsProtocolResponseMethodTopResponse&&
@@ -501,6 +538,76 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
+    ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
+  ::fidl::Encoder _encoder{
+      ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_protocols::
+          test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      [this](fidl::OutgoingMessage outgoing) {
+        return _inner().SendEvent(outgoing);
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<
+    ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
+  ::fidl::Encoder _encoder{
+      ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_protocols::
+          test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      [this](fidl::OutgoingMessage outgoing) {
+        outgoing.Write(_transport());
+        return ::fidl::Result{outgoing};
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
+    ::test_protocols::WithAndWithoutRequestResponse>::
+    OnWithResponse(
+        ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
+            payload) {
+  ::fidl::Encoder _encoder{
+      ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_protocols::
+          test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      [this](fidl::OutgoingMessage outgoing) {
+        return _inner().SendEvent(outgoing);
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<
+    ::test_protocols::WithAndWithoutRequestResponse>::
+    OnWithResponse(
+        ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
+            payload) {
+  ::fidl::Encoder _encoder{
+      ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_protocols::
+          test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      [this](fidl::OutgoingMessage outgoing) {
+        outgoing.Write(_transport());
+        return ::fidl::Result{outgoing};
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+#endif  // __Fuchsia__
+
 void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::
     Reply() {
@@ -829,6 +936,39 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional>::Event(
+    ::test_protocols::TransitionalEventRequest payload) {
+  ::fidl::Encoder _encoder{::test_protocols::kTransitional_Event_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_protocols::test_protocols_TransitionalEventEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      [this](fidl::OutgoingMessage outgoing) {
+        return _inner().SendEvent(outgoing);
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalEventSender<::test_protocols::Transitional>::Event(
+    ::test_protocols::TransitionalEventRequest payload) {
+  ::fidl::Encoder _encoder{::test_protocols::kTransitional_Event_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_protocols::test_protocols_TransitionalEventEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      [this](fidl::OutgoingMessage outgoing) {
+        outgoing.Write(_transport());
+        return ::fidl::Result{outgoing};
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+#endif  // __Fuchsia__
+
 void fidl::internal::
     NaturalCompleterBase<::test_protocols::Transitional::Request>::Reply(
         ::test_protocols::TransitionalRequestTopResponse&& payload) {
@@ -940,6 +1080,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         ::fidl::internal::IncomingTransportContext transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1137,6 +1281,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 void fidl::internal::
     NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds>::Reply(
         ::test_protocols::WithProtocolEndsClientEndsTopResponse&& payload) {
@@ -1302,6 +1450,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         ::fidl::internal::IncomingTransportContext transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1518,6 +1670,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>::
     Reply(::test_protocols::WithErrorSyntaxResponseAsStructTopResponse&&
@@ -1720,6 +1876,10 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::DiscoverableProtocol>::
         ::fidl::internal::IncomingTransportContext transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1940,6 +2100,39 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   }
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalWeakEventSender<::test_protocols::ChannelProtocol>::EventA(
+        ::test_protocols::ChannelProtocolEventARequest payload) {
+  ::fidl::Encoder _encoder{::test_protocols::kChannelProtocol_EventA_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_protocols::test_protocols_ChannelProtocolEventAEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      [this](fidl::OutgoingMessage outgoing) {
+        return _inner().SendEvent(outgoing);
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>::EventA(
+    ::test_protocols::ChannelProtocolEventARequest payload) {
+  ::fidl::Encoder _encoder{::test_protocols::kChannelProtocol_EventA_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_protocols::test_protocols_ChannelProtocolEventAEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      [this](fidl::OutgoingMessage outgoing) {
+        outgoing.Write(_transport());
+        return ::fidl::Result{outgoing};
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
 #endif  // __Fuchsia__
 
 void fidl::internal::

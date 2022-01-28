@@ -49,6 +49,10 @@ fidl::internal::NaturalEventDispatcher<::test_error::Example>::DispatchEvent(
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 void fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>::Reply(
     ::test_error::ExampleFooTopResponse&& payload) {
   ::fidl::Encoder _encoder{::test_error::kExample_foo_Ordinal};

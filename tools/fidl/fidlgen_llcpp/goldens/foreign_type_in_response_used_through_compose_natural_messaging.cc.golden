@@ -61,6 +61,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 void fidl::internal::NaturalCompleterBase<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
     Reply(::test_middle::MiddleGetFooTopResponse&& payload) {

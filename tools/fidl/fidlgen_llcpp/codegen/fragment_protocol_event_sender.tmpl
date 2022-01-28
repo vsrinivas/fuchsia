@@ -140,3 +140,78 @@ fidl::Result {{ $.InternalWireBufferEventSender.NoLeading }}::{{ .Name }}(
 {{- EndifFuchsia -}}
 {{- end }}
 
+
+
+{{- define "Protocol:EventSender:NaturalMessagingHeader" }}
+{{ EnsureNamespace "" }}
+{{- IfdefFuchsia -}}
+
+template<>
+class {{ .NaturalWeakEventSender }} : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+{{ "" }}
+
+  {{- range .Events }}
+    {{- .Docs }}
+    ::fitx::result<::fidl::Error> {{ .Name }}(
+        {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }});
+
+  {{ end }}
+};
+
+template<>
+class {{ .NaturalEventSender }}
+    : public ::fidl::internal::SyncEndpointManagedVeneer<{{ .NaturalEventSender }}> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+{{ "" }}
+
+  {{- range .Events }}
+    {{- .Docs }}
+    ::fitx::result<::fidl::Error> {{ .Name }}(
+        {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }});
+
+  {{ end }}
+};
+
+{{- EndifFuchsia -}}
+{{- end }}
+
+
+
+{{- define "Protocol:EventSender:NaturalMessagingSource" }}
+{{ EnsureNamespace "" }}
+{{- IfdefFuchsia -}}
+  {{- range .Events }}
+
+::fitx::result<::fidl::Error> {{ $.NaturalWeakEventSender.NoLeading }}::{{ .Name }}(
+    {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
+  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &{{ .Response.WireCodingTable }},
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}),
+      [this] (fidl::OutgoingMessage outgoing) {
+        return _inner().SendEvent(outgoing);
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error> {{ $.NaturalEventSender.NoLeading }}::{{ .Name }}(
+    {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
+  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &{{ .Response.WireCodingTable }},
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}),
+      [this] (fidl::OutgoingMessage outgoing) {
+        outgoing.Write(_transport());
+        return ::fidl::Result{outgoing};
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+  {{ end }}
+{{- EndifFuchsia -}}
+{{- end }}

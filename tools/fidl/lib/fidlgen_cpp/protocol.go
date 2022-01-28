@@ -109,6 +109,8 @@ var (
 	NaturalEventDispatcher       = internalNs.member("NaturalEventDispatcher")
 
 	// Server types
+	NaturalWeakEventSender  = internalNs.member("NaturalWeakEventSender")
+	NaturalEventSender      = internalNs.member("NaturalEventSender")
 	NaturalServer           = fidlNs.member("Server")
 	NaturalServerDispatcher = internalNs.member("NaturalServerDispatcher")
 	NaturalCompleter        = internalNs.member("NaturalCompleter")
@@ -120,6 +122,8 @@ type unifiedMessagingDetails struct {
 	NaturalAsyncEventHandler     name
 	NaturalEventHandlerInterface name
 	NaturalEventDispatcher       name
+	NaturalWeakEventSender       name
+	NaturalEventSender           name
 	NaturalServerDispatcher      name
 	NaturalServer                name
 }
@@ -131,6 +135,8 @@ func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol
 		NaturalAsyncEventHandler:     NaturalAsyncEventHandler.template(p),
 		NaturalEventHandlerInterface: NaturalEventHandlerInterface.template(p),
 		NaturalEventDispatcher:       NaturalEventDispatcher.template(p),
+		NaturalWeakEventSender:       NaturalWeakEventSender.template(p),
+		NaturalEventSender:           NaturalEventSender.template(p),
 		NaturalServerDispatcher:      NaturalServerDispatcher.template(p),
 		NaturalServer:                NaturalServer.template(p),
 	}

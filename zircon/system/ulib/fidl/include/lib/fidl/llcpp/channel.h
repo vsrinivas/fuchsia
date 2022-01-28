@@ -497,8 +497,8 @@ internal::SyncEndpointVeneer<internal::WireSyncClientImpl, FidlProtocol> WireCal
       fidl::internal::MakeAnyUnownedTransport(client_end.handle()));
 }
 
-// Return an interface for sending FIDL events over the endpoint managed by
-// |binding_ref|. Call it like:
+// Return an interface for sending FIDL events containing wire domain objects
+// over the endpoint managed by |binding_ref|. Call it like:
 //
 //     fidl::WireSendEvent(server_binding_ref)->FooEvent(args...);
 //
@@ -510,7 +510,8 @@ internal::WeakEventSenderVeneer<internal::WireWeakEventSender, FidlProtocol> Wir
           static_cast<const fidl::internal::ServerBindingRefBase&>(binding_ref)));
 }
 
-// Return an interface for sending FIDL events over |server_end|. Call it like:
+// Return an interface for sending FIDL events containing wire domain objects
+// over |server_end|. Call it like:
 //
 //     fidl::WireSendEvent(server_end)->FooEvent(args...);
 //

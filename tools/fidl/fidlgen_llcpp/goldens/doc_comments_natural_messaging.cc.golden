@@ -51,6 +51,35 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 #ifdef __Fuchsia__
 
+::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
+    ::test_doccomments::Interface>::OnEvent() {
+  ::fidl::Encoder _encoder{::test_doccomments::kInterface_OnEvent_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_doccomments::test_doccomments_InterfaceOnEventEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      [this](fidl::OutgoingMessage outgoing) {
+        return _inner().SendEvent(outgoing);
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalEventSender<::test_doccomments::Interface>::OnEvent() {
+  ::fidl::Encoder _encoder{::test_doccomments::kInterface_OnEvent_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_doccomments::test_doccomments_InterfaceOnEventEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      [this](fidl::OutgoingMessage outgoing) {
+        outgoing.Write(_transport());
+        return ::fidl::Result{outgoing};
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     ::test_doccomments::Interface>::entries_[] = {
     {

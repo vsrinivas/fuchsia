@@ -18,6 +18,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 #ifdef __Fuchsia__
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     ::test_versions::OtherProtocol>::entries_[] = {};
 
@@ -68,6 +72,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         ::fidl::internal::IncomingTransportContext transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

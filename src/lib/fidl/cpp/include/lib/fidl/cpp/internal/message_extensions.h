@@ -24,9 +24,30 @@ namespace internal {
     ::fidl::IncomingMessage message,
     ::cpp20::span<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES> handle_storage);
 
+// Converts an |HLCPPOutgoingMessage| into |OutgoingMessage|.
+// The resulting message uses the Zircon channel transport.
+//
+// |type| is used to validate the message.
+// |handles| is a caller-allocated array for storing handles.
+// |handle_metadata| is a caller-allocated array for storing handle metadata.
 ::fidl::OutgoingMessage ConvertFromHLCPPOutgoingMessage(
     const fidl_type_t* type, HLCPPOutgoingMessage&& message, zx_handle_t* handles,
     fidl_channel_handle_metadata_t* handle_metadata);
+
+// Converts an |HLCPPOutgoingMessage| into |OutgoingMessage|, then invoke
+// |callback| with it. Returns the return value of the callback.
+// The resulting message uses the Zircon channel transport.
+//
+// |type| is used to validate the message.
+template <typename Callable>
+auto ConvertFromHLCPPOutgoingMessageThen(const fidl_type_t* type, HLCPPOutgoingMessage&& message,
+                                         Callable&& callback) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT fidl_channel_handle_metadata_t
+      handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
+  return callback(
+      ConvertFromHLCPPOutgoingMessage(type, std::move(message), handles, handle_metadata));
+}
 
 }  // namespace internal
 }  // namespace fidl

@@ -38,6 +38,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 
 #ifdef __Fuchsia__
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     ::test_placementofattributes::ExampleProtocol>::entries_[] = {
     {

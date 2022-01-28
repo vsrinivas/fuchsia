@@ -18,6 +18,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 #ifdef __Fuchsia__
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     ::test_handles::SomeProtocol>::entries_[] = {};
 

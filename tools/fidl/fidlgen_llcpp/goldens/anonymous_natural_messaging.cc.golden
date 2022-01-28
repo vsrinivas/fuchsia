@@ -57,6 +57,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 void fidl::internal::
     NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>::Reply(
         ::test_anonymous::SomeProtocolSomeMethodTopResponse&& payload) {

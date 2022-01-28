@@ -38,6 +38,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 
 #ifdef __Fuchsia__
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     ::test_inheritancewithrecursivedecl::Parent>::entries_[] = {
     {
@@ -137,6 +141,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
         ::fidl::internal::IncomingTransportContext transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

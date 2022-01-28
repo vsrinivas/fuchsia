@@ -18,6 +18,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 #ifdef __Fuchsia__
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     ::test_bindingsdenylist::Allowed>::entries_[] = {};
 
@@ -109,6 +113,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
         LibfuzzerNeedsNonemptyProtocol>::Reply() {
@@ -194,6 +202,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 
 #ifdef __Fuchsia__
 
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     ::test_bindingsdenylist::OnlyCppAndDeps>::entries_[] = {};
 
@@ -265,6 +277,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
         ::fidl::internal::IncomingTransportContext transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -598,6 +614,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
         ::fidl::internal::IncomingTransportContext transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 #endif  // __Fuchsia__
 
 void fidl::internal::NaturalCompleterBase<

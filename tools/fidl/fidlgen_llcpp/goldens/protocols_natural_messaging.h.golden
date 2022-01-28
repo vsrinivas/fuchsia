@@ -4,6 +4,7 @@
 
 #include <fidl/test.protocols/cpp/markers.h>
 #include <fidl/test.protocols/cpp/natural_types.h>
+#include <lib/fidl/cpp/channel.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
@@ -198,6 +199,32 @@ class ::fidl::internal::NaturalEventDispatcher<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+
+  ::fitx::result<::fidl::Error> AnEvent(
+      ::test_protocols::HandleRightsProtocolAnEventRequest payload);
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<
+    ::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_protocols::HandleRightsProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  ::fitx::result<::fidl::Error> AnEvent(
+      ::test_protocols::HandleRightsProtocolAnEventRequest payload);
 };
 #endif  // __Fuchsia__
 
@@ -803,6 +830,38 @@ class ::fidl::internal::NaturalEventDispatcher<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+
+  ::fitx::result<::fidl::Error> OnEmptyResponse();
+
+  ::fitx::result<::fidl::Error> OnWithResponse(
+      ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
+          payload);
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<
+    ::test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_protocols::WithAndWithoutRequestResponse>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  ::fitx::result<::fidl::Error> OnEmptyResponse();
+
+  ::fitx::result<::fidl::Error> OnWithResponse(
+      ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
+          payload);
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::Request<
@@ -1390,6 +1449,30 @@ class ::fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional>
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+
+  ::fitx::result<::fidl::Error> Event(
+      ::test_protocols::TransitionalEventRequest payload);
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::Transitional>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_protocols::Transitional>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  ::fitx::result<::fidl::Error> Event(
+      ::test_protocols::TransitionalEventRequest payload);
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::Request<::test_protocols::Transitional::Request> final
@@ -1591,6 +1674,25 @@ class ::fidl::internal::NaturalEventDispatcher<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_protocols::MethodWithUnion>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -1946,6 +2048,25 @@ class ::fidl::internal::NaturalEventDispatcher<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_protocols::WithProtocolEnds>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> final
@@ -2252,6 +2373,24 @@ class ::fidl::internal::NaturalEventDispatcher<::test_protocols::ManyParameters>
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_protocols::ManyParameters>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::ManyParameters>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_protocols::ManyParameters>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -2655,6 +2794,25 @@ class ::fidl::internal::NaturalEventDispatcher<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_protocols::WithErrorSyntax>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct> final
@@ -2959,6 +3117,26 @@ class ::fidl::internal::NaturalEventDispatcher<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<
+    ::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_protocols::DiscoverableProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -3319,6 +3497,31 @@ class ::fidl::internal::NaturalEventDispatcher<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_protocols::ChannelProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+
+  ::fitx::result<::fidl::Error> EventA(
+      ::test_protocols::ChannelProtocolEventARequest payload);
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_protocols::ChannelProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  ::fitx::result<::fidl::Error> EventA(
+      ::test_protocols::ChannelProtocolEventARequest payload);
 };
 #endif  // __Fuchsia__
 

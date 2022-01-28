@@ -399,8 +399,6 @@ TEST_F(UnifiedClientToWireServerWithEventHandler, OnNode) {
   // Test receiving natural domain objects.
   ASSERT_OK(loop().RunUntilIdle());
   EXPECT_EQ(1, num_events());
-
-  // TODO(fxbug.dev/60240): Send an event using natural objects.
 }
 
 class NaturalTestBase : public fidl::Server<fidl_cpp_wire_interop_test::Interop> {
@@ -583,6 +581,91 @@ TEST_F(WireClientToNaturalServer, OneWay) {
   ASSERT_TRUE(result.ok());
   ASSERT_OK(loop().RunUntilIdle());
   EXPECT_EQ(1, server.num_calls);
+}
+
+// Test fixture that checks events.
+class WireClientToNaturalServerWithEventHandler : public WireClientToNaturalServerBase {
+ public:
+  int num_events() const { return event_handler_.num_events(); }
+
+ private:
+  class ExpectOnNodeEvent
+      : public fidl::WireAsyncEventHandler<fidl_cpp_wire_interop_test::Interop> {
+   public:
+    int num_events() const { return num_events_; }
+
+   private:
+    // We should not observe any terminal error from the client during these tests.
+    void on_fidl_error(fidl::UnbindInfo info) final {
+      ADD_FATAL_FAILURE("Detected client error during test: %s", info.FormatDescription().c_str());
+    }
+
+    void OnNode(fidl::WireEvent<fidl_cpp_wire_interop_test::Interop::OnNode>* event) final {
+      CheckWireDir(event->node);
+      num_events_++;
+    }
+
+    int num_events_ = 0;
+  };
+
+  fidl::WireAsyncEventHandler<fidl_cpp_wire_interop_test::Interop>* GetEventHandler() final {
+    return &event_handler_;
+  }
+
+  ExpectOnNodeEvent event_handler_;
+};
+
+// Test sending an event over a |fidl::ServerEnd|.
+TEST_F(WireClientToNaturalServerWithEventHandler, SendOnNodeEventOverServerEnd) {
+  EXPECT_EQ(0, num_events());
+
+  // Test sending the event with natural types.
+  {
+    fidl_cpp_wire_interop_test::Node node = MakeNaturalDir();
+    fitx::result result = fidl::SendEvent(server_end())->OnNode(node);
+    EXPECT_TRUE(result.is_ok(), "%s", result.error_value().FormatDescription().c_str());
+    EXPECT_OK(loop().RunUntilIdle());
+    EXPECT_EQ(1, num_events());
+  }
+
+  // Test sending the event with wire types.
+  {
+    fidl::Arena arena;
+    fidl_cpp_wire_interop_test::wire::Node node = MakeWireDir(arena);
+    fidl::Result result = fidl::WireSendEvent(server_end())->OnNode(node);
+    EXPECT_OK(result.status());
+    EXPECT_OK(loop().RunUntilIdle());
+    EXPECT_EQ(2, num_events());
+  }
+}
+
+// Test sending an event over a |fidl::ServerBindingRef|.
+TEST_F(WireClientToNaturalServerWithEventHandler, SendOnNodeEventOverServerBindingRef) {
+  EXPECT_EQ(0, num_events());
+
+  class Server : public NaturalTestBase {};
+  Server server;
+  fidl::ServerBindingRef binding_ref =
+      fidl::BindServer(loop().dispatcher(), std::move(server_end()), &server);
+
+  // Test sending the event with natural types.
+  {
+    fidl_cpp_wire_interop_test::Node node = MakeNaturalDir();
+    fitx::result result = fidl::SendEvent(binding_ref)->OnNode(node);
+    EXPECT_TRUE(result.is_ok(), "%s", result.error_value().FormatDescription().c_str());
+    EXPECT_OK(loop().RunUntilIdle());
+    EXPECT_EQ(1, num_events());
+  }
+
+  // Test sending the event with wire types.
+  {
+    fidl::Arena arena;
+    fidl_cpp_wire_interop_test::wire::Node node = MakeWireDir(arena);
+    fidl::Result result = fidl::WireSendEvent(binding_ref)->OnNode(node);
+    EXPECT_OK(result.status());
+    EXPECT_OK(loop().RunUntilIdle());
+    EXPECT_EQ(2, num_events());
+  }
 }
 
 }  // namespace

@@ -95,6 +95,41 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalWeakEventSender<::test_emptystruct::EmptyProtocol>::Receive(
+        ::test_emptystruct::EmptyProtocolReceiveRequest payload) {
+  ::fidl::Encoder _encoder{::test_emptystruct::kEmptyProtocol_Receive_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_emptystruct::
+          test_emptystruct_EmptyProtocolReceiveEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      [this](fidl::OutgoingMessage outgoing) {
+        return _inner().SendEvent(outgoing);
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>::Receive(
+    ::test_emptystruct::EmptyProtocolReceiveRequest payload) {
+  ::fidl::Encoder _encoder{::test_emptystruct::kEmptyProtocol_Receive_Ordinal};
+  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
+      &::test_emptystruct::
+          test_emptystruct_EmptyProtocolReceiveEventMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      [this](fidl::OutgoingMessage outgoing) {
+        outgoing.Write(_transport());
+        return ::fidl::Result{outgoing};
+      });
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+#endif  // __Fuchsia__
+
 void fidl::internal::NaturalCompleterBase<
     ::test_emptystruct::EmptyProtocol::SendAndReceive>::
     Reply(

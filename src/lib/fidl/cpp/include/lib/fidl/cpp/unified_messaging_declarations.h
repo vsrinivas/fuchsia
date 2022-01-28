@@ -68,6 +68,16 @@ namespace internal {
 template <typename Message>
 struct MessageTraits;
 
+// |NaturalWeakEventSender| borrows the server endpoint from a binding object and
+// exposes methods for sending events with natural types.
+template <typename FidlProtocol>
+class NaturalWeakEventSender;
+
+// |NaturalEventSender| borrows a server endpoint and exposes methods for sending
+// events with natural types.
+template <typename FidlProtocol>
+class NaturalEventSender;
+
 // |NaturalClientImpl| implements methods for making synchronous and
 // asynchronous FIDL calls with natural types.
 //

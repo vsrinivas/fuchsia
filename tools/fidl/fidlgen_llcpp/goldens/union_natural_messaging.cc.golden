@@ -119,6 +119,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 void fidl::internal::NaturalCompleterBase<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::
     Reply(

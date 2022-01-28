@@ -4,6 +4,7 @@
 
 #include <fidl/test.versions/cpp/markers.h>
 #include <fidl/test.versions/cpp/natural_types.h>
+#include <lib/fidl/cpp/channel.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
@@ -57,6 +58,24 @@ class ::fidl::internal::NaturalEventDispatcher<::test_versions::OtherProtocol>
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_versions::OtherProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_versions::OtherProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_versions::OtherProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -145,6 +164,23 @@ class ::fidl::internal::NaturalEventDispatcher<::test_versions::Protocol> final
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_versions::Protocol>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_versions::Protocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<::test_versions::Protocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 #endif  // __Fuchsia__
 

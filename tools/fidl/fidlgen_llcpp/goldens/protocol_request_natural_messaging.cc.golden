@@ -117,6 +117,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 void fidl::internal::
     NaturalCompleterBase<::test_protocolrequest::Parent::GetChild>::Reply(
         ::test_protocolrequest::ParentGetChildTopResponse&& payload) {
@@ -269,6 +273,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         ::fidl::internal::IncomingTransportContext transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

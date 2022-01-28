@@ -32,6 +32,7 @@ do not support them in the bindings. */}}
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/channel.h>
 
 #include <{{ .Library | Filename "Markers" }}>
 #include <{{ .Library | Filename "NaturalTypesHeader" }}>
@@ -51,6 +52,8 @@ do not support them in the bindings. */}}
   {{- template "Protocol:Client:NaturalMessagingHeader" $protocol }}
 {{ "" }}
   {{- template "Protocol:EventHandler:NaturalMessagingHeader" $protocol }}
+{{ "" }}
+  {{- template "Protocol:EventSender:NaturalMessagingHeader" $protocol }}
 {{ "" }}
   {{- template "Protocol:Interface:NaturalMessagingHeader" $protocol }}
 {{ "" }}

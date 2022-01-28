@@ -5,6 +5,7 @@
 #include <fidl/test.bindingsdenylist/cpp/markers.h>
 #include <fidl/test.bindingsdenylist/cpp/natural_types.h>
 #include <fidl/test.dependent/cpp/natural_messaging.h>
+#include <lib/fidl/cpp/channel.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
@@ -59,6 +60,24 @@ class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::Allowed>
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_bindingsdenylist::Allowed>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_bindingsdenylist::Allowed>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -202,6 +221,26 @@ class ::fidl::internal::NaturalEventDispatcher<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -351,6 +390,26 @@ class ::fidl::internal::NaturalEventDispatcher<
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<
+    ::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_bindingsdenylist::OnlyCppAndDeps>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+#endif  // __Fuchsia__
+
 template <>
 class ::fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps>
     : public ::fidl::internal::IncomingMessageDispatcher {
@@ -450,6 +509,26 @@ class ::fidl::internal::NaturalEventDispatcher<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<
+    ::test_bindingsdenylist::ImportsSameNameContext>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_bindingsdenylist::ImportsSameNameContext>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 #endif  // __Fuchsia__
 
@@ -987,6 +1066,26 @@ class ::fidl::internal::NaturalEventDispatcher<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<
+    ::test_bindingsdenylist::DenyEachBinding>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_bindingsdenylist::DenyEachBinding>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
 #endif  // __Fuchsia__
 

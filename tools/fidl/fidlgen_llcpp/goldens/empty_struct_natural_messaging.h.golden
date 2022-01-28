@@ -4,6 +4,7 @@
 
 #include <fidl/test.emptystruct/cpp/markers.h>
 #include <fidl/test.emptystruct/cpp/natural_types.h>
+#include <lib/fidl/cpp/channel.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
@@ -183,6 +184,31 @@ class ::fidl::internal::NaturalEventDispatcher<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<
+    ::test_emptystruct::EmptyProtocol>
+    : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+
+  ::fitx::result<::fidl::Error> Receive(
+      ::test_emptystruct::EmptyProtocolReceiveRequest payload);
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::NaturalEventSender<
+              ::test_emptystruct::EmptyProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  ::fitx::result<::fidl::Error> Receive(
+      ::test_emptystruct::EmptyProtocolReceiveRequest payload);
 };
 #endif  // __Fuchsia__
 

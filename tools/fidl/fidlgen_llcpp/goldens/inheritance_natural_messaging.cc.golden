@@ -49,6 +49,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 }
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 void fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>::
     Reply(::test_inheritance::SuperFooTopResponse&& payload) {
   ::fidl::Encoder _encoder{::test_inheritance::ksuper_foo_Ordinal};
@@ -148,6 +152,10 @@ fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub>::DispatchEvent(
     ::fidl::internal::IncomingTransportContext transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 #endif  // __Fuchsia__
 
 void fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo>::Reply(

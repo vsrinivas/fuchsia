@@ -4,6 +4,7 @@
 
 #include <fidl/test.driveroneway/cpp/markers.h>
 #include <fidl/test.driveroneway/cpp/natural_types.h>
+#include <lib/fidl/cpp/channel.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
