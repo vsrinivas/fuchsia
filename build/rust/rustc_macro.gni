@@ -213,15 +213,25 @@ template("rustc_macro") {
   # target. Since the parent rule is used to compile macros, which only run on
   # the host, only run the test code for the macros on the host.
   # TODO(https://fxbug.dev/72931): accept a string.
-  if (is_host && defined(invoker.with_unit_tests) &&
-      invoker.with_unit_tests == true) {
-    rustc_test("${target_name}_test") {
-      name = invoker.target_name + "_test"
-      if (defined(invoker.name)) {
-        name = invoker.name + "_test"
-      }
+  if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
+    if (in_host_compiler_toolchain) {
+      rustc_test("${target_name}_test") {
+        name = invoker.target_name + "_test"
+        if (defined(invoker.name)) {
+          name = invoker.name + "_test"
+        }
 
-      forward_variables_from(invoker, "*", [ "name" ])
+        forward_variables_from(invoker, "*", [ "name" ])
+      }
+    } else {
+      # For convenience, create a forwarding target that points to the on-host
+      # test target. This allows developers to list "${target_name}_test" in a
+      # test group instead of "${target_name}_test($host_toolchain)" to include
+      # the test target generated for this rule.
+      group("${target_name}_test") {
+        public_deps = [ ":${target_name}($host_toolchain)" ]
+        testonly = true
+      }
     }
   }
 

@@ -49,7 +49,7 @@ fuchsia_unittest_package("net-declare-tests") {
 group("tests") {
   testonly = true
   deps = [
-    ":net-declare-macros_test($host_toolchain)",
+    ":net-declare-macros_test",
     ":net-declare-tests",
   ]
 }
