@@ -65,12 +65,12 @@ void EnablePagingForEl(Paddr ttbr0_root) {
   MairReg::Write(AddressSpaceBuilder::GetArmMemoryAttrIndirectionRegister().reg_value());
 
   // Configure the page table layout of TTBR0 and enable page table caching.
-  TcrReg tcr = TcrReg{}
-                   .set_tg0(arch::ArmTcrTg0Value::k4KiB)                     // Use 4 KiB granules.
-                   .set_t0sz(64 - kDefaultPageTableLayout.region_size_bits)  // Set region size.
-                   .set_sh0(arch::ArmTcrShareAttr::kInnerShareable)
-                   .set_orgn0(arch::ArmTcrCacheAttr::kWriteBackWriteAllocate)
-                   .set_irgn0(arch::ArmTcrCacheAttr::kWriteBackWriteAllocate);
+  TcrReg tcr;
+  tcr.set_tg0(arch::ArmTcrTg0Value::k4KiB)                      // Use 4 KiB granules.
+      .set_t0sz(64 - kDefaultPageTableLayout.region_size_bits)  // Set region size.
+      .set_sh0(arch::ArmTcrShareAttr::kInnerShareable)
+      .set_orgn0(arch::ArmTcrCacheAttr::kWriteBackWriteAllocate)
+      .set_irgn0(arch::ArmTcrCacheAttr::kWriteBackWriteAllocate);
 
   // Allow the CPU to access all of its supported physical address space.
   SetPhysicalAddressSize(tcr, arch::ArmIdAa64Mmfr0El1::Read().pa_range());

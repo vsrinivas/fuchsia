@@ -185,6 +185,9 @@ enum class ArmTcrShareAttr {
   kInnerShareable = 0b11,
 };
 
+// Forward declaration, defined below.
+struct ArmTcrEl2;
+
 // Translation Control Register (TCR) for EL1.
 //
 // The TCR controls the settings relating to the page table, including
@@ -194,6 +197,9 @@ enum class ArmTcrShareAttr {
 // [arm/v8]: D13.2.120 TCR_EL1, Translation Control Register (EL1)
 class ArmTcrEl1 : public SysRegBase<ArmTcrEl1> {
  public:
+  // Copy all the fields that have direct equivalents in TCR_EL2.
+  inline ArmTcrEl1& CopyEl2(const ArmTcrEl2& tcr_el2);
+
   // Bits [63:60] reserved.
   DEF_BIT(59, ds);
   DEF_BIT(58, tcma1);
@@ -239,36 +245,10 @@ class ArmTcrEl1 : public SysRegBase<ArmTcrEl1> {
 
 ARCH_ARM64_SYSREG(ArmTcrEl1, "tcr_el1");
 
-// Translation Control Register (TCR) for EL2.
-//
-// This register layout is only valid when HCR_EL2.E2H == 0 (that is,
-// Virtualization Host Extensions are disabled).
-//
-// [arm/v8]: D13.2.121 TCR_EL2, Translation Control Register (EL2)
-struct ArmTcrEl2 : public SysRegBase<ArmTcrEl2> {
-  // Bits [63:33] reserved.
-  DEF_BIT(32, ds);
-  DEF_BIT(31, res1_bit32);  // RES1: should be preserved or written as 1.
-  DEF_BIT(30, tcma);
-  DEF_BIT(29, tbid);
-  DEF_BIT(28, hwu62);
-  DEF_BIT(27, hwu61);
-  DEF_BIT(26, hwu60);
-  DEF_BIT(25, hwu59);
-  DEF_BIT(24, hpd);                                    // Hierarchical Permission Disable
-  DEF_BIT(23, res1_bit23);                             // RES1: should be preserved or written as 1.
-  DEF_BIT(22, hd);                                     // Hardware Dirty state management
-  DEF_BIT(21, ha);                                     // Hardware Access flag updated
-  DEF_BIT(20, tbi);                                    // Top byte ignored
-  DEF_ENUM_FIELD(ArmPhysicalAddressSize, 18, 16, ps);  // Physical address size
-  DEF_ENUM_FIELD(ArmTcrTg0Value, 15, 14, tg0);         // TTBR0 Granule size
-  DEF_ENUM_FIELD(ArmTcrShareAttr, 13, 12, sh0);        // TTBR0 Cache sharability
-  DEF_ENUM_FIELD(ArmTcrCacheAttr, 11, 10, orgn0);      // TTBR0 Outer cacheability
-  DEF_ENUM_FIELD(ArmTcrCacheAttr, 9, 8, irgn0);        // TTBR0 Inner cacheability
-  // Bits [7:6] reserved.
-  DEF_FIELD(5, 0, t0sz);  // TTBR0 size offset
-
-  ArmTcrEl2() {
+// This is the common base for TCR_EL2 and VTCR_EL2.  See below.
+struct ArmTranslationControlRegisterEl2Base
+    : public SysRegDerivedBase<ArmTranslationControlRegisterEl2Base, uint64_t> {
+  ArmTranslationControlRegisterEl2Base() {
     // Bits marked RES1 need to be either preserved or set to 1. If constructing
     // the register from scratch, set them to 1.
     //
@@ -276,9 +256,91 @@ struct ArmTcrEl2 : public SysRegBase<ArmTcrEl2> {
     set_res1_bit32(1);
     set_res1_bit23(1);
   }
+
+  // Bits [63:33] reserved.
+  DEF_BIT(32, ds);
+  DEF_BIT(31, res1_bit32);  // RES1: should be preserved or written as 1.
+  // Bits [30:29] differ between TCR_EL2 and VTCR_EL2.  See below.
+  DEF_BIT(28, hwu62);
+  DEF_BIT(27, hwu61);
+  DEF_BIT(26, hwu60);
+  DEF_BIT(25, hwu59);
+  // Bit 24 differs between TCR_EL2 and VTCR_EL2.  See below.
+  DEF_BIT(23, res1_bit23);  // RES1: should be preserved or written as 1.
+  DEF_BIT(22, hd);          // Hardware Dirty state management
+  DEF_BIT(21, ha);          // Hardware Access flag updated
+  // Bits [20:19] differ between TCR_EL2 and VTCR_EL2.  See below.
+  DEF_ENUM_FIELD(ArmPhysicalAddressSize, 18, 16, ps);  // Physical address size
+  DEF_ENUM_FIELD(ArmTcrTg0Value, 15, 14, tg0);         // TTBR0 Granule size
+  DEF_ENUM_FIELD(ArmTcrShareAttr, 13, 12, sh0);        // TTBR0 Cache sharability
+  DEF_ENUM_FIELD(ArmTcrCacheAttr, 11, 10, orgn0);      // TTBR0 Outer cacheability
+  DEF_ENUM_FIELD(ArmTcrCacheAttr, 9, 8, irgn0);        // TTBR0 Inner cacheability
+  // Bits [7:6] differ between TCR_EL2 and VTCR_EL2.  See below.
+  DEF_FIELD(5, 0, t0sz);  // TTBR0 size offset
 };
 
+// Translation Control Register (TCR) for EL2.
+//
+// This register layout is only valid when HCR_EL2.E2H == 0 (that is,
+// Virtualization Host Extensions are disabled).
+//
+// [arm/v8]: D13.2.121 TCR_EL2, Translation Control Register (EL2)
+struct ArmTcrEl2 : public SysRegDerived<ArmTcrEl2, ArmTranslationControlRegisterEl2Base> {
+  // Copy values that have direct equivalents in TCR_EL1.
+  ArmTcrEl2& CopyEl1(const ArmTcrEl1& tcr_el1) {
+    set_ds(tcr_el1.ds());
+    set_tcma(tcr_el1.tcma0());
+    set_tbid(tcr_el1.tbid0());
+    set_hpd(tcr_el1.hpd0());
+    set_hd(tcr_el1.hd());
+    set_ha(tcr_el1.ha());
+    set_tbi(tcr_el1.tbi0());
+    set_tg0(tcr_el1.tg0());
+    set_sh0(tcr_el1.sh0());
+    set_orgn0(tcr_el1.orgn0());
+    set_irgn0(tcr_el1.irgn0());
+    set_t0sz(tcr_el1.t0sz());
+    return *this;
+  }
+
+  DEF_BIT(30, tcma);
+  DEF_BIT(29, tbid);
+  DEF_BIT(24, hpd);  // Hierarchical Permission Disable
+  DEF_BIT(20, tbi);  // Top byte ignored
+  DEF_RSVDZ_FIELD(7, 6);
+};
 ARCH_ARM64_SYSREG(ArmTcrEl2, "tcr_el2");
+
+// Copy values that have direct equivalents in TCR_EL2.
+inline ArmTcrEl1& ArmTcrEl1::CopyEl2(const ArmTcrEl2& tcr_el2) {
+  set_ds(tcr_el2.ds());
+  set_tcma0(tcr_el2.tcma());
+  set_tbid0(tcr_el2.tbid());
+  set_hpd0(tcr_el2.hpd());
+  set_hd(tcr_el2.hd());
+  set_ha(tcr_el2.ha());
+  set_tbi0(tcr_el2.tbi());
+  set_tg0(tcr_el2.tg0());
+  set_sh0(tcr_el2.sh0());
+  set_orgn0(tcr_el2.orgn0());
+  set_irgn0(tcr_el2.irgn0());
+  set_t0sz(tcr_el2.t0sz());
+  return *this;
+}
+
+// Virtualization Translation Control Register (VTCR_EL2).
+//
+// [arm/v8]: VTCR_EL2, Virtualization Translation Control Register
+struct ArmVtcrEl2 : public SysRegDerived<ArmVtcrEl2, ArmTranslationControlRegisterEl2Base> {
+  // Most fields are the same as in TCR_EL2, but these few differ.
+  DEF_BIT(33, sl2);
+  DEF_BIT(30, nsa);
+  DEF_BIT(29, nsw);
+  DEF_RSVDZ_BIT(24);
+  DEF_BIT(19, vs);
+  DEF_FIELD(7, 6, sl0);
+};
+ARCH_ARM64_SYSREG(ArmVtcrEl2, "vtcr_el2");
 
 // Page table root pointer.
 //
@@ -311,6 +373,14 @@ ARCH_ARM64_SYSREG(ArmTtbr1El1, "ttbr1_el1");
 
 struct ArmTtbr1El2 : public arch::SysRegDerived<ArmTtbr1El2, ArmTranslationTableBaseRegister> {};
 ARCH_ARM64_SYSREG(ArmTtbr1El2, "ttbr1_el2");
+
+// [arm/v8]: VTTBR_EL2, Virtualization Translation Table Base Register (EL2)
+struct ArmVttbrEl2 : public arch::SysRegDerived<ArmVttbrEl2, ArmTranslationTableBaseRegister> {
+  // The layout is the same ar TTBR0_ELx, but the ASID field is called VMID.
+  uint64_t vmid() const { return asid(); }
+  void set_vmid(uint64_t vmid) { set_asid(vmid); }
+};
+ARCH_ARM64_SYSREG(ArmVttbrEl2, "vttbr_el2");
 
 // Memory attributes.
 //
@@ -510,6 +580,83 @@ ARCH_ARM64_SYSREG(ArmSpsrEl2, "spsr_el2");
 
 struct ArmSpsrEl3 : public arch::SysRegDerived<ArmSpsrEl3, ArmSavedProgramStatusRegister> {};
 ARCH_ARM64_SYSREG(ArmSpsrEl3, "spsr_el3");
+
+// [arm/sysreg]/esr_el1: Exception Syndrome Register (El1)
+// [arm/sysreg]/esr_el2: Exception Syndrome Register (El2)
+// [arm/sysreg]/esr_el3: Exception Syndrome Register (El3)
+//
+// These are the assignments when an exception is taken from AArch64 state.
+struct ArmExceptionSyndromeRegister
+    : public SysRegDerivedBase<ArmExceptionSyndromeRegister, uint64_t, hwreg::EnablePrinter> {
+  // Some values are only possible in ESR_EL2 and/or ESR_EL3.
+  enum class ExceptionClass : uint32_t {
+    kUnknown = 0b000000,
+    kWf = 0b000001,
+    kMcr = 0b000011,         // MCR or MRC
+    kMcrr = 0b000100,        // MCRR or MRRC
+    kMcrCoproc = 0b000101,   // MCR or MRC (coproc=0b1110)
+    kLdc = 0b000110,         // LDC or STC
+    kFp = 0b000111,          // SVE or SIMD
+    kLd64b = 0b001010,       // LD64B, ST64B, ST64BV, or ST64BVO
+    kMcrrCoproc = 0b001100,  // MRRC (coproc==0b1110)
+    kBti = 0b001101,
+    kIllegalExecution = 0b001110,
+    kSvc32 = 0b010001,
+    kHvc32 = 0b010010,  // EL2, EL3
+    kSmc32 = 0b010011,  // EL2, EL3
+    kSvc64 = 0b010101,
+    kHvc64 = 0b010110,  // EL2, EL3
+    kSmc64 = 0b010111,  // EL2, EL3
+    kMsr = 0b011000,    // MSR, MRS, or System Instruction
+    kSve = 0b011001,
+    kEret = 0b011010,  // EL2, EL3
+    kPac = 0b011100,
+    kImplementationDefined = 0b011111,  // EL3
+    kInstructionAbortLowerEl = 0b100000,
+    kInstructionAbortSameEl = 0b100001,
+    kPcAlignment = 0b100010,
+    kDataAbortLowerEl = 0b100100,
+    kDataAbortSameEl = 0b100101,
+    kSpAlignment = 0b100110,
+    kFpe32 = 0b101000,
+    kFpe64 = 0b101100,
+    kSerror = 0b101111,
+    kBreakpointLowerEl = 0b110000,
+    kBreakpointSameEl = 0b110001,
+    kStepLowerEl = 0b110010,
+    kStepSameEl = 0b110011,
+    kWatchpointLowerEl = 0b110100,
+    kWatchpointSameEl = 0b110101,
+    kBkpt = 0b111000,         // AArch32 BKPT #<n>
+    kVectorCatch = 0b111010,  // EL2, EL3
+    kBrk = 0b111100,          // AArch64 BRK #<n>
+
+    // Unused values in this range reserved for future synchronous exceptions.
+    kFirstReservedSynchronous = 0b000000,
+    kLastReservedSynchronous = 0b101100,
+
+    // Unused values in this range reserved for future exceptions, possibly
+    // synchronous or possibly asynchronous..
+    kFirstReservedMaybeAsynchronous = 0b101101,
+    kLastReservedMaybeAsynchronous = 0b111111,
+  };
+
+  DEF_RSVDZ_FIELD(63, 37);
+
+  DEF_FIELD(36, 32, iss2);
+  DEF_ENUM_FIELD(ExceptionClass, 31, 26, ec);
+  DEF_BIT(25, il);
+  DEF_FIELD(24, 0, iss);
+};
+
+struct ArmEsrEl1 : public arch::SysRegDerived<ArmEsrEl1, ArmExceptionSyndromeRegister> {};
+ARCH_ARM64_SYSREG(ArmEsrEl1, "esr_el1");
+
+struct ArmEsrEl2 : public arch::SysRegDerived<ArmEsrEl2, ArmExceptionSyndromeRegister> {};
+ARCH_ARM64_SYSREG(ArmEsrEl2, "esr_el2");
+
+struct ArmEsrEl3 : public arch::SysRegDerived<ArmEsrEl3, ArmExceptionSyndromeRegister> {};
+ARCH_ARM64_SYSREG(ArmEsrEl3, "esr_el3");
 
 }  // namespace arch
 
