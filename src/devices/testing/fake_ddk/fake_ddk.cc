@@ -161,8 +161,9 @@ zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_ar
       op_ctx_ = args->ctx;
     }
   }
-
-  *out = kFakeDevice;
+  if (out) {
+    *out = kFakeDevice;
+  }
   add_called_ = true;
   // This needs to come after setting |out|, as this sets the device's internal |zxdev_|,
   // which needs to be present for the InitTxn.

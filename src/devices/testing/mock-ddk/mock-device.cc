@@ -33,7 +33,9 @@ zx_status_t MockDevice::Create(device_add_args_t* args, MockDevice* parent, Mock
 
   // Using `new` to access a non-public constructor.
   auto new_device = std::shared_ptr<MockDevice>(new MockDevice(args, parent));
-  *out_dev = new_device.get();
+  if (out_dev) {
+    *out_dev = new_device.get();
+  }
   parent->children_.emplace_back(std::move(new_device));
   // PropagateMetadata to last child:
   for (const auto& [key, value] : parent->metadata_) {
