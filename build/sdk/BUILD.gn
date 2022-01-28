@@ -9,6 +9,11 @@ if (is_host) {
     main_source = "sdk_common_unittest.py"
     sources = [ "sdk_common.py" ]
   }
+
+  python_host_test("sdk_element_adapter_test") {
+    main_source = "sdk_element_adapter_test.py"
+    sources = [ "sdk_element_adapter.py" ]
+  }
 }
 
 group("tests") {
@@ -16,6 +21,7 @@ group("tests") {
 
   deps = [
     ":sdk_common_unittests($host_toolchain)",
+    ":sdk_element_adapter_test($host_toolchain)",
     "meta:tests($host_toolchain)",
     "tests",
     "tools/merge:merge_sdk_test($host_toolchain)",

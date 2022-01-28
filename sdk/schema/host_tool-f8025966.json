@@ -1,0 +1,44 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "allOf": [
+        {
+            "$ref": "../common-00000000.json#/definitions/versioned_sdk_element"
+        },
+        {
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "element_type": {
+                            "enum": [
+                                "host_tool"
+                            ]
+                        },
+                        "contents": {
+                            "type": "object",
+                            "properties": {
+                                "binary": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "binary"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "name",
+                        "element_type",
+                        "host_os",
+                        "host_arch",
+                        "contents"
+                    ]
+                }
+            },
+            "type": "object"
+        }
+    ],
+    "description": "A host tool",
+    "id": "http://fuchsia.dev/schema/sdk/host_tool/f8025966.json",
+    "type": "object"
+}
