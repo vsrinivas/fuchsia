@@ -77,17 +77,17 @@ Install
 [vscode-clangd](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd).
 Disable the default C/C++ extension if you have it installed.
 
-In settings, add:
+If you don't have `clangd` available in your environment (that is, included in `$PATH`), or if you
+want to ensure that you use the same version of `clangd` that is used by the Fuchsia toolchain,
+update VS Code's `settings.json` file to set the path to `clangd` as follows:
+
+Note: The path to `FUCHSIA_CHECKOUT_ROOT_DIRECTORY` below needs to be an absolute path.
 
 ```
-"clangd.path": "<absolute path to fuchsia root directory>/prebuilt/third_party/clang/<platform>/bin/clangd",
+"clangd.path": "<FUCHSIA_CHECKOUT_ROOT_DIRECTORY>/prebuilt/third_party/clang/<PLATFORM>/bin/clangd",
 ```
 
-Note: The path to clangd does need to be absolute.
-
-Finally, follow the **Compilation Database** instructions below to
-generate the `compile_commands.json` in the fuchsia root directory. Then
-reload VS Code to enjoy the results.
+After updating the `settings.json` file, you need to restart VS Code.
 
 You may also benefit from enabling background indexing and clang-tidy using the following settings:
 
