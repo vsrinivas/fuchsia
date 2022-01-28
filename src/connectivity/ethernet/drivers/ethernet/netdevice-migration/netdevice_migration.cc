@@ -153,6 +153,11 @@ void NetdeviceMigration::EthernetIfcRecv(const uint8_t* data_buffer, size_t data
       .length = static_cast<uint32_t>(data_size),
   };
   rx_buffer_t buf = {
+      .meta =
+          {
+              .port = kPortId,
+              .frame_type = static_cast<uint8_t>(fuchsia_hardware_network::FrameType::kEthernet),
+          },
       .data_list = &part,
       .data_count = 1,
   };

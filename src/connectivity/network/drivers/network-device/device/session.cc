@@ -835,6 +835,9 @@ bool Session::CompleteRx(const RxFrameInfo& frame_info) {
     // NB: Error logging happens at LoadRxInfo at a greater granularity, we only care about success
     // here.
     allow_reuse &= LoadRxInfo(frame_info) != ZX_OK;
+  } else if (frame_info.meta.frame_type == 0) {
+    // Help parent driver authors to debug common contract violation.
+    LOGF_WARN("network-device(%s): rx frame has unspecified frame type, dropping frame", name());
   }
 
   return allow_reuse;
@@ -847,6 +850,10 @@ bool Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
   if (!IsSubscribedToFrameType(frame_info.meta.port,
                                static_cast<netdev::wire::FrameType>(frame_info.meta.frame_type)) ||
       IsPaused()) {
+    if (frame_info.meta.frame_type == 0) {
+      // Help parent driver authors to debug common contract violation.
+      LOGF_WARN("network-device(%s): rx frame has unspecified frame type, dropping frame", name());
+    }
     // Don't do anything if we're paused or not subscribed to this frame type.
     return false;
   }

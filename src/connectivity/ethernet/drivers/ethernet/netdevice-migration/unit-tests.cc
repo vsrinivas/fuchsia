@@ -486,12 +486,17 @@ TEST_F(NetdeviceMigrationDefaultSetupTest, EthernetIfcRecv) {
   constexpr uint8_t rcvd[] = {0, 1, 2, 3, 4, 5, 6, 7};
   EXPECT_CALL(
       MockNetworkDevice(),
-      NetworkDeviceIfcCompleteRx(testing::Pointee(testing::FieldsAre(
-                                     testing::A<buffer_metadata_t>(),
-                                     testing::Pointee(testing::FieldsAre(
-                                         kSpaceId, 0, static_cast<uint32_t>(std::size(rcvd)))),
-                                     std::size(spaces))),
-                                 std::size(spaces)));
+      NetworkDeviceIfcCompleteRx(
+          testing::Pointee(testing::FieldsAre(
+              testing::FieldsAre(
+                  netdevice_migration::NetdeviceMigration::kPortId, testing::A<frame_info_t>(),
+                  static_cast<uint32_t>(fuchsia_hardware_network::wire::InfoType::kNoInfo),
+                  static_cast<uint32_t>(fuchsia_hardware_network::RxFlags()),
+                  static_cast<uint8_t>(fuchsia_hardware_network::FrameType::kEthernet)),
+              testing::Pointee(
+                  testing::FieldsAre(kSpaceId, 0, static_cast<uint32_t>(std::size(rcvd)))),
+              std::size(spaces))),
+          std::size(spaces)));
   Device().EthernetIfcRecv(rcvd, sizeof(rcvd), 0);
   netdevice_migration::NetdeviceMigrationTestHelper helper(Device());
   helper.WithVmoStore<void>([&rcvd](auto& vmo_store) {
