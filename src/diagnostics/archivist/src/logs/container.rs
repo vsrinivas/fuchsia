@@ -15,7 +15,7 @@ use crate::{
     },
     utils::AutoCall,
 };
-use diagnostics_data::{BuilderArgs, LogsData, LogsDataBuilder};
+use diagnostics_data::{BuilderArgs, Data, LogError, Logs, LogsData, LogsDataBuilder};
 use fidl::prelude::*;
 use fidl_fuchsia_diagnostics::{Interest as FidlInterest, LogInterestSelector, StreamMode};
 use fidl_fuchsia_logger::{
@@ -133,51 +133,57 @@ impl LogsArtifactsContainer {
 
     /// Returns a stream of this component's log messages.
     ///
-    /// # Dropped logs
+    /// # Rolled out logs
     ///
     /// When messages are evicted from our internal buffers before a client can read them, they
-    /// are surfaced here as an `LazyItem::ItemsRolledOut` variant. We report these as synthesized
-    /// messages with the timestamp populated as the most recent timestamp from the stream.
+    /// are counted as rolled out messages which gets appended to the metadata of the next message.
+    /// If there is no next message, there is no way to know how many messages were rolled out.
     pub fn cursor(&self, mode: StreamMode) -> PinStream<Arc<LogsData>> {
         let identity = self.identity.clone();
         let earliest_timestamp = self.buffer.peek_front().map(|f| f.timestamp()).unwrap_or(0);
-        Box::pin(self.buffer.cursor(mode).scan(earliest_timestamp, move |last_timestamp, item| {
-            futures::future::ready(Some(match item {
-                LazyItem::Next(m) => {
-                    *last_timestamp = m.timestamp();
-                    match m.parse(&identity) {
-                        Ok(m) => Arc::new(m),
-                        Err(err) => {
-                            let data = LogsDataBuilder::new(BuilderArgs {
-                                moniker: identity.to_string(),
-                                timestamp_nanos: (*last_timestamp).into(),
-                                component_url: Some(identity.url.clone()),
-                                severity: diagnostics_data::Severity::Warn,
-                            })
-                            .add_error(diagnostics_data::LogError::FailedToParseRecord(format!(
-                                "{:?}",
-                                err
-                            )))
-                            .build();
-                            Arc::new(data.into())
-                        }
-                    }
-                }
-                LazyItem::ItemsRolledOut(n) => {
-                    let message = format!("Rolled {} logs out of buffer", n);
-                    let data = LogsDataBuilder::new(BuilderArgs {
-                        moniker: identity.to_string(),
-                        timestamp_nanos: (*last_timestamp).into(),
-                        component_url: Some(identity.url.clone()),
-                        severity: diagnostics_data::Severity::Warn,
-                    })
-                    .add_error(diagnostics_data::LogError::RolledOutLogs { count: n })
-                    .set_message(message)
-                    .build();
-                    Arc::new(data)
-                }
-            }))
-        }))
+        Box::pin(
+            self.buffer
+                .cursor(mode)
+                .scan(
+                    (earliest_timestamp, 0 as u64),
+                    move |(last_timestamp, dropped_messages), item| {
+                        futures::future::ready(match item {
+                            LazyItem::Next(m) => {
+                                *last_timestamp = m.timestamp();
+                                match m.parse(&identity) {
+                                    Ok(m) => Some(Some(Arc::new(maybe_add_rolled_out_error(
+                                        dropped_messages,
+                                        m,
+                                    )))),
+                                    Err(err) => {
+                                        let data = maybe_add_rolled_out_error(
+                                            dropped_messages,
+                                            LogsDataBuilder::new(BuilderArgs {
+                                                moniker: identity.to_string(),
+                                                timestamp_nanos: (*last_timestamp).into(),
+                                                component_url: Some(identity.url.clone()),
+                                                severity: diagnostics_data::Severity::Warn,
+                                            })
+                                            .add_error(
+                                                diagnostics_data::LogError::FailedToParseRecord(
+                                                    format!("{:?}", err),
+                                                ),
+                                            )
+                                            .build(),
+                                        );
+                                        Some(Some(Arc::new(data.into())))
+                                    }
+                                }
+                            }
+                            LazyItem::ItemsRolledOut(drop_count) => {
+                                *dropped_messages += drop_count;
+                                Some(None)
+                            }
+                        })
+                    },
+                )
+                .filter_map(|value| future::ready(value)),
+        )
     }
 
     /// Handle `LogSink` protocol on `stream`. Each socket received from the `LogSink` client is
@@ -496,6 +502,18 @@ impl LogsArtifactsContainer {
     pub fn buffer(&self) -> &ArcList<StoredMessage> {
         &self.buffer
     }
+}
+
+fn maybe_add_rolled_out_error(dropped_messages: &mut u64, mut msg: Data<Logs>) -> Data<Logs> {
+    if *dropped_messages != 0 {
+        // Add rolled out metadata
+        msg.metadata
+            .errors
+            .get_or_insert(vec![])
+            .push(LogError::RolledOutLogs { count: *dropped_messages });
+    }
+    *dropped_messages = 0;
+    msg
 }
 
 impl ContainerState {

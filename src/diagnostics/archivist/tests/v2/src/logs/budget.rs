@@ -66,7 +66,8 @@ async fn test_budget() {
     let mut observed_logs = env.log_reader.snapshot_then_subscribe::<Logs>().unwrap();
     let msg_b = observed_logs.next().await.unwrap().unwrap();
     // First message should have been rolled out
-    assert_eq!(msg_b.rolled_out_logs(), Some(1));
+    assert_eq!(msg_b.rolled_out_logs(), Some(8940));
+    assert_eq!(observed_logs.next().await.unwrap().unwrap().rolled_out_logs(), None);
     assert_ne!(msg_a, msg_b);
 }
 
