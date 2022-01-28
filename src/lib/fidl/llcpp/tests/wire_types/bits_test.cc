@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.llcpp.types.test/cpp/wire.h>
+#include <fidl/test.types/cpp/wire.h>
 #include <lib/stdcompat/optional.h>
 
 #include <gtest/gtest.h>
@@ -101,14 +101,14 @@ REGISTER_TYPED_TEST_SUITE_P(Bits, BitwiseOperators, BitwiseAssignOperators, IsCo
                             CanConvertToNumberButMustBeExplicit, CanConvertToBool,
                             TruncatingUnknown, TryFrom, AllowingUnknownThroughStaticCast);
 
-using BitsTypesToTest = ::testing::Types<fidl_llcpp_types_test::wire::StrictBits,
-                                         fidl_llcpp_types_test::wire::FlexibleBits>;
+using BitsTypesToTest =
+    ::testing::Types<test_types::wire::StrictBits, test_types::wire::FlexibleBits>;
 INSTANTIATE_TYPED_TEST_SUITE_P(BitsTests, Bits, BitsTypesToTest);
 
 // The following APIs tested are only available on flexible bits.
 
 TEST(Bits, QueryingUnknown) {
-  using BitsType = fidl_llcpp_types_test::wire::FlexibleBits;
+  using BitsType = test_types::wire::FlexibleBits;
   // The bits type only has 2, 4, and 8 defined.
   auto bits = static_cast<BitsType>(2 | 1);
   EXPECT_TRUE(bits.has_unknown_bits());

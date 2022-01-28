@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.llcpp.types.test/cpp/fidl.h>
+#include <fidl/test.types/cpp/fidl.h>
 #include <lib/zx/event.h>
 
 #include <iostream>
@@ -40,11 +40,11 @@ TEST(NaturalStruct, Decode) {
   auto wire_format = ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV2Header);
 
   // Perform decoding.
-  fitx::result result = ::fidl::internal::DecodeFrom<fidl_llcpp_types_test::CopyableStruct>(
-      std::move(message), wire_format);
+  fitx::result result =
+      ::fidl::internal::DecodeFrom<test_types::CopyableStruct>(std::move(message), wire_format);
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
-  fidl_llcpp_types_test::CopyableStruct& obj = result.value();
+  test_types::CopyableStruct& obj = result.value();
 
   // Check decoded value.
   EXPECT_EQ(42, obj.x());
@@ -80,11 +80,11 @@ TEST(NaturalStructWithHandle, Decode) {
   auto wire_format = ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV2Header);
 
   // Perform decoding.
-  fitx::result result = ::fidl::internal::DecodeFrom<fidl_llcpp_types_test::MoveOnlyStruct>(
-      std::move(message), wire_format);
+  fitx::result result =
+      ::fidl::internal::DecodeFrom<test_types::MoveOnlyStruct>(std::move(message), wire_format);
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
-  fidl_llcpp_types_test::MoveOnlyStruct& obj = result.value();
+  test_types::MoveOnlyStruct& obj = result.value();
 
   // Check decoded value.
   EXPECT_EQ(event.get(), obj.h().get());
@@ -94,7 +94,7 @@ TEST(NaturalStructWithHandle, Decode) {
 
 TEST(NaturalStruct, Encode) {
   // Set up an object.
-  fidl_llcpp_types_test::CopyableStruct obj;
+  test_types::CopyableStruct obj;
   obj.x() = 42;
 
   // Perform encoding.
@@ -138,7 +138,7 @@ TEST(NaturalStructWithHandle, Encode) {
   };
 
   // Set up an object.
-  fidl_llcpp_types_test::HandleStruct obj;
+  test_types::HandleStruct obj;
   obj.h() = std::move(event);
 
   // Perform encoding.

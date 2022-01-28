@@ -23,8 +23,8 @@ test("fidl_llcpp_wire_type_api_tests_bin") {
     "enum_test.cc",
   ]
   deps = [
-    "//src/lib/fidl/llcpp/tests:fidl.llcpp.types.test_llcpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/tests/fidl/types_tests:test.types_llcpp",
     "//third_party/googletest:gtest",
   ]
 

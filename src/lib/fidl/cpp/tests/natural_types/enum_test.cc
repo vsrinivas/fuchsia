@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.llcpp.types.test/cpp/natural_types.h>
+#include <fidl/test.types/cpp/natural_types.h>
 
 #include <gtest/gtest.h>
 
-using fidl_llcpp_types_test::EmptyFlexibleEnum;
-using fidl_llcpp_types_test::FlexibleEnum;
-using fidl_llcpp_types_test::StrictEnum;
+using test_types::EmptyFlexibleEnum;
+using test_types::FlexibleEnum;
+using test_types::StrictEnum;
 
 TEST(Enum, Defaults) {
   using StrictType = StrictEnum;

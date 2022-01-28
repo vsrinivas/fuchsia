@@ -32,9 +32,3 @@ source_set("types_test_utils") {
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
-
-fidl("fidl.llcpp.types.test") {
-  sources = [ "types.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-  host_llcpp = true
-}

@@ -4,7 +4,7 @@
 
 #include "lib/fidl/llcpp/traits.h"
 
-#include <fidl/fidl.llcpp.types.test/cpp/wire.h>
+#include <fidl/test.types/cpp/wire.h>
 
 #ifdef __Fuchsia__
 #include <lib/zx/object.h>
@@ -15,7 +15,7 @@
 
 #include "gtest/gtest.h"
 
-namespace test = fidl_llcpp_types_test;
+namespace test = test_types;
 
 // There's no actual code in here, but if it compiles, success.
 TEST(Traits, NotConst) {

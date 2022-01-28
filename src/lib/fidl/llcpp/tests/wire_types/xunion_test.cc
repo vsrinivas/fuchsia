@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.llcpp.types.test/cpp/wire.h>
+#include <fidl/test.types/cpp/wire.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/fidl.h>
@@ -15,7 +15,7 @@
 #include <gtest/gtest.h>
 #include <src/lib/fidl/llcpp/tests/types_test_utils.h>
 
-namespace llcpp_test = ::fidl_llcpp_types_test;
+namespace llcpp_test = ::test_types;
 
 TEST(XUnionPayload, Primitive) {
   {

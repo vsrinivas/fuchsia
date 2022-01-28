@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.llcpp.types.test/cpp/fidl.h>
+#include <fidl/test.types/cpp/fidl.h>
 
 #include <iostream>
 #include <string>
@@ -35,10 +35,10 @@ TEST(NaturalResponse, DecodeMessage) {
 
   // Perform decoding.
   fitx::result result =
-      fidl::Response<fidl_llcpp_types_test::Baz::Foo>::DecodeTransactional(std::move(message));
+      fidl::Response<test_types::Baz::Foo>::DecodeTransactional(std::move(message));
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
-  fidl::Response<fidl_llcpp_types_test::Baz::Foo>& response = result.value();
+  fidl::Response<test_types::Baz::Foo>& response = result.value();
 
   // Check decoded value.
   EXPECT_EQ(42, response->res().bar());
@@ -64,11 +64,11 @@ TEST(NaturalResponsePayload, Decode) {
   auto metadata = fidl::internal::WireFormatMetadata::FromTransactionalHeader(header);
 
   // Perform decoding.
-  fitx::result result = fidl::internal::DecodeFrom<fidl_llcpp_types_test::BazFooTopResponse>(
-      std::move(message), metadata);
+  fitx::result result =
+      fidl::internal::DecodeFrom<test_types::BazFooTopResponse>(std::move(message), metadata);
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
-  fidl_llcpp_types_test::BazFooTopResponse& response = result.value();
+  test_types::BazFooTopResponse& response = result.value();
 
   // Check decoded value.
   EXPECT_EQ(42, response.res().bar());
@@ -76,8 +76,8 @@ TEST(NaturalResponsePayload, Decode) {
 
 TEST(NaturalResponsePayload, Encode) {
   // Set up an object.
-  fidl_llcpp_types_test::BazFooTopResponse response;
-  response.res() = fidl_llcpp_types_test::FooResponse{{.bar = 42}};
+  test_types::BazFooTopResponse response;
+  response.res() = test_types::FooResponse{{.bar = 42}};
 
   // Perform encoding.
   fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(response);
@@ -121,15 +121,15 @@ TEST(NaturalResponseWithHandle, Encode) {
   };
 
   // Set up an object.
-  fidl_llcpp_types_test::MsgWrapperTestXUnionTopResponse response;
-  response.result() = ::fidl_llcpp_types_test::TestXUnion::WithH(std::move(event));
+  test_types::MsgWrapperTestXUnionTopResponse response;
+  response.result() = ::test_types::TestXUnion::WithH(std::move(event));
 
   // Perform encoding.
   fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(response);
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
   // Handles are moved.
-  ASSERT_EQ(fidl_llcpp_types_test::TestXUnion::Tag::kH, response.result().Which());
+  ASSERT_EQ(test_types::TestXUnion::Tag::kH, response.result().Which());
   ASSERT_EQ(zx::handle(), response.result().h().value());
 
   // Check encoded bytes.

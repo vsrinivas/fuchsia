@@ -1,0 +1,14 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+# This is a FIDL library containing a bunch of declarations that are useful for
+# writing tests for FIDL bindings - especially how they map FIDL types to
+# target language types.
+fidl("test.types") {
+  sources = [ "types.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+  host_llcpp = true
+}

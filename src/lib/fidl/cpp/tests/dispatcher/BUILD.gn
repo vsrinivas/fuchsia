@@ -47,7 +47,7 @@ test("fidl_cpp_messaging_public_api_tests_bin") {
   deps = [
     "//sdk/lib/stdcompat",
     "//src/lib/fidl/cpp",
-    "//src/lib/fidl/llcpp/tests:fidl.llcpp.types.test_cpp",
+    "//src/tests/fidl/types_tests:test.types_cpp",
     "//zircon/system/ulib/zxtest",
   ]
 }

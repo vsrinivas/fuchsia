@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.llcpp.types.test/cpp/wire.h>
+#include <fidl/test.types/cpp/wire.h>
 
 #include <gtest/gtest.h>
 #include <src/lib/fidl/llcpp/tests/types_test_utils.h>
 
 TEST(Table, TablePrimitive) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
   fidl::Arena allocator;
   test::wire::SampleTable table(allocator);
   table.set_x(3).set_y(100);
@@ -21,7 +21,7 @@ TEST(Table, TablePrimitive) {
 }
 
 TEST(Table, InlineSetClear) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
   fidl::Arena allocator;
   test::wire::SampleTable table(allocator);
   table.set_x(3u);
@@ -34,7 +34,7 @@ TEST(Table, InlineSetClear) {
 }
 
 TEST(Table, OutOfLineSetClear) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
   fidl::Arena allocator;
   test::wire::Uint64Table table(allocator);
   table.set_x(allocator, 3u);
@@ -47,7 +47,7 @@ TEST(Table, OutOfLineSetClear) {
 }
 
 TEST(Table, TableVectorOfStruct) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
   fidl::Arena allocator;
   fidl::VectorView<test::wire::CopyableStruct> structs(allocator, 2);
   structs[0].x = 30;
@@ -65,14 +65,14 @@ TEST(Table, TableVectorOfStruct) {
 }
 
 TEST(Table, EmptyTable) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
   fidl::Arena allocator;
   test::wire::SampleEmptyTable table(allocator);
   ASSERT_TRUE(table.IsEmpty());
 }
 
 TEST(Table, NotEmptyTable) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
   fidl::Arena allocator;
   test::wire::SampleTable table(allocator);
   ASSERT_TRUE(table.IsEmpty());
@@ -81,7 +81,7 @@ TEST(Table, NotEmptyTable) {
 }
 
 TEST(Table, ManualFrame) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
   fidl::WireTableFrame<test::wire::SampleTable> frame;
   test::wire::SampleTable table(
       fidl::ObjectView<fidl::WireTableFrame<test::wire::SampleTable>>::FromExternal(&frame));
@@ -92,7 +92,7 @@ TEST(Table, ManualFrame) {
 }
 
 TEST(Table, Getters) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
   fidl::Arena allocator;
   test::wire::SampleTable table(allocator);
   EXPECT_FALSE(table.has_x());
@@ -106,7 +106,7 @@ TEST(Table, Getters) {
 }
 
 TEST(Table, SubTables) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
   fidl::Arena allocator;
   test::wire::TableWithSubTables table(allocator);
 
@@ -150,7 +150,7 @@ TEST(Table, SubTables) {
 }
 
 TEST(Table, SettingUnsettingHandles) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
   fidl::Arena allocator;
   test::wire::TestHandleTable table(allocator);
 
@@ -185,7 +185,7 @@ TEST(Table, SettingUnsettingHandles) {
 }
 
 TEST(Table, UnknownHandlesResource) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
 
   auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01,  // txn header
@@ -211,7 +211,7 @@ TEST(Table, UnknownHandlesResource) {
 }
 
 TEST(Table, UnknownHandlesNonResource) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
 
   auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01,  // txn header

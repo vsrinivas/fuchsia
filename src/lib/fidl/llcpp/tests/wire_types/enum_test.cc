@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.llcpp.types.test/cpp/wire.h>
+#include <fidl/test.types/cpp/wire.h>
 
 #include <gtest/gtest.h>
 
-using fidl_llcpp_types_test::wire::EmptyFlexibleEnum;
-using fidl_llcpp_types_test::wire::FlexibleEnum;
-using fidl_llcpp_types_test::wire::StrictEnum;
+using test_types::wire::EmptyFlexibleEnum;
+using test_types::wire::FlexibleEnum;
+using test_types::wire::StrictEnum;
 
 TEST(Enum, Defaults) {
   using StrictType = StrictEnum;

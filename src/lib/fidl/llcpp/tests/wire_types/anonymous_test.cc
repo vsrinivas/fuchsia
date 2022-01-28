@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.llcpp.types.test/cpp/wire.h>
+#include <fidl/test.types/cpp/wire.h>
 
 #include <gtest/gtest.h>
 
 TEST(Anonymous, ScopedAndFlattenedNames) {
-  namespace test = fidl_llcpp_types_test;
+  namespace test = test_types;
 
   // Test that anonymous layouts can be accessed using both the flattened and
   // scoped names.

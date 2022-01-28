@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.llcpp.types.test/cpp/wire.h>
+#include <fidl/test.types/cpp/wire.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/zx/channel.h>
 
@@ -12,8 +12,8 @@
 
 #include <gtest/gtest.h>
 
-using ::fidl_llcpp_types_test::TypesTest;
-using ::fidl_llcpp_types_test::wire::VectorStruct;
+using ::test_types::TypesTest;
+using ::test_types::wire::VectorStruct;
 using NonNullableChannelRequest = fidl::WireRequest<TypesTest::NonNullableChannel>;
 
 namespace {
@@ -72,8 +72,8 @@ TEST(LlcppTypesTests, RoundTripTest) {
 
   uint8_t golden_encoded[] = {0x0a, 0x00, 0x00, 0x00,   // txid
                               0x02, 0x00, 0x00, 0x01,   // flags and version
-                              0x4c, 0xf1, 0x17, 0xe9,   // low bytes of ordinal
-                              0xa3, 0x24, 0xcb, 0x2d,   // high bytes of ordinal
+                              0xa2, 0x37, 0xe0, 0x88,   // low bytes of ordinal
+                              0xbd, 0x2e, 0x98, 0x67,   // high bytes of ordinal
                               0xff, 0xff, 0xff, 0xff,   // handle present
                               0x00, 0x00, 0x00, 0x00};  // Padding
 
@@ -89,7 +89,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
   auto decoded = fidl::DecodedMessage<NonNullableChannelRequest>(std::move(incoming));
   EXPECT_TRUE(decoded.ok());
   EXPECT_EQ(decoded.PrimaryObject()->_hdr.txid, 10u);
-  EXPECT_EQ(decoded.PrimaryObject()->_hdr.ordinal, 0x2DCB24A3E917F14Clu);
+  EXPECT_EQ(decoded.PrimaryObject()->_hdr.ordinal, 0x67982ebd88e037a2lu);
   EXPECT_EQ(decoded.PrimaryObject()->channel.get(), unsafe_handle_backup);
   // encoded_message should be consumed
   EXPECT_EQ(encoded->GetOutgoingMessage().handle_actual(), 0u);
