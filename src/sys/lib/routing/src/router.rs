@@ -22,7 +22,7 @@ use {
     },
     derivative::Derivative,
     from_enum::FromEnum,
-    moniker::{ChildMoniker, ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
+    moniker::{ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
     std::{marker::PhantomData, sync::Arc},
 };
 
@@ -835,7 +835,7 @@ where
                     let parent_offer: O = {
                         let parent_offers = parent_component.lock_resolved_state().await?.offers();
                         let child_moniker =
-                            target.child_moniker().cloned().expect("ChildMoniker should exist");
+                            target.child_moniker().expect("ChildMoniker should exist").to_partial();
                         find_matching_offer(use_.source_name(), &child_moniker, &parent_offers)
                             .cloned()
                             .ok_or_else(|| {
@@ -969,7 +969,7 @@ where
                     let parent_offer: O = {
                         let parent_offers = parent_component.lock_resolved_state().await?.offers();
                         let child_moniker =
-                            target.child_moniker().cloned().expect("ChildMoniker should exist");
+                            target.child_moniker().expect("ChildMoniker should exist").to_partial();
                         find_matching_offer(
                             registration.source_name(),
                             &child_moniker,
@@ -1125,7 +1125,7 @@ where
                         ExtendedInstanceInterface::<C>::Component(component) => component,
                     };
                     let child_moniker =
-                        target.child_moniker().cloned().expect("ChildMoniker should exist");
+                        target.child_moniker().expect("ChildMoniker should exist").to_partial();
                     let parent_offer = {
                         let parent_offers = parent_component.lock_resolved_state().await?.offers();
                         find_matching_offer(offer.source_name(), &child_moniker, &parent_offers)
@@ -1324,7 +1324,7 @@ where
     }
 }
 
-fn target_matches_moniker(target: &OfferTarget, child_moniker: &ChildMoniker) -> bool {
+fn target_matches_moniker(target: &OfferTarget, child_moniker: &PartialChildMoniker) -> bool {
     match target {
         OfferTarget::Child(target_ref) => {
             target_ref.name == child_moniker.name()
@@ -1372,7 +1372,7 @@ pub trait CapabilityVisitor {
 
 pub fn find_matching_offer<'a, O>(
     source_name: &CapabilityName,
-    child_moniker: &ChildMoniker,
+    child_moniker: &PartialChildMoniker,
     offers: &'a Vec<OfferDecl>,
 ) -> Option<&'a O>
 where
