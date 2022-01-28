@@ -145,7 +145,8 @@ class WiFiService implements TaskService {
         }
       } on Exception catch (e) {
         log.warning('Error encountered during scan: $e');
-        return;
+        // TODO(cwhitten): uncomment once fxb/87664 fixed
+        // return;
       }
       onChanged();
     }()
