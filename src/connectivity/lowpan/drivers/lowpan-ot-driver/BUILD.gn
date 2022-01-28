@@ -32,7 +32,6 @@ rustc_binary("bin") {
     "//src/connectivity/lowpan/lib/openthread_fuchsia",
     "//src/connectivity/lowpan/lib/openthread_rust:openthread",
     "//src/connectivity/lowpan/lib/openthread_sys",
-    "//src/connectivity/network/tun",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
