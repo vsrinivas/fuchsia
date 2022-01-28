@@ -9,6 +9,7 @@ import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk.gni")
 import("//build/sdk/sdk_documentation.gni")
+import("//build/sdk/sdk_package.gni")
 import("//build/sdk/version_history_sdk_element.gni")
 import("//sdk/cts/build/cts_sdk.gni")
 import("config.gni")
@@ -676,4 +677,9 @@ sdk("ddk") {
     "//src/lib/ddk:ddk_sdk",
     "//src/lib/ddktl:ddktl_sdk",
   ]
+}
+
+# Experimental SDK packaging using fuchsia packages.
+sdk_package("version_package") {
+  deps = [ ":version_history" ]
 }

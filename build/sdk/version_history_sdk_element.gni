@@ -13,10 +13,15 @@ import("sdk_element.gni")
 template("version_history_sdk_element") {
   assert(defined(invoker.data), "Must define the version history")
   version_history = invoker.data
+  schema = invoker.schema
 
   sdk_element(target_name) {
-    forward_variables_from(invoker, [ "schema" ])
-    meta_src = version_history
-    meta_dst = "version_history.json"
+    schema = {
+      source = schema
+    }
+    meta = {
+      source = version_history
+      dest = "version_history.json"
+    }
   }
 }

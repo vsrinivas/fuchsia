@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import json
 import unittest
 from sdk_element_adapter import Adapter
 
@@ -11,34 +12,39 @@ class TestVersionHistory(unittest.TestCase):
 
     def setUp(self):
         self.maxDiff = None
-        element_meta = {
-            'data':
-                {
-                    'name':
-                        'Platform version map',
-                    'type':
-                        'version_history',
-                    'versions':
-                        [{
-                            'abi_revision': '0x02160C9D',
-                            'api_level': '1'
-                        }],
-                },
-            'schema_id':
-                'https://fuchsia.dev/schema/version_history-038fa854.json'
-        }
-        element_manifest = [
-            {
-                'dst': 'version_history.json',
-                'src': 'gen/sdk/version_history_sdk_element_sdk_metadata.json'
+        element_meta = json.loads(
+            """{
+            "data": {
+                "name": "Platform version map",
+                "type": "version_history",
+                "versions": [
+                    {
+                        "abi_revision": "0x02160C9D",
+                        "api_level": "1"
+                    }
+                ]
             },
-        ]
+            "schema_id": "https://fuchsia.dev/schema/version_history-038fa854.json"
+        }""")
+        gn_meta = json.loads(
+            """[
+            {
+                "files": [],
+                "meta": {
+                    "dest": "version_history.json",
+                    "source": "//out/default/gen/sdk/version_history_sdk_element_sdk_metadata.json"
+                }
+            }
+        ]""")
         gn_label = '//sdk:version_history(//build/toolchain/fuchsia:x64)'
-        meta_out = 'gen/sdk/version_history.meta.json'
+        base_out_dir = '//out/default'
+        category = 'public'
+        atom_meta_path = 'gen/sdk/version_history_adapter.meta.json'
         self.adapter = Adapter(
-            element_meta, element_manifest, gn_label, meta_out)
+            element_meta, gn_meta[0], gn_label, base_out_dir, category,
+            atom_meta_path).adapt()
 
-    def test_atom_meta(self):
+    def test_meta(self):
         expected = {
             'data':
                 {
@@ -55,15 +61,15 @@ class TestVersionHistory(unittest.TestCase):
             'schema_id':
                 'https://fuchsia.dev/schema/version_history-038fa854.json'
         }
-        self.assertEqual(self.adapter.atom_meta(), expected)
+        self.assertEqual(self.adapter['meta'], expected)
 
-    def test_atom_manifest(self):
+    def test_manifest(self):
         expected = {
             'atoms':
                 [
                     {
                         'category':
-                            'partner',
+                            'public',
                         'deps': [],
                         'files':
                             [
@@ -71,7 +77,7 @@ class TestVersionHistory(unittest.TestCase):
                                     'destination':
                                         'version_history.json',
                                     'source':
-                                        'gen/sdk/version_history.meta.json'
+                                        'gen/sdk/version_history_adapter.meta.json'
                                 }
                             ],
                         'gn-label':
@@ -87,54 +93,62 @@ class TestVersionHistory(unittest.TestCase):
                 ],
             'ids': ['sdk://version_history']
         }
-        self.assertEqual(self.adapter.atom_manifest(), expected)
+        self.assertEqual(self.adapter['manifest'], expected)
 
 
 class TestHostTool(unittest.TestCase):
 
     def setUp(self):
         self.maxDiff = None
-        element_meta = {
-            'data':
+        element_meta = json.loads(
+            """{
+            "data":
                 {
-                    'contents': {
-                        'binary': 'cmc'
+                    "contents": {
+                        "binary": "cmc"
                     },
-                    'description': 'cmc processes component manifests',
-                    'host_arch': 'x64',
-                    'host_os': 'linux',
-                    'name': 'cmc',
-                    'element_type': 'host_tool'
+                    "description": "cmc processes component manifests",
+                    "host_arch": "x64",
+                    "host_os": "linux",
+                    "name": "cmc",
+                    "element_type": "host_tool"
                 },
-            'schema_id':
-                'https://fuchsia.dev/schema/sdk/host_tool_sdk_element-00000000.json'
-        }
-        element_manifest = [
+            "schema_id":
+                "https://fuchsia.dev/schema/sdk/host_tool_sdk_element-00000000.json"
+        }""")
+        gn_meta = json.loads(
+            """[
             {
-                'dst': 'cmc',
-                'src': 'host_x64/cmc'
-            }, {
-                'dst':
-                    'cmc_sdk_element_sdk_metadata.json',
-                'src':
-                    'host_x64/gen/tools/cmc/cmc_sdk_element_sdk_metadata.json'
+                "files": [
+                    {
+                        "dest": "cmc",
+                        "source": "//out/default/host_x64/cmc"
+                    }
+                ],
+                "meta": {
+                    "dest": "cmc_sdk_element_sdk_metadata.json",
+                    "source": "//out/default/host_x64/gen/tools/cmc/cmc_sdk_element_sdk_metadata.json"
+                }
             }
-        ]
+        ]""")
         gn_label = '//tools/cmc:cmc_sdk(//build/toolchain:host_x64)'
-        meta_out = 'host_x64/gen/tools/cmc/cmc_sdk_element_adapter.meta.json'
+        base_out_dir = '//out/default'
+        category = 'partner'
+        atom_meta_path = 'host_x64/gen/cmc_adapter.meta.json'
         self.adapter = Adapter(
-            element_meta, element_manifest, gn_label, meta_out)
+            element_meta, gn_meta[0], gn_label, base_out_dir, category,
+            atom_meta_path).adapt()
 
-    def test_atom_meta(self):
+    def test_meta(self):
         expected = {
             'files': ['tools/x64/cmc'],
             'name': 'cmc',
             'root': 'tools',
             'type': 'host_tool'
         }
-        self.assertEqual(self.adapter.atom_meta(), expected)
+        self.assertEqual(self.adapter['meta'], expected)
 
-    def test_atom_manifest(self):
+    def test_manifest(self):
         expected = {
             'atoms':
                 [
@@ -149,9 +163,9 @@ class TestHostTool(unittest.TestCase):
                                     'source': 'host_x64/cmc'
                                 }, {
                                     'destination':
-                                        'tools/x64/cmc_sdk_element_sdk_metadata.json',
+                                        'tools/x64/cmc-meta.json',
                                     'source':
-                                        'host_x64/gen/tools/cmc/cmc_sdk_element_adapter.meta.json'
+                                        'host_x64/gen/cmc_adapter.meta.json'
                                 }
                             ],
                         'gn-label':
@@ -159,7 +173,7 @@ class TestHostTool(unittest.TestCase):
                         'id':
                             'sdk://tools/x64/cmc',
                         'meta':
-                            'tools/x64/cmc_sdk_element_sdk_metadata.json',
+                            'tools/x64/cmc-meta.json',
                         'plasa': [],
                         'type':
                             'host_tool'
@@ -167,7 +181,7 @@ class TestHostTool(unittest.TestCase):
                 ],
             'ids': ['sdk://tools/x64/cmc']
         }
-        self.assertEqual(self.adapter.atom_manifest(), expected)
+        self.assertEqual(self.adapter['manifest'], expected)
 
 
 if __name__ == '__main__':
