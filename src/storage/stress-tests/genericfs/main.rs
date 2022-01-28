@@ -9,7 +9,8 @@ mod instance_actor;
 
 use {
     argh::FromArgs,
-    environment::MinfsEnvironment,
+    environment::FsEnvironment,
+    fs_management::{Fxfs, Minfs},
     fuchsia_async as fasync,
     log::LevelFilter,
     stress_test::{run_test, StdoutLogger},
@@ -51,6 +52,10 @@ pub struct Args {
     #[argh(option, short = 't')]
     time_limit_secs: Option<u64>,
 
+    /// which filesystem to target (e.g. 'fxfs' or 'minfs').
+    #[argh(option, short = 'f')]
+    target_filesystem: String,
+
     /// parameter passed in by rust test runner
     #[argh(switch)]
     // TODO(fxbug.dev/84729)
@@ -60,15 +65,19 @@ pub struct Args {
 
 #[fasync::run_singlethreaded(test)]
 async fn test() {
-    // Get arguments from command line
     let args: Args = argh::from_env();
 
-    // Initialize logging
     StdoutLogger::init(args.log_filter.unwrap_or(LevelFilter::Info));
 
-    // Setup the minfs environment
-    let env = MinfsEnvironment::new(args).await;
-
-    // Run the test
-    run_test(env).await;
+    match args.target_filesystem.as_str() {
+        "fxfs" => {
+            let env = FsEnvironment::new(Fxfs::default(), args).await;
+            run_test(env).await;
+        }
+        "minfs" => {
+            let env = FsEnvironment::new(Minfs::default(), args).await;
+            run_test(env).await;
+        }
+        _ => panic!("Unsupported filesystem {}", args.target_filesystem),
+    }
 }

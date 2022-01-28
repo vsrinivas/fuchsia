@@ -361,6 +361,7 @@ impl<FSC: FSConfig> Drop for Filesystem<FSC> {
 ///
 
 /// Layout of blobs in blobfs
+#[derive(Clone)]
 pub enum BlobLayout {
     /// Merkle tree is stored in a separate block. This is deprecated and used only on Astro
     /// devices (it takes more space).
@@ -371,6 +372,7 @@ pub enum BlobLayout {
 }
 
 /// Compression used for blobs in blobfs
+#[derive(Clone)]
 pub enum BlobCompression {
     ZSTD,
     ZSTDSeekable,
@@ -379,6 +381,7 @@ pub enum BlobCompression {
 }
 
 /// Eviction policy used for blobs in blobfs
+#[derive(Clone)]
 pub enum BlobEvictionPolicy {
     NeverEvict,
     EvictImmediately,
@@ -386,7 +389,7 @@ pub enum BlobEvictionPolicy {
 
 /// Blobfs Filesystem Configuration
 /// If fields are None or false, they will not be set in arguments.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Blobfs {
     pub verbose: bool,
     pub readonly: bool,
@@ -458,7 +461,7 @@ impl FSConfig for Blobfs {
 
 /// Minfs Filesystem Configuration
 /// If fields are None or false, they will not be set in arguments.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Minfs {
     // TODO(xbhatnag): Add support for fvm_data_slices
     pub verbose: bool,
@@ -510,9 +513,54 @@ impl FSConfig for Minfs {
     }
 }
 
+/// Fxfs Filesystem Configuration
+/// If fields are None or false, they will not be set in arguments.
+#[derive(Clone, Default)]
+pub struct Fxfs {
+    pub verbose: bool,
+    pub readonly: bool,
+}
+
+impl Fxfs {
+    /// Manages a block device at a given path using
+    /// the default configuration.
+    pub fn new(path: &str) -> Result<Filesystem<Self>, Error> {
+        Filesystem::from_path(path, Self::default())
+    }
+
+    /// Manages a block device at a given channel using
+    /// the default configuration.
+    pub fn from_channel(channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
+        Filesystem::from_channel(channel, Self::default())
+    }
+}
+
+impl FSConfig for Fxfs {
+    fn binary_path(&self) -> &CStr {
+        cstr!("/pkg/bin/fxfs")
+    }
+    fn generic_args(&self) -> Vec<&CStr> {
+        let mut args = vec![];
+        if self.verbose {
+            args.push(cstr!("--verbose"));
+        }
+        args
+    }
+    fn format_args(&self) -> Vec<&CStr> {
+        vec![]
+    }
+    fn mount_args(&self) -> Vec<&CStr> {
+        let mut args = vec![];
+        if self.readonly {
+            args.push(cstr!("--readonly"));
+        }
+        args
+    }
+}
+
 /// Factoryfs Filesystem Configuration
 /// If fields are None or false, they will not be set in arguments.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Factoryfs {
     pub verbose: bool,
     pub metrics: bool,

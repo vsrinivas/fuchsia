@@ -64,7 +64,7 @@ impl BlobfsEnvironment {
             FvmInstance::new(true, &vmo, args.fvm_slice_size, args.ramdisk_block_size).await;
 
         // Create a blobfs volume
-        let volume_guid = fvm.new_volume("blobfs", TYPE_GUID).await;
+        let volume_guid = fvm.new_volume("blobfs", TYPE_GUID, 1).await;
 
         // Find the path to the volume
         let volume_path = get_volume_path(&volume_guid).await;

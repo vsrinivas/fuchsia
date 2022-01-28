@@ -7,11 +7,13 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/minfs_stressor",
+        binary: "bin/fs_stressor",
         args: [
             // 6 hour time limit
             "--time-limit-secs",
             "21600",
+            "--target-filesystem",
+            "minfs",
         ],
     },
     children: [

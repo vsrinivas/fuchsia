@@ -9,19 +9,11 @@
     program: {
         binary: "bin/fs_stressor",
         args: [
-            // Run a 100 operations. This should fit in the CQ/CI time limits.
-            "--num-operations",
-            "100",
-
-            // Use a smaller ramdisk for short tests
-            "--ramdisk-block-count",
-            "27136",
-
-            // Enable debug logging for this variant
-            "-l",
-            "debug",
+            // 6 hour time limit
+            "--time-limit-secs",
+            "21600",
             "--target-filesystem",
-            "minfs",
+            "fxfs",
         ],
     },
     children: [

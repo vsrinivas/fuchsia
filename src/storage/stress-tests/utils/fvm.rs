@@ -131,9 +131,9 @@ impl FvmInstance {
         Self { _ramdisk: ramdisk, volume_manager }
     }
 
-    /// Create a new FVM volume with the given name and type GUID. This volume will consume
-    /// exactly 1 slice. Returns the instance GUID used to uniquely identify this volume.
-    pub async fn new_volume(&mut self, name: &str, mut type_guid: Guid) -> Guid {
+    /// Create a new FVM volume with the given name and type GUID.
+    /// Returns the instance GUID used to uniquely identify this volume.
+    pub async fn new_volume(&mut self, name: &str, mut type_guid: Guid, num_slices: u64) -> Guid {
         // Generate a random instance GUID
         let mut rng = SmallRng::from_entropy();
         let mut instance_guid = Guid { value: rng.gen() };
@@ -141,12 +141,20 @@ impl FvmInstance {
         // Create the new volume
         let status = self
             .volume_manager
-            .allocate_partition(1, &mut type_guid, &mut instance_guid, name, 0)
+            .allocate_partition(num_slices, &mut type_guid, &mut instance_guid, name, 0)
             .await
             .unwrap();
         Status::ok(status).unwrap();
 
         instance_guid
+    }
+
+    /// Returns the number of slices the FVM partition has available.
+    pub async fn total_slices(&self) -> u64 {
+        let (status, info) = self.volume_manager.get_info().await.unwrap();
+        Status::ok(status).unwrap();
+
+        info.unwrap().slice_count
     }
 }
 

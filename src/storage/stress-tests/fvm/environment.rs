@@ -52,7 +52,7 @@ impl FvmEnvironment {
         for i in 0..args.num_volumes {
             // Create the new volume
             let volume_name = format!("testpart-{}", i);
-            let volume_guid = fvm.new_volume(&volume_name, TYPE_GUID).await;
+            let volume_guid = fvm.new_volume(&volume_name, TYPE_GUID, 1).await;
 
             // Connect to the volume
             let volume = VolumeConnection::new(volume_guid, args.fvm_slice_size).await;

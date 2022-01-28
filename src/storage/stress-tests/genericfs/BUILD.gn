@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_test("stressor-bin") {
-  name = "minfs_stressor"
+  name = "fs_stressor"
   edition = "2018"
   source_root = "main.rs"
   testonly = true

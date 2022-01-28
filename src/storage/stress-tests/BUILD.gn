@@ -9,13 +9,25 @@ import("//build/rust/rustc_library.gni")
 fuchsia_component("minfs-crash") {
   testonly = true
   manifest = "minfs/meta/crash.cml"
-  deps = [ "minfs:stressor-bin" ]
+  deps = [ "genericfs:stressor-bin" ]
 }
 
 fuchsia_component("minfs-no-crash") {
   testonly = true
   manifest = "minfs/meta/no-crash.cml"
-  deps = [ "minfs:stressor-bin" ]
+  deps = [ "genericfs:stressor-bin" ]
+}
+
+fuchsia_component("fxfs-crash") {
+  testonly = true
+  manifest = "fxfs/meta/crash.cml"
+  deps = [ "genericfs:stressor-bin" ]
+}
+
+fuchsia_component("fxfs-no-crash") {
+  testonly = true
+  manifest = "fxfs/meta/no-crash.cml"
+  deps = [ "genericfs:stressor-bin" ]
 }
 
 fuchsia_component("blobfs-crash") {
@@ -57,7 +69,13 @@ fuchsia_component("fvm-short") {
 fuchsia_component("minfs-short") {
   testonly = true
   manifest = "minfs/meta/short.cml"
-  deps = [ "minfs:stressor-bin" ]
+  deps = [ "genericfs:stressor-bin" ]
+}
+
+fuchsia_component("fxfs-short") {
+  testonly = true
+  manifest = "fxfs/meta/short.cml"
+  deps = [ "genericfs:stressor-bin" ]
 }
 
 # This test package is designed to run on `core.qemu-x64-stress`.
@@ -71,10 +89,15 @@ fuchsia_test_package("storage-stress-tests") {
     ":blobfs-no-crash",
     ":minfs-crash",
     ":minfs-no-crash",
+
+    # TODO(fxbug.dev/92435): Enable this variant.
+    #":fxfs-crash",
+    ":fxfs-no-crash",
   ]
   deps = [
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
+    "//src/storage/fxfs",
     "//src/storage/testing:storage_driver_test_realm",
   ]
   test_specs = {
@@ -99,10 +122,12 @@ fuchsia_test_package("storage-stress-tests-short") {
     ":fvm-short",
     ":blobfs-short",
     ":minfs-short",
+    ":fxfs-short",
   ]
   deps = [
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
+    "//src/storage/fxfs",
     "//src/storage/testing:storage_driver_test_realm",
   ]
   test_specs = {

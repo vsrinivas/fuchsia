@@ -9,7 +9,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fs_management::Minfs,
+    fs_management::{FSConfig, Filesystem},
     fuchsia_zircon::Vmo,
     futures::lock::Mutex,
     rand::{rngs::SmallRng, Rng, SeedableRng},
@@ -32,47 +32,44 @@ const TYPE_GUID: Guid = Guid {
 const ONE_MIB: u64 = 1048576;
 const FOUR_MIB: u64 = 4 * ONE_MIB;
 
-// The path to the minfs filesystem in the test's namespace
-const MINFS_MOUNT_PATH: &str = "/minfs";
+const MOUNT_PATH: &str = "/fs";
 
-pub fn open_dir_at_minfs_root(subdir: &str) -> Directory {
-    let path = PathBuf::from(MINFS_MOUNT_PATH).join(subdir);
+pub fn open_dir_at_root(subdir: &str) -> Directory {
+    let path = PathBuf::from(MOUNT_PATH).join(subdir);
     Directory::from_namespace(path, OPEN_RIGHT_WRITABLE | OPEN_RIGHT_READABLE).unwrap()
 }
 
-/// Describes the environment that this minfs stress test will run under.
-pub struct MinfsEnvironment {
+/// Describes the environment that this stress test will run under.
+pub struct FsEnvironment<FSC: FSConfig> {
     seed: u64,
     args: Args,
     vmo: Vmo,
     volume_guid: Guid,
-    instance_actor: Arc<Mutex<InstanceActor>>,
+    config: FSC,
+    instance_actor: Arc<Mutex<InstanceActor<FSC>>>,
     file_actor: Arc<Mutex<FileActor>>,
     deletion_actor: Arc<Mutex<DeletionActor>>,
 }
 
-impl MinfsEnvironment {
-    pub async fn new(args: Args) -> Self {
+impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
+    pub async fn new(config: FSC, args: Args) -> Self {
         // Create the VMO that the ramdisk is backed by
         let vmo_size = args.ramdisk_block_count * args.ramdisk_block_size;
         let vmo = Vmo::create(vmo_size).unwrap();
 
-        // Initialize the VMO with FVM partition style and a single minfs partition
+        // Initialize the VMO with FVM partition style and a single filesystem partition
 
         // Create a ramdisk and setup FVM.
         let mut fvm =
             FvmInstance::new(true, &vmo, args.fvm_slice_size, args.ramdisk_block_size).await;
 
-        // Create a minfs volume
-        let volume_guid = fvm.new_volume("minfs", TYPE_GUID).await;
-
-        // Find the path to the volume
+        // Initialize the filesystem on a new volume
+        let volume_guid = fvm.new_volume("default", TYPE_GUID, fvm.total_slices().await).await;
         let volume_path = get_volume_path(&volume_guid).await;
+        let mut fs = Filesystem::from_path(volume_path.to_str().unwrap(), config.clone()).unwrap();
+        fs.format().unwrap();
 
-        // Initialize minfs on volume
-        let mut minfs = Minfs::new(volume_path.to_str().unwrap()).unwrap();
-        minfs.format().unwrap();
-        minfs.mount(MINFS_MOUNT_PATH).unwrap();
+        fs.mount(MOUNT_PATH).unwrap();
 
         let seed = match args.seed {
             Some(seed) => seed,
@@ -83,7 +80,7 @@ impl MinfsEnvironment {
 
         // Make a home directory for file actor and deletion actor
         let root_dir =
-            Directory::from_namespace(MINFS_MOUNT_PATH, OPEN_RIGHT_WRITABLE | OPEN_RIGHT_READABLE)
+            Directory::from_namespace(MOUNT_PATH, OPEN_RIGHT_WRITABLE | OPEN_RIGHT_READABLE)
                 .unwrap();
         root_dir
             .create_directory("home1", OPEN_RIGHT_WRITABLE | OPEN_RIGHT_READABLE)
@@ -95,29 +92,29 @@ impl MinfsEnvironment {
             let uncompressed_size = UncompressedSize::InRange(ONE_MIB, FOUR_MIB);
             let compressibility = Compressibility::Compressible;
             let factory = FileFactory::new(rng, uncompressed_size, compressibility);
-            let home_dir = open_dir_at_minfs_root("home1");
+            let home_dir = open_dir_at_root("home1");
             Arc::new(Mutex::new(FileActor::new(factory, home_dir)))
         };
         let deletion_actor = {
             let rng = SmallRng::from_seed(rng.gen());
-            let home_dir = open_dir_at_minfs_root("home1");
+            let home_dir = open_dir_at_root("home1");
             Arc::new(Mutex::new(DeletionActor::new(rng, home_dir)))
         };
 
-        let instance_actor = Arc::new(Mutex::new(InstanceActor::new(fvm, minfs)));
+        let instance_actor = Arc::new(Mutex::new(InstanceActor::new(fvm, fs)));
 
-        Self { seed, args, vmo, volume_guid, file_actor, deletion_actor, instance_actor }
+        Self { seed, args, vmo, volume_guid, file_actor, deletion_actor, instance_actor, config }
     }
 }
 
-impl std::fmt::Debug for MinfsEnvironment {
+impl<FSC: FSConfig> std::fmt::Debug for FsEnvironment<FSC> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Environment").field("seed", &self.seed).field("args", &self.args).finish()
     }
 }
 
 #[async_trait]
-impl Environment for MinfsEnvironment {
+impl<FSC: 'static + FSConfig + Clone + Send + Sync> Environment for FsEnvironment<FSC> {
     fn target_operations(&self) -> Option<u64> {
         self.args.num_operations
     }
@@ -167,29 +164,26 @@ impl Environment for MinfsEnvironment {
             )
             .await;
 
-            // Find the path to the volume
             let volume_path = get_volume_path(&self.volume_guid).await;
 
-            // Initialize minfs on volume
-            let mut minfs = Minfs::new(volume_path.to_str().unwrap()).unwrap();
+            let mut fs =
+                Filesystem::from_path(volume_path.to_str().unwrap(), self.config.clone()).unwrap();
+            fs.fsck().unwrap();
+            fs.mount(MOUNT_PATH).unwrap();
 
-            // Mount the minfs volume
-            minfs.fsck().unwrap();
-            minfs.mount(MINFS_MOUNT_PATH).unwrap();
-
-            // Replace the fvm and minfs instances
-            actor.instance = Some((minfs, fvm));
+            // Replace the fvm and fs instances
+            actor.instance = Some((fs, fvm));
         }
 
         // Replace the root directory with a new one
         {
             let mut actor = self.file_actor.lock().await;
-            actor.home_dir = open_dir_at_minfs_root("home1");
+            actor.home_dir = open_dir_at_root("home1");
         }
 
         {
             let mut actor = self.deletion_actor.lock().await;
-            actor.home_dir = open_dir_at_minfs_root("home1");
+            actor.home_dir = open_dir_at_root("home1");
         }
     }
 }
