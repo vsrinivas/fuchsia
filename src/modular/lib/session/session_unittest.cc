@@ -157,12 +157,6 @@ class TestLauncher : fuchsia::modular::session::Launcher {
     is_launched_ = true;
   }
 
-  // |Launcher|
-  void LaunchSessionmgrWithServices(fuchsia::mem::Buffer config,
-                                    fuchsia::sys::ServiceList additional_services) override {
-    FX_NOTREACHED();
-  }
-
   bool is_launched() const { return is_launched_; }
   fuchsia::modular::session::ModularConfig* config() const { return config_.get(); }
 

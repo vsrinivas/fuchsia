@@ -30,18 +30,6 @@ class LauncherImpl : public fuchsia::modular::session::Launcher {
 
   // |Launcher|
   void LaunchSessionmgr(fuchsia::mem::Buffer config) override {
-    LaunchSessionmgrWithServices(std::move(config), fuchsia::sys::ServiceList());
-  }
-
-  // |Launcher|
-  void LaunchSessionmgrWithServices(fuchsia::mem::Buffer config,
-                                    fuchsia::sys::ServiceList additional_services) override {
-    if (!additional_services.names.empty() && !additional_services.host_directory) {
-      FX_LOGS(ERROR)
-          << "LaunchSessionmgrWithServices() requires additional_services.host_directory";
-      binding_->Close(ZX_ERR_INVALID_ARGS);
-      return;
-    }
     FX_DCHECK(binding_);
 
     if (basemgr_impl_->state() == BasemgrImpl::State::SHUTTING_DOWN) {
@@ -63,7 +51,7 @@ class LauncherImpl : public fuchsia::modular::session::Launcher {
       return;
     }
 
-    basemgr_impl_->LaunchSessionmgr(config_result.take_value(), std::move(additional_services));
+    basemgr_impl_->LaunchSessionmgr(config_result.take_value());
   }
 
   void set_binding(modular::BasemgrImpl::LauncherBinding* binding) { binding_ = binding; }
@@ -221,21 +209,20 @@ void BasemgrImpl::GetPresentation(
   presentation_container_->GetPresentation(std::move(request));
 }
 
-void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig config,
-                                   fuchsia::sys::ServiceList additional_services) {
+void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig config) {
   // If there is a session provider, tear it down and try again. This stops any running session.
   if (session_provider_.get()) {
-    session_provider_.Teardown(
-        kSessionProviderTimeout,
-        [this, config = std::move(config), services = std::move(additional_services)]() mutable {
-          session_provider_.reset(nullptr);
-          LaunchSessionmgr(std::move(config), std::move(services));
-        });
+    session_provider_.Teardown(kSessionProviderTimeout,
+                               [this, config = std::move(config)]() mutable {
+                                 session_provider_.reset(nullptr);
+                                 LaunchSessionmgr(std::move(config));
+                               });
     return;
   }
 
   launch_sessionmgr_config_accessor_ =
       std::make_unique<modular::ModularConfigAccessor>(std::move(config));
+  fuchsia::sys::ServiceList additional_services{};
 
   CreateSessionProvider(launch_sessionmgr_config_accessor_.get(), std::move(additional_services));
 

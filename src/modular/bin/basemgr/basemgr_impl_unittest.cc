@@ -198,49 +198,6 @@ TEST_F(BasemgrImplTest, StartsSessionWithConfig) {
   RunLoopUntil([&]() { return did_shut_down_; });
 }
 
-// Tests that the LaunchSessionmgrWithServices method provide services to sessionmgr.
-TEST_F(BasemgrImplTest, LauncherOffersServices) {
-  FakeSessionmgr sessionmgr{};
-  sessionmgr.component()->Register(modular_config::kSessionmgrUrl, fake_launcher_);
-
-  CreateBasemgrImpl(DefaultConfig());
-
-  // Build a directory to serve services from the session launcher component.
-  int connect_count = 0;
-  auto dir = std::make_unique<vfs::PseudoDir>();
-  dir->AddEntry(
-      fuchsia::testing::modular::TestProtocol::Name_,
-      std::make_unique<vfs::Service>([&](zx::channel, async_dispatcher_t*) { ++connect_count; }));
-  auto dir_server = std::make_unique<modular::PseudoDirServer>(std::move(dir));
-
-  // Construct a ServiceList with the above dir server.
-  fuchsia::sys::ServiceList service_list;
-  service_list.names.push_back(fuchsia::testing::modular::TestProtocol::Name_);
-  service_list.host_directory = dir_server->Serve().Unbind().TakeChannel();
-
-  auto config_buf = BufferFromString(modular::ConfigToJsonString(DefaultConfig()));
-
-  // Launch the session
-  auto session_launcher = GetSessionLauncher();
-  session_launcher->LaunchSessionmgrWithServices(std::move(config_buf), std::move(service_list));
-
-  // sessionmgr should be started and initialized.
-  RunLoopUntil([&]() { return sessionmgr.initialized(); });
-
-  // sessionmgr should have received the service in `additional_services_for_agents`
-  auto& services = sessionmgr.additional_services_for_agents().value();
-  ASSERT_EQ(1u, services.names.size());
-
-  sys::ServiceDirectory service_dir{std::move(services.host_directory)};
-  auto test_protocol = service_dir.Connect<fuchsia::testing::modular::TestProtocol>();
-
-  RunLoopUntil([&] { return connect_count > 0; });
-  EXPECT_EQ(1, connect_count);
-
-  basemgr_impl_->Terminate();
-  RunLoopUntil([&]() { return did_shut_down_; });
-}
-
 // Tests that LaunchSessionmgr closes the channel with an ZX_ERR_INVALID_ARGS epitaph if the
 // config buffer is not readable.
 TEST_F(BasemgrImplTest, LaunchSessionmgrFailsGivenUnreadableBuffer) {

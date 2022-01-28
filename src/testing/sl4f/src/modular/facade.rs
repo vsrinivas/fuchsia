@@ -537,11 +537,6 @@ mod tests {
                                     .await
                                     .expect("could not send on channel");
                             }
-                            fmodular_session::LauncherRequest::LaunchSessionmgrWithServices {
-                                ..
-                            } => {
-                                panic!("LaunchSessionmgrWithServices should not be called");
-                            }
                         }
                     }
                 }

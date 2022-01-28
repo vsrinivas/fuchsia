@@ -11,7 +11,6 @@ table/member fuchsia.modular.session/BasemgrConfig.story_shell fuchsia.modular.s
 table/member fuchsia.modular.session/BasemgrConfig.use_session_shell_for_story_shell_factory bool
 table fuchsia.modular.session/BasemgrConfig
 protocol/member fuchsia.modular.session/Launcher.LaunchSessionmgr(fuchsia.mem/Buffer config)
-protocol/member fuchsia.modular.session/Launcher.LaunchSessionmgrWithServices(fuchsia.mem/Buffer config,fuchsia.sys/ServiceList additional_services)
 protocol fuchsia.modular.session/Launcher
 table/member fuchsia.modular.session/ModularConfig.basemgr_config fuchsia.modular.session/BasemgrConfig
 table/member fuchsia.modular.session/ModularConfig.sessionmgr_config fuchsia.modular.session/SessionmgrConfig

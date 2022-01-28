@@ -86,8 +86,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   void Stop() override;
 
   // Launches sessionmgr with the given |config|.
-  void LaunchSessionmgr(fuchsia::modular::session::ModularConfig config,
-                        fuchsia::sys::ServiceList additional_services);
+  void LaunchSessionmgr(fuchsia::modular::session::ModularConfig config);
 
   State state() const { return state_; }
 
