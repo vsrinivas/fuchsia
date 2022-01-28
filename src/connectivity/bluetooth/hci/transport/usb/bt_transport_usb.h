@@ -50,6 +50,12 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   zx_status_t BtHciOpenSnoopChannel(zx::channel channel);
 
  private:
+  enum class ReadThreadPortKey : uint64_t {
+    kCommandChannel,
+    kAclChannel,
+    kUnbind,
+  };
+
   // The number of currently supported HCI channel endpoints. We currently have
   // one channel for command/event flow and one for ACL data flow. The snoop channel is managed
   // separately.
@@ -75,7 +81,7 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
 
   void QueueInterruptRequestsLocked() __TA_REQUIRES(mutex_);
 
-  void ChannelCleanupLocked(zx::channel* channel);
+  void ChannelCleanupLocked(zx::channel* channel) __TA_REQUIRES(mutex_);
 
   void SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, size_t length) __TA_REQUIRES(mutex_);
 
@@ -87,21 +93,17 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
 
   void HciAclWriteComplete(usb_request_t* req);
 
-  void HciBuildReadWaitItemsLocked() __TA_REQUIRES(mutex_);
-
-  void HciBuildReadWaitItems();
-
   // Handle a readable or closed signal from the command channel.
-  void HciHandleCmdReadEvents(zx_wait_item_t* cmd_item);
+  void HciHandleCmdReadEvents(const zx_port_packet_t& packet);
 
   // Handle a readable or closed signal from the ACL channel.
-  void HciHandleAclReadEvents(zx_wait_item_t* acl_item);
+  void HciHandleAclReadEvents(const zx_port_packet_t& packet);
 
   // The read thread reads outbound command and ACL packets from the command and ACL channels and
   // forwards them to the USB device.
   static int HciReadThread(void* void_dev);
 
-  zx_status_t HciOpenChannel(zx::channel* out, zx::channel in);
+  zx_status_t HciOpenChannel(zx::channel* out, zx::channel in, ReadThreadPortKey key);
 
   zx_status_t AllocBtUsbPackets(int limit, uint64_t data_size, uint8_t ep_address, size_t req_size,
                                 list_node_t* list);
@@ -110,8 +112,6 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   void OnBindFailure(zx_status_t status, const char* msg);
 
   void HandleUsbResponseError(usb_request_t* req, const char* msg) __TA_REQUIRES(mutex_);
-
-  void CloseChannelWithLog(zx::channel* channel, zx_status_t status, const char* msg);
 
   usb_protocol_t usb_ __TA_GUARDED(mutex_);
 
@@ -122,14 +122,9 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   // Port to queue PEER_CLOSED signals on
   zx_handle_t snoop_watch_ = ZX_HANDLE_INVALID;
 
-  // Signaled when a channel opens or closes
-  zx_handle_t channels_changed_evt_ = ZX_HANDLE_INVALID;
-
-  // Signaled when the driver is unbound.
-  zx_handle_t unbind_evt_ = ZX_HANDLE_INVALID;
-
-  // Waits for channel signale and events that the read thread waits on.
-  std::vector<zx_wait_item_t> read_wait_items_ __TA_GUARDED(mutex_);
+  // Port that the read thread waits on. Events that need to be signaled to the read thread should
+  // be sent on this port.
+  zx_handle_t read_thread_port_ = ZX_HANDLE_INVALID;
 
   thrd_t read_thread_ __TA_GUARDED(mutex_) = 0;
 

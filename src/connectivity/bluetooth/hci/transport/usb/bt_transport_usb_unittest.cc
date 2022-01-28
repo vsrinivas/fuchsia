@@ -772,9 +772,4 @@ TEST_F(BtTransportUsbHciProtocolTest, SendManyAclPackets) {
   }
 }
 
-TEST_F(BtTransportUsbHciProtocolTest, ReconfigureSnoopChannelMultipleTimesSucceeds) {
-  EXPECT_EQ(configure_snoop_channel(), ZX_OK);
-  EXPECT_EQ(configure_snoop_channel(), ZX_OK);
-}
-
 }  // namespace
