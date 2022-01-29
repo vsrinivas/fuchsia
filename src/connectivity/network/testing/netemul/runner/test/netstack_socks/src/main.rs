@@ -4,7 +4,6 @@
 
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::ProtocolMarker;
-use fidl_fuchsia_net_interfaces::StateMarker;
 use fidl_fuchsia_netemul_environment::{
     EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker, VirtualDevice,
 };
@@ -12,8 +11,6 @@ use fidl_fuchsia_netemul_network::{
     DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker, EndpointProxy,
     NetworkConfig, NetworkContextMarker, NetworkManagerMarker, NetworkProxy,
 };
-use fidl_fuchsia_netstack::NetstackMarker;
-use fidl_fuchsia_posix_socket::ProviderMarker;
 use fidl_fuchsia_sys::{
     ComponentControllerEvent, ComponentControllerMarker, ComponentControllerProxy, LaunchInfo,
     LauncherMarker, TerminationReason,
@@ -79,23 +76,20 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
 
     let env_options = EnvironmentOptions {
         name: Some(String::from(env_name)),
-        services: Some(vec![
-            LaunchService {
-                name: String::from(NetstackMarker::NAME),
+        services: Some(
+            IntoIterator::into_iter([
+                fidl_fuchsia_net_debug::InterfacesMarker::NAME,
+                fidl_fuchsia_net_interfaces::StateMarker::NAME,
+                fidl_fuchsia_netstack::NetstackMarker::NAME,
+                fidl_fuchsia_posix_socket::ProviderMarker::NAME,
+            ])
+            .map(|marker| LaunchService {
+                name: String::from(marker),
                 url: String::from(NETSTACK_URL),
                 arguments: Vec::new(),
-            },
-            LaunchService {
-                name: String::from(ProviderMarker::NAME),
-                url: String::from(NETSTACK_URL),
-                arguments: Vec::new(),
-            },
-            LaunchService {
-                name: String::from(StateMarker::NAME),
-                url: String::from(NETSTACK_URL),
-                arguments: Vec::new(),
-            },
-        ]),
+            })
+            .collect(),
+        ),
         // pass the endpoint's proxy to create a virtual device
         devices: Some(vec![VirtualDevice {
             path: String::from(format!("class/ethernet/{}", env_name)),

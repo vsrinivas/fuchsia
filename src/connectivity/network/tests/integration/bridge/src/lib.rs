@@ -249,9 +249,11 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
                     message
                 );
                 bridge = Some(bridge_id);
-                let () = switch_netstack
-                    .set_interface_status(bridge_id, true)
-                    .expect("error enabling bridge interface");
+                let () = switch_stack
+                    .enable_interface(bridge_id.into())
+                    .await
+                    .expect("error calling enable_interface(bridge)")
+                    .expect("error response from enable_interface(bridge)");
                 let (switch_interface_control, server_end) = fidl::endpoints::create_proxy::<
                     fidl_fuchsia_net_interfaces_admin::ControlMarker,
                 >()

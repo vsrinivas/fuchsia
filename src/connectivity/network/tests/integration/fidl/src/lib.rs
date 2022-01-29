@@ -35,42 +35,6 @@ use packet_formats::{
 };
 use test_case::test_case;
 
-/// Regression test: test that Netstack.SetInterfaceStatus does not kill the channel to the client
-/// if given an invalid interface id.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn set_interface_status_unknown_interface() {
-    let name = "set_interface_status";
-    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
-    let netstack = realm
-        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
-        .expect("connect to protocol");
-
-    let interface_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
-    let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("create event stream"),
-        HashMap::new(),
-    )
-    .await
-    .expect("get existing interfaces");
-
-    let next_id = 1 + interfaces
-        .keys()
-        .max()
-        .expect("can't find any network interfaces (at least loopback should be present)");
-    let next_id =
-        next_id.try_into().unwrap_or_else(|e| panic!("{} try_into error: {:?}", next_id, e));
-
-    let () = netstack.set_interface_status(next_id, false).expect("set_interface_status");
-    let _routes = netstack.get_route_table().await.expect(
-        "invoke netstack method after calling set_interface_status with an invalid argument",
-    );
-}
-
 #[fuchsia_async::run_singlethreaded(test)]
 async fn add_ethernet_device() {
     let name = "add_ethernet_device";

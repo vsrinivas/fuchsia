@@ -7,7 +7,6 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_net,
     fidl_fuchsia_netemul_network::{DeviceConnection, EndpointManagerMarker, NetworkContextMarker},
-    fidl_fuchsia_netstack::{InterfaceConfig, NetstackMarker},
     fuchsia_component::client,
     std::io::{Read, Write},
     std::net::{SocketAddr, TcpListener, TcpStream},
@@ -94,7 +93,9 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
 
     let if_name = format!("eth-{}", opt.endpoint);
     // connect to netstack:
-    let netstack = client::connect_to_protocol::<NetstackMarker>()?;
+    let netstack = client::connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()?;
+    let debug_interfaces =
+        client::connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()?;
     let static_ip =
         opt.ip.parse::<fidl_fuchsia_net_ext::Subnet>().expect("must be able to parse ip");
     println!("static ip = {:?}", static_ip);
@@ -104,18 +105,27 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
         None => opt.ip,
     };
 
-    let mut cfg = InterfaceConfig {
+    let mut cfg = fidl_fuchsia_netstack::InterfaceConfig {
         name: if_name.to_string(),
         filepath: "[TBD]".to_string(),
         metric: DEFAULT_METRIC,
     };
+    let (control, control_server_end) =
+        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+            .context("failed to create control endpoints")?;
     let nicid = match device_connection {
-        DeviceConnection::Ethernet(eth) => netstack
-            .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth)
-            .await
-            .context("add_ethernet_device FIDL error")?
-            .map_err(fuchsia_zircon::Status::from_raw)
-            .context("add_ethernet_device error")?,
+        DeviceConnection::Ethernet(eth) => {
+            let nicid = netstack
+                .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth)
+                .await
+                .context("add_ethernet_device FIDL error")?
+                .map_err(fuchsia_zircon::Status::from_raw)
+                .context("add_ethernet_device error")?;
+            let () = debug_interfaces
+                .get_admin(nicid.into(), control_server_end)
+                .context("calling get_admin")?;
+            nicid
+        }
         DeviceConnection::NetworkDevice(netdevice) => {
             panic!(
                 "got unexpected NetworkDevice {:?}; expected to have been configured with Ethernet",
@@ -124,9 +134,14 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
         }
     };
 
-    let () = netstack.set_interface_status(nicid as u32, true)?;
+    let _: bool = control.enable().await.context("call enable")?.map_err(
+        |e: fidl_fuchsia_net_interfaces_admin::ControlEnableError| {
+            anyhow::format_err!("enable interface: {:?}", e)
+        },
+    )?;
     let fidl_fuchsia_net::Subnet { mut addr, prefix_len } = static_ip.clone().into();
-    let _ = netstack.set_interface_address(nicid as u32, &mut addr, prefix_len).await?;
+    let _: fidl_fuchsia_netstack::NetErr =
+        netstack.set_interface_address(nicid, &mut addr, prefix_len).await?;
 
     let interface_state =
         client::connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()?;

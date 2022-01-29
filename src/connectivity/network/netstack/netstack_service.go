@@ -175,17 +175,6 @@ func (ni *netstackImpl) BridgeInterfaces(_ fidl.Context, nicids []uint32) (netst
 	return netstack.NetErr{Status: netstack.StatusOk}, uint32(ifs.nicid), nil
 }
 
-func (ni *netstackImpl) SetInterfaceStatus(_ fidl.Context, nicid uint32, enabled bool) error {
-	if nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(nicid)]; ok {
-		if _, err := nicInfo.Context.(*ifState).setState(enabled); err != nil {
-			_ = syslog.Errorf("(NIC %d).setState(enabled=%t): %s", nicid, enabled, err)
-		}
-	} else {
-		_ = syslog.Warnf("(NIC %d).setState(enabled=%t): not found", nicid, enabled)
-	}
-	return nil
-}
-
 func (ni *netstackImpl) GetDhcpClient(_ fidl.Context, id uint32, request dhcp.ClientWithCtxInterfaceRequest) (netstack.NetstackGetDhcpClientResult, error) {
 	var result netstack.NetstackGetDhcpClientResult
 	nicid := tcpip.NICID(id)

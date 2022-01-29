@@ -8,6 +8,7 @@
                     {
                         "name": "fuchsia",
                         "services": {
+                            "fuchsia.net.debug.Interfaces": "fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/netstack.cmx",
                             "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/netstack.cmx",
                             "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/netstack.cmx",
                             "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/netstack.cmx",
@@ -91,9 +92,9 @@
             "isolated-persistent-storage"
         ],
         "services": [
-                "fuchsia.kernel.HypervisorResource",
-                "fuchsia.kernel.VmexResource",
-                "fuchsia.sysinfo.SysInfo"
+            "fuchsia.kernel.HypervisorResource",
+            "fuchsia.kernel.VmexResource",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

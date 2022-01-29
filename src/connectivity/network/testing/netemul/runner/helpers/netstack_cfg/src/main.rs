@@ -58,6 +58,12 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
 
     // connect to netstack:
     let netstack = client::connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()?;
+    let debug_interfaces =
+        client::connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()?;
+
+    let (control, control_server_end) =
+        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+            .context("failed to create control endpoints")?;
 
     let nicid = match device_connection {
         fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(e) => {
@@ -66,12 +72,18 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
                 filepath: format!("/vdev/{}", opt.endpoint),
                 metric: DEFAULT_METRIC,
             };
-            netstack
+            let nicid = netstack
                 .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, e)
                 .await
                 .with_context(|| format!("add_ethernet_device FIDL error ({:?})", cfg))?
                 .map_err(fuchsia_zircon::Status::from_raw)
-                .with_context(|| format!("add_ethernet_device error ({:?})", cfg))?
+                .with_context(|| format!("add_ethernet_device error ({:?})", cfg))?;
+            let nicid = nicid.into();
+
+            let () = debug_interfaces
+                .get_admin(nicid, control_server_end)
+                .context("calling get_admin")?;
+            nicid
         }
         fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(device_instance) => {
             let device = {
@@ -130,9 +142,6 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
                 proxy
             };
 
-            let (control, control_server_end) =
-                fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
-                    .context("failed to create control endpoints")?;
             let () = device_control
                 .create_interface(
                     &mut port_id,
@@ -145,19 +154,23 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
                 )
                 .context("create interface")?;
 
-            let nicid = control.get_id().await.context("get id")?;
-
-            // Allow interface to live beyond these handles.
+            // Allow interface to live on after this process exits.
             let () = device_control.detach().context("device control detach")?;
             let () = control.detach().context("control detach")?;
 
-            u32::try_from(nicid).with_context(|| format!("{} does not fit in a u32", nicid))?
+            control.get_id().await.context("get id")?
         }
     };
 
-    let () =
-        netstack.set_interface_status(nicid, true).context("error setting interface status")?;
+    let _: bool = control.enable().await.context("call enable")?.map_err(
+        |e: fidl_fuchsia_net_interfaces_admin::ControlEnableError| {
+            anyhow::format_err!("enable interface: {:?}", e)
+        },
+    )?;
+
     log::info!("Added ethernet to stack.");
+
+    let nicid = u32::try_from(nicid).with_context(|| format!("{} does not fit in a u32", nicid))?;
 
     // TODO(fxbug.dev/74595): Expose an option to preempt address autogeneration instead of
     // removing them after the fact.
@@ -286,7 +299,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         let mut entry = fidl_fuchsia_netstack::RouteTableEntry {
             destination: fidl_fuchsia_net::Subnet { addr: unspec_addr, prefix_len: 0 },
             gateway: Some(Box::new(gw_addr)),
-            nicid: nicid,
+            nicid,
             metric: 0,
         };
         let () = route_proxy

@@ -56,8 +56,6 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack,
   void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
                            SetInterfaceAddressCallback callback) override;
 
-  void SetInterfaceStatus(uint32_t nicid, bool enabled) override {}
-
   // The following methods are not used by Machina guests and are stubbed out.
   void GetRouteTable(GetRouteTableCallback callback) override {}
 

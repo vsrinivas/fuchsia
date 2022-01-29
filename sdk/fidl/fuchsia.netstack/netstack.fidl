@@ -35,12 +35,6 @@ protocol Netstack {
         rt vector<RouteTableEntry>:MAX;
     });
 
-    /// Sets the status (up or down) for the interface with the given nicid.
-    SetInterfaceStatus(struct {
-        nicid uint32;
-        enabled bool;
-    });
-
     /// Sets the address for the interface with the given nicid.
     /// Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
     @deprecated("Use fuchsia.net.interfaces.admin/Control.AddAddress")
