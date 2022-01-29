@@ -7,147 +7,17 @@
 //! - [Package](https://fuchsia.dev/fuchsia-src/concepts/packages/package?hl=en)
 //! - [TUF](https://theupdateframework.io/)
 
-use {
-    super::{Error, Repository, RepositoryBackend, Resource, ResourceRange},
-    anyhow::{anyhow, Context, Result},
-    errors::{ffx_bail, ffx_error},
-    fidl_fuchsia_developer_bridge_ext::RepositorySpec,
-    fuchsia_pkg::{MetaContents, MetaPackage, PackageBuilder, PackageManifest},
-    futures::TryStreamExt,
-    futures_lite::io::{copy, AsyncWriteExt},
-    hyper::{
-        body::HttpBody,
-        client::{connect::Connect, Client},
-        Body, StatusCode, Uri,
-    },
-    serde_json::Value,
-    std::{
-        fmt::Debug,
-        fs::{metadata, File},
-        path::PathBuf,
-        sync::Arc,
-        time::SystemTime,
-    },
-    tuf::{
-        interchange::Json,
-        repository::{HttpRepositoryBuilder as TufHttpRepositoryBuilder, RepositoryProvider},
-    },
-    url::Url,
-};
-
-#[derive(Debug)]
-pub struct HttpRepository<C> {
-    client: Client<C, Body>,
-    metadata_repo_url: Url,
-    blob_repo_url: Url,
-}
-
-impl<C> HttpRepository<C> {
-    pub fn new(
-        client: Client<C, Body>,
-        mut metadata_repo_url: Url,
-        mut blob_repo_url: Url,
-    ) -> Self {
-        // `URL.join` treats urls with a trailing slash as a directory, and without as a file.
-        // In the latter case, it will strip off the last segment before joining paths. Since the
-        // metadata and blob url are directories, make sure they have a trailing slash.
-        if !metadata_repo_url.path().ends_with('/') {
-            metadata_repo_url.set_path(&format!("{}/", metadata_repo_url.path()));
-        }
-
-        if !blob_repo_url.path().ends_with('/') {
-            blob_repo_url.set_path(&format!("{}/", blob_repo_url.path()));
-        }
-
-        Self { client, metadata_repo_url, blob_repo_url }
-    }
-}
-
-impl<C> HttpRepository<C>
-where
-    C: Connect + Clone + Send + Sync + 'static,
-{
-    async fn fetch_from(
-        &self,
-        root: &Url,
-        resource_path: &str,
-        _range: ResourceRange,
-    ) -> Result<Resource, Error> {
-        let full_url = root.join(resource_path).map_err(|e| anyhow!(e))?;
-        let uri = full_url.as_str().parse::<Uri>().map_err(|e| anyhow!(e))?;
-
-        let resp = self
-            .client
-            .get(uri)
-            .await
-            .context(format!("fetching resource {}", full_url.as_str()))?;
-
-        let body = match resp.status() {
-            StatusCode::OK => resp.into_body(),
-            StatusCode::NOT_FOUND => return Err(Error::NotFound),
-            status_code => {
-                return Err(Error::Other(anyhow!(
-                    "Got error downloading resource, error is: {}",
-                    status_code
-                )))
-            }
-        };
-
-        let content_len = body
-            .size_hint()
-            .exact()
-            .ok_or_else(|| anyhow!("response did not include Content-Length"))?;
-
-        Ok(Resource {
-            content_len: content_len,
-            total_len: content_len,
-            stream: Box::pin(body.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))),
-        })
-    }
-}
-
-#[async_trait::async_trait]
-impl<C> RepositoryBackend for HttpRepository<C>
-where
-    C: Connect + Clone + Debug + Send + Sync + 'static,
-{
-    fn spec(&self) -> RepositorySpec {
-        RepositorySpec::Http {
-            metadata_repo_url: self.metadata_repo_url.as_str().to_owned(),
-            blob_repo_url: self.blob_repo_url.as_str().to_owned(),
-        }
-    }
-
-    async fn fetch_metadata(
-        &self,
-        resource_path: &str,
-        range: ResourceRange,
-    ) -> Result<Resource, Error> {
-        self.fetch_from(&self.metadata_repo_url, resource_path, range).await
-    }
-
-    async fn fetch_blob(
-        &self,
-        resource_path: &str,
-        range: ResourceRange,
-    ) -> Result<Resource, Error> {
-        self.fetch_from(&self.blob_repo_url, resource_path, range).await
-    }
-
-    fn get_tuf_repo(&self) -> Result<Box<(dyn RepositoryProvider<Json> + 'static)>, Error> {
-        Ok(Box::new(
-            TufHttpRepositoryBuilder::<_, Json>::new(
-                self.metadata_repo_url.clone().into(),
-                self.client.clone(),
-            )
-            .build(),
-        ) as Box<dyn RepositoryProvider<Json>>)
-    }
-
-    async fn blob_modification_time(&self, _path: &str) -> Result<Option<SystemTime>> {
-        Ok(None)
-    }
-}
+use anyhow::Result;
+use errors::ffx_bail;
+use fuchsia_hyper::{new_https_client, HttpsClient};
+use fuchsia_pkg::{MetaContents, MetaPackage, PackageBuilder, PackageManifest};
+use futures_lite::io::AsyncWriteExt;
+use hyper::body::HttpBody;
+use hyper::{StatusCode, Uri};
+use serde_json::Value;
+use std::fs::{metadata, File};
+use std::path::PathBuf;
+use std::sync::Arc;
 
 /// Download a package from a TUF repo.
 ///
@@ -155,35 +25,18 @@ where
 /// `blob_url`: URL of Blobs Server.
 /// `target_path`: Target path for the package to download.
 /// `output_path`: Local path to save the downloaded package.
-pub async fn package_download<C>(
-    client: Client<C, Body>,
+pub async fn package_download(
     tuf_url: String,
     blob_url: String,
     target_path: String,
     output_path: PathBuf,
-) -> Result<()>
-where
-    C: Connect + Clone + Debug + Send + Sync + 'static,
-{
-    let backend =
-        Box::new(HttpRepository::new(client, Url::parse(&tuf_url)?, Url::parse(&blob_url)?));
-    let repo = Repository::new("repo", backend).await?;
+) -> Result<()> {
+    let client = Arc::new(new_https_client());
 
-    let desc = repo
-        .get_target_description(&target_path)
-        .await?
-        .context("missing target description here")?
-        .custom()
-        .context("missing custom data")?
-        .get("merkle")
-        .context("missing merkle")?
-        .clone();
-    let merkle = if let Value::String(hash) = desc {
-        hash.to_string()
-    } else {
-        ffx_bail!("[Error] Merkle field is not a String. {:#?}", desc);
-    };
+    // TODO(fxb/75396): Use rust-tuf to find the merkle for the package path
+    let merkle = read_meta_far_merkle(tuf_url, &client, target_path).await?;
 
+    let uri = format!("{}/{}", blob_url, merkle).parse::<Uri>()?;
     if !output_path.exists() {
         async_fs::create_dir_all(&output_path).await?;
     }
@@ -193,7 +46,7 @@ where
     }
     let meta_far_path = output_path.join("meta.far");
 
-    download_blob_to_destination(&merkle, &repo, meta_far_path.clone()).await?;
+    download_file_to_destination(uri, &client, meta_far_path.clone()).await?;
 
     let mut archive = File::open(&meta_far_path)?;
     let mut meta_far = fuchsia_archive::Reader::new(&mut archive)?;
@@ -212,13 +65,11 @@ where
     }
     // Download all the blobs.
     let mut tasks = Vec::new();
-    let repo = Arc::new(repo);
     for hash in meta_contents.values() {
+        let uri = format!("{}/{}", blob_url, hash).parse::<Uri>()?;
         let blob_path = blob_output_path.join(&hash.to_string());
-        let clone = repo.clone();
-        tasks.push(async move {
-            download_blob_to_destination(&hash.to_string(), &clone, blob_path).await
-        });
+        let client = Arc::clone(&client);
+        tasks.push(async move { download_file_to_destination(uri, &client, blob_path).await });
     }
     futures::future::join_all(tasks).await;
 
@@ -238,51 +89,75 @@ where
     Ok(())
 }
 
-/// Download a blob from the repository and save it to the given
-/// destination
-/// `path`: Path on the server from which to download the package.
-/// `repo`: A [Repository] instance.
+/// Check if the merkle of downloaded meta.far matches the merkle in targets.json
+///
+/// `tuf_url`: The URL of the TUF repo.
+/// `client`: Https Client used to make request.
+/// `target_path`: target path of package on TUF repo.
+async fn read_meta_far_merkle(
+    tuf_url: String,
+    client: &HttpsClient,
+    target_path: String,
+) -> Result<String> {
+    let uri = format!("{}/targets.json", tuf_url).parse::<Uri>()?;
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("targets.json");
+
+    download_file_to_destination(uri, &client, path.clone()).await?;
+    let targets: Value = serde_json::from_reader(File::open(&path)?)?;
+    let merkle = &targets["signed"]["targets"][&target_path]["custom"]["merkle"];
+    if let Value::String(hash) = merkle {
+        Ok(hash.to_string())
+    } else {
+        ffx_bail!("[Error] Merkle field is not a String. {:#?}", merkle);
+    }
+}
+
+/// Download file and save it to the given
+///
+/// `uri`: Uri from where file is downloaded.
+/// `client`: Https Client used to make request.
 /// `destination`: Local path to save the downloaded package.
-async fn download_blob_to_destination(
-    path: &str,
-    repo: &Repository,
+async fn download_file_to_destination(
+    uri: Uri,
+    client: &HttpsClient,
     destination: PathBuf,
 ) -> Result<()> {
-    let res = repo.fetch_blob(path).await.map_err(|e| {
-        ffx_error!("Cannot download file to {}. Error was {:#}", destination.display(), anyhow!(e))
-    })?;
-    copy(res.stream.into_async_read(), async_fs::File::create(destination).await?).await?;
+    let mut res = client.get(uri.clone()).await?;
+    let status = res.status();
+    if status != StatusCode::OK {
+        ffx_bail!(
+            "Cannot download file to {}. Status is {}. Uri is: {}. \n",
+            destination.display(),
+            status,
+            &uri
+        );
+    }
+    let mut output = async_fs::File::create(destination).await?;
+    while let Some(next) = res.data().await {
+        let chunk = next?;
+        output.write_all(&chunk).await?;
+    }
+    output.sync_all().await?;
     Ok(())
 }
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*,
-        crate::{
-            repository::{PmRepository, RepositoryManager, RepositoryServer},
-            test_utils::repo_private_key,
-        },
-        fuchsia_async as fasync,
-        fuchsia_hyper::new_https_client,
-        fuchsia_pkg::{build_with_file_system, CreationManifest, FileSystem},
-        fuchsia_repo_builder::RepoBuilder,
-        maplit::{btreemap, hashmap},
-        std::{
-            collections::HashMap,
-            fs::create_dir,
-            io::{self, Write},
-            net::Ipv4Addr,
-            path::Path,
-        },
-        tuf::{
-            client::Config,
-            crypto::HashAlgorithm,
-            interchange::Json,
-            metadata::{TargetDescription, VirtualTargetPath},
-            repository::FileSystemRepositoryBuilder,
-        },
+    use super::*;
+    use crate::{
+        repository::{RepositoryManager, RepositoryServer},
+        test_utils::make_writable_empty_repository,
     };
+    use fuchsia_async as fasync;
+    use fuchsia_pkg::CreationManifest;
+    use fuchsia_pkg::{build_with_file_system, FileSystem};
+    use maplit::{btreemap, hashmap};
+    use std::collections::HashMap;
+    use std::fs::create_dir;
+    use std::io;
+    use std::io::Write;
+    use std::net::Ipv4Addr;
 
     struct FakeFileSystem {
         content_map: HashMap<String, Vec<u8>>,
@@ -301,7 +176,7 @@ mod test {
         }
     }
 
-    fn create_meta_far(path: &Path) {
+    fn create_meta_far(path: PathBuf) {
         let creation_manifest = CreationManifest::from_external_and_far_contents(
             btreemap! {
                 "lib/mylib.so".to_string() => "host/mylib.so".to_string()
@@ -330,6 +205,10 @@ mod test {
         build_with_file_system(&creation_manifest, &path, "my-package-name", &file_system).unwrap();
     }
 
+    fn create_targets_json() -> Vec<u8> {
+        "{\"signed\":{\"targets\":{\"test_package\":{\"custom\":{\"merkle\":\"0000000000000000000000000000000000000000000000000000000000000000\"}}}}}".as_bytes().to_vec()
+    }
+
     fn write_file(path: PathBuf, body: &[u8]) {
         let mut tmp = tempfile::NamedTempFile::new().unwrap();
         tmp.write(body).unwrap();
@@ -341,59 +220,26 @@ mod test {
         let manager = RepositoryManager::new();
 
         let tempdir = tempfile::tempdir().unwrap();
-        let metadata_dir = tempdir.path().join("repository");
-        create_dir(&metadata_dir).unwrap();
-        let blob_dir = metadata_dir.join("blobs");
+        let root = tempdir.path().join("tuf");
+        let repo = make_writable_empty_repository("tuf", root.clone()).await.unwrap();
+
+        // Write targets.json
+        let target_json = create_targets_json();
+        let target_json_path = root.join("repository").join("targets.json");
+        write_file(target_json_path.clone(), target_json.as_slice());
+
+        let blob_dir = root.join("repository").join("blobs");
         create_dir(&blob_dir).unwrap();
 
         // Put meta.far and blob into blobs directory
         let meta_far_path =
-            blob_dir.join("947015aca61730b5035469d86344aa9d68284143967e41496a9394b26ac8eabc");
-        create_meta_far(&meta_far_path);
+            blob_dir.join("0000000000000000000000000000000000000000000000000000000000000000");
+        create_meta_far(meta_far_path);
 
         let blob_path =
             blob_dir.join("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b");
         write_file(blob_path, "".as_bytes());
 
-        // Write TUF metadata
-        let key = repo_private_key();
-        RepoBuilder::create(
-            Config::default(),
-            &FileSystemRepositoryBuilder::<Json>::new(metadata_dir.clone()).build().unwrap(),
-            [&key],
-            [&key],
-            [&key],
-            [&key],
-        )
-        .with_root_builder(|builder| builder.consistent_snapshot(true))
-        .await
-        .unwrap()
-        .with_targets_builder(|builder| {
-            let description = TargetDescription::from_reader_with_custom(
-                File::open(meta_far_path).unwrap(),
-                &[HashAlgorithm::Sha256],
-                hashmap! {
-                    "merkle".into() =>
-                        "947015aca61730b5035469d86344aa9d68284143967e41496a9394b26ac8eabc"
-                        .into(),
-                },
-            )
-            .unwrap();
-
-            builder.insert_target_description(
-                VirtualTargetPath::new("test_package".to_owned()).unwrap(),
-                description,
-            )
-        })
-        .await
-        .unwrap()
-        .commit()
-        .await
-        .unwrap();
-
-        // Create the repository.
-        let backend = PmRepository::new(tempdir.path().to_path_buf());
-        let repo = Repository::new("tuf", Box::new(backend)).await.unwrap();
         manager.add(Arc::new(repo));
 
         let addr = (Ipv4Addr::LOCALHOST, 0).into();
@@ -408,17 +254,9 @@ mod test {
 
         let result_dir = tempdir.path().join("results");
         create_dir(&result_dir).unwrap();
-        let client = new_https_client();
-        let result = package_download(
-            client,
-            tuf_url,
-            blob_url,
-            String::from("test_package"),
-            result_dir.clone(),
-        )
-        .await;
-
-        result.unwrap();
+        package_download(tuf_url, blob_url, String::from("test_package"), result_dir.clone())
+            .await
+            .unwrap();
 
         let result_package_manifest =
             std::fs::read_to_string(result_dir.join("package_manifest.json")).unwrap();

@@ -34,13 +34,11 @@ use {
         crypto::KeyType,
         interchange::Json,
         metadata::{
-            Metadata as _, MetadataPath, MetadataVersion, RawSignedMetadata, Role,
-            TargetDescription, TargetsMetadata, VirtualTargetPath,
+            Metadata as _, MetadataPath, MetadataVersion, RawSignedMetadata, Role, TargetsMetadata,
         },
         repository::{EphemeralRepository, RepositoryProvider},
         verify::Verified,
     },
-    url::ParseError,
 };
 
 mod file_system;
@@ -51,10 +49,11 @@ mod server;
 pub mod http_repository;
 
 pub use file_system::FileSystemRepository;
-pub use http_repository::{package_download, HttpRepository};
+pub use http_repository::package_download;
 pub use manager::RepositoryManager;
 pub use pm::PmRepository;
 pub use server::{ConnectionStream, RepositoryServer, RepositoryServerBuilder};
+use tuf::metadata::VirtualTargetPath;
 
 /// A unique ID which is given to every repository.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -134,8 +133,6 @@ pub enum Error {
     InvalidPath(PathBuf),
     #[error("I/O error")]
     Io(#[source] io::Error),
-    #[error("URL Parsing Error")]
-    URLParseError(#[source] ParseError),
     #[error(transparent)]
     Tuf(#[from] tuf::Error),
     #[error(transparent)]
@@ -159,12 +156,6 @@ impl From<std::io::Error> for Error {
         } else {
             Error::Io(err)
         }
-    }
-}
-
-impl From<ParseError> for Error {
-    fn from(err: ParseError) -> Self {
-        Error::URLParseError(err)
     }
 }
 
@@ -256,6 +247,18 @@ impl Repository {
         })
     }
 
+    /// Create a [Repository] from a [RepositorySpec].
+    pub async fn from_repository_spec(name: &str, spec: RepositorySpec) -> Result<Self, Error> {
+        let backend: Box<dyn RepositoryBackend + Send + Sync> = match spec {
+            RepositorySpec::FileSystem { metadata_repo_path, blob_repo_path } => Box::new(
+                FileSystemRepository::new(metadata_repo_path.into(), blob_repo_path.into()),
+            ),
+            RepositorySpec::Pm { path } => Box::new(PmRepository::new(path.into())),
+        };
+
+        Self::new(name, backend).await
+    }
+
     pub fn id(&self) -> RepositoryId {
         self.id
     }
@@ -313,23 +316,6 @@ impl Repository {
         range: ResourceRange,
     ) -> Result<Resource, Error> {
         self.backend.fetch_blob(path, range).await
-    }
-
-    /// Return the target description for a TUF target path.
-    pub async fn get_target_description(
-        &self,
-        path: &str,
-    ) -> Result<Option<TargetDescription>, Error> {
-        let mut client = Self::get_tuf_client(self.backend.get_tuf_repo()?).await?;
-        let _ = client.update().await?;
-
-        match client.trusted_targets() {
-            Some(trusted_targets) => Ok(trusted_targets
-                .targets()
-                .get(&VirtualTargetPath::new(path.to_string()).map_err(|e| anyhow::anyhow!(e))?)
-                .map(|t| t.clone())),
-            None => Ok(None),
-        }
     }
 
     pub async fn get_config(
@@ -392,12 +378,10 @@ impl Repository {
     > {
         let metadata_repo = EphemeralRepository::<Json>::new();
 
-        // FIXME(http://fxbug.dev/92126) we really should be initializing trust, rather than just
-        // trusting 1.root.json.
         let mut md = tuf_repo
             .fetch_metadata(
                 &MetadataPath::from_role(&Role::Root),
-                &MetadataVersion::Number(1),
+                &MetadataVersion::None,
                 None,
                 None,
             )

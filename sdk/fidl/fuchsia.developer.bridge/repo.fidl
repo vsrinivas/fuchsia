@@ -14,7 +14,6 @@ const MAX_ALIASES uint64 = 32;
 type RepositorySpec = flexible union {
     1: file_system FileSystemRepositorySpec;
     2: pm PmRepositorySpec;
-    3: http HttpRepositorySpec;
 };
 
 /// [FileSystemRepositorySpec] describes a TUF repository found on the local filesystem.
@@ -30,15 +29,6 @@ type FileSystemRepositorySpec = table {
 type PmRepositorySpec = table {
     /// File system path to the location of the pm repository.
     1: path string:MAX_PATH;
-};
-
-/// [HttpRepositorySpec] describes a Http TUF repository.
-type HttpRepositorySpec = table {
-    /// URL of the TUF repository.
-    1: metadata_repo_url string:MAX_PATH;
-
-    /// URL of the Blob Server.
-    2: blob_repo_url string:MAX_PATH;
 };
 
 @discoverable
@@ -211,6 +201,4 @@ type RepositoryError = strict enum : uint32 {
     NO_MATCHING_REGISTRATION = 11;
     /// The server is not running.
     SERVER_NOT_RUNNING = 12;
-    /// The provided URL was invalid.
-    INVALID_URL = 13;
 };
