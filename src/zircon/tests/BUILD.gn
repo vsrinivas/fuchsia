@@ -13,6 +13,7 @@ group("tests") {
     "next-vdso:tests",
     "processor:tests",
     "profile:tests",
+    "property:tests",
     "register-state:tests",
     "status:tests",
     "stress-tests:tests",

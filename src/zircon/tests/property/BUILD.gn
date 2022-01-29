@@ -2,11 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("property") {
-  testonly = true
+import("//build/components.gni")
+import("//build/test.gni")
+
+test("property") {
+  output_name = "property-test"
   sources = [ "property.cc" ]
   deps = [
-    "//src/zircon/lib/zircon",
+    "//sdk/lib/fdio",
     "//zircon/system/ulib/test-utils",
     "//zircon/system/ulib/zxtest",
   ]
@@ -17,4 +20,14 @@ source_set("property") {
   # UB to unblock the clang roll, but we should go back and fix it and remove
   # this flag.
   cflags_cc = [ "-fno-finite-loops" ]
+}
+
+fuchsia_unittest_package("property-test-pkg") {
+  package_name = "property-test"
+  deps = [ ":property" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":property-test-pkg" ]
 }
