@@ -1221,6 +1221,117 @@ VK_TEST_F(VulkanRendererTest, MultipleSolidColorTest) {
       });
 }
 
+// Tests if the VK renderer can handle rendering a solid color rectangle as well as
+// an image-backed rectangle. Make sure that the two rectangles, if given the same
+// dimensions, occupy the exact same number of pixels.
+VK_TEST_F(VulkanRendererTest, MixSolidColorAndImageTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+
+  // Both renderables should be the same size.
+  const uint32_t kRenderableWidth = 93;
+  const uint32_t kRenderableHeight = 78;
+  fuchsia::sysmem::BufferCollectionInfo_2 client_collection_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr;
+  auto collection_id = SetupBufferCollection(1, 100, 100, false, &renderer, sysmem_allocator_.get(),
+                                             &client_collection_info, collection_ptr);
+
+  // Setup the render target collection.
+  const uint32_t kTargetWidth = 200;
+  const uint32_t kTargetHeight = 100;
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr target_ptr;
+  auto target_id = SetupBufferCollection(1, 200, 100, true, &renderer, sysmem_allocator_.get(),
+                                         &client_target_info, target_ptr);
+
+  // Create the render_target image metadata.
+  ImageMetadata render_target = {.collection_id = target_id,
+                                 .identifier = allocation::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kTargetWidth,
+                                 .height = kTargetHeight};
+
+  // Create the image meta data for the solid color renderable - green.
+  ImageMetadata renderable_image_data = {
+      .identifier = allocation::kInvalidImageId,
+      .multiply_color = {0, 1, 0, 1},
+      .blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER};
+
+  // Create the image meta data for the image backed renderable - red.
+  ImageMetadata renderable_image_data_2 = {.collection_id = collection_id,
+                                           .identifier = allocation::GenerateUniqueImageId(),
+                                           .vmo_index = 0,
+                                           .width = kRenderableWidth,
+                                           .height = kRenderableHeight};
+
+  // Have the client write pixel values to the renderable's texture. They should all be red.
+  MapHostPointer(client_collection_info, renderable_image_data_2.vmo_index,
+                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+                   uint8_t writeValues[num_bytes];
+                   for (uint32_t i = 0; i < num_bytes; i += 4) {
+                     writeValues[i] = 255U;
+                     writeValues[i + 1] = 0;
+                     writeValues[i + 2] = 0;
+                     writeValues[i + 3] = 255U;
+                   }
+
+                   memcpy(vmo_host, writeValues, sizeof(writeValues));
+
+                   // Flush the cache after writing to host VMO.
+                   EXPECT_EQ(ZX_OK,
+                             zx_cache_flush(vmo_host, num_bytes,
+                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+                 });
+
+  renderer.ImportBufferImage(renderable_image_data_2);
+  renderer.ImportBufferImage(render_target);
+
+  // Create the two renderables.
+  Rectangle2D renderable(glm::vec2(0, 0), glm::vec2(kRenderableWidth, kRenderableHeight));
+  Rectangle2D renderable_2(glm::vec2(kRenderableWidth + 1, 0),
+                           glm::vec2(kRenderableWidth, kRenderableHeight));
+
+  // Render the renderable to the render target.
+  renderer.Render(render_target, {renderable, renderable_2},
+                  {renderable_image_data, renderable_image_data_2});
+  renderer.WaitIdle();
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the two renderables were rendered side by
+  // side at the same size.
+  MapHostPointer(client_target_info, render_target.vmo_index,
+                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+                   // Flush the cache before reading back target image.
+                   EXPECT_EQ(ZX_OK,
+                             zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+                   uint8_t linear_vals[num_bytes];
+                   sRGBtoLinear(vmo_host, linear_vals, num_bytes);
+
+                   uint32_t num_red = 0, num_green = 0;
+                   for (uint32_t i = 0; i < kTargetWidth; i++) {
+                     for (uint32_t j = 0; j < kTargetHeight; j++) {
+                       auto pixel = GetPixel(linear_vals, kTargetWidth, i, j);
+                       if (pixel == glm::ivec4(0, 255, 0, 255)) {
+                         num_green++;
+                       } else if (pixel == glm::ivec4(255, 0, 0, 255)) {
+                         num_red++;
+                       }
+                     }
+                   }
+
+                   EXPECT_EQ(num_green, num_red);
+                   EXPECT_EQ(num_green, kRenderableWidth * kRenderableHeight);
+                   EXPECT_EQ(num_red, kRenderableWidth * kRenderableHeight);
+                   CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight,
+                                      2 * (kRenderableWidth * kRenderableHeight));
+                 });
+}
+
 // Tests transparency. Render two overlapping rectangles, a red opaque one covered slightly by
 // a green transparent one with an alpha of 0.5. The result should look like this:
 //

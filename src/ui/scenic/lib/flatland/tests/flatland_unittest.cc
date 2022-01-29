@@ -3608,25 +3608,47 @@ TEST_F(FlatlandTest, CreateFilledRectErrorTest) {
 // correctly to the uberstructs.
 TEST_F(FlatlandTest, FilledRectUberstructTest) {
   const ContentId kFilledRectId = {1};
+  const ContentId kChildRectId = {3};
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Create constants.
   const uint32_t kFilledWidth = 50;
   const uint32_t kFilledHeight = 100;
 
+  const uint32_t kFilledChildWidth = 75;
+  const uint32_t kFilledChildHeight = 220;
+
   // Create a filled rect and set its color to magenta with a size
   // of (50, 100);
+  fuchsia::ui::composition::ColorRgba rect_color = {0.75, 0.5, 0.25, 1.0};
   flatland->CreateFilledRect(kFilledRectId);
-  flatland->SetSolidFill(kFilledRectId, {1, 0, 1, 1}, {kFilledWidth, kFilledHeight});
+  flatland->SetSolidFill(kFilledRectId, rect_color, {kFilledWidth, kFilledHeight});
   PRESENT(flatland, true);
 
-  // Create a transform, make it the root transform, and attach the
-  // solid filled rect.
-  const TransformId kTransformId = {2};
+  // Create a second filled rect, set its color to blue, with a size of 75, 220;
+  fuchsia::ui::composition::ColorRgba child_color = {0.50, 0.75, 1.0, 0.25};
+  flatland->CreateFilledRect(kChildRectId);
+  flatland->SetSolidFill(kChildRectId, child_color, {kFilledChildWidth, kFilledChildHeight});
+  PRESENT(flatland, true);
 
+  // Create the transform graph. We will have a root node with one rectangle as content,
+  // a child node, and a second rectangle as content on the child node.
+  const TransformId kTransformId = {2};
+  const TransformId kChildTransformId = {4};
+
+  // Create both transforms.
   flatland->CreateTransform(kTransformId);
+  flatland->CreateTransform(kChildTransformId);
+
+  // Set the root of the tree, and set the content on that root.
   flatland->SetRootTransform(kTransformId);
   flatland->SetContent(kTransformId, kFilledRectId);
+
+  // Add the child transform to the parent transform, and set the child rectangle as
+  // content on the child transform.
+  flatland->AddChild(kTransformId, kChildTransformId);
+  flatland->SetContent(kChildTransformId, kChildRectId);
+
   PRESENT(flatland, true);
 
   // Get the filled rect content handle.
@@ -3634,27 +3656,45 @@ TEST_F(FlatlandTest, FilledRectUberstructTest) {
   ASSERT_TRUE(maybe_rect_handle.has_value());
   const auto rect_handle = maybe_rect_handle.value();
 
-  // Now find the data in the uber struct.
-  auto uber_struct = GetUberStruct(flatland.get());
-  EXPECT_EQ(uber_struct->local_topology.back().handle, rect_handle);
+  // Get the filled child rect handle.
+  const auto maybe_child_rect_handle = flatland->GetContentHandle(kChildRectId);
+  ASSERT_TRUE(maybe_child_rect_handle.has_value());
+  const auto child_rect_handle = maybe_child_rect_handle.value();
 
-  // Grab the metadata for the handle.
+  // Now find the data for both rectangles in the uber struct. The last handle
+  // should be that of the child rectangle.
+  auto uber_struct = GetUberStruct(flatland.get());
+  EXPECT_EQ(uber_struct->local_topology.back().handle, child_rect_handle);
+
+  // Grab the metadata for each handle.
   auto image_kv = uber_struct->images.find(rect_handle);
   EXPECT_NE(image_kv, uber_struct->images.end());
+  auto child_image_kv = uber_struct->images.find(child_rect_handle);
+  EXPECT_NE(child_image_kv, uber_struct->images.end());
 
-  // Make sure the color matches the above color.
-  EXPECT_EQ(image_kv->second.multiply_color[0], 1.0);
-  EXPECT_EQ(image_kv->second.multiply_color[1], 0.0);
-  EXPECT_EQ(image_kv->second.multiply_color[2], 1.0);
-  EXPECT_EQ(image_kv->second.multiply_color[3], 1.0);
+  // Make sure the color for each rectangle matches the above colors.
+  EXPECT_EQ(image_kv->second.multiply_color[0], rect_color.red);
+  EXPECT_EQ(image_kv->second.multiply_color[1], rect_color.green);
+  EXPECT_EQ(image_kv->second.multiply_color[2], rect_color.blue);
+  EXPECT_EQ(image_kv->second.multiply_color[3], rect_color.alpha);
 
-  // Grab the data for the matrix.
+  EXPECT_EQ(child_image_kv->second.multiply_color[0], child_color.red);
+  EXPECT_EQ(child_image_kv->second.multiply_color[1], child_color.green);
+  EXPECT_EQ(child_image_kv->second.multiply_color[2], child_color.blue);
+  EXPECT_EQ(child_image_kv->second.multiply_color[3], child_color.alpha);
+
+  // Grab the data for the matrices.
   auto matrix_kv = uber_struct->local_matrices.find(rect_handle);
   EXPECT_NE(matrix_kv, uber_struct->local_matrices.end());
+
+  auto child_matrix_kv = uber_struct->local_matrices.find(child_rect_handle);
+  EXPECT_NE(child_matrix_kv, uber_struct->local_matrices.end());
 
   // Make sure the values match.
   EXPECT_EQ(static_cast<uint32_t>(matrix_kv->second[0][0]), kFilledWidth);
   EXPECT_EQ(static_cast<uint32_t>(matrix_kv->second[1][1]), kFilledHeight);
+  EXPECT_EQ(static_cast<uint32_t>(child_matrix_kv->second[0][0]), kFilledChildWidth);
+  EXPECT_EQ(static_cast<uint32_t>(child_matrix_kv->second[1][1]), kFilledChildHeight);
 }
 
 TEST_F(FlatlandTest, SetImageSampleRegionTestCases) {
