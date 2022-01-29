@@ -5,8 +5,9 @@
 use {
     crate::synthesizer::*,
     anyhow::{format_err, Error},
+    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_ui_input::{self, KeyboardReport, Touch},
-    fuchsia_component::client::new_protocol_connector,
+    fuchsia_component::client::{new_protocol_connector, new_protocol_connector_in_dir},
     keymaps::{
         inverse_keymap::{InverseKeymap, Shift},
         usages::{self, Usages},
@@ -265,6 +266,27 @@ async fn get_backend() -> Result<Box<dyn InputDeviceRegistry>, Error> {
     }
 
     Err(format_err!("no available InputDeviceRegistry"))
+}
+
+/// Similar to [get_backend] but looks for the input injection backend inside the directory `dir`.
+///
+/// Useful for tests that prefer to connect to FIDL inside a specific test realm, rather than
+/// the default `/svc`.
+///
+/// # Returns
+///
+/// See [get_backend] for the discussion of the returned values.
+pub async fn get_modern_backend_at(
+    dir: &DirectoryProxy,
+) -> Result<Box<dyn InputDeviceRegistry>, Error> {
+    let modern_registry = new_protocol_connector_in_dir::<
+        fidl_fuchsia_input_injection::InputDeviceRegistryMarker,
+    >(dir);
+    if modern_registry.exists().await? {
+        return Ok(Box::new(modern_backend::InputDeviceRegistry::new(modern_registry.connect()?)));
+    }
+
+    Err(format_err!("no available InputDeviceRegistry in the provided directory"))
 }
 
 /// Converts the `input` string into a key sequence under the `InverseKeymap` derived from `keymap`.

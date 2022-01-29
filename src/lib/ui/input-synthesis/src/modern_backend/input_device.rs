@@ -169,7 +169,7 @@ impl synthesizer::InputDevice for self::InputDevice {
             let reader_server_end = input_reports_reader_server_end_stream
                 .next()
                 .await
-                .ok_or(format_err!("stream ended without a call GetInputReportsReader"))?
+                .ok_or(format_err!("stream ended without a call to GetInputReportsReader"))?
                 .context("handling InputDeviceRequest")?;
             InputReportsReader {
                 request_stream: reader_server_end

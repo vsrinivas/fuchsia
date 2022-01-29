@@ -335,7 +335,23 @@ pub(crate) async fn keyboard_event(
     input_device.serve_reports().await
 }
 
-pub(crate) async fn text(
+/// Simulates `input` being typed on a keyboard, with `key_event_duration` between key events.
+///
+/// # Requirements
+/// * `input` must be non-empty
+/// * `input` must only contain characters representable using the current keyboard layout
+///    and locale. (At present, it is assumed that the current layout and locale are
+///   `US-QWERTY` and `en-US`, respectively.)
+///
+/// # Resolves to
+/// * `Ok(())` if the arguments met the requirements above, and the events were successfully
+///   injected.
+/// * `Err(Error)` otherwise.
+///
+/// # Corner case handling
+/// * `key_event_duration` of zero is permitted, and will result in events being generated as
+///    quickly as possible.
+pub async fn text(
     input: String,
     key_event_duration: Duration,
     registry: &mut dyn InputDeviceRegistry,
