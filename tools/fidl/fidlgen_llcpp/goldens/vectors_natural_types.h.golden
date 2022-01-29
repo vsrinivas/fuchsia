@@ -43,6 +43,15 @@ class ExampleUseOfVectors final {
     return *this;
   }
 
+  bool operator==(const ExampleUseOfVectors& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_vectors::ExampleUseOfVectors, 32, 32>::Equal(this, &other);
+  }
+  bool operator!=(const ExampleUseOfVectors& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_vectors::ExampleUseOfVectors, 32, 32>::Equal(this, &other);
+  }
+
   const ::std::vector<uint8_t>& vector_of_uint8() const {
     return storage_.vector_of_uint8;
   }
@@ -68,6 +77,8 @@ class ExampleUseOfVectors final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_vectors::ExampleUseOfVectors, 32, 32>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_vectors::ExampleUseOfVectors>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::std::vector<uint8_t>>{
           &Storage_::vector_of_uint8, 0, 0},

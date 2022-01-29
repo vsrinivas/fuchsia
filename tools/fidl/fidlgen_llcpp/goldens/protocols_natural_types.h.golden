@@ -142,6 +142,8 @@ class WithErrorSyntax_HandleInResult_Response final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithErrorSyntax_HandleInResult_Response, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithErrorSyntax_HandleInResult_Response>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
           &Storage_::h, 0, 0,
@@ -289,6 +291,8 @@ class WithErrorSyntaxHandleInResultTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithErrorSyntaxHandleInResultTopResponse, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithErrorSyntaxHandleInResultTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_protocols::WithErrorSyntax_HandleInResult_Result>{
@@ -332,6 +336,8 @@ class HandleRightsProtocolResponseMethodTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::HandleRightsProtocolResponseMethodTopResponse, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
           &Storage_::h, 0, 0,
@@ -376,6 +382,8 @@ class HandleRightsProtocolResponseMethodRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::HandleRightsProtocolResponseMethodRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::HandleRightsProtocolResponseMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
           &Storage_::h, 0, 0,
@@ -420,6 +428,8 @@ class HandleRightsProtocolNoResponseMethodRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
           &Storage_::h, 0, 0,
@@ -464,6 +474,8 @@ class HandleRightsProtocolAnEventRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::HandleRightsProtocolAnEventRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::HandleRightsProtocolAnEventRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
           &Storage_::h, 0, 0,
@@ -508,6 +520,8 @@ class ChannelProtocolTakeHandleRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::ChannelProtocolTakeHandleRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::ChannelProtocolTakeHandleRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
           &Storage_::h, 0, 0,
@@ -552,6 +566,8 @@ class ChannelProtocolMutateSocketTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::ChannelProtocolMutateSocketTopResponse, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::ChannelProtocolMutateSocketTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
           &Storage_::b, 0, 0,
@@ -596,6 +612,8 @@ class ChannelProtocolMutateSocketRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::ChannelProtocolMutateSocketRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::ChannelProtocolMutateSocketRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
           &Storage_::a, 0, 0,
@@ -645,6 +663,8 @@ class WithProtocolEndsServerEndsTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithProtocolEndsServerEndsTopResponse, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithProtocolEndsServerEndsTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>{
@@ -696,6 +716,8 @@ class WithProtocolEndsServerEndsRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithProtocolEndsServerEndsRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithProtocolEndsServerEndsRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>{
@@ -747,6 +769,8 @@ class WithProtocolEndsClientEndsTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithProtocolEndsClientEndsTopResponse, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithProtocolEndsClientEndsTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>{
@@ -798,6 +822,8 @@ class WithProtocolEndsClientEndsRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithProtocolEndsClientEndsRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithProtocolEndsClientEndsRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>{
@@ -838,6 +864,19 @@ class WithErrorSyntax_ResponseAsStruct_Response final {
     return *this;
   }
 
+  bool operator==(
+      const WithErrorSyntax_ResponseAsStruct_Response& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response, 24,
+        24>::Equal(this, &other);
+  }
+  bool operator!=(
+      const WithErrorSyntax_ResponseAsStruct_Response& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response, 24,
+        24>::Equal(this, &other);
+  }
+
   int64_t a() const { return storage_.a; }
 
   int64_t& a() { return storage_.a; }
@@ -862,6 +901,8 @@ class WithErrorSyntax_ResponseAsStruct_Response final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response, 24, 24>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
                                                                0},
@@ -902,6 +943,15 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
       const WithErrorSyntax_ResponseAsStruct_Result& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(
+      const WithErrorSyntax_ResponseAsStruct_Result& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(
+      const WithErrorSyntax_ResponseAsStruct_Result& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag
@@ -1003,6 +1053,19 @@ class WithErrorSyntaxResponseAsStructTopResponse final {
     return *this;
   }
 
+  bool operator==(
+      const WithErrorSyntaxResponseAsStructTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse, 24,
+        16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const WithErrorSyntaxResponseAsStructTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse, 24,
+        16>::Equal(this, &other);
+  }
+
   const ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result& result()
       const {
     return storage_.result;
@@ -1022,6 +1085,8 @@ class WithErrorSyntaxResponseAsStructTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>{
@@ -1056,6 +1121,19 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final {
     return *this;
   }
 
+  bool operator==(
+      const WithErrorSyntax_ErrorAsPrimitive_Response& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1,
+        1>::Equal(this, &other);
+  }
+  bool operator!=(
+      const WithErrorSyntax_ErrorAsPrimitive_Response& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1,
+        1>::Equal(this, &other);
+  }
+
   uint8_t __reserved() const { return storage_.__reserved; }
 
   uint8_t& __reserved() { return storage_.__reserved; }
@@ -1070,6 +1148,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1, 1>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
           &Storage_::__reserved, 0, 0});
@@ -1106,6 +1186,15 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
       const WithErrorSyntax_ErrorAsPrimitive_Result& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(
+      const WithErrorSyntax_ErrorAsPrimitive_Result& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(
+      const WithErrorSyntax_ErrorAsPrimitive_Result& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag
@@ -1207,6 +1296,19 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse final {
     return *this;
   }
 
+  bool operator==(
+      const WithErrorSyntaxErrorAsPrimitiveTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse, 24,
+        16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const WithErrorSyntaxErrorAsPrimitiveTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse, 24,
+        16>::Equal(this, &other);
+  }
+
   const ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result& result()
       const {
     return storage_.result;
@@ -1226,6 +1328,8 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>{
@@ -1260,6 +1364,19 @@ class WithErrorSyntax_ErrorAsEnum_Response final {
     return *this;
   }
 
+  bool operator==(
+      const WithErrorSyntax_ErrorAsEnum_Response& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response, 1,
+        1>::Equal(this, &other);
+  }
+  bool operator!=(
+      const WithErrorSyntax_ErrorAsEnum_Response& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response, 1,
+        1>::Equal(this, &other);
+  }
+
   uint8_t __reserved() const { return storage_.__reserved; }
 
   uint8_t& __reserved() { return storage_.__reserved; }
@@ -1274,6 +1391,8 @@ class WithErrorSyntax_ErrorAsEnum_Response final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response, 1, 1>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
           &Storage_::__reserved, 0, 0});
@@ -1315,6 +1434,23 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final {
     return *this;
   }
 
+  bool operator==(
+      const WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&
+          other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::
+            WithAndWithoutRequestResponseWithRequestWithResponseTopResponse,
+        16, 16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&
+          other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::
+            WithAndWithoutRequestResponseWithRequestWithResponseTopResponse,
+        16, 16>::Equal(this, &other);
+  }
+
   const ::std::string& ret() const { return storage_.ret; }
 
   ::std::string& ret() { return storage_.ret; }
@@ -1331,6 +1467,9 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final {
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestWithResponseTopResponse,
       16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
           &Storage_::ret, 0, 0});
@@ -1372,6 +1511,23 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final {
     return *this;
   }
 
+  bool operator==(
+      const WithAndWithoutRequestResponseWithRequestWithResponseRequest& other)
+      const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::
+            WithAndWithoutRequestResponseWithRequestWithResponseRequest,
+        16, 16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const WithAndWithoutRequestResponseWithRequestWithResponseRequest& other)
+      const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::
+            WithAndWithoutRequestResponseWithRequestWithResponseRequest,
+        16, 16>::Equal(this, &other);
+  }
+
   const ::std::string& arg() const { return storage_.arg; }
 
   ::std::string& arg() { return storage_.arg; }
@@ -1388,6 +1544,9 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final {
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestWithResponseRequest,
       16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
           &Storage_::arg, 0, 0});
@@ -1428,6 +1587,23 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final {
     return *this;
   }
 
+  bool operator==(
+      const WithAndWithoutRequestResponseWithRequestNoResponseRequest& other)
+      const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::
+            WithAndWithoutRequestResponseWithRequestNoResponseRequest,
+        16, 16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const WithAndWithoutRequestResponseWithRequestNoResponseRequest& other)
+      const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::
+            WithAndWithoutRequestResponseWithRequestNoResponseRequest,
+        16, 16>::Equal(this, &other);
+  }
+
   const ::std::string& arg() const { return storage_.arg; }
 
   ::std::string& arg() { return storage_.arg; }
@@ -1444,6 +1620,9 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final {
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestNoResponseRequest,
       16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::
+          WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
           &Storage_::arg, 0, 0});
@@ -1485,6 +1664,23 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final {
     return *this;
   }
 
+  bool operator==(
+      const WithAndWithoutRequestResponseWithRequestEmptyResponseRequest& other)
+      const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::
+            WithAndWithoutRequestResponseWithRequestEmptyResponseRequest,
+        16, 16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const WithAndWithoutRequestResponseWithRequestEmptyResponseRequest& other)
+      const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::
+            WithAndWithoutRequestResponseWithRequestEmptyResponseRequest,
+        16, 16>::Equal(this, &other);
+  }
+
   const ::std::string& arg() const { return storage_.arg; }
 
   ::std::string& arg() { return storage_.arg; }
@@ -1501,6 +1697,9 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final {
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestEmptyResponseRequest,
       16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::
+          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
           &Storage_::arg, 0, 0});
@@ -1536,6 +1735,19 @@ class WithAndWithoutRequestResponseOnWithResponseRequest final {
     return *this;
   }
 
+  bool operator==(const WithAndWithoutRequestResponseOnWithResponseRequest&
+                      other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest,
+        16, 16>::Equal(this, &other);
+  }
+  bool operator!=(const WithAndWithoutRequestResponseOnWithResponseRequest&
+                      other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest,
+        16, 16>::Equal(this, &other);
+  }
+
   const ::std::string& ret() const { return storage_.ret; }
 
   ::std::string& ret() { return storage_.ret; }
@@ -1551,6 +1763,8 @@ class WithAndWithoutRequestResponseOnWithResponseRequest final {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest, 16,
       16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
           &Storage_::ret, 0, 0});
@@ -1592,6 +1806,23 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final {
     return *this;
   }
 
+  bool operator==(
+      const WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&
+          other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::
+            WithAndWithoutRequestResponseNoRequestWithResponseTopResponse,
+        16, 16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&
+          other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::
+            WithAndWithoutRequestResponseNoRequestWithResponseTopResponse,
+        16, 16>::Equal(this, &other);
+  }
+
   const ::std::string& ret() const { return storage_.ret; }
 
   ::std::string& ret() { return storage_.ret; }
@@ -1608,6 +1839,9 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final {
       ::test_protocols::
           WithAndWithoutRequestResponseNoRequestWithResponseTopResponse,
       16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::
+          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
           &Storage_::ret, 0, 0});
@@ -1640,6 +1874,17 @@ class TransitionalRequestTopResponse final {
     return *this;
   }
 
+  bool operator==(const TransitionalRequestTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::TransitionalRequestTopResponse, 8, 8>::Equal(this,
+                                                                       &other);
+  }
+  bool operator!=(const TransitionalRequestTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::TransitionalRequestTopResponse, 8, 8>::Equal(this,
+                                                                       &other);
+  }
+
   int64_t y() const { return storage_.y; }
 
   int64_t& y() { return storage_.y; }
@@ -1654,6 +1899,8 @@ class TransitionalRequestTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::TransitionalRequestTopResponse, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::TransitionalRequestTopResponse>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
           &Storage_::y, 0, 0});
@@ -1683,6 +1930,17 @@ class TransitionalRequestRequest final {
     return *this;
   }
 
+  bool operator==(const TransitionalRequestRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::TransitionalRequestRequest, 8, 8>::Equal(this,
+                                                                   &other);
+  }
+  bool operator!=(const TransitionalRequestRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::TransitionalRequestRequest, 8, 8>::Equal(this,
+                                                                   &other);
+  }
+
   int64_t x() const { return storage_.x; }
 
   int64_t& x() { return storage_.x; }
@@ -1697,6 +1955,8 @@ class TransitionalRequestRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::TransitionalRequestRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::TransitionalRequestRequest>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
           &Storage_::x, 0, 0});
@@ -1726,6 +1986,15 @@ class TransitionalOneWayRequest final {
     return *this;
   }
 
+  bool operator==(const TransitionalOneWayRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::TransitionalOneWayRequest, 8, 8>::Equal(this, &other);
+  }
+  bool operator!=(const TransitionalOneWayRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::TransitionalOneWayRequest, 8, 8>::Equal(this, &other);
+  }
+
   int64_t x() const { return storage_.x; }
 
   int64_t& x() { return storage_.x; }
@@ -1740,6 +2009,8 @@ class TransitionalOneWayRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::TransitionalOneWayRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::TransitionalOneWayRequest>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
           &Storage_::x, 0, 0});
@@ -1769,6 +2040,15 @@ class TransitionalEventRequest final {
     return *this;
   }
 
+  bool operator==(const TransitionalEventRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::TransitionalEventRequest, 8, 8>::Equal(this, &other);
+  }
+  bool operator!=(const TransitionalEventRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::TransitionalEventRequest, 8, 8>::Equal(this, &other);
+  }
+
   int64_t x() const { return storage_.x; }
 
   int64_t& x() { return storage_.x; }
@@ -1783,6 +2063,8 @@ class TransitionalEventRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::TransitionalEventRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::TransitionalEventRequest>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
           &Storage_::x, 0, 0});
@@ -1810,6 +2092,13 @@ class TheUnion final {
   TheUnion& operator=(const TheUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const TheUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const TheUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_protocols::TheUnion::Tag Which() const {
@@ -1885,6 +2174,19 @@ class MethodWithUnionUnionMethodRequest final {
     return *this;
   }
 
+  bool operator==(
+      const MethodWithUnionUnionMethodRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::MethodWithUnionUnionMethodRequest, 24,
+        16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const MethodWithUnionUnionMethodRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::MethodWithUnionUnionMethodRequest, 24,
+        16>::Equal(this, &other);
+  }
+
   const ::test_protocols::TheUnion& u() const { return storage_.u; }
 
   ::test_protocols::TheUnion& u() { return storage_.u; }
@@ -1899,6 +2201,8 @@ class MethodWithUnionUnionMethodRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::MethodWithUnionUnionMethodRequest, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::MethodWithUnionUnionMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::test_protocols::TheUnion>{
@@ -1931,6 +2235,17 @@ class SyscallProtocolMethodCRequest final {
     return *this;
   }
 
+  bool operator==(const SyscallProtocolMethodCRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::SyscallProtocolMethodCRequest, 16, 16>::Equal(this,
+                                                                        &other);
+  }
+  bool operator!=(const SyscallProtocolMethodCRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::SyscallProtocolMethodCRequest, 16, 16>::Equal(this,
+                                                                        &other);
+  }
+
   int64_t a() const { return storage_.a; }
 
   int64_t& a() { return storage_.a; }
@@ -1950,6 +2265,8 @@ class SyscallProtocolMethodCRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::SyscallProtocolMethodCRequest, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::SyscallProtocolMethodCRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
                                                                0},
@@ -2030,6 +2347,7 @@ class ProtocolEnds final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::ProtocolEnds, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::ProtocolEnds>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>{
@@ -2096,6 +2414,8 @@ class WithProtocolEndsStructContainingEndsTopResponse final {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse, 16,
       16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::test_protocols::ProtocolEnds>{
@@ -2140,6 +2460,8 @@ class WithProtocolEndsStructContainingEndsRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithProtocolEndsStructContainingEndsRequest, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithProtocolEndsStructContainingEndsRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::test_protocols::ProtocolEnds>{
@@ -2189,6 +2511,17 @@ class ManyParametersFifteenRequest final {
       const ManyParametersFifteenRequest& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const ManyParametersFifteenRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::ManyParametersFifteenRequest, 16, 16>::Equal(this,
+                                                                       &other);
+  }
+  bool operator!=(const ManyParametersFifteenRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::ManyParametersFifteenRequest, 16, 16>::Equal(this,
+                                                                       &other);
   }
 
   bool p1() const { return storage_.p1; }
@@ -2275,6 +2608,8 @@ class ManyParametersFifteenRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::ManyParametersFifteenRequest, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::ManyParametersFifteenRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p1, 0,
                                                             0},
@@ -2340,6 +2675,15 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
       const WithErrorSyntax_ErrorAsEnum_Result& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(
+      const WithErrorSyntax_ErrorAsEnum_Result& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(
+      const WithErrorSyntax_ErrorAsEnum_Result& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag Which()
@@ -2437,6 +2781,19 @@ class WithErrorSyntaxErrorAsEnumTopResponse final {
     return *this;
   }
 
+  bool operator==(
+      const WithErrorSyntaxErrorAsEnumTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse, 24,
+        16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const WithErrorSyntaxErrorAsEnumTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse, 24,
+        16>::Equal(this, &other);
+  }
+
   const ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result& result() const {
     return storage_.result;
   }
@@ -2455,6 +2812,8 @@ class WithErrorSyntaxErrorAsEnumTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>{
@@ -2489,6 +2848,19 @@ class ChannelProtocolMethodBTopResponse final {
     return *this;
   }
 
+  bool operator==(
+      const ChannelProtocolMethodBTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::ChannelProtocolMethodBTopResponse, 8,
+        8>::Equal(this, &other);
+  }
+  bool operator!=(
+      const ChannelProtocolMethodBTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::ChannelProtocolMethodBTopResponse, 8,
+        8>::Equal(this, &other);
+  }
+
   int64_t result() const { return storage_.result; }
 
   int64_t& result() { return storage_.result; }
@@ -2503,6 +2875,8 @@ class ChannelProtocolMethodBTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::ChannelProtocolMethodBTopResponse, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::ChannelProtocolMethodBTopResponse>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
           &Storage_::result, 0, 0});
@@ -2534,6 +2908,17 @@ class ChannelProtocolMethodBRequest final {
     return *this;
   }
 
+  bool operator==(const ChannelProtocolMethodBRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::ChannelProtocolMethodBRequest, 16, 16>::Equal(this,
+                                                                        &other);
+  }
+  bool operator!=(const ChannelProtocolMethodBRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::ChannelProtocolMethodBRequest, 16, 16>::Equal(this,
+                                                                        &other);
+  }
+
   int64_t a() const { return storage_.a; }
 
   int64_t& a() { return storage_.a; }
@@ -2553,6 +2938,8 @@ class ChannelProtocolMethodBRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::ChannelProtocolMethodBRequest, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::ChannelProtocolMethodBRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
                                                                0},
@@ -2586,6 +2973,17 @@ class ChannelProtocolMethodARequest final {
     return *this;
   }
 
+  bool operator==(const ChannelProtocolMethodARequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::ChannelProtocolMethodARequest, 16, 16>::Equal(this,
+                                                                        &other);
+  }
+  bool operator!=(const ChannelProtocolMethodARequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::ChannelProtocolMethodARequest, 16, 16>::Equal(this,
+                                                                        &other);
+  }
+
   int64_t a() const { return storage_.a; }
 
   int64_t& a() { return storage_.a; }
@@ -2605,6 +3003,8 @@ class ChannelProtocolMethodARequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::ChannelProtocolMethodARequest, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::ChannelProtocolMethodARequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
                                                                0},
@@ -2638,6 +3038,17 @@ class ChannelProtocolEventARequest final {
     return *this;
   }
 
+  bool operator==(const ChannelProtocolEventARequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::ChannelProtocolEventARequest, 16, 16>::Equal(this,
+                                                                       &other);
+  }
+  bool operator!=(const ChannelProtocolEventARequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_protocols::ChannelProtocolEventARequest, 16, 16>::Equal(this,
+                                                                       &other);
+  }
+
   int64_t a() const { return storage_.a; }
 
   int64_t& a() { return storage_.a; }
@@ -2657,6 +3068,8 @@ class ChannelProtocolEventARequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocols::ChannelProtocolEventARequest, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocols::ChannelProtocolEventARequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
                                                                0},

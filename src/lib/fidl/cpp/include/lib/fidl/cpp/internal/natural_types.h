@@ -109,6 +109,68 @@ bool NaturalEnvelopeDecode(::fidl::Decoder* decoder, F* value, size_t offset) {
   }
 }
 
+// MemberVisitor provides helpers to invoke visitor functions over natural struct and natural table
+// members. This works because structs and tables have similar shapes in the natural bindings.
+// There is an instance data member called `storage_` which is a struct containing the member data
+// and a constexpr std::tuple member called `kMembers`, and each member of that has a `member_ptr`
+// which is a member pointer into the `storage_` struct.
+template <typename T>
+struct MemberVisitor {
+  static constexpr auto kMembers = T::kMembers;
+  static constexpr size_t kNumMembers = std::tuple_size_v<decltype(kMembers)>;
+
+  // Visit each of the members in order while the visitor function returns a truthy value.
+  template <typename U, typename F, size_t I = 0>
+  static void VisitWhile(U value, F func) {
+    static_assert(std::is_same_v<T*, U> || std::is_same_v<const T*, U>);
+    if constexpr (I < kNumMembers) {
+      auto& member_info = std::get<I>(kMembers);
+      auto* member_ptr = &(value->storage_.*(member_info.member_ptr));
+
+      if (func(member_ptr, member_info)) {
+        VisitWhile<U, F, I + 1>(value, func);
+      }
+    }
+  }
+
+  // Visit all of the members in order.
+  template <typename U, typename F>
+  static void Visit(U value, F func) {
+    static_assert(std::is_same_v<T*, U> || std::is_same_v<const T*, U>);
+    VisitWhile(value, [func = std::move(func)](auto member_ptr, auto member_info) {
+      func(member_ptr, member_info);
+      return true;
+    });
+  }
+
+  // Visit each of the members of two structs or tables in order while the visitor function returns
+  // a truthy value.
+  template <typename U, typename F, size_t I = 0>
+  static void Visit2While(U value1, U value2, F func) {
+    static_assert(std::is_same_v<T*, U> || std::is_same_v<const T*, U>);
+    if constexpr (I < std::tuple_size_v<decltype(T::kMembers)>) {
+      auto& member_info = std::get<I>(T::kMembers);
+      auto* member_ptr1 = &(value1->storage_.*(member_info.member_ptr));
+      auto* member_ptr2 = &(value2->storage_.*(member_info.member_ptr));
+
+      if (func(member_ptr1, member_ptr2, member_info)) {
+        Visit2While<U, F, I + 1>(value1, value2, func);
+      }
+    }
+  }
+
+  // Visit all of the members of two structs or tables in order.
+  template <typename U, typename F>
+  static void Visit2(U value1, U value2, F func) {
+    static_assert(std::is_same_v<T*, U> || std::is_same_v<const T*, U>);
+    Visit2While(value1, value2,
+                [func = std::move(func)](auto member1, auto member2, auto member_info) {
+                  func(member1, member2, member_info);
+                  return true;
+                });
+  }
+};
+
 // This holds metadata about a struct member: a member pointer to the member's value in
 // the struct's Storage_ type, offsets, and optionally handle information.
 template <typename T, typename F>
@@ -131,22 +193,11 @@ struct NaturalStructCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = V1;
   static constexpr size_t inline_size_v2 = V2;
 
-  // Visit each of the members of the struct in order.
-  template <typename F, size_t I = 0>
-  static void Visit(T* table, F func) {
-    if constexpr (I < std::tuple_size_v<decltype(T::kMembers)>) {
-      auto member_info = std::get<I>(T::kMembers);
-      auto* member_ptr = &(table->storage_.*(member_info.member_ptr));
-      func(member_ptr, member_info);
-      Visit<F, I + 1>(table, func);
-    }
-  }
-
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, T* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     const auto wire_format = encoder->wire_format();
-    Visit(value, [&](auto* member, auto& member_info) {
+    MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) -> void {
       size_t field_offset = wire_format == ::fidl::internal::WireFormatVersion::kV1
                                 ? member_info.offset_v1
                                 : member_info.offset_v2;
@@ -156,9 +207,22 @@ struct NaturalStructCodingTraits {
 
   template <class DecoderImpl>
   static void Decode(DecoderImpl* decoder, T* value, size_t offset) {
-    Visit(value, [&](auto* member, auto& member_info) {
+    MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) {
       ::fidl::Decode(decoder, member, offset + member_info.offset_v2);
     });
+  }
+
+  static bool Equal(const T* struct1, const T* struct2) {
+    bool equal = true;
+    MemberVisitor<T>::Visit2(
+        struct1, struct2, [&](const auto* member1, const auto* member2, auto& member_info) -> bool {
+          if (*member1 != *member2) {
+            equal = false;
+            return false;
+          }
+          return true;
+        });
+    return equal;
   }
 };
 
@@ -180,17 +244,6 @@ struct NaturalTableCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
-  // Visit each of the members of the table in order.
-  template <typename F, size_t I = 0>
-  static void Visit(T* table, F func) {
-    if constexpr (I < std::tuple_size_v<decltype(T::kMembers)>) {
-      auto member_info = std::get<I>(T::kMembers);
-      auto* member_ptr = &(table->storage_.*(member_info.member_ptr));
-      func(member_ptr, member_info);
-      Visit<F, I + 1>(table, func);
-    }
-  }
-
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, T* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -202,7 +255,7 @@ struct NaturalTableCodingTraits {
                                ? sizeof(fidl_envelope_t)
                                : sizeof(fidl_envelope_v2_t);
     size_t base = encoder->Alloc(max_ordinal * envelope_size);
-    Visit(value, [&](auto* member, auto& member_info) {
+    MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) {
       size_t offset = base + (member_info.ordinal - 1) * envelope_size;
       NaturalEnvelopeEncodeOptional(encoder, member, offset, member_info.handle_info);
     });
@@ -236,7 +289,7 @@ struct NaturalTableCodingTraits {
     size_t count = encoded->count;
     constexpr size_t envelope_size = sizeof(fidl_envelope_v2_t);
 
-    Visit(value, [&](auto* member, auto& member_info) {
+    MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) {
       size_t member_offset = base + (member_info.ordinal - 1) * envelope_size;
       if (member_info.ordinal <= count) {
         NaturalEnvelopeDecodeOptional(decoder, member, member_offset);
@@ -244,6 +297,17 @@ struct NaturalTableCodingTraits {
         member->reset();
       }
     });
+  }
+
+  static bool Equal(const T* table1, const T* table2) {
+    bool equal = true;
+    MemberVisitor<T>::Visit2(table1, table2,
+                             [&](const auto* member1, const auto* member2, auto& member_info) {
+                               if (*member1 != *member2) {
+                                 equal = false;
+                               }
+                             });
+    return equal;
   }
 };
 

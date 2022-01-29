@@ -135,6 +135,8 @@ class ExampleOfUseOfAliases final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_typealiases::ExampleOfUseOfAliases, 88, 88>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_typealiases::ExampleOfUseOfAliases>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
           &Storage_::field_of_u32, 0, 0},

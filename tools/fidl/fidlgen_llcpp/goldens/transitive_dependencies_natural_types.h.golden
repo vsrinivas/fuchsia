@@ -38,6 +38,15 @@ class Baz final {
     return *this;
   }
 
+  bool operator==(const Baz& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_transitivedependencies::Baz, 4, 4>::Equal(this, &other);
+  }
+  bool operator!=(const Baz& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_transitivedependencies::Baz, 4, 4>::Equal(this, &other);
+  }
+
   const ::test_middle::Bar& g() const { return storage_.g; }
 
   ::test_middle::Bar& g() { return storage_.g; }
@@ -52,6 +61,8 @@ class Baz final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_transitivedependencies::Baz, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_transitivedependencies::Baz>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::test_middle::Bar>{
           &Storage_::g, 0, 0});

@@ -51,6 +51,13 @@ class UnionSmallArray final {
     return *this;
   }
 
+  bool operator==(const UnionSmallArray& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const UnionSmallArray& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_arrays::UnionSmallArray::Tag Which() const {
     return UnionSmallArray::IndexToTag(storage_->index());
   }
@@ -121,6 +128,13 @@ class UnionLargeArray final {
     return *this;
   }
 
+  bool operator==(const UnionLargeArray& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const UnionLargeArray& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_arrays::UnionLargeArray::Tag Which() const {
     return UnionLargeArray::IndexToTag(storage_->index());
   }
@@ -183,6 +197,14 @@ class TableSmallArray final {
     storage_ = other.CloneStorage_();
     return *this;
   }
+  bool operator==(const TableSmallArray& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_arrays::TableSmallArray>::Equal(this, &other);
+  }
+  bool operator!=(const TableSmallArray& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_arrays::TableSmallArray>::Equal(this, &other);
+  }
 
   bool IsEmpty() const { return !(storage_.a.has_value()); }
 
@@ -201,6 +223,7 @@ class TableSmallArray final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_arrays::TableSmallArray>;
+  friend struct ::fidl::internal::MemberVisitor<::test_arrays::TableSmallArray>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalTableMember<Storage_, ::std::array<uint32_t, 2>>{
           1, &Storage_::a});
@@ -223,6 +246,14 @@ class TableLargeArray final {
     storage_ = other.CloneStorage_();
     return *this;
   }
+  bool operator==(const TableLargeArray& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_arrays::TableLargeArray>::Equal(this, &other);
+  }
+  bool operator!=(const TableLargeArray& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_arrays::TableLargeArray>::Equal(this, &other);
+  }
 
   bool IsEmpty() const { return !(storage_.a.has_value()); }
 
@@ -241,6 +272,7 @@ class TableLargeArray final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_arrays::TableLargeArray>;
+  friend struct ::fidl::internal::MemberVisitor<::test_arrays::TableLargeArray>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalTableMember<
                       Storage_, ::std::array<uint32_t, 100>>{1, &Storage_::a});
@@ -267,6 +299,15 @@ class StructSmallArray final {
     return *this;
   }
 
+  bool operator==(const StructSmallArray& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_arrays::StructSmallArray, 8, 8>::Equal(this, &other);
+  }
+  bool operator!=(const StructSmallArray& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_arrays::StructSmallArray, 8, 8>::Equal(this, &other);
+  }
+
   const ::std::array<uint32_t, 2>& a() const { return storage_.a; }
 
   ::std::array<uint32_t, 2>& a() { return storage_.a; }
@@ -281,6 +322,8 @@ class StructSmallArray final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_arrays::StructSmallArray, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_arrays::StructSmallArray>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::std::array<uint32_t, 2>>{&Storage_::a, 0, 0});
@@ -307,6 +350,15 @@ class StructLargeArray final {
     return *this;
   }
 
+  bool operator==(const StructLargeArray& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_arrays::StructLargeArray, 400, 400>::Equal(this, &other);
+  }
+  bool operator!=(const StructLargeArray& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_arrays::StructLargeArray, 400, 400>::Equal(this, &other);
+  }
+
   const ::std::array<uint32_t, 100>& a() const { return storage_.a; }
 
   ::std::array<uint32_t, 100>& a() { return storage_.a; }
@@ -321,6 +373,8 @@ class StructLargeArray final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_arrays::StructLargeArray, 400, 400>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_arrays::StructLargeArray>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::std::array<uint32_t, 100>>{

@@ -46,6 +46,15 @@ class Example_foo_Response final {
     return *this;
   }
 
+  bool operator==(const Example_foo_Response& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_error::Example_foo_Response, 8, 8>::Equal(this, &other);
+  }
+  bool operator!=(const Example_foo_Response& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_error::Example_foo_Response, 8, 8>::Equal(this, &other);
+  }
+
   int64_t y() const { return storage_.y; }
 
   int64_t& y() { return storage_.y; }
@@ -60,6 +69,8 @@ class Example_foo_Response final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_error::Example_foo_Response, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_error::Example_foo_Response>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
           &Storage_::y, 0, 0});
@@ -89,6 +100,13 @@ class Example_foo_Result final {
   Example_foo_Result& operator=(const Example_foo_Result& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const Example_foo_Result& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const Example_foo_Result& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_error::Example_foo_Result::Tag Which() const {
@@ -176,6 +194,15 @@ class ExampleFooTopResponse final {
     return *this;
   }
 
+  bool operator==(const ExampleFooTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_error::ExampleFooTopResponse, 24, 16>::Equal(this, &other);
+  }
+  bool operator!=(const ExampleFooTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_error::ExampleFooTopResponse, 24, 16>::Equal(this, &other);
+  }
+
   const ::test_error::Example_foo_Result& result() const {
     return storage_.result;
   }
@@ -192,6 +219,8 @@ class ExampleFooTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_error::ExampleFooTopResponse, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_error::ExampleFooTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::test_error::Example_foo_Result>{
@@ -218,6 +247,15 @@ class ExampleFooRequest final {
     return *this;
   }
 
+  bool operator==(const ExampleFooRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_error::ExampleFooRequest, 16, 16>::Equal(this, &other);
+  }
+  bool operator!=(const ExampleFooRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_error::ExampleFooRequest, 16, 16>::Equal(this, &other);
+  }
+
   const ::std::string& s() const { return storage_.s; }
 
   ::std::string& s() { return storage_.s; }
@@ -232,6 +270,8 @@ class ExampleFooRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_error::ExampleFooRequest, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_error::ExampleFooRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
           &Storage_::s, 0, 0});

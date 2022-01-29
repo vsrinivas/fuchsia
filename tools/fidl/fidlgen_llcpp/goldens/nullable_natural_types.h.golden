@@ -65,6 +65,15 @@ class StructWithNullableVector final {
     return *this;
   }
 
+  bool operator==(const StructWithNullableVector& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::StructWithNullableVector, 16, 16>::Equal(this, &other);
+  }
+  bool operator!=(const StructWithNullableVector& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::StructWithNullableVector, 16, 16>::Equal(this, &other);
+  }
+
   const ::cpp17::optional<::std::vector<int32_t>>& val() const {
     return storage_.val;
   }
@@ -81,6 +90,8 @@ class StructWithNullableVector final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_nullable::StructWithNullableVector, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_nullable::StructWithNullableVector>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::cpp17::optional<::std::vector<int32_t>>>{
@@ -112,6 +123,15 @@ class StructWithNullableUnion final {
     return *this;
   }
 
+  bool operator==(const StructWithNullableUnion& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::StructWithNullableUnion, 24, 16>::Equal(this, &other);
+  }
+  bool operator!=(const StructWithNullableUnion& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::StructWithNullableUnion, 24, 16>::Equal(this, &other);
+  }
+
   const ::std::unique_ptr<::test_nullable::SimpleUnion>& val() const {
     return storage_.val;
   }
@@ -130,6 +150,8 @@ class StructWithNullableUnion final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_nullable::StructWithNullableUnion, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_nullable::StructWithNullableUnion>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::unique_ptr<::test_nullable::SimpleUnion>>{
@@ -161,6 +183,15 @@ class StructWithNullableStruct final {
     return *this;
   }
 
+  bool operator==(const StructWithNullableStruct& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::StructWithNullableStruct, 8, 8>::Equal(this, &other);
+  }
+  bool operator!=(const StructWithNullableStruct& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::StructWithNullableStruct, 8, 8>::Equal(this, &other);
+  }
+
   const ::std::unique_ptr<::test_nullable::Int32Wrapper>& val() const {
     return storage_.val;
   }
@@ -179,6 +210,8 @@ class StructWithNullableStruct final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_nullable::StructWithNullableStruct, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_nullable::StructWithNullableStruct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::unique_ptr<::test_nullable::Int32Wrapper>>{
@@ -209,6 +242,15 @@ class StructWithNullableString final {
     return *this;
   }
 
+  bool operator==(const StructWithNullableString& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::StructWithNullableString, 16, 16>::Equal(this, &other);
+  }
+  bool operator!=(const StructWithNullableString& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::StructWithNullableString, 16, 16>::Equal(this, &other);
+  }
+
   const ::cpp17::optional<::std::string>& val() const { return storage_.val; }
 
   ::cpp17::optional<::std::string>& val() { return storage_.val; }
@@ -223,6 +265,8 @@ class StructWithNullableString final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_nullable::StructWithNullableString, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_nullable::StructWithNullableString>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::cpp17::optional<::std::string>>{
@@ -266,6 +310,8 @@ class StructWithNullableRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_nullable::StructWithNullableRequest, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_nullable::StructWithNullableRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_nullable::SimpleProtocol>>{
@@ -314,6 +360,8 @@ class StructWithNullableProtocol final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_nullable::StructWithNullableProtocol, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_nullable::StructWithNullableProtocol>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_nullable::SimpleProtocol>>{
@@ -357,6 +405,8 @@ class StructWithNullableHandle final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_nullable::StructWithNullableHandle, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_nullable::StructWithNullableHandle>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo>{
           &Storage_::val, 0, 0,
@@ -389,6 +439,13 @@ class SimpleUnion final {
   SimpleUnion& operator=(const SimpleUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const SimpleUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const SimpleUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_nullable::SimpleUnion::Tag Which() const {
@@ -476,6 +533,17 @@ class SimpleProtocolAddTopResponse final {
     return *this;
   }
 
+  bool operator==(const SimpleProtocolAddTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::SimpleProtocolAddTopResponse, 8, 8>::Equal(this,
+                                                                    &other);
+  }
+  bool operator!=(const SimpleProtocolAddTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::SimpleProtocolAddTopResponse, 8, 8>::Equal(this,
+                                                                    &other);
+  }
+
   int32_t sum() const { return storage_.sum; }
 
   int32_t& sum() { return storage_.sum; }
@@ -490,6 +558,8 @@ class SimpleProtocolAddTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_nullable::SimpleProtocolAddTopResponse, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_nullable::SimpleProtocolAddTopResponse>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
           &Storage_::sum, 0, 0});
@@ -519,6 +589,15 @@ class SimpleProtocolAddRequest final {
     return *this;
   }
 
+  bool operator==(const SimpleProtocolAddRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::SimpleProtocolAddRequest, 8, 8>::Equal(this, &other);
+  }
+  bool operator!=(const SimpleProtocolAddRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::SimpleProtocolAddRequest, 8, 8>::Equal(this, &other);
+  }
+
   int32_t a() const { return storage_.a; }
 
   int32_t& a() { return storage_.a; }
@@ -538,6 +617,8 @@ class SimpleProtocolAddRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_nullable::SimpleProtocolAddRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_nullable::SimpleProtocolAddRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, int32_t>{&Storage_::a, 0,
                                                                0},
@@ -565,6 +646,15 @@ class Int32Wrapper final {
     return *this;
   }
 
+  bool operator==(const Int32Wrapper& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::Int32Wrapper, 4, 4>::Equal(this, &other);
+  }
+  bool operator!=(const Int32Wrapper& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_nullable::Int32Wrapper, 4, 4>::Equal(this, &other);
+  }
+
   int32_t val() const { return storage_.val; }
 
   int32_t& val() { return storage_.val; }
@@ -579,6 +669,7 @@ class Int32Wrapper final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_nullable::Int32Wrapper, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_nullable::Int32Wrapper>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
           &Storage_::val, 0, 0});

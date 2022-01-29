@@ -57,6 +57,8 @@ class ServerEndWrapper final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_driverhandle::ServerEndWrapper, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_driverhandle::ServerEndWrapper>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>>{
@@ -103,6 +105,8 @@ class ClientEndWrapper final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_driverhandle::ClientEndWrapper, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_driverhandle::ClientEndWrapper>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>{

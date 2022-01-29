@@ -40,6 +40,17 @@ class Foo final {
     return *this;
   }
 
+  bool operator==(const Foo& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_structdefaultvalueenumlibraryreference::Foo, 4,
+        4>::Equal(this, &other);
+  }
+  bool operator!=(const Foo& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_structdefaultvalueenumlibraryreference::Foo, 4,
+        4>::Equal(this, &other);
+  }
+
   ::test_dependent::MyEnum field() const { return storage_.field; }
 
   ::test_dependent::MyEnum& field() { return storage_.field; }
@@ -54,6 +65,8 @@ class Foo final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_structdefaultvalueenumlibraryreference::Foo, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_structdefaultvalueenumlibraryreference::Foo>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::test_dependent::MyEnum>{
           &Storage_::field, 0, 0});

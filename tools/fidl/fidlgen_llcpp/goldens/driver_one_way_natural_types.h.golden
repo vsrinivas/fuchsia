@@ -40,6 +40,15 @@ class Payload final {
     return *this;
   }
 
+  bool operator==(const Payload& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_driveroneway::Payload, 4, 4>::Equal(this, &other);
+  }
+  bool operator!=(const Payload& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_driveroneway::Payload, 4, 4>::Equal(this, &other);
+  }
+
   uint32_t value() const { return storage_.value; }
 
   uint32_t& value() { return storage_.value; }
@@ -54,6 +63,7 @@ class Payload final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_driveroneway::Payload, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_driveroneway::Payload>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
           &Storage_::value, 0, 0});
@@ -80,6 +90,15 @@ class OneWaySendRequest final {
     return *this;
   }
 
+  bool operator==(const OneWaySendRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_driveroneway::OneWaySendRequest, 8, 8>::Equal(this, &other);
+  }
+  bool operator!=(const OneWaySendRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_driveroneway::OneWaySendRequest, 8, 8>::Equal(this, &other);
+  }
+
   const ::test_driveroneway::Payload& payload() const {
     return storage_.payload;
   }
@@ -96,6 +115,8 @@ class OneWaySendRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_driveroneway::OneWaySendRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_driveroneway::OneWaySendRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::test_driveroneway::Payload>{

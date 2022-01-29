@@ -49,6 +49,13 @@ class {{ .Name }} final {
       storage_ = other.CloneStorage_();
       return *this;
     }
+
+    bool operator==(const {{ .Name }}& other) const noexcept {
+      return *storage_ == *other.storage_;
+    }
+    bool operator!=(const {{ .Name }}& other) const noexcept {
+      return *storage_ != *other.storage_;
+    }
   {{- end }}
 
   constexpr {{ .TagEnum }} Which() const {

@@ -62,6 +62,8 @@ class ParentTakeChildRequestRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocolrequest::ParentTakeChildRequestRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocolrequest::ParentTakeChildRequestRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocolrequest::Child>>{
@@ -108,6 +110,8 @@ class ParentTakeChildRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocolrequest::ParentTakeChildRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocolrequest::ParentTakeChildRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocolrequest::Child>>{
@@ -155,6 +159,8 @@ class ParentGetChildTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocolrequest::ParentGetChildTopResponse, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocolrequest::ParentGetChildTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocolrequest::Child>>{
@@ -204,6 +210,8 @@ class ParentGetChildRequestTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_protocolrequest::ParentGetChildRequestTopResponse, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_protocolrequest::ParentGetChildRequestTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocolrequest::Child>>{

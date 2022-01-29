@@ -62,6 +62,13 @@ class UnionMember final {
     return *this;
   }
 
+  bool operator==(const UnionMember& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const UnionMember& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_anonymous::UnionMember::Tag Which() const {
     return UnionMember::IndexToTag(storage_->index());
   }
@@ -127,6 +134,15 @@ class TableData final {
     return *this;
   }
 
+  bool operator==(const TableData& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_anonymous::TableData, 1, 1>::Equal(this, &other);
+  }
+  bool operator!=(const TableData& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_anonymous::TableData, 1, 1>::Equal(this, &other);
+  }
+
   uint8_t data() const { return storage_.data; }
 
   uint8_t& data() { return storage_.data; }
@@ -141,6 +157,7 @@ class TableData final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_anonymous::TableData, 1, 1>;
+  friend struct ::fidl::internal::MemberVisitor<::test_anonymous::TableData>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
           &Storage_::data, 0, 0});
@@ -163,6 +180,14 @@ class TableMember final {
     storage_ = other.CloneStorage_();
     return *this;
   }
+  bool operator==(const TableMember& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_anonymous::TableMember>::Equal(this, &other);
+  }
+  bool operator!=(const TableMember& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_anonymous::TableMember>::Equal(this, &other);
+  }
 
   bool IsEmpty() const { return !(storage_.table_data.has_value()); }
 
@@ -184,6 +209,7 @@ class TableMember final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_anonymous::TableMember>;
+  friend struct ::fidl::internal::MemberVisitor<::test_anonymous::TableMember>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalTableMember<
                       Storage_, ::std::vector<::test_anonymous::TableData>>{
@@ -219,6 +245,17 @@ class SomeProtocolSomeMethodRequest final {
     return *this;
   }
 
+  bool operator==(const SomeProtocolSomeMethodRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_anonymous::SomeProtocolSomeMethodRequest, 40, 32>::Equal(this,
+                                                                        &other);
+  }
+  bool operator!=(const SomeProtocolSomeMethodRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_anonymous::SomeProtocolSomeMethodRequest, 40, 32>::Equal(this,
+                                                                        &other);
+  }
+
   const ::test_anonymous::UnionMember& union_member() const {
     return storage_.union_member;
   }
@@ -246,6 +283,8 @@ class SomeProtocolSomeMethodRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_anonymous::SomeProtocolSomeMethodRequest, 40, 32>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_anonymous::SomeProtocolSomeMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::test_anonymous::UnionMember>{
@@ -280,6 +319,15 @@ class OverrideTest final {
     return *this;
   }
 
+  bool operator==(const OverrideTest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_anonymous::OverrideTest, 56, 40>::Equal(this, &other);
+  }
+  bool operator!=(const OverrideTest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_anonymous::OverrideTest, 56, 40>::Equal(this, &other);
+  }
+
   ::test_anonymous::Op op() const { return storage_.op; }
 
   ::test_anonymous::Op& op() { return storage_.op; }
@@ -312,6 +360,7 @@ class OverrideTest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_anonymous::OverrideTest, 56, 40>;
+  friend struct ::fidl::internal::MemberVisitor<::test_anonymous::OverrideTest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::test_anonymous::Op>{
           &Storage_::op, 0, 0},
@@ -340,6 +389,14 @@ class FunctionApplication final {
   FunctionApplication& operator=(const FunctionApplication& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+  bool operator==(const FunctionApplication& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_anonymous::FunctionApplication>::Equal(this, &other);
+  }
+  bool operator!=(const FunctionApplication& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_anonymous::FunctionApplication>::Equal(this, &other);
   }
 
   bool IsEmpty() const {
@@ -380,6 +437,8 @@ class FunctionApplication final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_anonymous::FunctionApplication>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_anonymous::FunctionApplication>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalTableMember<Storage_, ::std::string>{
           1, &Storage_::func},
@@ -418,6 +477,13 @@ class Expression final {
   Expression& operator=(const Expression& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const Expression& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const Expression& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_anonymous::Expression::Tag Which() const {
@@ -526,6 +592,19 @@ class SomeProtocol_SomeMethod_Response final {
     return *this;
   }
 
+  bool operator==(
+      const SomeProtocol_SomeMethod_Response& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_anonymous::SomeProtocol_SomeMethod_Response, 4,
+        4>::Equal(this, &other);
+  }
+  bool operator!=(
+      const SomeProtocol_SomeMethod_Response& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_anonymous::SomeProtocol_SomeMethod_Response, 4,
+        4>::Equal(this, &other);
+  }
+
   ::test_anonymous::BitsMember bits_member() const {
     return storage_.bits_member;
   }
@@ -542,6 +621,8 @@ class SomeProtocol_SomeMethod_Response final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_anonymous::SomeProtocol_SomeMethod_Response, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_anonymous::SomeProtocol_SomeMethod_Response>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::test_anonymous::BitsMember>{
@@ -578,6 +659,13 @@ class SomeProtocol_SomeMethod_Result final {
       const SomeProtocol_SomeMethod_Result& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const SomeProtocol_SomeMethod_Result& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const SomeProtocol_SomeMethod_Result& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_anonymous::SomeProtocol_SomeMethod_Result::Tag Which()
@@ -673,6 +761,19 @@ class SomeProtocolSomeMethodTopResponse final {
     return *this;
   }
 
+  bool operator==(
+      const SomeProtocolSomeMethodTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_anonymous::SomeProtocolSomeMethodTopResponse, 24,
+        16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const SomeProtocolSomeMethodTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_anonymous::SomeProtocolSomeMethodTopResponse, 24,
+        16>::Equal(this, &other);
+  }
+
   const ::test_anonymous::SomeProtocol_SomeMethod_Result& result() const {
     return storage_.result;
   }
@@ -691,6 +792,8 @@ class SomeProtocolSomeMethodTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_anonymous::SomeProtocolSomeMethodTopResponse, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_anonymous::SomeProtocolSomeMethodTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_anonymous::SomeProtocol_SomeMethod_Result>{

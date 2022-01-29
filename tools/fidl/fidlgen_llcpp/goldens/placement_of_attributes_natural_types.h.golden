@@ -54,6 +54,13 @@ class ExampleXUnion final {
     return *this;
   }
 
+  bool operator==(const ExampleXUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const ExampleXUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_placementofattributes::ExampleXUnion::Tag Which() const {
     return ExampleXUnion::IndexToTag(storage_->index());
   }
@@ -125,6 +132,13 @@ class ExampleUnion final {
     return *this;
   }
 
+  bool operator==(const ExampleUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const ExampleUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_placementofattributes::ExampleUnion::Tag Which() const {
     return ExampleUnion::IndexToTag(storage_->index());
   }
@@ -188,6 +202,14 @@ class ExampleTable final {
     storage_ = other.CloneStorage_();
     return *this;
   }
+  bool operator==(const ExampleTable& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_placementofattributes::ExampleTable>::Equal(this, &other);
+  }
+  bool operator!=(const ExampleTable& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_placementofattributes::ExampleTable>::Equal(this, &other);
+  }
 
   bool IsEmpty() const { return !(storage_.member.has_value()); }
 
@@ -203,6 +225,8 @@ class ExampleTable final {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
+      ::test_placementofattributes::ExampleTable>;
+  friend struct ::fidl::internal::MemberVisitor<
       ::test_placementofattributes::ExampleTable>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint32_t>{
@@ -230,6 +254,15 @@ class ExampleStruct final {
     return *this;
   }
 
+  bool operator==(const ExampleStruct& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_placementofattributes::ExampleStruct, 4, 4>::Equal(this, &other);
+  }
+  bool operator!=(const ExampleStruct& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_placementofattributes::ExampleStruct, 4, 4>::Equal(this, &other);
+  }
+
   uint32_t member() const { return storage_.member; }
 
   uint32_t& member() { return storage_.member; }
@@ -244,6 +277,8 @@ class ExampleStruct final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_placementofattributes::ExampleStruct, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_placementofattributes::ExampleStruct>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
           &Storage_::member, 0, 0});
@@ -276,6 +311,17 @@ class ExampleProtocolMethodRequest final {
     return *this;
   }
 
+  bool operator==(const ExampleProtocolMethodRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_placementofattributes::ExampleProtocolMethodRequest, 8,
+        8>::Equal(this, &other);
+  }
+  bool operator!=(const ExampleProtocolMethodRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_placementofattributes::ExampleProtocolMethodRequest, 8,
+        8>::Equal(this, &other);
+  }
+
   const ::test_exampleusing::Empty& arg() const { return storage_.arg; }
 
   ::test_exampleusing::Empty& arg() { return storage_.arg; }
@@ -290,6 +336,8 @@ class ExampleProtocolMethodRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_placementofattributes::ExampleProtocolMethodRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_placementofattributes::ExampleProtocolMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::test_exampleusing::Empty>{

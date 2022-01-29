@@ -122,6 +122,8 @@ class TableWithHandle final {
   Storage_ storage_;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_handlesintypes::TableWithHandle>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_handlesintypes::TableWithHandle>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::zx::vmo>{
           1, &Storage_::h,
@@ -216,6 +218,8 @@ class HandlesInTypes final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_handlesintypes::HandlesInTypes, 104, 96>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_handlesintypes::HandlesInTypes>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo>{
           &Storage_::normal_handle, 0, 0,

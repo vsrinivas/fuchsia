@@ -32,7 +32,13 @@ class {{ .Name }} final {
       storage_ = other.CloneStorage_();
       return *this;
     }
-  {{- end }}  
+  bool operator==(const {{.Name }}& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<{{ . }}>::Equal(this, &other);
+  }
+  bool operator!=(const {{.Name }}& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<{{ . }}>::Equal(this, &other);
+  }
+  {{- end }}
 
   bool IsEmpty() const {
     {{- if len .Members }}
@@ -67,6 +73,7 @@ class {{ .Name }} final {
     Storage_ CloneStorage_() const;
   {{- end }}
   friend struct ::fidl::internal::NaturalTableCodingTraits<{{ . }}>;
+  friend struct ::fidl::internal::MemberVisitor<{{ . }}>;
   static constexpr auto kMembers = std::make_tuple(
     {{- range $i, $m := .Members }}
       {{- if $i }}, {{ end -}}

@@ -42,6 +42,15 @@ class SuperFooTopResponse final {
     return *this;
   }
 
+  bool operator==(const SuperFooTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_inheritance::SuperFooTopResponse, 8, 8>::Equal(this, &other);
+  }
+  bool operator!=(const SuperFooTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_inheritance::SuperFooTopResponse, 8, 8>::Equal(this, &other);
+  }
+
   int64_t y() const { return storage_.y; }
 
   int64_t& y() { return storage_.y; }
@@ -56,6 +65,8 @@ class SuperFooTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_inheritance::SuperFooTopResponse, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_inheritance::SuperFooTopResponse>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
           &Storage_::y, 0, 0});
@@ -81,6 +92,15 @@ class SuperFooRequest final {
     return *this;
   }
 
+  bool operator==(const SuperFooRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_inheritance::SuperFooRequest, 16, 16>::Equal(this, &other);
+  }
+  bool operator!=(const SuperFooRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_inheritance::SuperFooRequest, 16, 16>::Equal(this, &other);
+  }
+
   const ::std::string& s() const { return storage_.s; }
 
   ::std::string& s() { return storage_.s; }
@@ -95,6 +115,8 @@ class SuperFooRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_inheritance::SuperFooRequest, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_inheritance::SuperFooRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
           &Storage_::s, 0, 0});

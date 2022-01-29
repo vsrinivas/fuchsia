@@ -40,6 +40,15 @@ class DocCommentWithQuotes final {
     return *this;
   }
 
+  bool operator==(const DocCommentWithQuotes& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_escaping::DocCommentWithQuotes, 1, 1>::Equal(this, &other);
+  }
+  bool operator!=(const DocCommentWithQuotes& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_escaping::DocCommentWithQuotes, 1, 1>::Equal(this, &other);
+  }
+
   uint8_t __reserved() const { return storage_.__reserved; }
 
   uint8_t& __reserved() { return storage_.__reserved; }
@@ -54,6 +63,8 @@ class DocCommentWithQuotes final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_escaping::DocCommentWithQuotes, 1, 1>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_escaping::DocCommentWithQuotes>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
           &Storage_::__reserved, 0, 0});

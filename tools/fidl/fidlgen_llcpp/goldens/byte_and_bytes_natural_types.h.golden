@@ -44,6 +44,15 @@ class ByteAndBytes final {
     return *this;
   }
 
+  bool operator==(const ByteAndBytes& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_byteandbytes::ByteAndBytes, 56, 56>::Equal(this, &other);
+  }
+  bool operator!=(const ByteAndBytes& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_byteandbytes::ByteAndBytes, 56, 56>::Equal(this, &other);
+  }
+
   uint8_t single_byte() const { return storage_.single_byte; }
 
   uint8_t& single_byte() { return storage_.single_byte; }
@@ -84,6 +93,8 @@ class ByteAndBytes final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_byteandbytes::ByteAndBytes, 56, 56>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_byteandbytes::ByteAndBytes>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
           &Storage_::single_byte, 0, 0},

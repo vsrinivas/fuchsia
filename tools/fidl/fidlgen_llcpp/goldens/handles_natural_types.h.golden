@@ -321,6 +321,7 @@ class Handles final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_handles::Handles, 128, 128>;
+  friend struct ::fidl::internal::MemberVisitor<::test_handles::Handles>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
           &Storage_::plain_handle, 0, 0,

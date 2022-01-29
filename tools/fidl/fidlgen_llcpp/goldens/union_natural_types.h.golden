@@ -100,6 +100,13 @@ class UnionWithAttributes final {
     return *this;
   }
 
+  bool operator==(const UnionWithAttributes& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const UnionWithAttributes& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_union::UnionWithAttributes::Tag Which() const {
     return UnionWithAttributes::IndexToTag(storage_->index());
   }
@@ -171,6 +178,13 @@ class Union final {
   Union& operator=(const Union& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const Union& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const Union& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::Union::Tag Which() const {
@@ -275,6 +289,15 @@ class StructWithNullableXUnion final {
     return *this;
   }
 
+  bool operator==(const StructWithNullableXUnion& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_union::StructWithNullableXUnion, 24, 16>::Equal(this, &other);
+  }
+  bool operator!=(const StructWithNullableXUnion& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_union::StructWithNullableXUnion, 24, 16>::Equal(this, &other);
+  }
+
   const ::std::unique_ptr<::test_union::OlderSimpleUnion>& x1() const {
     return storage_.x1;
   }
@@ -293,6 +316,8 @@ class StructWithNullableXUnion final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_union::StructWithNullableXUnion, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_union::StructWithNullableXUnion>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::unique_ptr<::test_union::OlderSimpleUnion>>{
@@ -324,6 +349,13 @@ class StrictUnion final {
   StrictUnion& operator=(const StrictUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const StrictUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const StrictUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::StrictUnion::Tag Which() const {
@@ -432,6 +464,13 @@ class StrictSimpleXUnion final {
     return *this;
   }
 
+  bool operator==(const StrictSimpleXUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const StrictSimpleXUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_union::StrictSimpleXUnion::Tag Which() const {
     return StrictSimpleXUnion::IndexToTag(storage_->index());
   }
@@ -533,6 +572,13 @@ class StrictFoo final {
     return *this;
   }
 
+  bool operator==(const StrictFoo& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const StrictFoo& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_union::StrictFoo::Tag Which() const {
     return StrictFoo::IndexToTag(storage_->index());
   }
@@ -614,6 +660,13 @@ class StrictBoundedXUnion final {
   StrictBoundedXUnion& operator=(const StrictBoundedXUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const StrictBoundedXUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const StrictBoundedXUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::StrictBoundedXUnion::Tag Which() const {
@@ -701,6 +754,23 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
     return *this;
   }
 
+  bool operator==(
+      const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
+          other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_union::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
+        24, 16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
+          other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_union::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
+        24, 16>::Equal(this, &other);
+  }
+
   const ::test_union::StrictBoundedXUnion& xu() const { return storage_.xu; }
 
   ::test_union::StrictBoundedXUnion& xu() { return storage_.xu; }
@@ -717,6 +787,9 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
       ::test_union::
           TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
       24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_union::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::test_union::StrictBoundedXUnion>{
@@ -746,6 +819,13 @@ class ReverseOrdinalUnion final {
   ReverseOrdinalUnion& operator=(const ReverseOrdinalUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const ReverseOrdinalUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const ReverseOrdinalUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::ReverseOrdinalUnion::Tag Which() const {
@@ -829,6 +909,16 @@ class Pizza final {
     return *this;
   }
 
+  bool operator==(const Pizza& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza, 16,
+                                                       16>::Equal(this, &other);
+  }
+  bool operator!=(const Pizza& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza, 16,
+                                                        16>::Equal(this,
+                                                                   &other);
+  }
+
   const ::std::vector<::std::string>& toppings() const {
     return storage_.toppings;
   }
@@ -845,6 +935,7 @@ class Pizza final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza,
                                                             16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_union::Pizza>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::std::vector<::std::string>>{
@@ -870,6 +961,16 @@ class Pasta final {
     return *this;
   }
 
+  bool operator==(const Pasta& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta, 16,
+                                                       16>::Equal(this, &other);
+  }
+  bool operator!=(const Pasta& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta, 16,
+                                                        16>::Equal(this,
+                                                                   &other);
+  }
+
   const ::std::string& sauce() const { return storage_.sauce; }
 
   ::std::string& sauce() { return storage_.sauce; }
@@ -884,6 +985,7 @@ class Pasta final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta,
                                                             16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_union::Pasta>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
           &Storage_::sauce, 0, 0});
@@ -913,6 +1015,13 @@ class StrictPizzaOrPasta final {
   StrictPizzaOrPasta& operator=(const StrictPizzaOrPasta& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const StrictPizzaOrPasta& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const StrictPizzaOrPasta& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::StrictPizzaOrPasta::Tag Which() const {
@@ -1002,6 +1111,13 @@ class PizzaOrPasta final {
     return *this;
   }
 
+  bool operator==(const PizzaOrPasta& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const PizzaOrPasta& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_union::PizzaOrPasta::Tag Which() const {
     return PizzaOrPasta::IndexToTag(storage_->index());
   }
@@ -1086,6 +1202,13 @@ class FlexiblePizzaOrPasta final {
   FlexiblePizzaOrPasta& operator=(const FlexiblePizzaOrPasta& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const FlexiblePizzaOrPasta& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const FlexiblePizzaOrPasta& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::FlexiblePizzaOrPasta::Tag Which() const {
@@ -1176,6 +1299,13 @@ class ExplicitPizzaOrPasta final {
     return *this;
   }
 
+  bool operator==(const ExplicitPizzaOrPasta& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const ExplicitPizzaOrPasta& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_union::ExplicitPizzaOrPasta::Tag Which() const {
     return ExplicitPizzaOrPasta::IndexToTag(storage_->index());
   }
@@ -1261,6 +1391,13 @@ class OlderSimpleUnion final {
   OlderSimpleUnion& operator=(const OlderSimpleUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const OlderSimpleUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const OlderSimpleUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::OlderSimpleUnion::Tag Which() const {
@@ -1363,6 +1500,23 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
     return *this;
   }
 
+  bool operator==(
+      const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
+          other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_union::
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
+        24, 16>::Equal(this, &other);
+  }
+  bool operator!=(
+      const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
+          other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_union::
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
+        24, 16>::Equal(this, &other);
+  }
+
   const ::test_union::OlderSimpleUnion& xu() const { return storage_.xu; }
 
   ::test_union::OlderSimpleUnion& xu() { return storage_.xu; }
@@ -1379,6 +1533,9 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
       ::test_union::
           TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
       24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_union::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::test_union::OlderSimpleUnion>{
@@ -1407,6 +1564,15 @@ class NullableUnionStruct final {
     return *this;
   }
 
+  bool operator==(const NullableUnionStruct& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_union::NullableUnionStruct, 24, 16>::Equal(this, &other);
+  }
+  bool operator!=(const NullableUnionStruct& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_union::NullableUnionStruct, 24, 16>::Equal(this, &other);
+  }
+
   const ::std::unique_ptr<::test_union::Union>& the_union() const {
     return storage_.the_union;
   }
@@ -1425,6 +1591,8 @@ class NullableUnionStruct final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_union::NullableUnionStruct, 24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_union::NullableUnionStruct>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::std::unique_ptr<::test_union::Union>>{
@@ -1457,6 +1625,13 @@ class NewerSimpleUnion final {
   NewerSimpleUnion& operator=(const NewerSimpleUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const NewerSimpleUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const NewerSimpleUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::NewerSimpleUnion::Tag Which() const {
@@ -1561,6 +1736,13 @@ class FlexibleUnion final {
   FlexibleUnion& operator=(const FlexibleUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const FlexibleUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const FlexibleUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::FlexibleUnion::Tag Which() const {
@@ -1669,6 +1851,13 @@ class FlexibleFoo final {
     return *this;
   }
 
+  bool operator==(const FlexibleFoo& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const FlexibleFoo& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_union::FlexibleFoo::Tag Which() const {
     return FlexibleFoo::IndexToTag(storage_->index());
   }
@@ -1753,6 +1942,13 @@ class FieldCollision final {
     return *this;
   }
 
+  bool operator==(const FieldCollision& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const FieldCollision& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_union::FieldCollision::Tag Which() const {
     return FieldCollision::IndexToTag(storage_->index());
   }
@@ -1822,6 +2018,13 @@ class ExplicitXUnion final {
   ExplicitXUnion& operator=(const ExplicitXUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const ExplicitXUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const ExplicitXUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::ExplicitXUnion::Tag Which() const {
@@ -1905,6 +2108,15 @@ class UnionSandwich final {
     return *this;
   }
 
+  bool operator==(const UnionSandwich& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_union::UnionSandwich, 40, 32>::Equal(this, &other);
+  }
+  bool operator!=(const UnionSandwich& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_union::UnionSandwich, 40, 32>::Equal(this, &other);
+  }
+
   uint32_t a() const { return storage_.a; }
 
   uint32_t& a() { return storage_.a; }
@@ -1929,6 +2141,7 @@ class UnionSandwich final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_union::UnionSandwich, 40, 32>;
+  friend struct ::fidl::internal::MemberVisitor<::test_union::UnionSandwich>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::a, 0,
                                                                 0},
@@ -1962,6 +2175,13 @@ class ExplicitUnion final {
   ExplicitUnion& operator=(const ExplicitUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const ExplicitUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const ExplicitUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::ExplicitUnion::Tag Which() const {
@@ -2047,6 +2267,13 @@ class ExplicitStrictFoo final {
   ExplicitStrictFoo& operator=(const ExplicitStrictFoo& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const ExplicitStrictFoo& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const ExplicitStrictFoo& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::ExplicitStrictFoo::Tag Which() const {
@@ -2135,6 +2362,13 @@ class ExplicitFoo final {
     return *this;
   }
 
+  bool operator==(const ExplicitFoo& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const ExplicitFoo& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_union::ExplicitFoo::Tag Which() const {
     return ExplicitFoo::IndexToTag(storage_->index());
   }
@@ -2215,6 +2449,15 @@ class Empty final {
     return *this;
   }
 
+  bool operator==(const Empty& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_union::Empty, 1,
+                                                       1>::Equal(this, &other);
+  }
+  bool operator!=(const Empty& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_union::Empty, 1,
+                                                        1>::Equal(this, &other);
+  }
+
   uint8_t __reserved() const { return storage_.__reserved; }
 
   uint8_t& __reserved() { return storage_.__reserved; }
@@ -2229,6 +2472,7 @@ class Empty final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::Empty,
                                                             1, 1>;
+  friend struct ::fidl::internal::MemberVisitor<::test_union::Empty>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
           &Storage_::__reserved, 0, 0});
@@ -2259,6 +2503,13 @@ class XUnionContainingEmptyStruct final {
       const XUnionContainingEmptyStruct& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const XUnionContainingEmptyStruct& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const XUnionContainingEmptyStruct& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_union::XUnionContainingEmptyStruct::Tag Which() const {

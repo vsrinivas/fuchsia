@@ -39,6 +39,16 @@ class Simple final {
     return *this;
   }
 
+  bool operator==(const Simple& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple, 2,
+                                                       2>::Equal(this, &other);
+  }
+  bool operator!=(const Simple& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple,
+                                                        2, 2>::Equal(this,
+                                                                     &other);
+  }
+
   uint8_t f1() const { return storage_.f1; }
 
   uint8_t& f1() { return storage_.f1; }
@@ -58,6 +68,7 @@ class Simple final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_struct::Simple, 2, 2>;
+  friend struct ::fidl::internal::MemberVisitor<::test_struct::Simple>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::f1, 0,
                                                                0},
@@ -86,6 +97,15 @@ class BasicStruct final {
     return *this;
   }
 
+  bool operator==(const BasicStruct& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_struct::BasicStruct, 24, 24>::Equal(this, &other);
+  }
+  bool operator!=(const BasicStruct& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_struct::BasicStruct, 24, 24>::Equal(this, &other);
+  }
+
   uint32_t x() const { return storage_.x; }
 
   uint32_t& x() { return storage_.x; }
@@ -105,6 +125,7 @@ class BasicStruct final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_struct::BasicStruct, 24, 24>;
+  friend struct ::fidl::internal::MemberVisitor<::test_struct::BasicStruct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::x, 0,
                                                                 0},

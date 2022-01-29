@@ -44,6 +44,14 @@ class Table final {
     storage_ = other.CloneStorage_();
     return *this;
   }
+  bool operator==(const Table& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_doccomments::Table>::Equal(this, &other);
+  }
+  bool operator!=(const Table& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_doccomments::Table>::Equal(this, &other);
+  }
 
   bool IsEmpty() const { return !(storage_.field.has_value()); }
 
@@ -69,6 +77,7 @@ class Table final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_doccomments::Table>;
+  friend struct ::fidl::internal::MemberVisitor<::test_doccomments::Table>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, int32_t>{
           1, &Storage_::field});
@@ -96,6 +105,15 @@ class Struct final {
     return *this;
   }
 
+  bool operator==(const Struct& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_doccomments::Struct, 4, 4>::Equal(this, &other);
+  }
+  bool operator!=(const Struct& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_doccomments::Struct, 4, 4>::Equal(this, &other);
+  }
+
   /// struct member comment #1
   ///
   /// struct member comment #3
@@ -119,6 +137,7 @@ class Struct final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_doccomments::Struct, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_doccomments::Struct>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
           &Storage_::field, 0, 0});
@@ -149,6 +168,13 @@ class StrictUnion final {
   StrictUnion& operator=(const StrictUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const StrictUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const StrictUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_doccomments::StrictUnion::Tag Which() const {
@@ -222,6 +248,13 @@ class FlexibleUnion final {
   FlexibleUnion& operator=(const FlexibleUnion& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const FlexibleUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const FlexibleUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_doccomments::FlexibleUnion::Tag Which() const {

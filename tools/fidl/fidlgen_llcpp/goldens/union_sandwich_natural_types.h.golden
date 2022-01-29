@@ -57,6 +57,13 @@ class UnionSize8Alignment4 final {
     return *this;
   }
 
+  bool operator==(const UnionSize8Alignment4& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const UnionSize8Alignment4& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_unionsandwich::UnionSize8Alignment4::Tag Which() const {
     return UnionSize8Alignment4::IndexToTag(storage_->index());
   }
@@ -134,6 +141,17 @@ class SandwichUnionSize8Alignment4 final {
     return *this;
   }
 
+  bool operator==(const SandwichUnionSize8Alignment4& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_unionsandwich::SandwichUnionSize8Alignment4, 40,
+        32>::Equal(this, &other);
+  }
+  bool operator!=(const SandwichUnionSize8Alignment4& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_unionsandwich::SandwichUnionSize8Alignment4, 40,
+        32>::Equal(this, &other);
+  }
+
   uint32_t before() const { return storage_.before; }
 
   uint32_t& before() { return storage_.before; }
@@ -162,6 +180,8 @@ class SandwichUnionSize8Alignment4 final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_unionsandwich::SandwichUnionSize8Alignment4, 40, 32>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_unionsandwich::SandwichUnionSize8Alignment4>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
           &Storage_::before, 0, 0},
@@ -195,6 +215,13 @@ class UnionSize36Alignment4 final {
       const UnionSize36Alignment4& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const UnionSize36Alignment4& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const UnionSize36Alignment4& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_unionsandwich::UnionSize36Alignment4::Tag Which() const {
@@ -274,6 +301,17 @@ class SandwichUnionSize36Alignment4 final {
     return *this;
   }
 
+  bool operator==(const SandwichUnionSize36Alignment4& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_unionsandwich::SandwichUnionSize36Alignment4, 40,
+        32>::Equal(this, &other);
+  }
+  bool operator!=(const SandwichUnionSize36Alignment4& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_unionsandwich::SandwichUnionSize36Alignment4, 40,
+        32>::Equal(this, &other);
+  }
+
   uint32_t before() const { return storage_.before; }
 
   uint32_t& before() { return storage_.before; }
@@ -302,6 +340,8 @@ class SandwichUnionSize36Alignment4 final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_unionsandwich::SandwichUnionSize36Alignment4, 40, 32>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_unionsandwich::SandwichUnionSize36Alignment4>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
           &Storage_::before, 0, 0},
@@ -335,6 +375,13 @@ class UnionSize12Alignment4 final {
       const UnionSize12Alignment4& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const UnionSize12Alignment4& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const UnionSize12Alignment4& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_unionsandwich::UnionSize12Alignment4::Tag Which() const {
@@ -414,6 +461,17 @@ class SandwichUnionSize12Alignment4 final {
     return *this;
   }
 
+  bool operator==(const SandwichUnionSize12Alignment4& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_unionsandwich::SandwichUnionSize12Alignment4, 40,
+        32>::Equal(this, &other);
+  }
+  bool operator!=(const SandwichUnionSize12Alignment4& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_unionsandwich::SandwichUnionSize12Alignment4, 40,
+        32>::Equal(this, &other);
+  }
+
   uint32_t before() const { return storage_.before; }
 
   uint32_t& before() { return storage_.before; }
@@ -442,6 +500,8 @@ class SandwichUnionSize12Alignment4 final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_unionsandwich::SandwichUnionSize12Alignment4, 40, 32>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_unionsandwich::SandwichUnionSize12Alignment4>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
           &Storage_::before, 0, 0},
@@ -476,6 +536,17 @@ class StructSize16Alignment8 final {
     return *this;
   }
 
+  bool operator==(const StructSize16Alignment8& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_unionsandwich::StructSize16Alignment8, 16, 16>::Equal(this,
+                                                                     &other);
+  }
+  bool operator!=(const StructSize16Alignment8& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_unionsandwich::StructSize16Alignment8, 16, 16>::Equal(this,
+                                                                     &other);
+  }
+
   uint64_t f1() const { return storage_.f1; }
 
   uint64_t& f1() { return storage_.f1; }
@@ -495,6 +566,8 @@ class StructSize16Alignment8 final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_unionsandwich::StructSize16Alignment8, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_unionsandwich::StructSize16Alignment8>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::f1,
                                                                 0, 0},
@@ -526,6 +599,13 @@ class UnionSize24Alignment8 final {
       const UnionSize24Alignment8& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const UnionSize24Alignment8& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const UnionSize24Alignment8& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_unionsandwich::UnionSize24Alignment8::Tag Which() const {
@@ -606,6 +686,17 @@ class SandwichUnionSize24Alignment8 final {
     return *this;
   }
 
+  bool operator==(const SandwichUnionSize24Alignment8& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_unionsandwich::SandwichUnionSize24Alignment8, 40,
+        32>::Equal(this, &other);
+  }
+  bool operator!=(const SandwichUnionSize24Alignment8& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_unionsandwich::SandwichUnionSize24Alignment8, 40,
+        32>::Equal(this, &other);
+  }
+
   uint32_t before() const { return storage_.before; }
 
   uint32_t& before() { return storage_.before; }
@@ -634,6 +725,8 @@ class SandwichUnionSize24Alignment8 final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_unionsandwich::SandwichUnionSize24Alignment8, 40, 32>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_unionsandwich::SandwichUnionSize24Alignment8>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
           &Storage_::before, 0, 0},

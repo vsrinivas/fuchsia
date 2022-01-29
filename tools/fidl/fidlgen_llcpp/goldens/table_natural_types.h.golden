@@ -50,6 +50,14 @@ class TableWithAttributes final {
     storage_ = other.CloneStorage_();
     return *this;
   }
+  bool operator==(const TableWithAttributes& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::TableWithAttributes>::Equal(this, &other);
+  }
+  bool operator!=(const TableWithAttributes& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::TableWithAttributes>::Equal(this, &other);
+  }
 
   bool IsEmpty() const { return !(storage_.x.has_value()); }
 
@@ -65,6 +73,8 @@ class TableWithAttributes final {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
+      ::test_table::TableWithAttributes>;
+  friend struct ::fidl::internal::MemberVisitor<
       ::test_table::TableWithAttributes>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x});
@@ -86,6 +96,14 @@ class SimpleTable final {
   SimpleTable& operator=(const SimpleTable& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+  bool operator==(const SimpleTable& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::SimpleTable>::Equal(this, &other);
+  }
+  bool operator!=(const SimpleTable& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::SimpleTable>::Equal(this, &other);
   }
 
   bool IsEmpty() const {
@@ -109,6 +127,7 @@ class SimpleTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::SimpleTable>;
+  friend struct ::fidl::internal::MemberVisitor<::test_table::SimpleTable>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x},
       ::fidl::internal::NaturalTableMember<Storage_, int64_t>{5, &Storage_::y});
@@ -131,6 +150,14 @@ class ReverseOrdinalTable final {
   ReverseOrdinalTable& operator=(const ReverseOrdinalTable& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+  bool operator==(const ReverseOrdinalTable& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::ReverseOrdinalTable>::Equal(this, &other);
+  }
+  bool operator!=(const ReverseOrdinalTable& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::ReverseOrdinalTable>::Equal(this, &other);
   }
 
   bool IsEmpty() const {
@@ -159,6 +186,8 @@ class ReverseOrdinalTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::ReverseOrdinalTable>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_table::ReverseOrdinalTable>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::z},
       ::fidl::internal::NaturalTableMember<Storage_, int64_t>{2, &Storage_::y},
@@ -182,6 +211,14 @@ class OlderSimpleTable final {
     storage_ = other.CloneStorage_();
     return *this;
   }
+  bool operator==(const OlderSimpleTable& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::OlderSimpleTable>::Equal(this, &other);
+  }
+  bool operator!=(const OlderSimpleTable& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::OlderSimpleTable>::Equal(this, &other);
+  }
 
   bool IsEmpty() const { return !(storage_.x.has_value()); }
 
@@ -198,6 +235,7 @@ class OlderSimpleTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::OlderSimpleTable>;
+  friend struct ::fidl::internal::MemberVisitor<::test_table::OlderSimpleTable>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x});
 };
@@ -218,6 +256,14 @@ class NewerSimpleTable final {
   NewerSimpleTable& operator=(const NewerSimpleTable& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+  bool operator==(const NewerSimpleTable& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::NewerSimpleTable>::Equal(this, &other);
+  }
+  bool operator!=(const NewerSimpleTable& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::NewerSimpleTable>::Equal(this, &other);
   }
 
   bool IsEmpty() const {
@@ -246,6 +292,7 @@ class NewerSimpleTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::NewerSimpleTable>;
+  friend struct ::fidl::internal::MemberVisitor<::test_table::NewerSimpleTable>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x},
       ::fidl::internal::NaturalTableMember<Storage_, int64_t>{5, &Storage_::y},
@@ -269,6 +316,14 @@ class ExtensionTable final {
     storage_ = other.CloneStorage_();
     return *this;
   }
+  bool operator==(const ExtensionTable& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::ExtensionTable>::Equal(this, &other);
+  }
+  bool operator!=(const ExtensionTable& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::ExtensionTable>::Equal(this, &other);
+  }
 
   bool IsEmpty() const { return true; }
 
@@ -280,6 +335,7 @@ class ExtensionTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::ExtensionTable>;
+  friend struct ::fidl::internal::MemberVisitor<::test_table::ExtensionTable>;
   static constexpr auto kMembers = std::make_tuple();
 };
 
@@ -301,6 +357,14 @@ class SixtyFourOrdinalTable final {
       const SixtyFourOrdinalTable& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+  bool operator==(const SixtyFourOrdinalTable& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::SixtyFourOrdinalTable>::Equal(this, &other);
+  }
+  bool operator!=(const SixtyFourOrdinalTable& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::SixtyFourOrdinalTable>::Equal(this, &other);
   }
 
   bool IsEmpty() const {
@@ -607,6 +671,8 @@ class SixtyFourOrdinalTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::SixtyFourOrdinalTable>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_table::SixtyFourOrdinalTable>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::v1},
       ::fidl::internal::NaturalTableMember<Storage_, int64_t>{2, &Storage_::v2},
@@ -747,6 +813,14 @@ class EmptyTable final {
     storage_ = other.CloneStorage_();
     return *this;
   }
+  bool operator==(const EmptyTable& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::EmptyTable>::Equal(this, &other);
+  }
+  bool operator!=(const EmptyTable& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_table::EmptyTable>::Equal(this, &other);
+  }
 
   bool IsEmpty() const { return true; }
 
@@ -758,6 +832,7 @@ class EmptyTable final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_table::EmptyTable>;
+  friend struct ::fidl::internal::MemberVisitor<::test_table::EmptyTable>;
   static constexpr auto kMembers = std::make_tuple();
 };
 

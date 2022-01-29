@@ -46,6 +46,15 @@ class {{ .Name }} final {
       storage_ = other.CloneStorage_();
       return *this;
     }
+
+    bool operator==(const {{ .Name }}& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<{{ . }},
+          {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}>::Equal(this, &other);
+    }
+    bool operator!=(const {{ .Name }}& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<{{ . }},
+          {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}>::Equal(this, &other);
+    }
   {{- end }}
 
   {{- range .Members }}
@@ -84,6 +93,7 @@ class {{ .Name }} final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<{{ . }},
       {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}>;
+  friend struct ::fidl::internal::MemberVisitor<{{ . }}>;
   static constexpr auto kMembers = std::make_tuple(
     {{- range $i, $m := .Members }}
       {{- if $i }}, {{ end -}}

@@ -60,6 +60,8 @@ class ParentFirstRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_inheritancewithrecursivedecl::ParentFirstRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_inheritancewithrecursivedecl::ParentFirstRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
@@ -111,6 +113,8 @@ class ChildSecondRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_inheritancewithrecursivedecl::ChildSecondRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_inheritancewithrecursivedecl::ChildSecondRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,

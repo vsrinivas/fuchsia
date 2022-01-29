@@ -43,6 +43,15 @@ class TwoWayAddTopResponse final {
     return *this;
   }
 
+  bool operator==(const TwoWayAddTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_drivertwoway::TwoWayAddTopResponse, 8, 8>::Equal(this, &other);
+  }
+  bool operator!=(const TwoWayAddTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_drivertwoway::TwoWayAddTopResponse, 8, 8>::Equal(this, &other);
+  }
+
   uint16_t sum() const { return storage_.sum; }
 
   uint16_t& sum() { return storage_.sum; }
@@ -57,6 +66,8 @@ class TwoWayAddTopResponse final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_drivertwoway::TwoWayAddTopResponse, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_drivertwoway::TwoWayAddTopResponse>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint16_t>{
           &Storage_::sum, 0, 0});
@@ -84,6 +95,15 @@ class TwoWayAddRequest final {
     return *this;
   }
 
+  bool operator==(const TwoWayAddRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_drivertwoway::TwoWayAddRequest, 8, 8>::Equal(this, &other);
+  }
+  bool operator!=(const TwoWayAddRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_drivertwoway::TwoWayAddRequest, 8, 8>::Equal(this, &other);
+  }
+
   uint16_t addend1() const { return storage_.addend1; }
 
   uint16_t& addend1() { return storage_.addend1; }
@@ -103,6 +123,8 @@ class TwoWayAddRequest final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_drivertwoway::TwoWayAddRequest, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_drivertwoway::TwoWayAddRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{
           &Storage_::addend1, 0, 0},

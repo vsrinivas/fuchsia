@@ -47,6 +47,13 @@ class Union final {
     return *this;
   }
 
+  bool operator==(const Union& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const Union& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_versions::Union::Tag Which() const {
     return Union::IndexToTag(storage_->index());
   }
@@ -108,6 +115,14 @@ class Table final {
     storage_ = other.CloneStorage_();
     return *this;
   }
+  bool operator==(const Table& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<
+        ::test_versions::Table>::Equal(this, &other);
+  }
+  bool operator!=(const Table& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<
+        ::test_versions::Table>::Equal(this, &other);
+  }
 
   bool IsEmpty() const { return !(storage_.x.has_value()); }
 
@@ -124,6 +139,7 @@ class Table final {
   Storage_ CloneStorage_() const;
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_versions::Table>;
+  friend struct ::fidl::internal::MemberVisitor<::test_versions::Table>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint32_t>{
           1, &Storage_::x});
@@ -148,6 +164,17 @@ class Struct final {
     return *this;
   }
 
+  bool operator==(const Struct& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct,
+                                                       4, 4>::Equal(this,
+                                                                    &other);
+  }
+  bool operator!=(const Struct& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct,
+                                                        4, 4>::Equal(this,
+                                                                     &other);
+  }
+
   uint32_t x() const { return storage_.x; }
 
   uint32_t& x() { return storage_.x; }
@@ -162,6 +189,7 @@ class Struct final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_versions::Struct, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_versions::Struct>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
           &Storage_::x, 0, 0});

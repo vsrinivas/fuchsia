@@ -54,6 +54,13 @@ class StrictFoo final {
     return *this;
   }
 
+  bool operator==(const StrictFoo& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const StrictFoo& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
   constexpr ::test_requestflexibleenvelope::StrictFoo::Tag Which() const {
     return StrictFoo::IndexToTag(storage_->index());
   }
@@ -144,6 +151,21 @@ class ProtocolRequestStrictResponseFlexibleRequest final {
     return *this;
   }
 
+  bool operator==(const ProtocolRequestStrictResponseFlexibleRequest& other)
+      const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_requestflexibleenvelope::
+            ProtocolRequestStrictResponseFlexibleRequest,
+        24, 16>::Equal(this, &other);
+  }
+  bool operator!=(const ProtocolRequestStrictResponseFlexibleRequest& other)
+      const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_requestflexibleenvelope::
+            ProtocolRequestStrictResponseFlexibleRequest,
+        24, 16>::Equal(this, &other);
+  }
+
   const ::test_requestflexibleenvelope::StrictFoo& s() const {
     return storage_.s;
   }
@@ -162,6 +184,9 @@ class ProtocolRequestStrictResponseFlexibleRequest final {
       ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleRequest,
       24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleRequest>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::test_requestflexibleenvelope::StrictFoo>{
@@ -198,6 +223,21 @@ class ProtocolRequestFlexibleResponseStrictTopResponse final {
     return *this;
   }
 
+  bool operator==(const ProtocolRequestFlexibleResponseStrictTopResponse& other)
+      const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_requestflexibleenvelope::
+            ProtocolRequestFlexibleResponseStrictTopResponse,
+        24, 16>::Equal(this, &other);
+  }
+  bool operator!=(const ProtocolRequestFlexibleResponseStrictTopResponse& other)
+      const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_requestflexibleenvelope::
+            ProtocolRequestFlexibleResponseStrictTopResponse,
+        24, 16>::Equal(this, &other);
+  }
+
   const ::test_requestflexibleenvelope::StrictFoo& f() const {
     return storage_.f;
   }
@@ -216,6 +256,9 @@ class ProtocolRequestFlexibleResponseStrictTopResponse final {
       ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictTopResponse,
       24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictTopResponse>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::test_requestflexibleenvelope::StrictFoo>{
@@ -246,6 +289,13 @@ class FlexibleFoo final {
   FlexibleFoo& operator=(const FlexibleFoo& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
+  }
+
+  bool operator==(const FlexibleFoo& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const FlexibleFoo& other) const noexcept {
+    return *storage_ != *other.storage_;
   }
 
   constexpr ::test_requestflexibleenvelope::FlexibleFoo::Tag Which() const {
@@ -340,6 +390,21 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final {
     return *this;
   }
 
+  bool operator==(const ProtocolRequestStrictResponseFlexibleTopResponse& other)
+      const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_requestflexibleenvelope::
+            ProtocolRequestStrictResponseFlexibleTopResponse,
+        24, 16>::Equal(this, &other);
+  }
+  bool operator!=(const ProtocolRequestStrictResponseFlexibleTopResponse& other)
+      const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_requestflexibleenvelope::
+            ProtocolRequestStrictResponseFlexibleTopResponse,
+        24, 16>::Equal(this, &other);
+  }
+
   const ::test_requestflexibleenvelope::FlexibleFoo& f() const {
     return storage_.f;
   }
@@ -358,6 +423,9 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final {
       ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleTopResponse,
       24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleTopResponse>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::test_requestflexibleenvelope::FlexibleFoo>{
@@ -393,6 +461,21 @@ class ProtocolRequestFlexibleResponseStrictRequest final {
     return *this;
   }
 
+  bool operator==(const ProtocolRequestFlexibleResponseStrictRequest& other)
+      const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_requestflexibleenvelope::
+            ProtocolRequestFlexibleResponseStrictRequest,
+        24, 16>::Equal(this, &other);
+  }
+  bool operator!=(const ProtocolRequestFlexibleResponseStrictRequest& other)
+      const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_requestflexibleenvelope::
+            ProtocolRequestFlexibleResponseStrictRequest,
+        24, 16>::Equal(this, &other);
+  }
+
   const ::test_requestflexibleenvelope::FlexibleFoo& s() const {
     return storage_.s;
   }
@@ -411,6 +494,9 @@ class ProtocolRequestFlexibleResponseStrictRequest final {
       ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictRequest,
       24, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictRequest>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::test_requestflexibleenvelope::FlexibleFoo>{

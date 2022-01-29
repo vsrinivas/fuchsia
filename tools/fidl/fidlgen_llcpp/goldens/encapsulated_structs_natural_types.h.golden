@@ -74,6 +74,8 @@ class NonInlineStructTestStruct final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_encapsulatedstructs::NonInlineStructTestStruct, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_encapsulatedstructs::NonInlineStructTestStruct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>>{
@@ -107,6 +109,15 @@ class Int8Int32 final {
     return *this;
   }
 
+  bool operator==(const Int8Int32& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_encapsulatedstructs::Int8Int32, 8, 8>::Equal(this, &other);
+  }
+  bool operator!=(const Int8Int32& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_encapsulatedstructs::Int8Int32, 8, 8>::Equal(this, &other);
+  }
+
   int8_t a() const { return storage_.a; }
 
   int8_t& a() { return storage_.a; }
@@ -126,6 +137,8 @@ class Int8Int32 final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_encapsulatedstructs::Int8Int32, 8, 8>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_encapsulatedstructs::Int8Int32>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, int8_t>{&Storage_::a, 0,
                                                               0},
@@ -154,6 +167,15 @@ class Int16Int8 final {
     return *this;
   }
 
+  bool operator==(const Int16Int8& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_encapsulatedstructs::Int16Int8, 4, 4>::Equal(this, &other);
+  }
+  bool operator!=(const Int16Int8& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_encapsulatedstructs::Int16Int8, 4, 4>::Equal(this, &other);
+  }
+
   int16_t a() const { return storage_.a; }
 
   int16_t& a() { return storage_.a; }
@@ -173,6 +195,8 @@ class Int16Int8 final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_encapsulatedstructs::Int16Int8, 4, 4>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_encapsulatedstructs::Int16Int8>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, int16_t>{&Storage_::a, 0,
                                                                0},
@@ -202,6 +226,17 @@ class ArrayInt16Int8 final {
     return *this;
   }
 
+  bool operator==(const ArrayInt16Int8& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_encapsulatedstructs::ArrayInt16Int8, 12, 12>::Equal(this,
+                                                                   &other);
+  }
+  bool operator!=(const ArrayInt16Int8& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_encapsulatedstructs::ArrayInt16Int8, 12, 12>::Equal(this,
+                                                                   &other);
+  }
+
   const ::std::array<::test_encapsulatedstructs::Int16Int8, 3>& arr() const {
     return storage_.arr;
   }
@@ -220,6 +255,8 @@ class ArrayInt16Int8 final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_encapsulatedstructs::ArrayInt16Int8, 12, 12>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_encapsulatedstructs::ArrayInt16Int8>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::array<::test_encapsulatedstructs::Int16Int8, 3>>{
@@ -256,6 +293,17 @@ class StructPaddingTestStruct final {
     return *this;
   }
 
+  bool operator==(const StructPaddingTestStruct& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<
+        ::test_encapsulatedstructs::StructPaddingTestStruct, 24,
+        24>::Equal(this, &other);
+  }
+  bool operator!=(const StructPaddingTestStruct& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<
+        ::test_encapsulatedstructs::StructPaddingTestStruct, 24,
+        24>::Equal(this, &other);
+  }
+
   const ::test_encapsulatedstructs::Int16Int8& trailing() const {
     return storage_.trailing;
   }
@@ -288,6 +336,8 @@ class StructPaddingTestStruct final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_encapsulatedstructs::StructPaddingTestStruct, 24, 24>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_encapsulatedstructs::StructPaddingTestStruct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_encapsulatedstructs::Int16Int8>{&Storage_::trailing,
@@ -345,6 +395,8 @@ class TopLevelStruct final {
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_encapsulatedstructs::TopLevelStruct, 40, 40>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_encapsulatedstructs::TopLevelStruct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_encapsulatedstructs::StructPaddingTestStruct>{
