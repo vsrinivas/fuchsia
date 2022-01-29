@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1654
+From //build/config/BUILDCONFIG.gn:1653
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -989,27 +989,22 @@ launch the vm service in the runner.
 From //build/dart/dart_build_config.gni:8
 
 ### dart_default_build_cfg
-TODO(fxbug.dev/64153) renable aot builds
- if (dart_force_product) {
-Product AOT
-   dart_default_build_cfg = dart_release_build_cfg
- } else if (is_debug) {
-Non-product JIT
+Non-product AOT
 
 **Current value (from the default):**
 ```
 {
-  enable_asserts = true
-  is_aot = false
+  enable_asserts = false
+  is_aot = true
   is_product = false
   platform_name = "dart_runner"
-  runner_dep = "//src/dart:dart_jit_runner"
-  runtime_meta = "//build/dart/meta/jit_runtime.cmx"
-  runtime_meta_v2 = "//build/dart/meta/jit_runtime.cml"
+  runner_dep = "//src/dart:dart_aot_runner"
+  runtime_meta = "//build/dart/meta/aot_runtime.cmx"
+  runtime_meta_v2 = "//build/dart/meta/aot_runtime.cml"
 }
 ```
 
-From //build/dart/config.gni:18
+From //build/dart/config.gni:22
 
 ### dart_force_product
 Forces all Dart apps to build in product mode which is a
@@ -1358,7 +1353,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1401
+From //build/config/BUILDCONFIG.gn:1400
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
@@ -2391,15 +2386,14 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1232
+From //build/config/BUILDCONFIG.gn:1231
 
 ### launch_basemgr_on_boot
-Indicates whether to include basemgr.cmx in the boot sequence for the
-product image.
+Indicates whether to start basemgr.cmx on boot.
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
-From //src/modular/build/modular_config/modular_config.gni:12
+From //src/modular/build/modular_config/modular_config.gni:11
 
 ### linux_runner_extras_tests
 If `true`, adds additional testonly content to extras.img, which will be
@@ -3713,7 +3707,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1644
+From //build/config/BUILDCONFIG.gn:1643
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3722,7 +3716,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1649
+From //build/config/BUILDCONFIG.gn:1648
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3772,7 +3766,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1447
+From //build/config/BUILDCONFIG.gn:1446
 
 ### size_checker_input
 The input to the size checker.
@@ -4097,7 +4091,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1431
+From //build/config/BUILDCONFIG.gn:1430
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
