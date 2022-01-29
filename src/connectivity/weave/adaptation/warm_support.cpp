@@ -117,8 +117,8 @@ PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
     return kPlatformResultFailure;
   }
 
-  fuchsia::netstack::NetstackSyncPtr stack_sync_ptr;
-  zx_status_t status = svc->Connect(stack_sync_ptr.NewRequest());
+  fuchsia::net::stack::StackSyncPtr net_stack_sync_ptr;
+  zx_status_t status = svc->Connect(net_stack_sync_ptr.NewRequest());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to connect to netstack: " << zx_status_get_string(status);
     return kPlatformResultFailure;
@@ -142,12 +142,28 @@ PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
   std::memcpy(ipv6_addr.addr.data(), (uint8_t *)(address.Addr), ipv6_addr.addr.size());
   ip_addr.set_ipv6(ipv6_addr);
 
+  fuchsia::net::Subnet subnet{
+      .addr = std::move(ip_addr),
+      .prefix_len = prefix_length,
+  };
+
   // Add or remove the address from the interface.
-  fuchsia::netstack::NetErr result;
-  status = add ? stack_sync_ptr->SetInterfaceAddress(interface_id.value(), std::move(ip_addr),
-                                                     prefix_length, &result)
-               : stack_sync_ptr->RemoveInterfaceAddress(interface_id.value(), std::move(ip_addr),
-                                                        prefix_length, &result);
+  std::optional<fuchsia::net::stack::Error> error;
+  if (add) {
+    fuchsia::net::stack::Stack_AddInterfaceAddress_Result result;
+    status =
+        net_stack_sync_ptr->AddInterfaceAddress(interface_id.value(), std::move(subnet), &result);
+    if (status == ZX_OK && result.is_err()) {
+      error = result.err();
+    }
+  } else {
+    fuchsia::net::stack::Stack_DelInterfaceAddress_Result result;
+    status =
+        net_stack_sync_ptr->DelInterfaceAddress(interface_id.value(), std::move(subnet), &result);
+    if (status == ZX_OK && result.is_err()) {
+      error = result.err();
+    }
+  }
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to configure interface address to interface id "
                    << interface_id.value() << ": " << zx_status_get_string(status);
@@ -155,33 +171,44 @@ PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
   }
 
   // Verify that the result from netstack confirms that the address was actually
-  // added or removed, and short-circuit operations if the interface state is
-  // already in the desired configuration.
-  if (result.status == fuchsia::netstack::Status::UNKNOWN_INTERFACE) {
-    // If adding an address, being informed of an unknown interface is fatal.
-    // However, this is acceptable if we're removing an address, which can
-    // happen when the lowpan service brings its interface down on reset.
+  // added or removed.
+  if (error.has_value()) {
+    const std::string_view error_str = [error_val = error.value()]() {
+      switch (error_val) {
+        case fuchsia::net::stack::Error::INTERNAL:
+          return "internal";
+        case fuchsia::net::stack::Error::NOT_SUPPORTED:
+          return "not supported";
+        case fuchsia::net::stack::Error::INVALID_ARGS:
+          return "invalid arguments";
+        case fuchsia::net::stack::Error::BAD_STATE:
+          return "bad state";
+        case fuchsia::net::stack::Error::TIME_OUT:
+          return "timeout";
+        case fuchsia::net::stack::Error::NOT_FOUND:
+          return "not found";
+        case fuchsia::net::stack::Error::ALREADY_EXISTS:
+          return "already exists";
+        case fuchsia::net::stack::Error::IO:
+          return "i/o";
+      }
+    }();
     if (add) {
-      FX_LOGS(ERROR) << "Failed to set address on already removed interface id "
-                     << interface_id.value();
-      return kPlatformResultFailure;
+      constexpr std::string_view msg = "Failed to add address on interface id ";
+      if (error.value() == fuchsia::net::stack::Error::ALREADY_EXISTS) {
+        FX_LOGS(WARNING) << msg << interface_id.value() << ": " << error_str;
+        return kPlatformResultSuccess;
+      }
+      FX_LOGS(ERROR) << msg << interface_id.value() << ": " << error_str;
     } else {
-      FX_LOGS(WARNING) << "Skipping removing address on already removed interface id "
-                       << interface_id.value();
-      return kPlatformResultSuccess;
+      constexpr std::string_view msg = "Failed to remove address on interface id ";
+      if (error.value() == fuchsia::net::stack::Error::NOT_FOUND) {
+        FX_LOGS(WARNING) << msg << interface_id.value() << ": " << error_str;
+        return kPlatformResultSuccess;
+      }
+      FX_LOGS(ERROR) << msg << interface_id.value() << ": " << error_str;
     }
-  } else if (result.status == fuchsia::netstack::Status::UNKNOWN_ERROR) {
-    // If removing an address, an unknown error is fatal. However, this is
-    // acceptable when adding an address, which can happen if the interface has
-    // already been configured with the same address.
-    if (add) {
-      FX_LOGS(WARNING) << "Skipping adding address on already configured interface id "
-                       << interface_id.value();
-      return kPlatformResultSuccess;
-    } else {
-      FX_LOGS(ERROR) << "Failed to remove address on interface id " << interface_id.value();
-      return kPlatformResultFailure;
-    }
+    return kPlatformResultFailure;
   }
 
   FX_LOGS(INFO) << (add ? "Added" : "Removed") << " address from interface id "

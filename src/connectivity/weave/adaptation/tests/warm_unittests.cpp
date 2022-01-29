@@ -49,7 +49,6 @@ using fuchsia::lowpan::device::Protocols;
 using fuchsia::lowpan::device::ServiceError;
 
 using fuchsia::netstack::RouteTableEntry;
-using fuchsia::netstack::Status;
 
 using DeviceLayer::ConnectivityMgrImpl;
 using DeviceLayer::PlatformMgrImpl;
@@ -245,46 +244,47 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
   fidl::Binding<Lookup> binding_{this};
 };
 
-// Fake implementation of the fuchsia::netstack::Netstack that provides
-// the minimal functionality required for WARM to run.
-class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
+// The minimal set of fuchsia networking protocols required for WARM to run.
+class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
+                     public fuchsia::netstack::testing::Netstack_TestBase,
                      public fuchsia::netstack::testing::RouteTableTransaction_TestBase {
  private:
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
-  void SetInterfaceAddress(uint32_t nicid, ::fuchsia::net::IpAddress addr, uint8_t prefix_len,
-                           SetInterfaceAddressCallback callback) override {
+  void AddInterfaceAddress(uint64_t nicid, ::fuchsia::net::Subnet subnet,
+                           AddInterfaceAddressCallback callback) override {
     // Confirm that the configured address is a V6 address.
-    ASSERT_TRUE(addr.is_ipv6());
+    ASSERT_TRUE(subnet.addr.is_ipv6());
 
     // Find the interface with the specified ID and append the address.
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
                            [&](const OwnedInterface& interface) { return nicid == interface.id; });
     if (it == interfaces_.end()) {
-      callback({.status = Status::UNKNOWN_INTERFACE});
+      callback(fuchsia::net::stack::Stack_AddInterfaceAddress_Result::WithErr(
+          fuchsia::net::stack::Error::NOT_FOUND));
       return;
     }
 
     // Verify that the interface does not already have the address being added.
     auto addr_it = std::find_if(
         it->ipv6addrs.begin(), it->ipv6addrs.end(),
-        [&](const fuchsia::net::Subnet& ipv6) { return CompareIpAddress(addr, ipv6.addr); });
+        [&](const fuchsia::net::Subnet& ipv6) { return CompareIpAddress(subnet.addr, ipv6.addr); });
     if (addr_it != it->ipv6addrs.end()) {
-      callback({.status = Status::UNKNOWN_ERROR});
+      callback(fuchsia::net::stack::Stack_AddInterfaceAddress_Result::WithErr(
+          fuchsia::net::stack::Error::ALREADY_EXISTS));
       return;
     }
 
-    auto& ipv6 = it->ipv6addrs.emplace_back();
-    ipv6.prefix_len = prefix_len;
-    ipv6.addr.set_ipv6(addr.ipv6());
-    callback({.status = Status::OK});
+    it->ipv6addrs.push_back(std::move(subnet));
+    callback(fuchsia::net::stack::Stack_AddInterfaceAddress_Result::WithResponse({}));
   }
 
-  void RemoveInterfaceAddress(uint32_t nicid, ::fuchsia::net::IpAddress addr, uint8_t prefix_len,
-                              RemoveInterfaceAddressCallback callback) override {
-    // If forced, return UNKNOWN_ERROR.
-    if (remove_interface_address_unknown_error_) {
-      callback({.status = Status::UNKNOWN_ERROR});
+  void DelInterfaceAddress(uint64_t nicid, ::fuchsia::net::Subnet subnet,
+                           DelInterfaceAddressCallback callback) override {
+    // If forced, return INTERNAL.
+    if (del_interface_address_internal_error_) {
+      callback(fuchsia::net::stack::Stack_DelInterfaceAddress_Result::WithErr(
+          fuchsia::net::stack::Error::INTERNAL));
       return;
     }
 
@@ -292,21 +292,39 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
                            [&](const OwnedInterface& interface) { return nicid == interface.id; });
     if (it == interfaces_.end()) {
-      callback({.status = Status::UNKNOWN_INTERFACE});
+      callback(fuchsia::net::stack::Stack_DelInterfaceAddress_Result::WithErr(
+          fuchsia::net::stack::Error::NOT_FOUND));
       return;
     }
 
     auto addr_it = std::remove_if(
         it->ipv6addrs.begin(), it->ipv6addrs.end(),
-        [&](const fuchsia::net::Subnet& ipv6) { return CompareIpAddress(addr, ipv6.addr); });
+        [&](const fuchsia::net::Subnet& ipv6) { return CompareIpAddress(subnet.addr, ipv6.addr); });
     if (addr_it == it->ipv6addrs.end()) {
-      // Refer to netstack_service.go - when an address cannot be found on the
-      // interface, it currently returns UNKNOWN_INTERFACE.
-      callback({.status = Status::UNKNOWN_INTERFACE});
+      callback(fuchsia::net::stack::Stack_DelInterfaceAddress_Result::WithErr(
+          fuchsia::net::stack::Error::NOT_FOUND));
       return;
     }
     it->ipv6addrs.erase(addr_it, it->ipv6addrs.end());
-    callback({.status = Status::OK});
+    callback(fuchsia::net::stack::Stack_DelInterfaceAddress_Result::WithResponse({}));
+  }
+
+  // fuchsia::net::stack::Stack interface definitions.
+  void SetInterfaceIpForwarding(uint64_t id, fuchsia::net::IpVersion ip_version, bool enabled,
+                                SetInterfaceIpForwardingCallback callback) override {
+    fuchsia::net::stack::Stack_SetInterfaceIpForwarding_Result result;
+    fuchsia::net::stack::Stack_SetInterfaceIpForwarding_Response response;
+
+    EXPECT_EQ(ip_version, fuchsia::net::IpVersion::V6);
+    EXPECT_TRUE(enabled);
+
+    if (forwarding_success_) {
+      ip_forwarded_interfaces_.push_back(id);
+      result.set_response(std::move(response));
+    } else {
+      result.set_err(fuchsia::net::stack::Error::INTERNAL);
+    }
+    callback(std::move(result));
   }
 
   void StartRouteTableTransaction(
@@ -343,9 +361,9 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
  public:
   // Mutators, accessors, and helpers for tests.
 
-  // Force RemoveInterfaceAddress to return an UNKNOWN_ERROR.
-  void SetRemoveInterfaceAddressUnknownError(bool enable) {
-    remove_interface_address_unknown_error_ = enable;
+  // Force DelInterfaceAddress to return an INTERNAL error.
+  void SetDelInterfaceAddressInternalError(bool enable) {
+    del_interface_address_internal_error_ = enable;
   }
 
   // Add a fake interface with the given name. Does not check for duplicates.
@@ -380,6 +398,23 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
     return *it;
   }
 
+  // Set the success of an IP forwarding request.
+  void SetForwardingSuccess(bool forwarding_success) { forwarding_success_ = forwarding_success; }
+
+  // Check if interface is forwarded.
+  bool IsInterfaceForwarded(uint64_t id) {
+    return std::find(ip_forwarded_interfaces_.begin(), ip_forwarded_interfaces_.end(), id) !=
+           ip_forwarded_interfaces_.end();
+  }
+
+  fidl::InterfaceRequestHandler<fuchsia::net::stack::Stack> GetStackHandler(
+      async_dispatcher_t* dispatcher) {
+    dispatcher_ = dispatcher;
+    return [this](fidl::InterfaceRequest<fuchsia::net::stack::Stack> request) {
+      stack_binding_.Bind(std::move(request), dispatcher_);
+    };
+  }
+
   // Check if the given interface ID and address exists in the route table.
   bool FindRouteTableEntry(uint32_t nicid, ::nl::Inet::IPAddress addr,
                            uint32_t metric = kRouteMetric_HighPriority) {
@@ -392,73 +427,25 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
     return it != route_table_.end();
   }
 
-  fidl::InterfaceRequestHandler<fuchsia::netstack::Netstack> GetHandler(
+  fidl::InterfaceRequestHandler<fuchsia::netstack::Netstack> GetNetstackHandler(
       async_dispatcher_t* dispatcher) {
     dispatcher_ = dispatcher;
     return [this](fidl::InterfaceRequest<fuchsia::netstack::Netstack> request) {
-      binding_.Bind(std::move(request), dispatcher_);
+      netstack_binding_.Bind(std::move(request), dispatcher_);
     };
   }
 
  private:
-  fidl::Binding<fuchsia::netstack::Netstack> binding_{this};
+  fidl::Binding<fuchsia::net::stack::Stack> stack_binding_{this};
+  fidl::Binding<fuchsia::netstack::Netstack> netstack_binding_{this};
   fidl::Binding<fuchsia::netstack::RouteTableTransaction> route_table_binding_{this};
   async_dispatcher_t* dispatcher_;
-  std::vector<OwnedInterface> interfaces_;
   std::vector<RouteTableEntry> route_table_;
-  bool remove_interface_address_unknown_error_ = false;
-  uint32_t last_id_assigned = 0;
-};
-
-// Fake implementation of he fuchsia::net::stack::Stack and that provides
-// the minimal functionality required for WARM to run.
-class FakeStack : public fuchsia::net::stack::testing::Stack_TestBase {
- private:
-  void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
-
-  // fuchsia::net::stack::Stack interface definitions.
-  void SetInterfaceIpForwarding(uint64_t id, fuchsia::net::IpVersion ip_version, bool enabled,
-                                SetInterfaceIpForwardingCallback callback) override {
-    fuchsia::net::stack::Stack_SetInterfaceIpForwarding_Result result;
-    fuchsia::net::stack::Stack_SetInterfaceIpForwarding_Response response;
-
-    EXPECT_EQ(ip_version, fuchsia::net::IpVersion::V6);
-    EXPECT_TRUE(enabled);
-
-    if (forwarding_success_) {
-      ip_forwarded_interfaces_.push_back(id);
-      result.set_response(std::move(response));
-    } else {
-      result.set_err(fuchsia::net::stack::Error::INTERNAL);
-    }
-    callback(std::move(result));
-  }
-
- public:
-  // Mutators, accessors, and helpers for tests.
-
-  // Set the success of an IP forwarding request.
-  void SetForwardingSuccess(bool forwarding_success) { forwarding_success_ = forwarding_success; }
-
-  // Check if interface is forwarded.
-  bool IsInterfaceForwarded(uint64_t id) {
-    return std::find(ip_forwarded_interfaces_.begin(), ip_forwarded_interfaces_.end(), id) !=
-           ip_forwarded_interfaces_.end();
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::net::stack::Stack> GetHandler(
-      async_dispatcher_t* dispatcher) {
-    dispatcher_ = dispatcher;
-    return [this](fidl::InterfaceRequest<fuchsia::net::stack::Stack> request) {
-      binding_.Bind(std::move(request), dispatcher_);
-    };
-  }
-
- private:
-  fidl::Binding<fuchsia::net::stack::Stack> binding_{this};
-  async_dispatcher_t* dispatcher_;
+  std::vector<OwnedInterface> interfaces_;
   std::vector<uint64_t> ip_forwarded_interfaces_;
   bool forwarding_success_ = true;
+  bool del_interface_address_internal_error_ = false;
+  uint32_t last_id_assigned = 0;
 };
 
 class WarmTest : public testing::WeaveTestFixture<> {
@@ -472,9 +459,9 @@ class WarmTest : public testing::WeaveTestFixture<> {
     context_provider_.service_directory_provider()->AddService(
         fake_net_interfaces_.GetHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
-        fake_net_stack_.GetHandler(dispatcher()));
+        fake_net_stack_.GetNetstackHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
-        fake_stack_.GetHandler(dispatcher()));
+        fake_net_stack_.GetStackHandler(dispatcher()));
 
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     ConnectivityMgrImpl().SetDelegate(std::make_unique<TestConnectivityManager>());
@@ -504,7 +491,6 @@ class WarmTest : public testing::WeaveTestFixture<> {
   FakeLowpanLookup& fake_lowpan_lookup() { return fake_lowpan_lookup_; }
   FakeNetInterfaces& fake_net_interfaces() { return fake_net_interfaces_; }
   FakeNetstack& fake_net_stack() { return fake_net_stack_; }
-  FakeStack& fake_stack() { return fake_stack_; }
 
   TestThreadStackManager& thread_delegate() {
     return *reinterpret_cast<TestThreadStackManager*>(ThreadStackMgrImpl().GetDelegate());
@@ -542,7 +528,6 @@ class WarmTest : public testing::WeaveTestFixture<> {
   FakeLowpanLookup fake_lowpan_lookup_;
   FakeNetstack fake_net_stack_;
   FakeNetInterfaces fake_net_interfaces_;
-  FakeStack fake_stack_;
   sys::testing::ComponentContextProvider context_provider_;
 };
 
@@ -664,7 +649,7 @@ TEST_F(WarmTest, AddRemoveSameAddress) {
   EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 }
 
-TEST_F(WarmTest, RemoveAddressUnknownError) {
+TEST_F(WarmTest, RemoveAddressInternalError) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
   Inet::IPAddress addr;
@@ -684,7 +669,7 @@ TEST_F(WarmTest, RemoveAddressUnknownError) {
   EXPECT_TRUE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 
   // Attempt to remove the address, but simulate an UNKNOWN_ERROR.
-  fake_net_stack().SetRemoveInterfaceAddressUnknownError(true);
+  fake_net_stack().SetDelInterfaceAddressInternalError(true);
   result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
   EXPECT_EQ(result, kPlatformResultFailure);
 
@@ -694,7 +679,7 @@ TEST_F(WarmTest, RemoveAddressUnknownError) {
   EXPECT_TRUE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 
   // Attempt to remove the address, after recovering from UNKNOWN_ERROR.
-  fake_net_stack().SetRemoveInterfaceAddressUnknownError(false);
+  fake_net_stack().SetDelInterfaceAddressInternalError(false);
   result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
   EXPECT_EQ(result, kPlatformResultSuccess);
 
@@ -865,7 +850,7 @@ TEST_F(WarmTest, AddRemoveHostRouteThread) {
   EXPECT_TRUE(fake_net_stack().FindRouteTableEntry(thread_iface_id, prefix.IPAddr));
 
   // Confirm that this interface is now forwarded.
-  EXPECT_TRUE(fake_stack().IsInterfaceForwarded(thread_iface_id));
+  EXPECT_TRUE(fake_net_stack().IsInterfaceForwarded(thread_iface_id));
 
   // Remove the route to the Thread interface.
   result = AddRemoveHostRoute(kInterfaceTypeThread, prefix, kRoutePriorityHigh, /*add*/ false);
@@ -896,7 +881,7 @@ TEST_F(WarmTest, AddRemoveHostRouteTunnel) {
   EXPECT_TRUE(fake_net_stack().FindRouteTableEntry(tunnel_iface_id, prefix.IPAddr));
 
   // Confirm that this interface is now forwarded.
-  EXPECT_TRUE(fake_stack().IsInterfaceForwarded(tunnel_iface_id));
+  EXPECT_TRUE(fake_net_stack().IsInterfaceForwarded(tunnel_iface_id));
 
   // Remove the route to the Tunnel interface.
   result = AddRemoveHostRoute(kInterfaceTypeTunnel, prefix, kRoutePriorityHigh, /*add*/ false);
@@ -927,7 +912,7 @@ TEST_F(WarmTest, AddRemoveHostRouteWiFi) {
   EXPECT_TRUE(fake_net_stack().FindRouteTableEntry(wlan_iface_id, prefix.IPAddr));
 
   // Confirm that this interface is NOT forwarded.
-  EXPECT_FALSE(fake_stack().IsInterfaceForwarded(wlan_iface_id));
+  EXPECT_FALSE(fake_net_stack().IsInterfaceForwarded(wlan_iface_id));
 
   // Remove the route to the WiFi interface.
   result = AddRemoveHostRoute(kInterfaceTypeWiFi, prefix, kRoutePriorityHigh, /*add*/ false);
@@ -955,7 +940,7 @@ TEST_F(WarmTest, RemoveHostRouteThreadNotFound) {
   EXPECT_EQ(result, kPlatformResultFailure);
 
   // Confirm that the interface is not forwarded.
-  EXPECT_FALSE(fake_stack().IsInterfaceForwarded(thread_iface_id));
+  EXPECT_FALSE(fake_net_stack().IsInterfaceForwarded(thread_iface_id));
 
   // Sanity check - confirm still no routes to the Thread interface exist.
   EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(thread_iface_id, prefix.IPAddr));
@@ -979,7 +964,7 @@ TEST_F(WarmTest, RemoveHostRouteTunnelNotFound) {
   EXPECT_EQ(result, kPlatformResultFailure);
 
   // Confirm that the interface is not forwarded.
-  EXPECT_FALSE(fake_stack().IsInterfaceForwarded(tunnel_iface_id));
+  EXPECT_FALSE(fake_net_stack().IsInterfaceForwarded(tunnel_iface_id));
 
   // Sanity check - confirm still no routes to the Tunnel interface exist.
   EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(tunnel_iface_id, prefix.IPAddr));
@@ -1003,7 +988,7 @@ TEST_F(WarmTest, RemoveHostRouteWiFiNotFound) {
   EXPECT_EQ(result, kPlatformResultFailure);
 
   // Confirm that the interface is not forwarded.
-  EXPECT_FALSE(fake_stack().IsInterfaceForwarded(wlan_iface_id));
+  EXPECT_FALSE(fake_net_stack().IsInterfaceForwarded(wlan_iface_id));
 
   // Sanity check - confirm still no routes to the WiFi interface exist.
   EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(wlan_iface_id, prefix.IPAddr));
@@ -1023,7 +1008,7 @@ TEST_F(WarmTest, AddHostRouteThreadForwardingFailure) {
   EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(thread_iface_id, prefix.IPAddr));
 
   // Simulate a forwarding failure.
-  fake_stack().SetForwardingSuccess(false);
+  fake_net_stack().SetForwardingSuccess(false);
 
   // Attempt to add a route to the Thread interface, expect failure.
   auto result = AddRemoveHostRoute(kInterfaceTypeThread, prefix, kRoutePriorityHigh, /*add*/ true);
@@ -1033,7 +1018,7 @@ TEST_F(WarmTest, AddHostRouteThreadForwardingFailure) {
   EXPECT_TRUE(fake_net_stack().FindRouteTableEntry(thread_iface_id, prefix.IPAddr));
 
   // Confirm that this interface is not forwarded.
-  EXPECT_FALSE(fake_stack().IsInterfaceForwarded(thread_iface_id));
+  EXPECT_FALSE(fake_net_stack().IsInterfaceForwarded(thread_iface_id));
 }
 
 TEST_F(WarmTest, AddHostRouteTunnelRoutePriorities) {
