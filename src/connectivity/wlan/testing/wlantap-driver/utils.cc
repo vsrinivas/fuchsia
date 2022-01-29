@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
+#include <lib/ddk/debug.h>
 
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
@@ -180,15 +181,24 @@ zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
   return ZX_OK;
 }
 
-zx_status_t ConvertTapPhyConfig(wlanphy_impl_info_t* phy_impl_info,
-                                const wlan_tap::WlantapPhyConfig& tap_phy_config) {
-  *phy_impl_info = {};
-  wlan_mac_role_t* supported_mac_roles_list =
-      static_cast<wlan_mac_role_t*>(calloc(1, sizeof(wlan_mac_role_t)));
-  supported_mac_roles_list[0] = ConvertMacRole(tap_phy_config.mac_role);
-
-  phy_impl_info->supported_mac_roles_list = supported_mac_roles_list;
-  phy_impl_info->supported_mac_roles_count = 1;
+zx_status_t ConvertTapPhyConfig(
+    wlan_mac_role_t supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+    uint8_t* supported_mac_roles_count, const wlan_tap::WlantapPhyConfig& tap_phy_config) {
+  switch (tap_phy_config.mac_role) {
+    case wlan_common::WlanMacRole::CLIENT:
+      supported_mac_roles_list[0] = WLAN_MAC_ROLE_CLIENT;
+      break;
+    case wlan_common::WlanMacRole::AP:
+      supported_mac_roles_list[0] = WLAN_MAC_ROLE_AP;
+      break;
+    case wlan_common::WlanMacRole::MESH:
+      supported_mac_roles_list[0] = WLAN_MAC_ROLE_MESH;
+      break;
+    default:
+      zxlogf(ERROR, "MAC role %u not supported", tap_phy_config.mac_role);
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  *supported_mac_roles_count = 1;
   return ZX_OK;
 }
 

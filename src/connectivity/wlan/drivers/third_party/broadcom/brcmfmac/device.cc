@@ -102,9 +102,12 @@ brcmf_pub* Device::drvr() { return brcmf_pub_.get(); }
 
 const brcmf_pub* Device::drvr() const { return brcmf_pub_.get(); }
 
-zx_status_t Device::WlanphyImplQuery(wlanphy_impl_info_t* out_info) {
-  BRCMF_DBG(WLANPHY, "Received query request from SME");
-  return WlanInterface::Query(brcmf_pub_.get(), out_info);
+zx_status_t Device::WlanphyImplGetSupportedMacRoles(
+    wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+    uint8_t* out_supported_mac_roles_count) {
+  BRCMF_DBG(WLANPHY, "Received request for supported MAC roles from SME");
+  return WlanInterface::GetSupportedMacRoles(brcmf_pub_.get(), out_supported_mac_roles_list,
+                                             out_supported_mac_roles_count);
 }
 
 zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,

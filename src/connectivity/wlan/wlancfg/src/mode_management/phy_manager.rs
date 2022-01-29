@@ -48,7 +48,7 @@ pub enum CreateClientIfacesReason {
 
 /// Stores information about a WLAN PHY and any interfaces that belong to it.
 pub(crate) struct PhyContainer {
-    supported_mac_roles: Vec<fidl_common::WlanMacRole>,
+    supported_mac_roles: HashSet<fidl_common::WlanMacRole>,
     // Driver features are tracked for each interface so that callers can request an interface
     // based on capabilities.
     client_ifaces: HashMap<u16, Vec<fidl_common::DriverFeature>>,
@@ -157,7 +157,7 @@ impl PhyContainer {
     /// interface IDs that belong to this PHY.
     pub fn new(supported_mac_roles: Vec<fidl_common::WlanMacRole>) -> Self {
         PhyContainer {
-            supported_mac_roles,
+            supported_mac_roles: supported_mac_roles.into_iter().collect(),
             client_ifaces: HashMap::new(),
             ap_ifaces: HashSet::new(),
         }
@@ -221,15 +221,12 @@ impl PhyManager {
     fn phys_for_role(&self, role: fidl_common::WlanMacRole) -> Vec<u16> {
         self.phys
             .iter()
-            .filter_map(
-                |(k, v)| {
-                    if v.supported_mac_roles.contains(&role) {
-                        Some(*k)
-                    } else {
-                        None
-                    }
-                },
-            )
+            .filter_map(|(k, v)| {
+                if v.supported_mac_roles.contains(&role) {
+                    return Some(*k);
+                }
+                None
+            })
             .collect()
     }
 
@@ -252,16 +249,22 @@ impl PhyManager {
 #[async_trait]
 impl PhyManagerApi for PhyManager {
     async fn add_phy(&mut self, phy_id: u16) -> Result<(), PhyManagerError> {
-        let mac_roles_response =
-            self.device_monitor.get_supported_mac_roles(phy_id).await.map_err(|e| {
+        let supported_mac_roles = self
+            .device_monitor
+            .get_supported_mac_roles(phy_id)
+            .await
+            .map_err(|e| {
                 warn!("Failed to communicate with monitor service: {:?}", e);
                 PhyManagerError::PhyQueryFailure
+            })?
+            .map_err(|e| {
+                warn!("Unable to get supported MAC roles: {:?}", e);
+                PhyManagerError::PhyQueryFailure
             })?;
-        let mac_roles = mac_roles_response.ok_or(PhyManagerError::PhyQueryFailure)?;
 
         // Create a new container to store the PHY's information.
         info!("adding PHY ID #{}", phy_id);
-        let mut phy_container = PhyContainer::new(mac_roles);
+        let mut phy_container = PhyContainer::new(supported_mac_roles);
 
         // Attempt to set the country for the newly-discovered PHY.
         let set_country_result = match self.saved_country_code {
@@ -744,7 +747,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints,
-        fidl_fuchsia_wlan_device as fidl_device, fidl_fuchsia_wlan_device_service as fidl_service,
+        fidl_fuchsia_wlan_device_service as fidl_service,
         fuchsia_async::{run_singlethreaded, TestExecutor},
         fuchsia_inspect::{self as inspect, assert_data_tree},
         fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK},
@@ -789,22 +792,19 @@ mod tests {
     fn send_get_supported_mac_roles_response(
         exec: &mut TestExecutor,
         server: &mut fidl_service::DeviceMonitorRequestStream,
-        supported_mac_roles: Option<Vec<fidl_common::WlanMacRole>>,
+        mut supported_mac_roles: Result<
+            Vec<fidl_common::WlanMacRole>,
+            fuchsia_zircon::sys::zx_status_t,
+        >,
     ) {
-        assert_variant!(
+        let _ = assert_variant!(
             exec.run_until_stalled(&mut server.next()),
             Poll::Ready(Some(Ok(
                 fidl_service::DeviceMonitorRequest::GetSupportedMacRoles {
                     responder, ..
                 }
             ))) => {
-                match supported_mac_roles {
-                    Some(mut supported_mac_roles) => {
-                        responder.send(Some(&mut supported_mac_roles.drain(..)))
-                            .expect("sending fake MAC roles");
-                    }
-                    None => responder.send(None).expect("sending fake response with none")
-                }
+                responder.send(&mut supported_mac_roles)
             }
         );
     }
@@ -881,11 +881,6 @@ mod tests {
         );
     }
 
-    /// Create a PhyInfo object for unit testing.
-    fn fake_phy_info(id: u16, mac_roles: Vec<fidl_common::WlanMacRole>) -> fidl_device::PhyInfo {
-        fidl_device::PhyInfo { id: id, dev_path: None, supported_mac_roles: mac_roles }
-    }
-
     /// Creates a QueryIfaceResponse from the arguments provided by the caller.
     fn create_iface_response(
         role: fidl_common::WlanMacRole,
@@ -915,7 +910,7 @@ mod tests {
         let mut test_values = test_setup();
 
         let fake_phy_id = 0;
-        let fake_mac_roles = Vec::new();
+        let fake_mac_roles = vec![];
 
         let mut phy_manager =
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
@@ -927,14 +922,17 @@ mod tests {
             send_get_supported_mac_roles_response(
                 &mut exec,
                 &mut test_values.monitor_stream,
-                Some(fake_mac_roles.clone()),
+                Ok(fake_mac_roles.clone()),
             );
 
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
         }
 
         assert!(phy_manager.phys.contains_key(&fake_phy_id));
-        assert_eq!(phy_manager.phys.get(&fake_phy_id).unwrap().supported_mac_roles, fake_mac_roles);
+        assert_eq!(
+            phy_manager.phys.get(&fake_phy_id).unwrap().supported_mac_roles,
+            fake_mac_roles.into_iter().collect()
+        );
     }
 
     /// This test mimics a client of the DeviceWatcher watcher receiving an OnPhyCreated event and
@@ -952,7 +950,11 @@ mod tests {
             pin_mut!(add_phy_fut);
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
 
-            send_get_supported_mac_roles_response(&mut exec, &mut test_values.monitor_stream, None);
+            send_get_supported_mac_roles_response(
+                &mut exec,
+                &mut test_values.monitor_stream,
+                Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND),
+            );
 
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
         }
@@ -970,7 +972,7 @@ mod tests {
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
 
         let fake_phy_id = 0;
-        let fake_mac_roles = Vec::new();
+        let fake_mac_roles = vec![];
 
         {
             let add_phy_fut = phy_manager.add_phy(fake_phy_id);
@@ -980,7 +982,7 @@ mod tests {
             send_get_supported_mac_roles_response(
                 &mut exec,
                 &mut test_values.monitor_stream,
-                Some(fake_mac_roles.clone()),
+                Ok(fake_mac_roles.clone()),
             );
 
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
@@ -990,29 +992,30 @@ mod tests {
             assert!(phy_manager.phys.contains_key(&fake_phy_id));
             assert_eq!(
                 phy_manager.phys.get(&fake_phy_id).unwrap().supported_mac_roles,
-                fake_mac_roles
+                fake_mac_roles.clone().into_iter().collect()
             );
         }
 
         // Send an update for the same PHY ID and ensure that the PHY info is updated.
-        let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
-
         {
-            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            let add_phy_fut = phy_manager.add_phy(fake_phy_id);
             pin_mut!(add_phy_fut);
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
 
             send_get_supported_mac_roles_response(
                 &mut exec,
                 &mut test_values.monitor_stream,
-                Some(fake_mac_roles.clone()),
+                Ok(fake_mac_roles.clone()),
             );
 
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
         }
 
         assert!(phy_manager.phys.contains_key(&fake_phy_id));
-        assert_eq!(phy_manager.phys.get(&fake_phy_id).unwrap().supported_mac_roles, fake_mac_roles);
+        assert_eq!(
+            phy_manager.phys.get(&fake_phy_id).unwrap().supported_mac_roles,
+            fake_mac_roles.into_iter().collect()
+        );
     }
 
     /// This test mimics a client of the DeviceWatcher watcher receiving an OnPhyRemoved event and
@@ -1028,13 +1031,12 @@ mod tests {
         let fake_iface_id = 1;
         let fake_phy_id = 1;
         let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
-        let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
 
         let fake_phy_assigned_id = 0;
         let fake_sta_addr = [0, 0, 0, 0, 0, 0];
         let driver_features = vec![fidl_common::DriverFeature::SaeDriverAuth];
         let mut iface_response = create_iface_response(
-            fake_mac_roles[0],
+            fidl_common::WlanMacRole::Client,
             fake_iface_id,
             fake_phy_id,
             fake_phy_assigned_id,
@@ -1052,14 +1054,14 @@ mod tests {
         // Add a new phy.  Since client connections have been started, it should also create a
         // client iface.
         {
-            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            let add_phy_fut = phy_manager.add_phy(fake_phy_id);
             pin_mut!(add_phy_fut);
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
 
             send_get_supported_mac_roles_response(
                 &mut exec,
                 &mut test_values.monitor_stream,
-                Some(fake_mac_roles.clone()),
+                Ok(fake_mac_roles),
             );
 
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
@@ -1094,8 +1096,7 @@ mod tests {
         let mut test_values = test_setup();
 
         let fake_phy_id = 1;
-        let fake_mac_roles = Vec::new();
-        let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
+        let fake_mac_roles = vec![];
 
         let mut phy_manager =
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
@@ -1107,14 +1108,14 @@ mod tests {
         }
 
         {
-            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            let add_phy_fut = phy_manager.add_phy(fake_phy_id);
             pin_mut!(add_phy_fut);
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
 
             send_get_supported_mac_roles_response(
                 &mut exec,
                 &mut test_values.monitor_stream,
-                Some(fake_mac_roles.clone()),
+                Ok(fake_mac_roles.clone()),
             );
 
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
@@ -1138,7 +1139,10 @@ mod tests {
         }
 
         assert!(phy_manager.phys.contains_key(&fake_phy_id));
-        assert_eq!(phy_manager.phys.get(&fake_phy_id).unwrap().supported_mac_roles, fake_mac_roles);
+        assert_eq!(
+            phy_manager.phys.get(&fake_phy_id).unwrap().supported_mac_roles,
+            fake_mac_roles.into_iter().collect()
+        );
     }
 
     #[run_singlethreaded(test)]
@@ -1148,7 +1152,7 @@ mod tests {
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
 
         let fake_phy_id = 1;
-        let fake_mac_roles = Vec::new();
+        let fake_mac_roles = vec![];
 
         let phy_container = PhyContainer::new(fake_mac_roles);
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -1167,7 +1171,7 @@ mod tests {
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
 
         let fake_phy_id = 1;
-        let fake_mac_roles = Vec::new();
+        let fake_mac_roles = vec![];
 
         let phy_container = PhyContainer::new(fake_mac_roles);
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -1188,7 +1192,7 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
         let fake_phy_id = 1;
-        let fake_mac_roles = Vec::new();
+        let fake_mac_roles = vec![];
 
         let phy_container = PhyContainer::new(fake_mac_roles);
 
@@ -1246,7 +1250,7 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
         let fake_phy_id = 1;
-        let fake_mac_roles = Vec::new();
+        let fake_mac_roles = vec![];
 
         // Create an IfaceResponse to be sent to the PhyManager when the iface ID is queried
         let fake_role = fidl_common::WlanMacRole::Client;
@@ -1286,7 +1290,7 @@ mod tests {
             send_get_supported_mac_roles_response(
                 &mut exec,
                 &mut test_values.monitor_stream,
-                Some(fake_mac_roles),
+                Ok(fake_mac_roles),
             );
 
             // Wait for the PhyManager to finish processing the received iface information
@@ -1314,7 +1318,7 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
         let fake_phy_id = 1;
-        let fake_mac_roles = Vec::new();
+        let fake_mac_roles = vec![];
 
         // Inject the fake PHY information
         let phy_container = PhyContainer::new(fake_mac_roles);
@@ -1398,7 +1402,7 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
         let fake_phy_id = 1;
-        let fake_mac_roles = Vec::new();
+        let fake_mac_roles = vec![];
 
         // Inject the fake PHY information
         let mut phy_container = PhyContainer::new(fake_mac_roles);
@@ -1427,7 +1431,7 @@ mod tests {
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
         let fake_phy_id = 1;
-        let fake_mac_roles = Vec::new();
+        let fake_mac_roles = vec![];
 
         let present_iface_id = 1;
         let removed_iface_id = 2;
@@ -2030,7 +2034,7 @@ mod tests {
         let fake_iface_id = 1;
         let fake_phy_id = 1;
         let fake_mac_role = fidl_common::WlanMacRole::Client;
-        let fake_mac_roles = vec![fake_mac_role.clone()];
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
         let phy_container = PhyContainer::new(fake_mac_roles.clone());
 
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -2101,14 +2105,13 @@ mod tests {
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
 
         {
-            let phy_info = fake_phy_info(1, vec![]);
-            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            let add_phy_fut = phy_manager.add_phy(1);
             pin_mut!(add_phy_fut);
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
             send_get_supported_mac_roles_response(
                 &mut exec,
                 &mut test_values.monitor_stream,
-                Some(vec![]),
+                Ok(vec![]),
             );
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
         }
@@ -2126,27 +2129,25 @@ mod tests {
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
 
         {
-            let phy_info = fake_phy_info(1, Vec::new());
-            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            let add_phy_fut = phy_manager.add_phy(1);
             pin_mut!(add_phy_fut);
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
             send_get_supported_mac_roles_response(
                 &mut exec,
                 &mut test_values.monitor_stream,
-                Some(vec![]),
+                Ok(vec![]),
             );
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
         }
 
         {
-            let phy_info = fake_phy_info(2, Vec::new());
-            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            let add_phy_fut = phy_manager.add_phy(2);
             pin_mut!(add_phy_fut);
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
             send_get_supported_mac_roles_response(
                 &mut exec,
                 &mut test_values.monitor_stream,
-                Some(vec![]),
+                Ok(vec![]),
             );
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
         }
@@ -2190,7 +2191,7 @@ mod tests {
         let _ = phy_manager.phys.insert(
             0,
             PhyContainer {
-                supported_mac_roles: vec![],
+                supported_mac_roles: HashSet::new(),
                 client_ifaces: HashMap::new(),
                 ap_ifaces: HashSet::new(),
             },
@@ -2198,7 +2199,7 @@ mod tests {
         let _ = phy_manager.phys.insert(
             1,
             PhyContainer {
-                supported_mac_roles: vec![],
+                supported_mac_roles: HashSet::new(),
                 client_ifaces: HashMap::new(),
                 ap_ifaces: HashSet::new(),
             },
@@ -2276,7 +2277,7 @@ mod tests {
         let _ = phy_manager.phys.insert(
             0,
             PhyContainer {
-                supported_mac_roles: vec![],
+                supported_mac_roles: HashSet::new(),
                 client_ifaces: HashMap::new(),
                 ap_ifaces: HashSet::new(),
             },
@@ -2382,7 +2383,7 @@ mod tests {
 
                     // Expect and respond to a QueryIface request.
                     let mut iface_response = create_iface_response(
-                        fake_mac_roles[0],
+                        fidl_common::WlanMacRole::Client,
                         req.phy_id,
                         req.phy_id,
                         0,
@@ -2478,7 +2479,7 @@ mod tests {
                 // If creating the iface succeeded, respond to the QueryIface request
                 if let Some(iface_id) = created_iface_id {
                     let mut iface_response = create_iface_response(
-                        fake_mac_roles[0],
+                        fidl_common::WlanMacRole::Client,
                         iface_id,
                         iface_id,
                         0,
@@ -2839,7 +2840,7 @@ mod tests {
             send_get_supported_mac_roles_response(
                 &mut exec,
                 &mut test_values.monitor_stream,
-                Some(Vec::new()),
+                Ok(Vec::new()),
             );
 
             // There should be a stall as the low power mode is requested.

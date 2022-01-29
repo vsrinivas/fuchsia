@@ -46,9 +46,10 @@ class WlanInterface {
   void DdkAsyncRemove();
   void DdkRelease();
 
-  static std::vector<wlan_mac_role_t> GetMacRoles(struct brcmf_pub* drvr);
-
-  static zx_status_t Query(brcmf_pub* drvr, wlanphy_impl_info_t* out_info);
+  static zx_status_t GetSupportedMacRoles(
+      struct brcmf_pub* drvr,
+      wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+      uint8_t* out_supported_mac_roles_count);
   static zx_status_t SetCountry(brcmf_pub* drvr, const wlanphy_country_t* country);
   // Reads the currently configured `country` from the firmware.
   static zx_status_t GetCountry(brcmf_pub* drvr, wlanphy_country_t* out_country);

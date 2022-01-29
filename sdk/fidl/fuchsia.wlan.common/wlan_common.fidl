@@ -34,8 +34,11 @@ type WlanMacRole = strict enum {
     AP = 2;
     MESH = 3;
 };
+
+/// This constant defines fixed length for arrays containing MAC roles supported by
+/// PHY entities.
 @namespaced
-const MAX_SUPPORTED_MAC_ROLES uint8 = 3;
+const MAX_SUPPORTED_MAC_ROLES uint8 = 16;
 
 type ChannelBandwidth = strict enum { // Channel Bandwidth
     CBW20 = 0;

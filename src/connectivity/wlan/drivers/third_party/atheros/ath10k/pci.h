@@ -316,7 +316,10 @@ void ath10k_pci_irq_msi_fw_mask(struct ath10k* ar);
 zx_status_t ath10k_pci_wait_for_target_init(struct ath10k* ar);
 zx_status_t ath10k_pci_setup_resource(struct ath10k* ar);
 void ath10k_pci_release_resource(struct ath10k* ar);
-void ath10k_pci_fill_wlanphy_impl_info(struct ath10k* ar, wlanphy_impl_info_t* phy_info);
+void ath10k_pci_fill_wlanphy_impl_supported_mac_roles(
+    struct ath10k* ar,
+    wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+    uint8_t* out_supported_mac_roles_count);
 void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* mac_info);
 
 extern wlan_softmac_protocol_ops_t wlan_softmac_ops;

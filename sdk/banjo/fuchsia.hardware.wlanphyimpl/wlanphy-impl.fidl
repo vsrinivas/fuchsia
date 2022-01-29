@@ -23,13 +23,6 @@ type WlanphyImplCreateIfaceReq = resource struct {
     init_sta_addr ieee80211.MacAddr;
 };
 
-/// Info about this WLAN PHY.
-type WlanphyImplInfo = struct {
-    /// MAC roles supported. For an interface, this will be a single value.
-    supported_mac_roles
-            vector<fuchsia.wlan.common.WlanMacRole>:fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES;
-};
-
 const WLANPHY_ALPHA2_LEN uint8 = 2;
 
 @packed
@@ -49,10 +42,12 @@ type WlanphyPsMode = struct {
 @transport("Banjo")
 @banjo_layout("ddk-protocol")
 protocol WlanphyImpl {
-    /// Get information about the capabilities of the physical device.
-    Query() -> (struct {
+    /// MAC roles supported for ifaces on the physical device.
+    GetSupportedMacRoles() -> (struct {
         s zx.status;
-        info WlanphyImplInfo;
+        supported_mac_roles_list
+                array<fuchsia.wlan.common.WlanMacRole, fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES>;
+        supported_mac_roles_count uint8;
     });
 
     /// Create a new interface with the specified role, returning the interface id.

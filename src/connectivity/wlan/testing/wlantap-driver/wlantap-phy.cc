@@ -177,10 +177,13 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
   // wlanphy-impl DDK interface
 
-  zx_status_t Query(wlanphy_impl_info_t* info) {
-    zxlogf(INFO, "%s: received a 'Query' DDK request", name_.c_str());
-    zx_status_t status = ConvertTapPhyConfig(info, *phy_config_);
-    zxlogf(INFO, "%s: responded to 'Query' with status %s", name_.c_str(),
+  zx_status_t GetSupportedMacRoles(
+      wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+      uint8_t* out_supported_mac_roles_count) {
+    zxlogf(INFO, "%s: received a 'GetSupportedMacRoles' DDK request", name_.c_str());
+    zx_status_t status = ConvertTapPhyConfig(out_supported_mac_roles_list,
+                                             out_supported_mac_roles_count, *phy_config_);
+    zxlogf(INFO, "%s: responded to 'GetSupportedMacRoles' with status %s", name_.c_str(),
            zx_status_get_string(status));
     return status;
   }
@@ -423,8 +426,13 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
 #define DEV(c) static_cast<WlantapPhy*>(c)
 static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
-    .query = [](void* ctx, wlanphy_impl_info_t* info) -> zx_status_t {
-      return DEV(ctx)->Query(info);
+    .get_supported_mac_roles =
+        [](void* ctx,
+           wlan_mac_role_t
+               out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+           uint8_t* out_supported_mac_roles_count) -> zx_status_t {
+      return DEV(ctx)->GetSupportedMacRoles(out_supported_mac_roles_list,
+                                            out_supported_mac_roles_count);
     },
     .create_iface = [](void* ctx, const wlanphy_impl_create_iface_req_t* req,
                        uint16_t* out_iface_id) -> zx_status_t {

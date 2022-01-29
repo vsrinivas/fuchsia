@@ -50,17 +50,20 @@ class WlanphyImplDeviceTest : public SingleApTest {
 
 /////////////////////////////////////       PHY       //////////////////////////////////////////////
 
-TEST_F(WlanphyImplDeviceTest, PhyQuery) {
-  wlanphy_impl_info_t info = {};
-
+TEST_F(WlanphyImplDeviceTest, PhyGetSupportedMacRolesNullPtr) {
   // Test input null pointers
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanphyImplQuery(nullptr));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanphyImplGetSupportedMacRoles(nullptr, 0));
+}
+
+TEST_F(WlanphyImplDeviceTest, PhyGetSupportedMacRoles) {
+  wlan_mac_role_t supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES] = {};
+  uint8_t supported_mac_roles_count = 0;
 
   // Normal case
-  ASSERT_EQ(ZX_OK, device_->WlanphyImplQuery(&info));
-  EXPECT_EQ(1U, info.supported_mac_roles_count);
-  EXPECT_EQ(WLAN_MAC_ROLE_CLIENT, info.supported_mac_roles_list[0]);
-  free(static_cast<void*>(const_cast<wlan_mac_role_t*>(info.supported_mac_roles_list)));
+  ASSERT_EQ(ZX_OK, device_->WlanphyImplGetSupportedMacRoles(supported_mac_roles_list,
+                                                            &supported_mac_roles_count));
+  EXPECT_EQ(supported_mac_roles_count, 1);
+  EXPECT_EQ(supported_mac_roles_list[0], WLAN_MAC_ROLE_CLIENT);
 }
 
 TEST_F(WlanphyImplDeviceTest, PhyPartialCreateCleanup) {

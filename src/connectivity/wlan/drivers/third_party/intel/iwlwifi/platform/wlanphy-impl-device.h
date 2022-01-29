@@ -34,7 +34,9 @@ class WlanphyImplDevice
   virtual const iwl_trans* drvdata() const = 0;
 
   // WlanphyImpl interface implementation.
-  zx_status_t WlanphyImplQuery(wlanphy_impl_info_t* out_info);
+  zx_status_t WlanphyImplGetSupportedMacRoles(
+      wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+      uint8_t* out_supported_mac_roles_count);
   zx_status_t WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,
                                      uint16_t* out_iface_id);
   zx_status_t WlanphyImplDestroyIface(uint16_t iface_id);

@@ -3121,16 +3121,12 @@ static void ath10k_wlan_softmac_band_query_info(struct ath10k* ar,
   ath10k_band_query_info(ar, dev_band, &mac_info->bands[mac_info->bands_count++]);
 }
 
-// TODO(fxbug.dev/52941): Remove this function in favor of a more targeted query for phy data.
-void ath10k_pci_fill_wlanphy_impl_info(struct ath10k* ar, wlanphy_impl_info_t* phy_info) {
-  *phy_info = (wlanphy_impl_info_t){};
-
-  // mac_role
-  wlan_mac_role_t* supported_mac_roles_list = (wlan_mac_role_t*)calloc(1, sizeof(wlan_mac_role_t));
-  supported_mac_roles_list[0] = ar->mac_role;
-
-  phy_info->supported_mac_roles_list = supported_mac_roles_list;
-  phy_info->supported_mac_roles_count = 1;
+void ath10k_pci_fill_wlanphy_impl_supported_mac_roles(
+    struct ath10k* ar,
+    wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+    uint8_t* out_supported_mac_roles_count) {
+  out_supported_mac_roles_list[0] = ar->mac_role;
+  *out_supported_mac_roles_count = 1;
 }
 
 void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* mac_info) {

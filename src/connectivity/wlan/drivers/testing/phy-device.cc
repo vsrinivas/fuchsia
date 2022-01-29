@@ -89,24 +89,12 @@ zx_status_t PhyDevice::Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-namespace {
-wlan_device::PhyInfo get_info() {
-  wlan_device::PhyInfo info;
+void PhyDevice::GetSupportedMacRoles(GetSupportedMacRolesCallback callback) {
+  zxlogf(INFO, "wlan::testing::phy::PhyDevice::GetSupportedMacRoles()");
 
-  info.supported_mac_roles.resize(0);
-
-  info.supported_mac_roles.push_back(wlan_common::WlanMacRole::CLIENT);
-  info.supported_mac_roles.push_back(wlan_common::WlanMacRole::AP);
-
-  return info;
-}
-}  // namespace
-
-void PhyDevice::Query(QueryCallback callback) {
-  zxlogf(INFO, "wlan::testing::phy::PhyDevice::Query()");
-  wlan_device::QueryResponse resp;
-  resp.info = get_info();
-  callback(std::move(resp));
+  callback(wlan_device::Phy_GetSupportedMacRoles_Result::WithResponse(
+      wlan_device::Phy_GetSupportedMacRoles_Response(
+          {wlan_common::WlanMacRole::CLIENT, wlan_common::WlanMacRole::AP})));
 }
 
 void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallback callback) {

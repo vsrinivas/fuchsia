@@ -32,7 +32,10 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
                      size_t bands_count, wlan_info_band_info_t* band_infos);
 
 // Phy protocol helpers
-zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info);
+zx_status_t phy_get_supported_mac_roles(
+    void* ctx,
+    wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+    uint8_t* out_supported_mac_roles_count);
 zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
                              uint16_t* out_iface_id);
 zx_status_t phy_start_iface(void* ctx, zx_device_t* zxdev, uint16_t idx);

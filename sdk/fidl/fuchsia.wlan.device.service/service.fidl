@@ -4,30 +4,12 @@
 library fuchsia.wlan.device.service;
 
 using fuchsia.wlan.common;
-using fuchsia.wlan.device;
 using fuchsia.wlan.ieee80211 as ieee80211;
 using fuchsia.wlan.minstrel;
 using fuchsia.wlan.mlme;
 using fuchsia.wlan.sme;
 using fuchsia.wlan.stats;
 using zx;
-
-type PhyListItem = struct {
-    phy_id uint16;
-    path string;
-};
-
-type ListPhysResponse = struct {
-    phys vector<PhyListItem>;
-};
-
-type QueryPhyRequest = struct {
-    phy_id uint16;
-};
-
-type QueryPhyResponse = struct {
-    info fuchsia.wlan.device.PhyInfo;
-};
 
 type IfaceListItem = struct {
     iface_id uint16;
@@ -210,8 +192,8 @@ protocol DeviceMonitor {
         phy_id uint16;
     }) -> (struct {
         supported_mac_roles
-                vector<fuchsia.wlan.common.WlanMacRole>:<fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES, optional>;
-    });
+                vector<fuchsia.wlan.common.WlanMacRole>:fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES;
+    }) error zx.status;
     WatchDevices(resource struct {
         watcher server_end:DeviceWatcher;
     });

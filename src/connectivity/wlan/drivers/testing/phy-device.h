@@ -33,7 +33,7 @@ class PhyDevice : public ::fuchsia::wlan::device::Phy {
   void Release();
   zx_status_t Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
-  virtual void Query(QueryCallback callback) override;
+  virtual void GetSupportedMacRoles(GetSupportedMacRolesCallback callback) override;
   virtual void CreateIface(::fuchsia::wlan::device::CreateIfaceRequest req,
                            CreateIfaceCallback callback) override;
   virtual void DestroyIface(::fuchsia::wlan::device::DestroyIfaceRequest req,

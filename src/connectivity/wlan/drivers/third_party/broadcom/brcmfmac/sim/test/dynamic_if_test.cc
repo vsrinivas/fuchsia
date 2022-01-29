@@ -74,9 +74,6 @@ class DynamicIfTest : public SimTest {
   // Verify the start ap timeout timer is triggered.
   void VerifyStartApTimer();
 
-  // Query for wlanphy info
-  void PhyQuery(wlanphy_impl_info_t* out_info);
-
   // Interfaces to set and get chanspec iovar in sim-fw
   void SetChanspec(bool is_ap_iface, uint16_t* chanspec, zx_status_t expect_result);
   uint16_t GetChanspec(bool is_ap_iface, zx_status_t expect_result);
@@ -94,12 +91,6 @@ class DynamicIfTest : public SimTest {
 void DynamicIfTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
   ap_.EnableBeacon(zx::msec(100));
-}
-
-void DynamicIfTest::PhyQuery(wlanphy_impl_info_t* out_info) {
-  zx_status_t status;
-  status = device_->WlanphyImplQuery(out_info);
-  ASSERT_EQ(status, ZX_OK);
 }
 
 uint32_t DynamicIfTest::DeviceCountByProtocolId(uint32_t proto_id) {

@@ -9,7 +9,7 @@ use {
     },
     anyhow::{Context, Error},
     fidl::endpoints::create_endpoints,
-    fidl_fuchsia_wlan_device as fidl_dev,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device as fidl_dev,
     fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceMonitorRequest},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     futures::TryStreamExt,
@@ -31,10 +31,7 @@ pub(crate) async fn serve_monitor_requests(
                 responder.send(get_dev_path(&phys, phy_id).as_deref())
             }
             DeviceMonitorRequest::GetSupportedMacRoles { phy_id, responder } => {
-                match query_phy(&phys, phy_id).await {
-                    Some(mut info) => responder.send(Some(&mut info.supported_mac_roles.drain(..))),
-                    None => responder.send(None),
-                }
+                responder.send(&mut get_supported_mac_roles(&phys, phy_id).await)
             }
             DeviceMonitorRequest::WatchDevices { watcher, control_handle: _ } => {
                 watcher_service
@@ -179,22 +176,19 @@ async fn get_ps_mode(
     }
 }
 
-async fn query_phy(phys: &PhyMap, id: u16) -> Option<fidl_dev::PhyInfo> {
-    let phy = phys.get(&id)?;
-    let query_result = phy
-        .proxy
-        .query()
-        .await
-        .map_err(move |e| {
-            error!("query_phy(id = {}): error sending 'Query' request to phy: {}", id, e);
-        })
-        .ok()?;
-    zx::Status::ok(query_result.status)
-        .map_err(move |e| {
-            error!("query_phy(id = {}): returned an error: {}", id, e);
-        })
-        .ok()?;
-    Some(query_result.info)
+async fn get_supported_mac_roles(
+    phys: &PhyMap,
+    id: u16,
+) -> Result<Vec<fidl_common::WlanMacRole>, zx::sys::zx_status_t> {
+    let phy = phys.get(&id).ok_or(zx::sys::ZX_ERR_NOT_FOUND)?;
+    phy.proxy.get_supported_mac_roles().await.map_err(move |fidl_error| {
+        error!("get_supported_mac_roles(id = {}): error sending 'GetSupportedMacRoles' request to phy: {}", id, fidl_error);
+        zx::sys::ZX_ERR_INTERNAL
+    })?.map_err(move |e| {
+        let status = zx::Status::from_raw(e);
+        error!("get_supported_mac_roles(id = {}): returned an error: {}", id, status);
+        status.into_raw()
+    })
 }
 
 async fn create_iface(
@@ -504,31 +498,28 @@ mod tests {
 
         // Initiate a GetWlanMacRoles request. The returned future should not be able
         // to produce a result immediately
-        let query_fut = test_values.monitor_proxy.get_supported_mac_roles(10u16);
-        pin_mut!(query_fut);
-        assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
+        let get_supported_mac_roles_fut = test_values.monitor_proxy.get_supported_mac_roles(10u16);
+        pin_mut!(get_supported_mac_roles_fut);
+        assert_variant!(exec.run_until_stalled(&mut get_supported_mac_roles_fut), Poll::Pending);
 
         // The call above should trigger a Query message to the phy.
         // Pretend that we are the phy and read the message from the other side.
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
         let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
-            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::Query { responder }))) => responder
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::GetSupportedMacRoles { responder }))) => responder
         );
 
         // Reply with a fake phy info
-        let mut phy_info = fake_phy_info();
-        phy_info.supported_mac_roles.push(fidl_wlan_common::WlanMacRole::Client);
         responder
-            .send(&mut fidl_dev::QueryResponse { status: zx::sys::ZX_OK, info: phy_info })
+            .send(&mut Ok(vec![fidl_wlan_common::WlanMacRole::Client]))
             .expect("failed to send QueryResponse");
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
         // Our original future should complete now and the client role should be reported.
         assert_variant!(
-            exec.run_until_stalled(&mut query_fut),
-            Poll::Ready(Ok(Some(roles))) => {
-                assert_eq!(roles.len(), 1);
-                assert_eq!(roles[0], fidl_wlan_common::WlanMacRole::Client);
+            exec.run_until_stalled(&mut get_supported_mac_roles_fut),
+            Poll::Ready(Ok(Ok(supported_mac_roles))) => {
+                assert_eq!(supported_mac_roles, vec![fidl_wlan_common::WlanMacRole::Client]);
             }
         );
     }
@@ -549,15 +540,18 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
         // Query a PHY's dev path.
-        let query_fut = test_values.monitor_proxy.get_supported_mac_roles(0);
-        pin_mut!(query_fut);
-        assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
+        let get_supported_mac_roles_fut = test_values.monitor_proxy.get_supported_mac_roles(0);
+        pin_mut!(get_supported_mac_roles_fut);
+        assert_variant!(exec.run_until_stalled(&mut get_supported_mac_roles_fut), Poll::Pending);
 
         // Progress the service loop.
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
         // The attempt to query the PHY's information should fail.
-        assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Ready(Ok(None)));
+        assert_variant!(
+            exec.run_until_stalled(&mut get_supported_mac_roles_fut),
+            Poll::Ready(Ok(Err(zx::sys::ZX_ERR_NOT_FOUND)))
+        );
     }
 
     #[test]
@@ -1093,14 +1087,6 @@ mod tests {
         );
 
         assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Err(_)));
-    }
-
-    fn fake_phy_info() -> fidl_dev::PhyInfo {
-        fidl_dev::PhyInfo {
-            id: 10,
-            dev_path: Some("/dev/null".to_string()),
-            supported_mac_roles: Vec::new(),
-        }
     }
 
     #[test_case(false, false, false; "CreateIface without MACsucceeds")]

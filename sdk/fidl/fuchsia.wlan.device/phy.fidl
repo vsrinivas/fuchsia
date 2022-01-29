@@ -49,23 +49,6 @@ type BandInfo = struct {
     supported_channels ChannelList;
 };
 
-type PhyInfo = struct {
-    // The following fields are not set by the phy itself, but by the service that monitors them.
-    // The phy id. This is not a stable identifier, but will not change while this phy's device node
-    // remains.
-    id uint16;
-    // The topological path of the phy in the device tree.
-    dev_path string:optional;
-
-    supported_mac_roles
-            vector<fuchsia.wlan.common.WlanMacRole>:fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES;
-};
-
-type QueryResponse = struct {
-    status int32;
-    info PhyInfo;
-};
-
 type CreateIfaceRequest = resource struct {
     role fuchsia.wlan.common.WlanMacRole;
     // TODO(fxbug.dev/29547): Make `mlme_channel` mandatory once all drivers support the channel.
@@ -93,9 +76,10 @@ type CountryCode = struct {
 };
 
 protocol Phy {
-    Query() -> (struct {
-        resp QueryResponse;
-    });
+    GetSupportedMacRoles() -> (struct {
+        supported_mac_roles
+                vector<fuchsia.wlan.common.WlanMacRole>:fuchsia.wlan.common.MAX_SUPPORTED_MAC_ROLES;
+    }) error zx.status;
     CreateIface(resource struct {
         req CreateIfaceRequest;
     }) -> (struct {

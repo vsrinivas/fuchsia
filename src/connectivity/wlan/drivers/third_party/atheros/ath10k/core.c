@@ -2284,12 +2284,14 @@ static zx_protocol_device_t device_phy_ops = {
     .release = ath10k_core_phy_release,
 };
 
-static zx_status_t ath10k_core_phy_query(void* ctx, wlanphy_impl_info_t* phy_info) {
+static zx_status_t ath10k_core_phy_get_supported_mac_roles(
+    void* ctx,
+    wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+    uint8_t* out_supported_mac_roles_count) {
   struct ath10k* ar = ctx;
 
-  // Reset the output values.
-  memset(phy_info, 0, sizeof(*phy_info));
-  ath10k_pci_fill_wlanphy_impl_info(ar, phy_info);
+  ath10k_pci_fill_wlanphy_impl_supported_mac_roles(ar, out_supported_mac_roles_list,
+                                                   out_supported_mac_roles_count);
 
   return ZX_OK;
 }
@@ -2402,7 +2404,7 @@ zx_status_t ath10k_core_get_ps_mode(void* ctx, wlanphy_ps_mode_t* out_ps_mode) {
 }
 
 static wlanphy_impl_protocol_ops_t wlanphy_ops = {
-    .query = ath10k_core_phy_query,
+    .get_supported_mac_roles = ath10k_core_phy_get_supported_mac_roles,
     .create_iface = ath10k_core_create_iface,
     .destroy_iface = ath10k_core_destroy_iface,
     .set_country = ath10k_core_set_country,

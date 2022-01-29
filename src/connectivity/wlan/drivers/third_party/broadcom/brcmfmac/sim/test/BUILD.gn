@@ -550,10 +550,10 @@ executable("phy_ps_mode_test") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-executable("phy_query_test") {
-  output_name = "phy_query_test"
+executable("phy_mac_roles_test") {
+  output_name = "phy_mac_roles_test"
   testonly = true
-  sources = [ "phy_query_test.cc" ]
+  sources = [ "phy_mac_roles_test.cc" ]
   deps = [
     ":sim_test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -693,7 +693,7 @@ _tests = [
   "no_random_mac_test",
   "passive_scan_test",
   "phy_ps_mode_test",
-  "phy_query_test",
+  "phy_mac_roles_test",
   "scan_dwell_time_test",
   "scan_while_scanning_test",
   "set_keys_test",

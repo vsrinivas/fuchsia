@@ -544,25 +544,23 @@ void mac_release(void* ctx) {
 
 /////////////////////////////////////       PHY       //////////////////////////////////////////////
 
-zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
+zx_status_t phy_get_supported_mac_roles(
+    void* ctx,
+    wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+    uint8_t* out_supported_mac_roles_count) {
   const auto iwl_trans = reinterpret_cast<struct iwl_trans*>(ctx);
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
-  if (!mvm || !info) {
+  if (nullptr == mvm || nullptr == out_supported_mac_roles_list ||
+      nullptr == out_supported_mac_roles_count) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   struct iwl_nvm_data* nvm_data = mvm->nvm_data;
   ZX_ASSERT(nvm_data);
 
-  *info = {};
-
   // TODO(fxbug.dev/36677): supports AP role
-  wlan_mac_role_t* supported_mac_roles_list =
-      static_cast<wlan_mac_role_t*>(calloc(1, sizeof(wlan_mac_role_t)));
-  supported_mac_roles_list[0] = WLAN_MAC_ROLE_CLIENT;
-
-  info->supported_mac_roles_list = supported_mac_roles_list;
-  info->supported_mac_roles_count = 1;
+  out_supported_mac_roles_list[0] = WLAN_MAC_ROLE_CLIENT;
+  *out_supported_mac_roles_count = 1;
   return ZX_OK;
 }
 

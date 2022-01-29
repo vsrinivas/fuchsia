@@ -28,7 +28,7 @@ class Device : public ::fuchsia::wlan::device::Phy {
   void Unbind();
 
   // wlanphy_protocol_t from ::fuchsia::wlan::device::Phy
-  virtual void Query(QueryCallback callback) override;
+  virtual void GetSupportedMacRoles(GetSupportedMacRolesCallback callback) override;
   virtual void CreateIface(::fuchsia::wlan::device::CreateIfaceRequest req,
                            CreateIfaceCallback callback) override;
   virtual void DestroyIface(::fuchsia::wlan::device::DestroyIfaceRequest req,
@@ -53,9 +53,6 @@ class Device : public ::fuchsia::wlan::device::Phy {
   friend class DeviceConnector;
 };
 
-void ConvertSupportedMacRoles(
-    ::std::vector<::fuchsia::wlan::common::WlanMacRole>* fidl_supported_mac_roles,
-    const wlan_mac_role_t* banjo_supported_mac_roles_list, size_t banjo_supported_mac_roles_count);
 }  // namespace wlanphy
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_

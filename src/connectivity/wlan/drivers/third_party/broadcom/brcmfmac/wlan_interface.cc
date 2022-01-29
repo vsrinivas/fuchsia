@@ -202,36 +202,26 @@ void WlanInterface::DdkAsyncRemove() {
 void WlanInterface::DdkRelease() { delete this; }
 
 // static
-std::vector<wlan_mac_role_t> WlanInterface::GetMacRoles(struct brcmf_pub* drvr) {
-  std::vector<wlan_mac_role_t> mac_roles;
-  if (brcmf_feat_is_enabled(drvr, BRCMF_FEAT_STA)) {
-    mac_roles.push_back(WLAN_MAC_ROLE_CLIENT);
-  }
-  if (brcmf_feat_is_enabled(drvr, BRCMF_FEAT_AP)) {
-    mac_roles.push_back(WLAN_MAC_ROLE_AP);
-  }
-  return mac_roles;
-}
-
-// static
-zx_status_t WlanInterface::Query(brcmf_pub* drvr, wlanphy_impl_info_t* info) {
-  std::memset(info, 0, sizeof(*info));
-
+zx_status_t WlanInterface::GetSupportedMacRoles(
+    struct brcmf_pub* drvr,
+    wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+    uint8_t* out_supported_mac_roles_count) {
   // The default client iface at bsscfgidx 0 is always assumed to exist by the driver.
   if (!drvr->iflist[0]) {
     BRCMF_ERR("drvr->iflist[0] is NULL. This should never happen.");
-    return false;
+    return ZX_ERR_INTERNAL;
   }
 
-  const std::vector<wlan_mac_role_t> roles_list = GetMacRoles(drvr);
-  size_t roles_count = roles_list.size();
-  wlan_mac_role_t* supported_mac_roles_list =
-      static_cast<wlan_mac_role_t*>(calloc(roles_count, sizeof(wlan_mac_role_t)));
-  for (size_t i = 0; i < roles_count; i++) {
-    supported_mac_roles_list[i] = roles_list[i];
+  size_t len = 0;
+  if (brcmf_feat_is_enabled(drvr, BRCMF_FEAT_STA)) {
+    out_supported_mac_roles_list[len] = WLAN_MAC_ROLE_CLIENT;
+    ++len;
   }
-  info->supported_mac_roles_list = supported_mac_roles_list;
-  info->supported_mac_roles_count = roles_count;
+  if (brcmf_feat_is_enabled(drvr, BRCMF_FEAT_AP)) {
+    out_supported_mac_roles_list[len] = WLAN_MAC_ROLE_AP;
+    ++len;
+  }
+  *out_supported_mac_roles_count = len;
 
   return ZX_OK;
 }

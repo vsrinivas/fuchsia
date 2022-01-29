@@ -24,8 +24,11 @@ WlanphyImplDevice::~WlanphyImplDevice() = default;
 
 void WlanphyImplDevice::DdkRelease() { delete this; }
 
-zx_status_t WlanphyImplDevice::WlanphyImplQuery(wlanphy_impl_info_t* out_info) {
-  return phy_query(drvdata(), out_info);
+zx_status_t WlanphyImplDevice::WlanphyImplGetSupportedMacRoles(
+    wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+    uint8_t* out_supported_mac_roles_count) {
+  return phy_get_supported_mac_roles(drvdata(), out_supported_mac_roles_list,
+                                     out_supported_mac_roles_count);
 }
 
 zx_status_t WlanphyImplDevice::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,
