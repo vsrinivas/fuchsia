@@ -33,7 +33,6 @@ use {
     wep_deprecated,
     wlan_common::{
         bss::BssDescription,
-        channel::Channel,
         format::MacFmt as _,
         ie::{self, rsn::cipher},
         timer::EventId,
@@ -71,7 +70,6 @@ pub struct Idle {
 pub struct Joining {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    channel: Channel,
     capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
@@ -80,7 +78,6 @@ pub struct Joining {
 pub struct Authenticating {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    channel: Channel,
     capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
@@ -89,7 +86,6 @@ pub struct Authenticating {
 pub struct Associating {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    channel: Channel,
     capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
@@ -103,9 +99,6 @@ pub struct Associated {
     last_signal_report_time: zx::Time,
     link_state: LinkState,
     capability_info: Option<ClientCapabilities>,
-    // TODO(fxbug.dev/82653): There are two channels, one in `latest_ap_state` and one here.
-    //                        Revisit how we should handle this for OnChannelSwitched event.
-    channel: Channel,
     protection_ie: Option<ProtectionIe>,
     // TODO(fxbug.dev/82654): Remove `wmm_param` field when wlanstack telemetry is deprecated.
     wmm_param: Option<ie::WmmParam>,
@@ -186,7 +179,6 @@ impl Joining {
                 Ok(Authenticating {
                     cfg: self.cfg,
                     cmd: self.cmd,
-                    channel: self.channel,
                     capability_info: self.capability_info,
                     protection_ie: self.protection_ie,
                 })
@@ -226,7 +218,6 @@ impl Authenticating {
                 Ok(Associating {
                     cfg: self.cfg,
                     cmd: self.cmd,
-                    channel: self.channel,
                     capability_info: self.capability_info,
 
                     protection_ie: self.protection_ie,
@@ -368,7 +359,7 @@ impl Associating {
                         return Err(Idle { cfg: self.cfg });
                     }
                     context.mlme_sink.send(MlmeRequest::FinalizeAssociation(
-                        negotiated_cap.to_fidl_negotiated_capabilities(&self.channel),
+                        negotiated_cap.to_fidl_negotiated_capabilities(&self.cmd.bss.channel),
                     ))
                 }
 
@@ -423,7 +414,6 @@ impl Associating {
             last_signal_report_time: now(),
             latest_ap_state: self.cmd.bss,
             link_state,
-            channel: self.channel,
             capability_info: self.capability_info,
             protection_ie: self.protection_ie,
             wmm_param,
@@ -557,7 +547,7 @@ impl Associated {
                 ssid: self.latest_ap_state.ssid.clone(),
                 protection: self.latest_ap_state.protection(),
                 wsc: self.latest_ap_state.probe_resp_wsc(),
-                channel: Channel::from(self.latest_ap_state.channel),
+                channel: self.latest_ap_state.channel.clone(),
                 disconnect_source,
                 time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
             };
@@ -599,7 +589,6 @@ impl Associated {
         Associating {
             cfg: self.cfg,
             cmd,
-            channel: self.channel,
             capability_info: self.capability_info,
             protection_ie: self.protection_ie,
         }
@@ -633,7 +622,7 @@ impl Associated {
                     ssid: self.latest_ap_state.ssid.clone(),
                     protection: self.latest_ap_state.protection(),
                     wsc: self.latest_ap_state.probe_resp_wsc(),
-                    channel: Channel::from(self.latest_ap_state.channel),
+                    channel: self.latest_ap_state.channel.clone(),
                     disconnect_source,
                     time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
                 };
@@ -1018,9 +1007,8 @@ impl ClientState {
     }
 
     pub fn connect(self, cmd: ConnectCommand, context: &mut Context) -> Self {
-        let channel = Channel::from(cmd.bss.channel);
         let capability_info = match derive_join_capabilities(
-            Channel::from(cmd.bss.channel),
+            cmd.bss.channel,
             cmd.bss.rates(),
             &context.device_info,
         ) {
@@ -1067,9 +1055,9 @@ impl ClientState {
         });
         let state = Self::new(cfg.clone());
         match state {
-            Self::Idle(state) => state
-                .transition_to(Joining { cfg, cmd, channel, capability_info, protection_ie })
-                .into(),
+            Self::Idle(state) => {
+                state.transition_to(Joining { cfg, cmd, capability_info, protection_ie }).into()
+            }
             _ => unreachable!(),
         }
     }
@@ -1092,7 +1080,7 @@ impl ClientState {
                     ssid: state.latest_ap_state.ssid.clone(),
                     protection: state.latest_ap_state.protection(),
                     wsc: state.latest_ap_state.probe_resp_wsc(),
-                    channel: Channel::from(state.latest_ap_state.channel),
+                    channel: state.latest_ap_state.channel.clone(),
                     disconnect_source,
                     time_since_channel_switch: state.last_channel_switch_time.map(|t| now() - t),
                 };
@@ -1205,7 +1193,7 @@ impl ClientState {
                         rssi_dbm: latest_ap_state.rssi_dbm,
                         snr_db: latest_ap_state.snr_db,
                         signal_report_time: associated.last_signal_report_time,
-                        channel: Channel::from(latest_ap_state.channel),
+                        channel: latest_ap_state.channel.clone(),
                         protection: latest_ap_state.protection(),
                         ht_cap: latest_ap_state.raw_ht_cap(),
                         vht_cap: latest_ap_state.raw_vht_cap(),
@@ -1389,7 +1377,7 @@ fn connect_cmd_inspect_summary(cmd: &ConnectCommand) -> String {
     format!(
         "ConnectCmd {{ \
          capability_info: {capability_info:?}, rates: {rates:?}, \
-         protected: {protected:?}, channel: {channel:?}, \
+         protected: {protected:?}, channel: {channel}, \
          rssi: {rssi:?}, ht_cap: {ht_cap:?}, ht_op: {ht_op:?}, \
          vht_cap: {vht_cap:?}, vht_op: {vht_op:?} }}",
         capability_info = bss.capability_info,
@@ -1464,7 +1452,7 @@ mod tests {
     use wlan_common::{
         assert_variant,
         bss::Protection as BssProtection,
-        channel::Cbw,
+        channel::{Cbw, Channel},
         fake_bss_description,
         hasher::WlanHasher,
         ie::{
@@ -1718,7 +1706,6 @@ mod tests {
         let state = ClientState::from(testing::new_state(Joining {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -1746,7 +1733,6 @@ mod tests {
         let state = ClientState::from(testing::new_state(Authenticating {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -1779,7 +1765,6 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -2119,7 +2104,6 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd: command,
-            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -2434,7 +2418,6 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         }));
@@ -3426,7 +3409,6 @@ mod tests {
         testing::new_state(Joining {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         })
@@ -3443,7 +3425,6 @@ mod tests {
         testing::new_state(Authenticating {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         })
@@ -3454,7 +3435,6 @@ mod tests {
         testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
         })
@@ -3485,7 +3465,6 @@ mod tests {
             connect_txn_sink: cmd.connect_txn_sink,
             last_signal_report_time: zx::Time::ZERO,
             link_state,
-            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
             wmm_param: None,
@@ -3513,7 +3492,6 @@ mod tests {
             auth_method,
             last_signal_report_time: zx::Time::ZERO,
             link_state,
-            channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
             wmm_param,
@@ -3524,9 +3502,5 @@ mod tests {
 
     fn fake_device_info() -> fidl_mlme::DeviceInfo {
         test_utils::fake_device_info([0, 1, 2, 3, 4, 5])
-    }
-
-    fn fake_channel() -> Channel {
-        Channel { primary: 153, cbw: wlan_common::channel::Cbw::Cbw20 }
     }
 }
