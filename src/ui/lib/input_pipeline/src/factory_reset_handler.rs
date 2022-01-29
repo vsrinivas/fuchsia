@@ -393,6 +393,7 @@ mod tests {
         fidl_fuchsia_recovery_policy::{DeviceMarker, DeviceProxy},
         fidl_fuchsia_recovery_ui::{FactoryResetCountdownMarker, FactoryResetCountdownProxy},
         fuchsia_async::TestExecutor,
+        fuchsia_zircon as zx,
         pin_utils::pin_mut,
         pretty_assertions::assert_eq,
         std::task::Poll,
@@ -471,7 +472,7 @@ mod tests {
         input_device::UnhandledInputEvent {
             device_event,
             device_descriptor: create_input_device_descriptor(),
-            event_time: Time::now().into_nanos() as u64,
+            event_time: zx::Time::get_monotonic(),
         }
     }
 
@@ -483,7 +484,7 @@ mod tests {
         input_device::UnhandledInputEvent {
             device_event,
             device_descriptor: create_input_device_descriptor(),
-            event_time: Time::now().into_nanos() as u64,
+            event_time: zx::Time::get_monotonic(),
         }
     }
 

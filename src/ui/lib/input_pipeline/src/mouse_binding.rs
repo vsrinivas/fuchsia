@@ -10,6 +10,7 @@ use {
     fidl_fuchsia_input_report as fidl_input_report,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
     fuchsia_syslog::fx_log_err,
+    fuchsia_zircon as zx,
     futures::channel::mpsc::Sender,
     std::collections::HashSet,
     std::iter::FromIterator,
@@ -220,8 +221,7 @@ impl MouseBinding {
             buttons_from_optional_report(&previous_report.as_ref());
         let current_buttons: HashSet<MouseButton> = buttons_from_report(&report);
 
-        let event_time: input_device::EventTime =
-            input_device::event_time_or_now(report.event_time);
+        let event_time: zx::Time = input_device::event_time_or_now(report.event_time);
 
         // Send a Down event with:
         // * affected_buttons: the buttons that were pressed since the previous report,
@@ -300,7 +300,7 @@ fn send_mouse_event(
     affected_buttons: HashSet<MouseButton>,
     pressed_buttons: HashSet<MouseButton>,
     device_descriptor: &input_device::InputDeviceDescriptor,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     sender: &mut Sender<input_device::InputEvent>,
 ) {
     // Only send Down/Up events when there are buttons affected.

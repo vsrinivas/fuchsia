@@ -18,13 +18,12 @@ use {
     maplit::hashmap,
     std::collections::HashMap,
     std::collections::HashSet,
-    std::convert::TryInto,
 };
 
-/// Returns the current time as an i64 for InputReports and input_device::EventTime for InputEvents.
-pub fn event_times() -> (i64, input_device::EventTime) {
-    let event_time = zx::Time::get_monotonic().into_nanos();
-    (event_time, event_time as input_device::EventTime)
+/// Returns the current time as an i64 for InputReports and zx::Time for InputEvents.
+pub fn event_times() -> (i64, zx::Time) {
+    let event_time = zx::Time::get_monotonic();
+    (event_time.into_nanos(), event_time)
 }
 
 /// Creates a [`fidl_input_report::InputReport`] with a keyboard report.
@@ -55,7 +54,7 @@ pub fn create_keyboard_input_report(
 pub fn create_input_event(
     keyboard_event: keyboard_binding::KeyboardEvent,
     device_descriptor: &input_device::InputDeviceDescriptor,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     handled: input_device::Handled,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
@@ -79,7 +78,7 @@ pub fn create_keyboard_event_with_handled(
     key: fidl_fuchsia_input::Key,
     event_type: fidl_fuchsia_ui_input3::KeyEventType,
     modifiers: Option<fidl_ui_input3::Modifiers>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
     keymap: Option<String>,
     key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
@@ -106,7 +105,7 @@ pub fn create_keyboard_event_with_key_meaning_and_repeat_sequence(
     key: fidl_fuchsia_input::Key,
     event_type: fidl_fuchsia_ui_input3::KeyEventType,
     modifiers: Option<fidl_ui_input3::Modifiers>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
     keymap: Option<String>,
     key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
@@ -132,7 +131,7 @@ pub fn create_keyboard_event_with_key_meaning(
     key: fidl_fuchsia_input::Key,
     event_type: fidl_fuchsia_ui_input3::KeyEventType,
     modifiers: Option<fidl_ui_input3::Modifiers>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
     keymap: Option<String>,
     key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
@@ -161,7 +160,7 @@ pub fn create_keyboard_event(
     key: fidl_fuchsia_input::Key,
     event_type: fidl_fuchsia_ui_input3::KeyEventType,
     modifiers: Option<fidl_ui_input3::Modifiers>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
     keymap: Option<String>,
 ) -> input_device::InputEvent {
@@ -178,7 +177,7 @@ pub fn create_keyboard_event(
 
 /// Creates a fake input event with the given event time.  Please do not
 /// read into other event fields.
-pub fn create_fake_input_event(event_time: input_device::EventTime) -> input_device::InputEvent {
+pub fn create_fake_input_event(event_time: zx::Time) -> input_device::InputEvent {
     input_device::InputEvent {
         event_time,
         device_event: input_device::InputDeviceEvent::Fake,
@@ -189,9 +188,7 @@ pub fn create_fake_input_event(event_time: input_device::EventTime) -> input_dev
 
 /// Creates a fake handled input event with the given event time.  Please do not
 /// read into other event fields.
-pub fn create_fake_handled_input_event(
-    event_time: input_device::EventTime,
-) -> input_device::InputEvent {
+pub fn create_fake_handled_input_event(event_time: zx::Time) -> input_device::InputEvent {
     input_device::InputEvent {
         event_time,
         device_event: input_device::InputDeviceEvent::Fake,
@@ -249,7 +246,7 @@ pub fn create_consumer_control_input_report(
 /// - `handled`: Whether the event has been consumed.
 pub fn create_consumer_controls_event_with_handled(
     pressed_buttons: Vec<fidl_input_report::ConsumerControlButton>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
     handled: input_device::Handled,
 ) -> input_device::InputEvent {
@@ -271,7 +268,7 @@ pub fn create_consumer_controls_event_with_handled(
 /// - `device_descriptor`: The device descriptor to add to the event.
 pub fn create_consumer_controls_event(
     pressed_buttons: Vec<fidl_input_report::ConsumerControlButton>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     create_consumer_controls_event_with_handled(
@@ -341,7 +338,7 @@ pub fn create_mouse_event_with_handled(
     phase: mouse_binding::MousePhase,
     affected_buttons: HashSet<mouse_binding::MouseButton>,
     pressed_buttons: HashSet<mouse_binding::MouseButton>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
     handled: input_device::Handled,
 ) -> input_device::InputEvent {
@@ -371,7 +368,7 @@ pub fn create_mouse_event(
     phase: mouse_binding::MousePhase,
     affected_buttons: HashSet<mouse_binding::MouseButton>,
     pressed_buttons: HashSet<mouse_binding::MouseButton>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     create_mouse_event_with_handled(
@@ -398,7 +395,7 @@ pub fn create_mouse_pointer_sample_event(
     buttons: Vec<mouse_binding::MouseButton>,
     position: crate::utils::Position,
     relative_motion: Option<[f32; 2]>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
 ) -> pointerinjector::Event {
     let pointer_sample = pointerinjector::PointerSample {
         pointer_id: Some(0),
@@ -413,7 +410,7 @@ pub fn create_mouse_pointer_sample_event(
     let data = pointerinjector::Data::PointerSample(pointer_sample);
 
     pointerinjector::Event {
-        timestamp: Some(event_time.try_into().unwrap()),
+        timestamp: Some(event_time.into_nanos()),
         data: Some(data),
         ..pointerinjector::Event::EMPTY
     }
@@ -457,7 +454,7 @@ pub fn create_touch_contact(id: u32, position: Position) -> touch_binding::Touch
 /// - `handled`: Whether the event has been consumed.
 pub fn create_touch_event_with_handled(
     mut contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch_binding::TouchContact>>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
     handled: input_device::Handled,
 ) -> input_device::InputEvent {
@@ -481,7 +478,7 @@ pub fn create_touch_event_with_handled(
             injector_contacts,
         }),
         device_descriptor: device_descriptor.clone(),
-        event_time: event_time,
+        event_time,
         handled: handled,
     }
 }
@@ -494,7 +491,7 @@ pub fn create_touch_event_with_handled(
 /// - `device_descriptor`: The device descriptor to add to the event.
 pub fn create_touch_event(
     contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch_binding::TouchContact>>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     create_touch_event_with_handled(
@@ -516,7 +513,7 @@ pub fn create_touch_pointer_sample_event(
     phase: pointerinjector::EventPhase,
     contact: &touch_binding::TouchContact,
     position: crate::utils::Position,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
 ) -> pointerinjector::Event {
     let pointer_sample = pointerinjector::PointerSample {
         pointer_id: Some(contact.id),
@@ -530,7 +527,7 @@ pub fn create_touch_pointer_sample_event(
     let data = pointerinjector::Data::PointerSample(pointer_sample);
 
     pointerinjector::Event {
-        timestamp: Some(event_time.try_into().unwrap()),
+        timestamp: Some(event_time.into_nanos()),
         data: Some(data),
         trace_flow_id: Some(fuchsia_trace::generate_nonce()),
         ..pointerinjector::Event::EMPTY

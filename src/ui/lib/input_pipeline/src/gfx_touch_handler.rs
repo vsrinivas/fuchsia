@@ -10,7 +10,7 @@ use {
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
-    fuchsia_scenic as scenic,
+    fuchsia_scenic as scenic, fuchsia_zircon as zx,
     std::rc::Rc,
 };
 
@@ -83,7 +83,7 @@ impl GfxTouchHandler {
         &self,
         touch_event: &touch_binding::TouchEvent,
         touch_descriptor: &touch_binding::TouchDeviceDescriptor,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) {
         // The order in which events are sent to clients.
         let ordered_phases = vec![
@@ -123,12 +123,12 @@ impl GfxTouchHandler {
         phase: fidl_ui_input::PointerEventPhase,
         contact: touch_binding::TouchContact,
         touch_descriptor: &touch_binding::TouchDeviceDescriptor,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) -> fidl_ui_scenic::Command {
         let position = self.device_coordinate_from_contact(&contact, &touch_descriptor);
 
         let pointer_event = fidl_ui_input::PointerEvent {
-            event_time,
+            event_time: event_time.into_nanos() as u64,
             device_id: touch_descriptor.device_id,
             pointer_id: contact.id,
             type_: fidl_ui_input::PointerEventType::Touch,
@@ -222,10 +222,10 @@ mod tests {
     fn create_pointer_event(
         position: Position,
         phase: fidl_ui_input::PointerEventPhase,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) -> fidl_ui_input::PointerEvent {
         fidl_ui_input::PointerEvent {
-            event_time: event_time,
+            event_time: event_time.into_nanos() as u64,
             device_id: 1,
             pointer_id: 1,
             type_: fidl_ui_input::PointerEventType::Touch,
@@ -297,7 +297,7 @@ mod tests {
         .expect("Failed to create GfxTouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add
@@ -349,7 +349,7 @@ mod tests {
         .expect("Failed to create GfxTouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Up
@@ -401,7 +401,7 @@ mod tests {
         .expect("Failed to create GfxTouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add

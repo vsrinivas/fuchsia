@@ -72,17 +72,18 @@ impl ModifierHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::input_device::{EventTime, InputDeviceDescriptor, InputDeviceEvent, InputEvent};
+    use crate::input_device::{InputDeviceDescriptor, InputDeviceEvent, InputEvent};
     use crate::keyboard_binding::KeyboardEvent;
     use fidl_fuchsia_input::Key;
     use fidl_fuchsia_ui_input3::{KeyEventType, LockState, Modifiers};
     use fuchsia_async as fasync;
+    use fuchsia_zircon as zx;
     use pretty_assertions::assert_eq;
 
     fn get_unhandled_input_event(event: KeyboardEvent) -> UnhandledInputEvent {
         UnhandledInputEvent {
             device_event: InputDeviceEvent::Keyboard(event),
-            event_time: 42 as EventTime,
+            event_time: zx::Time::from_nanos(42),
             device_descriptor: InputDeviceDescriptor::Fake,
         }
     }

@@ -15,8 +15,9 @@ use {
     fidl_fuchsia_ui_pointerinjector_configuration as pointerinjector_config,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_zircon as zx,
     futures::stream::StreamExt,
-    std::{cell::RefCell, collections::HashMap, convert::TryInto, option::Option, rc::Rc},
+    std::{cell::RefCell, collections::HashMap, option::Option, rc::Rc},
 };
 
 /// An input handler that parses touch events and forwards them to Scenic through the
@@ -227,7 +228,7 @@ impl TouchInjectorHandler {
         &self,
         touch_event: &touch_binding::TouchEvent,
         touch_descriptor: &touch_binding::TouchDeviceDescriptor,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) -> Result<(), anyhow::Error> {
         // The order in which events are sent to clients.
         let ordered_phases = vec![
@@ -280,7 +281,7 @@ impl TouchInjectorHandler {
         contact: &touch_binding::TouchContact,
         touch_descriptor: &touch_binding::TouchDeviceDescriptor,
         display_size: &Size,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) -> pointerinjector::Event {
         let position =
             Self::display_coordinate_from_contact(&contact, &touch_descriptor, display_size);
@@ -296,7 +297,7 @@ impl TouchInjectorHandler {
         let data = pointerinjector::Data::PointerSample(pointer_sample);
 
         pointerinjector::Event {
-            timestamp: Some(event_time.try_into().unwrap()),
+            timestamp: Some(event_time.into_nanos()),
             data: Some(data),
             trace_flow_id: None,
             ..pointerinjector::Event::EMPTY
@@ -619,7 +620,7 @@ mod tests {
         let touch_handler = touch_handler_res.expect("Failed to create touch handler.");
 
         // Create touch event.
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let contact = create_touch_contact(TOUCH_ID, Position { x: 20.0, y: 40.0 });
         let descriptor = get_touch_device_descriptor();
         let input_event = input_device::UnhandledInputEvent::try_from(create_touch_event(

@@ -22,9 +22,6 @@ pub const INPUT_EVENT_BUFFER_SIZE: usize = 100;
 /// The path to the input-report directory.
 pub static INPUT_REPORT_PATH: &str = "/dev/class/input-report";
 
-/// An `EventTime` indicates the time in nanoseconds when an event was first recorded.
-pub type EventTime = u64;
-
 /// An [`InputEvent`] holds information about an input event and the device that produced the event.
 #[derive(Clone, Debug, PartialEq)]
 pub struct InputEvent {
@@ -36,7 +33,7 @@ pub struct InputEvent {
     pub device_descriptor: InputDeviceDescriptor,
 
     /// The time in nanoseconds when the event was first recorded.
-    pub event_time: EventTime,
+    pub event_time: zx::Time,
 
     /// The handled state of the event.
     pub handled: Handled,
@@ -57,7 +54,7 @@ pub struct UnhandledInputEvent {
     pub device_descriptor: InputDeviceDescriptor,
 
     /// The time in nanoseconds when the event was first recorded.
-    pub event_time: EventTime,
+    pub event_time: zx::Time,
 }
 
 /// An [`InputDeviceEvent`] represents an input event from an input device.
@@ -283,10 +280,10 @@ pub fn get_device_from_dir_entry_path(
 ///
 /// # Parameters
 /// - `event_time`: The event time from an InputReport.
-pub fn event_time_or_now(event_time: Option<i64>) -> EventTime {
+pub fn event_time_or_now(event_time: Option<i64>) -> zx::Time {
     match event_time {
-        Some(time) => time as EventTime,
-        None => zx::Time::get_monotonic().into_nanos() as EventTime,
+        Some(time) => zx::Time::from_nanos(time),
+        None => zx::Time::get_monotonic(),
     }
 }
 
@@ -345,19 +342,20 @@ impl InputEvent {
 mod tests {
     use {
         super::*, assert_matches::assert_matches, fidl::endpoints::spawn_stream_handler,
-        pretty_assertions::assert_eq, std::convert::TryFrom as _, test_case::test_case,
+        fuchsia_zircon as zx, pretty_assertions::assert_eq, std::convert::TryFrom as _,
+        test_case::test_case,
     };
 
     #[test]
     fn max_event_time() {
         let event_time = event_time_or_now(Some(std::i64::MAX));
-        assert_eq!(event_time, std::i64::MAX as EventTime);
+        assert_eq!(event_time, zx::Time::INFINITE);
     }
 
     #[test]
     fn min_event_time() {
         let event_time = event_time_or_now(Some(std::i64::MIN));
-        assert_eq!(event_time, std::i64::MIN as EventTime);
+        assert_eq!(event_time, zx::Time::INFINITE_PAST);
     }
 
     // Tests that is_device_type() returns true for InputDeviceType::ConsumerControls when a
@@ -641,7 +639,7 @@ mod tests {
             InputEvent::from(UnhandledInputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
-                event_time: 1,
+                event_time: zx::Time::from_nanos(1),
             })
             .handled,
             Handled::No
@@ -650,16 +648,17 @@ mod tests {
 
     #[fuchsia::test]
     fn unhandled_to_generic_conversion_preserves_fields() {
+        const EVENT_TIME: zx::Time = zx::Time::from_nanos(42);
         assert_matches!(
             InputEvent::from(UnhandledInputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
-                event_time: 1,
+                event_time: EVENT_TIME,
             }),
             InputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
-                event_time: 1,
+                event_time: EVENT_TIME,
                 handled: _,
             }
         );
@@ -671,7 +670,7 @@ mod tests {
             UnhandledInputEvent::try_from(InputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
-                event_time: 1,
+                event_time: zx::Time::from_nanos(1),
                 handled: Handled::Yes,
             }),
             Err(_)
@@ -680,17 +679,18 @@ mod tests {
 
     #[fuchsia::test]
     fn generic_to_unhandled_conversion_preserves_fields_for_unhandled_events() {
+        const EVENT_TIME: zx::Time = zx::Time::from_nanos(42);
         assert_matches!(
             UnhandledInputEvent::try_from(InputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
-                event_time: 1,
+                event_time: EVENT_TIME,
                 handled: Handled::No,
             }),
             Ok(UnhandledInputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
-                event_time: 1
+                event_time: EVENT_TIME,
             })
         )
     }
@@ -701,7 +701,7 @@ mod tests {
         let event = InputEvent {
             device_event: InputDeviceEvent::Fake,
             device_descriptor: InputDeviceDescriptor::Fake,
-            event_time: 1,
+            event_time: zx::Time::from_nanos(1),
             handled: initially_handled,
         };
         pretty_assertions::assert_eq!(event.into_handled_if(true).handled, Handled::Yes);
@@ -713,7 +713,7 @@ mod tests {
         let event = InputEvent {
             device_event: InputDeviceEvent::Fake,
             device_descriptor: InputDeviceDescriptor::Fake,
-            event_time: 1,
+            event_time: zx::Time::from_nanos(1),
             handled: initially_handled.clone(),
         };
         pretty_assertions::assert_eq!(event.into_handled_if(false).handled, initially_handled);
@@ -725,7 +725,7 @@ mod tests {
         let event = InputEvent {
             device_event: InputDeviceEvent::Fake,
             device_descriptor: InputDeviceDescriptor::Fake,
-            event_time: 1,
+            event_time: zx::Time::from_nanos(1),
             handled: initially_handled,
         };
         pretty_assertions::assert_eq!(event.into_handled().handled, Handled::Yes);

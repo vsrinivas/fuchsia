@@ -264,7 +264,7 @@ mod tests {
 
         // Setup events and expectations.
         let descriptor = testing_utilities::consumer_controls_device_descriptor();
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![testing_utilities::create_consumer_controls_event(
             vec![
                 fidl_input_report::ConsumerControlButton::VolumeUp,
@@ -308,7 +308,7 @@ mod tests {
 
         // Setup events and expectations.
         let descriptor = testing_utilities::consumer_controls_device_descriptor();
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![testing_utilities::create_consumer_controls_event(
             vec![fidl_input_report::ConsumerControlButton::VolumeUp],
             event_time,

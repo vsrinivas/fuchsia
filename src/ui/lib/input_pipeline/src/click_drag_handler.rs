@@ -6,6 +6,7 @@ use {
     crate::{input_device, input_handler::UnhandledInputHandler, mouse_binding, utils::Position},
     async_trait::async_trait,
     fuchsia_syslog::{fx_log_debug, fx_log_warn},
+    fuchsia_zircon as zx,
     std::{
         cell::{Cell, RefCell},
         collections::HashSet,
@@ -24,7 +25,7 @@ struct RelativeMouseEvent {
     affected_buttons: HashSet<mouse_binding::MouseButton>,
     pressed_buttons: HashSet<mouse_binding::MouseButton>,
     mouse_descriptor: mouse_binding::MouseDeviceDescriptor,
-    event_time: u64,
+    event_time: zx::Time,
     handled: input_device::Handled,
 }
 
@@ -353,7 +354,10 @@ impl ClickDragHandler {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, maplit::hashset, pretty_assertions::assert_eq, test_case::test_case};
+    use {
+        super::*, fuchsia_zircon as zx, maplit::hashset, pretty_assertions::assert_eq,
+        test_case::test_case,
+    };
 
     const DEVICE_DESCRIPTOR: input_device::InputDeviceDescriptor =
         input_device::InputDeviceDescriptor::Mouse(mouse_binding::MouseDeviceDescriptor {
@@ -368,7 +372,7 @@ mod tests {
     const LARGE_MOTION: f32 = CLICK_TO_DRAG_THRESHOLD * 1.2;
     const DIAGONAL_LARGE_MOTION: f32 = LARGE_MOTION / 2.0 * std::f32::consts::SQRT_2;
 
-    std::thread_local! {static NEXT_EVENT_TIME: Cell<u64> = Cell::new(0)}
+    std::thread_local! {static NEXT_EVENT_TIME: Cell<i64> = Cell::new(0)}
 
     fn make_unhandled_input_event(
         mouse_event: mouse_binding::MouseEvent,
@@ -381,7 +385,7 @@ mod tests {
         input_device::UnhandledInputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
             device_descriptor: DEVICE_DESCRIPTOR.clone(),
-            event_time,
+            event_time: zx::Time::from_nanos(event_time),
         }
     }
 

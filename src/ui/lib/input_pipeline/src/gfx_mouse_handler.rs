@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
     fuchsia_scenic as scenic,
     fuchsia_syslog::fx_log_err,
+    fuchsia_zircon as zx,
     futures::{channel::mpsc::Sender, SinkExt},
     std::cell::RefCell,
     std::collections::HashSet,
@@ -215,12 +216,12 @@ impl GfxMouseHandler {
         phase: fidl_ui_input::PointerEventPhase,
         buttons: &HashSet<mouse_binding::MouseButton>,
         device_descriptor: &mouse_binding::MouseDeviceDescriptor,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) {
         let buttons = mouse_binding::get_u32_from_buttons(buttons);
 
         let pointer_event = fidl_ui_input::PointerEvent {
-            event_time,
+            event_time: event_time.into_nanos() as u64,
             device_id: device_descriptor.device_id,
             pointer_id: 0,
             type_: fidl_ui_input::PointerEventType::Mouse,
@@ -335,10 +336,10 @@ mod tests {
         position: Position,
         phase: fidl_ui_input::PointerEventPhase,
         device_id: u32,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) -> fidl_ui_input::PointerEvent {
         fidl_ui_input::PointerEvent {
-            event_time,
+            event_time: event_time.into_nanos() as u64,
             device_id,
             pointer_id: 0,
             type_: fidl_ui_input::PointerEventType::Mouse,
@@ -432,7 +433,7 @@ mod tests {
         let cursor_relative_position = Position { x: 50.0, y: 75.0 };
         let cursor_location = mouse_binding::MouseLocation::Relative(cursor_relative_position);
         let descriptor = mouse_device_descriptor(DEVICE_ID);
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event(
             cursor_location,
             mouse_binding::MousePhase::Move,
@@ -493,7 +494,7 @@ mod tests {
             y: SCENIC_DISPLAY_HEIGHT + 2.0,
         });
         let descriptor = mouse_device_descriptor(DEVICE_ID);
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event(
             cursor_location,
             mouse_binding::MousePhase::Move,
@@ -552,7 +553,7 @@ mod tests {
         let cursor_location =
             mouse_binding::MouseLocation::Relative(Position { x: -20.0, y: -15.0 });
         let descriptor = mouse_device_descriptor(DEVICE_ID);
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event(
             cursor_location,
             mouse_binding::MousePhase::Move,
@@ -631,7 +632,7 @@ mod tests {
                 absolute_y_range: Some(fidl_input_report::Range { min: -50, max: 50 }),
                 buttons: None,
             });
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event(
             cursor_location,
             mouse_binding::MousePhase::Move,
@@ -690,7 +691,7 @@ mod tests {
         let cursor_relative_position = Position { x: 50.0, y: 75.0 };
         let cursor_location = mouse_binding::MouseLocation::Relative(cursor_relative_position);
         let descriptor = mouse_device_descriptor(DEVICE_ID);
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event_with_handled(
             cursor_location,
             mouse_binding::MousePhase::Move,
@@ -733,7 +734,7 @@ mod tests {
         let cursor_relative_position = Position { x: 50.0, y: 75.0 };
         let cursor_location = mouse_binding::MouseLocation::Relative(cursor_relative_position);
         let descriptor = mouse_device_descriptor(DEVICE_ID);
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event(
             cursor_location,
             mouse_binding::MousePhase::Move,
@@ -787,7 +788,7 @@ mod tests {
 
         const TOUCH_ID: u32 = 1;
         let touch_descriptor = get_touch_device_descriptor();
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_touch_event_with_handled(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add

@@ -85,6 +85,7 @@ mod tests {
         crate::input_device::{
             Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent, UnhandledInputEvent,
         },
+        fuchsia_zircon as zx,
         futures::{channel::mpsc, StreamExt as _},
         pretty_assertions::assert_eq,
         test_case::test_case,
@@ -120,7 +121,7 @@ mod tests {
             .handle_input_event(InputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
-                event_time: 1,
+                event_time: zx::Time::from_nanos(1),
                 handled: Handled::No,
             })
             .await;
@@ -129,7 +130,7 @@ mod tests {
             Some(UnhandledInputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
-                event_time: 1,
+                event_time: zx::Time::from_nanos(1),
             })
         )
     }
@@ -144,7 +145,7 @@ mod tests {
         let input_event = InputEvent {
             device_event: InputDeviceEvent::Fake,
             device_descriptor: InputDeviceDescriptor::Fake,
-            event_time: 1,
+            event_time: zx::Time::from_nanos(1),
             handled: Handled::No,
         };
         let expected_propagated_event = input_event.clone().into_handled_if(mark_events_handled);
@@ -166,7 +167,7 @@ mod tests {
             .handle_input_event(InputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
-                event_time: 1,
+                event_time: zx::Time::from_nanos(1),
                 handled: Handled::Yes,
             })
             .await;
@@ -191,7 +192,7 @@ mod tests {
                 .handle_input_event(InputEvent {
                     device_event: InputDeviceEvent::Fake,
                     device_descriptor: InputDeviceDescriptor::Fake,
-                    event_time: 1,
+                    event_time: zx::Time::from_nanos(1),
                     handled: Handled::Yes,
                 })
                 .await
@@ -199,7 +200,7 @@ mod tests {
             [InputEvent {
                 device_event: InputDeviceEvent::Fake,
                 device_descriptor: InputDeviceDescriptor::Fake,
-                event_time: 1,
+                event_time: zx::Time::from_nanos(1),
                 handled: Handled::Yes,
             }]
         );

@@ -114,6 +114,7 @@ mod tests {
     use {
         super::*,
         assert_matches::assert_matches,
+        fuchsia_zircon as zx,
         maplit::hashset,
         std::{cell::Cell, collections::HashSet},
         test_case::test_case,
@@ -127,7 +128,7 @@ mod tests {
             buttons: None,
         });
 
-    std::thread_local! {static NEXT_EVENT_TIME: Cell<u64> = Cell::new(0)}
+    std::thread_local! {static NEXT_EVENT_TIME: Cell<i64> = Cell::new(0)}
 
     fn make_unhandled_input_event(
         mouse_event: mouse_binding::MouseEvent,
@@ -140,7 +141,7 @@ mod tests {
         input_device::UnhandledInputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
             device_descriptor: DEVICE_DESCRIPTOR.clone(),
-            event_time,
+            event_time: zx::Time::from_nanos(event_time),
         }
     }
 
@@ -241,10 +242,11 @@ mod tests {
             affected_buttons: hashset! {},
             pressed_buttons: hashset! {},
         });
-        input_event.event_time = 42;
+        const EVENT_TIME: zx::Time = zx::Time::from_nanos(42);
+        input_event.event_time = EVENT_TIME;
         assert_matches!(
             handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
-            [input_device::InputEvent { event_time: 42, .. }]
+            [input_device::InputEvent { event_time: EVENT_TIME, .. }]
         );
     }
 }

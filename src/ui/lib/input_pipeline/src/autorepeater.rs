@@ -18,15 +18,14 @@
 //! not cost effective to retrofit all other handlers just for the sake of this one.  We may
 //! revisit this decision if we grow more stages that need autorepeat.
 
-use crate::input_device::{
-    self, EventTime, Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent,
-};
+use crate::input_device::{self, Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent};
 use crate::keyboard_binding::KeyboardEvent;
 use anyhow::{anyhow, Context, Result};
 use fidl_fuchsia_settings as fsettings;
 use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning};
 use fuchsia_async::{Task, Time, Timer};
 use fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_info, fx_log_warn};
+use fuchsia_zircon as zx;
 use fuchsia_zircon::Duration;
 use futures::channel::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use futures::StreamExt;
@@ -107,7 +106,7 @@ fn repeatability(key_meaning: Option<KeyMeaning>) -> Repeatability {
 #[derive(Debug, Clone)]
 enum AnyEvent {
     // A keyboard input event.
-    Keyboard(KeyboardEvent, InputDeviceDescriptor, EventTime, Handled),
+    Keyboard(KeyboardEvent, InputDeviceDescriptor, zx::Time, Handled),
     // An input event other than keyboard.
     NonKeyboard(InputEvent),
     // A timer event.
@@ -444,7 +443,7 @@ mod tests {
             key,
             event_type,
             /*modifiers=*/ None,
-            /*event_time*/ 0,
+            /*event_time*/ zx::Time::ZERO,
             &InputDeviceDescriptor::Fake,
             /*keymap=*/ None,
             key_meaning,
@@ -479,7 +478,7 @@ mod tests {
         events
             .into_iter()
             .map(|InputEvent { device_event, device_descriptor, event_time: _, handled }| {
-                InputEvent { device_event, device_descriptor, event_time: 0, handled }
+                InputEvent { device_event, device_descriptor, event_time: zx::Time::ZERO, handled }
             })
             .collect()
     }

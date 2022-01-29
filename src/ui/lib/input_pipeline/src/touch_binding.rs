@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_pointerinjector as pointerinjector,
     fuchsia_syslog::fx_log_err,
+    fuchsia_zircon as zx,
     futures::channel::mpsc::Sender,
     maplit::hashmap,
     std::collections::HashMap,
@@ -298,8 +299,7 @@ impl TouchBinding {
                 .filter(|contact| !current_contacts.contains_key(&contact.id)),
         );
 
-        let event_time: input_device::EventTime =
-            input_device::event_time_or_now(report.event_time);
+        let event_time: zx::Time = input_device::event_time_or_now(report.event_time);
 
         send_event(
             hashmap! {
@@ -383,7 +383,7 @@ fn send_event(
     contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<TouchContact>>,
     injector_contacts: HashMap<pointerinjector::EventPhase, Vec<TouchContact>>,
     device_descriptor: &input_device::InputDeviceDescriptor,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     input_event_sender: &mut Sender<input_device::InputEvent>,
 ) {
     match input_event_sender.try_send(input_device::InputEvent {

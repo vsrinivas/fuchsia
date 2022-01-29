@@ -13,6 +13,7 @@ use {
     fidl_fuchsia_ui_input3::KeyEventType,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    fuchsia_zircon as zx,
     futures::{channel::mpsc::Sender, SinkExt},
 };
 
@@ -329,8 +330,7 @@ impl KeyboardBinding {
             .and_then(|unwrapped_report| KeyboardBinding::parse_pressed_keys(&unwrapped_report))
             .unwrap_or_default();
 
-        let event_time: input_device::EventTime =
-            input_device::event_time_or_now(report.event_time);
+        let event_time: zx::Time = input_device::event_time_or_now(report.event_time);
 
         KeyboardBinding::send_key_events(
             &new_keys,
@@ -366,13 +366,13 @@ impl KeyboardBinding {
     /// - `new_keys`: The input3 keys which are currently pressed, as reported by the bound device.
     /// - `previous_keys`: The input3 keys which were pressed in the previous input report.
     /// - `device_descriptor`: The descriptor for the input device generating the input reports.
-    /// - `event_time_ns`: The time in nanoseconds when the event was first recorded.
+    /// - `event_time`: The time in nanoseconds when the event was first recorded.
     /// - `input_event_sender`: The sender for the device binding's input event stream.
     fn send_key_events(
         new_keys: &Vec<fidl_fuchsia_input::Key>,
         previous_keys: &Vec<fidl_fuchsia_input::Key>,
         device_descriptor: input_device::InputDeviceDescriptor,
-        event_time_ns: input_device::EventTime,
+        event_time: zx::Time,
         input_event_sender: Sender<input_device::InputEvent>,
     ) {
         // Dispatches all key events individually in a separate task.  This is done in a separate
@@ -381,11 +381,11 @@ impl KeyboardBinding {
         fn dispatch_events(
             key_events: Vec<(fidl_fuchsia_input::Key, fidl_fuchsia_ui_input3::KeyEventType)>,
             device_descriptor: input_device::InputDeviceDescriptor,
-            event_time: input_device::EventTime,
+            event_time: zx::Time,
             mut input_event_sender: Sender<input_device::InputEvent>,
         ) {
             fasync::Task::spawn(async move {
-                let mut event_time_ns = event_time;
+                let mut event_time = event_time;
                 for (key, event_type) in key_events.into_iter() {
                     match input_event_sender
                         .send(input_device::InputEvent {
@@ -393,7 +393,7 @@ impl KeyboardBinding {
                                 KeyboardEvent::new(key, event_type),
                             ),
                             device_descriptor: device_descriptor.clone(),
-                            event_time: event_time_ns,
+                            event_time,
                             handled: Handled::No,
                         })
                         .await
@@ -412,7 +412,7 @@ impl KeyboardBinding {
                     // we pull them apart artificially. A 1ns increment will likely
                     // be enough of a difference that it is recognizable but that it
                     // does not introduce confusion.
-                    event_time_ns = event_time_ns + 1;
+                    event_time = event_time + zx::Duration::from_nanos(1);
                 }
             })
             .detach();
@@ -440,13 +440,16 @@ impl KeyboardBinding {
         // a closure.
         let all_keys = released_keys.chain(pressed_keys).collect::<Vec<_>>();
 
-        dispatch_events(all_keys, device_descriptor, event_time_ns, input_event_sender);
+        dispatch_events(all_keys, device_descriptor, event_time, input_event_sender);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::testing_utilities, fuchsia_async as fasync, futures::StreamExt};
+    use {
+        super::*, crate::testing_utilities, fuchsia_async as fasync, fuchsia_zircon as zx,
+        futures::StreamExt,
+    };
 
     /// Tests that a key that is present in the new report, but was not present in the previous report
     /// is propagated as pressed.
@@ -565,7 +568,7 @@ mod tests {
         let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
             keys: vec![fidl_fuchsia_input::Key::A, fidl_fuchsia_input::Key::B],
         });
-        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
+        let (event_time_i64, event_time) = testing_utilities::event_times();
 
         let reports = vec![
             testing_utilities::create_keyboard_input_report(
@@ -583,7 +586,7 @@ mod tests {
                 fidl_fuchsia_input::Key::A,
                 fidl_fuchsia_ui_input3::KeyEventType::Pressed,
                 None,
-                event_time_u64,
+                event_time,
                 &descriptor,
                 /* keymap= */ None,
             ),
@@ -591,7 +594,7 @@ mod tests {
                 fidl_fuchsia_input::Key::A,
                 fidl_fuchsia_ui_input3::KeyEventType::Released,
                 None,
-                event_time_u64,
+                event_time,
                 &descriptor,
                 /* keymap= */ None,
             ),
@@ -601,7 +604,7 @@ mod tests {
                 None,
                 // Simultaneous key events are artificially separated by 1ns
                 // on purpose.
-                event_time_u64 + 1,
+                event_time + zx::Duration::from_nanos(1),
                 &descriptor,
                 /* keymap= */ None,
             ),

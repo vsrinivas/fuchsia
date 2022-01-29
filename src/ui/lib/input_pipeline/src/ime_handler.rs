@@ -11,8 +11,8 @@ use {
     fidl_fuchsia_ui_input3::{self as fidl_ui_input3, LockState, Modifiers},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_debug, fx_log_err},
+    fuchsia_zircon as zx,
     keymaps::{self, LockStateChecker, ModifierChecker},
-    std::convert::TryInto,
     std::rc::Rc,
 };
 
@@ -129,7 +129,7 @@ impl ImeHandler {
 /// * `event_time`: The time in nanoseconds when the event was first recorded.
 fn create_key_event(
     event: &keyboard_binding::KeyboardEvent,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
 ) -> fidl_ui_input3::KeyEvent {
     let modifier_state: FrozenModifierState =
         event.get_modifiers().unwrap_or(Modifiers::from_bits_allow_unknown(0)).into();
@@ -156,7 +156,7 @@ fn create_key_event(
     };
 
     fidl_ui_input3::KeyEvent {
-        timestamp: Some(event_time.try_into().unwrap_or_default()),
+        timestamp: Some(event_time.into_nanos()),
         type_: event.get_event_type().into(),
         key: event.get_key().into(),
         modifiers: event.get_modifiers(),
@@ -175,7 +175,7 @@ mod tests {
         crate::testing_utilities,
         assert_matches::assert_matches,
         fidl_fuchsia_input as fidl_input, fidl_fuchsia_ui_input3 as fidl_ui_input3,
-        fuchsia_async as fasync,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::StreamExt,
         std::convert::TryFrom as _,
         test_case::test_case,
@@ -236,7 +236,7 @@ mod tests {
         key: fidl_fuchsia_input::Key,
         event_type: fidl_fuchsia_ui_input3::KeyEventType,
         modifiers: Option<fidl_ui_input3::Modifiers>,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
         device_descriptor: &input_device::InputDeviceDescriptor,
         keymap: Option<String>,
     ) -> input_device::UnhandledInputEvent {
@@ -255,7 +255,7 @@ mod tests {
         key: fidl_fuchsia_input::Key,
         event_type: fidl_fuchsia_ui_input3::KeyEventType,
         modifiers: Option<fidl_ui_input3::Modifiers>,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
         device_descriptor: &input_device::InputDeviceDescriptor,
         keymap: Option<String>,
         key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
@@ -277,7 +277,7 @@ mod tests {
     fn create_unhandled_input_event(
         keyboard_event: keyboard_binding::KeyboardEvent,
         device_descriptor: &input_device::InputDeviceDescriptor,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) -> input_device::UnhandledInputEvent {
         input_device::UnhandledInputEvent {
             device_event: input_device::InputDeviceEvent::Keyboard(keyboard_event),
@@ -766,7 +766,7 @@ mod tests {
         keyboard_binding::KeyboardEvent::new(
             fidl_input::Key::A,
             fidl_ui_input3::KeyEventType::Pressed),
-        42u64 => fidl_ui_input3::KeyEvent{
+        zx::Time::from_nanos(42) => fidl_ui_input3::KeyEvent{
             timestamp: Some(42),
             type_: Some(fidl_ui_input3::KeyEventType::Pressed),
             key: Some(fidl_input::Key::A),
@@ -777,7 +777,7 @@ mod tests {
             fidl_input::Key::A,
             fidl_ui_input3::KeyEventType::Pressed)
             .into_with_repeat_sequence(13),
-        42u64 => fidl_ui_input3::KeyEvent{
+        zx::Time::from_nanos(42) => fidl_ui_input3::KeyEvent{
             timestamp: Some(42),
             type_: Some(fidl_ui_input3::KeyEventType::Pressed),
             key: Some(fidl_input::Key::A),
@@ -786,7 +786,7 @@ mod tests {
             ..fidl_ui_input3::KeyEvent::EMPTY}; "repeat_sequence is honored")]
     fn test_create_key_event(
         event: keyboard_binding::KeyboardEvent,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) -> fidl_ui_input3::KeyEvent {
         super::create_key_event(&event, event_time)
     }

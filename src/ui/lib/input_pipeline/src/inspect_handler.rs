@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::input_device::{EventTime, Handled, InputDeviceEvent, InputEvent};
+use crate::input_device::{Handled, InputDeviceEvent, InputEvent};
 use crate::input_handler::InputHandler;
 use async_trait::async_trait;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
@@ -60,7 +60,7 @@ struct EventCounters {
     last_seen_timestamp_ns: inspect::IntProperty,
     /// The event time at which the last recorded event was generated.
     /// 0 if unset.
-    last_generated_timestamp_ns: inspect::UintProperty,
+    last_generated_timestamp_ns: inspect::IntProperty,
 }
 
 impl EventCounters {
@@ -73,7 +73,7 @@ impl EventCounters {
         let events_count = node.create_uint("events_count", 0);
         let handled_events_count = node.create_uint("handled_events_count", 0);
         let last_seen_timestamp_ns = node.create_int("last_seen_timestamp_ns", 0);
-        let last_generated_timestamp_ns = node.create_uint("last_generated_timestamp_ns", 0);
+        let last_generated_timestamp_ns = node.create_int("last_generated_timestamp_ns", 0);
         let new_counters = EventCounters {
             _node: node,
             events_count,
@@ -84,13 +84,13 @@ impl EventCounters {
         map.insert(event_type, new_counters);
     }
 
-    pub fn count_event(&self, time: zx::Time, event_time: EventTime, handled: &Handled) {
+    pub fn count_event(&self, time: zx::Time, event_time: zx::Time, handled: &Handled) {
         self.events_count.add(1);
         if *handled == Handled::Yes {
             self.handled_events_count.add(1);
         }
         self.last_seen_timestamp_ns.set(time.into_nanos());
-        self.last_generated_timestamp_ns.set(event_time);
+        self.last_generated_timestamp_ns.set(event_time.into_nanos());
     }
 }
 
@@ -111,7 +111,7 @@ pub struct InspectHandler {
     last_seen_timestamp_ns: inspect::IntProperty,
     /// The event time at which the last recorded event was generated.
     /// 0 if unset.
-    last_generated_timestamp_ns: inspect::UintProperty,
+    last_generated_timestamp_ns: inspect::IntProperty,
 
     /// An inventory of event counters by type.
     events_by_type: HashMap<EventType, EventCounters>,
@@ -124,7 +124,7 @@ impl InputHandler for InspectHandler {
         let now = (self.now)();
         self.events_count.add(1);
         self.last_seen_timestamp_ns.set(now.into_nanos());
-        self.last_generated_timestamp_ns.set(event_time);
+        self.last_generated_timestamp_ns.set(event_time.into_nanos());
         let event_type = EventType::for_device_event(&input_event.device_event);
         self.events_by_type.get(&event_type).expect("all event types are tracked").count_event(
             now,
@@ -148,7 +148,7 @@ impl InspectHandler {
     fn new_with_now(node: inspect::Node, now: fn() -> zx::Time) -> Rc<Self> {
         let event_count = node.create_uint("events_count", 0);
         let last_seen_timestamp_ns = node.create_int("last_seen_timestamp_ns", 0);
-        let last_generated_timestamp_ns = node.create_uint("last_generated_timestamp_ns", 0);
+        let last_generated_timestamp_ns = node.create_int("last_generated_timestamp_ns", 0);
 
         let mut events_by_type = HashMap::new();
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::Keyboard);
@@ -191,113 +191,35 @@ mod tests {
             test_node: {
                 events_count: 0u64,
                 last_seen_timestamp_ns: 0i64,
-                last_generated_timestamp_ns: 0u64,
+                last_generated_timestamp_ns: 0i64,
                 consumer_controls: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
+                     last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
                 fake: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
+                     last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
                 keyboard: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
+                     last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
                 mouse: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
+                     last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
                 touch: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
-                     last_seen_timestamp_ns: 0i64,
-                },
-            }
-        });
-
-        handler.clone().handle_input_event(testing_utilities::create_fake_input_event(43u64)).await;
-        assert_data_tree!(inspector, root: {
-            test_node: {
-                events_count: 1u64,
-                last_seen_timestamp_ns: 42i64,
-                last_generated_timestamp_ns: 43u64,
-                consumer_controls: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
-                     last_seen_timestamp_ns: 0i64,
-                },
-                fake: {
-                     events_count: 1u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 43u64,
-                     last_seen_timestamp_ns: 42i64,
-                },
-                keyboard: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
-                     last_seen_timestamp_ns: 0i64,
-                },
-                mouse: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
-                     last_seen_timestamp_ns: 0i64,
-                },
-                touch: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
-                     last_seen_timestamp_ns: 0i64,
-                },
-            }
-        });
-
-        handler.clone().handle_input_event(testing_utilities::create_fake_input_event(44u64)).await;
-        assert_data_tree!(inspector, root: {
-            test_node: {
-                events_count: 2u64,
-                last_seen_timestamp_ns: 42i64,
-                last_generated_timestamp_ns: 44u64,
-                consumer_controls: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
-                     last_seen_timestamp_ns: 0i64,
-                },
-                fake: {
-                     events_count: 2u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 44u64,
-                     last_seen_timestamp_ns: 42i64,
-                },
-                keyboard: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
-                     last_seen_timestamp_ns: 0i64,
-                },
-                mouse: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
-                     last_seen_timestamp_ns: 0i64,
-                },
-                touch: {
-                     events_count: 0u64,
-                     handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
+                     last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
             }
@@ -305,41 +227,131 @@ mod tests {
 
         handler
             .clone()
-            .handle_input_event(testing_utilities::create_fake_handled_input_event(44u64))
+            .handle_input_event(testing_utilities::create_fake_input_event(zx::Time::from_nanos(
+                43i64,
+            )))
             .await;
         assert_data_tree!(inspector, root: {
             test_node: {
-                events_count: 3u64,
+                events_count: 1u64,
                 last_seen_timestamp_ns: 42i64,
-                last_generated_timestamp_ns: 44u64,
+                last_generated_timestamp_ns: 43i64,
                 consumer_controls: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
+                     last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
                 fake: {
-                     events_count: 3u64,
-                     handled_events_count: 1u64,
-                     last_generated_timestamp_ns: 44u64,
+                     events_count: 1u64,
+                     handled_events_count: 0u64,
+                     last_generated_timestamp_ns: 43i64,
                      last_seen_timestamp_ns: 42i64,
                 },
                 keyboard: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
+                     last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
                 mouse: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
+                     last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
                 touch: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
-                     last_generated_timestamp_ns: 0u64,
+                     last_generated_timestamp_ns: 0i64,
+                     last_seen_timestamp_ns: 0i64,
+                },
+            }
+        });
+
+        handler
+            .clone()
+            .handle_input_event(testing_utilities::create_fake_input_event(zx::Time::from_nanos(
+                44i64,
+            )))
+            .await;
+        assert_data_tree!(inspector, root: {
+            test_node: {
+                events_count: 2u64,
+                last_seen_timestamp_ns: 42i64,
+                last_generated_timestamp_ns: 44i64,
+                consumer_controls: {
+                     events_count: 0u64,
+                     handled_events_count: 0u64,
+                     last_generated_timestamp_ns: 0i64,
+                     last_seen_timestamp_ns: 0i64,
+                },
+                fake: {
+                     events_count: 2u64,
+                     handled_events_count: 0u64,
+                     last_generated_timestamp_ns: 44i64,
+                     last_seen_timestamp_ns: 42i64,
+                },
+                keyboard: {
+                     events_count: 0u64,
+                     handled_events_count: 0u64,
+                     last_generated_timestamp_ns: 0i64,
+                     last_seen_timestamp_ns: 0i64,
+                },
+                mouse: {
+                     events_count: 0u64,
+                     handled_events_count: 0u64,
+                     last_generated_timestamp_ns: 0i64,
+                     last_seen_timestamp_ns: 0i64,
+                },
+                touch: {
+                     events_count: 0u64,
+                     handled_events_count: 0u64,
+                     last_generated_timestamp_ns: 0i64,
+                     last_seen_timestamp_ns: 0i64,
+                },
+            }
+        });
+
+        handler
+            .clone()
+            .handle_input_event(testing_utilities::create_fake_handled_input_event(
+                zx::Time::from_nanos(44),
+            ))
+            .await;
+        assert_data_tree!(inspector, root: {
+            test_node: {
+                events_count: 3u64,
+                last_seen_timestamp_ns: 42i64,
+                last_generated_timestamp_ns: 44i64,
+                consumer_controls: {
+                     events_count: 0u64,
+                     handled_events_count: 0u64,
+                     last_generated_timestamp_ns: 0i64,
+                     last_seen_timestamp_ns: 0i64,
+                },
+                fake: {
+                     events_count: 3u64,
+                     handled_events_count: 1u64,
+                     last_generated_timestamp_ns: 44i64,
+                     last_seen_timestamp_ns: 42i64,
+                },
+                keyboard: {
+                     events_count: 0u64,
+                     handled_events_count: 0u64,
+                     last_generated_timestamp_ns: 0i64,
+                     last_seen_timestamp_ns: 0i64,
+                },
+                mouse: {
+                     events_count: 0u64,
+                     handled_events_count: 0u64,
+                     last_generated_timestamp_ns: 0i64,
+                     last_seen_timestamp_ns: 0i64,
+                },
+                touch: {
+                     events_count: 0u64,
+                     handled_events_count: 0u64,
+                     last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
             }

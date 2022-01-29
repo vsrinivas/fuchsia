@@ -16,9 +16,10 @@ use {
     fidl_fuchsia_ui_pointerinjector_configuration as pointerinjector_config,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_zircon as zx,
     futures::{channel::mpsc::Sender, stream::StreamExt, SinkExt},
     std::iter::FromIterator,
-    std::{cell::RefCell, collections::HashMap, convert::TryInto, option::Option, rc::Rc},
+    std::{cell::RefCell, collections::HashMap, option::Option, rc::Rc},
 };
 
 /// A [`MouseInjectorHandler`] parses mouse events and forwards them to Scenic through the
@@ -290,7 +291,7 @@ impl MouseInjectorHandler {
         self: &Rc<Self>,
         mouse_event: &mouse_binding::MouseEvent,
         mouse_descriptor: &mouse_binding::MouseDeviceDescriptor,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) -> Result<(), anyhow::Error> {
         let mut inner = self.inner.borrow_mut();
         if inner.injectors.contains_key(&mouse_descriptor.device_id) {
@@ -444,7 +445,7 @@ impl MouseInjectorHandler {
         &self,
         mouse_event: &mouse_binding::MouseEvent,
         mouse_descriptor: &mouse_binding::MouseDeviceDescriptor,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) -> Result<(), anyhow::Error> {
         let inner = self.inner.borrow();
         if let Some(injector) = inner.injectors.get(&mouse_descriptor.device_id) {
@@ -485,7 +486,7 @@ impl MouseInjectorHandler {
     fn create_pointer_sample_event(
         &self,
         mouse_event: &mouse_binding::MouseEvent,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
         phase: pointerinjector::EventPhase,
         current_position: Position,
         relative_motion: Option<[f32; 2]>,
@@ -501,7 +502,7 @@ impl MouseInjectorHandler {
             ..pointerinjector::PointerSample::EMPTY
         };
         pointerinjector::Event {
-            timestamp: Some(event_time.try_into().unwrap()),
+            timestamp: Some(event_time.into_nanos()),
             data: Some(pointerinjector::Data::PointerSample(pointer_sample)),
             trace_flow_id: None,
             ..pointerinjector::Event::EMPTY
@@ -866,7 +867,7 @@ mod tests {
         let (mouse_handler_res, _) = futures::join!(mouse_handler_fut, config_request_stream_fut);
         let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
 
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_event = create_mouse_event(
             move_location,
             mouse_binding::MousePhase::Move,
@@ -970,7 +971,7 @@ mod tests {
         // Where w = DISPLAY_WIDTH, h = DISPLAY_HEIGHT
         let cursor_location =
             mouse_binding::MouseLocation::Absolute(Position { x: -25.0, y: 25.0 });
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let descriptor =
             input_device::InputDeviceDescriptor::Mouse(mouse_binding::MouseDeviceDescriptor {
                 device_id: DEVICE_ID,
@@ -1075,7 +1076,7 @@ mod tests {
         let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
 
         let cursor_location = mouse_binding::MouseLocation::Absolute(Position { x: 0.0, y: 0.0 });
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
 
         let input_event = create_mouse_event(
             cursor_location,
@@ -1164,7 +1165,7 @@ mod tests {
         let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
 
         let cursor_location = mouse_binding::MouseLocation::Absolute(Position { x: 0.0, y: 0.0 });
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
 
         let event1 = create_mouse_event(
             cursor_location,
@@ -1281,7 +1282,7 @@ mod tests {
         let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
 
         let cursor_location = mouse_binding::MouseLocation::Absolute(Position { x: 0.0, y: 0.0 });
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
 
         let event1 = create_mouse_event(
             cursor_location,
@@ -1360,7 +1361,7 @@ mod tests {
             .await
             .map(|events| events.concat())
             .expect("Failed to receive pointer sample event.");
-        let expected_event_time: i64 = event_time.try_into().unwrap();
+        let expected_event_time: i64 = event_time.into_nanos();
         assert_eq!(pointer_sample_event2.len(), 1);
 
         // We must break this event result apart for assertions since the
@@ -1456,7 +1457,7 @@ mod tests {
         let (mouse_handler_res, _) = futures::join!(mouse_handler_fut, config_request_stream_fut);
         let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
 
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let zero_position = Position { x: 0.0, y: 0.0 };
         let expected_position = Position { x: 10.0, y: 15.0 };
         let expected_relative_motion = [10.0, 15.0];
@@ -1606,7 +1607,7 @@ mod tests {
 
         let cursor_relative_position = Position { x: 50.0, y: 75.0 };
         let cursor_location = mouse_binding::MouseLocation::Relative(cursor_relative_position);
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event_with_handled(
             cursor_location,
             mouse_binding::MousePhase::Move,
@@ -1654,7 +1655,7 @@ mod tests {
 
         const TOUCH_ID: u32 = 1;
         let touch_descriptor = get_touch_device_descriptor();
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_touch_event_with_handled(
             hashmap! {
                 fidl_fuchsia_ui_input::PointerEventPhase::Add

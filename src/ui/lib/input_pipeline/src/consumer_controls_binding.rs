@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_input_report as fidl_input_report,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
     fuchsia_syslog::fx_log_err,
+    fuchsia_zircon as zx,
     futures::channel::mpsc::Sender,
 };
 
@@ -163,8 +164,7 @@ impl ConsumerControlsBinding {
                 None => return previous_report,
             };
 
-        let event_time: input_device::EventTime =
-            input_device::event_time_or_now(report.event_time);
+        let event_time: zx::Time = input_device::event_time_or_now(report.event_time);
 
         send_consumer_controls_event(
             pressed_buttons,
@@ -187,7 +187,7 @@ impl ConsumerControlsBinding {
 fn send_consumer_controls_event(
     pressed_buttons: Vec<fidl_input_report::ConsumerControlButton>,
     device_descriptor: &input_device::InputDeviceDescriptor,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
     sender: &mut Sender<input_device::InputEvent>,
 ) {
     if let Err(e) = sender.try_send(input_device::InputEvent {

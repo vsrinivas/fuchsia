@@ -505,7 +505,7 @@ mod tests {
                     buttons: None,
                 },
             ),
-            event_time: zx::Time::get_monotonic().into_nanos() as input_device::EventTime,
+            event_time: zx::Time::get_monotonic(),
             handled: input_device::Handled::No,
         };
         match sender.try_send(input_event.clone()) {

@@ -36,7 +36,7 @@
 //! See the documentation for [Handler] for some more detail.
 
 use crate::input_device::{
-    EventTime, Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent, UnhandledInputEvent,
+    Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent, UnhandledInputEvent,
 };
 use crate::input_handler::UnhandledInputHandler;
 use crate::keyboard_binding::KeyboardEvent;
@@ -44,6 +44,7 @@ use async_trait::async_trait;
 use core::fmt;
 use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning};
 use fuchsia_syslog::fx_log_debug;
+use fuchsia_zircon as zx;
 use rust_icu_sys as usys;
 use rust_icu_unorm2 as unorm;
 use std::cell::RefCell;
@@ -85,7 +86,7 @@ fn remove_combination(c: u32) -> u32 {
 struct StoredEvent {
     event: KeyboardEvent,
     device_descriptor: InputDeviceDescriptor,
-    event_time: EventTime,
+    event_time: zx::Time,
 }
 
 impl fmt::Display for StoredEvent {
@@ -749,6 +750,7 @@ mod tests {
     use crate::testing_utilities;
     use fidl_fuchsia_input::Key;
     use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning};
+    use fuchsia_zircon as zx;
     use pretty_assertions::assert_eq;
     use std::convert::TryFrom as _;
 
@@ -762,7 +764,7 @@ mod tests {
             key,
             event_type,
             /*modifiers=*/ None,
-            /*event_time*/ 0,
+            /*event_time*/ zx::Time::ZERO,
             &InputDeviceDescriptor::Fake,
             /*keymap=*/ None,
             key_meaning,

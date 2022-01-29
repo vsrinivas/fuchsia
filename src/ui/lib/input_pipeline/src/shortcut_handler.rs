@@ -9,8 +9,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_input::Key,
     fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, LockState, Modifiers},
-    fidl_fuchsia_ui_shortcut as ui_shortcut,
-    std::convert::TryInto,
+    fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_zircon as zx,
     std::rc::Rc,
 };
 
@@ -69,10 +68,10 @@ fn create_key_event(
     event_type: KeyEventType,
     modifiers: Option<Modifiers>,
     lock_state: Option<LockState>,
-    event_time: input_device::EventTime,
+    event_time: zx::Time,
 ) -> KeyEvent {
     KeyEvent {
-        timestamp: Some(event_time.try_into().unwrap_or_default()),
+        timestamp: Some(event_time.into_nanos()),
         type_: Some(event_type),
         key: Some(*key),
         modifiers,
@@ -139,7 +138,7 @@ mod tests {
         key3: fidl_fuchsia_input::Key,
         event_type: fidl_fuchsia_ui_input3::KeyEventType,
         modifiers: Option<fidl_ui_input3::Modifiers>,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) -> input_device::UnhandledInputEvent {
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
             keyboard_binding::KeyboardDeviceDescriptor { keys: vec![key3] },
@@ -157,7 +156,7 @@ mod tests {
     async fn press_key(
         pressed_key3: fidl_fuchsia_input::Key,
         modifiers: Option<fidl_ui_input3::Modifiers>,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
         shortcut_handler: Rc<ShortcutHandler>,
     ) -> Vec<input_device::InputEvent> {
         let input_event = create_unhandled_keyboard_event(
@@ -173,7 +172,7 @@ mod tests {
     async fn release_key(
         released_key3: fidl_fuchsia_input::Key,
         modifiers: Option<fidl_ui_input3::Modifiers>,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
         shortcut_handler: Rc<ShortcutHandler>,
     ) -> Vec<input_device::InputEvent> {
         let input_event = create_unhandled_keyboard_event(
@@ -191,7 +190,7 @@ mod tests {
         let shortcut_handler = create_shortcut_handler(false, false);
         let modifiers = None;
         let key3 = fidl_fuchsia_input::Key::A;
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
 
         let handle_result = press_key(key3, modifiers, event_time, shortcut_handler).await;
         assert_matches!(
@@ -217,7 +216,7 @@ mod tests {
     /// Tests that a press key shortcut is consumed.
     #[fasync::run_singlethreaded(test)]
     async fn press_key_activates_shortcut() {
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
         let shortcut_handler = create_shortcut_handler(true, false);
         let handle_result = press_key(
             fidl_fuchsia_input::Key::CapsLock,
@@ -238,7 +237,7 @@ mod tests {
         let shortcut_handler = create_shortcut_handler(false, false);
         let key3 = fidl_fuchsia_input::Key::A;
         let modifiers = None;
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
 
         let handle_result = release_key(key3, modifiers, event_time, shortcut_handler).await;
         assert_matches!(
@@ -265,7 +264,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn release_key_triggers_shortcut() {
         let shortcut_handler = create_shortcut_handler(true, false);
-        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic();
 
         let handle_result = release_key(
             fidl_fuchsia_input::Key::CapsLock,

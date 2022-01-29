@@ -11,6 +11,7 @@ use crate::input_handler::UnhandledInputHandler;
 use crate::keyboard_binding;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_debug;
+use fuchsia_zircon as zx;
 use keymaps;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -65,7 +66,7 @@ impl KeymapHandler {
         self: &Rc<Self>,
         event: keyboard_binding::KeyboardEvent,
         device_descriptor: input_device::InputDeviceDescriptor,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
     ) -> input_device::UnhandledInputEvent {
         let (key, event_type) = (event.get_key(), event.get_event_type());
         fx_log_debug!(
@@ -101,6 +102,7 @@ mod tests {
     use super::*;
     use crate::{consumer_controls_binding, testing_utilities};
     use fuchsia_async as fasync;
+    use fuchsia_zircon as zx;
     use pretty_assertions::assert_eq;
     use std::convert::TryFrom as _;
 
@@ -130,7 +132,7 @@ mod tests {
     // A mod-specific version of `testing_utilities::create_consumer_controls_event`.
     fn create_unhandled_consumer_controls_event(
         pressed_buttons: Vec<fidl_fuchsia_input_report::ConsumerControlButton>,
-        event_time: input_device::EventTime,
+        event_time: zx::Time,
         device_descriptor: &input_device::InputDeviceDescriptor,
     ) -> input_device::UnhandledInputEvent {
         input_device::UnhandledInputEvent::try_from(
@@ -179,7 +181,7 @@ mod tests {
                 // A non-keyboard event.
                 events: vec![create_unhandled_consumer_controls_event(
                     vec![],
-                    0,
+                    zx::Time::ZERO,
                     &input_device::InputDeviceDescriptor::ConsumerControls(
                         consumer_controls_binding::ConsumerControlsDeviceDescriptor {
                             buttons: vec![],
