@@ -101,6 +101,10 @@ type TestDetails struct {
 
 	// IsTestingFailureMode is true iff this test was produced by tefmocheck.
 	IsTestingFailureMode bool `json:"is_testing_failure_mode"`
+
+	// Affected indicates whether the test is affected by the change under test.
+	// It will only be set for tests running within tryjobs.
+	Affected bool `json:"affected"`
 }
 
 // TestCaseResult contains the details of a single test case, nested within a

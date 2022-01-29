@@ -159,6 +159,7 @@ func testDetailsToResultSink(tags []*resultpb.StringPair, testDetail *runtests.T
 		Tags: append([]*resultpb.StringPair{
 			{Key: "gn_label", Value: testDetail.GNLabel},
 			{Key: "test_case_count", Value: strconv.Itoa(len(testDetail.Cases))},
+			{Key: "affected", Value: strconv.FormatBool(testDetail.Affected)},
 		}, tags...),
 	}
 	testStatus, err := resultDBStatus(testDetail.Result)

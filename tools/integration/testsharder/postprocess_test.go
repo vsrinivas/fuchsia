@@ -22,7 +22,9 @@ import (
 func affectedShard(env build.Environment, os string, ids ...int) *Shard {
 	var tests []Test
 	for _, id := range ids {
-		tests = append(tests, makeTest(id, os))
+		test := makeTest(id, os)
+		test.Affected = true
+		tests = append(tests, test)
 	}
 	return &Shard{
 		Name:  affectedShardPrefix + environmentName(env),
@@ -63,6 +65,14 @@ func TestMultiplyShards(t *testing.T) {
 			Tests: []Test{test},
 			Env:   env,
 		}
+	}
+
+	affectedMultShard := func(env build.Environment, os string, id, runs, timeoutSecs int) *Shard {
+		shard := multShard(env, os, id, runs, timeoutSecs)
+		for i := range shard.Tests {
+			shard.Tests[i].Affected = true
+		}
+		return shard
 	}
 
 	testCases := []struct {
@@ -236,7 +246,7 @@ func TestMultiplyShards(t *testing.T) {
 				{Name: "fuchsia-pkg", TotalRuns: 5},
 			},
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, 5, 0),
+				affectedMultShard(env1, "fuchsia", 1, 5, 0),
 			},
 		},
 		{

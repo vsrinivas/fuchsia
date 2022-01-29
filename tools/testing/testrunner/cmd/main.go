@@ -539,6 +539,7 @@ func runMultipleTests(ctx context.Context, multiTests []testToRun, mt multiTeste
 		retryTests := []testToRun{}
 		for i, result := range testResults {
 			result.RunIndex = multiTestRunIndex
+			result.Affected = multiTests[i].Affected
 			if err := outputs.Record(ctx, *result); err != nil {
 				return err
 			}
@@ -683,5 +684,6 @@ func runTestOnce(
 	if result.EndTime.IsZero() {
 		result.EndTime = endTime
 	}
+	result.Affected = test.Affected
 	return result, nil
 }

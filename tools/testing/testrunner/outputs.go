@@ -147,6 +147,7 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 		StartTime:      result.StartTime,
 		DurationMillis: duration.Milliseconds(),
 		DataSinks:      result.DataSinks.Sinks,
+		Affected:       result.Affected,
 	})
 
 	desc := fmt.Sprintf("%s (%s)", result.Name, duration)

@@ -699,6 +699,24 @@ func TestRunAndOutputTests(t *testing.T) {
 				stdioPath("bar", 0): "bar-stdout0\nbar-stderr0\n",
 			},
 		},
+		{
+			name: "affected test",
+			tests: []testsharder.Test{
+				{
+					Test:         build.Test{Name: "foo"},
+					RunAlgorithm: testsharder.StopOnFailure,
+					Runs:         1,
+					Affected:     true,
+				},
+			},
+			expectedResults: []runtests.TestDetails{
+				func() runtests.TestDetails {
+					d := succeededTest("foo", 0, defaultDuration)
+					d.Affected = true
+					return d
+				}(),
+			},
+		},
 	}
 
 	for _, tc := range testCases {

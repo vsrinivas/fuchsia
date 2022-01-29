@@ -61,30 +61,28 @@ func TestSetTestDetailsToResultSink(t *testing.T) {
 	if len(extraTags) != 1 {
 		t.Errorf("extraTags(%v) got mutated, this value should not be changed.", extraTags)
 	}
-	// We only expect 3 tags
+	// We only expect 4 tags
 	// 1. gn_label:value
 	// 2. test_case_count:value
-	// 3. key1:value1
-	if len(tags) != 3 {
+	// 3. affected:value
+	// 4. key1:value1
+	if len(tags) != 4 {
 		t.Errorf("tags(%v) contains unexpected values.", tags)
 	}
-	if extra, ok := tags["key1"]; !ok {
-		t.Error("Did not find key1 in tags")
-	} else if extra != "value1" {
-		t.Errorf("Found incorrect key value tag, got %s, want value1", extra)
+
+	checkTagValue := func(key, want string) {
+		if got, ok := tags[key]; !ok {
+			t.Errorf("Did not find %q in tags", key)
+		} else if got != want {
+			t.Errorf("Wrong value for tag %q: got %q, wanted %q", key, got, want)
+		}
 	}
 
-	if testCaseCount, ok := tags["test_case_count"]; !ok {
-		t.Error("Did not find test_case_count in tags")
-	} else if testCaseCount != "5" {
-		t.Errorf("Found incorrect test_case_count tag, got %s, want 5", testCaseCount)
-	}
+	checkTagValue("key1", "value1")
+	checkTagValue("gn_label", detail.GNLabel)
+	checkTagValue("test_case_count", "5")
+	checkTagValue("affected", "false")
 
-	if gnLabel, ok := tags["gn_label"]; !ok {
-		t.Error("Did not find gn_label in tags")
-	} else if gnLabel != detail.GNLabel {
-		t.Errorf("Found incorrect gn_label tab, got %s, want %s", gnLabel, detail.GNLabel)
-	}
 	if len(result.Artifacts) != 2 {
 		t.Errorf("Got %d artifacts, want 2", len(result.Artifacts))
 	}

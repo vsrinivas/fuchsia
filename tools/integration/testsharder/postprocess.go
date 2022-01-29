@@ -272,6 +272,7 @@ func ShardAffected(shards []*Shard, modTests []TestModifier, affectedOnly bool) 
 
 				if modTest.Affected {
 					isAffected = true
+					test.Affected = true
 					affected = append(affected, test)
 					break
 				}

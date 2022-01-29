@@ -45,6 +45,10 @@ type Test struct {
 
 	// Timeout is the timeout that should be set for each run of this test.
 	Timeout time.Duration `json:"timeout_nanos,omitempty"`
+
+	// Affected indicates whether the test is affected by the change under test.
+	// It will only be set for tests running within tryjobs.
+	Affected bool `json:"affected,omitempty"`
 }
 
 func (t *Test) applyModifier(m TestModifier) {

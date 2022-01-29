@@ -42,6 +42,10 @@ type TestResult struct {
 	// The directory where the OutputFiles live.
 	OutputDir string
 
+	// Whether the test is affected by the change under test. This will only be
+	// set for tests running within tryjobs.
+	Affected bool `json:"affected,omitempty"`
+
 	StartTime time.Time
 	EndTime   time.Time
 }
