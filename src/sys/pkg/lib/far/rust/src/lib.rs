@@ -10,12 +10,7 @@
 //! # Example
 //!
 //! ```
-//! extern crate failure;
-//! extern crate fuchsia_archive;
-//! extern crate tempfile;
-//!
 //! use anyhow::Error;
-//! use fuchsia_archive::write;
 //! use std::collections::BTreeMap;
 //! use std::fs;
 //! use std::io::{Cursor, Read, Write};
@@ -38,17 +33,16 @@
 //! let test_dir = create_test_files(&file_names).unwrap();
 //! let mut path_content_map: BTreeMap<&str, (u64, Box<dyn Read>)> = BTreeMap::new();
 //! for file_name in file_names.iter() {
-//!     let path = test_dir
-//!         .path()
-//!         .join(file_name)
-//!         .to_string_lossy()
-//!         .to_string();
-//!     let file = fs::File::open(path).unwrap();
+//!     let file = fs::File::open(test_dir.path().join(file_name)).unwrap();
 //!     path_content_map.insert(file_name, (file.metadata().unwrap().len(), Box::new(file)));
 //! }
-//! let mut target = Cursor::new(Vec::new());
-//! write(&mut target, path_content_map).unwrap();
+//! let mut result = Vec::new();
+//! fuchsia_archive::write(&mut result, path_content_map).unwrap();
+//! let result = &result[..];
 //!
+//! let reader = fuchsia_archive::Reader::new(Cursor::new(result)).unwrap();
+//! let entries = reader.list().map(|e| e.path()).collect::<Vec<_>>();
+//! assert_eq!(entries, ["a", "b", "dir/c"]);
 //! ```
 
 use serde::{Deserialize, Serialize};

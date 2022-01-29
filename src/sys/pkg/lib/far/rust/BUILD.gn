@@ -66,5 +66,8 @@ fuchsia_test_package("fuchsia-archive-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":fuchsia-archive-tests" ]
+  public_deps = [
+    ":fuchsia-archive-tests",
+    ":fuchsia-archive_test($host_toolchain)",
+  ]
 }
