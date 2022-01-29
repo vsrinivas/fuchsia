@@ -47,6 +47,7 @@ struct Result {
 
 template <class ColorT>
 bool ColorMatch(const ColorT x, const ColorT y, double eps = 0.05) {
+  static_assert(ColorT::color_depth() == 8);
   return sqrt(((x.r - y.r) / 255.0 * (x.r - y.r) / 255.0) +
               ((x.g - y.g) / 255.0 * (x.g - y.g) / 255.0) +
               ((x.b - y.b) / 255.0 * (x.b - y.b) / 255.0) +

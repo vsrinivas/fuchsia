@@ -22,6 +22,7 @@ struct ColorRgba {
   static ColorRgba FromFloats(float r, float g, float b, float a) {
     return ColorRgba::FromFloats(glm::vec4(r, g, b, a));
   }
+  static constexpr uint32_t color_depth() { return 8; }
 
   const uint8_t* bytes() const { return reinterpret_cast<const uint8_t*>(this); }
 
@@ -43,6 +44,7 @@ struct ColorBgra {
   static ColorBgra FromFloats(float r, float g, float b, float a) {
     return ColorBgra::FromFloats(glm::vec4(r, g, b, a));
   }
+  static constexpr uint32_t color_depth() { return 8; }
 
   const uint8_t* bytes() const { return reinterpret_cast<const uint8_t*>(this); }
 
