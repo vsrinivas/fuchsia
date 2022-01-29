@@ -110,7 +110,7 @@ template("clang_toolchain") {
 
     # Configure Rust remote builds.
     _rustc_wrapper = ""
-    _rust_concurrent_jobs = concurrent_jobs.local
+    _rust_concurrent_jobs = ""
     if (enable_rbe) {
       if (check_rustc_determinism) {
         # Determinism check is run locally, and doesn't use RBE,
@@ -131,6 +131,9 @@ template("clang_toolchain") {
       }
       _rustc_wrapper = rebase_path(rustc_remote_wrapper, root_build_dir) +
                        _rewrapper_flags + " -- "
+    }
+    if (_rust_concurrent_jobs == "") {
+      _rust_concurrent_jobs = concurrent_jobs.local
     }
 
     rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)
