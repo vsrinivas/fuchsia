@@ -1573,17 +1573,17 @@ mod tests {
         };
 
         let mut builder = DummyEventDispatcherBuilder::default();
-        let device_id = builder.add_device(local_mac);
+        let device_id = DeviceId::new_ethernet(builder.add_device(local_mac));
         let mut ctx = builder.build::<DummyEventDispatcher>();
         crate::device::add_ip_addr_subnet(
             &mut ctx,
-            device_id.into(),
+            device_id,
             AddrSubnet::new(local_ip.get(), 16).unwrap(),
         )
         .unwrap();
         crate::device::add_ip_addr_subnet(
             &mut ctx,
-            device_id.into(),
+            device_id,
             AddrSubnet::new(remote_ip.get(), 16).unwrap(),
         )
         .unwrap();

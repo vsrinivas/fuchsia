@@ -1538,7 +1538,8 @@ mod tests {
             .unwrap();
         }
 
-        let device = DeviceId::new_ethernet(0);
+        let device_builder_id = 0;
+        let device = DeviceId::new_ethernet(device_builder_id);
         let a = "alice";
         let b = "bob";
         let c = "calvin";
@@ -1555,12 +1556,12 @@ mod tests {
         bob.add_device_with_ip(mac_b, ip_b.get(), subnet);
         let mut calvin = DummyEventDispatcherBuilder::default();
         calvin.add_device_with_ip(mac_c, ip_c.get(), subnet);
-        add_arp_or_ndp_table_entry(&mut alice, device.id(), ip_b.get(), mac_b);
-        add_arp_or_ndp_table_entry(&mut alice, device.id(), ip_c.get(), mac_c);
-        add_arp_or_ndp_table_entry(&mut bob, device.id(), ip_a.get(), mac_a);
-        add_arp_or_ndp_table_entry(&mut bob, device.id(), ip_c.get(), mac_c);
-        add_arp_or_ndp_table_entry(&mut calvin, device.id(), ip_a.get(), mac_a);
-        add_arp_or_ndp_table_entry(&mut calvin, device.id(), ip_b.get(), mac_b);
+        add_arp_or_ndp_table_entry(&mut alice, device_builder_id, ip_b.get(), mac_b);
+        add_arp_or_ndp_table_entry(&mut alice, device_builder_id, ip_c.get(), mac_c);
+        add_arp_or_ndp_table_entry(&mut bob, device_builder_id, ip_a.get(), mac_a);
+        add_arp_or_ndp_table_entry(&mut bob, device_builder_id, ip_c.get(), mac_c);
+        add_arp_or_ndp_table_entry(&mut calvin, device_builder_id, ip_a.get(), mac_a);
+        add_arp_or_ndp_table_entry(&mut calvin, device_builder_id, ip_b.get(), mac_b);
         let contexts =
             vec![(a.clone(), alice.build()), (b.clone(), bob.build()), (c.clone(), calvin.build())]
                 .into_iter();

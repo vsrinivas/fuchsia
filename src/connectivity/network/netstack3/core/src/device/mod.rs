@@ -236,12 +236,6 @@ impl From<EthernetTimerId<EthernetDeviceId>> for DeviceLayerTimerId {
     }
 }
 
-impl From<EthernetDeviceId> for DeviceId {
-    fn from(id: EthernetDeviceId) -> DeviceId {
-        DeviceId::new_ethernet(id.0)
-    }
-}
-
 impl<D: EventDispatcher> DeviceIdContext<EthernetLinkDevice> for Ctx<D> {
     type DeviceId = EthernetDeviceId;
 }
@@ -260,45 +254,44 @@ pub(crate) fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: DeviceLayer
     }
 }
 
-/// An ID identifying a device.
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct DeviceId {
-    id: usize,
-    protocol: DeviceProtocol,
+pub(crate) enum DeviceIdInner {
+    Ethernet(EthernetDeviceId),
 }
 
-impl From<usize> for DeviceId {
-    fn from(id: usize) -> DeviceId {
-        DeviceId::new_ethernet(id)
+/// An ID identifying a device.
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub struct DeviceId(pub(crate) DeviceIdInner);
+
+impl From<DeviceIdInner> for DeviceId {
+    fn from(id: DeviceIdInner) -> DeviceId {
+        DeviceId(id)
     }
 }
 
-impl From<DeviceId> for usize {
-    fn from(id: DeviceId) -> usize {
-        id.id
+impl From<EthernetDeviceId> for DeviceId {
+    fn from(id: EthernetDeviceId) -> DeviceId {
+        DeviceIdInner::Ethernet(id).into()
     }
 }
 
 impl DeviceId {
     /// Construct a new `DeviceId` for an Ethernet device.
     pub(crate) fn new_ethernet(id: usize) -> DeviceId {
-        DeviceId { id, protocol: DeviceProtocol::Ethernet }
+        DeviceIdInner::Ethernet(EthernetDeviceId(id)).into()
     }
 
-    /// Get the protocol-specific ID for this `DeviceId`.
-    pub fn id(self) -> usize {
-        self.id
-    }
-
-    /// Get the protocol for this `DeviceId`.
-    pub fn protocol(self) -> DeviceProtocol {
-        self.protocol
+    pub(crate) fn inner(self) -> DeviceIdInner {
+        let DeviceId(id) = self;
+        id
     }
 }
 
 impl Display for DeviceId {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "{}:{}", self.protocol, self.id)
+        match self.inner() {
+            DeviceIdInner::Ethernet(EthernetDeviceId(id)) => write!(f, "Ethernet({})", id),
+        }
     }
 }
 
@@ -311,32 +304,16 @@ impl Debug for DeviceId {
 impl IdMapCollectionKey for DeviceId {
     const VARIANT_COUNT: usize = 1;
 
-    fn get_variant(&self) -> usize {
-        match self.protocol {
-            DeviceProtocol::Ethernet => 0,
+    fn get_id(&self) -> usize {
+        match self.inner() {
+            DeviceIdInner::Ethernet(EthernetDeviceId(id)) => id,
         }
     }
 
-    fn get_id(&self) -> usize {
-        self.id as usize
-    }
-}
-
-/// Type of device protocol.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub enum DeviceProtocol {
-    Ethernet,
-}
-
-impl Display for DeviceProtocol {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "{}",
-            match self {
-                DeviceProtocol::Ethernet => "Ethernet",
-            }
-        )
+    fn get_variant(&self) -> usize {
+        match self.inner() {
+            DeviceIdInner::Ethernet(_) => 0,
+        }
     }
 }
 
@@ -555,8 +532,8 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
 
     state.set_initialization_status(InitializationStatus::Initializing);
 
-    match device.protocol {
-        DeviceProtocol::Ethernet => ethernet::initialize_device(ctx, device.id.into()),
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => ethernet::initialize_device(ctx, id),
     }
 
     // All nodes should join the all-nodes multicast group.
@@ -567,12 +544,9 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
     {
         // RFC 4861 section 6.3.7, it implies only a host sends router
         // solicitation messages.
-        match device.protocol {
-            DeviceProtocol::Ethernet => {
-                <Ctx<_> as NdpHandler<EthernetLinkDevice>>::start_soliciting_routers(
-                    ctx,
-                    device.id.into(),
-                )
+        match device.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                <Ctx<_> as NdpHandler<EthernetLinkDevice>>::start_soliciting_routers(ctx, id)
             }
         }
     }
@@ -590,17 +564,18 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
 ///
 /// Panics if `device` does not refer to an existing device.
 pub fn remove_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId) -> Option<Vec<usize>> {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => {
             // TODO(rheacock): Generate any final frames to send here.
-            crate::device::ethernet::deinitialize(ctx, device.id.into());
+            crate::device::ethernet::deinitialize(ctx, id);
+            let EthernetDeviceId(id) = id;
             let _: DeviceState<_> = ctx
                 .state
                 .device
                 .ethernet
-                .remove(device.id)
-                .unwrap_or_else(|| panic!("no such Ethernet device: {}", device.id));
-            debug!("removing Ethernet device with ID {}", device.id);
+                .remove(id)
+                .unwrap_or_else(|| panic!("no such Ethernet device: {}", id));
+            debug!("removing Ethernet device with ID {}", id);
             None
         }
     }
@@ -610,16 +585,10 @@ pub fn remove_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId) -> 
 pub(crate) fn list_devices<D: EventDispatcher>(
     ctx: &Ctx<D>,
 ) -> impl Iterator<Item = DeviceId> + '_ {
-    // NOTE(joshlf): This unused closure exists so that any modifications to the
-    // `DeviceProtocol` enum will cause this function to stop compiling. This is
-    // to call out the fact that, when the `DeviceProtocol` enum is updated,
-    // this function needs to be updated too!
-    let _ = |proto: DeviceProtocol| match proto {
-        DeviceProtocol::Ethernet => (),
-    };
+    let DeviceLayerState { ethernet, default_ndp_config: _, default_ipv6_config: _ } =
+        &ctx.state.device;
 
-    // UPDATE ME when `DeviceProtocol` enum changes!
-    ctx.state.device.ethernet.iter().filter_map(|(id, state)| {
+    ethernet.iter().filter_map(|(id, state)| {
         if state.common.is_initialized() {
             Some(DeviceId::new_ethernet(id))
         } else {
@@ -651,10 +620,8 @@ where
     // `device` must not be uninitialized.
     assert!(is_device_usable(&ctx.state, device));
 
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::send_ip_frame(ctx, device.id.into(), local_addr, body)
-        }
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::send_ip_frame(ctx, id, local_addr, body),
     }
 }
 
@@ -671,8 +638,8 @@ pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
     // `device` must be initialized.
     assert!(is_device_initialized(&ctx.state, device));
 
-    match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::receive_frame(ctx, device.id.into(), buffer),
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::receive_frame(ctx, id, buffer),
     }
 }
 
@@ -684,10 +651,8 @@ pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
     device: DeviceId,
     enabled: bool,
 ) {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::set_promiscuous_mode(ctx, device.id.into(), enabled)
-        }
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::set_promiscuous_mode(ctx, id, enabled),
     }
 }
 
@@ -701,8 +666,8 @@ pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &Ctx<D>,
     device: DeviceId,
 ) -> Option<AddrSubnet<A>> {
-    match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::get_ip_addr_subnet(ctx, device.id.into()),
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::get_ip_addr_subnet(ctx, id),
     }
 }
 
@@ -711,9 +676,9 @@ pub(crate) fn get_ipv4_device_state<D: EventDispatcher>(
     ctx: &Ctx<D>,
     device: DeviceId,
 ) -> &IpDeviceState<D::Instant, Ipv4> {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            &ctx.state.device.ethernet.get(device.id).unwrap().device.ip.ipv4.ip_state
+    match device.inner() {
+        DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
+            &ctx.state.device.ethernet.get(id).unwrap().device.ip.ipv4.ip_state
         }
     }
 }
@@ -723,9 +688,9 @@ pub(crate) fn get_ipv6_device_state<D: EventDispatcher>(
     ctx: &Ctx<D>,
     device: DeviceId,
 ) -> &IpDeviceState<D::Instant, Ipv6> {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            &ctx.state.device.ethernet.get(device.id).unwrap().device.ip.ipv6.ip_state
+    match device.inner() {
+        DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
+            &ctx.state.device.ethernet.get(id).unwrap().device.ip.ipv6.ip_state
         }
     }
 }
@@ -759,10 +724,8 @@ pub fn get_assigned_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
     ctx: &Ctx<D>,
     device: DeviceId,
 ) -> Box<dyn Iterator<Item = AddrSubnet<A>> + '_> {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::get_assigned_ip_addr_subnets(ctx, device.id.into())
-        }
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::get_assigned_ip_addr_subnets(ctx, id),
     }
 }
 
@@ -785,10 +748,8 @@ pub fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 
     trace!("add_ip_addr_subnet: adding addr {:?} to device {:?}", addr_sub, device);
 
-    let res = match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::add_ip_addr_subnet(ctx, device.id.into(), addr_sub)
-        }
+    let res = match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::add_ip_addr_subnet(ctx, id, addr_sub),
     };
 
     if res.is_ok() {
@@ -817,8 +778,8 @@ pub fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
 
     trace!("del_ip_addr: removing addr {:?} from device {:?}", addr, device);
 
-    let res = match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::del_ip_addr(ctx, device.id.into(), addr),
+    let res = match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::del_ip_addr(ctx, id, addr),
     };
 
     if res.is_ok() {
@@ -856,10 +817,8 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
 
     trace!("join_ip_multicast: device {:?} joining multicast {:?}", device, multicast_addr);
 
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::join_ip_multicast(ctx, device.id.into(), multicast_addr)
-        }
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::join_ip_multicast(ctx, id, multicast_addr),
     }
 }
 
@@ -890,24 +849,22 @@ pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
 
     trace!("join_ip_multicast: device {:?} leaving multicast {:?}", device, multicast_addr);
 
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::leave_ip_multicast(ctx, device.id.into(), multicast_addr)
-        }
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::leave_ip_multicast(ctx, id, multicast_addr),
     }
 }
 
 /// Get the MTU associated with this device.
 pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &Ctx<D>, device: DeviceId) -> u32 {
-    match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::get_mtu(ctx, device.id.into()),
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(ctx, id),
     }
 }
 
 /// Get the hop limit for new IPv6 packets that will be sent out from `device`.
 pub(crate) fn get_ipv6_hop_limit<D: EventDispatcher>(ctx: &Ctx<D>, device: DeviceId) -> NonZeroU8 {
-    match device.protocol {
-        DeviceProtocol::Ethernet => self::ethernet::get_ipv6_hop_limit(ctx, device.id.into()),
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::get_ipv6_hop_limit(ctx, id),
     }
 }
 
@@ -916,13 +873,13 @@ fn get_common_device_state<D: EventDispatcher>(
     state: &StackState<D>,
     device: DeviceId,
 ) -> &CommonDeviceState {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
+    match device.inner() {
+        DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
             &state
                 .device
                 .ethernet
-                .get(device.id)
-                .unwrap_or_else(|| panic!("no such Ethernet device: {}", device.id))
+                .get(id)
+                .unwrap_or_else(|| panic!("no such Ethernet device: {}", id))
                 .common
         }
     }
@@ -933,13 +890,13 @@ fn get_common_device_state_mut<D: EventDispatcher>(
     state: &mut StackState<D>,
     device: DeviceId,
 ) -> &mut CommonDeviceState {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
+    match device.inner() {
+        DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
             &mut state
                 .device
                 .ethernet
-                .get_mut(device.id)
-                .unwrap_or_else(|| panic!("no such Ethernet device: {}", device.id))
+                .get_mut(id)
+                .unwrap_or_else(|| panic!("no such Ethernet device: {}", id))
                 .common
         }
     }
@@ -955,10 +912,8 @@ pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(
     ctx: &Ctx<D>,
     device: DeviceId,
 ) -> bool {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::is_routing_enabled::<_, I>(ctx, device.id.into())
-        }
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::is_routing_enabled::<_, I>(ctx, id),
     }
 }
 
@@ -1026,12 +981,9 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(ctx: &mut Ctx<D>, device: Device
             //               periodic router advertisements (if configured to do
             //               so)
 
-            match device.protocol {
-                DeviceProtocol::Ethernet => {
-                    <Ctx<_> as NdpHandler<EthernetLinkDevice>>::stop_soliciting_routers(
-                        ctx,
-                        device.id.into(),
-                    )
+            match device.inner() {
+                DeviceIdInner::Ethernet(id) => {
+                    <Ctx<_> as NdpHandler<EthernetLinkDevice>>::stop_soliciting_routers(ctx, id)
                 }
             }
         }
@@ -1073,12 +1025,9 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(ctx: &mut Ctx<D>, device: Device
         if ip_routing {
             // On transition from router -> host, start soliciting router
             // information.
-            match device.protocol {
-                DeviceProtocol::Ethernet => {
-                    <Ctx<_> as NdpHandler<EthernetLinkDevice>>::start_soliciting_routers(
-                        ctx,
-                        device.id.into(),
-                    )
+            match device.inner() {
+                DeviceIdInner::Ethernet(id) => {
+                    <Ctx<_> as NdpHandler<EthernetLinkDevice>>::start_soliciting_routers(ctx, id)
                 }
             }
         }
@@ -1091,9 +1040,9 @@ fn set_routing_enabled_inner<D: EventDispatcher, I: Ip>(
     device: DeviceId,
     enabled: bool,
 ) {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::set_routing_enabled_inner::<_, I>(ctx, device.id.into(), enabled)
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => {
+            self::ethernet::set_routing_enabled_inner::<_, I>(ctx, id, enabled)
         }
     }
 }
@@ -1111,9 +1060,9 @@ pub(super) fn insert_static_arp_table_entry<D: EventDispatcher>(
     addr: Ipv4Addr,
     mac: UnicastAddr<Mac>,
 ) {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::insert_static_arp_table_entry(ctx, device.id.into(), addr, mac.get())
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => {
+            self::ethernet::insert_static_arp_table_entry(ctx, id, addr, mac.get())
         }
     }
 }
@@ -1131,10 +1080,8 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
     addr: UnicastAddr<Ipv6Addr>,
     mac: Mac,
 ) {
-    match device.protocol {
-        DeviceProtocol::Ethernet => {
-            self::ethernet::insert_ndp_table_entry(ctx, device.id.into(), addr, mac)
-        }
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => self::ethernet::insert_ndp_table_entry(ctx, id, addr, mac),
     }
 }
 
@@ -1157,12 +1104,10 @@ pub fn set_ndp_configuration<D: EventDispatcher>(
     device: DeviceId,
     config: ndp::NdpConfiguration,
 ) {
-    match device.protocol {
-        DeviceProtocol::Ethernet => <Ctx<_> as NdpHandler<EthernetLinkDevice>>::set_configuration(
-            ctx,
-            device.id.into(),
-            config,
-        ),
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => {
+            <Ctx<_> as NdpHandler<EthernetLinkDevice>>::set_configuration(ctx, id, config)
+        }
     }
 }
 
@@ -1173,8 +1118,8 @@ pub(crate) fn set_ipv6_configuration<D: EventDispatcher>(
     device: DeviceId,
     config: Ipv6DeviceConfiguration,
 ) {
-    match device.protocol {
-        DeviceProtocol::Ethernet => ethernet::set_ipv6_configuration(ctx, device.id.into(), config),
+    match device.inner() {
+        DeviceIdInner::Ethernet(id) => ethernet::set_ipv6_configuration(ctx, id, config),
     }
 }
 
@@ -1200,15 +1145,9 @@ impl<D: EventDispatcher> NdpPacketHandler<DeviceId> for Ctx<D> {
     ) {
         trace!("device::receive_ndp_packet");
 
-        match device.protocol {
-            DeviceProtocol::Ethernet => {
-                crate::device::ndp::receive_ndp_packet(
-                    self,
-                    device.id.into(),
-                    src_ip,
-                    dst_ip,
-                    packet,
-                );
+        match device.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                crate::device::ndp::receive_ndp_packet(self, id, src_ip, dst_ip, packet);
             }
         }
     }
@@ -1223,14 +1162,10 @@ impl<B: BufferMut, D: BufferDispatcher<B>> IgmpPacketHandler<(), DeviceId, B> fo
         dst_ip: SpecifiedAddr<Ipv4Addr>,
         buffer: B,
     ) {
-        match device.protocol {
-            DeviceProtocol::Ethernet => {
+        match device.inner() {
+            DeviceIdInner::Ethernet(id) => {
                 IgmpPacketHandler::<EthernetLinkDevice, _, _>::receive_igmp_packet(
-                    self,
-                    device.id.into(),
-                    src_ip,
-                    dst_ip,
-                    buffer,
+                    self, id, src_ip, dst_ip, buffer,
                 );
             }
         }
@@ -1246,14 +1181,10 @@ impl<D: EventDispatcher> MldPacketHandler<(), DeviceId> for Ctx<D> {
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         packet: MldPacket<B>,
     ) {
-        match device.protocol {
-            DeviceProtocol::Ethernet => {
+        match device.inner() {
+            DeviceIdInner::Ethernet(id) => {
                 MldPacketHandler::<EthernetLinkDevice, _>::receive_mld_packet(
-                    self,
-                    device.id.into(),
-                    src_ip,
-                    dst_ip,
-                    packet,
+                    self, id, src_ip, dst_ip, packet,
                 );
             }
         }

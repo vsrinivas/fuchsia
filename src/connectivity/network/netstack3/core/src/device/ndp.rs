@@ -2295,7 +2295,7 @@ mod tests {
     use super::*;
 
     use alloc::{vec, vec::Vec};
-    use core::convert::TryInto as _;
+    use core::convert::{TryFrom, TryInto as _};
 
     use net_types::ethernet::Mac;
     use net_types::ip::AddrSubnet;
@@ -2313,7 +2313,7 @@ mod tests {
         add_ip_addr_subnet, del_ip_addr,
         ethernet::{EthernetLinkDevice, EthernetTimerId},
         get_assigned_ip_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
-        is_routing_enabled, set_routing_enabled, DeviceId, DeviceLayerTimerId,
+        is_routing_enabled, set_routing_enabled, DeviceId, DeviceIdInner, DeviceLayerTimerId,
         DeviceLayerTimerIdInner, EthernetDeviceId, Ipv6AddressEntry,
     };
     use crate::testutil::{
@@ -2412,6 +2412,15 @@ mod tests {
             .unwrap_b()
     }
 
+    impl TryFrom<DeviceId> for EthernetDeviceId {
+        type Error = ();
+        fn try_from(id: DeviceId) -> Result<EthernetDeviceId, ()> {
+            match id.inner() {
+                DeviceIdInner::Ethernet(id) => Ok(id),
+            }
+        }
+    }
+
     #[test]
     fn test_ndp_configuration() {
         let mut c = NdpConfiguration::default();
@@ -2444,7 +2453,11 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip()),
+            lookup::<EthernetLinkDevice, _>(
+                &mut ctx,
+                dev_id.try_into().expect("expected ethernet ID"),
+                remote_ip()
+            ),
             None
         );
 
@@ -2455,7 +2468,11 @@ mod tests {
 
             assert_eq!(
                 testutil::trigger_next_timer(&mut ctx).unwrap(),
-                NdpTimerId::new_link_address_resolution(dev_id.id().into(), remote_ip()).into()
+                NdpTimerId::new_link_address_resolution(
+                    dev_id.try_into().expect("expected ethernet ID"),
+                    remote_ip()
+                )
+                .into()
             );
         }
         // Check that we hit the timeout after MAX_MULTICAST_SOLICIT.
@@ -2530,7 +2547,7 @@ mod tests {
         assert_eq!(
             StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
                 net.context("local"),
-                device_id.id().into()
+                device_id.try_into().expect("expected ethernet ID")
             )
             .neighbors
             .get_neighbor_state(&remote_ip())
@@ -2559,7 +2576,7 @@ mod tests {
         // their NDP tables.
         let local_neighbor = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             net.context("local"),
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         )
         .neighbors
         .get_neighbor_state(&remote_ip())
@@ -2571,7 +2588,7 @@ mod tests {
 
         let remote_neighbor = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             net.context("remote"),
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         )
         .neighbors
         .get_neighbor_state(&local_ip())
@@ -2615,7 +2632,11 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip()),
+            lookup::<EthernetLinkDevice, _>(
+                &mut ctx,
+                dev_id.try_into().expect("expected ethernet ID"),
+                remote_ip()
+            ),
             None
         );
 
@@ -2623,11 +2644,15 @@ mod tests {
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Deinitializing a different ID should not impact the current timer
-        deinitialize(&mut ctx, (dev_id.id + 1).into());
+        let other_id = {
+            let EthernetDeviceId(id) = dev_id.try_into().expect("expected ethernet ID");
+            EthernetDeviceId(id + 1).into()
+        };
+        deinitialize(&mut ctx, other_id);
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Deinitializing the correct ID should cancel the timer.
-        deinitialize(&mut ctx, dev_id.id.into());
+        deinitialize(&mut ctx, dev_id.try_into().expect("expected ethernet ID"));
         assert_empty(ctx.dispatcher.timer_events());
     }
 
@@ -2767,12 +2792,12 @@ mod tests {
 
         assert_eq!(
             testutil::trigger_next_timer(net.context("local")).unwrap(),
-            dad_timer_id(device_id.id().into(), local_ip())
+            dad_timer_id(device_id.try_into().expect("expected ethernet ID"), local_ip())
         );
 
         assert!(NdpContext::<EthernetLinkDevice>::get_ip_device_state(
             net.context("local"),
-            device_id.id().into()
+            device_id.try_into().expect("expected ethernet ID")
         )
         .find_addr(&local_ip())
         .unwrap()
@@ -2797,7 +2822,7 @@ mod tests {
         // Let's make sure that our local node still can use that address.
         assert!(NdpContext::<EthernetLinkDevice>::get_ip_device_state(
             net.context("local"),
-            device_id.id().into()
+            device_id.try_into().expect("expected ethernet ID")
         )
         .find_addr(&local_ip())
         .unwrap()
@@ -2830,24 +2855,33 @@ mod tests {
         let addr = local_ip();
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(addr.get(), 128).unwrap()).unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, dev_id.id().into())
-                .find_addr(&addr)
-                .unwrap()
-                .state,
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                dev_id.try_into().expect("expected ethernet ID")
+            )
+            .find_addr(&addr)
+            .unwrap()
+            .state,
             AddressState::Tentative { dad_transmits_remaining: None },
         );
         let addr = remote_ip();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, dev_id.id().into())
-                .find_addr(&addr),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                dev_id.try_into().expect("expected ethernet ID")
+            )
+            .find_addr(&addr),
             None
         );
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(addr.get(), 128).unwrap()).unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, dev_id.id().into())
-                .find_addr(&addr)
-                .unwrap()
-                .state,
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                dev_id.try_into().expect("expected ethernet ID")
+            )
+            .find_addr(&addr)
+            .unwrap()
+            .state,
             AddressState::Tentative { dad_transmits_remaining: None },
         );
     }
@@ -2874,14 +2908,17 @@ mod tests {
         for _ in 0..3 {
             assert_eq!(
                 testutil::trigger_next_timer(&mut ctx).unwrap(),
-                dad_timer_id(dev_id.id().into(), local_ip())
+                dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), local_ip())
             );
         }
-        assert!(NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, dev_id.id().into())
-            .find_addr(&local_ip())
-            .unwrap()
-            .state
-            .is_assigned());
+        assert!(NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            dev_id.try_into().expect("expected ethernet ID")
+        )
+        .find_addr(&local_ip())
+        .unwrap()
+        .state
+        .is_assigned());
     }
 
     #[test]
@@ -2918,7 +2955,8 @@ mod tests {
         )
         .unwrap();
 
-        let expected_timer_id = dad_timer_id(device_id.id().into(), local_ip());
+        let expected_timer_id =
+            dad_timer_id(device_id.try_into().expect("expected ethernet ID"), local_ip());
         // During the first and second period, the remote host is still down.
         assert_eq!(testutil::trigger_next_timer(net.context("local")).unwrap(), expected_timer_id);
         assert_eq!(testutil::trigger_next_timer(net.context("local")).unwrap(), expected_timer_id);
@@ -2977,7 +3015,8 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         // Send another NS.
-        let local_timer_id = dad_timer_id(dev_id.id().into(), local_ip());
+        let local_timer_id =
+            dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), local_ip());
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id]);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
 
@@ -2997,7 +3036,8 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
 
         // Run to the end for DAD for local ip
-        let remote_timer_id = dad_timer_id(dev_id.id().into(), remote_ip());
+        let remote_timer_id =
+            dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), remote_ip());
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs(2)),
             [local_timer_id, remote_timer_id, local_timer_id, remote_timer_id]
@@ -3059,7 +3099,8 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         // Send another NS.
-        let local_timer_id = dad_timer_id(dev_id.id().into(), local_ip());
+        let local_timer_id =
+            dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), local_ip());
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id]);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
 
@@ -3079,7 +3120,8 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
 
         // Run 1s
-        let remote_timer_id = dad_timer_id(dev_id.id().into(), remote_ip());
+        let remote_timer_id =
+            dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), remote_ip());
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id, remote_timer_id]);
         assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&local_ip())
@@ -3243,7 +3285,7 @@ mod tests {
             .unwrap();
         assert!(!StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         )
         .has_default_router(&src_ip));
         ctx.receive_ndp_packet(
@@ -3255,7 +3297,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         // We should have the new router in our list with our NDP parameters
         // updated.
@@ -3295,7 +3337,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_default_router(&src_ip));
         let base = Duration::from_millis(10);
@@ -3336,7 +3378,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 3);
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_default_router(&src_ip));
         // Should be the same value as before.
@@ -3372,7 +3414,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 4);
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_default_router(&src_ip));
         // Should update to new value.
@@ -3412,7 +3454,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 5);
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_default_router(&src_ip));
         // Should update to new value.
@@ -3453,7 +3495,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 6);
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         // Router should no longer be in our list.
         assert!(!ndp_state.has_default_router(&src_ip));
@@ -3496,7 +3538,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 7);
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         // Router should be re-added.
         assert!(ndp_state.has_default_router(&src_ip));
@@ -3513,11 +3555,15 @@ mod tests {
         // Invalidate the router by triggering the timeout.
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
-            NdpTimerId::new_router_invalidation(device_id.id().into(), src_ip).into()
+            NdpTimerId::new_router_invalidation(
+                device_id.try_into().expect("expected ethernet ID"),
+                src_ip
+            )
+            .into()
         );
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         assert!(!ndp_state.has_default_router(&src_ip));
 
@@ -3549,7 +3595,7 @@ mod tests {
                 .unwrap();
             assert!(!StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
                 ctx,
-                device_id.id().into()
+                device_id.try_into().expect("expected ethernet ID")
             )
             .has_default_router(&src_ip));
             ctx.receive_ndp_packet(
@@ -3615,7 +3661,7 @@ mod tests {
             .unwrap();
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         assert!(!ndp_state.has_default_router(&src_ip));
         assert_eq!(ndp_state.neighbors.get_neighbor_state(&src_ip), None);
@@ -3628,7 +3674,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 1);
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         // We should have the new router in our list with our NDP parameters
         // updated.
@@ -3660,7 +3706,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "ndp::rx_router_advertisement"), 2);
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_default_router(&src_ip));
         let neighbor = ndp_state.neighbors.get_neighbor_state(&src_ip).unwrap();
@@ -3672,14 +3718,18 @@ mod tests {
         // Trigger router invalidation.
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
-            NdpTimerId::new_router_invalidation(device_id.id().into(), src_ip).into()
+            NdpTimerId::new_router_invalidation(
+                device_id.try_into().expect("expected ethernet ID"),
+                src_ip
+            )
+            .into()
         );
 
         // Neighbor entry shouldn't change except for `is_router` which should
         // now be `false`.
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device_id.id().into(),
+            device_id.try_into().expect("expected ethernet ID"),
         );
         assert!(!ndp_state.has_default_router(&src_ip));
         let neighbor = ndp_state.neighbors.get_neighbor_state(&src_ip).unwrap();
@@ -3709,7 +3759,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let hw_mtu = 5000;
         let device = ctx.state.add_ethernet_device(local_mac(), hw_mtu);
-        let device_id = device.id().into();
+        let device_id = device.try_into().expect("expected ethernet ID");
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
         let src_ip = src_mac.to_ipv6_link_local().addr();
 
@@ -3816,7 +3866,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
-        let device_id = device.id().into();
+        let device_id = device.try_into().expect("expected ethernet ID");
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]);
@@ -3964,7 +4014,10 @@ mod tests {
         let time = ctx.now();
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
-            NdpTimerId::new_router_solicitation(device_id.id().into()).into()
+            NdpTimerId::new_router_solicitation(
+                device_id.try_into().expect("expected ethernet ID")
+            )
+            .into()
         );
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
@@ -3982,7 +4035,10 @@ mod tests {
         let time = ctx.now();
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
-            NdpTimerId::new_router_solicitation(device_id.id().into()).into()
+            NdpTimerId::new_router_solicitation(
+                device_id.try_into().expect("expected ethernet ID")
+            )
+            .into()
         );
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
@@ -4005,7 +4061,10 @@ mod tests {
         let time = ctx.now();
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
-            NdpTimerId::new_router_solicitation(device_id.id().into()).into()
+            NdpTimerId::new_router_solicitation(
+                device_id.try_into().expect("expected ethernet ID")
+            )
+            .into()
         );
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
@@ -4053,7 +4112,10 @@ mod tests {
         let time = ctx.now();
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
-            NdpTimerId::new_router_solicitation(device_id.id().into()).into()
+            NdpTimerId::new_router_solicitation(
+                device_id.try_into().expect("expected ethernet ID")
+            )
+            .into()
         );
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
@@ -4064,7 +4126,10 @@ mod tests {
         let time = ctx.now();
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
-            NdpTimerId::new_router_solicitation(device_id.id().into()).into()
+            NdpTimerId::new_router_solicitation(
+                device_id.try_into().expect("expected ethernet ID")
+            )
+            .into()
         );
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
@@ -4111,7 +4176,9 @@ mod tests {
         let device =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
-        let timer_id = NdpTimerId::new_router_solicitation(device.id().into()).into();
+        let timer_id =
+            NdpTimerId::new_router_solicitation(device.try_into().expect("expected ethernet ID"))
+                .into();
 
         // Send the first router solicitation.
         assert_empty(ctx.dispatcher.frames_sent());
@@ -4165,7 +4232,9 @@ mod tests {
         let device =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
-        let timer_id = NdpTimerId::new_router_solicitation(device.id().into()).into();
+        let timer_id =
+            NdpTimerId::new_router_solicitation(device.try_into().expect("expected ethernet ID"))
+                .into();
 
         // Send the first router solicitation.
         assert_empty(ctx.dispatcher.frames_sent());
@@ -4242,10 +4311,13 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .find_addr(&dummy_config.local_ip.try_into().unwrap())
-                .unwrap()
-                .state,
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .find_addr(&dummy_config.local_ip.try_into().unwrap())
+            .unwrap()
+            .state,
             AddressState::Assigned
         );
         assert_empty(ctx.dispatcher.frames_sent());
@@ -4265,17 +4337,23 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .find_addr(&dummy_config.local_ip.try_into().unwrap())
-                .unwrap()
-                .state,
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .find_addr(&dummy_config.local_ip.try_into().unwrap())
+            .unwrap()
+            .state,
             AddressState::Assigned
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .find_addr(&dummy_config.remote_ip.try_into().unwrap())
-                .unwrap()
-                .state,
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .find_addr(&dummy_config.remote_ip.try_into().unwrap())
+            .unwrap()
+            .state,
             AddressState::Tentative {
                 dad_transmits_remaining: NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS - 1)
             }
@@ -4286,8 +4364,10 @@ mod tests {
         // Disable DAD during DAD.
         ipv6_config.set_dad_transmits(None);
         crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config.clone());
-        let expected_timer_id =
-            dad_timer_id(device.id().into(), dummy_config.remote_ip.try_into().unwrap());
+        let expected_timer_id = dad_timer_id(
+            device.try_into().expect("expected ethernet ID"),
+            dummy_config.remote_ip.try_into().unwrap(),
+        );
         // Allow already started DAD to complete (2 more more NS, 3 more timers).
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
@@ -4296,10 +4376,13 @@ mod tests {
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .find_addr(&dummy_config.remote_ip.try_into().unwrap())
-                .unwrap()
-                .state,
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .find_addr(&dummy_config.remote_ip.try_into().unwrap())
+            .unwrap()
+            .state,
             AddressState::Assigned
         );
 
@@ -4308,24 +4391,33 @@ mod tests {
         let new_ip = Ipv6::get_other_ip_address(3);
         add_ip_addr_subnet(&mut ctx, device, AddrSubnet::new(new_ip.get(), 128).unwrap()).unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .find_addr(&dummy_config.local_ip.try_into().unwrap())
-                .unwrap()
-                .state,
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .find_addr(&dummy_config.local_ip.try_into().unwrap())
+            .unwrap()
+            .state,
             AddressState::Assigned
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .find_addr(&dummy_config.remote_ip.try_into().unwrap())
-                .unwrap()
-                .state,
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .find_addr(&dummy_config.remote_ip.try_into().unwrap())
+            .unwrap()
+            .state,
             AddressState::Assigned
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .find_addr(&new_ip.try_into().unwrap())
-                .unwrap()
-                .state,
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .find_addr(&new_ip.try_into().unwrap())
+            .unwrap()
+            .state,
             AddressState::Assigned
         );
     }
@@ -4360,7 +4452,7 @@ mod tests {
             let neighbor_state =
                 StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
                     ctx,
-                    device.id().into(),
+                    device.try_into().expect("expected ethernet ID"),
                 )
                 .neighbors
                 .get_neighbor_state(&src_ip.try_into().unwrap())
@@ -4383,7 +4475,7 @@ mod tests {
         assert_eq!(
             StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
                 &mut ctx,
-                device.id().into()
+                device.try_into().expect("expected ethernet ID")
             )
             .neighbors
             .get_neighbor_state(&neighbor_ip.get()),
@@ -4417,7 +4509,7 @@ mod tests {
         assert_eq!(
             StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
                 &mut ctx,
-                device.id().into()
+                device.try_into().expect("expected ethernet ID")
             )
             .neighbors
             .get_neighbor_state(&neighbor_ip),
@@ -4451,7 +4543,7 @@ mod tests {
         assert_eq!(
             StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
                 &mut ctx,
-                device.id().into()
+                device.try_into().expect("expected ethernet ID")
             )
             .neighbors
             .get_neighbor_state(&neighbor_ip),
@@ -4466,7 +4558,7 @@ mod tests {
         // Create incomplete neighbor entry.
         let neighbors = &mut StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device.id().into(),
+            device.try_into().expect("expected ethernet ID"),
         )
         .neighbors;
         neighbors.add_incomplete_neighbor_state(neighbor_ip.get());
@@ -4740,8 +4832,11 @@ mod tests {
         );
 
         assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID"),
+            )
+            .iter_global_ipv6_addrs(),
         );
 
         // No timers.
@@ -4795,14 +4890,17 @@ mod tests {
         );
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device.id().into(),
+            device.try_into().expect("expected ethernet ID"),
         );
         // Prefix should be in our list now.
         assert!(ndp_state.has_prefix(&subnet));
         // No new address should be formed.
         assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID"),
+            )
+            .iter_global_ipv6_addrs(),
         );
 
         // Receive a new RA with new prefix (autonomous).
@@ -4833,21 +4931,27 @@ mod tests {
         );
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device.id().into(),
+            device.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_prefix(&subnet));
 
         // Should have gotten a new IP.
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Tentative { dad_transmits_remaining: None });
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
@@ -4861,7 +4965,7 @@ mod tests {
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
                     && (*x.1
                         == NdpTimerId::new_deprecate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into()))
@@ -4875,7 +4979,7 @@ mod tests {
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
                     && (*x.1
                         == NdpTimerId::new_invalidate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into()))
@@ -4886,13 +4990,16 @@ mod tests {
         // Complete DAD
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs(1)),
-            vec!(dad_timer_id(device.id().into(), expected_addr))
+            vec!(dad_timer_id(device.try_into().expect("expected ethernet ID"), expected_addr))
         );
 
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
@@ -4922,21 +5029,27 @@ mod tests {
         );
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device.id().into(),
+            device.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_prefix(&subnet));
 
         // Should not have changed.
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
@@ -4950,7 +5063,7 @@ mod tests {
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
                     && (*x.1
                         == NdpTimerId::new_deprecate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into()))
@@ -4964,7 +5077,7 @@ mod tests {
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
                     && (*x.1
                         == NdpTimerId::new_invalidate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into()))
@@ -4979,12 +5092,19 @@ mod tests {
         //
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs(preferred_lifetime.into())),
-            vec!(NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr).into())
+            vec!(NdpTimerId::new_deprecate_slaac_address(
+                device.try_into().expect("expected ethernet ID"),
+                expected_addr
+            )
+            .into())
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.state, AddressState::Deprecated);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
@@ -4995,13 +5115,24 @@ mod tests {
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs((valid_lifetime - preferred_lifetime).into())),
             vec!(
-                NdpTimerId::new_prefix_invalidation(device.id().into(), subnet).into(),
-                NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr).into()
+                NdpTimerId::new_prefix_invalidation(
+                    device.try_into().expect("expected ethernet ID"),
+                    subnet
+                )
+                .into(),
+                NdpTimerId::new_invalidate_slaac_address(
+                    device.try_into().expect("expected ethernet ID"),
+                    expected_addr
+                )
+                .into()
             )
         );
         assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID"),
+            )
+            .iter_global_ipv6_addrs(),
         );
 
         // No more timers.
@@ -5058,39 +5189,49 @@ mod tests {
         );
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device.id().into(),
+            device.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_prefix(&subnet));
 
         // Should NOT have gotten a new IP.
         assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID"),
+            )
+            .iter_global_ipv6_addrs(),
         );
 
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
         assert_empty(ctx.dispatcher.timer_events().filter(|x| {
-            *x.1 == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
-                .into()
+            *x.1 == NdpTimerId::new_deprecate_slaac_address(
+                device.try_into().expect("expected ethernet ID"),
+                expected_addr,
+            )
+            .into()
         }));
         assert_empty(ctx.dispatcher.timer_events().filter(|x| {
             *x.0 == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap()
                 && *x.1
-                    == NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr)
-                        .into()
+                    == NdpTimerId::new_invalidate_slaac_address(
+                        device.try_into().expect("expected ethernet ID"),
+                        expected_addr,
+                    )
+                    .into()
         }));
-        assert_empty(
-            ctx.dispatcher
-                .timer_events()
-                .filter(|x| *x.1 == dad_timer_id(device.id().into(), expected_addr)),
-        );
+        assert_empty(ctx.dispatcher.timer_events().filter(|x| {
+            *x.1 == dad_timer_id(device.try_into().expect("expected ethernet ID"), expected_addr)
+        }));
 
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), []);
 
         assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID"),
+            )
+            .iter_global_ipv6_addrs(),
         );
     }
 
@@ -5146,21 +5287,27 @@ mod tests {
         );
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device.id().into(),
+            device.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_prefix(&subnet));
 
         // Should have gotten a new IP.
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Tentative { dad_transmits_remaining: None });
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
@@ -5174,7 +5321,7 @@ mod tests {
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
                     && (*x.1
                         == NdpTimerId::new_deprecate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into()))
@@ -5188,7 +5335,7 @@ mod tests {
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
                     && (*x.1
                         == NdpTimerId::new_invalidate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into()))
@@ -5198,20 +5345,27 @@ mod tests {
         assert_eq!(
             ctx.dispatcher
                 .timer_events()
-                .filter(|x| (*x.1 == dad_timer_id(device.id().into(), expected_addr)))
+                .filter(|x| (*x.1
+                    == dad_timer_id(
+                        device.try_into().expect("expected ethernet ID"),
+                        expected_addr
+                    )))
                 .count(),
             1
         );
 
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs(1)),
-            vec!(dad_timer_id(device.id().into(), expected_addr))
+            vec!(dad_timer_id(device.try_into().expect("expected ethernet ID"), expected_addr))
         );
 
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
@@ -5242,21 +5396,27 @@ mod tests {
         );
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device.id().into(),
+            device.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_prefix(&subnet));
 
         // Should not have changed.
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Deprecated);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
@@ -5264,8 +5424,11 @@ mod tests {
         // Timers should have been reset.
         let now = ctx.now();
         assert_empty(ctx.dispatcher.timer_events().filter(|x| {
-            *x.1 == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
-                .into()
+            *x.1 == NdpTimerId::new_deprecate_slaac_address(
+                device.try_into().expect("expected ethernet ID"),
+                expected_addr,
+            )
+            .into()
         }));
         assert_eq!(
             ctx.dispatcher
@@ -5274,7 +5437,7 @@ mod tests {
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
                     && *x.1
                         == NdpTimerId::new_invalidate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into())
@@ -5308,21 +5471,27 @@ mod tests {
         );
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device.id().into(),
+            device.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_prefix(&subnet));
 
         // Should not have changed.
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Deprecated);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
@@ -5330,8 +5499,11 @@ mod tests {
         // Timers should have been reset.
         let now = ctx.now();
         assert_empty(ctx.dispatcher.timer_events().filter(|x| {
-            *x.1 == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
-                .into()
+            *x.1 == NdpTimerId::new_deprecate_slaac_address(
+                device.try_into().expect("expected ethernet ID"),
+                expected_addr,
+            )
+            .into()
         }));
         assert_eq!(
             ctx.dispatcher
@@ -5340,7 +5512,7 @@ mod tests {
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
                     && *x.1
                         == NdpTimerId::new_invalidate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into())
@@ -5374,21 +5546,27 @@ mod tests {
         );
         let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device.id().into(),
+            device.try_into().expect("expected ethernet ID"),
         );
         assert!(ndp_state.has_prefix(&subnet));
 
         // Should not have changed.
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
@@ -5402,7 +5580,7 @@ mod tests {
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
                     && (*x.1
                         == NdpTimerId::new_deprecate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into()))
@@ -5416,25 +5594,26 @@ mod tests {
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
                     && (*x.1
                         == NdpTimerId::new_invalidate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into()))
                 .count(),
             1
         );
-        assert_empty(
-            ctx.dispatcher
-                .timer_events()
-                .filter(|x| *x.1 == dad_timer_id(device.id().into(), expected_addr)),
-        );
+        assert_empty(ctx.dispatcher.timer_events().filter(|x| {
+            *x.1 == dad_timer_id(device.try_into().expect("expected ethernet ID"), expected_addr)
+        }));
 
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), vec!());
 
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.addr_sub().subnet(), expected_subnet);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
@@ -5446,13 +5625,20 @@ mod tests {
         //
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs(preferred_lifetime.into())),
-            vec!(NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr).into())
+            vec!(NdpTimerId::new_deprecate_slaac_address(
+                device.try_into().expect("expected ethernet ID"),
+                expected_addr
+            )
+            .into())
         );
 
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.state, AddressState::Deprecated);
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
@@ -5464,13 +5650,24 @@ mod tests {
         assert_eq!(
             run_for(&mut ctx, Duration::from_secs((valid_lifetime - preferred_lifetime).into())),
             vec!(
-                NdpTimerId::new_prefix_invalidation(device.id().into(), subnet).into(),
-                NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr).into()
+                NdpTimerId::new_prefix_invalidation(
+                    device.try_into().expect("expected ethernet ID"),
+                    subnet
+                )
+                .into(),
+                NdpTimerId::new_invalidate_slaac_address(
+                    device.try_into().expect("expected ethernet ID"),
+                    expected_addr
+                )
+                .into()
             )
         );
         assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID"),
+            )
+            .iter_global_ipv6_addrs(),
         );
 
         // No more timers.
@@ -5499,15 +5696,21 @@ mod tests {
         // Manually give the device the expected address/subnet
         add_ip_addr_subnet(&mut ctx, device, expected_addr_sub.to_witness()).unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
         assert_empty(ctx.dispatcher.timer_events());
@@ -5538,15 +5741,21 @@ mod tests {
 
         // Address state and configuration type should not have changed.
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
@@ -5579,15 +5788,21 @@ mod tests {
         // prefix.
         add_ip_addr_subnet(&mut ctx, device, manual_addr_sub.to_witness()).unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
@@ -5617,15 +5832,21 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         // Address state and configuration type should not have changed.
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state, AddressState::Assigned);
@@ -5659,15 +5880,21 @@ mod tests {
         // Manually give the device the expected address with the same prefix.
         add_ip_addr_subnet(&mut ctx, device, manual_addr_sub.to_witness()).unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
         assert_empty(ctx.dispatcher.timer_events());
@@ -5696,23 +5923,32 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             2
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .nth(0)
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .nth(0)
+        .unwrap();
         // Address state and configuration type should not have changed.
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state, AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         // Address state and configuration type should not have changed.
         assert_eq!(*entry.addr_sub(), slaac_addr_sub);
         assert_eq!(entry.state, AddressState::Assigned);
@@ -5735,8 +5971,11 @@ mod tests {
         let prefix_length = 64;
 
         assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID"),
+            )
+            .iter_global_ipv6_addrs(),
         );
 
         // Receive a new RA with new prefix (autonomous), but preferred lifetime
@@ -5764,8 +6003,11 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID"),
+            )
+            .iter_global_ipv6_addrs(),
         );
 
         // Address invalidation timers were added.
@@ -5793,8 +6035,11 @@ mod tests {
 
         // Have no addresses yet.
         assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID"),
+            )
+            .iter_global_ipv6_addrs(),
         );
 
         // Enable DAD for future IPs.
@@ -5808,7 +6053,7 @@ mod tests {
         // than the preferred lifetime of the prefix.
         StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
             &mut ctx,
-            device.id().into(),
+            device.try_into().expect("expected ethernet ID"),
         )
         .set_retrans_timer(Duration::from_secs(10));
 
@@ -5841,15 +6086,21 @@ mod tests {
 
         // Should have gotten a new IP.
         assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .count(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID")
+            )
+            .iter_global_ipv6_addrs()
+            .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
+        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+            &ctx,
+            device.try_into().expect("expected ethernet ID"),
+        )
+        .iter_global_ipv6_addrs()
+        .last()
+        .unwrap();
         assert_eq!(*entry.addr_sub(), expected_addr_sub);
         assert_eq!(entry.state, AddressState::Tentative { dad_transmits_remaining: None });
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
@@ -5863,7 +6114,7 @@ mod tests {
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
                     && (*x.1
                         == NdpTimerId::new_deprecate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into()))
@@ -5877,7 +6128,7 @@ mod tests {
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
                     && (*x.1
                         == NdpTimerId::new_invalidate_slaac_address(
-                            device.id().into(),
+                            device.try_into().expect("expected ethernet ID"),
                             expected_addr
                         )
                         .into()))
@@ -5888,15 +6139,22 @@ mod tests {
         // Trigger the deprecation timer.
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
-            NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr).into()
+            NdpTimerId::new_deprecate_slaac_address(
+                device.try_into().expect("expected ethernet ID"),
+                expected_addr
+            )
+            .into()
         );
 
         // At this point, the address (that was tentative) should just be
         // invalidated (removed) since we should not have any existing
         // connections using the tentative address.
         assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID"),
+            )
+            .iter_global_ipv6_addrs(),
         );
 
         // No more timers.
@@ -5938,13 +6196,12 @@ mod tests {
 
     fn get_slaac_address_entry(
         ctx: &Ctx<DummyEventDispatcher>,
-        device: DeviceId,
+        device: EthernetDeviceId,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
     ) -> Option<&Ipv6AddressEntry<DummyInstant>> {
-        let mut matching_addrs =
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(ctx, device.id().into())
-                .iter_global_ipv6_addrs()
-                .filter(|entry| *entry.addr_sub() == addr_sub);
+        let mut matching_addrs = NdpContext::<EthernetLinkDevice>::get_ip_device_state(ctx, device)
+            .iter_global_ipv6_addrs()
+            .filter(|entry| *entry.addr_sub() == addr_sub);
         let entry = matching_addrs.next();
         assert_eq!(matching_addrs.next(), None);
         entry
@@ -5952,7 +6209,7 @@ mod tests {
 
     fn assert_slaac_lifetimes_enforced(
         ctx: &Ctx<DummyEventDispatcher>,
-        device: DeviceId,
+        device: EthernetDeviceId,
         entry: &Ipv6AddressEntry<DummyInstant>,
         valid_until: DummyInstant,
         preferred_until: DummyInstant,
@@ -5965,11 +6222,8 @@ mod tests {
                 .timer_events()
                 .filter_map(|(time, timer_id)| {
                     if *timer_id
-                        == NdpTimerId::new_deprecate_slaac_address(
-                            device.id().into(),
-                            entry.addr_sub().addr(),
-                        )
-                        .into()
+                        == NdpTimerId::new_deprecate_slaac_address(device, entry.addr_sub().addr())
+                            .into()
                     {
                         Some(*time)
                     } else {
@@ -5984,11 +6238,8 @@ mod tests {
                 .timer_events()
                 .filter_map(|(time, timer_id)| {
                     if *timer_id
-                        == NdpTimerId::new_invalidate_slaac_address(
-                            device.id().into(),
-                            entry.addr_sub().addr(),
-                        )
-                        .into()
+                        == NdpTimerId::new_invalidate_slaac_address(device, entry.addr_sub().addr())
+                            .into()
                     {
                         Some(*time)
                     } else {
@@ -6026,14 +6277,25 @@ mod tests {
                 preferred_lifetime,
                 valid_lifetime,
             );
-            let entry = get_slaac_address_entry(ctx, device, addr_sub).unwrap();
+            let entry = get_slaac_address_entry(
+                ctx,
+                device.try_into().expect("expected ethernet ID"),
+                addr_sub,
+            )
+            .unwrap();
             let now = ctx.now();
             let valid_until =
                 now.checked_add(Duration::from_secs(expected_valid_lifetime.into())).unwrap();
             let preferred_until =
                 now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap();
 
-            assert_slaac_lifetimes_enforced(ctx, device, entry, valid_until, preferred_until);
+            assert_slaac_lifetimes_enforced(
+                ctx,
+                device.try_into().expect("expected ethernet ID"),
+                entry,
+                valid_until,
+                preferred_until,
+            );
         }
 
         let config = Ipv6::DUMMY_CONFIG;
@@ -6054,8 +6316,11 @@ mod tests {
 
         // Have no addresses yet.
         assert_empty(
-            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device.id().into())
-                .iter_global_ipv6_addrs(),
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(
+                &ctx,
+                device.try_into().expect("expected ethernet ID"),
+            )
+            .iter_global_ipv6_addrs(),
         );
 
         // Receive a new RA with new prefix (autonomous).

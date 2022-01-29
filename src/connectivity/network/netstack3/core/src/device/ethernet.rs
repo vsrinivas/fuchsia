@@ -1541,7 +1541,7 @@ mod tests {
     use crate::context::testutil::DummyInstant;
     use crate::device::{
         arp::ArpHandler, is_routing_enabled, set_routing_enabled, testutil::DeviceTestIpExt,
-        AssignedAddress as _, DeviceId, EthernetDeviceId, IpLinkDeviceState,
+        AssignedAddress as _, DeviceId, DeviceIdInner, EthernetDeviceId, IpLinkDeviceState,
     };
     use crate::ip::{
         dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId, IpDeviceIdContext,
@@ -1860,7 +1860,8 @@ mod tests {
         // Test with netstack no forwarding
 
         let mut builder = DummyEventDispatcherBuilder::from_config(config.clone());
-        add_arp_or_ndp_table_entry(&mut builder, device.id(), src_ip.get(), src_mac);
+        let device_builder_id = 0;
+        add_arp_or_ndp_table_entry(&mut builder, device_builder_id, src_ip.get(), src_mac);
         let mut ctx = builder.build();
 
         // Should not be a router (default).
@@ -1896,7 +1897,7 @@ mod tests {
         ipv6_config.set_dad_transmits(None);
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut builder = DummyEventDispatcherBuilder::from_config(config.clone());
-        add_arp_or_ndp_table_entry(&mut builder, device.id(), src_ip.get(), src_mac);
+        add_arp_or_ndp_table_entry(&mut builder, device_builder_id, src_ip.get(), src_mac);
         let mut ctx = builder.build_with(state_builder, DummyEventDispatcher::default());
 
         // Should not be a router (default).
@@ -2308,9 +2309,11 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        assert_eq!(device.id, 0);
         let device = EthernetDeviceId(0);
+        assert_eq!(
+            ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into()),
+            DeviceIdInner::Ethernet(device).into()
+        );
 
         // `initialize_device` adds the MAC-derived link-local IPv6 address.
         initialize_device(&mut ctx, device);
@@ -2340,9 +2343,11 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        assert_eq!(device.id, 0);
         let device = EthernetDeviceId(0);
+        assert_eq!(
+            ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into()),
+            DeviceIdInner::Ethernet(device).into()
+        );
 
         initialize_device(&mut ctx, device);
         // Verify that there is a single assigned address.
