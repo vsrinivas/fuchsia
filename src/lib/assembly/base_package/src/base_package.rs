@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Result};
-use assembly_util::create_meta_package_file;
+use assembly_util::PackageBuilder;
 use fuchsia_hash::Hash;
-use fuchsia_pkg::{CreationManifest, PackageManifest};
-use serde_json::ser;
+use fuchsia_pkg::PackageManifest;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
@@ -58,6 +57,9 @@ impl BasePackageBuilder {
         name: impl AsRef<str>,
         out: impl AsRef<Path>,
     ) -> Result<BasePackageBuildResults> {
+        // Write all generated files in a subdir with the name of the package.
+        let gendir = gendir.as_ref().join(name.as_ref());
+
         let Self { contents, base_packages, cache_packages } = self;
 
         // Capture the generated files
@@ -77,26 +79,19 @@ impl BasePackageBuilder {
             external_contents.insert(destination.clone(), source.clone());
         }
 
-        let mut far_contents = BTreeMap::new();
+        // All base packages are named 'system-image' internally, for
+        // consistency on the platform.
+        let mut builder = PackageBuilder::new("system_image");
+        // However, they can have different published names.  And the name here
+        // is the name to publish it under (and to include in the generated
+        // package manifest).
+        builder.published_name(name);
 
-        far_contents.insert(
-            "meta/package".to_string(),
-            create_meta_package_file(&gendir, "system_image", "0")?,
-        );
-
-        // Build the base packages.
-        let creation_manifest = CreationManifest::from_external_and_far_contents(
-            external_contents.clone(),
-            far_contents,
-        )?;
-
-        let package_manifest = fuchsia_pkg::build(&creation_manifest, out, name.as_ref())?;
-
-        // Write the package manifest to a file.
-        let package_manifest_path = outdir.as_ref().join("base_package_manifest.json");
-        let package_manifest_file = File::create(&package_manifest_path)
-            .context("Failed to create base_package_manifest.json")?;
-        ser::to_writer(package_manifest_file, &package_manifest)?;
+        for (destination, source) in &external_contents {
+            builder.add_file_as_blob(destination, source)?;
+        }
+        builder.manifest_path(outdir.as_ref().join("base_package_manifest.json"));
+        builder.build(gendir, out)?;
 
         Ok(BasePackageBuildResults {
             contents: external_contents,

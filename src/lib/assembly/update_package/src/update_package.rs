@@ -6,12 +6,8 @@ use anyhow::{anyhow, Context, Result};
 use assembly_images_manifest::{Image, ImagesManifest};
 use assembly_partitions_config::PartitionsConfig;
 use assembly_update_packages_manifest::UpdatePackagesManifest;
-use assembly_util::create_meta_package_file;
+use assembly_util::{PackageBuilder, PathToStringExt};
 use epoch::EpochFile;
-use fuchsia_pkg::CreationManifest;
-use serde_json::ser;
-use std::collections::BTreeMap;
-use std::fs::File;
 use std::path::{Path, PathBuf};
 
 /// A builder that constructs update packages.
@@ -154,22 +150,8 @@ impl UpdatePackageBuilder {
         self.packages.append(packages);
     }
 
-    /// Write data to a file and add it to the map.
-    fn add_data_to_map(
-        &self,
-        data: impl AsRef<str>,
-        destination: impl AsRef<str>,
-        map: &mut BTreeMap<String, String>,
-    ) -> Result<()> {
-        let destination = destination.as_ref();
-        let path = self.gendir.join(destination);
-        std::fs::write(&path, data.as_ref())
-            .context(format!("Failed to create: {}", destination))?;
-        self.add_file_to_map(path, destination, map)
-    }
-
     /// Add the ZBI and VBMeta from the |slot| to the |map|.
-    fn add_images_to_map(&self, slot: &Slot, map: &mut BTreeMap<String, String>) -> Result<()> {
+    fn add_images_to_builder(slot: &Slot, builder: &mut PackageBuilder) -> Result<()> {
         let mappings: Vec<ImageMapping> = slot
             .manifest()
             .images
@@ -177,24 +159,8 @@ impl UpdatePackageBuilder {
             .filter_map(|i| ImageMapping::try_from(i, slot).ok())
             .collect();
         for ImageMapping { source, destination } in mappings {
-            self.add_file_to_map(source, destination, map)?;
+            builder.add_file_as_blob(destination, source.path_to_string()?)?;
         }
-        Ok(())
-    }
-
-    /// Add a file to be updated to |map| by parsing the path to a string
-    /// and adding it to the map.
-    fn add_file_to_map(
-        &self,
-        source: impl AsRef<Path>,
-        destination: impl AsRef<str>,
-        map: &mut BTreeMap<String, String>,
-    ) -> Result<()> {
-        let source = source
-            .as_ref()
-            .to_str()
-            .context(format!("File path is not valid UTF-8: {}", source.as_ref().display()))?;
-        map.insert(destination.as_ref().to_string(), source.to_string());
         Ok(())
     }
 
@@ -202,17 +168,24 @@ impl UpdatePackageBuilder {
     pub fn build(self) -> Result<()> {
         use serde_json::to_string;
 
-        // Maps the blob destination -> source.
-        let mut contents = BTreeMap::<String, String>::new();
-        self.add_data_to_map(to_string(&self.packages)?, "packages.json", &mut contents)?;
-        self.add_data_to_map(to_string(&self.epoch)?, "epoch.json", &mut contents)?;
-        self.add_data_to_map(&self.board_name, "board", &mut contents)?;
-        self.add_file_to_map(&self.version_file, "version", &mut contents)?;
+        // All update packages need to be named 'update' to be accepted by the
+        // `system-updater`.
+        let mut builder = PackageBuilder::new("update");
+        // However, they can have different published names.  And the name here
+        // is the name to publish it under (and to include in the generated
+        // package manifest).
+        builder.published_name(self.name);
+
+        builder.add_contents_as_blob("packages.json", to_string(&self.packages)?, &self.gendir)?;
+        builder.add_contents_as_blob("epoch.json", to_string(&self.epoch)?, &self.gendir)?;
+        builder.add_contents_as_blob("board", &self.board_name, &self.gendir)?;
+
+        builder.add_file_as_blob("version", self.version_file.path_to_string()?)?;
 
         // Add the images.
         let slots = vec![&self.slot_primary, &self.slot_recovery];
         for slot in slots.iter().filter_map(|s| s.as_ref()) {
-            self.add_images_to_map(slot, &mut contents)?;
+            Self::add_images_to_builder(slot, &mut builder)?;
         }
 
         // Add the bootloaders.
@@ -221,30 +194,14 @@ impl UpdatePackageBuilder {
                 "" => "firmware".to_string(),
                 t => format!("firmware_{}", t),
             };
-            self.add_file_to_map(&bootloader.image, destination, &mut contents)?;
+            builder.add_file_as_blob(destination, bootloader.image.path_to_string()?)?;
         }
 
-        let mut far_contents = BTreeMap::new();
-
-        far_contents.insert(
-            "meta/package".to_string(),
-            create_meta_package_file(&self.gendir, "update", "0")?,
-        );
-
-        // Build the update package.
-        let creation_manifest =
-            CreationManifest::from_external_and_far_contents(contents, far_contents)
-                .context("Failed to create the creation manifest")?;
         let update_package_path = self.outdir.join("update.far");
-        let package_manifest =
-            fuchsia_pkg::build(&creation_manifest, update_package_path, self.name)
-                .context("Failed to build the update package")?;
-
-        // Write the package manifest to a file.
-        let package_manifest_path = self.outdir.join("update_package_manifest.json");
-        let package_manifest_file = File::create(&package_manifest_path)
-            .context("Failed to create update_package_manifest.json")?;
-        ser::to_writer(package_manifest_file, &package_manifest)?;
+        builder.manifest_path(self.outdir.join("update_package_manifest.json"));
+        builder
+            .build(&self.gendir, &update_package_path)
+            .context("Failed to build the update package")?;
 
         Ok(())
     }
@@ -261,7 +218,7 @@ mod tests {
     use fuchsia_archive::Reader;
     use fuchsia_hash::{Hash, HASH_SIZE};
     use fuchsia_pkg::{PackageManifest, PackagePath};
-    use fuchsia_url::pkg_url::{PackageName, PkgUrl};
+    use fuchsia_url::pkg_url::PkgUrl;
     use std::fs::File;
     use std::io::{BufReader, Write};
     use std::str::FromStr;
@@ -296,7 +253,7 @@ mod tests {
         builder.add_slot_images(Slot::Primary(ImagesManifest {
             images: vec![Image::ZBI { path: fake_zbi.path().to_path_buf(), signed: true }],
         }));
-        assert!(builder.build().is_ok());
+        builder.build().unwrap();
 
         let file = File::open(outdir.path().join("packages.json")).unwrap();
         let reader = BufReader::new(file);
@@ -350,7 +307,7 @@ mod tests {
         let manifest_path = outdir.path().join("update_package_manifest.json");
         let manifest_file = File::open(manifest_path).unwrap();
         let manifest: PackageManifest = serde_json::from_reader(manifest_file).unwrap();
-        assert_eq!(&"update_2".parse::<PackageName>().unwrap(), manifest.name());
+        assert_eq!("update_2", manifest.name().as_ref());
     }
 
     #[test]

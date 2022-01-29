@@ -194,6 +194,11 @@ template("assemble_system") {
     image_name = invoker.image_name
   }
 
+  base_package_name = "system_image"
+  if (defined(invoker.base_package_name)) {
+    base_package_name = invoker.base_package_name
+  }
+
   # Internal labels used for Image Assembly.
   labels = {
     base_packages_group = "${image_name}_base_packages"
@@ -245,9 +250,9 @@ template("assemble_system") {
     zbi_manifest = "${gendir}/zbi.json"
     blobfs_manifest = "${gendir}/blob.manifest"
     blobs_json = "${gendir}/blobs.json"
-    static_packages = "${gendir}/data/static_packages"
-    cache_packages = "${gendir}/data/cache_packages"
-    base_meta_package = "${gendir}/system_image/meta/package"
+    static_packages = "${gendir}/${base_package_name}/data/static_packages"
+    cache_packages = "${gendir}/${base_package_name}/data/cache_packages"
+    base_meta_package = "${gendir}/${base_package_name}/meta/package"
     images_manifest = "${outdir}/images.json"
     assembly_inputs = "${outdir}/assembly_inputs.json"
 
@@ -492,8 +497,8 @@ template("assemble_system") {
                              "zbi_name",
                              "zbi_signing_script",
                              "zbi_signing_args",
-                             "base_package_name",
                            ])
+    base_package_name = base_package_name
     generate_fvm = generate_fvm
     output_path = files.board_config
 

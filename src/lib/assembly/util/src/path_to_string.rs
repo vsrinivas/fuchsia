@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{Context, Result};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Extension trait for getting a String from a Path.
 pub trait PathToStringExt {
@@ -12,6 +12,14 @@ pub trait PathToStringExt {
 }
 
 impl PathToStringExt for Path {
+    fn path_to_string(&self) -> Result<String> {
+        self.to_str()
+            .context(format!("Path is not valid UTF-8: {}", self.display()))
+            .map(str::to_string)
+    }
+}
+
+impl PathToStringExt for PathBuf {
     fn path_to_string(&self) -> Result<String> {
         self.to_str()
             .context(format!("Path is not valid UTF-8: {}", self.display()))

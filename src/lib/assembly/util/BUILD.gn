@@ -24,7 +24,6 @@ if (is_host) {
     sources = [
       "src/insert_unique.rs",
       "src/lib.rs",
-      "src/meta_package.rs",
       "src/package_builder.rs",
       "src/path_to_string.rs",
     ]

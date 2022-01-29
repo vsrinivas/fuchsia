@@ -20,7 +20,7 @@ template("update_package") {
     depfile_path = "$outdir.d"
     update_package = "$outdir/update.far"
     update_package_manifest = "$outdir/update_package_manifest.json"
-    update_meta_package = "$gendir/update/meta/package"
+    update_meta_package = "$gendir/meta/package"
     board = "$gendir/board"
     epoch = "$gendir/epoch.json"
     packages = "$gendir/packages.json"

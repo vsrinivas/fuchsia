@@ -17,7 +17,7 @@ import("//build/zbi/zbi.gni")
 #   output_path (required)
 #     [path] Board config output location.
 #
-#   base_package_name (optional; default: "system_image")
+#   base_package_name (required)
 #     [string] The name to give the base package. For prime builds this
 #     should be "system_image_prime", so that the package does not override the
 #     non-prime package during publishing.
@@ -65,11 +65,7 @@ template("generated_board_config") {
   assert(defined(invoker.blob_layout_format), "Need to define blob_layout_form")
   assert(defined(invoker.fvm_slice_size), "Need to define fvm_slice_size")
   assert(defined(invoker.zbi_name), "Need to define zbi_name")
-
-  base_package_name = "system_image"
-  if (defined(invoker.base_package_name)) {
-    base_package_name = invoker.base_package_name
-  }
+  assert(defined(invoker.base_package_name), "Need to define base_package_name")
 
   generate_fvm = true
   if (defined(invoker.generate_fvm)) {
@@ -171,7 +167,7 @@ template("generated_board_config") {
     }
 
     contents = {
-      base_package_name = base_package_name
+      base_package_name = invoker.base_package_name
       zbi = {
         name = invoker.zbi_name
         max_size = 0
