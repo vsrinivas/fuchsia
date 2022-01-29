@@ -74,17 +74,6 @@ impl Client {
         Ok(Client { proxy })
     }
 
-    /// Forward an open request directly to BlobFs.
-    pub fn forward_open(
-        &self,
-        blob: &Hash,
-        flags: u32,
-        mode: u32,
-        server_end: ServerEnd<NodeMarker>,
-    ) -> Result<(), fidl::Error> {
-        self.proxy.open(flags, mode, &blob.to_string(), server_end)
-    }
-
     /// Returns an client connected to blobfs from the given blobfs root dir.
     pub fn new(proxy: DirectoryProxy) -> Self {
         Client { proxy }
@@ -146,6 +135,17 @@ impl Client {
             .unwrap(),
         );
         (blobfs, TempDirFake { dir: blobfs_dir })
+    }
+
+    /// Forward an open request directly to BlobFs.
+    pub fn forward_open(
+        &self,
+        blob: &Hash,
+        flags: u32,
+        mode: u32,
+        server_end: ServerEnd<NodeMarker>,
+    ) -> Result<(), fidl::Error> {
+        self.proxy.open(flags, mode, &blob.to_string(), server_end)
     }
 
     /// Returns the list of known blobs in blobfs.
