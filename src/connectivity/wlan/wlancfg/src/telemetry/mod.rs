@@ -8,6 +8,7 @@ mod windowed_stats;
 use {
     crate::telemetry::windowed_stats::WindowedStats,
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
+    fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_device_service::{
         GetIfaceCounterStatsResponse, GetIfaceHistogramStatsResponse,
     },
@@ -402,6 +403,7 @@ fn inspect_record_connection_status(
                 ConnectionStateInfo::Connected { .. } => "connected".to_string(),
             });
             if let ConnectionStateInfo::Connected { latest_ap_state, .. } = info {
+                let fidl_channel = fidl_common::WlanChannel::from(latest_ap_state.channel);
                 inspect_insert!(inspector.root(), connected_network: {
                     rssi_dbm: latest_ap_state.rssi_dbm,
                     snr_db: latest_ap_state.snr_db,
@@ -411,9 +413,9 @@ fn inspect_record_connection_status(
                     ssid_hash: hasher.hash_ssid(&latest_ap_state.ssid),
                     protection: format!("{:?}", latest_ap_state.protection()),
                     channel: {
-                        primary: latest_ap_state.channel.primary,
-                        cbw: format!("{:?}", latest_ap_state.channel.cbw),
-                        secondary80: latest_ap_state.channel.secondary80,
+                        primary: fidl_channel.primary,
+                        cbw: format!("{:?}", fidl_channel.cbw),
+                        secondary80: fidl_channel.secondary80,
                     },
                     ht_cap?: latest_ap_state.raw_ht_cap().map(|cap| InspectBytes(cap.bytes)),
                     vht_cap?: latest_ap_state.raw_vht_cap().map(|cap| InspectBytes(cap.bytes)),
@@ -1017,6 +1019,7 @@ impl Telemetry {
     }
 
     pub fn log_disconnect_event_inspect(&self, info: &DisconnectInfo) {
+        let fidl_channel = fidl_common::WlanChannel::from(info.latest_ap_state.channel);
         inspect_log!(self.disconnect_events_node.lock(), {
             connected_duration: info.connected_duration.into_nanos(),
             disconnect_source: info.disconnect_source.inspect_string(),
@@ -1029,9 +1032,9 @@ impl Telemetry {
                 ssid_hash: self.hasher.hash_ssid(&info.latest_ap_state.ssid),
                 protection: format!("{:?}", info.latest_ap_state.protection()),
                 channel: {
-                    primary: info.latest_ap_state.channel.primary,
-                    cbw: format!("{:?}", info.latest_ap_state.channel.cbw),
-                    secondary80: info.latest_ap_state.channel.secondary80,
+                    primary: fidl_channel.primary,
+                    cbw: format!("{:?}", fidl_channel.cbw),
+                    secondary80: fidl_channel.secondary80,
                 },
                 ht_cap?: info.latest_ap_state.raw_ht_cap().map(|cap| InspectBytes(cap.bytes)),
                 vht_cap?: info.latest_ap_state.raw_vht_cap().map(|cap| InspectBytes(cap.bytes)),
@@ -2451,7 +2454,6 @@ mod tests {
         crate::util::testing::create_wlan_hasher,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_metrics::{MetricEvent, MetricEventLoggerRequest, MetricEventPayload},
-        fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_device_service::{
             DeviceServiceRequest, GetIfaceCounterStatsResponse, GetIfaceHistogramStatsResponse,
         },
@@ -2461,7 +2463,11 @@ mod tests {
         std::{cmp::min, pin::Pin},
         test_case::test_case,
         wlan_common::{
-            assert_variant, ie::IeType, random_bss_description, test_utils::fake_stas::IesOverrides,
+            assert_variant,
+            channel::{Cbw, Channel},
+            ie::IeType,
+            random_bss_description,
+            test_utils::fake_stas::IesOverrides,
         },
     };
 
@@ -4103,11 +4109,7 @@ mod tests {
         test_helper.advance_by(5.hours(), test_fut.as_mut());
 
         let primary_channel = 8;
-        let channel = fidl_common::WlanChannel {
-            primary: primary_channel,
-            cbw: fidl_common::ChannelBandwidth::Cbw20,
-            secondary80: 0,
-        };
+        let channel = Channel::new(primary_channel, Cbw::Cbw20);
         let latest_ap_state = random_bss_description!(Wpa2, channel: channel);
         let info = DisconnectInfo {
             connected_duration: 5.hours(),
@@ -4337,11 +4339,7 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
 
         let primary_channel = 8;
-        let channel = fidl_common::WlanChannel {
-            primary: primary_channel,
-            cbw: fidl_common::ChannelBandwidth::Cbw20,
-            secondary80: 0,
-        };
+        let channel = Channel::new(primary_channel, Cbw::Cbw20);
         let latest_ap_state = random_bss_description!(Wpa2,
             bssid: [0x00, 0xf6, 0x20, 0x03, 0x04, 0x05],
             channel: channel,
@@ -4634,16 +4632,16 @@ mod tests {
         "breakdown_by_security_type"
     )]
     #[test_case(
-        (false, random_bss_description!(Wpa2, channel: fidl_common::WlanChannel { primary: 6, cbw: fidl_common::ChannelBandwidth::Cbw20, secondary80: 0 })),
-        (false, random_bss_description!(Wpa2, channel: fidl_common::WlanChannel { primary: 157, cbw: fidl_common::ChannelBandwidth::Cbw40, secondary80: 0 })),
+        (false, random_bss_description!(Wpa2, channel: Channel::new(6, Cbw::Cbw20))),
+        (false, random_bss_description!(Wpa2, channel: Channel::new(157, Cbw::Cbw40))),
         metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID,
         6,
         157;
         "breakdown_by_primary_channel"
     )]
     #[test_case(
-        (false, random_bss_description!(Wpa2, channel: fidl_common::WlanChannel { primary: 6, cbw: fidl_common::ChannelBandwidth::Cbw20, secondary80: 0 })),
-        (false, random_bss_description!(Wpa2, channel: fidl_common::WlanChannel { primary: 157, cbw: fidl_common::ChannelBandwidth::Cbw40, secondary80: 0 })),
+        (false, random_bss_description!(Wpa2, channel: Channel::new(6, Cbw::Cbw20))),
+        (false, random_bss_description!(Wpa2, channel: Channel::new(157, Cbw::Cbw40))),
         metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID,
         metrics::SuccessfulConnectBreakdownByChannelBandMetricDimensionChannelBand::Band2Dot4Ghz as u32,
         metrics::SuccessfulConnectBreakdownByChannelBandMetricDimensionChannelBand::Band5Ghz as u32;
@@ -4957,11 +4955,7 @@ mod tests {
             0x00, 0x00, 0x00, 0x00, 0x40
         ];
         let bss_description = random_bss_description!(Wpa2,
-            channel: fidl_common::WlanChannel {
-                primary: 157,
-                cbw: fidl_common::ChannelBandwidth::Cbw40,
-                secondary80: 0,
-            },
+            channel: Channel::new(157, Cbw::Cbw40),
             ies_overrides: IesOverrides::new()
                 .remove(IeType::WMM_PARAM)
                 .set(IeType::WMM_INFO, wmm_info)
@@ -5128,11 +5122,7 @@ mod tests {
     fn test_log_device_connected_cobalt_metrics_on_channel_switched() {
         let (mut test_helper, mut test_fut) = setup_test();
         let bss_description = random_bss_description!(Wpa2,
-            channel: fidl_common::WlanChannel {
-                primary: 4,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
+            channel: Channel::new(4, Cbw::Cbw20),
         );
         test_helper.send_connected_event(bss_description);
         test_helper.drain_cobalt_events(&mut test_fut);

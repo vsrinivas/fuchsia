@@ -581,7 +581,7 @@ fn active_scan_args_series(
     wlan_softmac_info: &banjo_wlan_softmac::WlanSoftmacInfo,
     channel_list: Vec<u8>,
 ) -> Result<Vec<ActiveScanArgs>, Error> {
-    // TODO(fxbug.dev/...): The fuchsia.wlan.mlme/MLME API assumes channels numbers imply bands
+    // TODO(fxbug.dev/91038): The fuchsia.wlan.mlme/MLME API assumes channels numbers imply bands
     // and so partitioning channels must be done internally.
     let channel_lists: [ChannelList; 2] = channel_list.into_iter().fold(
         [

@@ -1456,7 +1456,6 @@ fn now() -> zx::Time {
 mod tests {
     use super::*;
     use anyhow::format_err;
-    use fidl_fuchsia_wlan_common as fidl_common;
     use fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector};
     use futures::channel::mpsc;
     use ieee80211::Ssid;
@@ -1465,6 +1464,7 @@ mod tests {
     use wlan_common::{
         assert_variant,
         bss::Protection as BssProtection,
+        channel::Cbw,
         fake_bss_description,
         hasher::WlanHasher,
         ie::{
@@ -2677,11 +2677,7 @@ mod tests {
         cmd.bss = Box::new(fake_bss_description!(Open,
             ssid: Ssid::try_from("bar").unwrap(),
             bssid: [8; 6],
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20
-            }
+            channel: Channel::new(1, Cbw::Cbw20),
         ));
         let state = link_up_state(cmd);
 

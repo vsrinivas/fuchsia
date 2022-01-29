@@ -4,9 +4,8 @@
 
 use {
     crate::config_management,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx, wlan_common,
     wlan_metrics_registry::{
         PolicyConnectionAttemptMetricDimensionReason, PolicyDisconnectionMetricDimensionReason,
     },
@@ -21,7 +20,8 @@ pub type SecurityType = config_management::network_config::SecurityType;
 pub type ConnectionState = fidl_policy::ConnectionState;
 pub type DisconnectStatus = fidl_policy::DisconnectStatus;
 pub type Compatibility = fidl_policy::Compatibility;
-pub type WlanChan = fidl_common::WlanChannel;
+pub type WlanChan = wlan_common::channel::Channel;
+pub type Cbw = wlan_common::channel::Cbw;
 pub use ieee80211::Bssid;
 pub use ieee80211::Ssid;
 pub type DisconnectReason = PolicyDisconnectionMetricDimensionReason;

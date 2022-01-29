@@ -788,7 +788,9 @@ mod tests {
     use ieee80211::MacAddr;
     use std::convert::TryFrom;
     use wlan_common::{
-        assert_variant, fake_bss_description, fake_fidl_bss_description,
+        assert_variant,
+        channel::Cbw,
+        fake_bss_description, fake_fidl_bss_description,
         ie::{fake_ht_cap_bytes, fake_vht_cap_bytes, rsn::akm, IeType},
         test_utils::fake_stas::IesOverrides,
     };
@@ -874,11 +876,7 @@ mod tests {
             bssid: [0u8; 6],
             rssi_dbm: -30,
             snr_db: 0,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(1, Cbw::Cbw20),
             ies_overrides: IesOverrides::new()
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
@@ -896,11 +894,7 @@ mod tests {
             bssid: [0u8; 6],
             rssi_dbm: -30,
             snr_db: 0,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(1, Cbw::Cbw20),
             wmm_param: Some(wmm_param),
             ies_overrides: IesOverrides::new()
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
@@ -916,11 +910,7 @@ mod tests {
             bssid: [0u8; 6],
             rssi_dbm: -30,
             snr_db: 0,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(1, Cbw::Cbw20),
             ies_overrides: IesOverrides::new()
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
@@ -935,11 +925,7 @@ mod tests {
             bssid: [0u8; 6],
             rssi_dbm: -30,
             snr_db: 0,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(1, Cbw::Cbw20),
             ies_overrides: IesOverrides::new()
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),

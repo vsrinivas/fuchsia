@@ -25,7 +25,7 @@ use {
     measure_tape_for_scan_result::Measurable as _,
     std::{collections::HashMap, convert::TryFrom, sync::Arc},
     stream::FuturesUnordered,
-    wlan_common::{self, channel::Channel},
+    wlan_common,
     wlan_metrics_registry::{
         ActiveScanRequestedForNetworkSelectionMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested,
         ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_METRIC_ID,
@@ -485,8 +485,9 @@ fn scan_result_to_policy_scan_result(
                                 // Get the frequency. On error, default to Some(0) rather than None
                                 // to protect against consumer code that expects this field to
                                 // always be set.
-                                let frequency =
-                                    Channel::from(input.channel).get_center_freq().unwrap_or(0);
+                                let frequency = types::WlanChan::from(input.channel)
+                                    .get_center_freq()
+                                    .unwrap_or(0);
                                 fidl_policy::Bss {
                                     bssid: Some(input.bssid.0),
                                     rssi: Some(input.rssi),
@@ -600,7 +601,7 @@ mod tests {
         },
         anyhow::Error,
         fidl::endpoints::{create_proxy, Proxy},
-        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync, fuchsia_zircon as zx,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel::oneshot, lock::Mutex, task::Poll},
         pin_utils::pin_mut,
         std::{convert::TryInto, sync::Arc},
@@ -761,11 +762,7 @@ mod tests {
                 ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                 rssi_dbm: 0,
                 snr_db: 1,
-                channel: fidl_common::WlanChannel {
-                    primary: 1,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
+                channel: types::WlanChan::new(1, types::Cbw::Cbw20),
             ),
         };
         let passive_result_2 = fidl_sme::ScanResult {
@@ -777,11 +774,7 @@ mod tests {
                 ssid: types::Ssid::try_from("unique ssid").unwrap(),
                 rssi_dbm: 7,
                 snr_db: 2,
-                channel: fidl_common::WlanChannel {
-                    primary: 8,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
+                channel: types::WlanChan::new(8, types::Cbw::Cbw20),
             ),
         };
         let passive_result_3 = fidl_sme::ScanResult {
@@ -793,11 +786,7 @@ mod tests {
                 ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                 rssi_dbm: 13,
                 snr_db: 3,
-                channel: fidl_common::WlanChannel {
-                    primary: 11,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
+                channel: types::WlanChan::new(11, types::Cbw::Cbw20),
             ),
         };
 
@@ -815,11 +804,7 @@ mod tests {
                         rssi: 0,
                         timestamp: zx::Time::from_nanos(passive_result_1.timestamp_nanos),
                         snr_db: 1,
-                        channel: fidl_common::WlanChannel {
-                            primary: 1,
-                            cbw: fidl_common::ChannelBandwidth::Cbw20,
-                            secondary80: 0,
-                        },
+                        channel: types::WlanChan::new(1, types::Cbw::Cbw20),
                         observed_in_passive_scan: true,
                         compatible: true,
                         bss_description: passive_result_1.bss_description.clone(),
@@ -829,11 +814,7 @@ mod tests {
                         rssi: 13,
                         timestamp: zx::Time::from_nanos(passive_result_3.timestamp_nanos),
                         snr_db: 3,
-                        channel: fidl_common::WlanChannel {
-                            primary: 11,
-                            cbw: fidl_common::ChannelBandwidth::Cbw20,
-                            secondary80: 0,
-                        },
+                        channel: types::WlanChan::new(11, types::Cbw::Cbw20),
                         observed_in_passive_scan: true,
                         compatible: false,
                         bss_description: passive_result_3.bss_description.clone(),
@@ -849,11 +830,7 @@ mod tests {
                     rssi: 7,
                     timestamp: zx::Time::from_nanos(passive_result_2.timestamp_nanos),
                     snr_db: 2,
-                    channel: fidl_common::WlanChannel {
-                        primary: 8,
-                        cbw: fidl_common::ChannelBandwidth::Cbw20,
-                        secondary80: 0,
-                    },
+                    channel: types::WlanChan::new(8, types::Cbw::Cbw20),
                     observed_in_passive_scan: true,
                     compatible: true,
                     bss_description: passive_result_2.bss_description.clone(),
@@ -912,11 +889,7 @@ mod tests {
                 ssid: types::Ssid::try_from("foo active ssid").unwrap(),
                 rssi_dbm: 0,
                 snr_db: 8,
-                channel: fidl_common::WlanChannel {
-                    primary: 1,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
+                channel: types::WlanChan::new(1, types::Cbw::Cbw20),
             ),
         };
         let active_result_2 = fidl_sme::ScanResult {
@@ -928,11 +901,7 @@ mod tests {
                 ssid: types::Ssid::try_from("misc ssid").unwrap(),
                 rssi_dbm: 7,
                 snr_db: 9,
-                channel: fidl_common::WlanChannel {
-                    primary: 8,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
+                channel: types::WlanChan::new(8, types::Cbw::Cbw20),
             ),
         };
         let active_input_aps = vec![active_result_1.clone(), active_result_2.clone()];
@@ -946,11 +915,7 @@ mod tests {
                         rssi: 0,
                         timestamp: zx::Time::from_nanos(passive_result_1.timestamp_nanos),
                         snr_db: 1,
-                        channel: fidl_common::WlanChannel {
-                            primary: 1,
-                            cbw: fidl_common::ChannelBandwidth::Cbw20,
-                            secondary80: 0,
-                        },
+                        channel: types::WlanChan::new(1, types::Cbw::Cbw20),
                         observed_in_passive_scan: true,
                         compatible: true,
                         bss_description: passive_result_1.bss_description.clone(),
@@ -960,11 +925,7 @@ mod tests {
                         rssi: 13,
                         timestamp: zx::Time::from_nanos(passive_result_3.timestamp_nanos),
                         snr_db: 3,
-                        channel: fidl_common::WlanChannel {
-                            primary: 11,
-                            cbw: fidl_common::ChannelBandwidth::Cbw20,
-                            secondary80: 0,
-                        },
+                        channel: types::WlanChan::new(11, types::Cbw::Cbw20),
                         observed_in_passive_scan: true,
                         compatible: false,
                         bss_description: passive_result_3.bss_description.clone(),
@@ -980,11 +941,7 @@ mod tests {
                     rssi: 0,
                     timestamp: zx::Time::from_nanos(active_result_1.timestamp_nanos),
                     snr_db: 8,
-                    channel: fidl_common::WlanChannel {
-                        primary: 1,
-                        cbw: fidl_common::ChannelBandwidth::Cbw20,
-                        secondary80: 0,
-                    },
+                    channel: types::WlanChan::new(1, types::Cbw::Cbw20),
                     observed_in_passive_scan: false,
                     compatible: true,
                     bss_description: active_result_1.bss_description.clone(),
@@ -999,11 +956,7 @@ mod tests {
                     rssi: 7,
                     timestamp: zx::Time::from_nanos(active_result_2.timestamp_nanos),
                     snr_db: 9,
-                    channel: fidl_common::WlanChannel {
-                        primary: 8,
-                        cbw: fidl_common::ChannelBandwidth::Cbw20,
-                        secondary80: 0,
-                    },
+                    channel: types::WlanChan::new(8, types::Cbw::Cbw20),
                     observed_in_passive_scan: false,
                     compatible: true,
                     bss_description: active_result_2.bss_description.clone(),
@@ -1018,11 +971,7 @@ mod tests {
                     rssi: 7,
                     timestamp: zx::Time::from_nanos(passive_result_2.timestamp_nanos),
                     snr_db: 2,
-                    channel: fidl_common::WlanChannel {
-                        primary: 8,
-                        cbw: fidl_common::ChannelBandwidth::Cbw20,
-                        secondary80: 0,
-                    },
+                    channel: types::WlanChan::new(8, types::Cbw::Cbw20),
                     observed_in_passive_scan: true,
                     compatible: true,
                     bss_description: passive_result_2.bss_description.clone(),
@@ -1798,11 +1747,7 @@ mod tests {
                 ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                 rssi_dbm: 0,
                 snr_db: 1,
-                channel: fidl_common::WlanChannel {
-                    primary: 1,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
+                channel: types::WlanChan::new(1, types::Cbw::Cbw20),
             ),
         };
 
@@ -1817,11 +1762,7 @@ mod tests {
                     ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                         rssi_dbm: 13,
                         snr_db: 3,
-                        channel: fidl_common::WlanChannel {
-                            primary: 14,
-                            cbw: fidl_common::ChannelBandwidth::Cbw20,
-                            secondary80: 0,
-                        },
+                        channel: types::WlanChan::new(14, types::Cbw::Cbw20),
                 ),
             },
         ];
@@ -1837,11 +1778,7 @@ mod tests {
             rssi: 0,
             timestamp: zx::Time::from_nanos(passive_result.timestamp_nanos),
             snr_db: 1,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
+            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
             observed_in_passive_scan: true,
             compatible: true,
             bss_description: passive_result.bss_description.clone(),
@@ -1870,11 +1807,7 @@ mod tests {
                 bssid: [1, 2, 3, 4, 5, 6],
                 rssi_dbm: 101,
                 snr_db: 101,
-                channel: fidl_common::WlanChannel {
-                    primary: 101,
-                    cbw: fidl_common::ChannelBandwidth::Cbw40,
-                    secondary80: 0,
-                },
+                channel: types::WlanChan::new(101, types::Cbw::Cbw40),
             ),
         };
         let active_input_aps = vec![
@@ -1887,11 +1820,7 @@ mod tests {
                     ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                     rssi_dbm: 100,
                     snr_db: 100,
-                    channel: fidl_common::WlanChannel {
-                        primary: 100,
-                        cbw: fidl_common::ChannelBandwidth::Cbw40,
-                        secondary80: 0,
-                    },
+                    channel: types::WlanChan::new(100, types::Cbw::Cbw40),
                 ),
             },
             active_result.clone(),
@@ -1904,11 +1833,7 @@ mod tests {
                 rssi: 0,
                 timestamp: zx::Time::from_nanos(passive_result.timestamp_nanos),
                 snr_db: 1,
-                channel: fidl_common::WlanChannel {
-                    primary: 1,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
+                channel: types::WlanChan::new(1, types::Cbw::Cbw20),
                 observed_in_passive_scan: true,
                 compatible: true,
                 bss_description: passive_result.bss_description.clone(),
@@ -1918,11 +1843,7 @@ mod tests {
                 rssi: 101,
                 timestamp: zx::Time::from_nanos(active_result.timestamp_nanos),
                 snr_db: 101,
-                channel: fidl_common::WlanChannel {
-                    primary: 101,
-                    cbw: fidl_common::ChannelBandwidth::Cbw40,
-                    secondary80: 0,
-                },
+                channel: types::WlanChan::new(101, types::Cbw::Cbw40),
                 observed_in_passive_scan: false,
                 compatible: true,
                 bss_description: active_result.bss_description.clone(),
@@ -2500,11 +2421,7 @@ mod tests {
             bss_description: random_fidl_bss_description!(
                 Wpa2Wpa3,
                 ssid: ssid.clone(),
-                channel: fidl_common::WlanChannel {
-                    primary: 8,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
+                channel: types::WlanChan::new(8, types::Cbw::Cbw20),
             ),
         };
         let common_scan_result: wlan_common::scan::ScanResult = sme_scan_result

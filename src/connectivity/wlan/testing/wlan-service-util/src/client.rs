@@ -256,7 +256,11 @@ mod tests {
         pin_utils::pin_mut,
         rand::Rng as _,
         std::convert::{TryFrom as _, TryInto as _},
-        wlan_common::{assert_variant, fake_fidl_bss_description},
+        wlan_common::{
+            assert_variant,
+            channel::{Cbw, Channel},
+            fake_fidl_bss_description,
+        },
     };
 
     fn generate_random_bss_description() -> fidl_fuchsia_wlan_internal::BssDescription {
@@ -1098,11 +1102,7 @@ mod tests {
             Ssid::try_from("foo").unwrap(),
             -30,
             20,
-            fidl_common::WlanChannel {
-                primary: 1,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
+            Channel::new(1, Cbw::Cbw20),
             Protection::Wpa2Personal,
             true,
         );
@@ -1112,11 +1112,7 @@ mod tests {
             Ssid::try_from("hello").unwrap(),
             -60,
             10,
-            fidl_common::WlanChannel {
-                primary: 2,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
+            Channel::new(2, Cbw::Cbw20),
             Protection::Wpa2Personal,
             false,
         );
@@ -1224,7 +1220,7 @@ mod tests {
         ssid: Ssid,
         rssi_dbm: i8,
         snr_db: i8,
-        channel: fidl_common::WlanChannel,
+        channel: Channel,
         protection: Protection,
         compatible: bool,
     ) -> fidl_sme::ScanResult {

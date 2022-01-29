@@ -314,7 +314,7 @@ impl ClientMlme {
     }
 
     fn join_device(&mut self, bss: &BssDescription) -> Result<(), Error> {
-        let channel = crate::ddk_converter::ddk_channel_from_fidl(bss.channel);
+        let channel = crate::ddk_converter::ddk_channel_from_fidl(bss.channel.into());
         self.set_main_channel(channel)
             .map_err(|status| Error::Status(format!("Error setting device channel"), status))?;
 

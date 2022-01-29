@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        channel::{Cbw, Channel},
         ie::{self, fake_ies::fake_wmm_param, write_wmm_param, IeType},
         mac,
         test_utils::fake_frames::{
@@ -13,8 +14,8 @@ use {
         },
     },
     anyhow::Context,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     ieee80211::Ssid,
     num_derive::FromPrimitive,
     num_traits::FromPrimitive,
@@ -74,7 +75,7 @@ pub struct BssDescriptionCreator {
     pub bssid: [u8; 6],
     pub bss_type: fidl_internal::BssType,
     pub beacon_period: u16,
-    pub channel: fidl_common::WlanChannel,
+    pub channel: Channel,
     pub rssi_dbm: i8,
     pub snr_db: i8,
 
@@ -176,7 +177,7 @@ impl BssDescriptionCreator {
             beacon_period: self.beacon_period,
             capability_info,
             ies: ies_updater.finalize(),
-            channel: self.channel,
+            channel: self.channel.into(),
             rssi_dbm: self.rssi_dbm,
             snr_db: self.snr_db,
         })
@@ -269,11 +270,7 @@ pub fn build_fake_bss_description_creator__(
         bssid: [7, 1, 2, 77, 53, 8],
         bss_type: fidl_internal::BssType::Infrastructure,
         beacon_period: 100,
-        channel: fidl_common::WlanChannel {
-            primary: 3,
-            secondary80: 0,
-            cbw: fidl_common::ChannelBandwidth::Cbw40,
-        },
+        channel: Channel::new(3, Cbw::Cbw40),
         rssi_dbm: 0,
         snr_db: 0,
 
@@ -335,11 +332,7 @@ pub fn build_random_bss_description_creator__(
         bss_type,
         beacon_period: rng.gen::<u16>(),
         // TODO(fxbug.dev/81978): Purely random valid channel values is not implemented.
-        channel: fidl_common::WlanChannel {
-            primary: rng.gen_range(1..255),
-            cbw: fidl_common::ChannelBandwidth::Cbw20,
-            secondary80: 0,
-        },
+        channel: Channel::new(rng.gen_range(1..255), Cbw::Cbw20),
         rssi_dbm: rng.gen::<i8>(),
         snr_db: rng.gen::<i8>(),
 

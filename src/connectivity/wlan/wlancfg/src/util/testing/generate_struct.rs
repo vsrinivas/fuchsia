@@ -5,33 +5,35 @@
 
 use {
     crate::client::types,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_zircon as zx,
     ieee80211::{Bssid, Ssid},
     rand::Rng as _,
     std::convert::TryFrom,
-    wlan_common::random_fidl_bss_description,
+    wlan_common::{
+        channel::{Cbw, Channel},
+        random_fidl_bss_description,
+    },
 };
 
-pub fn generate_random_channel() -> fidl_common::WlanChannel {
+pub fn generate_random_channel() -> Channel {
     let mut rng = rand::thread_rng();
     generate_channel(rng.gen::<u8>())
 }
 
-pub fn generate_channel(channel: u8) -> fidl_common::WlanChannel {
+pub fn generate_channel(channel: u8) -> Channel {
     let mut rng = rand::thread_rng();
-    fidl_common::WlanChannel {
+    Channel {
         primary: channel,
         cbw: match rng.gen_range(0..5) {
-            0 => fidl_common::ChannelBandwidth::Cbw20,
-            1 => fidl_common::ChannelBandwidth::Cbw40,
-            2 => fidl_common::ChannelBandwidth::Cbw40Below,
-            3 => fidl_common::ChannelBandwidth::Cbw80,
-            4 => fidl_common::ChannelBandwidth::Cbw160,
-            5 => fidl_common::ChannelBandwidth::Cbw80P80,
+            0 => Cbw::Cbw20,
+            1 => Cbw::Cbw40,
+            2 => Cbw::Cbw40Below,
+            3 => Cbw::Cbw80,
+            4 => Cbw::Cbw160,
+            5 => Cbw::Cbw80P80 { secondary80: rng.gen::<u8>() },
             _ => panic!(),
         },
-        secondary80: rng.gen::<u8>(),
     }
 }
 

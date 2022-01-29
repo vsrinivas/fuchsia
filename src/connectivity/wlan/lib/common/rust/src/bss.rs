@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        channel::Channel,
         format::MacFmt as _,
         hasher::WlanHasher,
         ie::{
@@ -106,7 +107,7 @@ pub struct BssDescription {
     pub bss_type: fidl_internal::BssType,
     pub beacon_period: u16,
     pub capability_info: u16,
-    pub channel: fidl_fuchsia_wlan_common::WlanChannel,
+    pub channel: Channel,
     pub rssi_dbm: i8,
     pub snr_db: i8,
     // Private because the parsed information reference the IEs
@@ -477,7 +478,7 @@ impl From<BssDescription> for fidl_internal::BssDescription {
             bss_type: bss.bss_type,
             beacon_period: bss.beacon_period,
             capability_info: bss.capability_info,
-            channel: bss.channel,
+            channel: bss.channel.into(),
             rssi_dbm: bss.rssi_dbm,
             snr_db: bss.snr_db,
             ies: bss.ies,
@@ -561,7 +562,7 @@ impl TryFrom<fidl_internal::BssDescription> for BssDescription {
             bss_type: bss.bss_type,
             beacon_period: bss.beacon_period,
             capability_info: bss.capability_info,
-            channel: bss.channel,
+            channel: bss.channel.into(),
             rssi_dbm: bss.rssi_dbm,
             snr_db: bss.snr_db,
             ies: bss.ies,
@@ -629,7 +630,9 @@ mod tests {
     use {
         super::*,
         crate::{
-            assert_variant, fake_bss_description,
+            assert_variant,
+            channel::Cbw,
+            fake_bss_description,
             ie::{fake_ies::fake_wmm_param, IeType},
             test_utils::{
                 fake_frames::{
@@ -641,8 +644,35 @@ mod tests {
                 fake_stas::IesOverrides,
             },
         },
-        fidl_fuchsia_wlan_common as fidl_common,
+        test_case::test_case,
     };
+
+    #[test_case(fake_bss_description!(
+        Wpa1Wpa2,
+        channel: Channel::new(36, Cbw::Cbw80P80{ secondary80: 106 }),
+        rssi_dbm: -20,
+        short_preamble: true,
+        ies_overrides: IesOverrides::new()
+            .set(IeType::DSSS_PARAM_SET, [136].to_vec())
+    ))]
+    #[test_case(fake_bss_description!(
+        Open,
+        channel: Channel::new(1, Cbw::Cbw20),
+        beacon_period: 110,
+        short_preamble: true,
+        radio_measurement: true,
+        rates: vec![0x02, 0x04, 0x0c],
+    ))]
+    fn test_bss_lossless_conversion(bss: BssDescription) {
+        let fidl_bss = fidl_internal::BssDescription::from(bss.clone());
+        assert_eq!(bss, BssDescription::try_from(fidl_bss.clone()).unwrap());
+        assert_eq!(
+            fidl_bss,
+            fidl_internal::BssDescription::from(
+                BssDescription::try_from(fidl_bss.clone()).unwrap()
+            )
+        );
+    }
 
     #[test]
     fn test_known_protection() {
@@ -828,11 +858,7 @@ mod tests {
     #[test]
     fn test_latest_standard_g() {
         let bss = fake_bss_description!(Open,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(1, Cbw::Cbw20),
             rates: vec![12],
             ies_overrides: IesOverrides::new()
                 .remove(IeType::HT_CAPABILITIES)
@@ -846,11 +872,7 @@ mod tests {
     #[test]
     fn test_latest_standard_b() {
         let bss = fake_bss_description!(Open,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(1, Cbw::Cbw20),
             rates: vec![2],
             ies_overrides: IesOverrides::new()
                 .remove(IeType::HT_CAPABILITIES)
@@ -864,11 +886,7 @@ mod tests {
     #[test]
     fn test_latest_standard_b_with_basic() {
         let bss = fake_bss_description!(Open,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(1, Cbw::Cbw20),
             rates: vec![ie::SupportedRate(2).with_basic(true).0],
             ies_overrides: IesOverrides::new()
                 .remove(IeType::HT_CAPABILITIES)
@@ -882,11 +900,7 @@ mod tests {
     #[test]
     fn test_latest_standard_a() {
         let bss = fake_bss_description!(Open,
-            channel: fidl_common::WlanChannel {
-                primary: 36,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(36, Cbw::Cbw20),
             rates: vec![48],
             ies_overrides: IesOverrides::new()
                 .remove(IeType::HT_CAPABILITIES)

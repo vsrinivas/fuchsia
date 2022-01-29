@@ -28,7 +28,7 @@ use {
     futures::lock::Mutex,
     log::{debug, error, info, trace},
     std::{collections::HashMap, convert::TryInto as _, sync::Arc},
-    wlan_common::{channel::Channel, hasher::WlanHasher},
+    wlan_common::hasher::WlanHasher,
     wlan_inspect::wrappers::InspectWlanChan,
     wlan_metrics_registry::{
         SavedNetworkInScanResultMetricDimensionBssCount,
@@ -102,7 +102,7 @@ impl InternalBss<'_> {
     /// BSS to connect to.
     fn score(&self) -> i16 {
         let mut score = self.scanned_bss.rssi as i16;
-        let channel = Channel::from(self.scanned_bss.channel);
+        let channel = types::WlanChan::from(self.scanned_bss.channel);
 
         // If the network is 5G and has a strong enough RSSI, give it a bonus
         if channel.is_5ghz() && score >= RSSI_CUTOFF_5G_PREFERENCE {
@@ -168,7 +168,7 @@ impl InternalBss<'_> {
     }
 
     fn to_string_without_pii(&self) -> String {
-        let channel = Channel::from(self.scanned_bss.channel);
+        let channel = types::WlanChan::from(self.scanned_bss.channel);
         let rssi = self.scanned_bss.rssi;
         let recent_failure_count = self.recent_failure_count();
         let recent_short_connection_count = self.recent_short_connections();
@@ -203,7 +203,7 @@ impl<'a> WriteInspect for InternalBss<'a> {
             rssi: self.scanned_bss.rssi,
             score: self.score(),
             security_type_saved: self.saved_security_type_to_string(),
-            channel: InspectWlanChan(&self.scanned_bss.channel),
+            channel: InspectWlanChan(&self.scanned_bss.channel.into()),
             compatible: self.scanned_bss.compatible,
             recent_failure_count: self.recent_failure_count(),
             saved_network_has_ever_connected: self.saved_network_info.has_ever_connected,
@@ -1754,6 +1754,7 @@ mod tests {
             ))
         );
 
+        let fidl_channel = fidl_common::WlanChannel::from(networks[2].scanned_bss.channel);
         assert_data_tree!(inspector, root: {
             test: {
                 "0": {
@@ -1777,8 +1778,8 @@ mod tests {
                         security_type_saved: networks[2].saved_security_type_to_string(),
                         channel: {
                             cbw: inspect::testing::AnyProperty,
-                            primary: u64::from(networks[2].scanned_bss.channel.primary),
-                            secondary80: u64::from(networks[2].scanned_bss.channel.secondary80),
+                            primary: u64::from(fidl_channel.primary),
+                            secondary80: u64::from(fidl_channel.secondary80),
                         },
                         compatible: networks[2].scanned_bss.compatible,
                         recent_failure_count: networks[2].recent_failure_count(),
@@ -2007,11 +2008,7 @@ mod tests {
             ssid: test_id_1.ssid.clone(),
             rssi_dbm: 0,
             snr_db: 0,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
+            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         );
 
         let mock_scan_results = vec![
@@ -2024,11 +2021,7 @@ mod tests {
                     ssid: test_id_1.ssid.clone(),
                     rssi_dbm: 10,
                     snr_db: 10,
-                    channel: fidl_common::WlanChannel {
-                        primary: 1,
-                        cbw: fidl_common::ChannelBandwidth::Cbw20,
-                        secondary80: 0,
-                    },
+                    channel: types::WlanChan::new(1, types::Cbw::Cbw20),
                 ),
             },
             fidl_sme::ScanResult {
@@ -2079,11 +2072,7 @@ mod tests {
             ssid: test_id_1.ssid.clone(),
             rssi_dbm: 10,
             snr_db: 10,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
+            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         );
         let bss_desc1_active = random_fidl_bss_description!(
             Wpa3Enterprise,
@@ -2091,11 +2080,7 @@ mod tests {
             ssid: test_id_1.ssid.clone(),
             rssi_dbm: 10,
             snr_db: 10,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
+            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         );
         let test_id_2 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("bar").unwrap(),
@@ -2108,11 +2093,7 @@ mod tests {
             ssid: test_id_2.ssid.clone(),
             rssi_dbm: 0,
             snr_db: 0,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
+            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         );
         let bss_desc2_active = random_fidl_bss_description!(
             Wpa1,
@@ -2120,11 +2101,7 @@ mod tests {
             ssid: test_id_2.ssid.clone(),
             rssi_dbm: 10,
             snr_db: 10,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
+            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         );
 
         // insert some new saved networks
@@ -2484,11 +2461,7 @@ mod tests {
             ssid: test_id_1.ssid.clone(),
             rssi_dbm: 10,
             snr_db: 10,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
+            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         );
         let mock_scan_results = vec![
             fidl_sme::ScanResult {
@@ -2505,11 +2478,7 @@ mod tests {
                     ssid: types::Ssid::try_from("other ssid").unwrap(),
                     rssi_dbm: 0,
                     snr_db: 0,
-                    channel: fidl_common::WlanChannel {
-                        primary: 1,
-                        cbw: fidl_common::ChannelBandwidth::Cbw20,
-                        secondary80: 0,
-                    },
+                    channel: types::WlanChan::new(1, types::Cbw::Cbw20),
                 ),
             },
         ];
