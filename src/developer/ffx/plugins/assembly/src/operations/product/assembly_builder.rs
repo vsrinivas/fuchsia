@@ -325,7 +325,7 @@ mod tests {
         let config_data_manifest: PackageManifest =
             serde_json::from_reader(File::open(expected_config_data_manifest_path).unwrap())
                 .unwrap();
-        assert_eq!(config_data_manifest.name().as_ref(), "config_data");
+        assert_eq!(config_data_manifest.name().as_ref(), "config-data");
 
         // and get the metafar path.
         let blobs = config_data_manifest.into_blobs();

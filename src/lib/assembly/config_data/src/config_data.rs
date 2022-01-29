@@ -50,7 +50,7 @@ impl ConfigDataBuilder {
     /// Build the config_data package, in the specified outdir, and return the
     /// path to the `config_data` package's manifest.
     pub fn build(self, outdir: impl AsRef<Path>) -> Result<PathBuf> {
-        let mut package_builder = PackageBuilder::new("config_data");
+        let mut package_builder = PackageBuilder::new("config-data");
 
         for (package_name, entries) in self.for_packages {
             for (destination_path, source_file) in entries {
@@ -105,7 +105,7 @@ mod tests {
         // Read the package manifest back in.
         let config_data_manifest: PackageManifest =
             serde_json::from_reader(File::open(manifest_path).unwrap()).unwrap();
-        assert_eq!(config_data_manifest.name().as_ref(), "config_data");
+        assert_eq!(config_data_manifest.name().as_ref(), "config-data");
 
         let mut config_data_metafar = File::open(config_data_metafar_path).unwrap();
         let mut far_reader = fuchsia_archive::Reader::new(&mut config_data_metafar).unwrap();

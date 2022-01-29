@@ -155,10 +155,12 @@ def copy_packages(
         with open(package_manifest_path, 'r') as file:
             manifest = json.load(file)
             package_name = manifest["package"]["name"]
+            # Track in deps, since it was opened.
+            deps.add(package_manifest_path)
 
         # But skip config-data, if we find it.
         if "config-data" == package_name:
-            next
+            continue
 
         # Add the blobs to the set of all blobs, validating that duplicates
         # don't have conflicting sources.
@@ -173,9 +175,8 @@ def copy_packages(
         package_manifest_destination = os.path.join(outdir, rebased_destination)
         fast_copy(package_manifest_path, package_manifest_destination)
 
-        # Track the package manifest in our st of packages, and in deps
+        # Track the package manifest in our st of packages
         packages.append(rebased_destination)
-        deps.add(package_manifest_path)
 
     return (packages, blobs, deps)
 
