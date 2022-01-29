@@ -312,7 +312,7 @@ async fn do_client_connect(
         future detailed BSS information will be required to connect! Use the `donut` tool to \
         connect to networks using an SSID."
     );
-    let opts::ClientConnectCmd { iface_id, ssid, password, psk, phy, cbw, scan_type } = cmd;
+    let opts::ClientConnectCmd { iface_id, ssid, password, psk, scan_type } = cmd;
     let ssid = Ssid::try_from(ssid)?;
     let credential = match make_credential(password, psk) {
         Ok(c) => c,
@@ -337,14 +337,6 @@ async fn do_client_connect(
         ssid: ssid.to_vec(),
         bss_description,
         credential,
-        radio_cfg: fidl_sme::RadioConfig {
-            override_phy: phy.is_some(),
-            phy: phy.unwrap_or(PhyArg::Vht).into(),
-            override_channel_bandwidth: cbw.is_some(),
-            channel_bandwidth: cbw.unwrap_or(CbwArg::Cbw80).into(),
-            override_primary_channel: false,
-            primary_channel: 0,
-        },
         deprecated_scan_type: scan_type.into(),
         multiple_bss_candidates: false, // only used for metrics, select arbitrary value
     };
@@ -1209,8 +1201,6 @@ mod tests {
             ssid: String::from_utf8(vec![65; 33]).unwrap(),
             password: None,
             psk: None,
-            phy: None,
-            cbw: None,
             scan_type: opts::ScanTypeArg::Passive,
         };
 

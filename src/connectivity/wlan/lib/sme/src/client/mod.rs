@@ -18,7 +18,7 @@ pub mod test_utils;
 
 use {
     self::{
-        capabilities::derive_join_channel_and_capabilities,
+        capabilities::derive_join_capabilities,
         event::Event,
         info::InfoReporter,
         protection::Protection,
@@ -47,7 +47,6 @@ use {
         scan::ScanResult,
         sink::UnboundedSink,
         timer::{self, TimedEvent},
-        RadioConfig,
     },
     wlan_rsn::auth,
 };
@@ -168,13 +167,7 @@ impl ClientConfig {
         bss: &BssDescription,
         device_info: &fidl_mlme::DeviceInfo,
     ) -> bool {
-        derive_join_channel_and_capabilities(
-            Channel::from(bss.channel),
-            None,
-            bss.rates(),
-            device_info,
-        )
-        .is_ok()
+        derive_join_capabilities(Channel::from(bss.channel), bss.rates(), device_info).is_ok()
     }
 }
 
@@ -532,12 +525,8 @@ impl ClientSme {
                 return connect_txn_stream;
             }
         };
-        let cmd = ConnectCommand {
-            bss: Box::new(bss_description.clone()),
-            connect_txn_sink,
-            protection,
-            radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
-        };
+        let cmd =
+            ConnectCommand { bss: Box::new(bss_description.clone()), connect_txn_sink, protection };
 
         self.context.info.report_connect_started(ssid);
         self.context.info.report_candidate_network(info::CandidateNetwork {
@@ -802,7 +791,6 @@ mod tests {
         assert_variant, fake_bss_description, fake_fidl_bss_description,
         ie::{fake_ht_cap_bytes, fake_vht_cap_bytes, rsn::akm, IeType},
         test_utils::fake_stas::IesOverrides,
-        RadioConfig,
     };
 
     use super::test_utils::{
@@ -1755,7 +1743,6 @@ mod tests {
             ssid: ssid.to_vec(),
             bss_description,
             credential,
-            radio_cfg: RadioConfig::default().to_fidl(),
             deprecated_scan_type: fidl_common::ScanType::Passive,
             multiple_bss_candidates: true,
         }

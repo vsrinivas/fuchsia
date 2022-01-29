@@ -15,7 +15,6 @@ use {
     },
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    log::warn,
     wlan_common::{
         channel::{Cbw, Channel},
         ie::{
@@ -70,12 +69,11 @@ fn override_capability_info(capability_info: CapabilityInfo) -> CapabilityInfo {
 /// 1. Extract the band capabilities from the iface device based on BSS channel.
 /// 2. Derive/Override capabilities based on iface capabilities, BSS requirements and
 /// user overridable channel bandwidths.
-pub(crate) fn derive_join_channel_and_capabilities(
+pub(crate) fn derive_join_capabilities(
     bss_channel: Channel,
-    user_cbw: Option<Cbw>,
     bss_rates: &[SupportedRate],
     device_info: &fidl_mlme::DeviceInfo,
-) -> Result<(Channel, ClientCapabilities), Error> {
+) -> Result<ClientCapabilities, Error> {
     // Step 1 - Extract iface capabilities for this particular band we are joining
     let band_info = get_device_band_info(&device_info, bss_channel.primary)
         .ok_or_else(|| format_err!("iface does not support BSS channel {}", bss_channel.primary))?;
@@ -92,31 +90,10 @@ pub(crate) fn derive_join_channel_and_capabilities(
 
     // Step 2.3 - Override HT Capabilities and VHT Capabilities
     // Here it is assumed that the channel specified by the BSS will never be invalid.
-    let channel = user_cbw.as_ref().map_or(bss_channel, |cbw| derive_channel(bss_channel, *cbw));
     let (ht_cap, vht_cap) =
-        override_ht_vht(band_info.ht_cap.as_ref(), band_info.vht_cap.as_ref(), channel.cbw)?;
+        override_ht_vht(band_info.ht_cap.as_ref(), band_info.vht_cap.as_ref(), bss_channel.cbw)?;
 
-    Ok((channel, ClientCapabilities(StaCapabilities { capability_info, rates, ht_cap, vht_cap })))
-}
-
-/// Follow the Channel as announced by the AP, unless user has manually specified CBW with
-/// a RadioConfig. Then verify the channel is still valid. If not, be conservative and use the
-/// channel bandwidth announced by the AP. E.g.
-/// Channel (165, CBW20) + Override CBW80 -> (165, CBW20)
-/// Channel (1, CBW20) + Override CBW40Below -> (1, CBW20)
-/// Channel (11, CBW20) + Override CBW40 -> (11, CBW20)
-fn derive_channel(ap_channel: Channel, cbw: Cbw) -> Channel {
-    let mut channel = ap_channel;
-    channel.cbw = std::cmp::min(channel.cbw, cbw);
-    if channel.is_valid_in_us() {
-        channel
-    } else {
-        warn!(
-            "{} is not a valid CBW, defaulting to {} as announced by AP",
-            channel.cbw, ap_channel.cbw
-        );
-        ap_channel
-    }
+    Ok(ClientCapabilities(StaCapabilities { capability_info, rates, ht_cap, vht_cap }))
 }
 
 /// Wrapper function to convert FIDL {HT,VHT}Capabilities into byte arrays, taking into account the
@@ -180,131 +157,7 @@ fn override_vht_capabilities(mut vht_cap: VhtCapabilities, cbw: Cbw) -> VhtCapab
 
 #[cfg(test)]
 mod tests {
-    use {super::*, wlan_common::ie, Cbw::*};
-
-    fn cbw_80p80(secondary80: u8) -> Cbw {
-        Cbw::Cbw80P80 { secondary80 }
-    }
-
-    #[test]
-    fn test_derive_channel_user_sets_80_p_80() {
-        // Cbw80P80 is the highest value so it would not override any of the channel bandwidth
-        let cbw = cbw_80p80(42);
-        assert_eq!(derive_channel(Channel::new(1, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(4, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(8, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(11, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(6, Cbw80), cbw).cbw, Cbw80);
-        assert_eq!(derive_channel(Channel::new(6, Cbw160), cbw).cbw, Cbw160);
-        assert_eq!(derive_channel(Channel::new(6, cbw_80p80(155)), cbw).cbw, cbw_80p80(155));
-
-        assert_eq!(derive_channel(Channel::new(36, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(36, cbw_80p80(58)), cbw).cbw, cbw_80p80(58));
-        assert_eq!(derive_channel(Channel::new(40, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(40, cbw_80p80(42)), cbw).cbw, cbw_80p80(42));
-
-        assert_eq!(derive_channel(Channel::new(165, Cbw80), cbw).cbw, Cbw80);
-        assert_eq!(derive_channel(Channel::new(165, cbw_80p80(42)), cbw).cbw, cbw_80p80(42));
-    }
-
-    #[test]
-    fn test_derive_channel_user_sets_160() {
-        let cbw = Cbw160;
-        assert_eq!(derive_channel(Channel::new(1, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(4, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(8, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(11, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(6, Cbw80), cbw).cbw, Cbw80);
-        assert_eq!(derive_channel(Channel::new(6, Cbw160), cbw).cbw, Cbw160);
-        assert_eq!(derive_channel(Channel::new(6, cbw_80p80(155)), cbw).cbw, cbw_80p80(155));
-
-        assert_eq!(derive_channel(Channel::new(36, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(36, cbw_80p80(58)), cbw).cbw, Cbw160);
-        assert_eq!(derive_channel(Channel::new(40, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(40, cbw_80p80(42)), cbw).cbw, Cbw160);
-
-        assert_eq!(derive_channel(Channel::new(165, Cbw80), cbw).cbw, Cbw80);
-    }
-
-    #[test]
-    fn test_derive_channel_user_sets_80() {
-        let cbw = Cbw80;
-        assert_eq!(derive_channel(Channel::new(1, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(4, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(8, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(11, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(6, Cbw80), cbw).cbw, Cbw80);
-        assert_eq!(derive_channel(Channel::new(6, Cbw160), cbw).cbw, Cbw160);
-        assert_eq!(derive_channel(Channel::new(6, cbw_80p80(155)), cbw).cbw, cbw_80p80(155));
-
-        assert_eq!(derive_channel(Channel::new(36, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(36, cbw_80p80(58)), cbw).cbw, Cbw80);
-        assert_eq!(derive_channel(Channel::new(40, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(40, cbw_80p80(42)), cbw).cbw, Cbw80);
-
-        assert_eq!(derive_channel(Channel::new(165, Cbw80), cbw).cbw, Cbw80);
-        assert_eq!(derive_channel(Channel::new(165, cbw_80p80(42)), cbw).cbw, cbw_80p80(42));
-    }
-
-    #[test]
-    fn test_derive_channel_user_sets_40_below() {
-        let cbw = Cbw40Below;
-        assert_eq!(derive_channel(Channel::new(1, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(4, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(8, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(11, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(6, Cbw80), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(6, Cbw160), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(6, cbw_80p80(155)), cbw).cbw, Cbw40Below);
-
-        assert_eq!(derive_channel(Channel::new(36, Cbw40Below), cbw).cbw, Cbw40Below);
-        assert_eq!(derive_channel(Channel::new(36, cbw_80p80(58)), cbw).cbw, cbw_80p80(58));
-        assert_eq!(derive_channel(Channel::new(40, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(40, cbw_80p80(42)), cbw).cbw, Cbw40Below);
-
-        assert_eq!(derive_channel(Channel::new(165, Cbw80), cbw).cbw, Cbw80);
-        assert_eq!(derive_channel(Channel::new(165, cbw_80p80(42)), cbw).cbw, cbw_80p80(42));
-    }
-
-    #[test]
-    fn test_derive_channel_user_sets_40() {
-        let cbw = Cbw40;
-        assert_eq!(derive_channel(Channel::new(1, Cbw40Below), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(4, Cbw40Below), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(8, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(11, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(6, Cbw80), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(6, Cbw160), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(6, cbw_80p80(155)), cbw).cbw, Cbw40);
-
-        assert_eq!(derive_channel(Channel::new(36, Cbw40Below), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(36, cbw_80p80(58)), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(40, Cbw40), cbw).cbw, Cbw40);
-        assert_eq!(derive_channel(Channel::new(40, cbw_80p80(42)), cbw).cbw, cbw_80p80(42));
-
-        assert_eq!(derive_channel(Channel::new(165, Cbw80), cbw).cbw, Cbw80);
-        assert_eq!(derive_channel(Channel::new(165, cbw_80p80(42)), cbw).cbw, cbw_80p80(42));
-    }
-
-    #[test]
-    fn test_derive_channel_user_sets_20() {
-        let cbw = Cbw20;
-        assert_eq!(derive_channel(Channel::new(1, Cbw40Below), cbw).cbw, Cbw20);
-        assert_eq!(derive_channel(Channel::new(4, Cbw40Below), cbw).cbw, Cbw20);
-        assert_eq!(derive_channel(Channel::new(8, Cbw40), cbw).cbw, Cbw20);
-        assert_eq!(derive_channel(Channel::new(11, Cbw40), cbw).cbw, Cbw20);
-        assert_eq!(derive_channel(Channel::new(6, Cbw80), cbw).cbw, Cbw20);
-        assert_eq!(derive_channel(Channel::new(6, Cbw160), cbw).cbw, Cbw20);
-        assert_eq!(derive_channel(Channel::new(6, cbw_80p80(155)), cbw).cbw, Cbw20);
-
-        assert_eq!(derive_channel(Channel::new(36, Cbw40Below), cbw).cbw, Cbw20);
-        assert_eq!(derive_channel(Channel::new(36, cbw_80p80(58)), cbw).cbw, Cbw20);
-        assert_eq!(derive_channel(Channel::new(40, Cbw40), cbw).cbw, Cbw20);
-        assert_eq!(derive_channel(Channel::new(40, cbw_80p80(42)), cbw).cbw, Cbw20);
-
-        assert_eq!(derive_channel(Channel::new(165, Cbw80), cbw).cbw, Cbw20);
-        assert_eq!(derive_channel(Channel::new(165, cbw_80p80(42)), cbw).cbw, Cbw20);
-    }
+    use {super::*, wlan_common::ie};
 
     #[test]
     fn test_build_cap_info() {

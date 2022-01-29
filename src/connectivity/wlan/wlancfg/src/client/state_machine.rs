@@ -32,7 +32,7 @@ use {
     log::{debug, error, info},
     std::{convert::TryInto, sync::Arc},
     void::ResultVoidErrExt,
-    wlan_common::{bss::BssDescription, energy::DecibelMilliWatt, RadioConfig},
+    wlan_common::{bss::BssDescription, energy::DecibelMilliWatt},
     wlan_metrics_registry::{
         POLICY_CONNECTION_ATTEMPT_METRIC_ID as CONNECTION_ATTEMPT_METRIC_ID,
         POLICY_DISCONNECTION_METRIC_ID as DISCONNECTION_METRIC_ID,
@@ -501,7 +501,6 @@ async fn connecting_state<'a>(
                         bss_description,
                         multiple_bss_candidates,
                         credential: sme_credential_from_policy(&options.connect_request.target.credential),
-                        radio_cfg: RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl(),
                         deprecated_scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
                     };
                     common_options.proxy.connect(&mut sme_connect_request, Some(remote)).map_err(|e| {
@@ -1054,7 +1053,6 @@ mod tests {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.bss_description, bss_description);
-                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, true);
                 // Send connection response.
@@ -1248,7 +1246,6 @@ mod tests {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.bss_description, bss_description.clone().into());
-                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, false);
                 // Send connection response.
@@ -1455,7 +1452,6 @@ mod tests {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.bss_description, bss_description);
-                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
             }
         );
@@ -1789,7 +1785,6 @@ mod tests {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.bss_description, bss_description);
-                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, false);
                  // Send connection response.
@@ -1904,7 +1899,6 @@ mod tests {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.bss_description, bss_description.clone());
-                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, true);
                  // Send connection response.
@@ -2048,7 +2042,6 @@ mod tests {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.bss_description, bss_description.clone());
-                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, true);
                  // Send connection response.
@@ -2185,7 +2178,6 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential.clone()));
-                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.multiple_bss_candidates, true);
@@ -3975,7 +3967,6 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
-                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.bss_description, bss_description.clone());
                 assert_eq!(req.multiple_bss_candidates, true);

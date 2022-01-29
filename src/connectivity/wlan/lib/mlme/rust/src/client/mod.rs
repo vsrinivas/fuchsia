@@ -1175,7 +1175,7 @@ mod tests {
         },
         banjo_fuchsia_hardware_wlan_phyinfo as banjo_ddk_wlanphyinfo,
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
+        fuchsia_async as fasync,
         futures::{task::Poll, StreamExt},
         std::convert::TryFrom,
         wlan_common::{
@@ -1337,8 +1337,6 @@ mod tests {
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
-            phy: fidl_common::Phy::Erp,
-            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("valid JoinRequest should be handled successfully");
         me.get_bound_client().expect("client sta should have been created by now.");
@@ -1355,8 +1353,6 @@ mod tests {
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
-            phy: fidl_common::Phy::Erp,
-            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("valid JoinRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
@@ -1374,8 +1370,6 @@ mod tests {
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
-            phy: fidl_common::Phy::Erp,
-            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("valid JoinRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
@@ -1393,8 +1387,6 @@ mod tests {
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
-            phy: fidl_common::Phy::Erp,
-            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("valid JoinRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");

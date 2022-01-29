@@ -623,10 +623,6 @@ pub struct Connect {
     password: Option<String>,
     #[argh(option, long = "hash", description = "WPA2 PSK as hex string")]
     psk: Option<String>,
-    #[argh(option, short = 'y', description = "PHY rate upper bound")]
-    phy: Option<Phy>,
-    #[argh(option, short = 'w', description = "CBW upper bound")]
-    cbw: Option<Cbw>,
     #[argh(
         option,
         short = 's',
@@ -649,8 +645,6 @@ impl From<Connect> for wlan_dev::opts::ClientCmd {
             iface_id: arg.iface_id,
             password: arg.password,
             psk: arg.psk,
-            phy: arg.phy.map(|p| wlan_dev::opts::PhyArg::from(p)),
-            cbw: arg.cbw.map(|w| wlan_dev::opts::CbwArg::from(w)),
             scan_type: wlan_dev::opts::ScanTypeArg::from(arg.scan_type),
             ssid: arg.ssid,
         })
@@ -995,8 +989,6 @@ mod tests {
                 iface_id: 123,
                 password: Some(String::from("password")),
                 psk: Some(String::from("psk")),
-                phy: Some(Phy::Vht),
-                cbw: Some(Cbw::Cbw80),
                 scan_type: ScanType::Passive,
                 ssid: String::from("ssid")
             }),
@@ -1004,8 +996,6 @@ mod tests {
                 iface_id: 123,
                 password: Some(String::from("password")),
                 psk: Some(String::from("psk")),
-                phy: Some(wlan_dev::opts::PhyArg::Vht),
-                cbw: Some(wlan_dev::opts::CbwArg::Cbw80),
                 scan_type: wlan_dev::opts::ScanTypeArg::Passive,
                 ssid: String::from("ssid")
             })

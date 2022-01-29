@@ -97,17 +97,6 @@ type JoinRequest = struct {
     join_failure_timeout uint32;
     nav_sync_delay uint32;
     op_rates bytes:internal.RATES_MAX_LEN;
-
-    // Combined with what MLME knows about the device capabilities,
-    // following parameters determine what to be advertised to the peer
-    // (in AssociationRequest). Effectively this way replaces the following
-    // fields originally defined in MLME-JOIN.request
-    // - Capability Information
-    // - HT Capabilities
-    // - VHT Capabilities
-    // - Extended Capabilities
-    phy fuchsia.wlan.common.PHY;
-    channel_bandwidth fuchsia.wlan.common.ChannelBandwidth;
 };
 
 // MLME-JOIN.confirm (IEEE Std 802.11-2016, 6.3.4.3)
