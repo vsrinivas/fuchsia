@@ -22,7 +22,10 @@ namespace blobfs {
 //
 // Using this interface, a caller can initialize a Blobfs object and access the filesystem hierarchy
 // through the ulib/fs Vnode classes, but not modify the internal structure of the filesystem.
-class Runner : public fs::PagedVfs {
+//
+// The Runner class *has* to be final because it calls PagedVfs::TearDown from
+// its destructor which is required to ensure thread-safety at destruction time.
+class Runner final : public fs::PagedVfs {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Runner);
 

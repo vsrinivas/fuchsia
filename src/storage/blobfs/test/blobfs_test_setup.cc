@@ -61,6 +61,7 @@ BlobfsTestSetup::~BlobfsTestSetup() {
 void BlobfsTestSetup::ShutdownVfs() {
   vfs()->Shutdown([](zx_status_t) {});
   loop().RunUntilIdle();
+  vfs()->TearDown();
 }
 
 BlobfsTestSetupWithThread::BlobfsTestSetupWithThread() { loop_.StartThread("blobfs-async-loop"); }
@@ -77,6 +78,7 @@ void BlobfsTestSetupWithThread::ShutdownVfs() {
   auto cb = [&completion](zx_status_t status) { sync_completion_signal(&completion); };
   vfs()->Shutdown(cb);
   ASSERT_EQ(sync_completion_wait(&completion, ZX_TIME_INFINITE), ZX_OK);
+  vfs()->TearDown();
 }
 
 }  // namespace blobfs

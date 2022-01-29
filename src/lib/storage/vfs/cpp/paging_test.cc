@@ -205,6 +205,7 @@ class PagingTest : public zxtest::Test {
         sync_completion_signal(&completion);
       });
       sync_completion_wait(&completion, zx::time::infinite().get());
+      vfs_->TearDown();
     }
 
     if (vfs_thread_) {

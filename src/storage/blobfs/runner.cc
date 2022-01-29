@@ -44,7 +44,10 @@ zx::status<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
 Runner::Runner(async::Loop* loop, int32_t paging_threads)
     : fs::PagedVfs(loop->dispatcher(), paging_threads), loop_(loop) {}
 
-Runner::~Runner() = default;
+Runner::~Runner() {
+  // Inform PagedVfs so that it can stop threads that might call out to blobfs.
+  TearDown();
+}
 
 void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   TRACE_DURATION("blobfs", "Runner::Unmount");

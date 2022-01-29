@@ -35,6 +35,8 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, const MountO
   if (auto status = vfs->Init(); status.is_error())
     return status.error_value();
 
+  auto defer = fit::defer([&] { vfs->TearDown(); });
+
   auto blobfs_or = Blobfs::Create(loop.dispatcher(), std::move(device), vfs.get(), options);
   if (blobfs_or.is_error()) {
     FX_LOGS(ERROR) << "Cannot create filesystem for checking: " << blobfs_or.status_string();

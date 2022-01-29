@@ -37,6 +37,11 @@ ComponentRunner::ComponentRunner(async::Loop& loop) : fs::PagedVfs(loop.dispatch
   startup->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs_startup::Startup>, startup_svc);
 }
 
+ComponentRunner::~ComponentRunner() {
+  // Inform PagedVfs so that it can stop threads that might call out to blobfs.
+  TearDown();
+}
+
 void ComponentRunner::RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback) {
   // If we don't have a connection to Driver Manager, just return ZX_OK.
   if (!driver_admin_.is_valid()) {

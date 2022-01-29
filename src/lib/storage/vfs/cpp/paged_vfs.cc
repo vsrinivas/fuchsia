@@ -15,6 +15,12 @@ PagedVfs::PagedVfs(async_dispatcher_t* dispatcher, int num_pager_threads) : Mana
 }
 
 PagedVfs::~PagedVfs() {
+  // The pager pool runs threads that get references to nodes and then makes callouts to them.  At
+  // this point, however, anything derived from PagedVfs will be in a partially destructed state,
+  // which means those callouts are potentially dangerous.  For this reason, the pager pool *must*
+  // have been destroyed before this runs.
+  ZX_ASSERT(!pager_pool_ || !pager_pool_->IsRunning());
+
   // We potentially have references to many vnodes in the form of the ones registered as paging
   // handlers. Tell all of these nodes that the VFS is going away outside of the lock.
   //
@@ -55,6 +61,11 @@ zx::status<> PagedVfs::Init() {
   }
 
   return zx::ok();
+}
+
+void PagedVfs::TearDown() {
+  // See the assertion at the top of ~PagedVfs.
+  pager_pool_.reset();
 }
 
 std::vector<zx::unowned_thread> PagedVfs::GetPagerThreads() const {

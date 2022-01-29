@@ -39,6 +39,8 @@ class PagerThreadPool {
 
   zx::status<> Init();
 
+  bool IsRunning() const { return !threads_.empty(); }
+
   // Gets the list of pager threads. This is designed to allow callers to set up scheduling profiles
   // on their pagers.
   std::vector<zx::unowned_thread> GetPagerThreads() const;
@@ -51,7 +53,7 @@ class PagerThreadPool {
   const int num_threads_;
 
   // Use from the main thread only.
-  std::vector<std::unique_ptr<std::thread>> threads_;
+  std::vector<std::thread> threads_;
 
   zx::port port_;  // Port associated with page requests.
 };

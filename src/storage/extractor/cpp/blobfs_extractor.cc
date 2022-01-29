@@ -35,6 +35,11 @@ namespace {
 // Walks the file system and collects interesting metadata.
 class FsWalker {
  public:
+  ~FsWalker() {
+    if (vfs_)
+      vfs_->TearDown();
+  }
+
   static zx::status<std::unique_ptr<FsWalker>> Create(fbl::unique_fd input_fd,
                                                       Extractor& extractor);
 

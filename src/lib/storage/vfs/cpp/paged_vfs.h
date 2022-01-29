@@ -23,9 +23,14 @@ class PagedVfs : public ManagedVfs {
   explicit PagedVfs(async_dispatcher_t* dispatcher, int num_pager_threads = 1);
   ~PagedVfs() override;
 
-  // Creates the pager and worker threads. If any of these fail, this class should no be used.
+  // Creates the pager and worker threads. If any of these fail, this class should not be used.
+  // After calling Init, TearDown *must* be called before destroying.
   zx::status<> Init() __TA_EXCLUDES(vfs_lock_);
   bool is_initialized() const { return pager_.is_valid(); }
+
+  // TearDown should be called before PagedVfs is destroyed. It can be called from the derived
+  // classes's destructor, but it should be on the class that is marked as final.
+  void TearDown();
 
   // Gets the list of pager threads. This is designed to allow callers to set up scheduling profiles
   // on their pagers.

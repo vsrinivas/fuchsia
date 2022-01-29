@@ -24,12 +24,17 @@ namespace blobfs {
 
 // TODO(fxbug.dev/90698): Once everything launches blobfs as a component, delete the old Runner
 // class and rename this just Runner.
-class ComponentRunner : public fs::PagedVfs {
+//
+// The Runner class *has* to be final because it calls PagedVfs::TearDown from
+// its destructor which is required to ensure thread-safety at destruction time.
+class ComponentRunner final : public fs::PagedVfs {
  public:
+  explicit ComponentRunner(async::Loop& loop);
+
   ComponentRunner(const ComponentRunner&) = delete;
   ComponentRunner& operator=(const ComponentRunner&) = delete;
 
-  explicit ComponentRunner(async::Loop& loop);
+  ~ComponentRunner();
 
   // fs::PagedVfs interface.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;

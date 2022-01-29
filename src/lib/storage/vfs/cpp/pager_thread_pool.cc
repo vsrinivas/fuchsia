@@ -28,8 +28,7 @@ PagerThreadPool::~PagerThreadPool() {
     port_.queue(&quit_packet);
 
   for (auto& thread : threads_) {
-    thread->join();
-    thread.reset();
+    thread.join();
   }
   threads_.clear();
 }
@@ -40,7 +39,7 @@ zx::status<> PagerThreadPool::Init() {
 
   // Start all the threads.
   for (int i = 0; i < num_threads_; i++)
-    threads_.push_back(std::make_unique<std::thread>([self = this]() { self->ThreadProc(); }));
+    threads_.push_back(std::thread([self = this]() { self->ThreadProc(); }));
 
   return zx::ok();
 }
@@ -49,8 +48,9 @@ std::vector<zx::unowned_thread> PagerThreadPool::GetPagerThreads() const {
   std::vector<zx::unowned_thread> result;
   result.reserve(num_threads_);
 
-  for (const std::unique_ptr<std::thread>& thread : threads_) {
-    result.emplace_back(native_thread_get_zx_handle(thread->native_handle()));
+  for (const auto& thread : threads_) {
+    result.emplace_back(
+        native_thread_get_zx_handle(const_cast<std::thread&>(thread).native_handle()));
   }
   return result;
 }
