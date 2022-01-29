@@ -6,6 +6,7 @@
 //
 // See tools/fidl/measure-tape/README.md
 
+// clang-format off
 #ifndef LIB_UI_SCENIC_CPP_COMMANDS_SIZING_H_
 #define LIB_UI_SCENIC_CPP_COMMANDS_SIZING_H_
 

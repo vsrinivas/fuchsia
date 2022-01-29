@@ -6,6 +6,7 @@
 //
 // See tools/fidl/measure-tape/README.md
 
+// clang-format off
 #include <lib/ui/scenic/cpp/commands_sizing.h>
 
 #include <fuchsia/images/cpp/fidl.h>

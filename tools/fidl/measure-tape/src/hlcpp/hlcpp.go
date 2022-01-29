@@ -55,6 +55,7 @@ var header = template.Must(template.New("tmpls").Parse(`// Copyright {{ .Year }}
 //
 // See tools/fidl/measure-tape/README.md
 
+// clang-format off
 #ifndef {{ .HeaderTag }}
 #define {{ .HeaderTag }}
 
@@ -95,6 +96,7 @@ var ccTop = template.Must(template.New("tmpls").Parse(`// Copyright {{ .Year }} 
 //
 // See tools/fidl/measure-tape/README.md
 
+// clang-format off
 #include <{{ .HIncludePath }}>
 {{ range .CcIncludes }}
 {{ . }}
