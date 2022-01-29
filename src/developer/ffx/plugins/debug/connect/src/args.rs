@@ -4,11 +4,11 @@
 
 use {argh::FromArgs, ffx_core::ffx_command};
 
-/// Options for "ffx debug run".
+/// Options for "ffx debug connect".
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "run", description = "start the debugger and connect to the target")]
-pub struct RunCommand {
+#[argh(subcommand, name = "connect", description = "start the debugger and connect to the target")]
+pub struct ConnectCommand {
     /// extra arguments passed to zxdb. Any arguments starting with "-" must be after a "--" separator.
     #[argh(positional)]
     pub zxdb_args: Vec<String>,

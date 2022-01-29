@@ -9,9 +9,9 @@ ffx_plugin("ffx_debug_plugin") {
   edition = "2018"
 
   plugin_deps = [
+    "connect:ffx_debug_connect",
     "core:ffx_debug_core",
     "fidlcat:ffx_debug_fidlcat",
-    "run:ffx_debug_run",
     "symbol-index:ffx_debug_symbol_index",
     "symbolize:ffx_debug_symbolize",
   ]

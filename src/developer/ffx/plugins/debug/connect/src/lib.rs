@@ -13,9 +13,9 @@ pub use debug_agent::DebugAgentSocket;
 #[ffx_core::ffx_plugin(
     fidl_fuchsia_debugger::DebugAgentProxy = "core/appmgr:out:fuchsia.debugger.DebugAgent"
 )]
-pub async fn run(
+pub async fn connect(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
-    cmd: ffx_debug_run_args::RunCommand,
+    cmd: ffx_debug_connect_args::ConnectCommand,
 ) -> Result<i32> {
     if let Err(e) = symbol_index::ensure_symbol_index_registered().await {
         eprintln!("ensure_symbol_index_registered failed, error was: {:#?}", e);

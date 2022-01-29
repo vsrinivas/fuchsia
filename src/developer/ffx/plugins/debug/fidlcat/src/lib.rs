@@ -4,7 +4,7 @@
 
 use {
     anyhow::Result, errors::ffx_error, ffx_config::sdk::SdkVersion,
-    ffx_debug_run::DebugAgentSocket, fuchsia_async::unblock, std::process::Command,
+    ffx_debug_connect::DebugAgentSocket, fuchsia_async::unblock, std::process::Command,
 };
 
 struct ProcessArguments {

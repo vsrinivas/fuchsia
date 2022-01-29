@@ -69,7 +69,7 @@ pub mod include_target {
                 "--config",
                 &config,
                 "debug",
-                "run",
+                "connect",
                 "--",
                 "--run",
                 "/boot/bin/crasher",

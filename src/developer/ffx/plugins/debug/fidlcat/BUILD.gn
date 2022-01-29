@@ -9,7 +9,7 @@ ffx_plugin("ffx_debug_fidlcat") {
   edition = "2018"
 
   deps = [
-    "../run:ffx_debug_run",
+    "../connect:ffx_debug_connect",
     "//sdk/fidl/fuchsia.debugger:fuchsia.debugger-rustc",
     "//src/developer/ffx/lib/symbol-index",
     "//src/lib/fuchsia-async",
