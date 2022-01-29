@@ -24,6 +24,8 @@ lib_sources = [
   "src/device/state.rs",
   "src/error.rs",
   "src/fuzz.rs",
+  "src/ip/device/mod.rs",
+  "src/ip/device/state.rs",
   "src/ip/forwarding.rs",
   "src/ip/gmp/igmp.rs",
   "src/ip/gmp/mld.rs",

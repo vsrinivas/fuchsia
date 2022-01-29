@@ -47,13 +47,17 @@ use packet_formats::ipv6::Ipv6PacketBuilder;
 use rand::{thread_rng, Rng};
 use zerocopy::ByteSlice;
 
-use crate::context::{CounterContext, RngContext, StateContext, TimerContext};
-use crate::device::link::{LinkAddress, LinkDevice};
-use crate::device::{
-    state::IpDeviceState, AddrConfig, AddrConfigType, AddressError, AddressState, DeviceIdContext,
-    SlaacConfig,
+use crate::{
+    context::{CounterContext, RngContext, StateContext, TimerContext},
+    device::{
+        link::{LinkAddress, LinkDevice},
+        DeviceIdContext,
+    },
+    ip::device::state::{
+        AddrConfig, AddrConfigType, AddressError, AddressState, IpDeviceState, SlaacConfig,
+    },
+    Instant,
 };
-use crate::Instant;
 
 const ZERO_DURATION: Duration = Duration::from_secs(0);
 
@@ -2314,7 +2318,7 @@ mod tests {
         ethernet::{EthernetLinkDevice, EthernetTimerId},
         get_assigned_ip_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
         is_routing_enabled, set_routing_enabled, DeviceId, DeviceIdInner, DeviceLayerTimerId,
-        DeviceLayerTimerIdInner, EthernetDeviceId, Ipv6AddressEntry,
+        DeviceLayerTimerIdInner, EthernetDeviceId,
     };
     use crate::testutil::{
         self, get_counter_val, run_for, set_logger_for_test, trigger_next_timer,
@@ -2322,8 +2326,8 @@ mod tests {
         TestIpExt, DUMMY_CONFIG_V6,
     };
     use crate::{
-        assert_empty, context::InstantContext as _, Ctx, Instant, Ipv6StateBuilder,
-        StackStateBuilder, TimerId, TimerIdInner,
+        assert_empty, context::InstantContext as _, ip::device::state::Ipv6AddressEntry, Ctx,
+        Instant, Ipv6StateBuilder, StackStateBuilder, TimerId, TimerIdInner,
     };
 
     type IcmpParseArgs = packet_formats::icmp::IcmpParseArgs<Ipv6Addr>;

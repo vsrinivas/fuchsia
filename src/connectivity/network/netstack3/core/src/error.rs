@@ -7,7 +7,7 @@
 use packet_formats::error::*;
 use thiserror::Error;
 
-use crate::device::AddressError;
+use crate::ip::device::state::AddressError;
 
 /// Results returned from many functions in the netstack.
 pub type Result<T> = core::result::Result<T, NetstackError>;

@@ -41,14 +41,19 @@ use crate::{
         arp::{self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId},
         link::LinkDevice,
         ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId},
-        state::{IpDeviceState, Ipv6DeviceConfiguration, Ipv6DeviceState},
-        AddrConfig, AddrConfigType, AddressError, AddressState, BufferIpDeviceContext, DadTimerId,
-        DeviceIdContext, FrameDestination, IpDeviceContext, Ipv6AddressEntry, RecvIpFrameMeta,
+        BufferIpDeviceContext, DadTimerId, DeviceIdContext, FrameDestination, IpDeviceContext,
+        RecvIpFrameMeta,
     },
-    ip::gmp::{
-        igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata, IgmpTimerId},
-        mld::{MldContext, MldFrameMetadata, MldGroupState, MldReportDelay},
-        GmpHandler, GroupJoinResult, GroupLeaveResult, MulticastGroupSet,
+    ip::{
+        device::state::{
+            AddrConfig, AddrConfigType, AddressError, AddressState, IpDeviceState,
+            Ipv6AddressEntry, Ipv6DeviceConfiguration, Ipv6DeviceState,
+        },
+        gmp::{
+            igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata, IgmpTimerId},
+            mld::{MldContext, MldFrameMetadata, MldGroupState, MldReportDelay},
+            GmpHandler, GroupJoinResult, GroupLeaveResult, MulticastGroupSet,
+        },
     },
 };
 
@@ -1541,10 +1546,11 @@ mod tests {
     use crate::context::testutil::DummyInstant;
     use crate::device::{
         arp::ArpHandler, is_routing_enabled, set_routing_enabled, testutil::DeviceTestIpExt,
-        AssignedAddress as _, DeviceId, DeviceIdInner, EthernetDeviceId, IpLinkDeviceState,
+        DeviceId, DeviceIdInner, EthernetDeviceId, IpLinkDeviceState,
     };
     use crate::ip::{
-        dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId, IpDeviceIdContext,
+        device::state::AssignedAddress as _, dispatch_receive_ip_packet_name, receive_ip_packet,
+        DummyDeviceId, IpDeviceIdContext,
     };
     use crate::testutil::{
         add_arp_or_ndp_table_entry, get_counter_val, new_rng, DummyEventDispatcher,

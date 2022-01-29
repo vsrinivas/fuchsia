@@ -56,13 +56,13 @@ pub use crate::data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionK
 pub use crate::device::ndp::NdpConfiguration;
 pub use crate::device::{
     get_assigned_ip_addr_subnets, initialize_device, receive_frame, remove_device, DeviceId,
-    DeviceLayerEventDispatcher, Ipv6DeviceConfiguration,
+    DeviceLayerEventDispatcher,
 };
 pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 pub use crate::ip::socket::{IpSockCreationError, IpSockSendError, IpSockUnroutableError};
 pub use crate::ip::{
-    icmp, EntryDest, EntryDestEither, EntryEither, IpExt, Ipv4StateBuilder, Ipv6StateBuilder,
-    TransportIpContext,
+    device::state::Ipv6DeviceConfiguration, icmp, EntryDest, EntryDestEither, EntryEither, IpExt,
+    Ipv4StateBuilder, Ipv6StateBuilder, TransportIpContext,
 };
 pub use crate::transport::udp::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,

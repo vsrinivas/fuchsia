@@ -7,6 +7,7 @@
 #[macro_use]
 pub(crate) mod path_mtu;
 
+pub(crate) mod device;
 mod forwarding;
 pub(crate) mod gmp;
 pub mod icmp;
@@ -40,25 +41,30 @@ use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Packet, Ipv4PacketBuilder};
 use packet_formats::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
-use crate::context::{CounterContext, FrameContext, StateContext, TimerContext, TimerHandler};
-use crate::device::{AddressState, DeviceId, FrameDestination};
-use crate::error::{ExistsError, NotFoundError};
-use crate::ip::forwarding::{Destination, ForwardingTable};
-use crate::ip::gmp::igmp::IgmpPacketHandler;
-use crate::ip::icmp::{
-    send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, IcmpIpExt,
-    IcmpIpTransportContext, IcmpState, Icmpv4ErrorCode, Icmpv4State, Icmpv4StateBuilder,
-    Icmpv6ErrorCode, Icmpv6State, Icmpv6StateBuilder, InnerBufferIcmpContext, InnerIcmpContext,
-    ShouldSendIcmpv4ErrorInfo, ShouldSendIcmpv6ErrorInfo,
+use crate::{
+    context::{CounterContext, FrameContext, StateContext, TimerContext, TimerHandler},
+    device::{DeviceId, FrameDestination},
+    error::{ExistsError, NotFoundError},
+    ip::{
+        device::state::AddressState,
+        forwarding::{Destination, ForwardingTable},
+        gmp::igmp::IgmpPacketHandler,
+        icmp::{
+            send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, IcmpIpExt,
+            IcmpIpTransportContext, IcmpState, Icmpv4ErrorCode, Icmpv4State, Icmpv4StateBuilder,
+            Icmpv6ErrorCode, Icmpv6State, Icmpv6StateBuilder, InnerBufferIcmpContext,
+            InnerIcmpContext, ShouldSendIcmpv4ErrorInfo, ShouldSendIcmpv6ErrorInfo,
+        },
+        ipv6::Ipv6PacketAction,
+        path_mtu::{IpLayerPathMtuCache, PmtuTimerId},
+        reassembly::{
+            process_fragment, reassemble_packet, FragmentCacheKey, FragmentProcessingState,
+            IpLayerFragmentCache,
+        },
+        socket::{IpSock, IpSockUpdate},
+    },
+    BufferDispatcher, Ctx, EventDispatcher, StackState, TimerId, TimerIdInner,
 };
-use crate::ip::ipv6::Ipv6PacketAction;
-use crate::ip::path_mtu::{IpLayerPathMtuCache, PmtuTimerId};
-use crate::ip::reassembly::{
-    process_fragment, reassemble_packet, FragmentCacheKey, FragmentProcessingState,
-    IpLayerFragmentCache,
-};
-use crate::ip::socket::{IpSock, IpSockUpdate};
-use crate::{BufferDispatcher, Ctx, EventDispatcher, StackState, TimerId, TimerIdInner};
 
 /// Default IPv4 TTL.
 const DEFAULT_TTL: NonZeroU8 = nonzero!(64u8);
@@ -2603,7 +2609,7 @@ mod tests {
         let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
         ndp_config.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_config(ndp_config);
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(None);
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let device = DeviceId::new_ethernet(0);
@@ -2677,7 +2683,7 @@ mod tests {
         let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
         ndp_config.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_config(ndp_config);
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(None);
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut dispatcher_builder = DummyEventDispatcherBuilder::from_config(dummy_config.clone());

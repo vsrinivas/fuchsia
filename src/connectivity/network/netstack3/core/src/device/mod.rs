@@ -10,11 +10,6 @@ pub(crate) mod link;
 pub(crate) mod ndp;
 mod state;
 
-pub use self::state::Ipv6DeviceConfiguration;
-pub(crate) use self::state::{
-    AddrConfig, AddrConfigType, AddressState, IpDeviceState, Ipv6AddressEntry, SlaacConfig,
-};
-
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::fmt::{self, Debug, Display, Formatter};
@@ -29,7 +24,6 @@ use net_types::ip::{
 #[cfg(test)]
 use net_types::Witness as _;
 use net_types::{MulticastAddr, SpecifiedAddr, UnicastAddr};
-use nonzero_ext::nonzero;
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
 use packet_formats::icmp::{mld::MldPacket, ndp::NdpPacket};
 use specialize_ip_macro::specialize_ip_address;
@@ -50,10 +44,8 @@ use crate::{
         state::{CommonDeviceState, DeviceState, InitializationStatus, IpLinkDeviceState},
     },
     ip::{
-        gmp::{
-            igmp::{IgmpGroupState, IgmpPacketHandler},
-            mld::{MldGroupState, MldPacketHandler},
-        },
+        device::state::{AddressError, IpDeviceState, Ipv6DeviceConfiguration},
+        gmp::{igmp::IgmpPacketHandler, mld::MldPacketHandler},
         socket::IpSockUpdate,
     },
     BufferDispatcher, Ctx, EventDispatcher, Instant, StackState,
@@ -407,62 +399,6 @@ impl<I: Instant> DeviceLayerState<I> {
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
         DeviceId::new_ethernet(id)
     }
-}
-
-/// The state associated with an IP address assigned to an IP device.
-pub trait AssignedAddress<A: IpAddress> {
-    /// Gets the address.
-    fn addr(&self) -> SpecifiedAddr<A>;
-}
-
-impl AssignedAddress<Ipv4Addr> for AddrSubnet<Ipv4Addr> {
-    fn addr(&self) -> SpecifiedAddr<Ipv4Addr> {
-        self.addr()
-    }
-}
-
-impl<I: Instant> AssignedAddress<Ipv6Addr> for Ipv6AddressEntry<I> {
-    fn addr(&self) -> SpecifiedAddr<Ipv6Addr> {
-        self.addr_sub().addr().into_specified()
-    }
-}
-
-/// An `Ip` extension trait adding device layer functionality.
-pub(crate) trait DeviceIpExt<Instant>: Ip {
-    /// The information stored about an IP address assigned to an interface.
-    type AssignedAddress: AssignedAddress<Self::Addr>;
-
-    /// The state kept by the Group Messaging Protocol (GMP) used to announce
-    /// membership in an IP multicast group for this version of IP.
-    ///
-    /// Note that a GMP is only used when membership must be explicitly
-    /// announced. For example, a GMP is not used in the context of a loopback
-    /// device (because there are no remote hosts) or in the context of an IPsec
-    /// device (because multicast is not supported).
-    type GmpState;
-
-    /// The default TTL (IPv4) or hop limit (IPv6) to configure for new IP
-    /// devices.
-    const DEFAULT_HOP_LIMIT: NonZeroU8;
-}
-
-impl<I: Instant> DeviceIpExt<I> for Ipv4 {
-    type AssignedAddress = AddrSubnet<Ipv4Addr>;
-    type GmpState = IgmpGroupState<I>;
-    const DEFAULT_HOP_LIMIT: NonZeroU8 = nonzero!(64u8);
-}
-
-impl<I: Instant> DeviceIpExt<I> for Ipv6 {
-    type AssignedAddress = Ipv6AddressEntry<I>;
-    type GmpState = MldGroupState<I>;
-    const DEFAULT_HOP_LIMIT: NonZeroU8 = ndp::HOP_LIMIT_DEFAULT;
-}
-
-/// Possible return values during an erroneous interface address change operation.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AddressError {
-    AlreadyExists,
-    NotFound,
 }
 
 /// An event dispatcher for the device layer.
@@ -1196,11 +1132,14 @@ pub(crate) mod testutil {
     use net_types::ip::{Ipv4, Ipv6};
 
     use crate::{
-        device::{DeviceId, DeviceIpExt, IpDeviceState},
+        device::{DeviceId, IpDeviceState},
+        ip::device::state::IpStateIpExt,
         Ctx, EventDispatcher,
     };
 
-    pub(crate) trait DeviceTestIpExt<Instant: crate::Instant>: DeviceIpExt<Instant> {
+    pub(crate) trait DeviceTestIpExt<Instant: crate::Instant>:
+        IpStateIpExt<Instant>
+    {
         fn get_ip_device_state<D: EventDispatcher<Instant = Instant>>(
             ctx: &Ctx<D>,
             device: DeviceId,

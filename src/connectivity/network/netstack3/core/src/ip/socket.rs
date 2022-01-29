@@ -18,10 +18,16 @@ use packet_formats::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
 use rand::Rng;
 use thiserror::Error;
 
-use crate::device::{AddressState, DeviceId, FrameDestination, Ipv6AddressEntry};
-use crate::ip::{forwarding::ForwardingTable, IpExt, Ipv6SocketData};
-use crate::socket::Socket;
-use crate::{BufferDispatcher, Ctx, EventDispatcher};
+use crate::{
+    device::{DeviceId, FrameDestination},
+    ip::{
+        device::state::{AddressState, Ipv6AddressEntry},
+        forwarding::ForwardingTable,
+        IpExt, Ipv6SocketData,
+    },
+    socket::Socket,
+    BufferDispatcher, Ctx, EventDispatcher,
+};
 
 /// A socket identifying a connection between a local and remote IP host.
 pub(crate) trait IpSocket<I: Ip>: Socket<UpdateError = IpSockCreationError> {
@@ -762,7 +768,6 @@ mod ipv6_source_address_selection {
     use net_types::ip::IpAddress as _;
 
     use super::*;
-    use crate::device::AddressState;
 
     /// Selects the source address for an IPv6 socket using the algorithm
     /// defined in [RFC 6724 Section 5].
@@ -949,7 +954,7 @@ mod ipv6_source_address_selection {
         use net_types::ip::AddrSubnet;
 
         use super::*;
-        use crate::device::AddrConfig;
+        use crate::ip::device::state::AddrConfig;
 
         #[test]
         fn test_select_ipv6_source_address() {
