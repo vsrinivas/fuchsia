@@ -8,6 +8,7 @@
 
 #include "lib/images/cpp/images.h"
 #include "src/ui/lib/escher/impl/naive_image.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 #include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
@@ -43,6 +44,7 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
   }
   // No matter what the incoming format, the gpu format will be BGRA:
   vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Srgb;
+  escher::ColorSpace gpu_image_color_space = escher::ColorSpace::kSrgb;
   size_t pixel_alignment = images::MaxSampleAlignment(image_info.pixel_format);
 
   if (image_info.width <= 0) {
@@ -112,9 +114,9 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
     return nullptr;
   }
 
-  auto escher_image =
-      escher::image_utils::NewImage(session->resource_context().escher_image_factory,
-                                    gpu_image_pixel_format, image_info.width, image_info.height);
+  auto escher_image = escher::image_utils::NewImage(
+      session->resource_context().escher_image_factory, gpu_image_pixel_format,
+      gpu_image_color_space, image_info.width, image_info.height);
 
   auto host_image = fxl::AdoptRef(new HostImage(
       session, id, std::move(memory), std::move(escher_image), memory_offset, image_info));

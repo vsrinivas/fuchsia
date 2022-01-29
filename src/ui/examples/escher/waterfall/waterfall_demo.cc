@@ -20,6 +20,7 @@
 #include "src/ui/lib/escher/util/enum_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 #include "src/ui/lib/escher/vk/shader_module_template.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 #include "src/ui/lib/escher/vk/texture.h"
@@ -157,6 +158,7 @@ void WaterfallDemo::InitializeYcbcrTexture() {
   constexpr uint32_t kYuvFrameWidth = 320;
   constexpr uint32_t kYuvFrameHeight = 180;
   constexpr vk::Format kYuvFrameFormat = kYuvTextureFormat;
+  constexpr ColorSpace kYuvFrameColorSpace = escher::ColorSpace::kRec709;
 
   auto base = escher()->shader_program_factory()->filesystem()->base_path();
   FX_CHECK(base);
@@ -170,7 +172,8 @@ void WaterfallDemo::InitializeYcbcrTexture() {
        .width = kYuvFrameWidth,
        .height = kYuvFrameHeight,
        .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
-       .tiling = kYuvTextureTiling});
+       .tiling = kYuvTextureTiling,
+       .color_space = kYuvFrameColorSpace});
 
   BatchGpuUploader gpu_uploader(escher()->GetWeakPtr(), 0);
   image_utils::WritePixelsToImage(&gpu_uploader, data.data(), image,

@@ -12,6 +12,7 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -29,6 +30,7 @@ class ReadbackTest : public ::testing::Test {
       kNumFramebufferPixels * kFramebufferBytesPerPixel;
   static constexpr vk::Format kColorFormat = vk::Format::eB8G8R8A8Unorm;
   static constexpr vk::Format kDepthFormat = vk::Format::eD24UnormS8Uint;
+  static constexpr ColorSpace kColorSpace = ColorSpace::kSrgb;
 
   // NewFrame() returns a color and a depth attachment that can be rendered
   // into.  The color attachment is first cleared to black via a blit operation,

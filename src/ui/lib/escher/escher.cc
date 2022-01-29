@@ -7,6 +7,7 @@
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/impl/command_buffer_pool.h"
 #include "src/ui/lib/escher/impl/frame_manager.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 #if ESCHER_USE_RUNTIME_GLSL
 #include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"  // nogncheck
 #endif
@@ -230,7 +231,8 @@ TexturePtr Escher::NewTexture(vk::Format format, uint32_t width, uint32_t height
                        .width = width,
                        .height = height,
                        .sample_count = sample_count,
-                       .usage = usage_flags};
+                       .usage = usage_flags,
+                       .color_space = GetDefaultColorSpace(format)};
   image_info.memory_flags |= memory_flags;
   ImagePtr image = gpu_allocator()->AllocateImage(resource_recycler(), image_info);
   return Texture::New(resource_recycler(), std::move(image), filter, aspect_flags,

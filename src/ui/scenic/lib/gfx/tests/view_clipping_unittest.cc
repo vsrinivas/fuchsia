@@ -288,6 +288,7 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
   info.width = kWidth;
   info.height = kHeight;
   info.usage = vk::ImageUsageFlagBits::eColorAttachment;
+  info.color_space = escher::ColorSpace::kSrgb;
   auto image_cache = escher->image_cache();
   auto output_image = image_cache->NewImage(info);
 

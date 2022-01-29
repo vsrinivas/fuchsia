@@ -16,6 +16,7 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/renderer/sampler_cache.h"
 #include "src/ui/lib/escher/scene/model.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer_visitor.h"
@@ -38,6 +39,7 @@ static_assert(std::is_same<zx_time_t, int64_t>::value,
 namespace {
 // Format used for intermediate layers when we're rendering more than one layer.
 constexpr vk::Format kIntermediateLayerFormat = vk::Format::eB8G8R8A8Srgb;
+constexpr escher::ColorSpace kIntermediateLayerColorSpace = escher::ColorSpace::kSrgb;
 // Color used to replace protected content.
 static const escher::vec4 kReplacementMaterialColor = escher::vec4(0, 0, 0, 255);
 }  // namespace
@@ -254,15 +256,22 @@ void EngineRenderer::WarmPipelineCache(std::set<vk::Format> framebuffer_formats)
     const std::vector<vk::Format> immutable_sampler_formats{vk::Format::eG8B8G8R8422Unorm,
                                                             vk::Format::eG8B8R82Plane420Unorm,
                                                             vk::Format::eG8B8R83Plane420Unorm};
+    const std::vector<escher::ColorSpace> color_spaces{
+        escher::ColorSpace::kRec709,
+        escher::ColorSpace::kRec601Ntsc,
+    };
     const auto vk_physical_device = escher_->vk_physical_device();
     for (auto fmt : immutable_sampler_formats) {
-      if (escher::impl::IsYuvConversionSupported(vk_physical_device, fmt)) {
-        vk::Filter filter = vk::Filter::eNearest;
-        if (vk_physical_device.getFormatProperties(fmt).optimalTilingFeatures &
-            vk::FormatFeatureFlagBits::eSampledImageFilterLinear) {
-          filter = vk::Filter::eLinear;
+      for (auto color_space : color_spaces) {
+        if (escher::impl::IsYuvConversionSupported(vk_physical_device, fmt)) {
+          vk::Filter filter = vk::Filter::eNearest;
+          if (vk_physical_device.getFormatProperties(fmt).optimalTilingFeatures &
+              vk::FormatFeatureFlagBits::eSampledImageFilterLinear) {
+            filter = vk::Filter::eLinear;
+          }
+          immutable_samplers.push_back(
+              escher_->sampler_cache()->ObtainYuvSampler(fmt, filter, color_space));
         }
-        immutable_samplers.push_back(escher_->sampler_cache()->ObtainYuvSampler(fmt, filter));
       }
     }
   }
@@ -288,6 +297,7 @@ escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width, uint32
   info.width = width;
   info.height = height;
   info.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled;
+  info.color_space = kIntermediateLayerColorSpace;
   if (use_protected_memory) {
     info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
   }

@@ -597,6 +597,7 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
     image_info.height = image_create_info.extent.height;
     image_info.usage = image_create_info.usage;
     image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+    image_info.color_space = escher::ColorSpace::kSrgb;
     image_info.is_external = true;
 
     auto escher_image = escher::impl::NaiveImage::AdoptVkImage(
@@ -687,6 +688,7 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
     image_info.height = image_create_info.extent.height;
     image_info.usage = image_create_info.usage;
     image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+    image_info.color_space = escher::ColorSpace::kSrgb;
     image_info.is_external = false;
 
     scratch_image_ = escher::impl::NaiveImage::AdoptVkImage(

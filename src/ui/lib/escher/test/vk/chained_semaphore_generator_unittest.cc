@@ -24,7 +24,8 @@ VK_TEST_F(ChainedSemaphoreGeneratorTest, SequentialUpload) {
 
   // Create a 1x1 RGBA (8-bit channels) image to write to.
   ImageFactoryAdapter image_factory(escher->gpu_allocator(), escher->resource_recycler());
-  ImagePtr image = image_utils::NewImage(&image_factory, vk::Format::eR8G8B8A8Unorm, 1, 1);
+  ImagePtr image =
+      image_utils::NewImage(&image_factory, vk::Format::eR8G8B8A8Unorm, ColorSpace::kSrgb, 1, 1);
   vk::BufferImageCopy region;
   region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
   region.imageSubresource.mipLevel = 0;

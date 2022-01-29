@@ -21,8 +21,9 @@ TexturePtr Texture::New(ResourceRecycler* resource_recycler, ImagePtr image, vk:
     return TexturePtr();
   }
 
-  SamplerPtr sampler = fxl::MakeRefCounted<Sampler>(resource_recycler, image->format(), filter,
-                                                    use_unnormalized_coordinates);
+  SamplerPtr sampler =
+      fxl::MakeRefCounted<Sampler>(resource_recycler, image->format(), filter, image->color_space(),
+                                   use_unnormalized_coordinates);
 
   if (sampler->is_immutable()) {
     FX_LOGS(WARNING) << "An immutable sampler was created using Texture::New. If "

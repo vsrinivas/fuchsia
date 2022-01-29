@@ -9,6 +9,7 @@
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/render_queue_context.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 
 #include "vulkan/vulkan.hpp"
 
@@ -59,8 +60,8 @@ VK_TEST(SamplerCache, LazyCaching) {
     vk::Format format = vk::Format::eG8B8G8R8422Unorm;
     if (impl::IsYuvConversionSupported(escher.get()->vk_physical_device(), format)) {
       // Use eNearest as the filter since it is supported by all platforms.
-      auto yuv1 = cache.ObtainYuvSampler(format, vk::Filter::eNearest, true);
-      auto yuv2 = cache.ObtainYuvSampler(format, vk::Filter::eNearest, true);
+      auto yuv1 = cache.ObtainYuvSampler(format, vk::Filter::eNearest, ColorSpace::kRec709, true);
+      auto yuv2 = cache.ObtainYuvSampler(format, vk::Filter::eNearest, ColorSpace::kRec709, true);
       EXPECT_EQ(yuv1, yuv2);
       EXPECT_NE(yuv1, s1);
       EXPECT_NE(yuv1, s3);
@@ -68,13 +69,26 @@ VK_TEST(SamplerCache, LazyCaching) {
       EXPECT_NE(yuv1, s5);
       EXPECT_EQ(++expected_cache_size, cache.size());
 
+      // A new sampler will be created if the color space type or range changes.
+      auto yuv1_601_ntsc =
+          cache.ObtainYuvSampler(format, vk::Filter::eNearest, ColorSpace::kRec601Ntsc, true);
+      EXPECT_NE(yuv1, yuv1_601_ntsc);
+      EXPECT_EQ(++expected_cache_size, cache.size());
+
+      auto yuv1_601_ntsc_wide = cache.ObtainYuvSampler(format, vk::Filter::eNearest,
+                                                       ColorSpace::kRec601NtscFullRange, true);
+      EXPECT_NE(yuv1, yuv1_601_ntsc_wide);
+      EXPECT_NE(yuv1_601_ntsc, yuv1_601_ntsc_wide);
+      EXPECT_EQ(++expected_cache_size, cache.size());
+
       // From now on don't bother with EXPECT_NE()... verifying the expected cache size is good
       // enough.
-      cache.ObtainYuvSampler(format, vk::Filter::eNearest, false);
+      cache.ObtainYuvSampler(format, vk::Filter::eNearest, ColorSpace::kRec709, false);
       EXPECT_EQ(++expected_cache_size, cache.size());
       if (SupportsLinearFilter(escher.get(), format)) {
-        cache.ObtainYuvSampler(format, vk::Filter::eLinear, false);
+        cache.ObtainYuvSampler(format, vk::Filter::eLinear, ColorSpace::kRec709, false);
         EXPECT_EQ(++expected_cache_size, cache.size());
+        EXPECT_NE(yuv1_601_ntsc, yuv1_601_ntsc_wide);
       } else {
         FX_LOGS(INFO) << "Linear filtering of format " << vk::to_string(format)
                       << " is not supported by physical device. Skip testing obtaining"
@@ -88,14 +102,14 @@ VK_TEST(SamplerCache, LazyCaching) {
 
     format = vk::Format::eG8B8R82Plane420Unorm;
     if (impl::IsYuvConversionSupported(escher.get()->vk_physical_device(), format)) {
-      cache.ObtainYuvSampler(format, vk::Filter::eNearest, true);
+      cache.ObtainYuvSampler(format, vk::Filter::eNearest, ColorSpace::kRec709, true);
       EXPECT_EQ(++expected_cache_size, cache.size());
-      cache.ObtainYuvSampler(format, vk::Filter::eNearest, false);
+      cache.ObtainYuvSampler(format, vk::Filter::eNearest, ColorSpace::kRec709, false);
       EXPECT_EQ(++expected_cache_size, cache.size());
       if (SupportsLinearFilter(escher.get(), format)) {
-        cache.ObtainYuvSampler(format, vk::Filter::eLinear, true);
+        cache.ObtainYuvSampler(format, vk::Filter::eLinear, ColorSpace::kRec709, true);
         EXPECT_EQ(++expected_cache_size, cache.size());
-        cache.ObtainYuvSampler(format, vk::Filter::eLinear, false);
+        cache.ObtainYuvSampler(format, vk::Filter::eLinear, ColorSpace::kRec709, false);
         EXPECT_EQ(++expected_cache_size, cache.size());
       } else {
         FX_LOGS(INFO) << "Linear filtering of format " << vk::to_string(format)

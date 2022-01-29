@@ -4,8 +4,12 @@
 
 #include "src/ui/scenic/lib/gfx/resources/gpu_image.h"
 
+#include "fuchsia/sysmem/cpp/fidl.h"
 #include "src/ui/lib/escher/impl/naive_image.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
+#include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 #include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
@@ -83,6 +87,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   escher_image_info.usage =
       vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
       vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
+  escher_image_info.color_space = escher::ColorSpace::kSrgb;
   escher_image_info.is_external = true;
   escher_image_info.is_mutable = is_mutable;
   // TODO(fxbug.dev/24387): Add unit tests to verify this logic.
@@ -145,6 +150,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
                           vk::ImageCreateInfo create_info, vk::Image input_image,
                           ErrorReporter* error_reporter) {
   auto vk_device = session->resource_context().vk_device;
+  const auto& vk_loader = session->resource_context().vk_loader;
 
   escher::GpuMemPtr gpu_mem = memory->GetGpuMem(error_reporter);
   FX_DCHECK(gpu_mem);
@@ -159,6 +165,22 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
     image_info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
   }
   image_info.is_external = true;
+
+  auto* buffer_collection_info =
+      escher::impl::GetFromStructChain<vk::BufferCollectionImageCreateInfoFUCHSIA>(&create_info);
+  if (buffer_collection_info) {
+    auto [result, properties] = vk_device.getBufferCollectionPropertiesFUCHSIA(
+        buffer_collection_info->collection, vk_loader);
+    if (result != vk::Result::eSuccess) {
+      error_reporter->ERROR() << "GpuImage::New(): Cannot get buffer collection properties: "
+                              << vk::to_string(result);
+      return nullptr;
+    }
+    image_info.color_space = escher::FromSysmemColorSpace(
+        static_cast<fuchsia::sysmem::ColorSpaceType>(properties.sysmemColorSpaceIndex.colorSpace));
+  } else {
+    image_info.color_space = escher::GetDefaultColorSpace(create_info.format);
+  }
 
   escher::ImagePtr image = escher::impl::NaiveImage::AdoptVkImage(
       session->resource_context().escher_resource_recycler, image_info, input_image,

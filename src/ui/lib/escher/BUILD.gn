@@ -352,6 +352,8 @@ template("escher_library") {
       "vk/buffer_factory.h",
       "vk/chained_semaphore_generator.cc",
       "vk/chained_semaphore_generator.h",
+      "vk/color_space.cc",
+      "vk/color_space.h",
       "vk/command_buffer.h",
       "vk/framebuffer.cc",
       "vk/framebuffer.h",

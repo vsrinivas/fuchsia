@@ -17,6 +17,7 @@
 #include "src/ui/lib/escher/impl/command_buffer.h"
 #include "src/ui/lib/escher/impl/command_buffer_pool.h"
 #include "src/ui/lib/escher/impl/image_cache.h"
+#include "src/ui/lib/escher/types/color.h"
 #include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
@@ -106,10 +107,11 @@ std::vector<uint8_t> rotate_img_vec(const std::vector<uint8_t>& imgvec, uint32_t
 // If this changes, or if we must determine this dynamically, look for other places
 // that the same constant is used to see if they must also be changed.
 constexpr vk::Format kScenicScreenshotFormat = vk::Format::eB8G8R8A8Srgb;
+constexpr escher::ColorSpace kScenicScreenshotColorSpace = escher::ColorSpace::kSrgb;
 
 constexpr uint32_t kBytesPerPixel = 4u;
 
-} // namespace
+}  // namespace
 
 // static
 void Screenshotter::OnCommandBufferDone(
@@ -168,6 +170,7 @@ void Screenshotter::TakeScreenshot(
   image_info.height = height;
   image_info.usage = vk::ImageUsageFlagBits::eColorAttachment |
                      vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
+  image_info.color_space = escher::ColorSpace::kSrgb;
 
   // TODO(fxbug.dev/23725): cache is never trimmed.
   escher::ImagePtr image = escher->image_cache()->NewImage(image_info);
@@ -224,7 +227,7 @@ void Screenshotter::TakeScreenshot(
 
   command_buffer->Submit(
       queue, [buffer, width, height, rotation, done_callback = std::move(done_callback)]() mutable {
-    OnCommandBufferDone(buffer, width, height, rotation, std::move(done_callback));
+        OnCommandBufferDone(buffer, width, height, rotation, std::move(done_callback));
       });
 
   // Force the command buffer to retire to guarantee that |done_callback| will

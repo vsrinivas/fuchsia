@@ -320,6 +320,7 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
   static const int kWidth = 64;
   static const int kHeight = 64;
   static const vk::Format kFormat = vk::Format::eR8G8B8A8Unorm;
+  static const ColorSpace kColorSpace = escher::ColorSpace::kSrgb;
   static const size_t kMemorySize = kWidth * kHeight * image_utils::BytesPerPixel(kFormat);
   static const vk::DeviceSize kMemorySizeAllowableError = 128;
   static const vk::ImageUsageFlags kUsage =
@@ -331,6 +332,7 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
   info.height = kHeight;
   info.usage = kUsage;
   info.tiling = vk::ImageTiling::eLinear;
+  info.color_space = kColorSpace;
   info.memory_flags = kMemoryPropertyFlags;
   if (use_protected_memory) {
     info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
@@ -421,6 +423,7 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
   small_image.height = 1;
   small_image.usage = kUsage;
   small_image.tiling = vk::ImageTiling::eLinear;
+  small_image.color_space = kColorSpace;
   small_image.memory_flags = kMemoryPropertyFlags;
 
   auto image_dedicated1 = allocator->AllocateImage(nullptr, small_image, &ptr);
@@ -553,6 +556,7 @@ VK_TEST(VmaGpuAllocatorTest, ProtectedMemoryIsDedicated) {
   ImageInfo info;
   info.format = vk::Format::eB8G8R8A8Unorm;
   info.usage = vk::ImageUsageFlagBits::eTransferDst;
+  info.color_space = escher::ColorSpace::kSrgb;
   info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
   auto image0 = allocator.AllocateImage(nullptr, info, nullptr);
   EXPECT_TRUE(allocation_create_info.flags & VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);

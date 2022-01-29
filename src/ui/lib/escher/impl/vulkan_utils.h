@@ -102,6 +102,36 @@ void ClipToRect(vk::Rect2D* clippee, const vk::Rect2D& clipper);
 // using the Vulkan physical device.
 bool IsYuvConversionSupported(vk::PhysicalDevice device, vk::Format format);
 
+template <class S, class T>
+S* GetFromStructChain(T* from) {
+  static_assert(offsetof(T, sType) == offsetof(vk::BaseOutStructure, sType));
+  static_assert(offsetof(T, pNext) == offsetof(vk::BaseOutStructure, pNext));
+
+  auto* curr = reinterpret_cast<vk::BaseOutStructure*>(from);
+  while (curr) {
+    if (curr->sType == S::structureType) {
+      return reinterpret_cast<S*>(curr);
+    }
+    curr = curr->pNext;
+  }
+  return nullptr;
+}
+
+template <class S, class T>
+const S* GetFromStructChain(const T* from) {
+  static_assert(offsetof(T, sType) == offsetof(vk::BaseInStructure, sType));
+  static_assert(offsetof(T, pNext) == offsetof(vk::BaseInStructure, pNext));
+
+  const auto* curr = reinterpret_cast<const vk::BaseInStructure*>(from);
+  while (curr) {
+    if (curr->sType == S::structureType) {
+      return reinterpret_cast<S*>(curr);
+    }
+    curr = curr->pNext;
+  }
+  return nullptr;
+}
+
 }  // namespace impl
 }  // namespace escher
 

@@ -100,6 +100,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
   escher_image_info.width = width();
   escher_image_info.height = height();
   escher_image_info.sample_count = 1;
+  escher_image_info.color_space = escher::ColorSpace::kSrgb;
   escher_image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
 
   vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;

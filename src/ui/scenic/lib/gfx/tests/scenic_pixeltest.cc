@@ -1690,6 +1690,7 @@ VK_TEST_F(ScenicPixelTest, UseExternalImage) {
                vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled,
       .memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal,
       .tiling = vk::ImageTiling::eOptimal,
+      .color_space = escher::ColorSpace::kSrgb,
       .is_mutable = true,
       .is_external = true};
   auto [gpu_mem_ptr, image] = escher::GenerateExportableMemImage(
@@ -1763,6 +1764,7 @@ VK_TEST_F(ScenicPixelTest, UseExternalImageImmutableRgba) {
                vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled,
       .memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal,
       .tiling = vk::ImageTiling::eOptimal,
+      .color_space = escher::ColorSpace::kSrgb,
       .is_mutable = false,
       .is_external = true};
   auto [gpu_mem_ptr, image] = escher::GenerateExportableMemImage(

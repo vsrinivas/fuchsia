@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 
 namespace {
 using namespace escher;
@@ -56,7 +57,8 @@ VK_TEST(DescriptorSetAllocatorCache, LazyCaching) {
   EXPECT_EQ(2U, cache.size());
 
   auto [format, filter] = SelectSupportedFormatAndFilter(escher);
-  auto sampler = fxl::MakeRefCounted<Sampler>(escher->resource_recycler(), format, filter, true);
+  auto sampler = fxl::MakeRefCounted<Sampler>(escher->resource_recycler(), format, filter,
+                                              GetDefaultColorSpace(format), true);
   auto a4 = cache.ObtainDescriptorSetAllocator(layout1, sampler);
   auto a5 = cache.ObtainDescriptorSetAllocator(layout1, sampler);
   EXPECT_NE(a1, a4);

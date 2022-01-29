@@ -9,6 +9,7 @@
 #include "src/ui/lib/escher/renderer/semaphore.h"
 #include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/util/debug_print.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 
 namespace escher {
 
@@ -22,6 +23,7 @@ struct ImageInfo {
   vk::ImageUsageFlags usage;
   vk::MemoryPropertyFlags memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
   vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
+  ColorSpace color_space = ColorSpace::kInvalid;
   bool is_mutable = false;
   bool is_external = false;
 
@@ -29,7 +31,8 @@ struct ImageInfo {
     return format == other.format && width == other.width && height == other.height &&
            sample_count == other.sample_count && usage == other.usage &&
            memory_flags == other.memory_flags && tiling == other.tiling &&
-           is_mutable == other.is_mutable && is_external == other.is_external;
+           color_space == other.color_space && is_mutable == other.is_mutable &&
+           is_external == other.is_external;
   }
 
   // Transient images are neither loaded nor stored by render passes.  Instead
@@ -62,6 +65,7 @@ class Image : public Resource {
   vk::Format vk_format() const { return info_.format; }
   uint32_t width() const { return info_.width; }
   uint32_t height() const { return info_.height; }
+  ColorSpace color_space() const { return info_.color_space; }
   bool has_depth() const { return has_depth_; }
   bool has_stencil() const { return has_stencil_; }
   bool is_transient() const { return info_.is_transient(); }

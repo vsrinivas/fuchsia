@@ -149,7 +149,8 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadImageTest) {
   constexpr uint32_t kWidth = 512;
   constexpr uint32_t kHeight = 256;
   auto pixels = image_utils::NewNoisePixels(kWidth, kHeight);
-  auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eR8Unorm, kWidth, kHeight);
+  auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eR8Unorm, ColorSpace::kSrgb,
+                                     kWidth, kHeight);
   BatchGpuUploader uploader(escher, 0);
   image_utils::WritePixelsToImage(&uploader, pixels.get(), image,
                                   vk::ImageLayout::eTransferSrcOptimal);
@@ -185,7 +186,8 @@ VK_TEST_F(BatchGpuDownloaderTest, SubmitToCommandBuffer) {
   constexpr uint32_t kWidth = 512;
   constexpr uint32_t kHeight = 256;
   auto pixels = image_utils::NewNoisePixels(kWidth, kHeight);
-  auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eR8Unorm, kWidth, kHeight);
+  auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eR8Unorm, ColorSpace::kSrgb,
+                                     kWidth, kHeight);
   BatchGpuUploader uploader(escher, 0);
   image_utils::WritePixelsToImage(&uploader, pixels.get(), image,
                                   vk::ImageLayout::eTransferSrcOptimal);
@@ -237,7 +239,8 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadTheSameImageTwice) {
   constexpr uint32_t kWidth = 512;
   constexpr uint32_t kHeight = 256;
   auto pixels = image_utils::NewNoisePixels(kWidth, kHeight);
-  auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eR8Unorm, kWidth, kHeight);
+  auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eR8Unorm, ColorSpace::kSrgb,
+                                     kWidth, kHeight);
   BatchGpuUploader uploader(escher, 0);
   image_utils::WritePixelsToImage(&uploader, pixels.get(), image,
                                   vk::ImageLayout::eTransferSrcOptimal);

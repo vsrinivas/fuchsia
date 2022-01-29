@@ -383,6 +383,8 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
     escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
   }
   escher_image_info.is_external = true;
+  escher_image_info.color_space = escher::FromSysmemColorSpace(
+      static_cast<fuchsia::sysmem::ColorSpaceType>(properties.sysmemColorSpaceIndex.colorSpace));
   return escher::impl::NaiveImage::AdoptVkImage(escher_->resource_recycler(), escher_image_info,
                                                 image_result.value, std::move(gpu_mem),
                                                 create_info.initialLayout);
@@ -408,10 +410,10 @@ escher::TexturePtr VkRenderer::ExtractTexture(const allocation::ImageMetadata& m
     return nullptr;
   }
 
-  escher::SamplerPtr sampler =
-      escher::image_utils::IsYuvFormat(image->format())
-          ? escher_->sampler_cache()->ObtainYuvSampler(image->format(), kDefaultFilter)
-          : escher_->sampler_cache()->ObtainSampler(kDefaultFilter);
+  escher::SamplerPtr sampler = escher::image_utils::IsYuvFormat(image->format())
+                                   ? escher_->sampler_cache()->ObtainYuvSampler(
+                                         image->format(), kDefaultFilter, image->color_space())
+                                   : escher_->sampler_cache()->ObtainSampler(kDefaultFilter);
   FX_DCHECK(escher::image_utils::IsYuvFormat(image->format()) ? sampler->is_immutable()
                                                               : !sampler->is_immutable());
   auto texture = fxl::MakeRefCounted<escher::Texture>(escher_->resource_recycler(), sampler, image);

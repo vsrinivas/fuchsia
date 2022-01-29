@@ -191,6 +191,7 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
       "integration/gamma_correction_unittest.cc",
       "integration/lazy_memory_unittest.cc",
       "integration/opacity_unittest.cc",
+      "integration/yuv_unittest.cc",
       "run_all_unittests.cc",
     ]
 

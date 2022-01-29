@@ -9,6 +9,7 @@
 #include "src/ui/lib/escher/impl/naive_image.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/lib/escher/vk/image_factory.h"
 
@@ -36,6 +37,28 @@ constexpr VkExternalMemoryImageCreateInfo kExternalImageCreateInfo{
 namespace escher {
 namespace image_utils {
 
+size_t GetImageByteSize(vk::Format format, size_t width, size_t height) {
+  switch (format) {
+    case vk::Format::eR8G8B8A8Unorm:
+    case vk::Format::eB8G8R8A8Unorm:
+    case vk::Format::eR8G8B8A8Srgb:
+    case vk::Format::eB8G8R8A8Srgb:
+      return width * height * 4;
+    case vk::Format::eG8B8G8R8422Unorm:
+      return width * height * 2;
+    case vk::Format::eG8B8R82Plane420Unorm:
+    case vk::Format::eG8B8R83Plane420Unorm:
+      // We need to round up width and height of U and V planes for I420 / NV12
+      // images.
+      return width * height + ((width + 1) / 2) * ((height + 1) / 2) * 2;
+    case vk::Format::eR8Unorm:
+      return width * height;
+    default:
+      FX_CHECK(false);
+      return 0;
+  }
+}
+
 size_t BytesPerPixel(vk::Format format) {
   switch (format) {
     case vk::Format::eR8G8B8A8Unorm:
@@ -45,6 +68,7 @@ size_t BytesPerPixel(vk::Format format) {
       return 4;
     case vk::Format::eG8B8G8R8422Unorm:
     case vk::Format::eG8B8R82Plane420Unorm:
+    case vk::Format::eG8B8R83Plane420Unorm:
       return 2;
     case vk::Format::eR8Unorm:
       return 1;
@@ -166,6 +190,7 @@ ImagePtr NewDepthImage(ImageFactory* image_factory, vk::Format format, uint32_t 
   info.width = width;
   info.height = height;
   info.sample_count = 1;
+  info.color_space = GetDefaultColorSpace(format);
   info.usage = additional_flags | vk::ImageUsageFlagBits::eDepthStencilAttachment;
 
   return image_factory->NewImage(info);
@@ -179,6 +204,7 @@ ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width, ui
   info.width = width;
   info.height = height;
   info.sample_count = 1;
+  info.color_space = ColorSpace::kSrgb;
   info.usage = additional_flags | vk::ImageUsageFlagBits::eColorAttachment;
 
   return image_factory->NewImage(info);
@@ -211,14 +237,16 @@ ImagePtr NewImage(const vk::Device& device, const vk::ImageCreateInfo& create_in
   if (create_info.flags & vk::ImageCreateFlagBits::eProtected) {
     image_info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
   }
+  image_info.color_space = GetDefaultColorSpace(create_info.format);
   image_info.is_external = true;
 
   return escher::impl::NaiveImage::AdoptVkImage(resource_recycler, image_info, image_result.value,
                                                 std::move(gpu_mem), create_info.initialLayout);
 }
 
-ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, uint32_t width, uint32_t height,
-                  vk::ImageUsageFlags additional_flags, vk::MemoryPropertyFlags memory_flags) {
+ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, ColorSpace color_space,
+                  uint32_t width, uint32_t height, vk::ImageUsageFlags additional_flags,
+                  vk::MemoryPropertyFlags memory_flags) {
   FX_DCHECK(image_factory);
 
   ImageInfo info;
@@ -229,6 +257,7 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, uint32_t width
   info.usage = additional_flags | vk::ImageUsageFlagBits::eTransferDst |
                vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
   info.memory_flags |= memory_flags;
+  info.color_space = color_space;
 
   // Create the new image.
   auto image = image_factory->NewImage(info);
@@ -243,11 +272,9 @@ void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader, const uint8_t* pix
   FX_DCHECK(image);
   FX_DCHECK(pixels);
 
-  size_t bytes_per_pixel = BytesPerPixel(image->info().format);
   uint32_t width = image->info().width;
   uint32_t height = image->info().height;
-
-  std::vector<uint8_t> pixels_to_write(bytes_per_pixel * width * height);
+  std::vector<uint8_t> pixels_to_write(GetImageByteSize(image->format(), width, height));
   if (!conversion_func) {
     std::copy(pixels, pixels + pixels_to_write.size(), pixels_to_write.begin());
   } else {
@@ -272,8 +299,8 @@ ImagePtr NewRgbaImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploade
   FX_DCHECK(image_factory);
   FX_DCHECK(gpu_uploader);
 
-  auto image =
-      NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height, vk::ImageUsageFlags());
+  auto image = NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, ColorSpace::kSrgb, width, height,
+                        vk::ImageUsageFlags());
 
   WritePixelsToImage(gpu_uploader, pixels, image, final_layout);
   return image;
@@ -284,7 +311,8 @@ ImagePtr NewCheckerboardImage(ImageFactory* image_factory, BatchGpuUploader* gpu
   FX_DCHECK(image_factory);
   FX_DCHECK(gpu_uploader);
 
-  auto image = NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height);
+  auto image =
+      NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, ColorSpace::kSrgb, width, height);
 
   auto pixels = NewCheckerboardPixels(width, height);
   WritePixelsToImage(gpu_uploader, pixels.get(), image);
@@ -298,7 +326,7 @@ ImagePtr NewGradientImage(ImageFactory* image_factory, BatchGpuUploader* gpu_upl
 
   auto pixels = NewGradientPixels(width, height);
   // TODO(fxbug.dev/24056): are SRGB formats slow on Mali?
-  auto image = NewImage(image_factory, vk::Format::eR8G8B8A8Srgb, width, height);
+  auto image = NewImage(image_factory, vk::Format::eR8G8B8A8Srgb, ColorSpace::kSrgb, width, height);
 
   WritePixelsToImage(gpu_uploader, pixels.get(), image);
   return image;
@@ -310,7 +338,8 @@ ImagePtr NewNoiseImage(ImageFactory* image_factory, BatchGpuUploader* gpu_upload
   FX_DCHECK(gpu_uploader);
 
   auto pixels = NewNoisePixels(width, height);
-  auto image = NewImage(image_factory, vk::Format::eR8Unorm, width, height, additional_flags);
+  auto image = NewImage(image_factory, vk::Format::eR8Unorm, ColorSpace::kSrgb, width, height,
+                        additional_flags);
 
   WritePixelsToImage(gpu_uploader, pixels.get(), image);
   return image;

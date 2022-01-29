@@ -198,4 +198,30 @@ ImageConstraintsInfo GetDefaultImageConstraintsInfo(const vk::ImageCreateInfo& c
   return result;
 }
 
+// Converts sysmem ColorSpace enum to Escher ColorSpace enum.
+ColorSpace FromSysmemColorSpace(fuchsia::sysmem::ColorSpaceType sysmem_color_space) {
+  switch (sysmem_color_space) {
+    case fuchsia::sysmem::ColorSpaceType::INVALID:
+      return ColorSpace::kInvalid;
+    case fuchsia::sysmem::ColorSpaceType::SRGB:
+      return ColorSpace::kSrgb;
+    case fuchsia::sysmem::ColorSpaceType::REC601_NTSC:
+      return ColorSpace::kRec601Ntsc;
+    case fuchsia::sysmem::ColorSpaceType::REC601_NTSC_FULL_RANGE:
+      return ColorSpace::kRec601NtscFullRange;
+    case fuchsia::sysmem::ColorSpaceType::REC601_PAL:
+      return ColorSpace::kRec601Pal;
+    case fuchsia::sysmem::ColorSpaceType::REC601_PAL_FULL_RANGE:
+      return ColorSpace::kRec601PalFullRange;
+    case fuchsia::sysmem::ColorSpaceType::REC709:
+      return ColorSpace::kRec709;
+    case fuchsia::sysmem::ColorSpaceType::REC2020:
+      return ColorSpace::kRec2020;
+    case fuchsia::sysmem::ColorSpaceType::REC2100:
+      return ColorSpace::kRec2100;
+    case fuchsia::sysmem::ColorSpaceType::PASS_THROUGH:
+      return ColorSpace::kPassThrough;
+  }
+}
+
 }  // namespace escher

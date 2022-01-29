@@ -6,6 +6,7 @@
 #define SRC_UI_LIB_ESCHER_RENDERER_SAMPLER_CACHE_H_
 
 #include "src/ui/lib/escher/resources/resource_recycler.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 #include "src/ui/lib/escher/vk/sampler.h"
 
 namespace escher {
@@ -16,7 +17,7 @@ class SamplerCache final {
   explicit SamplerCache(fxl::WeakPtr<ResourceRecycler> resource_recycler);
 
   SamplerPtr ObtainSampler(vk::Filter filter, bool use_unnormalized_coordinates = false);
-  SamplerPtr ObtainYuvSampler(vk::Format format, vk::Filter filter,
+  SamplerPtr ObtainYuvSampler(vk::Format format, vk::Filter filter, ColorSpace color_space,
                               bool use_unnormalized_coordinates = false);
 
   // Return the number of samplers in the cache.
@@ -26,6 +27,7 @@ class SamplerCache final {
   struct Key {
     vk::Format format;
     vk::Filter filter;
+    ColorSpace color_space;
     bool use_unnormalized_coordinates;
 
     // Key equality and hashing, for storage in |samplers_|.

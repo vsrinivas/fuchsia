@@ -19,7 +19,7 @@ void ReadbackTest::SetUp() {
   ImageFactoryAdapter image_factory(escher_->gpu_allocator(), escher_->resource_recycler());
 
   color_attachment_ = image_utils::NewImage(
-      &image_factory, kColorFormat, kFramebufferWidth, kFramebufferHeight,
+      &image_factory, kColorFormat, kColorSpace, kFramebufferWidth, kFramebufferHeight,
       vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc |
           vk::ImageUsageFlagBits::eTransferDst);
 

@@ -5,14 +5,13 @@
 #ifndef SRC_UI_LIB_ESCHER_UTIL_IMAGE_UTILS_H_
 #define SRC_UI_LIB_ESCHER_UTIL_IMAGE_UTILS_H_
 
-#ifdef __Fuchsia__
 #include <lib/fit/function.h>
-#endif
 
 #include <utility>
 
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/forward_declarations.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 #include "src/ui/lib/escher/vk/image.h"
 
 namespace escher {
@@ -83,7 +82,8 @@ ImagePtr NewImage(const vk::Device& device, const vk::ImageCreateInfo& create_in
 // |image_factory| is a generic interface that could be an Image cache (in which
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
-ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, uint32_t width, uint32_t height,
+ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, ColorSpace color_space,
+                  uint32_t width, uint32_t height,
                   vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags(),
                   vk::MemoryPropertyFlags memory_flags = vk::MemoryPropertyFlags());
 

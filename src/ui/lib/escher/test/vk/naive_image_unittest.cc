@@ -29,6 +29,7 @@ VK_TEST_F(NaiveImageTest, AdoptVkImageInsufficientMemory) {
       .sample_count = 1,
       .usage = vk::ImageUsageFlagBits::eSampled,
       .memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal,
+      .color_space = ColorSpace::kSrgb,
   };
   vk::Image vk_image = image_utils::CreateVkImage(escher->vk_device(), large_image_info,
                                                   vk::ImageLayout::eUndefined);

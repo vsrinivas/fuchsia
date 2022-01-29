@@ -7,16 +7,67 @@
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 
-#include "vulkan/vulkan.hpp"
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
+
+namespace {
+
+vk::SamplerYcbcrModelConversion GetYcbcrModelForColorSpace(ColorSpace color_space) {
+  switch (color_space) {
+    case ColorSpace::kSrgb:
+      return vk::SamplerYcbcrModelConversion::eRgbIdentity;
+
+    case ColorSpace::kRec601Ntsc:
+    case ColorSpace::kRec601NtscFullRange:
+    case ColorSpace::kRec601Pal:
+    case ColorSpace::kRec601PalFullRange:
+      return vk::SamplerYcbcrModelConversion::eYcbcr601;
+
+    case ColorSpace::kRec709:
+      return vk::SamplerYcbcrModelConversion::eYcbcr709;
+
+    case ColorSpace::kRec2020:
+    case ColorSpace::kRec2100:
+      return vk::SamplerYcbcrModelConversion::eYcbcr2020;
+
+    case ColorSpace::kInvalid:
+    case ColorSpace::kPassThrough:
+      FX_NOTREACHED() << "Invalid Color space";
+      return vk::SamplerYcbcrModelConversion::eYcbcrIdentity;
+  }
+}
+
+vk::SamplerYcbcrRange GetYcbcrRangeForColorSpace(ColorSpace color_space) {
+  switch (color_space) {
+    case ColorSpace::kRec601Ntsc:
+    case ColorSpace::kRec601Pal:
+    case ColorSpace::kRec709:
+    case ColorSpace::kRec2020:
+    case ColorSpace::kRec2100:
+      return vk::SamplerYcbcrRange::eItuNarrow;
+
+    case ColorSpace::kSrgb:
+    case ColorSpace::kRec601NtscFullRange:
+    case ColorSpace::kRec601PalFullRange:
+      return vk::SamplerYcbcrRange::eItuFull;
+
+    case ColorSpace::kInvalid:
+    case ColorSpace::kPassThrough:
+      FX_NOTREACHED() << "Invalid Color space";
+      return vk::SamplerYcbcrRange::eItuNarrow;
+  }
+}
+
+}  // namespace
 
 const ResourceTypeInfo Sampler::kTypeInfo("Sampler", ResourceType::kResource,
                                           ResourceType::kSampler);
 
 Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Filter filter,
-                 bool use_unnormalized_coordinates)
+                 ColorSpace color_space, bool use_unnormalized_coordinates)
     : Resource(resource_recycler), is_immutable_(false) {
   auto device = resource_recycler->vulkan_context().device;
 
@@ -32,8 +83,8 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Fil
     vk::SamplerYcbcrConversionCreateInfo ycbcr_create_info;
     ycbcr_create_info.pNext = nullptr;
     ycbcr_create_info.format = format;
-    ycbcr_create_info.ycbcrModel = vk::SamplerYcbcrModelConversion::eYcbcr709;
-    ycbcr_create_info.ycbcrRange = vk::SamplerYcbcrRange::eItuNarrow;
+    ycbcr_create_info.ycbcrModel = GetYcbcrModelForColorSpace(color_space);
+    ycbcr_create_info.ycbcrRange = GetYcbcrRangeForColorSpace(color_space);
     ycbcr_create_info.components = {
         VK_COMPONENT_SWIZZLE_IDENTITY,  // R
         VK_COMPONENT_SWIZZLE_IDENTITY,  // G

@@ -88,7 +88,9 @@ void Demo::RunOffscreenBenchmark(Demo* demo, uint32_t framebuffer_width,
       auto im = image_cache->NewImage({framebuffer_format, framebuffer_width, framebuffer_height, 1,
                                        vk::ImageUsageFlagBits::eColorAttachment |
                                            vk::ImageUsageFlagBits::eTransferSrc |
-                                           vk::ImageUsageFlagBits::eTransferDst});
+                                           vk::ImageUsageFlagBits::eTransferDst,
+                                       vk::MemoryPropertyFlagBits::eDeviceLocal,
+                                       vk::ImageTiling::eOptimal, escher::ColorSpace::kSrgb});
       images[i] = im;
       semaphores[i] = escher::Semaphore::New(escher->vk_device());
 

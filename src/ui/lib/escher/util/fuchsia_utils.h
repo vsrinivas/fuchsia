@@ -12,6 +12,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/renderer/semaphore.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 
 namespace escher {
 
@@ -80,6 +81,9 @@ struct ImageConstraintsInfo {
 // - All the other assumptions are the same as |GetDefaultImageFormatConstraintsInfo|.
 ImageConstraintsInfo GetDefaultImageConstraintsInfo(const vk::ImageCreateInfo& create_info,
                                                     bool allow_protected_memory = false);
+
+// Converts sysmem ColorSpace enum to Escher ColorSpace enum.
+ColorSpace FromSysmemColorSpace(fuchsia::sysmem::ColorSpaceType sysmem_color_space);
 
 }  // namespace escher
 

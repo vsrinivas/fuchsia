@@ -7,6 +7,7 @@
 
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/resources/resource.h"
+#include "src/ui/lib/escher/vk/color_space.h"
 
 namespace escher {
 
@@ -19,7 +20,7 @@ class Sampler : public Resource {
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
   Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Filter filter,
-          bool use_unnormalized_coordinates = false);
+          ColorSpace color_space, bool use_unnormalized_coordinates = false);
   ~Sampler() override;
 
   const vk::Sampler& vk() const { return sampler_; }
