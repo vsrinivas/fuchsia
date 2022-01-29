@@ -18,20 +18,6 @@ toc:
 # - title: "Component Lifecycle"
 #   path: /docs/concepts/diagnostics/lifecycle.md
 
-- title: "Inspect"
-  section:
-  # TODO(fxbug.dev/60767)
-  # - title: "Overview"
-  #   path: /docs/concepts/diagnostics/inspect/README.md
-
-  # TODO(fxbug.dev/60764)
-  # - title: "Principles"
-  #   path: /docs/concepts/diagnostics/inspect/principles.md
-
-  - title: "Health"
-    path: /docs/concepts/diagnostics/inspect/health.md
-  - title: "Rust libraries"
-    path: /docs/concepts/diagnostics/inspect/rust.md
 - title: "Logs"
   section:
   - title: "Overview"

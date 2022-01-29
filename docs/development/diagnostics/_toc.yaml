@@ -12,6 +12,17 @@ toc:
     path: /docs/development/diagnostics/inspect
   - title: "Quickstart"
     path: /docs/development/diagnostics/inspect/quickstart.md
+  # TODO(fxbug.dev/60767)
+  # - title: "Overview"
+  #   path: /docs/development/diagnostics/inspect/README.md
+
+  # TODO(fxbug.dev/60764)
+  # - title: "Principles"
+  #   path: /docs/development/diagnostics/inspect/principles.md
+  - title: "Health"
+    path: /docs/development/diagnostics/inspect/health.md
+  - title: "Rust libraries"
+    path: /docs/development/diagnostics/inspect/rust.md
   - title: "Inspect codelab"
     section:
     - title: "Overview"

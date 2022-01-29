@@ -256,7 +256,7 @@ ffx target snapshot
 [iquery]: /docs/reference/diagnostics/consumers/iquery.md
 [Inspect File Format]: /docs/reference/platform-spec/diagnostics/inspect-vmo-format.md
 [Validator Architecture]: /docs/reference/diagnostics/inspect/validator/README.md
-[Health checks]: /docs/concepts/diagnostics/inspect/health.md
+[Health checks]: /docs/development/diagnostics/inspect/health.md
 [ffx-inspect]: https://fuchsia.dev/reference/tools/sdk/ffx.md#inspect
 [ffx-inspect-show]: https://fuchsia.dev/reference/tools/sdk/ffx.md#show_3
 [ffx-target-snapshot]: https://fuchsia.dev/reference/tools/sdk/ffx.md#snapshot
