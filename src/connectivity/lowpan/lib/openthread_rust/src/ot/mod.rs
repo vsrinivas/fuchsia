@@ -91,6 +91,9 @@ pub use ip6::*;
 mod state;
 pub use state::*;
 
+mod radio;
+pub use radio::*;
+
 pub mod message;
 pub use message::{Message, MessageBuffer};
 
@@ -108,7 +111,7 @@ pub use platform::*;
 
 /// Trait implemented by all OpenThread instances.
 pub trait InstanceInterface:
-    Ip6 + Reset + Dataset + Link + State + Tasklets + Thread + BorderRouter + MessageBuffer
+    Ip6 + Reset + Dataset + Link + State + Tasklets + Thread + BorderRouter + MessageBuffer + Radio
 {
 }
 

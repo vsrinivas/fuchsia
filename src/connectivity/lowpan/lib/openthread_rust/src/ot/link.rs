@@ -57,10 +57,6 @@ pub trait Link {
     /// [`otsys::otLinkGetSupportedChannelMask`](crate::otsys::otLinkGetSupportedChannelMask).
     fn get_supported_channel_mask(&self) -> ot::ChannelMask;
 
-    /// Functional equivalent of
-    /// [`otsys::otPlatRadioGetRssi`](crate::otsys::otPlatRadioGetRssi).
-    fn get_rssi(&self) -> Decibels;
-
     /// Starts an active scan. Functional equivalent of
     /// [`otsys::otLinkActiveScan`](crate::otsys::otLinkActiveScan).
     ///
@@ -130,10 +126,6 @@ impl<T: Link + Boxable> Link for ot::Box<T> {
 
     fn get_supported_channel_mask(&self) -> ChannelMask {
         self.as_ref().get_supported_channel_mask()
-    }
-
-    fn get_rssi(&self) -> Decibels {
-        self.as_ref().get_rssi()
     }
 
     fn start_active_scan<'a, F>(&self, channels: ChannelMask, dwell: Duration, f: F) -> Result
@@ -214,10 +206,6 @@ impl Link for Instance {
     fn get_supported_channel_mask(&self) -> ChannelMask {
         let mask_u32 = unsafe { otLinkGetSupportedChannelMask(self.as_ot_ptr()) };
         mask_u32.into()
-    }
-
-    fn get_rssi(&self) -> Decibels {
-        unsafe { otPlatRadioGetRssi(self.as_ot_ptr()) }
     }
 
     fn start_active_scan<'a, F>(&self, channels: ChannelMask, dwell: Duration, f: F) -> Result
