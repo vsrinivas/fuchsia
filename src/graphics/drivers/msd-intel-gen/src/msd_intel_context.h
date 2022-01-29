@@ -59,6 +59,11 @@ class MsdIntelContext {
 
   void Kill();
 
+  size_t GetQueueSize() {
+    std::lock_guard lock(presubmit_mutex_);
+    return presubmit_queue_.size();
+  }
+
   // Gets the gpu address of the context buffer if mapped.
   bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
   bool GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);

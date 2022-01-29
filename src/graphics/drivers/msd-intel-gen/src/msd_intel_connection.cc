@@ -147,6 +147,7 @@ void MsdIntelConnection::ReleaseBuffer(
     }
   }
 
+  size_t max_queue_size = 0;
   uint64_t stall_ns = 0;
 
   if (do_stall) {
@@ -166,6 +167,8 @@ void MsdIntelConnection::ReleaseBuffer(
         TRACE_DURATION("magma", "stall on release");
         constexpr uint32_t kStallMaxMs = 1000;
         wait_callback(event.get(), kStallMaxMs);
+
+        max_queue_size = std::max(max_queue_size, context->GetQueueSize());
       }
     }
 
@@ -185,10 +188,12 @@ void MsdIntelConnection::ReleaseBuffer(
         mappings_to_release_.emplace_back(std::move(bus_mappings[i]));
       }
     } else if (!sent_context_killed()) {
-      MAGMA_LOG(WARNING,
-                "ReleaseBuffer %lu mapping has use count %zu after total stall (%lu us), sending "
-                "context killed",
-                mapping->BufferId(), use_count, stall_ns / 1000);
+      // If any queue has size > 0 after the stall, there is a stuck command buffer.
+      MAGMA_LOG(
+          WARNING,
+          "ReleaseBuffer %lu mapping has use count %zu after total stall (%lu us) %zd context(s) "
+          "max queue size %zd - sending context killed",
+          mapping->BufferId(), use_count, stall_ns / 1000, context_list_.size(), max_queue_size);
       SendContextKilled();
     }
   }
