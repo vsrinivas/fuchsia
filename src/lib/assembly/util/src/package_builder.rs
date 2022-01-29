@@ -208,22 +208,20 @@ impl PackageBuilder {
             create_meta_package_file(gendir.as_ref(), &name, "0")
                 .context(format!("Writing the {} file", META_PACKAGE_PATH))?,
         );
-        if let Some(abi_revision) = abi_revision {
-            let abi_revision_file = Self::write_contents_to_file(
-                gendir,
-                ABI_REVISION_FILE_PATH,
-                abi_revision.as_bytes(),
-            )
-            .context(format!("Writing the {} file", ABI_REVISION_FILE_PATH))?;
 
-            far_contents.insert(
-                ABI_REVISION_FILE_PATH.to_string(),
-                abi_revision_file.path_to_string().context(format!(
-                    "Adding the {} file to the package",
-                    ABI_REVISION_FILE_PATH
-                ))?,
-            );
-        }
+        let abi_revision =
+            abi_revision.unwrap_or(ABIRevision::from(version_history::LATEST_VERSION));
+
+        let abi_revision_file =
+            Self::write_contents_to_file(gendir, ABI_REVISION_FILE_PATH, abi_revision.as_bytes())
+                .context(format!("Writing the {} file", ABI_REVISION_FILE_PATH))?;
+
+        far_contents.insert(
+            ABI_REVISION_FILE_PATH.to_string(),
+            abi_revision_file
+                .path_to_string()
+                .context(format!("Adding the {} file to the package", ABI_REVISION_FILE_PATH))?,
+        );
 
         let creation_manifest =
             CreationManifest::from_external_and_far_contents(blobs, far_contents)?;
@@ -261,6 +259,12 @@ impl std::ops::Deref for ABIRevision {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl From<&version_history::Version> for ABIRevision {
+    fn from(version: &version_history::Version) -> Self {
+        ABIRevision(version.abi_revision)
     }
 }
 
@@ -327,7 +331,6 @@ mod tests {
 
         // Create the builder
         let mut builder = PackageBuilder::new("some_pkg_name");
-        builder.abi_revision(42);
         builder
             .add_file_as_blob("some/blob", blob_source_file_path.path().path_to_string().unwrap())
             .unwrap();
@@ -361,7 +364,7 @@ mod tests {
         let abi_revision_data = far_reader.read_file("meta/fuchsia.abi/abi-revision").unwrap();
         let abi_revision_data: [u8; 8] = abi_revision_data.try_into().unwrap();
         let abi_revision = u64::from_le_bytes(abi_revision_data);
-        assert_eq!(abi_revision, 42);
+        assert_eq!(abi_revision, version_history::LATEST_VERSION.abi_revision);
     }
 
     #[test]

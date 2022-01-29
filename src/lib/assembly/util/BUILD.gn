@@ -13,6 +13,7 @@ if (is_host) {
     deps = [
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//src/sys/pkg/lib/fuchsia-pkg",
+      "//src/sys/pkg/lib/version-history/rust:version-history",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:camino",
       "//third_party/rust_crates:serde_json",

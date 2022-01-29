@@ -253,6 +253,8 @@ template("assemble_system") {
     static_packages = "${gendir}/${base_package_name}/data/static_packages"
     cache_packages = "${gendir}/${base_package_name}/data/cache_packages"
     base_meta_package = "${gendir}/${base_package_name}/meta/package"
+    base_pkg_abi_revision =
+        "${gendir}/${base_package_name}/meta/fuchsia.abi/abi-revision"
     images_manifest = "${outdir}/images.json"
     assembly_inputs = "${outdir}/assembly_inputs.json"
 
@@ -679,6 +681,7 @@ template("assemble_system") {
       outputs += [
         # In the outdir.
         files.base_package,
+        files.base_package_manifest,
         files.minfs,
         files.blobfs,
         files.fvm,
@@ -691,7 +694,7 @@ template("assemble_system") {
         files.static_packages,
         files.cache_packages,
         files.base_meta_package,
-        files.base_package_manifest,
+        files.base_pkg_abi_revision,
       ]
 
       if (fvm_emmc_partition_size != false ||

@@ -21,6 +21,7 @@ template("update_package") {
     update_package = "$outdir/update.far"
     update_package_manifest = "$outdir/update_package_manifest.json"
     update_meta_package = "$gendir/meta/package"
+    update_abi_revision = "$gendir/meta/fuchsia.abi/abi-revision"
     board = "$gendir/board"
     epoch = "$gendir/epoch.json"
     packages = "$gendir/packages.json"
@@ -67,6 +68,7 @@ template("update_package") {
       files.update_package,
       files.update_package_manifest,
       files.update_meta_package,
+      files.update_abi_revision,
       files.board,
       files.epoch,
       files.packages,
