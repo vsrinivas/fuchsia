@@ -26,11 +26,7 @@ where
     pub(crate) async fn on_regulatory_region_changed(&self, region: String) -> Result<(), Error> {
         fx_log_info!("Got region code {:?}", region);
 
-        // TODO(rquattle): Set region code on OpenThread here
-        // let code = region.try_into()?;
-        // self.wait_for_state(DriverState::is_initialized).await;
-
-        Result::<_, Error>::Ok(())
+        Ok(self.driver_state.lock().ot_instance.set_region(region.try_into()?)?)
     }
 
     pub(crate) async fn on_network_interface_event(
