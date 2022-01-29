@@ -93,7 +93,8 @@ def copy_to_assembly_input_bundle(
     # Copy all the blobs to their dir in the out-of-tree layout
     (all_blobs, blob_deps) = copy_blobs(all_blobs, outdir)
     deps.update(blob_deps)
-    result.blobs = set([os.path.relpath(blob_path, outdir) for blob_path in all_blobs])
+    result.blobs = set(
+        [os.path.relpath(blob_path, outdir) for blob_path in all_blobs])
 
     # Copy the bootfs entries
     (bootfs,
@@ -175,13 +176,14 @@ def copy_packages(
         package_manifest_destination = os.path.join(outdir, rebased_destination)
         fast_copy(package_manifest_path, package_manifest_destination)
 
-        # Track the package manifest in our st of packages
+        # Track the package manifest in our set of packages
         packages.append(rebased_destination)
 
     return (packages, blobs, deps)
 
 
-def copy_blobs(blobs: Dict[Merkle, FilePath], outdir: FilePath) -> Tuple[List[FilePath], DepSet]:
+def copy_blobs(blobs: Dict[Merkle, FilePath],
+               outdir: FilePath) -> Tuple[List[FilePath], DepSet]:
     blob_paths: List[FilePath] = []
     deps: DepSet = set()
 
@@ -201,7 +203,6 @@ def copy_blobs(blobs: Dict[Merkle, FilePath], outdir: FilePath) -> Tuple[List[Fi
         deps.add(source)
 
     return (blob_paths, deps)
-
 
 
 def copy_file_entries(entries: FileEntrySet, outdir: FilePath,
@@ -294,8 +295,7 @@ def main():
     )
     parser.add_argument(
         "--image-assembly-config", type=argparse.FileType('r'), required=True)
-    parser.add_argument(
-        "--config-data-entries", type=argparse.FileType('r'), required=True)
+    parser.add_argument("--config-data-entries", type=argparse.FileType('r'))
     parser.add_argument(
         "--subtract", default=[], nargs="*", type=argparse.FileType('r'))
     parser.add_argument("--outdir", required=True)
@@ -312,11 +312,14 @@ def main():
     for other in subtract:
         legacy = legacy.difference(other)
 
-    # Read in the config_data entries
-    config_data_entries = [
-        FileEntry.from_dict(entry)
-        for entry in json.load(args.config_data_entries)
-    ]
+    # Read in the config_data entries if available.
+    if args.config_data_entries:
+        config_data_entries = [
+            FileEntry.from_dict(entry)
+            for entry in json.load(args.config_data_entries)
+        ]
+    else:
+        config_data_entries = []
 
     assembly_config_manifest_path = os.path.join(
         args.outdir, "assembly_config.json")

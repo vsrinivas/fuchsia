@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/assembly/assembly_input_bundle.gni")
-import("//build/python/python_action.gni")
+import("//build/assembly/legacy.gni")
 
 # Create an OOT-usable Image Assembly configuration, with all supporting
 # artifacts, based on the currently configured product configuration.
@@ -12,98 +11,10 @@ import("//build/python/python_action.gni")
 # a package from it that contains all the base, cache, bootfs, and config data
 # files, the kernel, and a new version of the image assembly config whose paths
 # are all relative to the file (in the same package as those artifacts.)
-
-labels = {
-  legacy_image_assembly = "//build/images/fuchsia"
-
-  # Extract the assembly label's dir and name components:
-  legacy_image_assembly_name = get_label_info(legacy_image_assembly, "name")
-  legacy_image_assembly_dir = get_label_info(legacy_image_assembly, "dir")
-
-  # Compute the assembly config and config_data labels that are generated within
-  # assemble_system()
-  legacy_image_assembly_config = "${legacy_image_assembly_dir}:${legacy_image_assembly_name}_image_assembly_config"
-  legacy_config_data = "${legacy_image_assembly_dir}:${legacy_image_assembly_name}_config-data_config_package_entries"
-}
-
-# Commonly used filename for the AssemblyInputConfiguration to be written to.
-assembly_config_filename = "assembly_config.json"
-
-files = {
-  # Locate the output files from the above labels, in their out dir:
-  legacy_image_assembly_config_dir =
-      get_label_info(labels.legacy_image_assembly_config, "target_out_dir")
-  legacy_image_assembly_config = "${legacy_image_assembly_config_dir}/${labels.legacy_image_assembly_name}_image_assembly_config.json"
-  legacy_config_data_dir =
-      get_label_info(labels.legacy_config_data, "target_out_dir")
-  legacy_config_data_entries = "${legacy_config_data_dir}/${labels.legacy_image_assembly_name}_config-data_config_package_entries"
-
-  legacy_assembly_dir = "${target_out_dir}/legacy"
-  legacy_assembly_input_config =
-      "${legacy_assembly_dir}/${assembly_config_filename}"
-  legacy_assembly_input_config_depfile = "${target_out_dir}/legacy.d}"
-  legacy_assembly_input_bundle_manifest =
-      "${target_out_dir}/legacy.fini_manifest"
-  legacy_assembly_input_bundle_package_metafar =
-      "${target_out_dir}/legacy.pkg/meta.far"
-  legacy_assembly_input_bundle_package_manifest =
-      "${target_out_dir}/legacy.pkg/package_manifest.json"
-  legacy_assembly_input_bundle_archive = "${target_out_dir}/legacy.tgz"
-  legacy_assembly_input_bundle_archive_manifest =
-      "${legacy_assembly_input_bundle_archive}.fini_manifest"
-}
-
-# Run the script that creates the out-of-tree-usable Assembly Input Bundle from
-# an Image Assembly product configuration and the config_data package entries
-# that go with it.
-python_action("legacy") {
+legacy_assembly_input_bundle("legacy") {
   testonly = true
-
-  binary_label = "scripts:make_legacy_config"
-
-  outputs = [
-    files.legacy_assembly_input_config,
-    files.legacy_assembly_input_bundle_manifest,
-  ]
-  depfile = files.legacy_assembly_input_config_depfile
-
-  args = [
-    "--image-assembly-config",
-    rebase_path(files.legacy_image_assembly_config, root_build_dir),
-    "--config-data-entries",
-    rebase_path(files.legacy_config_data_entries, root_build_dir),
-    "--outdir",
-    rebase_path(files.legacy_assembly_dir, root_build_dir),
-    "--export-manifest",
-    rebase_path(files.legacy_assembly_input_bundle_manifest, root_build_dir),
-    "--depfile",
-    rebase_path(files.legacy_assembly_input_config_depfile, root_build_dir),
-  ]
-  inputs = [
-    files.legacy_image_assembly_config,
-    files.legacy_config_data_entries,
-  ]
-  deps = [
-    labels.legacy_image_assembly_config,
-    labels.legacy_config_data,
-  ]
-}
-
-assembly_input_bundle_package("legacy.pkg") {
-  testonly = true
-  manifest = files.legacy_assembly_input_bundle_manifest
-  package_name = "legacy"
-  deps = [ ":legacy" ]
-}
-
-assembly_input_bundle_archive("legacy.tgz") {
-  testonly = true
-  manifest = files.legacy_assembly_input_bundle_manifest
-  meta_far = files.legacy_assembly_input_bundle_package_metafar
-  deps = [
-    ":legacy",
-    ":legacy.pkg",
-  ]
+  image_assembly_label = "//build/images/fuchsia"
+  create_package_archive = true
 }
 
 group("assembly") {

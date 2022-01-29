@@ -1,0 +1,183 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/assembly/assembly_input_bundle.gni")
+import("//build/python/python_action.gni")
+
+# Create a "legacy" assembly input bundle from an image assembly configuration,
+# so that product assembly can use it to produce a matching image assembly
+# configuration (so that the contents of the two can be validated against).
+#
+# These will be used to validate that product assembly is operating correctly
+# within the build, before we cut over to it.
+#
+# Parameters:
+#
+#   image_assembly_label
+#     [label] GN label for the image assembly to use as a basis for the "legacy"
+#     assembly input bundle.
+#
+#   bundles_dir [optional; default: target_out_dir]
+#     [GN file path] path to a dir to use instead of $target_out_dir as the
+#     parent of the legacy input bundle.
+#
+#   create_package [optional; default: false]
+#     [bool] optionally create a package that contains the legacy assembly input
+#      bundle
+#
+#   create_package_archive [optional; default: false]
+#     [bool] optionally create an archive of the legacy assembly input bundle.
+#     Implies that `create_package` is also true.
+#
+#   include_config_data [optional; default: true]
+#     [bool] optionally omit the handling of config_data entries (for those
+#     configurations that do not have a config_data package.
+#
+template("legacy_assembly_input_bundle") {
+  forward_variables_from(invoker,
+                         [
+                           "image_assembly_label",
+                           "bundles_dir",
+                           "create_package",
+                           "create_package_archive",
+                         ])
+
+  assert(defined(image_assembly_label),
+         "The image assembly configuration must be specified for: " +
+             get_label_info(target_name, "label_with_toolchain"))
+
+  if (!defined(bundles_dir)) {
+    bundles_dir = target_out_dir
+  }
+  bundle_name = "legacy"
+
+  create_package_archive =
+      defined(invoker.create_package_archive) && invoker.create_package_archive
+  create_package = create_package_archive ||
+                   (defined(invoker.create_package) && invoker.create_package)
+
+  include_config_data = true
+  if (defined(invoker.include_config_data)) {
+    include_config_data = invoker.include_config_data
+  }
+
+  labels = {
+    legacy_input_bundle = target_name
+
+    # Extract the assembly label's dir and name components:
+    image_assembly_name = get_label_info(image_assembly_label, "name")
+    image_assembly_dir = get_label_info(image_assembly_label, "dir")
+
+    # Compute the assembly config and config_data labels that are generated within
+    # assemble_system()
+    assemble_system_image_assembly_config =
+        "${image_assembly_dir}:${image_assembly_name}_image_assembly_config"
+    assemble_system_config_data = "${image_assembly_dir}:${image_assembly_name}_config-data_config_package_entries"
+
+    # The assembly bundle package and archive labels
+    assembly_input_bundle_package = "${target_name}.pkg"
+    assembly_input_bundle_archive = "${target_name}.tgz"
+  }
+
+  # Commonly used filename for the AssemblyInputConfiguration to be written to.
+  assembly_config_filename = "assembly_config.json"
+
+  files = {
+    # Locate the output files from the above labels, in their out dir:
+    image_assembly_config_dir =
+        get_label_info(labels.assemble_system_image_assembly_config,
+                       "target_out_dir")
+    image_assembly_config = "${image_assembly_config_dir}/${labels.image_assembly_name}_image_assembly_config.json"
+    assemble_system_config_data_dir =
+        get_label_info(labels.assemble_system_config_data, "target_out_dir")
+    assemble_system_config_data_entries = "${assemble_system_config_data_dir}/${labels.image_assembly_name}_config-data_config_package_entries"
+
+    # Outputs
+
+    _basename = "${bundles_dir}/${bundle_name}"
+
+    # The directory where all the bundle contents are written to
+    assembly_input_bundle_dir = _basename
+    assembly_input_bundle_config = "${_basename}/${assembly_config_filename}"
+    assembly_input_bundle_depfile = "${_basename}.d"
+    assembly_input_bundle_manifest = "${_basename}.fini_manifest"
+    assembly_input_bundle_package_metafar = "${_basename}.pkg/meta.far"
+    assembly_input_bundle_package_manifest =
+        "${_basename}.pkg/package_manifest.json"
+    assembly_input_bundle_archive = "${_basename}.tgz"
+    assembly_input_bundle_archive_manifest = "${_basename}.tgz.fini_manifest"
+  }
+
+  # Run the script that creates the out-of-tree-usable Assembly Input Bundle from
+  # an Image Assembly product configuration and the config_data package entries
+  # that go with it.
+  python_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    binary_label = "//build/assembly/scripts:make_legacy_config"
+
+    outputs = [
+      files.assembly_input_bundle_config,
+      files.assembly_input_bundle_manifest,
+    ]
+    depfile = files.assembly_input_bundle_depfile
+
+    args = [
+      "--image-assembly-config",
+      rebase_path(files.image_assembly_config, root_build_dir),
+      "--outdir",
+      rebase_path(files.assembly_input_bundle_dir, root_build_dir),
+      "--export-manifest",
+      rebase_path(files.assembly_input_bundle_manifest, root_build_dir),
+      "--depfile",
+      rebase_path(files.assembly_input_bundle_depfile, root_build_dir),
+    ]
+
+    inputs = [ files.image_assembly_config ]
+
+    deps = [ labels.assemble_system_image_assembly_config ]
+
+    if (include_config_data) {
+      args += [
+        "--config-data-entries",
+        rebase_path(files.assemble_system_config_data_entries, root_build_dir),
+      ]
+      inputs += [ files.assemble_system_config_data_entries ]
+      deps += [ labels.assemble_system_config_data ]
+    }
+
+    metadata = {
+      # We insert these barriers to prevent the dependencies of the input bundle
+      # from leaking into images "higher up" in the dependency chain.
+      package_barrier = []
+      config_package_barrier = []
+      distribution_entries_barrier = []
+    }
+  }
+
+  if (create_package) {
+    assembly_input_bundle_package(labels.assembly_input_bundle_package) {
+      testonly = true
+      manifest = files.assembly_input_bundle_manifest
+      package_name = target_name
+      deps = [ ":${labels.legacy_input_bundle}" ]
+    }
+  }
+
+  if (create_package_archive) {
+    assembly_input_bundle_archive(labels.assembly_input_bundle_archive) {
+      testonly = true
+      manifest = files.assembly_input_bundle_manifest
+      meta_far = files.assembly_input_bundle_package_metafar
+      deps = [
+        ":${labels.assembly_input_bundle_package}",
+        ":${labels.legacy_input_bundle}",
+      ]
+    }
+  }
+}
