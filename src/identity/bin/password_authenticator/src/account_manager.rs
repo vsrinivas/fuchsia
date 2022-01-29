@@ -93,7 +93,7 @@ where
         match request {
             AccountManagerRequest::GetAccountIds { responder } => {
                 let account_ids = self.get_account_ids().await?;
-                responder.send(&account_ids).context("sending GetAccountIds repsonse")?;
+                responder.send(&account_ids).context("sending GetAccountIds response")?;
             }
             AccountManagerRequest::DeprecatedGetAccount { id, password, account, responder } => {
                 let mut resp = self.get_account(id, &password, account).await;
@@ -117,8 +117,8 @@ where
                 let mut resp = Err(faccount::Error::UnsupportedOperation);
                 responder.send(&mut resp).context("sending GetAccountAuthStates response")?;
             }
-            AccountManagerRequest::GetAccountMetadata { id: _, responder } => {
-                let mut resp = Err(faccount::Error::UnsupportedOperation);
+            AccountManagerRequest::GetAccountMetadata { id, responder } => {
+                let mut resp = self.get_account_metadata(id).await;
                 responder.send(&mut resp).context("sending GetAccountMetadata response")?;
             }
             AccountManagerRequest::GetAccount {
@@ -193,6 +193,26 @@ where
         };
 
         Ok(account_ids)
+    }
+
+    /// Return the metadata for the requested account.
+    async fn get_account_metadata(
+        &self,
+        id: u64,
+    ) -> Result<faccount::AccountMetadata, faccount::Error> {
+        // Load metadata from account metadata store.
+        let ams_metadata = {
+            let ams_locked = self.account_metadata_store.lock().await;
+            ams_locked.load(&id).await?.ok_or_else(|| {
+                warn!("get_account_metadata: ID {} not found in account metadata store", id);
+                faccount::Error::NotFound
+            })?
+        };
+
+        Ok(faccount::AccountMetadata {
+            name: Some(ams_metadata.name().to_string()),
+            ..faccount::AccountMetadata::EMPTY
+        })
     }
 
     /// Authenticates an account and serves the Account FIDL protocol over the `account` channel.
@@ -516,7 +536,7 @@ mod test {
         super::*,
         crate::{
             account_metadata::{
-                test::{TEST_SCRYPT_KEY, TEST_SCRYPT_METADATA, TEST_SCRYPT_PASSWORD},
+                test::{TEST_NAME, TEST_SCRYPT_KEY, TEST_SCRYPT_METADATA, TEST_SCRYPT_PASSWORD},
                 AccountMetadata, AccountMetadataStoreError,
             },
             disk_management::{DiskError, MockMinfs},
@@ -541,6 +561,9 @@ mod test {
         Options { allow_null: true, allow_scrypt: false, allow_pinweaver: false };
     const SCRYPT_ONLY_OPTIONS: Options =
         Options { allow_null: false, allow_scrypt: true, allow_pinweaver: false };
+
+    // An account ID that should not exist.
+    const UNSUPPORTED_ACCOUNT_ID: u64 = 42;
 
     /// Mock implementation of [`DiskManager`].
     struct MockDiskManager {
@@ -745,7 +768,7 @@ mod test {
         }
 
         fn with_null_keyed_account(mut self, account_id: &AccountId) -> Self {
-            let metadata = AccountMetadata::new_null("Test Display Name".into());
+            let metadata = AccountMetadata::new_null(TEST_NAME.into());
             self.accounts.insert(*account_id, metadata);
             self
         }
@@ -897,6 +920,37 @@ mod test {
     }
 
     #[fuchsia::test]
+    async fn test_get_account_metadata_found() {
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
+        let account_metadata_store =
+            MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
+        let account_metadata =
+            account_manager.get_account_metadata(GLOBAL_ACCOUNT_ID).await.unwrap();
+        assert_eq!(
+            account_metadata,
+            faccount::AccountMetadata {
+                name: Some(TEST_NAME.to_string()),
+                ..faccount::AccountMetadata::EMPTY
+            }
+        );
+    }
+
+    #[fuchsia::test]
+    async fn test_get_account_metadata_not_found() {
+        let disk_manager =
+            MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
+        let account_metadata_store =
+            MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
+        let err = account_manager.get_account_metadata(UNSUPPORTED_ACCOUNT_ID).await.unwrap_err();
+        assert_eq!(err, faccount::Error::NotFound);
+    }
+
+    #[fuchsia::test]
     async fn test_get_account_no_accounts() {
         let account_manager = AccountManager::new(
             DEFAULT_OPTIONS,
@@ -914,7 +968,6 @@ mod test {
     async fn test_get_account_unsupported_id() {
         // All account IDs except for 1 are rejected with Internal (but only if the account
         // metadata is actually present for such a non-1 account).
-        const UNSUPPORTED_ACCOUNT_ID: u64 = 42;
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
         let account_metadata_store =

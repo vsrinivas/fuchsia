@@ -154,6 +154,11 @@ impl AccountMetadata {
             AuthenticatorMetadata::ScryptOnly(_) => options.allow_scrypt,
         }
     }
+
+    /// Returns the account name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[async_trait]
@@ -330,6 +335,9 @@ pub mod test {
         }
     }
 
+    // This is the user name we include in all test metadata objects
+    pub const TEST_NAME: &str = "Test Display Name";
+
     // These are both valid golden metadata we expect to be able to load.
     const NULL_KEY_AND_NAME_DATA: &[u8] =
         br#"{"name":"Display Name","authenticator_metadata":{"type":"NullKey"}}"#;
@@ -346,12 +354,9 @@ pub mod test {
 
     lazy_static! {
         pub static ref TEST_SCRYPT_METADATA: AccountMetadata =
-            AccountMetadata::test_new_weak_scrypt_with_salt(
-                "Test Display Name".into(),
-                TEST_SCRYPT_SALT,
-            );
+            AccountMetadata::test_new_weak_scrypt_with_salt(TEST_NAME.into(), TEST_SCRYPT_SALT,);
         static ref TEST_NULL_METADATA: AccountMetadata =
-            AccountMetadata::new_null("Test Display Name".into(),);
+            AccountMetadata::new_null(TEST_NAME.into(),);
     }
 
     // We have precomputed the key produced by the above fixed salt so that each test that wants to
@@ -495,11 +500,13 @@ pub mod test {
         let serialized = serde_json::to_vec(&content).unwrap();
         let deserialized = serde_json::from_slice::<AccountMetadata>(&serialized).unwrap();
         assert_eq!(content, deserialized);
+        assert_eq!(deserialized.name(), "Display Name");
 
         let content = AccountMetadata::new_scrypt("Display Name".into());
         let serialized = serde_json::to_vec(&content).unwrap();
         let deserialized = serde_json::from_slice::<AccountMetadata>(&serialized).unwrap();
         assert_eq!(content, deserialized);
+        assert_eq!(deserialized.name(), "Display Name");
     }
 
     #[fuchsia::test]
