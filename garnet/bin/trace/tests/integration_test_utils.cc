@@ -208,7 +208,7 @@ bool VerifyTestEventsFromJson(const std::string& test_output_file, size_t* out_n
   }
 
   const auto& array = value.GetArray();
-  for (size_t i = 0; i < array.Size(); ++i) {
+  for (unsigned int i = 0; i < array.Size(); ++i) {
     if (!array[i].IsObject()) {
       FX_LOGS(ERROR) << "Event " << i << " is not an object";
       return false;
@@ -326,7 +326,8 @@ static size_t GetMinimumNumberOfEvents(tracing::BufferingMode buffering_mode,
       FX_NOTREACHED();
   }
 
-  return (buffer_size / kRecordSize) * percentage_buffer_filled;
+  return static_cast<size_t>(static_cast<double>(buffer_size / kRecordSize) *
+                             percentage_buffer_filled);
 }
 
 bool VerifyFullBuffer(const std::string& test_output_file, tracing::BufferingMode buffering_mode,

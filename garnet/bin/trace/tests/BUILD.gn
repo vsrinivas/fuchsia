@@ -118,9 +118,6 @@ source_set("integration_test_utils") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-reader",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Same as "integration_test_utils" except uses trace-with-static-engine.
@@ -152,9 +149,6 @@ source_set("integration_test_utils_with_trace_with_static_engine") {
     "//zircon/system/ulib/trace:trace-with-static-engine",
     "//zircon/system/ulib/trace-reader",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("trace_integration_tests") {
@@ -195,9 +189,6 @@ executable("basic_integration_test_app") {
     "//zircon/system/ulib/trace-provider",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("two_providers_one_engine") {
@@ -255,9 +246,6 @@ executable("two_providers_two_engines_test_app") {
     "//zircon/system/ulib/trace-provider",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("nested_environment_test") {
@@ -274,9 +262,6 @@ executable("nested_environment_test") {
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("return_1234") {
@@ -366,9 +351,6 @@ executable("shared_provider_integration_tests") {
     "//zircon/system/ulib/trace-reader",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("provider_destruction_app") {
@@ -400,9 +382,6 @@ executable("provider_destruction_tests") {
     "//zircon/system/ulib/trace-reader",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_test_component("detach_tests_component") {

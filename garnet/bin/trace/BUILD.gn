@@ -46,9 +46,6 @@ source_set("trace_app") {
   ]
 
   deps = [ ":options" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("options") {
