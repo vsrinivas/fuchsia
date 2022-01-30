@@ -999,7 +999,6 @@ impl Mutations for SimpleAllocator {
         if !object_manager.needs_flush(self.object_id()) {
             return Ok(());
         }
-        let graveyard = object_manager.graveyard().ok_or(anyhow!("Missing graveyard!"))?;
         // TODO(csuter): This all needs to be atomic somehow. We'll need to use different
         // transactions for each stage, but we need make sure objects are cleaned up if there's a
         // failure.
@@ -1021,7 +1020,7 @@ impl Mutations for SimpleAllocator {
         )
         .await?;
         let object_id = layer_object_handle.object_id();
-        graveyard.add(&mut transaction, root_store.store_object_id(), object_id);
+        root_store.add_to_graveyard(&mut transaction, object_id);
         // It's important that this transaction does not include any allocations because we use
         // BeginFlush as a snapshot point for mutations to the tree: other allocator mutations
         // within this transaction might get applied before seal (which would be OK), but they could
@@ -1058,7 +1057,7 @@ impl Mutations for SimpleAllocator {
 
             // Move all the existing layers to the graveyard.
             for object_id in &inner.info.layers {
-                graveyard.add(&mut transaction, root_store.store_object_id(), *object_id);
+                root_store.add_to_graveyard(&mut transaction, *object_id);
             }
 
             inner.info.layers = vec![object_id];
@@ -1079,7 +1078,7 @@ impl Mutations for SimpleAllocator {
             Mutation::EndFlush,
             AssocObj::Borrowed(&reservation_update),
         );
-        graveyard.remove(&mut transaction, root_store.store_object_id(), object_id);
+        root_store.remove_from_graveyard(&mut transaction, object_id);
 
         // TODO(csuter): what if this fails.
         let layers =
@@ -1174,7 +1173,6 @@ mod tests {
                     SimpleAllocator,
                 },
                 filesystem::{Filesystem, Mutations},
-                graveyard::Graveyard,
                 testing::fake_filesystem::FakeFilesystem,
                 transaction::{Options, TransactionHandler},
                 ObjectStore,
@@ -1283,6 +1281,7 @@ mod tests {
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1));
         fs.object_manager().set_allocator(allocator.clone());
         let store = ObjectStore::new_empty(None, 2, fs.clone());
+        store.set_graveyard_directory_object_id(store.get_next_object_id());
         fs.object_manager().set_root_store(store.clone());
         fs.object_manager().init_metadata_reservation();
         allocator.create().await.expect("create failed");
@@ -1359,11 +1358,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_flush() {
-        let (fs, allocator, store) = test_fs().await;
+        let (fs, allocator, _) = test_fs().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
-        let graveyard = Graveyard::create(&mut transaction, &store).await.expect("create failed");
-        fs.object_manager().register_graveyard(graveyard);
         let mut device_ranges = Vec::new();
         device_ranges.push(
             allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),

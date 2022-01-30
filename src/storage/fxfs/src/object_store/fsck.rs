@@ -20,7 +20,6 @@ use {
             extent_record::{ExtentKey, ExtentValue},
             filesystem::{Filesystem, FxFilesystem},
             fsck::errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
-            graveyard::Graveyard,
             object_record::{ObjectKey, ObjectValue},
             transaction::{LockKey, TransactionHandler},
             volume::root_volume,
@@ -77,7 +76,7 @@ pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
                 log::warn!("{:?}", err.to_string())
             }
         },
-        verbose: false,
+        verbose: true,
     };
     fsck_with_options(filesystem, options).await
 }
@@ -92,21 +91,14 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     let mut fsck = Fsck::new(options);
 
     let object_manager = filesystem.object_manager();
-    // The graveyard not being present would prevent the filesystem from mounting at all.
-    let graveyard = object_manager.graveyard().ok_or(anyhow!("Missing graveyard!")).unwrap();
     let super_block = filesystem.super_block();
 
     // Scan the root parent object store.
     let mut root_objects = vec![super_block.root_store_object_id, super_block.journal_object_id];
     root_objects.append(&mut object_manager.root_store().parent_objects());
     fsck.verbose("Scanning root parent store...");
-    store_scanner::scan_store(
-        &fsck,
-        object_manager.root_parent_store().as_ref(),
-        graveyard.as_ref(),
-        &root_objects,
-    )
-    .await?;
+    store_scanner::scan_store(&fsck, object_manager.root_parent_store().as_ref(), &root_objects)
+        .await?;
     fsck.verbose("Scanning root parent store done");
 
     let root_store = &object_manager.root_store();
@@ -127,8 +119,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     // TODO(csuter): We could maybe iterate over stores concurrently.
     while let Some((name, store_id, _)) = iter.get() {
         fsck.verbose(format!("Scanning volume \"{}\" (id {})...", name, store_id));
-        fsck.check_child_store(&filesystem, &graveyard, store_id, &mut root_store_root_objects)
-            .await?;
+        fsck.check_child_store(&filesystem, store_id, &mut root_store_root_objects).await?;
         iter.advance().await?;
         fsck.verbose("Scanning volume done");
     }
@@ -162,13 +153,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
 
     // Finally scan the root object store.
     fsck.verbose("Scanning root object store...");
-    store_scanner::scan_store(
-        &fsck,
-        root_store.as_ref(),
-        graveyard.as_ref(),
-        &root_store_root_objects,
-    )
-    .await?;
+    store_scanner::scan_store(&fsck, root_store.as_ref(), &root_store_root_objects).await?;
     fsck.verbose("Scanning root object store done");
 
     // Now compare our regenerated allocation map with what we actually have.
@@ -315,7 +300,6 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
     async fn check_child_store(
         &mut self,
         filesystem: &FxFilesystem,
-        graveyard: &Graveyard,
         store_id: u64,
         root_store_root_objects: &mut Vec<u64>,
     ) -> Result<(), Error> {
@@ -371,7 +355,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
 
         let store = filesystem.object_manager().open_store(store_id).await?;
 
-        store_scanner::scan_store(self, store.as_ref(), graveyard, &store.root_objects()).await?;
+        store_scanner::scan_store(self, store.as_ref(), &store.root_objects()).await?;
         let mut parent_objects = store.parent_objects();
         root_store_root_objects.append(&mut parent_objects);
         Ok(())

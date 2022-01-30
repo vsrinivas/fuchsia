@@ -10,7 +10,6 @@ use {
             allocator::{Allocator, Reservation},
             directory::Directory,
             filesystem::{ApplyContext, ApplyMode, Mutations},
-            graveyard::Graveyard,
             journal::{self, checksum_list::ChecksumList, JournalCheckpoint},
             transaction::{
                 AssocObj, AssociatedObject, MetadataReservation, Mutation, Transaction, TxnMutation,
@@ -76,8 +75,6 @@ struct Inner {
     // has a dependency on journal records from that offset.
     journal_checkpoints: HashMap<u64, Checkpoints>,
 
-    graveyard: Option<Arc<Graveyard>>,
-
     // Mappings from object-id to a target reservation amount.  The object IDs here are from the
     // root store namespace, so it can be associated with any object in the root store.  A
     // reservation will be made to cover the *maximum* in this map, since it is assumed that any
@@ -126,7 +123,6 @@ impl ObjectManager {
                 allocator_object_id: INVALID_OBJECT_ID,
                 allocator: None,
                 journal_checkpoints: HashMap::new(),
-                graveyard: None,
                 reservations: HashMap::new(),
                 last_end_offset: 0,
                 borrowed_metadata_space: 0,
@@ -548,14 +544,6 @@ impl ObjectManager {
         self.inner.read().unwrap().journal_checkpoints.contains_key(&object_id)
     }
 
-    pub fn graveyard(&self) -> Option<Arc<Graveyard>> {
-        self.inner.read().unwrap().graveyard.clone()
-    }
-
-    pub fn register_graveyard(&self, graveyard: Arc<Graveyard>) {
-        self.inner.write().unwrap().graveyard = Some(graveyard);
-    }
-
     /// Flushes all known objects.  This will then allow the journal space to be freed.
     pub async fn flush(&self) -> Result<(), Error> {
         let mut object_ids: Vec<_> =
@@ -620,6 +608,17 @@ impl ObjectManager {
 
     pub fn encrypt_mutation(&self, object_id: u64, mutation: &Mutation) -> Option<Mutation> {
         self.inner.read().unwrap().stores.get(&object_id).and_then(|x| x.encrypt_mutation(mutation))
+    }
+
+    pub fn unlocked_stores(&self) -> Vec<Arc<ObjectStore>> {
+        let inner = self.inner.read().unwrap();
+        let mut stores = Vec::new();
+        for store in inner.stores.values() {
+            if !store.is_locked() {
+                stores.push(store.clone());
+            }
+        }
+        stores
     }
 }
 

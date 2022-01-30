@@ -268,6 +268,9 @@ impl Journal {
             super_block.root_parent_store_object_id,
             filesystem.clone(),
         );
+        root_parent.set_graveyard_directory_object_id(
+            super_block.root_parent_graveyard_directory_object_id,
+        );
 
         loop {
             let (mutation, sequence) = match reader.next_item().await? {
@@ -563,15 +566,6 @@ impl Journal {
 
         self.objects.on_replay_complete().await?;
 
-        self.objects.register_graveyard(
-            Graveyard::open(&self.objects.root_store(), root_store.graveyard_directory_object_id())
-                .await
-                .context(format!(
-                    "failed to open graveyard (object_id: {})",
-                    root_store.graveyard_directory_object_id()
-                ))?,
-        );
-
         if last_checkpoint.file_offset != reader.journal_file_checkpoint().file_offset {
             log::info!(
                 "replayed to {} (discarded to: {})",
@@ -672,11 +666,11 @@ impl Journal {
             .await
             .context("preallocate journal")?;
 
-        // the root store's graveyard and root directory...
-        let graveyard = Graveyard::create(&mut transaction, &root_store).await?;
-        root_store.set_graveyard_directory_object_id(&mut transaction, graveyard.object_id());
-        self.objects.register_graveyard(graveyard);
+        // The graveyards.
+        Graveyard::create(&mut transaction, &root_parent);
+        Graveyard::create(&mut transaction, &root_store);
 
+        // The root directory for the root store.
         let root_directory = Directory::create(&mut transaction, &root_store)
             .await
             .context("create root directory")?;
@@ -689,6 +683,7 @@ impl Journal {
             let mut inner = self.inner.lock().unwrap();
             inner.super_block = SuperBlock::new(
                 root_parent.store_object_id(),
+                root_parent.graveyard_directory_object_id(),
                 root_store.store_object_id(),
                 allocator.object_id(),
                 journal_handle.object_id(),

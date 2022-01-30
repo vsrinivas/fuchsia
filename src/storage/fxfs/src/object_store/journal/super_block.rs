@@ -119,6 +119,10 @@ pub struct SuperBlock {
     /// and mutations are also recorded in the journal.
     pub root_parent_store_object_id: u64,
 
+    /// The root parent needs a graveyard and there's nowhere else to store it other than in the
+    /// super-block.
+    pub root_parent_graveyard_directory_object_id: u64,
+
     /// The root object store contains all other metadata objects (including the allocator, the
     /// journal and the super-blocks) and is the parent for all other object stores.
     pub root_store_object_id: u64,
@@ -165,6 +169,7 @@ pub enum SuperBlockRecord {
 impl SuperBlock {
     pub(super) fn new(
         root_parent_store_object_id: u64,
+        root_parent_graveyard_directory_object_id: u64,
         root_store_object_id: u64,
         allocator_object_id: u64,
         journal_object_id: u64,
@@ -175,6 +180,7 @@ impl SuperBlock {
             oldest_minor_version: SUPER_BLOCK_MINOR_VERSION,
             generation: 1u64,
             root_parent_store_object_id,
+            root_parent_graveyard_directory_object_id,
             root_store_object_id,
             allocator_object_id,
             journal_object_id,
@@ -459,6 +465,7 @@ mod tests {
 
         let mut super_block_a = SuperBlock::new(
             fs.object_manager().root_parent_store().store_object_id(),
+            /* root_parent_graveyard_directory_object_id: */ 1000,
             fs.root_store().store_object_id(),
             fs.allocator().object_id(),
             JOURNAL_OBJECT_ID,

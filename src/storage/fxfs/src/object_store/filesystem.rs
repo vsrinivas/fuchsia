@@ -10,6 +10,7 @@ use {
             allocator::{Allocator, Hold, Reservation, ReservationOwner},
             crypt::Crypt,
             directory::Directory,
+            graveyard::Graveyard,
             journal::{super_block::SuperBlock, Journal, JournalCheckpoint},
             object_manager::ObjectManager,
             trace_duration,
@@ -69,6 +70,10 @@ pub trait Filesystem: TransactionHandler {
     /// Returns the crypt interface.
     // TODO(csuter): This is going to need to be per-store eventually.
     fn crypt(&self) -> &dyn Crypt;
+
+    /// Returns the graveyard manager (whilst there exists a graveyard per store, the manager
+    /// handles all of them).
+    fn graveyard(&self) -> &Arc<Graveyard>;
 }
 
 /// The context in which a transaction is being applied.
@@ -183,6 +188,7 @@ pub struct FxFilesystem {
     closed: AtomicBool,
     read_only: bool,
     crypt: Arc<dyn Crypt>,
+    graveyard: Arc<Graveyard>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -203,7 +209,7 @@ impl FxFilesystem {
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
             block_size,
-            objects,
+            objects: objects.clone(),
             journal,
             lock_manager: LockManager::new(),
             flush_task: Mutex::new(None),
@@ -211,13 +217,13 @@ impl FxFilesystem {
             closed: AtomicBool::new(false),
             read_only: false,
             crypt,
+            graveyard: Graveyard::new(objects.clone()),
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.init_empty(filesystem.clone()).await?;
-        if let Some(graveyard) = filesystem.objects.graveyard() {
-            // Start the graveyard's background reaping task.
-            graveyard.reap_async(filesystem.journal.journal_file_offset());
-        }
+
+        // Start the graveyard's background reaping task.
+        filesystem.graveyard.clone().reap_async();
 
         // Create the root volume directory.
         let root_store = filesystem.root_store();
@@ -235,7 +241,7 @@ impl FxFilesystem {
             root_directory.create_child_dir(&mut transaction, VOLUMES_DIRECTORY).await?;
         transaction.commit().await?;
 
-        filesystem.objects.set_volume_directory(volume_directory);
+        objects.set_volume_directory(volume_directory);
 
         Ok(filesystem.into())
     }
@@ -252,7 +258,7 @@ impl FxFilesystem {
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
             block_size,
-            objects,
+            objects: objects.clone(),
             journal,
             lock_manager: LockManager::new(),
             flush_task: Mutex::new(None),
@@ -260,6 +266,7 @@ impl FxFilesystem {
             closed: AtomicBool::new(false),
             read_only: options.read_only,
             crypt,
+            graveyard: Graveyard::new(objects.clone()),
         });
         if !options.read_only {
             // See comment in JournalRecord::DidFlushDevice for why we need to flush the device
@@ -269,10 +276,14 @@ impl FxFilesystem {
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await.context("Journal replay failed")?;
         if !options.read_only {
-            if let Some(graveyard) = filesystem.objects.graveyard() {
-                // Purge the graveyard of old entries in a background task; once that's done the
-                // reaper will continue to run and purge newly received entries.
-                graveyard.reap_async(filesystem.journal.journal_file_offset());
+            // Start the async reaper.
+            filesystem.graveyard.clone().reap_async();
+            // Purge old entries.
+            for store in objects.unlocked_stores() {
+                filesystem
+                    .graveyard
+                    .initial_reap(&store, filesystem.journal.journal_file_offset())
+                    .await?;
             }
         }
         Ok(filesystem.into())
@@ -295,9 +306,7 @@ impl FxFilesystem {
 
     pub async fn close(&self) -> Result<(), Error> {
         assert_eq!(self.closed.swap(true, atomic::Ordering::SeqCst), false);
-        if let Some(graveyard) = self.objects.graveyard() {
-            debug_assert_not_too_long!(graveyard.wait_for_reap());
-        }
+        debug_assert_not_too_long!(self.graveyard.wait_for_reap());
         self.journal.stop_compactions().await;
         let sync_status =
             self.journal.sync(SyncOptions { flush_device: true, ..Default::default() }).await;
@@ -414,6 +423,10 @@ impl Filesystem for FxFilesystem {
 
     fn crypt(&self) -> &dyn Crypt {
         self.crypt.as_ref()
+    }
+
+    fn graveyard(&self) -> &Arc<Graveyard> {
+        &self.graveyard
     }
 }
 

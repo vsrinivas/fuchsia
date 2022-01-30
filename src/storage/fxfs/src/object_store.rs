@@ -472,12 +472,8 @@ impl ObjectStore {
         self.store_info.lock().unwrap().info().unwrap().graveyard_directory_object_id
     }
 
-    pub fn set_graveyard_directory_object_id<'a>(
-        &'a self,
-        transaction: &mut Transaction<'a>,
-        oid: u64,
-    ) {
-        transaction.add(self.store_object_id, Mutation::graveyard_directory(oid));
+    pub fn set_graveyard_directory_object_id<'a>(&'a self, oid: u64) {
+        self.store_info.lock().unwrap().info_mut().unwrap().graveyard_directory_object_id = oid;
     }
 
     pub fn object_count(&self) -> u64 {
@@ -644,12 +640,8 @@ impl ObjectStore {
             bail!(FxfsError::NotFile);
         };
         if *refs == 0 {
-            // Move the object into the graveyard.
-            self.filesystem().object_manager().graveyard().unwrap().add(
-                transaction,
-                self.store_object_id,
-                oid,
-            );
+            self.add_to_graveyard(transaction, oid);
+
             // We might still need to adjust the reference count if delta was something other than
             // -1.
             if delta != -1 {
@@ -682,12 +674,8 @@ impl ObjectStore {
                         ObjectValue::None,
                     ),
                 );
-                // Remove the object from the graveyard.
-                self.filesystem().object_manager().graveyard().unwrap().remove(
-                    &mut transaction,
-                    self.store_object_id,
-                    search_key.object_id,
-                );
+
+                self.remove_from_graveyard(&mut transaction, search_key.object_id);
             }
             transaction.commit().await?;
             search_key = if let Some(next_key) = next_key {
@@ -1032,6 +1020,30 @@ impl ObjectStore {
         }
         Ok(true)
     }
+
+    /// Adds the specified object to the graveyard.
+    pub fn add_to_graveyard(&self, transaction: &mut Transaction<'_>, object_id: u64) {
+        let graveyard_id = self.graveyard_directory_object_id();
+        assert_ne!(graveyard_id, INVALID_OBJECT_ID);
+        transaction.add(
+            self.store_object_id,
+            Mutation::replace_or_insert_object(
+                ObjectKey::graveyard_entry(graveyard_id, object_id),
+                ObjectValue::Some,
+            ),
+        );
+    }
+
+    /// Removes the specified object from the graveyard.
+    pub fn remove_from_graveyard(&self, transaction: &mut Transaction<'_>, object_id: u64) {
+        transaction.add(
+            self.store_object_id,
+            Mutation::replace_or_insert_object(
+                ObjectKey::graveyard_entry(self.graveyard_directory_object_id(), object_id),
+                ObjectValue::None,
+            ),
+        );
+    }
 }
 
 // In a major compaction (i.e. a compaction which involves the base layer), we have an opportunity
@@ -1153,7 +1165,6 @@ impl Mutations for ObjectStore {
         }
 
         let parent_store = self.parent_store.as_ref().unwrap();
-        let graveyard = object_manager.graveyard().ok_or(anyhow!("Missing graveyard!"))?;
 
         let reservation = object_manager.metadata_reservation();
         let txn_options = Options {
@@ -1207,11 +1218,7 @@ impl Mutations for ObjectStore {
         )
         .await?;
         let new_object_tree_layer_object_id = new_object_tree_layer.object_id();
-        graveyard.add(
-            &mut transaction,
-            parent_store.store_object_id(),
-            new_object_tree_layer_object_id,
-        );
+        parent_store.add_to_graveyard(&mut transaction, new_object_tree_layer_object_id);
 
         let new_extent_tree_layer = ObjectStore::create_object(
             parent_store,
@@ -1221,11 +1228,7 @@ impl Mutations for ObjectStore {
         )
         .await?;
         let new_extent_tree_layer_object_id = new_extent_tree_layer.object_id();
-        graveyard.add(
-            &mut transaction,
-            parent_store.store_object_id(),
-            new_extent_tree_layer_object_id,
-        );
+        parent_store.add_to_graveyard(&mut transaction, new_extent_tree_layer_object_id);
         transaction.commit().await?;
 
         impl tree::MajorCompactable<ObjectKey, ObjectValue> for LSMTree<ObjectKey, ObjectValue> {
@@ -1316,11 +1319,7 @@ impl Mutations for ObjectStore {
             // Move the existing layers we're compacting to the graveyard.
             for layer in &old_object_tree_layers {
                 if let Some(handle) = layer.handle() {
-                    graveyard.add(
-                        &mut transaction,
-                        parent_store.store_object_id(),
-                        handle.object_id(),
-                    );
+                    parent_store.add_to_graveyard(&mut transaction, handle.object_id());
                 }
             }
 
@@ -1334,11 +1333,7 @@ impl Mutations for ObjectStore {
                 INVALID_OBJECT_ID,
             );
             if encrypted_mutations_object_id != INVALID_OBJECT_ID {
-                graveyard.add(
-                    &mut transaction,
-                    parent_store.store_object_id(),
-                    encrypted_mutations_object_id,
-                );
+                parent_store.add_to_graveyard(&mut transaction, encrypted_mutations_object_id);
             }
 
             (old_object_tree_layers, Some(new_object_tree_layers))
@@ -1355,7 +1350,7 @@ impl Mutations for ObjectStore {
 
         for layer in &old_extent_tree_layers {
             if let Some(handle) = layer.handle() {
-                graveyard.add(&mut transaction, parent_store.store_object_id(), handle.object_id());
+                parent_store.add_to_graveyard(&mut transaction, handle.object_id());
             }
         }
 
@@ -1390,16 +1385,8 @@ impl Mutations for ObjectStore {
             Mutation::EndFlush,
             AssocObj::Borrowed(&reservation_update),
         );
-        graveyard.remove(
-            &mut transaction,
-            parent_store.store_object_id(),
-            new_object_tree_layer_object_id,
-        );
-        graveyard.remove(
-            &mut transaction,
-            parent_store.store_object_id(),
-            new_extent_tree_layer_object_id,
-        );
+        parent_store.remove_from_graveyard(&mut transaction, new_object_tree_layer_object_id);
+        parent_store.remove_from_graveyard(&mut transaction, new_extent_tree_layer_object_id);
 
         transaction
             .commit_with_callback(|_| {

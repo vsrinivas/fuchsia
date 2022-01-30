@@ -8,6 +8,7 @@ use {
             allocator::Allocator,
             crypt::{Crypt, InsecureCrypt},
             filesystem::{self, Filesystem, Info, SyncOptions},
+            graveyard::Graveyard,
             journal::JournalCheckpoint,
             object_manager::ObjectManager,
             transaction::{
@@ -33,17 +34,20 @@ pub struct FakeFilesystem {
     lock_manager: LockManager,
     num_syncs: AtomicU64,
     crypt: InsecureCrypt,
+    graveyard: Arc<Graveyard>,
 }
 
 impl FakeFilesystem {
     pub fn new(device: DeviceHolder) -> Arc<Self> {
         let object_manager = Arc::new(ObjectManager::new());
+        let graveyard = Graveyard::new(object_manager.clone());
         Arc::new(FakeFilesystem {
             device,
             object_manager,
             lock_manager: LockManager::new(),
             num_syncs: AtomicU64::new(0),
             crypt: InsecureCrypt::new(),
+            graveyard,
         })
     }
 }
@@ -81,6 +85,10 @@ impl Filesystem for FakeFilesystem {
 
     fn crypt(&self) -> &dyn Crypt {
         &self.crypt
+    }
+
+    fn graveyard(&self) -> &Arc<Graveyard> {
+        &self.graveyard
     }
 }
 

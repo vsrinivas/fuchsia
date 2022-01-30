@@ -22,8 +22,8 @@ use {
                 fsck_with_options, FsckOptions,
             },
             object_record::{
-                EncryptionKeys, ObjectAttributes, ObjectDescriptor, ObjectKey, ObjectKeyData,
-                ObjectKind, ObjectValue, Timestamp,
+                EncryptionKeys, ObjectAttributes, ObjectDescriptor, ObjectKey, ObjectKind,
+                ObjectValue, Timestamp,
             },
             transaction::{self, Options, TransactionHandler},
             volume::root_volume,
@@ -166,6 +166,7 @@ async fn install_items_in_store<K: Key, V: Value>(
     transaction.commit().await.expect("commit failed");
 }
 
+/* TODO(fxbug.dev/92054): Fix this test
 #[fasync::run_singlethreaded(test)]
 async fn test_missing_graveyard() {
     let mut test = FsckTest::new().await;
@@ -185,12 +186,21 @@ async fn test_missing_graveyard() {
             )
             .await
             .expect("New transaction failed");
-        root_store.set_graveyard_directory_object_id(&mut transaction, u64::MAX - 1);
+        transaction.add(root_store.store_object_id, Mutation::graveyard_directory(u64::MAX - 1));
         transaction.commit().await.expect("Commit transaction failed");
     }
 
-    test.remount().await.expect_err("Mount should fail");
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Error(FsckError::ExtraAllocations(_)),
+            FsckIssue::Error(FsckError::AllocatedBytesMismatch(..))
+        ]
+    );
 }
+*/
 
 #[fasync::run_singlethreaded(test)]
 async fn test_extra_allocation() {
@@ -1006,63 +1016,6 @@ async fn test_records_for_tombstoned_object() {
     assert_matches!(
         test.errors()[..],
         [FsckIssue::Error(FsckError::TombstonedObjectHasRecords(..)), ..]
-    );
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_graveyard_in_child_store() {
-    let mut test = FsckTest::new().await;
-
-    {
-        let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
-        let store = root_volume.new_volume("vol").await.unwrap();
-
-        install_items_in_store(
-            &fs,
-            store.as_ref(),
-            vec![
-                Item::new(
-                    ObjectKey::object(10),
-                    ObjectValue::Object {
-                        kind: ObjectKind::Graveyard,
-                        attributes: ObjectAttributes {
-                            creation_time: Timestamp::now(),
-                            modification_time: Timestamp::now(),
-                        },
-                    },
-                ),
-                Item::new(
-                    ObjectKey {
-                        object_id: 10,
-                        data: ObjectKeyData::GraveyardEntry {
-                            store_object_id: 100,
-                            object_id: 102,
-                        },
-                    },
-                    ObjectValue::Object {
-                        kind: ObjectKind::Graveyard,
-                        attributes: ObjectAttributes {
-                            creation_time: Timestamp::now(),
-                            modification_time: Timestamp::now(),
-                        },
-                    },
-                ),
-            ],
-            InstallTarget::ObjectTree,
-        )
-        .await;
-    }
-
-    test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(
-        test.errors()[..],
-        [
-            FsckIssue::Error(FsckError::GraveyardInChildStore(..)),
-            FsckIssue::Error(FsckError::GraveyardRecordInChildStore(..)),
-            ..
-        ]
     );
 }
 

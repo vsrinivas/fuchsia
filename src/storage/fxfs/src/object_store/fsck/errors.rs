@@ -163,8 +163,6 @@ pub enum FsckError {
     ExtentExceedsLength(u64, u64, u64, u64, Value),
     ExtraAllocations(Vec<Allocation>),
     FileHasChildren(u64, u64),
-    GraveyardInChildStore(u64, u64),
-    GraveyardRecordInChildStore(u64, Key),
     LinkCycle(u64, u64),
     MalformedAllocation(Allocation),
     MalformedExtent(u64, u64, Range<u64>, u64),
@@ -220,12 +218,6 @@ impl FsckError {
             }
             FsckError::FileHasChildren(store_id, object_id) => {
                 format!("Object {} in store {} has children", object_id, store_id)
-            }
-            FsckError::GraveyardInChildStore(store_id, graveyard_id) => {
-                format!("Found graveyard (id {}) in child store {}", graveyard_id, store_id)
-            }
-            FsckError::GraveyardRecordInChildStore(store_id, key) => {
-                format!("Found graveyard record {:?} in child store {}", key, store_id)
             }
             FsckError::LinkCycle(store_id, object_id) => {
                 format!("Detected cycle involving object {} in store {}", store_id, object_id)

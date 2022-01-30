@@ -32,7 +32,7 @@ pub enum ObjectKeyData {
     /// A child of a directory.
     Child { name: String }, // TODO(jfsulliv): Should this be a string or array of bytes?
     /// A graveyard entry.
-    GraveyardEntry { store_object_id: u64, object_id: u64 },
+    GraveyardEntry { object_id: u64 },
 }
 
 /// ObjectKey is a key in the object store.
@@ -61,11 +61,8 @@ impl ObjectKey {
     }
 
     /// Creates a graveyard entry.
-    pub fn graveyard_entry(graveyard_object_id: u64, store_object_id: u64, object_id: u64) -> Self {
-        Self {
-            object_id: graveyard_object_id,
-            data: ObjectKeyData::GraveyardEntry { store_object_id, object_id },
-        }
+    pub fn graveyard_entry(graveyard_object_id: u64, object_id: u64) -> Self {
+        Self { object_id: graveyard_object_id, data: ObjectKeyData::GraveyardEntry { object_id } }
     }
 
     /// Returns the merge key for this key; that is, a key which is <= this key and any other

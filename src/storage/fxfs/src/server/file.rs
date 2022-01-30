@@ -307,9 +307,7 @@ impl FxNode for FxFile {
             let store = self.handle.store();
             store
                 .filesystem()
-                .object_manager()
                 .graveyard()
-                .unwrap()
                 .queue_tombstone(store.store_object_id(), self.object_id());
         }
     }

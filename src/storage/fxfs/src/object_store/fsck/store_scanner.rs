@@ -215,14 +215,7 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                         }
                     }
                     ObjectValue::Object { kind: ObjectKind::Graveyard, .. } => {
-                        if self.is_root_store {
-                            self.objects.insert(key.object_id, ScannedObject::Etc(key.object_id));
-                        } else {
-                            self.fsck.error(FsckError::GraveyardInChildStore(
-                                self.store_id,
-                                key.object_id,
-                            ))?;
-                        }
+                        self.objects.insert(key.object_id, ScannedObject::Etc(key.object_id));
                     }
                     _ => {
                         self.fsck.error(FsckError::MalformedObjectRecord(
@@ -327,7 +320,7 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                                     // might be useful.
                                     self.fsck.error(FsckError::MultipleLinksToDirectory(
                                         self.store_id,
-                                        key.object_id,
+                                        *child_id,
                                     ))?;
                                 }
                                 *parent = Some(key.object_id);
@@ -423,12 +416,7 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                     }
                 }
             }
-            ObjectKeyData::GraveyardEntry { .. } => {
-                if !self.is_root_store {
-                    self.fsck
-                        .error(FsckError::GraveyardRecordInChildStore(self.store_id, key.into()))?;
-                }
-            }
+            ObjectKeyData::GraveyardEntry { .. } => {}
         }
         Ok(())
     }
@@ -580,7 +568,6 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
 pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
     fsck: &Fsck<F>,
     store: &ObjectStore,
-    graveyard: &Graveyard,
     root_objects: impl AsRef<[u64]>,
 ) -> Result<(), Error> {
     let store_id = store.store_object_id();
@@ -614,16 +601,13 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
     // Add a reference for files in the graveyard (which acts as the file's parent until it is
     // purged, leaving only the Object record in the original store and no links to the file).
     // This must be done after scanning the object store.
-    let layer_set = graveyard.store().tree().layer_set();
+    let layer_set = store.tree().layer_set();
     let mut merger = layer_set.merger();
     let mut iter = fsck.assert(
-        graveyard.iter_from(&mut merger, (store_id, 0)).await,
+        Graveyard::iter(store.graveyard_directory_object_id(), &mut merger).await,
         FsckFatal::MalformedGraveyard,
     )?;
-    while let Some((store_object_id, object_id, _)) = iter.get() {
-        if store_object_id != store_id {
-            break;
-        }
+    while let Some((object_id, _)) = iter.get() {
         scanned.insert_graveyard_file(object_id)?;
         fsck.assert(iter.advance().await, FsckFatal::MalformedGraveyard)?;
     }
