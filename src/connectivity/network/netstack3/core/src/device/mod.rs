@@ -1133,12 +1133,12 @@ pub(crate) mod testutil {
 
     use crate::{
         device::{DeviceId, IpDeviceState},
-        ip::device::state::IpStateIpExt,
+        ip::device::state::IpDeviceStateIpExt,
         Ctx, EventDispatcher,
     };
 
     pub(crate) trait DeviceTestIpExt<Instant: crate::Instant>:
-        IpStateIpExt<Instant>
+        IpDeviceStateIpExt<Instant>
     {
         fn get_ip_device_state<D: EventDispatcher<Instant = Instant>>(
             ctx: &Ctx<D>,

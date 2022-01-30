@@ -17,8 +17,8 @@ use crate::{
     Instant,
 };
 
-/// An `Ip` extension trait adding IP state properties..
-pub(crate) trait IpStateIpExt<Instant>: Ip {
+/// An `Ip` extension trait adding IP device state properties.
+pub(crate) trait IpDeviceStateIpExt<Instant>: Ip {
     /// The information stored about an IP address assigned to an interface.
     type AssignedAddress: AssignedAddress<Self::Addr>;
 
@@ -36,13 +36,13 @@ pub(crate) trait IpStateIpExt<Instant>: Ip {
     const DEFAULT_HOP_LIMIT: NonZeroU8;
 }
 
-impl<I: Instant> IpStateIpExt<I> for Ipv4 {
+impl<I: Instant> IpDeviceStateIpExt<I> for Ipv4 {
     type AssignedAddress = AddrSubnet<Ipv4Addr>;
     type GmpState = IgmpGroupState<I>;
     const DEFAULT_HOP_LIMIT: NonZeroU8 = nonzero!(64u8);
 }
 
-impl<I: Instant> IpStateIpExt<I> for Ipv6 {
+impl<I: Instant> IpDeviceStateIpExt<I> for Ipv6 {
     type AssignedAddress = Ipv6AddressEntry<I>;
     type GmpState = MldGroupState<I>;
     const DEFAULT_HOP_LIMIT: NonZeroU8 = crate::device::ndp::HOP_LIMIT_DEFAULT;
@@ -67,7 +67,7 @@ impl<I: Instant> AssignedAddress<Ipv6Addr> for Ipv6AddressEntry<I> {
 }
 
 /// The state common to all IP devices.
-pub(crate) struct IpDeviceState<Instant, I: IpStateIpExt<Instant>> {
+pub(crate) struct IpDeviceState<Instant, I: IpDeviceStateIpExt<Instant>> {
     /// IP addresses assigned to this device.
     ///
     /// IPv6 addresses may be tentative (performing NDP's Duplicate Address
@@ -109,7 +109,7 @@ pub(crate) struct IpDeviceState<Instant, I: IpStateIpExt<Instant>> {
     pub routing_enabled: bool,
 }
 
-impl<Instant, I: IpStateIpExt<Instant>> Default for IpDeviceState<Instant, I> {
+impl<Instant, I: IpDeviceStateIpExt<Instant>> Default for IpDeviceState<Instant, I> {
     fn default() -> IpDeviceState<Instant, I> {
         IpDeviceState {
             addrs: Vec::default(),
@@ -124,7 +124,7 @@ impl<Instant, I: IpStateIpExt<Instant>> Default for IpDeviceState<Instant, I> {
 // TODO(https://fxbug.dev/84871): Once we figure out what invariants we want to
 // hold regarding the set of IP addresses assigned to a device, ensure that all
 // of the methods on `IpDeviceState` uphold those invariants.
-impl<Instant, I: IpStateIpExt<Instant>> IpDeviceState<Instant, I> {
+impl<Instant, I: IpDeviceStateIpExt<Instant>> IpDeviceState<Instant, I> {
     /// Iterates over the addresses assigned to this device.
     pub(crate) fn iter_addrs(
         &self,
