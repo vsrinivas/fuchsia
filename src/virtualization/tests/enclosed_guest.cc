@@ -4,6 +4,7 @@
 
 #include "src/virtualization/tests/enclosed_guest.h"
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
@@ -23,8 +24,11 @@
 #include <string>
 
 #include "fuchsia/virtualization/cpp/fidl.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/glob.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
+#include "src/virtualization/tests/backtrace_watchdog.h"
 #include "src/virtualization/tests/guest_constants.h"
 #include "src/virtualization/tests/logger.h"
 #include "src/virtualization/tests/periodic_logger.h"
@@ -45,6 +49,7 @@ constexpr zx::duration kLoopConditionStep = zx::msec(10);
 constexpr zx::duration kRetryStep = zx::msec(200);
 constexpr uint32_t kTerminaStartupListenerPort = 7777;
 constexpr uint32_t kTerminaMaitredPort = 8888;
+constexpr zx::duration kBacktraceTimeout = zx::sec(120);
 
 bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition, zx::time deadline) {
   while (zx::clock::get_monotonic() < deadline) {
@@ -214,6 +219,35 @@ zx_status_t EnclosedGuest::Launch(sys::testing::EnclosingEnvironment& environmen
     return get_console_result->err();
   }
   console_.emplace(std::make_unique<ZxSocket>(std::move(get_console_result->response().socket)));
+
+  // fxbug.dev/86513
+  // To help track down a flake where guests sometimes cease responding create a watchdog that will
+  // backtrace all of the processes if our startup timeout is exceeded. The watchdog needs the job
+  // of the realm that was created for the enclosed environment.
+  // Note that the watchdog does not tear down or otherwise change the state of the system, so in
+  // the unlikely event it triggers spuriously it will just spam the logs once, but not fail the
+  // test.
+  BacktraceWatchdog watchdog;
+  {
+    // Find the path to the jobprovider in the realm.
+    files::Glob glob(std::string("/hub/r/") + kRealm + "/*/job");
+    FX_CHECK(1u == glob.size());
+    const std::string path = *glob.begin();
+
+    // Connect to the JobProvider
+    fuchsia::sys::JobProviderSyncPtr job_provider;
+    status = fdio_service_connect(path.c_str(), job_provider.NewRequest().TakeChannel().release());
+    FX_CHECK(status == ZX_OK);
+
+    // Get the job for the realm.
+    zx::job enclosed_job;
+    status = job_provider->GetJob(&enclosed_job);
+    FX_CHECK(status == ZX_OK);
+
+    // Start the watchdog.
+    status = watchdog.Start(std::move(enclosed_job), kBacktraceTimeout);
+    FX_CHECK(status == ZX_OK);
+  }
 
   // Wait for output to appear on the console.
   logger.Start("Waiting for output to appear on guest console", zx::sec(10));

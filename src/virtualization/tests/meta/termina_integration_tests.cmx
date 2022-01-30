@@ -15,6 +15,9 @@
         "binary": "bin/termina_integration_tests"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.kernel.HypervisorResource",
             "fuchsia.kernel.VmexResource",

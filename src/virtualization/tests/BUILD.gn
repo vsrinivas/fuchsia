@@ -63,6 +63,20 @@ source_set("periodic_logger") {
   public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
+source_set("backtrace_watchdog") {
+  visibility = [ ":*" ]
+  sources = [
+    "backtrace_watchdog.cc",
+    "backtrace_watchdog.h",
+  ]
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/system/ulib/inspector",
+    "//zircon/system/ulib/task-utils",
+  ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
+}
+
 source_set("socket_logger") {
   visibility = [
     "//src/connectivity/network/testing/netemul/*",
@@ -188,6 +202,7 @@ source_set("lib") {
   ]
 
   deps = [
+    ":backtrace_watchdog",
     ":guest_console",
     ":guest_constants",
     ":periodic_logger",

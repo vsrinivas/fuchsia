@@ -15,6 +15,9 @@
         "binary": "bin/virtualization_core_tests"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.kernel.HypervisorResource",
             "fuchsia.kernel.VmexResource",
