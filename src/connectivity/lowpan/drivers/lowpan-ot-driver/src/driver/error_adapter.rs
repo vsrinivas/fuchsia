@@ -40,6 +40,12 @@ impl From<ErrorAdapter<anyhow::Error>> for ZxStatus {
     }
 }
 
+impl From<ErrorAdapter<ot::WrongSize>> for ZxStatus {
+    fn from(_: ErrorAdapter<ot::WrongSize>) -> ZxStatus {
+        ZxStatus::INVALID_ARGS
+    }
+}
+
 pub trait ErrorExt {
     fn get_zx_status(&self) -> Option<ZxStatus>;
     fn get_netstack_error(&self) -> Option<fidl_fuchsia_net_stack::Error>;

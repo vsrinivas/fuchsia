@@ -663,4 +663,24 @@ where
     async fn make_joinable(&self, _duration: fuchsia_zircon::Duration, _port: u16) -> ZxResult<()> {
         return Err(ZxStatus::NOT_SUPPORTED);
     }
+
+    async fn get_active_dataset_tlvs(&self) -> ZxResult<Vec<u8>> {
+        self.driver_state
+            .lock()
+            .ot_instance
+            .dataset_get_active_tlvs()
+            .map(ot::OperationalDatasetTlvs::into)
+            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
+    }
+
+    async fn set_active_dataset_tlvs(&self, dataset: &[u8]) -> ZxResult {
+        let dataset = ot::OperationalDatasetTlvs::try_from_slice(dataset)
+            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?;
+
+        self.driver_state
+            .lock()
+            .ot_instance
+            .dataset_set_active_tlvs(&dataset)
+            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
+    }
 }
