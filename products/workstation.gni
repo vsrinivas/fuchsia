@@ -105,6 +105,9 @@ product_bootfs_labels += [
 
   # enable double buffered output
   "//products/kernel_cmdline:virtcon.buffer-count--2",
+
+  # enable component manager hosted bootfs
+  "//products/kernel_cmdline:bootsvc.next--host_bootfs",
 ]
 
 # Add bold and italic Vircon fonts.
