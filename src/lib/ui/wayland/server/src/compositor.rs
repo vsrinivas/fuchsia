@@ -767,7 +767,11 @@ impl RequestReceiver<WlSurface> for Surface {
             }
             WlSurfaceRequest::Damage { .. } => {}
             WlSurfaceRequest::SetOpaqueRegion { region } => {
-                let r = client.get_object::<Region>(region)?.clone();
+                let r = if region == 0 {
+                    Region { rects: vec![] }
+                } else {
+                    client.get_object::<Region>(region)?.clone()
+                };
                 this.get_mut(client)?.enqueue(SurfaceCommand::SetOpaqueRegion(r));
             }
             WlSurfaceRequest::SetInputRegion { .. } => {}
