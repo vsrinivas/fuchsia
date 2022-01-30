@@ -754,7 +754,6 @@ fn do_duplicate_address_detection<C: EthernetIpDeviceContext>(
     match remaining {
         None => {
             *state = AddressState::Assigned;
-            ctx.unique_address_determined_wrapper(device_id, addr);
         }
         Some(non_zero_remaining) => {
             *remaining = NonZeroU8::new(non_zero_remaining.get() - 1);

@@ -221,6 +221,7 @@ impl<I: Instant> Default for Ipv6DeviceState<I> {
 
 impl<I: Instant> IpDeviceState<I, Ipv6> {
     /// Iterates over the global IPv6 address entries.
+    #[cfg(test)]
     pub(crate) fn iter_global_ipv6_addrs(
         &self,
     ) -> impl Iterator<Item = &Ipv6AddressEntry<I>> + Clone {
@@ -369,10 +370,6 @@ impl<Instant> Ipv6AddressEntry<Instant> {
             AddrConfig::Slaac(_) => AddrConfigType::Slaac,
             AddrConfig::Manual => AddrConfigType::Manual,
         }
-    }
-
-    pub(crate) fn mark_permanent(&mut self) {
-        self.state = AddressState::Assigned;
     }
 
     pub(crate) fn is_global(&self) -> bool {

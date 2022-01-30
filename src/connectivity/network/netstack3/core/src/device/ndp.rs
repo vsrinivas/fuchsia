@@ -379,31 +379,6 @@ pub(crate) trait NdpContext<D: LinkDevice>:
         addr: UnicastAddr<Ipv6Addr>,
     );
 
-    /// Notifies the device layer that the address is very likely (because DAD
-    /// is not reliable) to be unique, it is time to mark it to be permanent.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `addr` is not tentative on the device identified by
-    /// `device_id`.
-    fn unique_address_determined(
-        &mut self,
-        device_id: Self::DeviceId,
-        addr: UnicastAddr<Ipv6Addr>,
-    ) {
-        trace!(
-            "NdpContext::unique_address_determined: device_id = {:?}; addr = {:?}",
-            device_id,
-            addr
-        );
-
-        self.get_ip_device_state_mut(device_id)
-            .iter_addrs_mut()
-            .find(|a| a.addr_sub().addr() == addr)
-            .expect("attempted to resolve an unknown tentative address")
-            .mark_permanent();
-    }
-
     /// Set Link MTU.
     ///
     /// `set_mtu` is used when a host receives a Router Advertisement with the
@@ -505,27 +480,6 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     /// either `device_id` or the netstack (`ctx`) has routing disabled.
     fn is_router_device(&self, device_id: Self::DeviceId) -> bool {
         self.is_router() && self.get_ip_device_state(device_id).routing_enabled
-    }
-
-    /// Notifies the device layer that the address is very likely (because DAD
-    /// is not reliable) to be unique, it is time to mark it to be permanent.
-    ///
-    /// If the address was the link-local address, periodic router
-    /// advertisements will be started if `device_id` is an advertising
-    /// interface.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `addr` is not tentative on the device identified by
-    /// `device_id`.
-    fn unique_address_determined_wrapper(
-        &mut self,
-        device_id: Self::DeviceId,
-        addr: UnicastAddr<Ipv6Addr>,
-    ) {
-        // Let the device-layer know that `addr` is most likely not already used
-        // on the link.
-        self.unique_address_determined(device_id, addr);
     }
 }
 
@@ -1458,10 +1412,9 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
     // Before configuring a SLAAC address, check to see if we already have a SLAAC address for the
     // given prefix.
     let entry = ctx
-        .get_ip_device_state(device_id)
-        .iter_global_ipv6_addrs()
-        .find(|a| a.addr_sub().subnet() == subnet && a.config_type() == AddrConfigType::Slaac)
-        .cloned();
+        .get_ip_device_state_mut(device_id)
+        .iter_global_ipv6_addrs_mut()
+        .find(|a| a.addr_sub().subnet() == subnet && a.config_type() == AddrConfigType::Slaac);
     if let Some(entry) = entry {
         let addr_sub = entry.addr_sub();
         let addr = addr_sub.addr();
@@ -1486,9 +1439,10 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
         //
         // Must not have reached this point if the address was not already assigned to a device.
         if let Some(preferred_until_duration) = preferred_until {
-            if entry.state.is_deprecated() {
-                ctx.unique_address_determined(device_id, addr);
-            }
+            entry.state = match entry.state {
+                AddressState::Deprecated => AddressState::Assigned,
+                state => state,
+            };
             let _: Option<C::Instant> = ctx.schedule_timer_instant(
                 preferred_until_duration,
                 NdpTimerId::new_deprecate_slaac_address(device_id, addr).into(),
