@@ -120,11 +120,13 @@ where
 /// This is just a simple test where we bring everything up and
 /// immediately tear it down. If this fails there are fundamental problems.
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_driver_setup_and_teardown() {
     test_harness(|_| async move {}).await;
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_initial_device_state() {
     test_harness(|driver| async move {
         let mut device_state_stream = driver.watch_device_state();
@@ -178,6 +180,7 @@ async fn test_energy_scan() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_get_supported_channels() {
     test_harness(|driver| async move {
         let channels = driver.get_supported_channels().await;
@@ -187,6 +190,7 @@ async fn test_get_supported_channels() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_get_factory_mac_address() {
     test_harness(|driver| async move {
         let fact_mac = driver.get_factory_mac_address().await;
@@ -196,6 +200,7 @@ async fn test_get_factory_mac_address() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_get_current_mac_address() {
     test_harness(|driver| async move {
         let fact_mac = driver.get_current_mac_address().await;
@@ -205,6 +210,7 @@ async fn test_get_current_mac_address() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_get_supported_network_types() {
     test_harness(|driver| async move {
         let network_types = driver.get_supported_network_types().await;
@@ -214,6 +220,7 @@ async fn test_get_supported_network_types() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_get_current_channel() {
     test_harness(|driver| async move {
         let curr_chan = driver.get_current_channel().await;
@@ -223,6 +230,7 @@ async fn test_get_current_channel() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_get_partition_id() {
     test_harness(|driver| async move {
         let part_id = driver.get_partition_id().await;
@@ -232,6 +240,7 @@ async fn test_get_partition_id() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_get_current_rssi() {
     test_harness(|driver| async move {
         let curr_rssi = driver.get_current_rssi().await;
@@ -241,6 +250,7 @@ async fn test_get_current_rssi() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_get_thread_rloc16() {
     test_harness(|driver| async move {
         let thread_rloc16 = driver.get_thread_rloc16().await;
@@ -250,6 +260,7 @@ async fn test_get_thread_rloc16() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_get_neighbor_table_offline() {
     test_harness(|driver| async move {
         let thread_neighbor_table = driver.get_neighbor_table().await;
@@ -259,6 +270,7 @@ async fn test_get_neighbor_table_offline() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_provision_network_offline() {
     test_harness(|driver| async move {
         let mut identity_stream = driver.watch_identity();
@@ -307,6 +319,7 @@ async fn test_provision_network_offline() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_provision_network_online() {
     test_harness(|driver| async move {
         let mut device_state_stream = driver.watch_device_state();
@@ -377,6 +390,7 @@ async fn test_provision_network_online() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_add_on_mesh_prefix() {
     test_harness(|driver| async move {
         assert_eq!(
@@ -424,6 +438,7 @@ async fn test_add_on_mesh_prefix() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_add_external_route() {
     test_harness(|driver| async move {
         assert_eq!(
@@ -471,6 +486,7 @@ async fn test_add_external_route() {
 }
 
 #[fasync::run(10, test)]
+#[ignore] // TODO(fxrev.dev/92419): Remove this once <fxrev.dev/92419> is fixed.
 async fn test_grind_lowpan_ot_driver() {
     test_harness(|driver| async move {
         let mut device_state_stream = driver.watch_device_state();
