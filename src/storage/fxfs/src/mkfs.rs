@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::{crypt::Crypt, volume::create_root_volume, FxFilesystem},
+    crate::object_store::{crypt::Crypt, volume::root_volume, FxFilesystem},
     anyhow::Error,
     std::sync::Arc,
     storage_device::DeviceHolder,
@@ -14,7 +14,7 @@ pub async fn mkfs(device: DeviceHolder, crypt: Arc<dyn Crypt>) -> Result<(), Err
     {
         // expect instead of propagating errors here, since otherwise we could drop |fs| before
         // close is called, which leads to confusing and unrelated error messages.
-        let root_volume = create_root_volume(&fs).await.expect("Open root_volume failed");
+        let root_volume = root_volume(&fs).await.expect("Open root_volume failed");
         root_volume.new_volume("default").await.expect("Create volume failed");
     }
     fs.close().await?;

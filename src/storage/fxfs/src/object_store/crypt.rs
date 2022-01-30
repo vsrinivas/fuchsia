@@ -85,6 +85,36 @@ impl UnwrappedKeys {
     }
 }
 
+// TODO(csuter): Implement
+pub struct StreamCipher(u64);
+
+impl StreamCipher {
+    pub fn new(offset: u64) -> Self {
+        Self(offset)
+    }
+
+    pub fn encrypt(&mut self, buffer: &mut [u8]) {
+        trace_duration!("StreamCipher::encrypt");
+        // TODO(csuter): Change this to use ChaCha20.
+        for b in buffer {
+            *b ^= 0xa7 ^ self.0 as u8;
+            self.0 += 1;
+        }
+    }
+
+    pub fn decrypt(&mut self, buffer: &mut [u8]) {
+        trace_duration!("StreamCipher::decrypt");
+        for b in buffer {
+            *b ^= 0xa7 ^ self.0 as u8;
+            self.0 += 1;
+        }
+    }
+
+    pub fn offset(&self) -> u64 {
+        self.0
+    }
+}
+
 /// An interface trait with the ability to wrap and unwrap AES256XTS formatted encryption keys.
 ///
 /// Note that existence of this trait does not imply that an object will **securely**

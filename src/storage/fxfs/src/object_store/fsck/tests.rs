@@ -26,7 +26,7 @@ use {
                 ObjectKind, ObjectValue, Timestamp,
             },
             transaction::{self, Options, TransactionHandler},
-            volume::create_root_volume,
+            volume::root_volume,
             HandleOptions, Mutation, ObjectStore,
         },
         round::round_down,
@@ -382,7 +382,7 @@ async fn test_misaligned_extent_in_child_store() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let volume = root_volume.new_volume("vol").await.unwrap();
 
         let mut transaction = fs
@@ -408,7 +408,7 @@ async fn test_malformed_extent_in_child_store() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let volume = root_volume.new_volume("vol").await.unwrap();
 
         let mut transaction = fs
@@ -455,13 +455,7 @@ async fn test_allocation_mismatch() {
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(
-        test.errors()[..],
-        [
-            FsckIssue::Error(FsckError::AllocationMismatch(..)),
-            FsckIssue::Error(FsckError::ExtraAllocations(..))
-        ]
-    );
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::AllocationMismatch(..)),]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -585,7 +579,7 @@ async fn test_missing_extent_tree_layer_file() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let volume = root_volume.new_volume("vol").await.unwrap();
         let mut transaction = fs
             .clone()
@@ -608,9 +602,7 @@ async fn test_missing_extent_tree_layer_file() {
             .expect("tombstone failed");
     }
 
-    test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MissingLayerFile(..))]);
+    test.remount().await.expect_err("Remount succeeded");
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -619,7 +611,7 @@ async fn test_missing_object_tree_layer_file() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let volume = root_volume.new_volume("vol").await.unwrap();
         let mut transaction = fs
             .clone()
@@ -642,9 +634,7 @@ async fn test_missing_object_tree_layer_file() {
             .expect("tombstone failed");
     }
 
-    test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MissingLayerFile(..))]);
+    test.remount().await.expect_err("Remount succeeded");
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -653,7 +643,7 @@ async fn test_missing_object_store_handle() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store_id = {
             let volume = root_volume.new_volume("vol").await.unwrap();
             volume.store_object_id()
@@ -664,9 +654,7 @@ async fn test_missing_object_store_handle() {
             .expect("tombstone failed");
     }
 
-    test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MissingStoreInfo(..))]);
+    test.remount().await.expect_err("Remount succeeded");
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -675,7 +663,7 @@ async fn test_misordered_layer_file() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
         install_items_in_store(
             &fs,
@@ -700,7 +688,7 @@ async fn test_overlapping_keys_in_layer_file() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
         install_items_in_store(
             &fs,
@@ -728,7 +716,7 @@ async fn test_unexpected_record_in_layer_file() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
         install_items_in_store(
             &fs,
@@ -750,7 +738,7 @@ async fn test_mismatched_key_and_value() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
         install_items_in_store(
             &fs,
@@ -775,7 +763,7 @@ async fn test_link_to_root_directory() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
@@ -808,7 +796,7 @@ async fn test_multiple_links_to_directory() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
@@ -843,7 +831,7 @@ async fn test_conflicting_link_types() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
@@ -878,7 +866,7 @@ async fn test_volume_in_child_store() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
@@ -906,7 +894,7 @@ async fn test_children_on_file() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
@@ -946,7 +934,7 @@ async fn test_attribute_on_directory() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
 
         install_items_in_store(
@@ -972,7 +960,7 @@ async fn test_orphaned_attribute() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
 
         install_items_in_store(
@@ -998,7 +986,7 @@ async fn test_records_for_tombstoned_object() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
 
         install_items_in_store(
@@ -1027,7 +1015,7 @@ async fn test_graveyard_in_child_store() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
 
         install_items_in_store(
@@ -1084,7 +1072,7 @@ async fn test_invalid_object_in_store() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
 
         install_items_in_store(
@@ -1110,7 +1098,7 @@ async fn test_invalid_child_in_store() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
@@ -1141,7 +1129,7 @@ async fn test_link_cycle() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
@@ -1185,7 +1173,7 @@ async fn test_file_length_mismatch() {
     {
         let fs = test.filesystem();
         let device = fs.device();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
 
         let mut transaction = fs
@@ -1258,7 +1246,7 @@ async fn test_spurious_extents() {
 
     {
         let fs = test.filesystem();
-        let root_volume = create_root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol").await.unwrap();
 
         let mut transaction = fs

@@ -118,20 +118,19 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     ]);
     root_store_root_objects.append(&mut root_store.root_objects());
 
-    if let Some(root_volume) = root_volume(filesystem).await? {
-        let volume_directory = root_volume.volume_directory();
-        let layer_set = volume_directory.store().tree().layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter = volume_directory.iter(&mut merger).await?;
+    let root_volume = root_volume(filesystem).await?;
+    let volume_directory = root_volume.volume_directory();
+    let layer_set = volume_directory.store().tree().layer_set();
+    let mut merger = layer_set.merger();
+    let mut iter = volume_directory.iter(&mut merger).await?;
 
-        // TODO(csuter): We could maybe iterate over stores concurrently.
-        while let Some((name, store_id, _)) = iter.get() {
-            fsck.verbose(format!("Scanning volume \"{}\" (id {})...", name, store_id));
-            fsck.check_child_store(&filesystem, &graveyard, store_id, &mut root_store_root_objects)
-                .await?;
-            iter.advance().await?;
-            fsck.verbose("Scanning volume done");
-        }
+    // TODO(csuter): We could maybe iterate over stores concurrently.
+    while let Some((name, store_id, _)) = iter.get() {
+        fsck.verbose(format!("Scanning volume \"{}\" (id {})...", name, store_id));
+        fsck.check_child_store(&filesystem, &graveyard, store_id, &mut root_store_root_objects)
+            .await?;
+        iter.advance().await?;
+        fsck.verbose("Scanning volume done");
     }
 
     // TODO(csuter): It's a bit crude how details of SimpleAllocator are leaking here. Is there

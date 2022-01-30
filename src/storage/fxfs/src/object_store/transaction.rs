@@ -125,6 +125,7 @@ pub trait TransactionHandler: Send + Sync {
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Mutation {
     ObjectStore(ObjectStoreMutation),
+    EncryptedObjectStore(Box<[u8]>),
     ObjectStoreInfo(StoreInfoMutation),
     Allocator(AllocatorMutation),
     // Like an Allocator mutation, but without any change in allocated counts.

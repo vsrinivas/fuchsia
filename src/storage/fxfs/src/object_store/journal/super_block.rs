@@ -43,8 +43,8 @@ const SUPER_BLOCK_CHUNK_SIZE: u64 = 65536;
 /// The first 2 * 512 KiB on the disk are reserved for two A/B super-blocks.
 const MIN_SUPER_BLOCK_SIZE: u64 = 524_288;
 
-/// All superblocks start with the magic bytes "FxFSSupr".
-const SUPER_BLOCK_MAGIC: &[u8; 8] = b"FxFSSupr";
+/// All superblocks start with the magic bytes "FxfsSupr".
+const SUPER_BLOCK_MAGIC: &[u8; 8] = b"FxfsSupr";
 
 pub const SUPER_BLOCK_MAJOR_VERSION: u32 = 1;
 pub const SUPER_BLOCK_MINOR_VERSION: u32 = 1;
@@ -223,7 +223,7 @@ impl SuperBlock {
     ) -> Result<(), Error> {
         assert_eq!(root_parent_store.store_object_id(), self.root_parent_store_object_id);
 
-        let object_manager = root_parent_store.filesystem().object_manager();
+        let object_manager = root_parent_store.filesystem().object_manager().clone();
         // TODO(ripper): Don't use the same code here for Journal and SuperBlock. They aren't the
         // same things and it is already getting convoluted. e.g of diff sstream content:
         //   Superblock:  (Magic, Ver, Header(Ver), SuperBlockRecord(Ver)*, ...)

@@ -36,6 +36,8 @@ pub enum FxfsError {
     JournalFlushError,
     #[error("Not supported")]
     NotSupported,
+    #[error("Access denied")]
+    AccessDenied,
 }
 
 impl FxfsError {

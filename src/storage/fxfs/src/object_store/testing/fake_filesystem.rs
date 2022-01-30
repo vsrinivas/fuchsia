@@ -62,8 +62,8 @@ impl Filesystem for FakeFilesystem {
         self.object_manager.allocator()
     }
 
-    fn object_manager(&self) -> Arc<ObjectManager> {
-        self.object_manager.clone()
+    fn object_manager(&self) -> &Arc<ObjectManager> {
+        &self.object_manager
     }
 
     async fn sync(&self, _: SyncOptions<'_>) -> Result<(), Error> {

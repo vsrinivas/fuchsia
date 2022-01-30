@@ -19,7 +19,7 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
-            filesystem::{ApplyMode, Filesystem, Mutations, SyncOptions},
+            filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations, SyncOptions},
             journal::checksum_list::ChecksumList,
             object_manager::ReservationUpdate,
             store_object_handle::DirectWriter,
@@ -887,19 +887,18 @@ impl Mutations for SimpleAllocator {
     async fn apply_mutation(
         &self,
         mutation: Mutation,
-        mode: ApplyMode<'_, '_>,
-        log_offset: u64,
+        context: &ApplyContext<'_, '_>,
         _assoc_obj: AssocObj<'_>,
     ) {
         match mutation {
             Mutation::Allocator(AllocatorMutation(mut item)) => {
-                item.sequence = log_offset;
+                item.sequence = context.checkpoint.file_offset;
                 // We currently rely on barriers here between inserting/removing from reserved
                 // allocations and merging into the tree.  These barriers are present whilst we use
                 // skip_list_layer's commit_and_wait method, rather than just commit.
                 let len = item.key.device_range.length().unwrap();
                 if item.value.delta < 0 {
-                    if mode.is_live() {
+                    if context.mode.is_live() {
                         let mut item = item.clone();
                         item.value.delta = 1;
                         self.reserved_allocations.insert(item).await;
@@ -908,10 +907,11 @@ impl Mutations for SimpleAllocator {
                     let mut inner = self.inner.lock().unwrap();
                     inner.allocated_bytes = inner.allocated_bytes.saturating_sub(len as i64);
 
-                    if mode.is_live() {
-                        inner
-                            .committed_deallocated
-                            .push_back((log_offset, item.key.device_range.clone()));
+                    if context.mode.is_live() {
+                        inner.committed_deallocated.push_back((
+                            context.checkpoint.file_offset,
+                            item.key.device_range.clone(),
+                        ));
                         inner.committed_deallocated_bytes +=
                             item.key.device_range.length().unwrap();
                     }
@@ -919,7 +919,7 @@ impl Mutations for SimpleAllocator {
                     if let ApplyMode::Live(Transaction {
                         allocator_reservation: Some(reservation),
                         ..
-                    }) = mode
+                    }) = context.mode
                     {
                         inner.reserved_bytes += len;
                         reservation.add(len);
@@ -928,12 +928,12 @@ impl Mutations for SimpleAllocator {
                 let lower_bound = item.key.lower_bound_for_merge_into();
                 self.tree.merge_into(item.clone(), &lower_bound).await;
                 if item.value.delta > 0 {
-                    if mode.is_live() {
+                    if context.mode.is_live() {
                         self.reserved_allocations.erase(item.as_item_ref()).await;
                     }
                     let mut inner = self.inner.lock().unwrap();
                     inner.allocated_bytes = inner.allocated_bytes.saturating_add(len as i64);
-                    if let ApplyMode::Live(transaction) = mode {
+                    if let ApplyMode::Live(transaction) = context.mode {
                         inner.uncommitted_allocated_bytes -= len;
                         if let Some(reservation) = transaction.allocator_reservation {
                             reservation.commit(len);
@@ -942,7 +942,7 @@ impl Mutations for SimpleAllocator {
                 }
             }
             Mutation::AllocatorRef(AllocatorMutation(mut item)) => {
-                item.sequence = log_offset;
+                item.sequence = context.checkpoint.file_offset;
                 let lower_bound = item.key.lower_bound_for_merge_into();
                 self.tree.merge_into(item, &lower_bound).await;
             }
@@ -961,7 +961,7 @@ impl Mutations for SimpleAllocator {
                 inner.info.allocated_bytes = inner.allocated_bytes as u64;
             }
             Mutation::EndFlush => {
-                if mode.is_replay() {
+                if context.mode.is_replay() {
                     self.tree.reset_immutable_layers();
                     // AllocatorInfo is written in the same transaction and will contain the count
                     // at the point BeginFlush was applied, so we need to adjust allocated_bytes so

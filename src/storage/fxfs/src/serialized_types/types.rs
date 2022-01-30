@@ -5,8 +5,9 @@
 use crate::{
     lsm_tree::LayerInfo,
     object_store::{
-        AllocatorInfo, AllocatorKey, AllocatorValue, ExtentKey, ExtentValue, JournalRecord,
-        ObjectKey, ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
+        transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
+        ExtentKey, ExtentValue, JournalRecord, ObjectKey, ObjectValue, StoreInfo, SuperBlock,
+        SuperBlockRecord,
     },
     serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
 };
@@ -62,4 +63,10 @@ versioned_type! {
 versioned_type! {
     1 => SuperBlockRecord,
     2 => SuperBlockRecord,
+}
+versioned_type! {
+    2 => EncryptedMutations,
+}
+versioned_type! {
+    2 => Mutation,
 }

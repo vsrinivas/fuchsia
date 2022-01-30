@@ -388,7 +388,7 @@ mod tests {
                 directory::ObjectDescriptor,
                 filesystem::FxFilesystem,
                 transaction::{Options, TransactionHandler},
-                volume::create_root_volume,
+                volume::root_volume,
                 HandleOptions, ObjectStore,
             },
             server::{
@@ -632,7 +632,7 @@ mod tests {
         let filesystem =
             FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new())).await.unwrap();
         {
-            let root_volume = create_root_volume(&filesystem).await.unwrap();
+            let root_volume = root_volume(&filesystem).await.unwrap();
             let volume = root_volume.new_volume("vol").await.unwrap();
             let mut transaction = filesystem
                 .clone()

@@ -8,7 +8,7 @@ use {
             crypt::InsecureCrypt,
             filesystem::{FxFilesystem, OpenFxFilesystem},
             fsck::{errors::FsckIssue, fsck_with_options, FsckOptions},
-            volume::{create_root_volume, root_volume},
+            volume::root_volume,
         },
         server::volume::FxVolumeAndRoot,
     },
@@ -53,15 +53,14 @@ impl TestFixture {
         let (filesystem, volume) = if format {
             let filesystem =
                 FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new())).await.unwrap();
-            let root_volume = create_root_volume(&filesystem).await.unwrap();
+            let root_volume = root_volume(&filesystem).await.unwrap();
             let vol =
                 FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap()).await.unwrap();
             (filesystem, vol)
         } else {
             let filesystem =
                 FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.unwrap();
-            let root_volume =
-                root_volume(&filesystem).await.unwrap().expect("root-volume not found");
+            let root_volume = root_volume(&filesystem).await.unwrap();
             let vol = FxVolumeAndRoot::new(root_volume.volume("vol").await.unwrap()).await.unwrap();
             (filesystem, vol)
         };

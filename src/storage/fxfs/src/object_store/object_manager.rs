@@ -4,19 +4,22 @@
 
 use {
     crate::{
+        errors::FxfsError,
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::{Allocator, Reservation},
-            filesystem::{ApplyMode, Mutations},
+            directory::Directory,
+            filesystem::{ApplyContext, ApplyMode, Mutations},
             graveyard::Graveyard,
             journal::{self, checksum_list::ChecksumList, JournalCheckpoint},
             transaction::{
                 AssocObj, AssociatedObject, MetadataReservation, Mutation, Transaction, TxnMutation,
             },
-            ObjectStore,
+            volume::{list_volumes, VOLUMES_DIRECTORY},
+            ObjectDescriptor, ObjectStore,
         },
     },
-    anyhow::{Context, Error},
+    anyhow::{anyhow, bail, Context, Error},
     once_cell::sync::OnceCell,
     std::{
         collections::{hash_map::Entry, HashMap},
@@ -39,6 +42,7 @@ pub const fn reserved_space_from_journal_usage(journal_usage: u64) -> u64 {
 pub struct ObjectManager {
     inner: RwLock<Inner>,
     metadata_reservation: OnceCell<Reservation>,
+    volume_directory: OnceCell<Directory<ObjectStore>>,
 }
 
 // Whilst we are flushing we need to keep track of the old checkpoint that we are hoping to flush,
@@ -129,6 +133,7 @@ impl ObjectManager {
                 max_txn_size: 0,
             }),
             metadata_reservation: OnceCell::new(),
+            volume_directory: OnceCell::new(),
         }
     }
 
@@ -187,25 +192,71 @@ impl ObjectManager {
                 // This assumes that all stores are children of the root store.
                 assert_ne!(store_object_id, root_parent_store_object_id);
                 assert_ne!(store_object_id, root_store.store_object_id());
-                ObjectStore::new(Some(root_store), store_object_id, fs, None)
+                ObjectStore::new(Some(root_store), store_object_id, fs, None, None, true)
             })
             .clone()
     }
 
     pub async fn open_store(&self, store_object_id: u64) -> Result<Arc<ObjectStore>, Error> {
-        let store = self.lazy_open_store(store_object_id);
-        store.open().await?;
-        Ok(store)
+        Ok(self
+            .inner
+            .read()
+            .unwrap()
+            .stores
+            .get(&store_object_id)
+            .ok_or(FxfsError::NotFound)?
+            .clone())
     }
 
     /// This is not thread-safe: it assumes that a store won't be forgotten whilst the loop is
     /// running.  This is to be used after replaying the journal.
-    pub async fn open_stores(&self) -> Result<(), Error> {
-        for store_id in self.store_object_ids() {
-            let store = self.inner.read().unwrap().stores.get(&store_id).unwrap().clone();
-            store.open().await.context(format!("Failed to open store {}", store_id))?;
+    pub async fn on_replay_complete(&self) -> Result<(), Error> {
+        let root_store = self.root_store();
+
+        let root_directory = Directory::open(&root_store, root_store.root_directory_object_id())
+            .await
+            .context("Unable to open root volume directory")?;
+
+        match root_directory.lookup(VOLUMES_DIRECTORY).await? {
+            None => bail!("Root directory not found"),
+            Some((object_id, ObjectDescriptor::Directory)) => {
+                let volume_directory = Directory::open(&root_store, object_id)
+                    .await
+                    .context("Unable to open volumes directory")?;
+                self.volume_directory.set(volume_directory).unwrap();
+            }
+            _ => {
+                bail!(anyhow!(FxfsError::Inconsistent)
+                    .context("Unexpected type for volumes directory"))
+            }
         }
+
+        let object_ids = list_volumes(self.volume_directory.get().unwrap()).await?;
+
+        for store_id in object_ids {
+            let store = self.lazy_open_store(store_id);
+            store
+                .on_replay_complete()
+                .await
+                .context(format!("Store {} failed to load after replay", store_id))?;
+
+            // TODO(csuter): This needs to move somewhere else.
+            if store.is_locked() {
+                store.unlock().await?;
+            }
+        }
+
+        self.init_metadata_reservation();
+
         Ok(())
+    }
+
+    pub fn volume_directory(&self) -> &Directory<ObjectStore> {
+        self.volume_directory.get().unwrap()
+    }
+
+    pub fn set_volume_directory(&self, volume_directory: Directory<ObjectStore>) {
+        self.volume_directory.set(volume_directory).unwrap();
     }
 
     pub fn add_store(&self, store: Arc<ObjectStore>) {
@@ -217,7 +268,6 @@ impl ObjectManager {
         inner.stores.insert(store_object_id, store);
     }
 
-    #[cfg(test)]
     pub fn forget_store(&self, store_object_id: u64) {
         let mut inner = self.inner.write().unwrap();
         assert_ne!(store_object_id, inner.allocator_object_id);
@@ -266,8 +316,7 @@ impl ObjectManager {
         &self,
         object_id: u64,
         mutation: Mutation,
-        mode: ApplyMode<'_, '_>,
-        checkpoint: &JournalCheckpoint,
+        context: &ApplyContext<'_, '_>,
         associated_object: AssocObj<'_>,
     ) {
         log::debug!("applying mutation: {}: {:?}", object_id, mutation);
@@ -305,10 +354,11 @@ impl ObjectManager {
                             .entry(object_id)
                             .and_modify(|entry| {
                                 if let Checkpoints::Old(x) = entry {
-                                    *entry = Checkpoints::Both(x.clone(), checkpoint.clone());
+                                    *entry =
+                                        Checkpoints::Both(x.clone(), context.checkpoint.clone());
                                 }
                             })
-                            .or_insert_with(|| Checkpoints::Current(checkpoint.clone()));
+                            .or_insert_with(|| Checkpoints::Current(context.checkpoint.clone()));
                     }
                 }
             }
@@ -319,11 +369,11 @@ impl ObjectManager {
             }
         }
         .unwrap_or_else(|| {
-            assert!(mode.is_replay());
+            assert!(context.mode.is_replay());
             self.lazy_open_store(object_id)
         });
         associated_object.map(|o| o.will_apply_mutation(&mutation, object_id, self));
-        object.apply_mutation(mutation, mode, checkpoint.file_offset, associated_object).await;
+        object.apply_mutation(mutation, context, associated_object).await;
     }
 
     /// Called by the journaling system to replay the given mutations.  `checkpoint` indicates the
@@ -332,10 +382,10 @@ impl ObjectManager {
     pub async fn replay_mutations(
         &self,
         mutations: Vec<(u64, Mutation)>,
-        journal_file_checkpoint: JournalCheckpoint,
+        context: &ApplyContext<'_, '_>,
         end_offset: u64,
     ) {
-        log::debug!("REPLAY {}", journal_file_checkpoint.file_offset);
+        log::debug!("REPLAY {}", context.checkpoint.file_offset);
         let txn_size = {
             let mut inner = self.inner.write().unwrap();
             if end_offset > inner.last_end_offset {
@@ -352,14 +402,7 @@ impl ObjectManager {
                 }
                 continue;
             }
-            self.apply_mutation(
-                object_id,
-                mutation,
-                ApplyMode::Replay,
-                &journal_file_checkpoint,
-                AssocObj::None,
-            )
-            .await;
+            self.apply_mutation(object_id, mutation, context, AssocObj::None).await;
         }
     }
 
@@ -377,15 +420,10 @@ impl ObjectManager {
 
         log::debug!("BEGIN TXN {}", checkpoint.file_offset);
         let mutations = std::mem::take(&mut transaction.mutations);
+        let context =
+            ApplyContext { mode: ApplyMode::Live(transaction), checkpoint: checkpoint.clone() };
         for TxnMutation { object_id, mutation, associated_object } in mutations {
-            self.apply_mutation(
-                object_id,
-                mutation,
-                ApplyMode::Live(transaction),
-                &checkpoint,
-                associated_object,
-            )
-            .await;
+            self.apply_mutation(object_id, mutation, &context, associated_object).await;
         }
         log::debug!("END TXN");
 
@@ -578,6 +616,10 @@ impl ObjectManager {
 
     pub fn set_borrowed_metadata_space(&self, v: u64) {
         self.inner.write().unwrap().borrowed_metadata_space = v;
+    }
+
+    pub fn encrypt_mutation(&self, object_id: u64, mutation: &Mutation) -> Option<Mutation> {
+        self.inner.read().unwrap().stores.get(&object_id).and_then(|x| x.encrypt_mutation(mutation))
     }
 }
 

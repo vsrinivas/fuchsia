@@ -22,6 +22,7 @@ impl From<FxfsError> for Status {
             FxfsError::InvalidVersion => Status::NOT_SUPPORTED,
             FxfsError::JournalFlushError => Status::IO,
             FxfsError::NotSupported => Status::NOT_SUPPORTED,
+            FxfsError::AccessDenied => Status::ACCESS_DENIED,
         }
     }
 }

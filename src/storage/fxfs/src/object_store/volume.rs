@@ -8,8 +8,8 @@ use {
         object_store::{
             directory::Directory,
             filesystem::{Filesystem, FxFilesystem},
-            transaction::{LockKey, Options, TransactionHandler},
-            ObjectDescriptor, ObjectStore,
+            transaction::{Options, TransactionHandler},
+            HandleOptions, ObjectDescriptor, ObjectStore,
         },
     },
     anyhow::{anyhow, bail, Context, Error},
@@ -23,55 +23,66 @@ use {
 // volume stores references to all other volumes on the system (as volumes/foo, volumes/bar, ...).
 // For now, this hierarchy is only one deep.
 
-const VOLUMES_DIRECTORY: &str = "volumes";
+pub const VOLUMES_DIRECTORY: &str = "volumes";
 
 /// RootVolume is the top-level volume which stores references to all of the other Volumes.
 pub struct RootVolume {
     _root_directory: Directory<ObjectStore>,
-    volume_directory: Directory<ObjectStore>,
     filesystem: Arc<FxFilesystem>,
 }
 
 impl RootVolume {
     pub fn volume_directory(&self) -> &Directory<ObjectStore> {
-        &self.volume_directory
+        self.filesystem.object_manager().volume_directory()
     }
 
     /// Creates a new volume.  This is not thread-safe.
     pub async fn new_volume(&self, volume_name: &str) -> Result<Arc<ObjectStore>, Error> {
         let root_store = self.filesystem.root_store();
         let store;
+        let store_handle;
         let mut transaction =
             self.filesystem.clone().new_transaction(&[], Options::default()).await?;
-        store = root_store.create_child_store(&mut transaction).await?;
 
-        let root_directory = Directory::create(&mut transaction, &store).await?;
-        store.set_root_directory_object_id(&mut transaction, root_directory.object_id());
+        store_handle = ObjectStore::create_object(
+            &root_store,
+            &mut transaction,
+            HandleOptions::default(),
+            Some(0),
+        )
+        .await?;
 
-        self.volume_directory
+        store = ObjectStore::new_encrypted(root_store, store_handle).await?;
+
+        // We must register the store here because create will add mutations for the store.
+        self.filesystem.object_manager().add_store(store.clone());
+
+        // If the transaction fails, we must unregister the store.
+        struct CleanUp<'a>(&'a ObjectStore);
+        impl Drop for CleanUp<'_> {
+            fn drop(&mut self) {
+                self.0.filesystem().object_manager().forget_store(self.0.store_object_id());
+            }
+        }
+        let clean_up = CleanUp(&store);
+
+        // Actually create the store in the transaction.
+        store.create(&mut transaction).await?;
+
+        self.volume_directory()
             .add_child_volume(&mut transaction, volume_name, store.store_object_id())
             .await?;
         transaction.commit().await?;
 
-        Ok(store)
-    }
+        std::mem::forget(clean_up);
 
-    pub async fn list_volumes(&self) -> Result<Vec<u64>, Error> {
-        let layer_set = self.volume_directory.store().tree().layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter = self.volume_directory.iter(&mut merger).await?;
-        let mut object_ids = vec![];
-        while let Some((_, id, _)) = iter.get() {
-            object_ids.push(id);
-            iter.advance().await?;
-        }
-        Ok(object_ids)
+        Ok(store)
     }
 
     /// Returns the volume with the given name.  This is not thread-safe.
     pub async fn volume(&self, volume_name: &str) -> Result<Arc<ObjectStore>, Error> {
         let object_id =
-            match self.volume_directory.lookup(volume_name).await?.ok_or(FxfsError::NotFound)? {
+            match self.volume_directory().lookup(volume_name).await?.ok_or(FxfsError::NotFound)? {
                 (object_id, ObjectDescriptor::Volume) => object_id,
                 _ => bail!(anyhow!(FxfsError::Inconsistent).context("Expected volume")),
             };
@@ -96,52 +107,32 @@ impl RootVolume {
     }
 }
 
-/// Returns the root volume for the filesystem or None if it doesn't exist.
-pub async fn root_volume(fs: &Arc<FxFilesystem>) -> Result<Option<RootVolume>, Error> {
+/// Returns the root volume for the filesystem.
+pub async fn root_volume(fs: &Arc<FxFilesystem>) -> Result<RootVolume, Error> {
     let root_store = fs.root_store();
     let root_directory = Directory::open(&root_store, root_store.root_directory_object_id())
         .await
         .context("Unable to open root volume directory")?;
-    match root_directory.lookup(VOLUMES_DIRECTORY).await? {
-        None => Ok(None),
-        Some((object_id, ObjectDescriptor::Directory)) => {
-            let volume_directory = Directory::open(&root_store, object_id)
-                .await
-                .context("unable to open volumes directory")?;
-            Ok(Some(RootVolume {
-                _root_directory: root_directory,
-                volume_directory,
-                filesystem: fs.clone(),
-            }))
-        }
-        _ => Err(anyhow!(FxfsError::Inconsistent).context("Unexpected type for volumes directory")),
-    }
+    Ok(RootVolume { _root_directory: root_directory, filesystem: fs.clone() })
 }
 
-/// Creates the root volume.  This is not thread-safe and does not check to see of the root volume
-/// has already been created.
-pub async fn create_root_volume(fs: &Arc<FxFilesystem>) -> Result<RootVolume, Error> {
-    let root_store = fs.root_store();
-    let root_directory = Directory::open(&root_store, root_store.root_directory_object_id())
-        .await
-        .context("Unable to open root volume directory")?;
-    let mut transaction = fs
-        .clone()
-        .new_transaction(
-            &[LockKey::object(root_store.store_object_id(), root_directory.object_id())],
-            Options::default(),
-        )
-        .await?;
-    let volume_directory =
-        root_directory.create_child_dir(&mut transaction, VOLUMES_DIRECTORY).await?;
-    transaction.commit().await?;
-    Ok(RootVolume { _root_directory: root_directory, volume_directory, filesystem: fs.clone() })
+/// Returns the object IDs for all volumes.
+pub async fn list_volumes(volume_directory: &Directory<ObjectStore>) -> Result<Vec<u64>, Error> {
+    let layer_set = volume_directory.store().tree().layer_set();
+    let mut merger = layer_set.merger();
+    let mut iter = volume_directory.iter(&mut merger).await?;
+    let mut object_ids = vec![];
+    while let Some((_, id, _)) = iter.get() {
+        object_ids.push(id);
+        iter.advance().await?;
+    }
+    Ok(object_ids)
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::{create_root_volume, root_volume},
+        super::root_volume,
         crate::object_store::{
             crypt::InsecureCrypt,
             directory::Directory,
@@ -159,7 +150,7 @@ mod tests {
         let filesystem = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
             .await
             .expect("new_empty failed");
-        let root_volume = create_root_volume(&filesystem).await.expect("create_root_volume failed");
+        let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
         root_volume.volume("vol").await.err().expect("Volume shouldn't exist");
         filesystem.close().await.expect("Close failed");
     }
@@ -171,8 +162,7 @@ mod tests {
             .await
             .expect("new_empty failed");
         {
-            let root_volume =
-                create_root_volume(&filesystem).await.expect("create_root_volume failed");
+            let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
             let store = root_volume.new_volume("vol").await.expect("new_volume failed");
             let mut transaction = filesystem
                 .clone()
@@ -196,10 +186,7 @@ mod tests {
             let filesystem = FxFilesystem::open(device, Arc::new(InsecureCrypt::new()))
                 .await
                 .expect("open failed");
-            let root_volume = root_volume(&filesystem)
-                .await
-                .expect("root_volume failed")
-                .expect("root-volume not found");
+            let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
             let volume = root_volume.volume("vol").await.expect("volume failed");
             let root_directory = Directory::open(&volume, volume.root_directory_object_id())
                 .await

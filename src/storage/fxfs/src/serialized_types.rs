@@ -70,6 +70,6 @@ pub use test_traits::*;
 #[cfg(test)]
 mod tests;
 
-// Re-export all FxFS types.
+// Re-export all Fxfs types.
 mod types;
 pub use types::*;

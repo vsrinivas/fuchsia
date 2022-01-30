@@ -32,7 +32,7 @@ use {
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             directory::Directory,
             extent_record::{ExtentKey, DEFAULT_DATA_ATTRIBUTE_ID},
-            filesystem::{ApplyMode, Filesystem, Mutations, SyncOptions},
+            filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations, SyncOptions},
             graveyard::Graveyard,
             journal::{
                 checksum_list::ChecksumList,
@@ -279,7 +279,19 @@ impl Journal {
                     (Mutation::extent(item.key, item.value), item.sequence)
                 }
             };
-            root_parent.apply_mutation(mutation, ApplyMode::Replay, sequence, AssocObj::None).await;
+            root_parent
+                .apply_mutation(
+                    mutation,
+                    &ApplyContext {
+                        mode: ApplyMode::Replay,
+                        checkpoint: JournalCheckpoint {
+                            file_offset: sequence,
+                            ..Default::default()
+                        },
+                    },
+                    AssocObj::None,
+                )
+                .await;
         }
 
         // TODO(jfsulliv): Upgrade minor revision as needed.
@@ -331,6 +343,8 @@ impl Journal {
             super_block.root_store_object_id,
             filesystem.clone(),
             None,
+            None,
+            true,
         );
         self.objects.set_root_store(root_store);
 
@@ -496,14 +510,21 @@ impl Journal {
                     if checkpoint.file_offset >= valid_to {
                         break 'outer checkpoint;
                     }
-                    self.objects.replay_mutations(mutations, checkpoint, end_offset).await;
+                    self.objects
+                        .replay_mutations(
+                            mutations,
+                            &ApplyContext { mode: ApplyMode::Replay, checkpoint },
+                            end_offset,
+                        )
+                        .await;
                 }
                 break reader.journal_file_checkpoint();
             }
         };
 
         let root_store = self.objects.root_store();
-        root_store.open().await?;
+        root_store.on_replay_complete().await?;
+        root_store.unlock().await?;
         allocator.open().await?;
 
         // Configure the journal writer so that we can continue.
@@ -539,6 +560,8 @@ impl Journal {
                 inner.discard_offset = Some(last_checkpoint.file_offset);
             }
         }
+
+        self.objects.on_replay_complete().await?;
 
         self.objects.register_graveyard(
             Graveyard::open(&self.objects.root_store(), root_store.graveyard_directory_object_id())
@@ -968,7 +991,18 @@ impl Journal {
             checkpoint_before = {
                 let mut inner = self.inner.lock().unwrap();
                 let checkpoint = inner.writer.journal_file_checkpoint();
-                inner.writer.write_mutations(transaction);
+                for TxnMutation { object_id, mutation, .. } in &transaction.mutations {
+                    let mutation = if let Some(mutation) =
+                        self.objects.encrypt_mutation(*object_id, mutation)
+                    {
+                        mutation
+                    } else {
+                        mutation.clone()
+                    };
+                    inner
+                        .writer
+                        .write_record(&JournalRecord::Mutation { object_id: *object_id, mutation });
+                }
                 checkpoint
             };
             // The call here isn't drop-safe.  If the future gets dropped, it will leave things in a
@@ -1106,18 +1140,6 @@ impl Journal {
         inner.terminate = true;
         if let Some(waker) = inner.flush_waker.take() {
             waker.wake();
-        }
-    }
-}
-
-impl JournalWriter {
-    // Extends JournalWriter to write mutations.
-    fn write_mutations<'a>(&mut self, transaction: &Transaction<'_>) {
-        for TxnMutation { object_id, mutation, .. } in &transaction.mutations {
-            self.write_record(&JournalRecord::Mutation {
-                object_id: *object_id,
-                mutation: mutation.clone(),
-            });
         }
     }
 }

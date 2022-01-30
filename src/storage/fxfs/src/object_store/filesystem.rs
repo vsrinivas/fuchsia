@@ -9,7 +9,8 @@ use {
         object_store::{
             allocator::{Allocator, Hold, Reservation, ReservationOwner},
             crypt::Crypt,
-            journal::{super_block::SuperBlock, Journal},
+            directory::Directory,
+            journal::{super_block::SuperBlock, Journal, JournalCheckpoint},
             object_manager::ObjectManager,
             trace_duration,
             transaction::{
@@ -17,7 +18,7 @@ use {
                 Transaction, TransactionHandler, TransactionLocks, WriteGuard,
                 TRANSACTION_METADATA_MAX_AMOUNT,
             },
-            volume::root_volume,
+            volume::VOLUMES_DIRECTORY,
             ObjectStore,
         },
     },
@@ -54,7 +55,7 @@ pub trait Filesystem: TransactionHandler {
     fn allocator(&self) -> Arc<dyn Allocator>;
 
     /// Returns the object manager for the filesystem.
-    fn object_manager(&self) -> Arc<ObjectManager>;
+    fn object_manager(&self) -> &Arc<ObjectManager>;
 
     /// Flushes buffered data to the underlying device.
     async fn sync(&self, options: SyncOptions<'_>) -> Result<(), Error>;
@@ -68,6 +69,15 @@ pub trait Filesystem: TransactionHandler {
     /// Returns the crypt interface.
     // TODO(csuter): This is going to need to be per-store eventually.
     fn crypt(&self) -> &dyn Crypt;
+}
+
+/// The context in which a transaction is being applied.
+pub struct ApplyContext<'a, 'b> {
+    /// The mode indicates whether the transaction is being replayed.
+    pub mode: ApplyMode<'a, 'b>,
+
+    /// The transaction checkpoint for this mutation.
+    pub checkpoint: JournalCheckpoint,
 }
 
 /// A transaction can be applied during replay or on a live running system (in which case a
@@ -96,8 +106,7 @@ pub trait Mutations: Send + Sync {
     async fn apply_mutation(
         &self,
         mutation: Mutation,
-        mode: ApplyMode<'_, '_>,
-        log_offset: u64,
+        context: &ApplyContext<'_, '_>,
         assoc_obj: AssocObj<'_>,
     );
 
@@ -106,6 +115,11 @@ pub trait Mutations: Send + Sync {
 
     /// Flushes in-memory changes to the device (to allow journal space to be freed).
     async fn flush(&self) -> Result<(), Error>;
+
+    /// Optionally encrypts a mutation.
+    fn encrypt_mutation(&self, _mutation: &Mutation) -> Option<Mutation> {
+        None
+    }
 }
 
 #[derive(Default)]
@@ -204,6 +218,25 @@ impl FxFilesystem {
             // Start the graveyard's background reaping task.
             graveyard.reap_async(filesystem.journal.journal_file_offset());
         }
+
+        // Create the root volume directory.
+        let root_store = filesystem.root_store();
+        let root_directory = Directory::open(&root_store, root_store.root_directory_object_id())
+            .await
+            .context("Unable to open root volume directory")?;
+        let mut transaction = filesystem
+            .clone()
+            .new_transaction(
+                &[LockKey::object(root_store.store_object_id(), root_directory.object_id())],
+                Options::default(),
+            )
+            .await?;
+        let volume_directory =
+            root_directory.create_child_dir(&mut transaction, VOLUMES_DIRECTORY).await?;
+        transaction.commit().await?;
+
+        filesystem.objects.set_volume_directory(volume_directory);
+
         Ok(filesystem.into())
     }
 
@@ -236,10 +269,6 @@ impl FxFilesystem {
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await.context("Journal replay failed")?;
         if !options.read_only {
-            filesystem
-                .initialize_metadata_reservation()
-                .await
-                .context("Failed to initialize reservation")?;
             if let Some(graveyard) = filesystem.objects.graveyard() {
                 // Purge the graveyard of old entries in a background task; once that's done the
                 // reaper will continue to run and purge newly received entries.
@@ -338,25 +367,6 @@ impl FxFilesystem {
         };
         Ok((metadata_reservation, options.allocator_reservation, hold))
     }
-
-    // Determines how much metadata reservation is needed based on the filesystem's initial state,
-    // and claims that amount.
-    async fn initialize_metadata_reservation(self: &Arc<Self>) -> Result<(), Error> {
-        // If the filesystem was only half-initialized, there might not be a root volume, which is
-        // OK.
-        // TODO(jfsulliv): We might consider moving the root volume into FxFilesystem, since the
-        // filesystem can't really be used without it.
-        if let Some(root_volume) = root_volume(self).await? {
-            for object_id in root_volume.list_volumes().await? {
-                self.objects.update_reservation(
-                    object_id,
-                    ObjectStore::compute_size(&self.root_store(), object_id).await?,
-                );
-            }
-        }
-        self.objects.init_metadata_reservation();
-        Ok(())
-    }
 }
 
 impl Drop for FxFilesystem {
@@ -382,8 +392,8 @@ impl Filesystem for FxFilesystem {
         self.objects.allocator()
     }
 
-    fn object_manager(&self) -> Arc<ObjectManager> {
-        self.objects.clone()
+    fn object_manager(&self) -> &Arc<ObjectManager> {
+        &self.objects
     }
 
     async fn sync(&self, options: SyncOptions<'_>) -> Result<(), Error> {

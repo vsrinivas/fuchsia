@@ -5,7 +5,7 @@
 use {
     crate::object_store::{
         allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
-        filesystem::{ApplyMode, Mutations},
+        filesystem::{ApplyContext, Mutations},
         journal::checksum_list::ChecksumList,
         transaction::{AssocObj, Mutation, Transaction},
     },
@@ -130,8 +130,7 @@ impl Mutations for FakeAllocator {
     async fn apply_mutation(
         &self,
         _mutation: Mutation,
-        _mode: ApplyMode<'_, '_>,
-        _log_offset: u64,
+        _context: &ApplyContext<'_, '_>,
         _associated_object: AssocObj<'_>,
     ) {
     }

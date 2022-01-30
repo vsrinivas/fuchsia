@@ -4,7 +4,6 @@
 
 use {
     crate::{
-        errors::FxfsError,
         object_store::{
             filesystem::{Filesystem, Info, OpenFxFilesystem},
             volume::root_volume,
@@ -67,9 +66,9 @@ pub struct FxfsServer {
 impl FxfsServer {
     /// Creates a new FxfsServer by opening or creating |volume_name| in |fs|.
     pub async fn new(fs: OpenFxFilesystem, volume_name: &str) -> Result<Self, Error> {
-        let volume_dir = root_volume(&fs).await?.ok_or(FxfsError::Inconsistent)?;
+        let root_volume = root_volume(&fs).await?;
         let volume = FxVolumeAndRoot::new(
-            volume_dir
+            root_volume
                 .open_or_create_volume(volume_name)
                 .await
                 .expect("Open or create volume failed"),
@@ -199,7 +198,7 @@ impl Info {
 mod tests {
     use {
         crate::{
-            object_store::{crypt::InsecureCrypt, volume::create_root_volume, FxFilesystem},
+            object_store::{crypt::InsecureCrypt, FxFilesystem},
             server::FxfsServer,
         },
         anyhow::Error,
@@ -214,7 +213,6 @@ mod tests {
     async fn test_lifecycle() -> Result<(), Error> {
         let device = DeviceHolder::new(FakeDevice::new(16384, 512));
         let filesystem = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new())).await?;
-        create_root_volume(&filesystem).await?;
         let server = FxfsServer::new(filesystem, "root").await.expect("Create server failed");
 
         let (client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>()?;

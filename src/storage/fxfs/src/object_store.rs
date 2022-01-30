@@ -41,18 +41,19 @@ use {
             types::{BoxedLayerIterator, Item, ItemRef, LayerIterator},
             LSMTree,
         },
-        object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
+        object_handle::{ObjectHandle, ObjectHandleExt, WriteBytes, INVALID_OBJECT_ID},
         object_store::{
+            crypt::StreamCipher,
             data_buffer::{DataBuffer, MemDataBuffer},
             extent_record::{Checksums, DEFAULT_DATA_ATTRIBUTE_ID},
-            filesystem::{ApplyMode, Filesystem, Mutations},
-            journal::checksum_list::ChecksumList,
+            filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
+            journal::{checksum_list::ChecksumList, JournalCheckpoint},
             object_manager::{ObjectManager, ReservationUpdate},
             object_record::{EncryptionKeys, ObjectKind},
             store_object_handle::DirectWriter,
             transaction::{
-                AssocObj, AssociatedObject, ExtentMutation, LockKey, Mutation, NoOrd,
-                ObjectStoreMutation, Operation, Options, StoreInfoMutation, Transaction,
+                AssocObj, AssociatedObject, ExtentMutation, Mutation, NoOrd, ObjectStoreMutation,
+                Operation, Options, StoreInfoMutation, Transaction,
             },
         },
         range::RangeExt,
@@ -109,16 +110,65 @@ pub struct StoreInfo {
 
     // The number of live objects in the store.
     object_count: u64,
+
+    // The (wrapped) key that encrypted mutations should use.
+    mutations_key: Option<Box<[u8]>>,
+
+    // Mutations for the store are encrypted using a stream cipher.  To decrypt the mutations, we
+    // need to know the offset in the cipher stream to start it.
+    mutations_cipher_offset: u64,
+
+    // If we have to flush the store whilst we do not have the key, we need to write the encrypted
+    // mutations to an object. This is the object ID of that file if it exists.
+    encrypted_mutations_object_id: u64,
 }
 
 // TODO(csuter): We should test or put checks in place to ensure this limit isn't exceeded.  It
 // will likely involve placing limits on the maximum number of layers.
 const MAX_STORE_INFO_SERIALIZED_SIZE: usize = 131072;
 
+const MAX_ENCRYPTED_MUTATIONS_SIZE: usize = journal::RECLAIM_SIZE as usize;
+
 #[derive(Default)]
 pub struct HandleOptions {
     /// If true, transactions used by this handle will skip journal space checks.
     pub skip_journal_checks: bool,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub struct EncryptedMutations {
+    // Information about the mutations are held here, but the actual encrypted data is held within
+    // data.  For each transaction, we record the checkpoint and the count of mutations within the
+    // transaction.  The checkpoint is required for the log file offset (which we need to apply the
+    // mutations), and the version so that we can correctly decode the mutation after it has been
+    // decrypted.
+    transactions: Vec<(JournalCheckpoint, u64)>,
+
+    // The encrypted mutations.
+    data: Vec<u8>,
+}
+
+impl EncryptedMutations {
+    fn is_empty(&self) -> bool {
+        self.transactions.is_empty()
+    }
+
+    fn extend(&mut self, other: EncryptedMutations) {
+        self.transactions.extend(other.transactions);
+        self.data.extend(other.data);
+    }
+
+    fn push(&mut self, checkpoint: &JournalCheckpoint, data: Box<[u8]>) {
+        self.data.append(&mut data.into());
+        // If the checkpoint is the same as the last mutation we pushed, increment the count.
+        if let Some((last_checkpoint, count)) = self.transactions.last_mut() {
+            if last_checkpoint.file_offset == checkpoint.file_offset {
+                *count += 1;
+                return;
+            }
+        }
+        self.transactions.push((checkpoint.clone(), 1));
+    }
 }
 
 // Whilst we are replaying the store, we need to keep track of changes to StoreInfo that arise from
@@ -132,6 +182,10 @@ struct ReplayInfo {
     object_count_delta: i64,
     root_directory: Option<u64>,
     graveyard_directory: Option<u64>,
+
+    // Encrypted mutations consist of an array of log offsets (1 per mutation), followed by the
+    // mutations.
+    encrypted_mutations: EncryptedMutations,
 }
 
 impl ReplayInfo {
@@ -200,7 +254,7 @@ impl StoreOrReplayInfo {
         }
     }
 
-    fn replay_info(&self) -> Option<&VecDeque<ReplayInfo>> {
+    fn replay_info_mut(&mut self) -> Option<&mut VecDeque<ReplayInfo>> {
         match self {
             StoreOrReplayInfo::Replay(info) => Some(info),
             _ => None,
@@ -235,6 +289,12 @@ impl StoreOrReplayInfo {
             replay_info.truncate(1);
         }
     }
+
+    fn push_encrypted_mutation(&mut self, checkpoint: &JournalCheckpoint, data: Box<[u8]>) {
+        if let StoreOrReplayInfo::Replay(replay_info) = self {
+            replay_info.front_mut().unwrap().encrypted_mutations.push(checkpoint, data);
+        }
+    }
 }
 
 /// An object store supports a file like interface for objects.  Objects are keyed by a 64 bit
@@ -256,6 +316,16 @@ pub struct ObjectStore {
     // just get sent to the tree. Once the journal has been replayed, we can open the store
     // and load all the other layer information.
     store_info_handle: OnceCell<StoreObjectHandle<ObjectStore>>,
+
+    // The cipher to use for encrypted mutations, if this store is encrypted.
+    mutations_cipher: Mutex<Option<StreamCipher>>,
+
+    // Any encrypted mutations that exist after replaying an encrypted store, but before it is
+    // unlocked.
+    encrypted_mutations: Mutex<Option<Arc<EncryptedMutations>>>,
+
+    // False if the keys are available and the store can be used.
+    locked: Mutex<bool>,
 }
 
 impl ObjectStore {
@@ -264,6 +334,8 @@ impl ObjectStore {
         store_object_id: u64,
         filesystem: Arc<dyn Filesystem>,
         store_info: Option<StoreInfo>,
+        mutations_cipher: Option<StreamCipher>,
+        locked: bool,
     ) -> Arc<ObjectStore> {
         let device = filesystem.device();
         let block_size = filesystem.block_size();
@@ -280,6 +352,9 @@ impl ObjectStore {
             tree: LSMTree::new(merge::merge),
             extent_tree: LSMTree::new(merge::merge_extents),
             store_info_handle: OnceCell::new(),
+            mutations_cipher: Mutex::new(mutations_cipher),
+            encrypted_mutations: Mutex::new(None),
+            locked: Mutex::new(locked),
         });
         store
     }
@@ -289,7 +364,67 @@ impl ObjectStore {
         store_object_id: u64,
         filesystem: Arc<dyn Filesystem>,
     ) -> Arc<Self> {
-        Self::new(parent_store, store_object_id, filesystem, Some(StoreInfo::default()))
+        Self::new(
+            parent_store,
+            store_object_id,
+            filesystem,
+            Some(StoreInfo::default()),
+            None,
+            false,
+        )
+    }
+
+    /// Creating an encrypted store is a multi-step process:
+    ///
+    ///   1. Create an object for the store.
+    ///   2. Call `ObjectStore::new_encrypted`.
+    ///   3. Call `ObjectStore::create` to write the store.
+    ///   4. If successful, register the store with object_manager.
+    ///
+    /// It requires the first three steps to be separate because of lifetime issues when working
+    /// with a transaction.
+    pub async fn new_encrypted(
+        parent_store: Arc<ObjectStore>,
+        handle: StoreObjectHandle<ObjectStore>,
+    ) -> Result<Arc<Self>, Error> {
+        let filesystem = parent_store.filesystem();
+        // TODO(fxbug.dev/92275): Pass appropriate arguments to create_key here.
+        let keys = filesystem.crypt().create_key(0, 0).await?;
+        let store = Self::new(
+            Some(parent_store),
+            handle.object_id(),
+            filesystem.clone(),
+            Some(StoreInfo { mutations_key: Some(keys.0.keys[0].1.into()), ..Default::default() }),
+            Some(StreamCipher::new(0)),
+            false,
+        );
+        assert!(store.store_info_handle.set(handle).is_ok());
+        Ok(store)
+    }
+
+    /// Actually creates the store in a transaction.  This will create a root directory for the
+    /// store.  See `new_encrypted` above.
+    pub async fn create<'a>(
+        self: &'a Arc<Self>,
+        transaction: &mut Transaction<'a>,
+    ) -> Result<(), Error> {
+        let buf = {
+            // Create a root directory.
+            let root_directory = Directory::create(transaction, &self).await?;
+
+            let mut store_info = self.store_info.lock().unwrap();
+            let mut store_info = store_info.info_mut().unwrap();
+
+            store_info.root_directory_object_id = root_directory.object_id();
+
+            let mut serialized_info = Vec::new();
+            store_info.serialize_with_version(&mut serialized_info)?;
+            let mut buf = self.device.allocate_buffer(serialized_info.len());
+            buf.as_mut_slice().copy_from_slice(&serialized_info[..]);
+            buf
+        };
+
+        self.store_info_handle.get().unwrap().txn_write(transaction, 0u64, buf.as_ref()).await
     }
 
     pub fn is_root(&self) -> bool {
@@ -645,20 +780,9 @@ impl ObjectStore {
         self.store_info_handle.get().map(|h| h.object_id())
     }
 
-    /// Opens a store.
-    pub async fn open(&self) -> Result<(), Error> {
+    /// Called when replay for a store has completed.
+    pub async fn on_replay_complete(&self) -> Result<(), Error> {
         if self.parent_store.is_none() || self.store_info_handle.get().is_some() {
-            return Ok(());
-        }
-        let fs = self.filesystem();
-        let _guard = fs
-            .write_lock(&[LockKey::object(
-                self.parent_store.as_ref().unwrap().store_object_id(),
-                self.store_object_id,
-            )])
-            .await;
-        if self.store_info_handle.get().is_some() {
-            // We lost the race.
             return Ok(());
         }
 
@@ -666,6 +790,9 @@ impl ObjectStore {
         let handle =
             ObjectStore::open_object(&parent_store, self.store_object_id, HandleOptions::default())
                 .await?;
+
+        let mut encrypted_mutations = EncryptedMutations::default();
+
         let (object_tree_layer_object_ids, extent_tree_layer_object_ids) = {
             let mut info = if handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
@@ -683,7 +810,7 @@ impl ObjectStore {
 
             // The frontmost element of the replay information is the most recent so we must apply
             // that last.
-            for replay_info in store_info.replay_info().unwrap().iter().rev() {
+            for replay_info in store_info.replay_info_mut().unwrap().iter_mut().rev() {
                 if replay_info.last_object_id > info.last_object_id {
                     info.last_object_id = replay_info.last_object_id;
                 }
@@ -700,6 +827,7 @@ impl ObjectStore {
                 if let Some(oid) = replay_info.graveyard_directory {
                     info.graveyard_directory_object_id = oid;
                 }
+                encrypted_mutations.extend(std::mem::take(&mut replay_info.encrypted_mutations));
             }
 
             let layers = (info.object_tree_layers.clone(), info.extent_tree_layers.clone());
@@ -707,79 +835,127 @@ impl ObjectStore {
             layers
         };
 
-        let mut handles = Vec::new();
-        let mut total_size = 0;
-        for object_id in object_tree_layer_object_ids {
-            let handle = CachingObjectHandle::new(
-                ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
-                    .await
-                    .context(format!("Failed to open object tree layer file {}", object_id))?,
-            );
-            total_size += handle.get_size();
-            handles.push(handle);
-        }
-        self.tree.append_layers(handles.into()).await?;
-
-        let mut handles = Vec::new();
-        for object_id in extent_tree_layer_object_ids {
-            let handle = CachingObjectHandle::new(
-                ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
-                    .await
-                    .context(format!("Failed to open extent tree layer file {}", object_id))?,
-            );
-            total_size += handle.get_size();
-            handles.push(handle);
-        }
-        self.extent_tree.append_layers(handles.into()).await?;
+        // TODO(csuter): the layer size here could be bad and cause overflow.
+        let total_size = self
+            .open_layers(object_tree_layer_object_ids)
+            .await?
+            .into_iter()
+            .chain(self.open_layers(extent_tree_layer_object_ids).await?)
+            .map(|h| h.get_size())
+            .sum();
 
         let _ = self.store_info_handle.set(handle);
         self.filesystem().object_manager().update_reservation(
             self.store_object_id,
             tree::reservation_amount_from_layer_size(total_size),
         );
+
+        if !encrypted_mutations.is_empty() {
+            *self.encrypted_mutations.lock().unwrap() = Some(Arc::new(encrypted_mutations.into()));
+        }
+
         Ok(())
     }
 
-    /// Computes the size of child store |store_object_id|.
-    // TODO(jfsulliv): This is redundant with ObjectStore::open, should we just eagerly open stores
-    // and get rid of this?
-    pub async fn compute_size(self: &Arc<Self>, store_object_id: u64) -> Result<u64, Error> {
-        assert!(self.is_root());
-        let fs = self.filesystem();
-        let _guard =
-            fs.read_lock(&[LockKey::object(self.store_object_id(), store_object_id)]).await;
-
-        let handle =
-            ObjectStore::open_object(self, store_object_id, HandleOptions::default()).await?;
-        let (object_tree_layer_object_ids, extent_tree_layer_object_ids) = {
-            if handle.get_size() > 0 {
-                let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
-                let mut cursor = std::io::Cursor::new(&serialized_info[..]);
-                let (store_info, _version) = StoreInfo::deserialize_with_version(&mut cursor)
-                    .context("Failed to deserialize StoreInfo")?;
-                (store_info.object_tree_layers, store_info.extent_tree_layers)
-            } else {
-                (vec![], vec![])
-            }
-        };
-
-        let mut total_size = 0;
-        for object_id in object_tree_layer_object_ids {
-            let handle = ObjectStore::open_object(self, object_id, HandleOptions::default())
-                .await
-                .context(format!("Failed to open object tree layer file {}", object_id))?;
-            total_size += handle.get_size();
+    async fn open_layers(
+        &self,
+        object_ids: impl std::iter::IntoIterator<Item = u64>,
+    ) -> Result<Vec<CachingObjectHandle<ObjectStore>>, Error> {
+        let parent_store = self.parent_store.as_ref().unwrap();
+        let mut handles = Vec::new();
+        for object_id in object_ids {
+            let handle = CachingObjectHandle::new(
+                ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
+                    .await
+                    .context(format!("Failed to open layerr file {}", object_id))?,
+            );
+            handles.push(handle);
         }
-        for object_id in extent_tree_layer_object_ids {
-            let handle = ObjectStore::open_object(self, object_id, HandleOptions::default())
-                .await
-                .context(format!("Failed to open extent tree layer file {}", object_id))?;
-            total_size += handle.get_size();
-        }
-        Ok(tree::reservation_amount_from_layer_size(total_size))
+        Ok(handles)
     }
 
-    fn get_next_object_id(&self) -> u64 {
+    /// Unlocks a store so that it is ready to be used.
+    /// This is not thread-safe.
+    // TODO(fxbug.dev/92275): this should take a crypt service
+    pub async fn unlock(&self) -> Result<(), Error> {
+        let store_info = self.store_info();
+
+        // The store should be locked.
+        assert!(*self.locked.lock().unwrap());
+
+        self.tree
+            .append_layers(
+                self.open_layers(store_info.object_tree_layers.iter().cloned()).await?.into(),
+            )
+            .await?;
+        self.extent_tree
+            .append_layers(
+                self.open_layers(store_info.extent_tree_layers.iter().cloned()).await?.into(),
+            )
+            .await?;
+
+        if store_info.mutations_key.is_none() {
+            assert!(self.encrypted_mutations.lock().unwrap().is_none());
+            assert_eq!(store_info.encrypted_mutations_object_id, INVALID_OBJECT_ID);
+
+            *self.locked.lock().unwrap() = false;
+            return Ok(());
+        }
+
+        // TODO(fxbug.dev/92275): this should pass the key into the cipher.
+        *self.mutations_cipher.lock().unwrap() =
+            Some(StreamCipher::new(store_info.mutations_cipher_offset));
+
+        // Apply the encrypted mutations.
+        // TODO(fxbug.dev/92275): this leaves things in a bad state if it fails part-way through.
+        let mutations = std::mem::take(&mut *self.encrypted_mutations.lock().unwrap());
+        let mutations = if let Some(m) = mutations {
+            // Unwrapping here should be safe because the only place we take additional references
+            // is in flush and that should not be running at this point.
+            Arc::try_unwrap(m).unwrap()
+        } else {
+            if store_info.encrypted_mutations_object_id == INVALID_OBJECT_ID {
+                return Ok(());
+            }
+            let parent_store = self.parent_store.as_ref().unwrap();
+            let handle = ObjectStore::open_object(
+                &parent_store,
+                store_info.encrypted_mutations_object_id,
+                HandleOptions::default(),
+            )
+            .await?;
+            EncryptedMutations::deserialize_with_version(&mut std::io::Cursor::new(
+                handle
+                    .contents(MAX_ENCRYPTED_MUTATIONS_SIZE)
+                    .await
+                    .context(FxfsError::Inconsistent)?,
+            ))?
+            .0
+        };
+        let EncryptedMutations { transactions, mut data } = mutations;
+        self.mutations_cipher.lock().unwrap().as_mut().unwrap().decrypt(&mut data);
+        let mut cursor = std::io::Cursor::new(data);
+        for (checkpoint, count) in transactions {
+            let context = ApplyContext { mode: ApplyMode::Replay, checkpoint };
+            for _ in 0..count {
+                self.apply_mutation(
+                    Mutation::deserialize_from_version(&mut cursor, context.checkpoint.version)?,
+                    &context,
+                    AssocObj::None,
+                )
+                .await;
+            }
+        }
+
+        *self.locked.lock().unwrap() = false;
+        Ok(())
+    }
+
+    pub fn is_locked(&self) -> bool {
+        *self.locked.lock().unwrap()
+    }
+
+    pub fn get_next_object_id(&self) -> u64 {
         let mut store_info = self.store_info.lock().unwrap();
         let last_object_id = store_info.last_object_id();
         *last_object_id += 1;
@@ -897,17 +1073,15 @@ impl Mutations for ObjectStore {
     async fn apply_mutation(
         &self,
         mutation: Mutation,
-        mode: ApplyMode<'_, '_>,
-        log_offset: u64,
+        context: &ApplyContext<'_, '_>,
         _assoc_obj: AssocObj<'_>,
     ) {
         // It's not safe to fully open a store until replay is fully complete (because subsequent
         // mutations could render current records invalid).
-        assert!(mode.is_live() || self.store_info_handle.get().is_none());
 
         match mutation {
             Mutation::ObjectStore(ObjectStoreMutation { mut item, op }) => {
-                item.sequence = log_offset;
+                item.sequence = context.checkpoint.file_offset;
                 self.update_last_object_id(item.key.object_id);
                 match op {
                     Operation::Insert => {
@@ -942,16 +1116,19 @@ impl Mutations for ObjectStore {
                 self.store_info.lock().unwrap().begin_flush();
             }
             Mutation::EndFlush => {
-                if mode.is_replay() {
+                if context.mode.is_replay() {
                     self.tree.reset_immutable_layers();
                     self.extent_tree.reset_immutable_layers();
                     self.store_info.lock().unwrap().end_flush();
                 }
             }
             Mutation::Extent(ExtentMutation(key, value)) => {
-                let item = Item::new_with_sequence(key, value, log_offset);
+                let item = Item::new_with_sequence(key, value, context.checkpoint.file_offset);
                 let lower_bound = item.key.key_for_merge_into();
                 self.extent_tree.merge_into(item, &lower_bound).await;
+            }
+            Mutation::EncryptedObjectStore(data) => {
+                self.store_info.lock().unwrap().push_encrypted_mutation(&context.checkpoint, data);
             }
             _ => panic!("unexpected mutation: {:?}", mutation), // TODO(csuter): can't panic
         }
@@ -997,7 +1174,15 @@ impl Mutations for ObjectStore {
                 _object_id: u64,
                 _manager: &ObjectManager,
             ) {
-                self.store_info.set(self.store.store_info()).unwrap();
+                let mut store_info = self.store.store_info();
+
+                // Capture the offset in the cipher stream.
+                let mutations_cipher = self.store.mutations_cipher.lock().unwrap();
+                if let Some(cipher) = mutations_cipher.as_ref() {
+                    store_info.mutations_cipher_offset = cipher.offset();
+                }
+
+                self.store_info.set(store_info).unwrap();
             }
         }
         let store_info_snapshot = StoreInfoSnapshot { store: self, store_info: OnceCell::new() };
@@ -1066,44 +1251,111 @@ impl Mutations for ObjectStore {
 
         // TODO(jfsulliv): Add transaction::Options to CachingObjectHandle so that we can get rid of
         // DirectWriter and use the cached handle for both writing and reading.
-        let (object_tree_layers_to_keep, old_object_tree_layers) =
-            tree::flush(&self.tree, DirectWriter::new(&new_object_tree_layer, txn_options)).await?;
+        let mut new_store_info = store_info_snapshot.store_info.into_inner().unwrap();
+        let reservation_update: ReservationUpdate;
+        let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
+        let mut total_layer_size = 0;
+
+        let mut writer = DirectWriter::new(&new_object_tree_layer, txn_options);
+
+        let mut encrypted_mutations_object_id = INVALID_OBJECT_ID;
+
+        // write_bytes is async below so to avoid having to copy the encrypted mutations, they are
+        // embedded in an Arc so that we can maintain a reference to them across an await point.  We
+        // could use UnsafeCell instead, but we don't need the performance and we'd lose the runtime
+        // asserts.
+        let encrypted_mutations = self.encrypted_mutations.lock().unwrap().clone();
+
+        let (old_object_tree_layers, new_object_tree_layers) = if let Some(mutations) =
+            encrypted_mutations
+        {
+            // TODO(fxbug.dev/92275): There are races here between unlocking and flushing that might
+            // need to be resolved.
+            assert!(self.is_locked());
+
+            // Write the encrypted mutations to the new layer file.
+            let mut buffer = Vec::new();
+            mutations.serialize_with_version(&mut buffer)?;
+            writer.write_bytes(&buffer).await?;
+            writer.complete().await?;
+
+            total_layer_size +=
+                layer_size_from_encrypted_mutations_size(writer.handle().get_size())
+                    + self
+                        .tree
+                        .immutable_layer_set()
+                        .layers
+                        .iter()
+                        .map(|l| l.handle().map(ObjectHandle::get_size).unwrap_or(0))
+                        .sum::<u64>();
+
+            // There shouldn't be any existing encrypted mutations because we shouldn't have any
+            // new encrypted mutations if we haven't unlocked the filesystem.
+            assert_eq!(new_store_info.encrypted_mutations_object_id, INVALID_OBJECT_ID);
+
+            new_store_info.encrypted_mutations_object_id = new_object_tree_layer_object_id;
+
+            // There are no changes to the layers in this case.
+            (Vec::new(), None)
+        } else {
+            let (object_tree_layers_to_keep, old_object_tree_layers) =
+                tree::flush(&self.tree, writer).await?;
+
+            let mut new_object_tree_layers =
+                layers_from_handles(Box::new([CachingObjectHandle::new(new_object_tree_layer)]))
+                    .await?;
+            new_object_tree_layers.extend(object_tree_layers_to_keep.iter().map(|l| (*l).clone()));
+
+            new_store_info.object_tree_layers = Vec::new();
+            for layer in &new_object_tree_layers {
+                if let Some(handle) = layer.handle() {
+                    new_store_info.object_tree_layers.push(handle.object_id());
+                }
+            }
+
+            // Move the existing layers we're compacting to the graveyard.
+            for layer in &old_object_tree_layers {
+                if let Some(handle) = layer.handle() {
+                    graveyard.add(
+                        &mut transaction,
+                        parent_store.store_object_id(),
+                        handle.object_id(),
+                    );
+                }
+            }
+
+            let object_tree_handles = new_object_tree_layers.iter().map(|l| l.handle());
+            total_layer_size += object_tree_handles
+                .map(|h| h.map(ObjectHandle::get_size).unwrap_or(0))
+                .sum::<u64>();
+
+            encrypted_mutations_object_id = std::mem::replace(
+                &mut new_store_info.encrypted_mutations_object_id,
+                INVALID_OBJECT_ID,
+            );
+            if encrypted_mutations_object_id != INVALID_OBJECT_ID {
+                graveyard.add(
+                    &mut transaction,
+                    parent_store.store_object_id(),
+                    encrypted_mutations_object_id,
+                );
+            }
+
+            (old_object_tree_layers, Some(new_object_tree_layers))
+        };
+
         let (extent_tree_layers_to_keep, old_extent_tree_layers) =
             tree::flush(&self.extent_tree, DirectWriter::new(&new_extent_tree_layer, txn_options))
                 .await?;
-
-        let mut new_object_tree_layers =
-            layers_from_handles(Box::new([CachingObjectHandle::new(new_object_tree_layer)]))
-                .await?;
-        new_object_tree_layers.extend(object_tree_layers_to_keep.iter().map(|l| (*l).clone()));
 
         let mut new_extent_tree_layers =
             layers_from_handles(Box::new([CachingObjectHandle::new(new_extent_tree_layer)]))
                 .await?;
         new_extent_tree_layers.extend(extent_tree_layers_to_keep.iter().map(|l| (*l).clone()));
 
-        let mut serialized_info = Vec::new();
-        let mut new_store_info = store_info_snapshot.store_info.into_inner().unwrap();
-
-        let reservation_update: ReservationUpdate;
-        let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
-
-        // Move the existing layers we're compacting to the graveyard.
-        for layer in &old_object_tree_layers {
-            if let Some(handle) = layer.handle() {
-                graveyard.add(&mut transaction, parent_store.store_object_id(), handle.object_id());
-            }
-        }
         for layer in &old_extent_tree_layers {
             if let Some(handle) = layer.handle() {
                 graveyard.add(&mut transaction, parent_store.store_object_id(), handle.object_id());
-            }
-        }
-
-        new_store_info.object_tree_layers = Vec::new();
-        for layer in &new_object_tree_layers {
-            if let Some(handle) = layer.handle() {
-                new_store_info.object_tree_layers.push(handle.object_id());
             }
         }
 
@@ -1114,6 +1366,7 @@ impl Mutations for ObjectStore {
             }
         }
 
+        let mut serialized_info = Vec::new();
         new_store_info.serialize_with_version(&mut serialized_info)?;
         let mut buf = self.device.allocate_buffer(serialized_info.len());
         buf.as_mut_slice().copy_from_slice(&serialized_info[..]);
@@ -1124,14 +1377,14 @@ impl Mutations for ObjectStore {
             .txn_write(&mut transaction, 0u64, buf.as_ref())
             .await?;
 
-        let object_tree_handles = new_object_tree_layers.iter().map(|l| l.handle());
         let extent_tree_handles = new_extent_tree_layers.iter().map(|l| l.handle());
-        reservation_update = ReservationUpdate::new(tree::reservation_amount_from_layer_size(
-            object_tree_handles
-                .chain(extent_tree_handles)
-                .map(|h| h.map(ObjectHandle::get_size).unwrap_or(0))
-                .sum::<u64>(),
-        ));
+
+        total_layer_size +=
+            extent_tree_handles.map(|h| h.map(ObjectHandle::get_size).unwrap_or(0)).sum::<u64>();
+
+        reservation_update =
+            ReservationUpdate::new(tree::reservation_amount_from_layer_size(total_layer_size));
+
         transaction.add_with_object(
             self.store_object_id(),
             Mutation::EndFlush,
@@ -1154,8 +1407,11 @@ impl Mutations for ObjectStore {
                 let info = store_info.info_mut().unwrap();
                 info.object_tree_layers = new_store_info.object_tree_layers;
                 info.extent_tree_layers = new_store_info.extent_tree_layers;
-                self.tree.set_layers(new_object_tree_layers);
+                if let Some(layers) = new_object_tree_layers {
+                    self.tree.set_layers(layers);
+                }
                 self.extent_tree.set_layers(new_extent_tree_layers);
+                self.encrypted_mutations.lock().unwrap().take();
             })
             .await?;
 
@@ -1176,7 +1432,24 @@ impl Mutations for ObjectStore {
             }
         }
 
+        if encrypted_mutations_object_id != INVALID_OBJECT_ID {
+            parent_store.tombstone(encrypted_mutations_object_id, txn_options).await?;
+        }
+
         Ok(())
+    }
+
+    fn encrypt_mutation(&self, mutation: &Mutation) -> Option<Mutation> {
+        match mutation {
+            // Encrypt all object store mutations.
+            Mutation::ObjectStore(_) => self.mutations_cipher.lock().unwrap().as_mut().map(|c| {
+                let mut buffer = Vec::new();
+                mutation.serialize_into(&mut buffer).unwrap();
+                c.encrypt(&mut buffer);
+                Mutation::EncryptedObjectStore(buffer.into())
+            }),
+            _ => None,
+        }
     }
 }
 
@@ -1195,6 +1468,17 @@ impl AsRef<ObjectStore> for ObjectStore {
     }
 }
 
+fn layer_size_from_encrypted_mutations_size(size: u64) -> u64 {
+    // This is similar to reserved_space_from_journal_usage. It needs to be a worst case estimate of
+    // the amount of metadata space that might need to be reserved to allow the encrypted mutations
+    // to be written to layer files.  It needs to be >= than reservation_amount_from_layer_size will
+    // return once the data has been written to layer files and <= than
+    // reserved_space_from_journal_usage would use.  We can't just use
+    // reserved_space_from_journal_usage because the encrypted mutations file includes some extra
+    // data (it includes the checkpoints) that isn't written in the same way to the journal.
+    size * 3
+}
+
 impl AssociatedObject for ObjectStore {}
 #[cfg(test)]
 mod tests {
@@ -1211,6 +1495,7 @@ mod tests {
                 fsck::fsck,
                 object_record::{ObjectKey, ObjectValue},
                 transaction::{Options, TransactionHandler},
+                volume::root_volume,
                 HandleOptions, ObjectStore,
             },
         },
@@ -1303,19 +1588,8 @@ mod tests {
     async fn test_create_and_open_store() {
         let fs = test_filesystem().await;
         let store_id = {
-            let root_store = fs.root_store();
-            let mut transaction = fs
-                .clone()
-                .new_transaction(&[], Options::default())
-                .await
-                .expect("new_transaction failed");
-            let child_store = root_store
-                .create_child_store(&mut transaction)
-                .await
-                .expect("create_child_store failed");
-            transaction.commit().await.expect("commit failed");
-
-            child_store.store_object_id()
+            let root_volume = root_volume(&fs).await.expect("root_volume failed");
+            root_volume.new_volume("test").await.expect("new_volume failed").store_object_id()
         };
 
         fs.close().await.expect("close failed");
