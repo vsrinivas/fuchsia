@@ -25,6 +25,18 @@ pub trait Dataset {
 
     /// Functional equivalent of [`otsys::otDatasetSetPending`](crate::otsys::otDatasetSetPending).
     fn dataset_set_pending(&self, dataset: &OperationalDataset) -> Result;
+
+    /// Functional equivalent of [`otsys::otDatasetGetActiveTlvs`](crate::otsys::otDatasetGetActiveTlvs).
+    fn dataset_get_active_tlvs(&self) -> Result<OperationalDatasetTlvs>;
+
+    /// Functional equivalent of [`otsys::otDatasetSetActiveTlvs`](crate::otsys::otDatasetSetActiveTlvs).
+    fn dataset_set_active_tlvs(&self, dataset: &OperationalDatasetTlvs) -> Result;
+
+    /// Functional equivalent of [`otsys::otDatasetGetPendingTlvs`](crate::otsys::otDatasetGetPendingTlvs).
+    fn dataset_get_pending_tlvs(&self) -> Result<OperationalDatasetTlvs>;
+
+    /// Functional equivalent of [`otsys::otDatasetSetPendingTlvs`](crate::otsys::otDatasetSetPendingTlvs).
+    fn dataset_set_pending_tlvs(&self, dataset: &OperationalDatasetTlvs) -> Result;
 }
 
 impl<T: Dataset + Boxable> Dataset for ot::Box<T> {
@@ -46,6 +58,22 @@ impl<T: Dataset + Boxable> Dataset for ot::Box<T> {
 
     fn dataset_set_pending(&self, dataset: &OperationalDataset) -> Result {
         self.as_ref().dataset_set_pending(dataset)
+    }
+
+    fn dataset_get_active_tlvs(&self) -> Result<OperationalDatasetTlvs> {
+        self.as_ref().dataset_get_active_tlvs()
+    }
+
+    fn dataset_set_active_tlvs(&self, dataset: &OperationalDatasetTlvs) -> Result {
+        self.as_ref().dataset_set_active_tlvs(dataset)
+    }
+
+    fn dataset_get_pending_tlvs(&self) -> Result<OperationalDatasetTlvs> {
+        self.as_ref().dataset_get_pending_tlvs()
+    }
+
+    fn dataset_set_pending_tlvs(&self, dataset: &OperationalDatasetTlvs) -> Result {
+        self.as_ref().dataset_set_pending_tlvs(dataset)
     }
 }
 
@@ -69,5 +97,32 @@ impl Dataset for Instance {
 
     fn dataset_set_pending(&self, dataset: &OperationalDataset) -> Result {
         Error::from(unsafe { otDatasetSetPending(self.as_ot_ptr(), dataset.as_ot_ptr()) }).into()
+    }
+
+    fn dataset_get_active_tlvs(&self) -> Result<OperationalDatasetTlvs> {
+        let mut ret = OperationalDatasetTlvs::default();
+
+        Error::from(unsafe { otDatasetGetActiveTlvs(self.as_ot_ptr(), ret.as_ot_mut_ptr()) })
+            .into_result()?;
+
+        Ok(ret)
+    }
+
+    fn dataset_set_active_tlvs(&self, dataset: &OperationalDatasetTlvs) -> Result {
+        Error::from(unsafe { otDatasetSetActiveTlvs(self.as_ot_ptr(), dataset.as_ot_ptr()) }).into()
+    }
+
+    fn dataset_get_pending_tlvs(&self) -> Result<OperationalDatasetTlvs> {
+        let mut ret = OperationalDatasetTlvs::default();
+
+        Error::from(unsafe { otDatasetGetPendingTlvs(self.as_ot_ptr(), ret.as_ot_mut_ptr()) })
+            .into_result()?;
+
+        Ok(ret)
+    }
+
+    fn dataset_set_pending_tlvs(&self, dataset: &OperationalDatasetTlvs) -> Result {
+        Error::from(unsafe { otDatasetSetPendingTlvs(self.as_ot_ptr(), dataset.as_ot_ptr()) })
+            .into()
     }
 }
