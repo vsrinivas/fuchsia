@@ -161,7 +161,11 @@ where
     async fn set_active(&self, enabled: bool) -> ZxResult<()> {
         fx_log_info!("Got set active command: {:?}", enabled);
 
-        self.apply_standard_combinators(self.net_if.set_enabled(enabled).boxed()).await
+        self.apply_standard_combinators(self.net_if.set_enabled(enabled).boxed()).await?;
+
+        self.wait_for_state(|x| x.is_active() == enabled).await;
+
+        Ok(())
     }
 
     async fn get_supported_network_types(&self) -> ZxResult<Vec<String>> {
@@ -647,7 +651,7 @@ where
             .driver_state
             .lock()
             .ot_instance
-            .iter_local_on_mesh_prefixes()
+            .iter_local_external_routes()
             .map(|x| ExternalRoute {
                 subnet: Some(Ipv6Subnet {
                     addr: Ipv6Address { addr: x.prefix().addr().octets() },

@@ -67,7 +67,6 @@ impl Platform {
         SpinelSink: SpinelDeviceClient + 'static,
         SpinelStream: Stream<Item = Result<Vec<u8>, anyhow::Error>> + 'static + Unpin + Send,
     {
-        use fuchsia_async::unblock;
         ot::set_logging_level(ot::LogLevel::Info);
 
         // OpenThread to RCP data-pump and related machinery.
@@ -75,13 +74,10 @@ impl Platform {
         let (ot_to_rcp_sender, ot_to_rcp_receiver) = mpsc::channel::<Vec<u8>>();
         let ot_to_rcp_task = fasync::Task::spawn(async move {
             spinel_sink.open().await.expect("Unable to open spinel stream");
-            let ot_to_rcp_receiver =
-                std::sync::Arc::new(parking_lot::Mutex::new(ot_to_rcp_receiver));
             loop {
                 trace!(target: "ot_to_rcp_task", "waiting on frame from OpenThread");
 
-                let ot_to_rcp_receiver = ot_to_rcp_receiver.clone();
-                let frame = match unblock(move || ot_to_rcp_receiver.lock().recv()).await {
+                let frame = match ot_to_rcp_receiver.recv() {
                     Ok(frame) => frame,
                     Err(e) => {
                         warn!(target: "ot_to_rcp_task", "ot_to_rcp_receiver.recv() failed with {:?}", e);

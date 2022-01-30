@@ -10,7 +10,7 @@ use fidl_fuchsia_lowpan_device::DeviceState;
 use lowpan_driver_common::spinel::AddressTable;
 
 #[derive(Debug)]
-pub(super) struct DriverState<OT> {
+pub struct DriverState<OT> {
     pub ot_instance: OT,
 
     pub connectivity_state: ConnectivityState,
@@ -80,28 +80,17 @@ where
     }
 
     pub fn get_current_identity(&self) -> Identity {
-        if self.ot_instance.is_commissioned() {
-            if self.is_active_and_ready() {
-                Identity {
-                    raw_name: Some(self.ot_instance.get_network_name().as_slice().to_vec()),
-                    xpanid: Some(self.ot_instance.get_extended_pan_id().as_slice().to_vec()),
-                    net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
-                    channel: Some(self.ot_instance.get_channel().into()),
-                    panid: Some(self.ot_instance.get_pan_id()),
-                    mesh_local_prefix: Some(
-                        self.ot_instance.get_mesh_local_prefix().clone().into(),
-                    ),
-                    ..Identity::EMPTY
-                }
-            } else {
-                let mut operational_dataset = Default::default();
-                match self.ot_instance.dataset_get_active(&mut operational_dataset) {
-                    Ok(()) => operational_dataset.into_ext(),
-                    Err(_) => Identity::EMPTY,
-                }
+        if !self.ot_instance.is_commissioned() {
+            return Identity::EMPTY;
+        }
+
+        let mut operational_dataset = Default::default();
+        match self.ot_instance.dataset_get_active(&mut operational_dataset) {
+            Ok(()) => operational_dataset.into_ext(),
+            Err(err) => {
+                warn!("Commissioned, but unable to get active dataset: {:?}", err);
+                Identity::EMPTY
             }
-        } else {
-            Identity::EMPTY
         }
     }
 
@@ -130,7 +119,7 @@ where
     /// If the predicate returns false, the task will sleep until
     /// the next driver state change, upon which the predicate will
     /// be checked again.
-    pub(super) async fn wait_for_state<FN>(&self, predicate: FN)
+    pub(crate) async fn wait_for_state<FN>(&self, predicate: FN)
     where
         FN: Fn(&DriverState<OT>) -> bool,
     {

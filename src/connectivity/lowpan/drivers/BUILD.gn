@@ -14,9 +14,7 @@ group("tests") {
   deps = [
     "lowpan-dummy-driver",
     "lowpan-dummy-driver:tests",
-
-    # TODO(fxbug.dev/92431): Re-enable this test once it passes on debug builders.
-    # "lowpan-ot-driver:tests",
+    "lowpan-ot-driver:tests",
     "lowpan-spinel-driver:tests",
   ]
 }
