@@ -84,6 +84,11 @@ impl<T: Driver> ServeTo<DriverRequestStream> for T {
                                 futures.push(self.serve_to(stream));
                             }
                         }
+                        if let Some(server_end) = protocols.thread_dataset {
+                            if let Some(stream) = server_end.into_stream().ok() {
+                                futures.push(self.serve_to(stream));
+                            }
+                        }
                         if let Some(server_end) = protocols.thread_legacy_joining {
                             if let Some(stream) = server_end.into_stream().ok() {
                                 // We only let there be one outstanding instance of this protocol.

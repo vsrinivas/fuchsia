@@ -252,6 +252,27 @@ pub trait Driver: Send + Sync {
 
     /// Changes the joinability status of the interface
     async fn make_joinable(&self, duration: fuchsia_zircon::Duration, port: u16) -> ZxResult<()>;
+
+    /// Fetches and returns the active Thread operational dataset in raw
+    /// TLV form. Functionally equivalent to [`otDatasetGetActiveTlvs()`][2].
+    ///
+    /// This method returns the active dataset, or nothing in the case that
+    /// there is no active operational dataset.
+    ///
+    /// [2]: https://openthread.io/reference/group/api-operational-dataset#otdatasetgetactivetlvs
+    async fn get_active_dataset_tlvs(&self) -> ZxResult<Vec<u8>> {
+        Err(ZxStatus::NOT_SUPPORTED)
+    }
+
+    /// Sets the active Thread Operational Dataset in raw TLV form.
+    /// Functionally equivalent to [`otDatasetSetActiveTlvs()`][3].
+    ///
+    /// This method returns once the operation has completed successfully.
+    ///
+    /// [3]: https://openthread.io/reference/group/api-operational-dataset#otdatasetsetactivetlvs
+    async fn set_active_dataset_tlvs(&self, _dataset: &[u8]) -> ZxResult {
+        Err(ZxStatus::NOT_SUPPORTED)
+    }
 }
 
 #[async_trait()]
@@ -936,6 +957,47 @@ impl<T: Driver> ServeTo<LegacyJoiningRequestStream> for T {
             request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
         {
             fx_log_err!("Error serving LegacyJoiningRequestStream: {:?}", err);
+
+            if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
+                request_control_handle.shutdown_with_epitaph(*epitaph);
+            }
+
+            Err(err)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[async_trait()]
+impl<T: Driver> ServeTo<DatasetRequestStream> for T {
+    async fn serve_to(&self, request_stream: DatasetRequestStream) -> anyhow::Result<()> {
+        let request_control_handle = request_stream.control_handle();
+
+        let closure = |command| async {
+            match command {
+                DatasetRequest::GetActiveTlvs { responder, .. } => {
+                    self.get_active_dataset_tlvs()
+                        .err_into::<Error>()
+                        .and_then(|x| ready(responder.send(Some(x.as_ref())).map_err(Error::from)))
+                        .await
+                        .context("error in get_active_dataset_tlvs request")?;
+                }
+                DatasetRequest::SetActiveTlvs { dataset, responder, .. } => {
+                    self.set_active_dataset_tlvs(&dataset)
+                        .err_into::<Error>()
+                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .await
+                        .context("error in set_active_dataset_tlvs request")?;
+                }
+            }
+            Result::<(), Error>::Ok(())
+        };
+
+        if let Some(err) =
+            request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.err()
+        {
+            fx_log_err!("Error serving DatasetRequestStream: {:?}", err);
 
             if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
                 request_control_handle.shutdown_with_epitaph(*epitaph);
