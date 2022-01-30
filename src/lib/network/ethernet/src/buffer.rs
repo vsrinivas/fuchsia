@@ -402,6 +402,8 @@ mod tests {
 
     #[test]
     #[should_panic]
+    // TODO(https://fxbug.dev/88496): delete the below
+    #[cfg_attr(feature = "variant_asan", ignore)]
     fn test_set_bit_oob() {
         let mut map = BufferMap::new(1);
         map.set_bit(1);
@@ -409,6 +411,8 @@ mod tests {
 
     #[test]
     #[should_panic]
+    // TODO(https://fxbug.dev/88496): delete the below
+    #[cfg_attr(feature = "variant_asan", ignore)]
     fn test_clear_bit_oob() {
         let mut map = BufferMap::new(1);
         map.clear_bit(1);
@@ -416,6 +420,8 @@ mod tests {
 
     #[test]
     #[should_panic]
+    // TODO(https://fxbug.dev/88496): delete the below
+    #[cfg_attr(feature = "variant_asan", ignore)]
     fn test_get_bit_oob() {
         let map = BufferMap::new(1);
         let _ = map.get_bit(1);

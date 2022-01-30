@@ -117,7 +117,6 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//src/graphics/tests/vkext/*",
     "//src/graphics/tests/vkloop/*",
     "//src/lib/cmx/*",
-    "//src/lib/network/ethernet/*",
     "//src/lib/scoped_task/*",
     "//src/lib/vulkan/tests/*",
     "//src/media/audio/drivers/intel-hda/controller/*",

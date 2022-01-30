@@ -24,9 +24,6 @@ rustc_library("ethernet") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  # TODO(fxbug.dev/91771): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   sources = [
     "src/buffer.rs",
     "src/ethernet_sys.rs",
