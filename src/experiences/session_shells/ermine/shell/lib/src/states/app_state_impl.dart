@@ -509,13 +509,11 @@ class AppStateImpl with Disposable implements AppState {
   void _onViewDismissed(ViewState viewState) {
     runInAction(() {
       final view = viewState as ViewStateImpl;
-      // Switch to next view before closing this view if it was the top view
+      // Switch to previous view before closing this view if it was the top view
       // and there are other views.
       if (view == topView && views.length > 1) {
-        final nextView = topView == views.last
-            ? views.first
-            : views[views.indexOf(topView) + 1];
-        topView = nextView;
+        final prevView = views[views.indexOf(topView) - 1];
+        topView = prevView;
         setFocusToChildView();
       }
 
