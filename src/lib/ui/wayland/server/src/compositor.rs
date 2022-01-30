@@ -12,8 +12,7 @@ use {
     crate::subcompositor::Subsurface,
     crate::xdg_shell::XdgSurface,
     anyhow::{format_err, Error},
-    fidl_fuchsia_math::{Rect, Size},
-    fidl_fuchsia_math::{RectF, SizeU, Vec_},
+    fidl_fuchsia_math::{Rect, RectF, Size, SizeU, Vec_},
     fidl_fuchsia_ui_composition::{BlendMode, TransformId},
     fuchsia_async as fasync, fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
     fuchsia_zircon::{self as zx, HandleBased},
@@ -128,7 +127,7 @@ pub enum SurfaceCommand {
 /// to attempt to assign it a different role.
 pub struct Surface {
     /// The current size of this surface as determined by the currently attached
-    /// buffer.
+    /// buffer and scale.
     ///
     /// If no buffer is currently associated with this surface the size will be
     /// (0, 0).
@@ -509,7 +508,7 @@ impl Surface {
             // another surface will not conflict with this surface.
             let image_content =
                 content.buffer.image_content(self.image_instance_id, &node.flatland);
-            self.size = content.buffer.image_size();
+            let image_size = content.buffer.image_size();
 
             // Set image as content for transform.
             node.flatland
@@ -517,6 +516,39 @@ impl Surface {
                 .proxy()
                 .set_content(&mut node.transform_id.clone(), &mut image_content.id.clone())
                 .expect("fidl error");
+
+            // Set image sample region based on current crop params.
+            let mut sample_region = self.crop_params.map_or(
+                RectF {
+                    x: 0.0,
+                    y: 0.0,
+                    width: image_size.width as f32,
+                    height: image_size.height as f32,
+                },
+                |crop| RectF { x: crop.x, y: crop.y, width: crop.width, height: crop.height },
+            );
+            node.flatland
+                .borrow()
+                .proxy()
+                .set_image_sample_region(&mut image_content.id.clone(), &mut sample_region)
+                .expect("fidl error");
+
+            // Set destination size based on current scale params.
+            let mut destination_size = self.scale_params.map_or(
+                SizeU { width: image_size.width as u32, height: image_size.height as u32 },
+                |scale| SizeU { width: scale.width as u32, height: scale.height as u32 },
+            );
+            node.flatland
+                .borrow()
+                .proxy()
+                .set_image_destination_size(&mut image_content.id.clone(), &mut destination_size)
+                .expect("fidl error");
+
+            // Update surface size. This is used to determine window geometry and blend mode.
+            self.size = Size {
+                width: destination_size.width as i32,
+                height: destination_size.height as i32,
+            };
 
             // Set blend mode based on the opaque region and if the buffer
             // has an alpha channel.
@@ -538,38 +570,10 @@ impl Surface {
             } else {
                 BlendMode::Src
             };
-
             node.flatland
                 .borrow()
                 .proxy()
                 .set_image_blending_function(&mut image_content.id.clone(), blend_mode)
-                .expect("fidl error");
-
-            // Set image sample region based on current crop params.
-            let mut sample_region = self.crop_params.map_or(
-                RectF {
-                    x: 0.0,
-                    y: 0.0,
-                    width: self.size.width as f32,
-                    height: self.size.height as f32,
-                },
-                |crop| RectF { x: crop.x, y: crop.y, width: crop.width, height: crop.height },
-            );
-            node.flatland
-                .borrow()
-                .proxy()
-                .set_image_sample_region(&mut image_content.id.clone(), &mut sample_region)
-                .expect("fidl error");
-
-            // Set destination size based on current scale params.
-            let mut destination_size = self.scale_params.map_or(
-                SizeU { width: self.size.width as u32, height: self.size.height as u32 },
-                |scale| SizeU { width: scale.width as u32, height: scale.height as u32 },
-            );
-            node.flatland
-                .borrow()
-                .proxy()
-                .set_image_destination_size(&mut image_content.id.clone(), &mut destination_size)
                 .expect("fidl error");
         }
 
