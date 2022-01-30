@@ -345,18 +345,19 @@ impl XdgSurface {
     /// committed by a xdg_surface::configure event.
     pub fn configure(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
         ftrace::duration!("wayland", "XdgSurface::configure");
-        let xdg_surface = this.get(client)?;
-        match xdg_surface.xdg_role {
-            Some(XdgSurfaceRole::Popup(popup)) => {
-                XdgPopup::configure(popup, client)?;
+        if let Some(xdg_surface) = this.try_get(client) {
+            match xdg_surface.xdg_role {
+                Some(XdgSurfaceRole::Popup(popup)) => {
+                    XdgPopup::configure(popup, client)?;
+                }
+                Some(XdgSurfaceRole::Toplevel(toplevel)) => {
+                    XdgToplevel::configure(toplevel, client)?;
+                }
+                _ => {}
             }
-            Some(XdgSurfaceRole::Toplevel(toplevel)) => {
-                XdgToplevel::configure(toplevel, client)?;
-            }
-            _ => {}
+            let serial = client.event_queue().next_serial();
+            client.event_queue().post(this.id(), XdgSurfaceEvent::Configure { serial })?;
         }
-        let serial = client.event_queue().next_serial();
-        client.event_queue().post(this.id(), XdgSurfaceEvent::Configure { serial })?;
         Ok(())
     }
 
