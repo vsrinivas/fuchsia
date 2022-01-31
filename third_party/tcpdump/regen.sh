@@ -9,7 +9,7 @@ source "$FUCHSIA_DIR"/tools/devshell/lib/prebuilt.sh
 set -euxo pipefail
 
 readonly REPO_DIR="$FUCHSIA_DIR/third_party/tcpdump"
-TCPDUMP_TAG="tcpdump-$(cat "$REPO_DIR/src/VERSION")"
+TCPDUMP_TAG="tcpdump-$(cat "$REPO_DIR/src/RELEASE_VERSION")"
 readonly TCPDUMP_TAG
 
 readonly CONFIG_H="$REPO_DIR/config.h"
