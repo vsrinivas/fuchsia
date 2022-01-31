@@ -175,11 +175,15 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                     err if err.is::<Canceled>() => Ok(()),
 
                     // Other error cases may be added here in the future.
-
-                    // Non-I/O errors cause a reset.
                     err => {
-                        fx_log_err!("inbound_frame_stream: Error: {:?}", err);
-                        self.ncp_is_misbehaving();
+                        if self.driver_state.lock().is_waiting_for_reset() {
+                            // Non-I/O errors while waiting for a reset are just a warning.
+                            fx_log_warn!("inbound_frame_stream: Warning: {:?}", err);
+                        } else {
+                            // Non-I/O errors when not waiting for a reset will cause us to re-init.
+                            fx_log_err!("inbound_frame_stream: Error: {:?}", err);
+                            self.ncp_is_misbehaving();
+                        }
                         Ok(())
                     }
                 })

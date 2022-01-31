@@ -164,6 +164,11 @@ impl DriverState {
         self.init_state.is_initialized()
     }
 
+    /// Convenience method for determining if we are waiting for a reset from the NCP.
+    pub fn is_waiting_for_reset(&self) -> bool {
+        self.init_state == InitState::WaitingForReset
+    }
+
     /// Convenience method for calling `init_state.is_initializing()`.
     pub fn is_initializing(&self) -> bool {
         self.init_state.is_initializing()
