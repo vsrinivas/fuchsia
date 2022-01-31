@@ -66,14 +66,13 @@ constexpr int kLinkMax = 32000;  // maximum link count per file
 // all the information are dedicated to a given direct node block determined
 // by the data offset in a file.
 struct DnodeOfData {
-  // inode *inode;		// vfs inode pointer
   VnodeF2fs *vnode = nullptr;
-  Page *inode_page = nullptr;      // its inode page, nullptr is possible
-  Page *node_page = nullptr;       // cached direct node page
-  nid_t nid = 0;                   // node id of the direct node block
-  uint32_t ofs_in_node = 0;        // data offset in the node page
-  bool inode_page_locked = false;  // inode page is locked or not
-  block_t data_blkaddr = 0;        // block address of the node block
+  fbl::RefPtr<Page> inode_page = nullptr;  // its inode page, nullptr is possible
+  fbl::RefPtr<Page> node_page = nullptr;   // cached direct node page
+  nid_t nid = 0;                           // node id of the direct node block
+  uint32_t ofs_in_node = 0;                // data offset in the node page
+  bool inode_page_locked = false;          // inode page is locked or not
+  block_t data_blkaddr = 0;                // block address of the node block
 };
 
 // CountType for monitoring
@@ -121,7 +120,8 @@ class SuperblockInfo {
   SuperblockInfo(SuperblockInfo &&) = delete;
   SuperblockInfo &operator=(SuperblockInfo &&) = delete;
 
-  SuperblockInfo() : nr_pages_{} {}
+  SuperblockInfo() : nr_pages_ {}
+  {}
 
   Superblock &GetRawSuperblock() { return *raw_superblock_; }
   void SetRawSuperblock(std::shared_ptr<Superblock> &raw_sb) { raw_superblock_ = raw_sb; }
@@ -272,29 +272,31 @@ class SuperblockInfo {
 
   std::mutex &GetStatLock() { return stat_lock_; }
 
-  void AddPageCount(CountType count_type) {
+  void IncreasePageCount(CountType count_type) {
     atomic_fetch_add_explicit(&nr_pages_[static_cast<int>(count_type)], 1,
                               std::memory_order_relaxed);
     SetDirty();
   }
 
-  void SubtractPageCount(CountType count_type) {
+  void DecreasePageCount(CountType count_type) {
     atomic_fetch_sub_explicit(&nr_pages_[static_cast<int>(count_type)], 1,
                               std::memory_order_relaxed);
   }
 
   int GetPageCount(CountType count_type) const {
-    // TODO: Add tracking page counts when impl page cache
-    return 0;
-    // return atomic_load_explicit(&nr_pages_[static_cast<int>(count_type)],
-    //                             std::memory_order_relaxed);
+    return atomic_load_explicit(&nr_pages_[static_cast<int>(count_type)],
+                                std::memory_order_relaxed);
   }
 
+  void IncreaseDirtyDir() { ++n_dirty_dirs; }
+  void DecreaseDirtyDir() { --n_dirty_dirs; }
+
   uint32_t BitmapSize(MetaBitmap flag) {
-    if (flag == MetaBitmap::kNatBitmap)
+    if (flag == MetaBitmap::kNatBitmap) {
       return LeToCpu(checkpoint_block_.checkpoint_.nat_ver_bitmap_bytesize);
-    else  // MetaBitmap::kSitBitmap
+    } else {  // MetaBitmap::kSitBitmap
       return LeToCpu(checkpoint_block_.checkpoint_.sit_ver_bitmap_bytesize);
+    }
   }
 
   void *BitmapPtr(MetaBitmap flag) {
@@ -335,10 +337,6 @@ class SuperblockInfo {
   // struct bio *bio[static_cast<int>(PageType::kNrPageType)];             // bios to merge
   // sector_t last_block_in_bio[static_cast<int>(PageType::kNrPageType)];  // last block number
   // rw_semaphore bio_sem;		// IO semaphore
-
-  // fbl::RefPtr<VnodeF2fs> node_vnode;
-  // inode *meta_inode;		// cache meta blocks
-  // fbl::RefPtr<VnodeF2fs> meta_vnode;
 #endif
 
   union CheckpointBlock {
@@ -362,15 +360,7 @@ class SuperblockInfo {
   fs::SharedMutex orphan_inode_mutex_;  // for orphan inode list
   uint64_t n_orphans_ = 0;              // # of orphan inodes
 
-#if 0  // porting needed
-  // for directory management
-  list_node_t dir_inode_list_;  // dir inode list
-  std::mutex dir_inode_lock_;  // for dir inode list lock
-  // uint64_t n_dirty_dirs = 0;   // # of dir inodes
-  list_node_t &GetDirInodeList() { return dir_inode_list_; }
-  std::mutex &GetDirInodeLock() { return dir_inode_lock_; };
-#endif
-
+  uint64_t n_dirty_dirs = 0;           // # of dir inodes
   block_t log_sectors_per_block_ = 0;  // log2 sectors per block
   block_t log_blocksize_ = 0;          // log2 block size
   block_t blocksize_ = 0;              // block size
@@ -387,12 +377,13 @@ class SuperblockInfo {
   nid_t total_valid_inode_count_ = 0;  // valid inode count
   int active_logs_ = 0;                // # of active logs
 
-  block_t user_block_count_ = 0;                                  // # of user blocks
-  block_t total_valid_block_count_ = 0;                           // # of valid blocks
-  block_t alloc_valid_block_count_ = 0;                           // # of allocated blocks
-  block_t last_valid_block_count_ = 0;                            // for recovery
-  uint32_t s_next_generation_ = 0;                                // for NFS support
-  atomic_t nr_pages_[static_cast<int>(CountType::kNrCountType)];  // # of pages, see count_type
+  block_t user_block_count_ = 0;         // # of user blocks
+  block_t total_valid_block_count_ = 0;  // # of valid blocks
+  block_t alloc_valid_block_count_ = 0;  // # of allocated blocks
+  block_t last_valid_block_count_ = 0;   // for recovery
+  uint32_t s_next_generation_ = 0;       // for NFS support
+  atomic_t nr_pages_[static_cast<int>(CountType::kNrCountType)] = {
+      0};                   // # of pages, see count_type
   uint64_t mount_opt_ = 0;  // set with kMountOptxxxx bits according to F2fs::mount_options_
 
 #if 0  // porting needed
@@ -420,43 +411,41 @@ inline bool IsSetCkptFlags(Checkpoint *cp, uint32_t f) {
   return ckpt_flags & f;
 }
 
-inline void F2fsPutPage(Page *&page, int unlock) {
-  if (page != nullptr) {
-    delete page;
-    page = nullptr;
-  }
-}
-
 inline void F2fsPutDnode(DnodeOfData *dn) {
   if (dn->inode_page == dn->node_page) {
     dn->inode_page = nullptr;
   }
-  F2fsPutPage(dn->node_page, 1);
-  F2fsPutPage(dn->inode_page, 0);
-}
-
-inline bool RawIsInode(Node *p) { return p->footer.nid == p->footer.ino; }
-
-inline bool IsInode(Page *page) {
-  Node *p = static_cast<Node *>(PageAddress(page));
-  return RawIsInode(p);
-}
-
-inline uint32_t *BlkaddrInNode(Node *node) {
-  if (RawIsInode(node)) {
-    if (node->i.i_inline & kExtraAttr) {
-      return node->i.i_addr + (node->i.i_extra_isize / sizeof(uint32_t));
-    }
-    return node->i.i_addr;
+  if (dn->node_page) {
+    Page::PutPage(std::move(dn->node_page), true);
   }
-  return node->dn.addr;
+  if (dn->inode_page) {
+    // TODO: revisit unlock arg.
+    Page::PutPage(std::move(dn->inode_page), true);
+  }
+}
+
+inline bool RawIsInode(Node &node) { return node.footer.nid == node.footer.ino; }
+
+inline bool IsInode(Page &page) {
+  Node *p = static_cast<Node *>(page.GetAddress());
+  return RawIsInode(*p);
+}
+
+inline uint32_t *BlkaddrInNode(Node &node) {
+  if (RawIsInode(node)) {
+    if (node.i.i_inline & kExtraAttr) {
+      return node.i.i_addr + (node.i.i_extra_isize / sizeof(uint32_t));
+    }
+    return node.i.i_addr;
+  }
+  return node.dn.addr;
 }
 
 inline block_t DatablockAddr(Page *node_page, uint64_t offset) {
   Node *raw_node;
   uint32_t *addr_array;
-  raw_node = static_cast<Node *>(PageAddress(node_page));
-  addr_array = BlkaddrInNode(raw_node);
+  raw_node = static_cast<Node *>(node_page->GetAddress());
+  addr_array = BlkaddrInNode(*raw_node);
   return LeToCpu(addr_array[offset]);
 }
 

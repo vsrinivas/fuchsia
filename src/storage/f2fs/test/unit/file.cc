@@ -111,9 +111,9 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
   std::unordered_set<block_t> blkaddr_set;
 
   nid_set.insert(test_file_ptr->Ino());
-  Page *ipage = nullptr;
+  fbl::RefPtr<Page> ipage = nullptr;
   ASSERT_EQ(fs_->GetNodeManager().GetNodePage(test_file_ptr->Ino(), &ipage), ZX_OK);
-  Inode *inode = &(static_cast<Node *>(PageAddress(ipage))->i);
+  Inode *inode = &(static_cast<Node *>(ipage->GetAddress())->i);
 
   for (int i = 0; i < kNidsPerInode; ++i) {
     if (inode->i_nid[i] != 0U)
@@ -126,19 +126,19 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
   }
 
   for (int i = 0; i < 2; ++i) {
-    Page *direct_node_page = nullptr;
+    fbl::RefPtr<Page> direct_node_page = nullptr;
     ASSERT_EQ(fs_->GetNodeManager().GetNodePage(inode->i_nid[i], &direct_node_page), ZX_OK);
-    DirectNode *direct_node = &(static_cast<Node *>(PageAddress(direct_node_page))->dn);
+    DirectNode *direct_node = &(static_cast<Node *>(direct_node_page->GetAddress())->dn);
 
     for (int j = 0; j < kAddrsPerBlock; j++) {
       ASSERT_NE(direct_node->addr[j], kNullAddr);
       blkaddr_set.insert(direct_node->addr[j]);
     }
 
-    F2fsPutPage(direct_node_page, 0);
+    Page::PutPage(std::move(direct_node_page), true);
   }
 
-  F2fsPutPage(ipage, 0);
+  Page::PutPage(std::move(ipage), true);
 
   ASSERT_EQ(nid_set.size(), level + 1);
   ASSERT_EQ(blkaddr_set.size(), static_cast<uint32_t>(kAddrsPerInode + kAddrsPerBlock * 2));

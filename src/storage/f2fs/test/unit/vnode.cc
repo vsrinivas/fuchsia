@@ -32,14 +32,15 @@ void VgetFaultInjetionAndTest(F2fs &fs, Dir &root_dir, std::string_view name, T 
   ASSERT_EQ(test_vnode->Close(), ZX_OK);
 
   // fault injection
-  Page *node_page = nullptr;
+  fbl::RefPtr<Page> node_page = nullptr;
   ASSERT_EQ(fs.GetNodeManager().GetNodePage(nid, &node_page), ZX_OK);
-  Node *rn = static_cast<Node *>(PageAddress(node_page));
+  Node *rn = static_cast<Node *>(node_page->GetAddress());
 
   fault_injection(rn);
 
+  node_page->SetDirty();
   FlushDirtyNodePage(&fs, *node_page);
-  F2fsPutPage(node_page, 1);
+  Page::PutPage(std::move(node_page), true);
 
   ASSERT_EQ(fs.GetVCache().RemoveDirty(test_vnode.get()), ZX_OK);
   fs.EvictVnode(test_vnode.get());
@@ -149,7 +150,7 @@ TEST_F(VnodeTest, WriteInode) {
 
   // 1. Check node ino exception
   ASSERT_EQ(VnodeF2fs::Vget(fs_.get(), fs_->GetSuperblockInfo().GetNodeIno(), &test_vnode), ZX_OK);
-  ASSERT_EQ(test_vnode->WriteInode(nullptr), ZX_OK);
+  ASSERT_EQ(test_vnode->WriteInode(false), ZX_OK);
   fs_->EvictVnode(test_vnode.get());
   test_vnode = nullptr;
 
@@ -160,23 +161,23 @@ TEST_F(VnodeTest, WriteInode) {
   test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(dir_raw_vnode));
   nid_t nid = test_vnode->GetKey();
 
-  ASSERT_EQ(test_vnode->WriteInode(nullptr), ZX_OK);
+  ASSERT_EQ(test_vnode->WriteInode(false), ZX_OK);
 
   block_t temp_block_address;
   MapTester::GetCachedNatEntryBlockAddress(node_manager, nid, temp_block_address);
 
   // Enable fault injection to dnode(vnode)
   MapTester::SetCachedNatEntryBlockAddress(node_manager, nid, kNullAddr);
-  ASSERT_EQ(test_vnode->WriteInode(nullptr), ZX_ERR_NOT_FOUND);
+  ASSERT_EQ(test_vnode->WriteInode(false), ZX_ERR_NOT_FOUND);
 
   // Disable fault injection
   MapTester::SetCachedNatEntryBlockAddress(node_manager, nid, temp_block_address);
-  ASSERT_EQ(test_vnode->WriteInode(nullptr), ZX_OK);
+  ASSERT_EQ(test_vnode->WriteInode(false), ZX_OK);
 
   // 3. Is clean inode
-  node_manager.SyncNodePages(nid, nullptr);
+  node_manager.SyncNodePages(nid, false);
   ASSERT_FALSE(test_vnode->IsDirty());
-  ASSERT_EQ(test_vnode->WriteInode(nullptr), ZX_OK);
+  ASSERT_EQ(test_vnode->WriteInode(false), ZX_OK);
 
   ASSERT_EQ(test_vnode->Close(), ZX_OK);
   test_vnode = nullptr;

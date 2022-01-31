@@ -17,58 +17,35 @@ namespace {
 using SegmentManagerTest = F2fsFakeDevTestFixture;
 
 TEST_F(SegmentManagerTest, BlkChaining) {
-  Page *root_node_page = nullptr;
+  fbl::RefPtr<Page> root_node_page = nullptr;
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
-
-  // read the node block where the root inode is stored
-  fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
-  ASSERT_NE(root_node_page, nullptr);
-
-  // retrieve the lba for root inode
   std::vector<block_t> blk_chain(0);
   int nwritten = kDefaultBlocksPerSegment * 2;
-  NodeInfo ni;
-  fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
-  ASSERT_NE(ni.blk_addr, kNullAddr);
-  ASSERT_NE(ni.blk_addr, kNewAddr);
-  block_t alloc_addr = ni.blk_addr;
-  blk_chain.push_back(alloc_addr);
-
   // write the root inode, and read the block where the previous version of the root inode is stored
   // to check if the block has a proper lba address to the next node block
   for (int i = 0; i < nwritten; ++i) {
-    block_t old_addr = alloc_addr;
-    Page *read_page = GrabCachePage(nullptr, 0, 0);
-    ASSERT_TRUE(read_page);
+    fbl::RefPtr<Page> read_page = nullptr;
+    NodeInfo ni;
 
-    fs_->GetSegmentManager().WriteNodePage(root_node_page, superblock_info.GetRootIno(), old_addr,
-                                           &alloc_addr);
-    blk_chain.push_back(alloc_addr);
-    ASSERT_NE(alloc_addr, kNullAddr);
-    ASSERT_EQ(fs_->GetBc().Readblk(blk_chain[i], read_page->data), ZX_OK);
-    ASSERT_EQ(alloc_addr, NodeManager::NextBlkaddrOfNode(*read_page));
-    F2fsPutPage(read_page, 0);
+    fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
+    blk_chain.push_back(NodeManager::NextBlkaddrOfNode(*read_page));
+    read_page->SetDirty();
+    fs_->GetNodeManager().F2fsWriteNodePage(*read_page, false);
+    fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
+    ASSERT_NE(ni.blk_addr, kNullAddr);
+    ASSERT_NE(ni.blk_addr, kNewAddr);
+    ASSERT_EQ(ni.blk_addr, blk_chain[i]);
+    Page::PutPage(std::move(read_page), true);
   }
-
-  F2fsPutPage(root_node_page, 0);
 }
 
 TEST_F(SegmentManagerTest, DirtyToFree) {
-  // read the root inode block
-  Page *root_node_page = nullptr;
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
-  fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
-  ASSERT_NE(root_node_page, nullptr);
 
   // check the precond. before making dirty segments
   std::vector<uint32_t> prefree_array(0);
   int nwritten = kDefaultBlocksPerSegment * 2;
   uint32_t nprefree = 0;
-  NodeInfo ni;
-  fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
-  ASSERT_NE(ni.blk_addr, kNullAddr);
-  ASSERT_NE(ni.blk_addr, kNewAddr);
-  block_t alloc_addr = ni.blk_addr;
   ASSERT_FALSE(fs_->GetSegmentManager().PrefreeSegments());
   uint32_t nfree_segs = fs_->GetSegmentManager().FreeSegments();
   FreeSegmapInfo *free_i = &fs_->GetSegmentManager().GetFreeSegmentInfo();
@@ -76,14 +53,24 @@ TEST_F(SegmentManagerTest, DirtyToFree) {
 
   // write the root inode repeatedly as much as 2 segments
   for (int i = 0; i < nwritten; ++i) {
-    block_t old_addr = alloc_addr;
-    fs_->GetSegmentManager().WriteNodePage(root_node_page, superblock_info.GetRootIno(), old_addr,
-                                           &alloc_addr);
+    fbl::RefPtr<Page> read_page = nullptr;
+    NodeInfo ni;
+
+    fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
+    fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
+    ASSERT_NE(ni.blk_addr, kNullAddr);
+    ASSERT_NE(ni.blk_addr, kNewAddr);
+    block_t old_addr = ni.blk_addr;
+
+    read_page->SetDirty();
+    fs_->GetNodeManager().F2fsWriteNodePage(*read_page, false);
+
     if (fs_->GetSegmentManager().GetValidBlocks(fs_->GetSegmentManager().GetSegmentNumber(old_addr),
                                                 0) == 0) {
       prefree_array.push_back(fs_->GetSegmentManager().GetSegmentNumber(old_addr));
       ASSERT_EQ(fs_->GetSegmentManager().PrefreeSegments(), ++nprefree);
     }
+    Page::PutPage(std::move(read_page), true);
   }
 
   // check the bitmaps and the number of free/prefree segments
@@ -102,8 +89,6 @@ TEST_F(SegmentManagerTest, DirtyToFree) {
   }
   ASSERT_EQ(fs_->GetSegmentManager().FreeSegments(), nfree_segs);
   ASSERT_FALSE(fs_->GetSegmentManager().PrefreeSegments());
-
-  F2fsPutPage(root_node_page, 0);
 }
 
 TEST_F(SegmentManagerTest, BalanceFs) {
@@ -127,7 +112,7 @@ TEST_F(SegmentManagerTest, BalanceFs) {
 
 TEST_F(SegmentManagerTest, InvalidateBlocksExceptionCase) {
   // read the root inode block
-  Page *root_node_page = nullptr;
+  fbl::RefPtr<Page> root_node_page = nullptr;
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
   ASSERT_NE(root_node_page, nullptr);
@@ -137,40 +122,41 @@ TEST_F(SegmentManagerTest, InvalidateBlocksExceptionCase) {
   fs_->GetSegmentManager().InvalidateBlocks(kNewAddr);
   ASSERT_EQ(temp_written_valid_blocks, fs_->GetSegmentManager().GetSitInfo().written_valid_blocks);
 
-  F2fsPutPage(root_node_page, 0);
+  Page::PutPage(std::move(root_node_page), true);
 }
 
 TEST_F(SegmentManagerTest, GetNewSegmentHeap) {
   // read the root inode block
-  Page *root_node_page = nullptr;
+  fbl::RefPtr<Page> root_node_page = nullptr;
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
-  fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
-  ASSERT_NE(root_node_page, nullptr);
 
   // Check GetNewSegment() on AllocDirection::kAllocLeft
   superblock_info.ClearOpt(kMountNoheap);
-
   uint32_t nwritten = kDefaultBlocksPerSegment * 3;
-  NodeInfo ni;
-  fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
-  ASSERT_NE(ni.blk_addr, kNullAddr);
-  ASSERT_NE(ni.blk_addr, kNewAddr);
-  block_t alloc_addr = ni.blk_addr;
 
   for (uint32_t i = 0; i < nwritten; ++i) {
-    block_t old_addr = alloc_addr;
-    fs_->GetSegmentManager().WriteNodePage(root_node_page, superblock_info.GetRootIno(), old_addr,
-                                           &alloc_addr);
-    ASSERT_NE(alloc_addr, kNullAddr);
-    // first segment already has next segment with noheap option
-    if ((i > kDefaultBlocksPerSegment - 1) && ((old_addr + 1) % kDefaultBlocksPerSegment == 0)) {
-      ASSERT_LT(alloc_addr, old_addr);
-    } else {
-      ASSERT_GT(alloc_addr, old_addr);
-    }
-  }
+    fbl::RefPtr<Page> read_page = nullptr;
+    NodeInfo ni, new_ni;
 
-  F2fsPutPage(root_node_page, 0);
+    fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
+    fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
+    ASSERT_NE(ni.blk_addr, kNullAddr);
+    ASSERT_NE(ni.blk_addr, kNewAddr);
+
+    read_page->SetDirty();
+    fs_->GetNodeManager().F2fsWriteNodePage(*read_page, false);
+    fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), new_ni);
+    ASSERT_NE(new_ni.blk_addr, kNullAddr);
+    ASSERT_NE(new_ni.blk_addr, kNewAddr);
+
+    // first segment already has next segment with noheap option
+    if ((i > kDefaultBlocksPerSegment - 1) && ((ni.blk_addr + 1) % kDefaultBlocksPerSegment == 0)) {
+      ASSERT_LT(new_ni.blk_addr, ni.blk_addr);
+    } else {
+      ASSERT_GT(new_ni.blk_addr, ni.blk_addr);
+    }
+    Page::PutPage(std::move(read_page), true);
+  }
 }
 
 TEST_F(SegmentManagerTest, GetMaxCost) {
@@ -276,7 +262,7 @@ TEST_F(SegmentManagerTest, AllocateNewSegments) {
 
 TEST_F(SegmentManagerTest, DirtySegments) {
   // read the root inode block
-  Page *root_node_page = nullptr;
+  fbl::RefPtr<Page> root_node_page = nullptr;
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
   ASSERT_NE(root_node_page, nullptr);
@@ -292,7 +278,7 @@ TEST_F(SegmentManagerTest, DirtySegments) {
 
   ASSERT_EQ(fs_->GetSegmentManager().DirtySegments(), dirtyDataSegments + dirtyNodeSegments);
 
-  F2fsPutPage(root_node_page, 0);
+  Page::PutPage(std::move(root_node_page), true);
 }
 
 TEST(SegmentManagerOptionTest, Section) {
@@ -303,32 +289,38 @@ TEST(SegmentManagerOptionTest, Section) {
 
   std::unique_ptr<F2fs> fs;
   MountOptions mount_options{};
-  // Enable inline dir option
-  ASSERT_EQ(mount_options.SetValue(mount_options.GetNameView(kOptInlineDentry), 1), ZX_OK);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   FileTester::MountWithOptions(loop.dispatcher(), mount_options, &bc, &fs);
 
-  // read the root inode block
-  Page *root_node_page = nullptr;
+  uint32_t blocks_per_section = kDefaultBlocksPerSegment * mkfs_options.segs_per_sec;
   SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
-  fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
-  ASSERT_NE(root_node_page, nullptr);
 
-  CursegInfo *cur_segment = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);
-  fs->GetSegmentManager().GetValidBlocks(cur_segment->segno,
-                                         safemath::checked_cast<int>(mkfs_options.segs_per_sec));
-  ASSERT_FALSE(fs->GetSegmentManager().HasNotEnoughFreeSecs());
+  for (uint32_t i = 0; i < blocks_per_section; ++i) {
+    NodeInfo ni;
+    fbl::RefPtr<Page> root_node_page = nullptr;
+    CursegInfo *cur_segment = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
+    fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
+    ASSERT_NE(root_node_page, nullptr);
 
-  // Consider the section in UpdateSitEntry()
-  NodeInfo ni;
-  fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
-  ASSERT_NE(ni.blk_addr, kNullAddr);
-  ASSERT_NE(ni.blk_addr, kNewAddr);
-  block_t alloc_addr = ni.blk_addr;
-  fs->GetSegmentManager().WriteNodePage(root_node_page, superblock_info.GetRootIno(), alloc_addr,
-                                        &alloc_addr);
+    // Consume a block in the current section
+    root_node_page->SetDirty();
+    fs->GetNodeManager().F2fsWriteNodePage(*root_node_page, false);
 
-  F2fsPutPage(root_node_page, 0);
+    fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
+    ASSERT_NE(ni.blk_addr, kNullAddr);
+    ASSERT_NE(ni.blk_addr, kNewAddr);
+
+    unsigned int expected = 1;
+    // When a new secton is allocated, the valid block count of the previous one should be zero
+    if ((ni.blk_addr + 1) % blocks_per_section == 0) {
+      expected = 0;
+    }
+    ASSERT_EQ(expected,
+              fs->GetSegmentManager().GetValidBlocks(
+                  cur_segment->segno, safemath::checked_cast<int>(mkfs_options.segs_per_sec)));
+    ASSERT_FALSE(fs->GetSegmentManager().HasNotEnoughFreeSecs());
+    Page::PutPage(std::move(root_node_page), true);
+  }
 
   FileTester::Unmount(std::move(fs), &bc);
 }
@@ -346,38 +338,38 @@ TEST(SegmentManagerOptionTest, GetNewSegmentHeap) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   FileTester::MountWithOptions(loop.dispatcher(), mount_options, &bc, &fs);
 
-  // read the root inode block
-  Page *root_node_page = nullptr;
+  // Clear kMountNoheap opt, Allocate a new segment for hot nodes
   SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
-  fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
-  ASSERT_NE(root_node_page, nullptr);
-
-  // Consider the section in GetNewSegment()
   superblock_info.ClearOpt(kMountNoheap);
   fs->GetSegmentManager().NewCurseg(CursegType::kCursegHotNode, false);
 
-  // Check GetNewSegment() on AllocDirection::kAllocLeft
   const uint32_t alloc_size = kDefaultBlocksPerSegment * mkfs_options.segs_per_sec;
   uint32_t nwritten = alloc_size * mkfs_options.secs_per_zone * 3;
-  NodeInfo ni;
-  fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
-  ASSERT_NE(ni.blk_addr, kNullAddr);
-  ASSERT_NE(ni.blk_addr, kNewAddr);
-  block_t alloc_addr = ni.blk_addr;
 
   for (uint32_t i = 0; i < nwritten; ++i) {
-    block_t old_addr = alloc_addr;
-    fs->GetSegmentManager().WriteNodePage(root_node_page, superblock_info.GetRootIno(), old_addr,
-                                          &alloc_addr);
-    ASSERT_NE(alloc_addr, kNullAddr);
-    // first segment already has next segment with noheap option
-    if ((i > alloc_size * 2 - 1) && ((old_addr + 1) % alloc_size == 0)) {
-      ASSERT_LT(alloc_addr, old_addr);
+    NodeInfo ni, new_ni;
+    fbl::RefPtr<Page> root_node_page = nullptr;
+    fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
+    ASSERT_NE(root_node_page, nullptr);
+
+    fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
+    ASSERT_NE(ni.blk_addr, kNullAddr);
+    ASSERT_NE(ni.blk_addr, kNewAddr);
+
+    root_node_page->SetDirty();
+    fs->GetNodeManager().F2fsWriteNodePage(*root_node_page, false);
+    fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), new_ni);
+    ASSERT_NE(new_ni.blk_addr, kNullAddr);
+    ASSERT_NE(new_ni.blk_addr, kNewAddr);
+
+    // The heap style allocation tries to find a free node section from the end of main area
+    if ((i > alloc_size * 2 - 1) && (new_ni.blk_addr % alloc_size == 0)) {
+      ASSERT_LT(new_ni.blk_addr, ni.blk_addr);
     } else {
-      ASSERT_GT(alloc_addr, old_addr);
+      ASSERT_GT(new_ni.blk_addr, ni.blk_addr);
     }
+    Page::PutPage(std::move(root_node_page), true);
   }
-  F2fsPutPage(root_node_page, 0);
 
   FileTester::Unmount(std::move(fs), &bc);
 }
@@ -395,33 +387,33 @@ TEST(SegmentManagerOptionTest, GetNewSegmentNoHeap) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   FileTester::MountWithOptions(loop.dispatcher(), mount_options, &bc, &fs);
 
-  // read the root inode block
-  Page *root_node_page = nullptr;
+  // Set kMountNoheap opt, Allocate a new segment for hot nodes
   SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
-  fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
-  ASSERT_NE(root_node_page, nullptr);
-
-  // Consider the section in GetNewSegment()
   superblock_info.SetOpt(kMountNoheap);
   fs->GetSegmentManager().NewCurseg(CursegType::kCursegHotNode, false);
 
-  // Check GetNewSegment() on AllocDirection::kAllocRight
   uint32_t nwritten =
       kDefaultBlocksPerSegment * mkfs_options.segs_per_sec * mkfs_options.secs_per_zone * 3;
-  NodeInfo ni;
-  fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
-  ASSERT_NE(ni.blk_addr, kNullAddr);
-  ASSERT_NE(ni.blk_addr, kNewAddr);
-  block_t alloc_addr = ni.blk_addr;
 
   for (uint32_t i = 0; i < nwritten; ++i) {
-    block_t old_addr = alloc_addr;
-    fs->GetSegmentManager().WriteNodePage(root_node_page, superblock_info.GetRootIno(), old_addr,
-                                          &alloc_addr);
-    ASSERT_NE(alloc_addr, kNullAddr);
-    ASSERT_GT(alloc_addr, old_addr);
+    NodeInfo ni, new_ni;
+    fbl::RefPtr<Page> root_node_page = nullptr;
+    fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
+    ASSERT_NE(root_node_page, nullptr);
+
+    fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
+    ASSERT_NE(ni.blk_addr, kNullAddr);
+    ASSERT_NE(ni.blk_addr, kNewAddr);
+
+    root_node_page->SetDirty();
+    fs->GetNodeManager().F2fsWriteNodePage(*root_node_page, false);
+    fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), new_ni);
+    ASSERT_NE(new_ni.blk_addr, kNullAddr);
+    ASSERT_NE(new_ni.blk_addr, kNewAddr);
+    // It tries to find a free nodesction from the start of main area
+    ASSERT_GT(new_ni.blk_addr, ni.blk_addr);
+    Page::PutPage(std::move(root_node_page), true);
   }
-  F2fsPutPage(root_node_page, 0);
 
   FileTester::Unmount(std::move(fs), &bc);
 }

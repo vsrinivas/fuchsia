@@ -1355,7 +1355,7 @@ zx_status_t FsckWorker::SanityCheckRawSuper(const Superblock *raw_super) {
   if (kF2fsSuperMagic != LeToCpu(raw_super->magic)) {
     return ZX_ERR_INTERNAL;
   }
-  if (kBlockSize != kPageCacheSize) {
+  if (kBlockSize != kPageSize) {
     return ZX_ERR_INTERNAL;
   }
   block_t blocksize = 1 << LeToCpu(raw_super->log_blocksize);
@@ -1678,7 +1678,7 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
 #endif  // __Fuchsia__
       curseg->sum_blk->entries[j] = *s;
       offset += kSummarySize;
-      if (offset + kSummarySize <= kPageCacheSize - kSumFooterSize) {
+      if (offset + kSummarySize <= kPageSize - kSumFooterSize) {
         continue;
       }
 #ifdef __Fuchsia__
@@ -1768,7 +1768,7 @@ zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
   }
 
   curseg = segment_manager_->CURSEG_I(type);
-  memcpy(curseg->sum_blk, summary_block, kPageCacheSize);
+  memcpy(curseg->sum_blk, summary_block, kPageSize);
   curseg->next_segno = segno;
   ResetCurseg(type, 0);
   curseg->alloc_type = ckpt.alloc_type[static_cast<int>(type)];

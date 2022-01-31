@@ -44,7 +44,6 @@ inline uint64_t CpuToLe(uint64_t x) { return x; }
 #endif
 
 constexpr size_t kPageSize = 4096;
-constexpr size_t kPageCacheSize = 4096;
 constexpr size_t kBitsPerByte = 8;
 constexpr size_t kPageCacheShift = 12;
 constexpr size_t kF2fsSuperMagic = 0xF2F52010;
@@ -60,13 +59,6 @@ constexpr size_t kSync = 0x10;
 constexpr size_t kReadSync = (kRead | kSync);
 constexpr size_t kWriteSync = (kWrite | kSync);
 constexpr size_t kWriteFlushFua = (kWrite | kSync | kFlush | kFua);
-
-struct Page {
-  uint8_t data[kPageSize];
-  pgoff_t index = -1;      // meta = lba, node = node id, file = fileofs;
-  void *host = nullptr;    // meta = null, node = null, file = vnodef2fs
-  uint32_t host_nid = -1;  // meta = F2FS_META_INO(sbi), node = F2FS_NODE_INO, file = host->nid_
-};
 
 }  // namespace f2fs
 

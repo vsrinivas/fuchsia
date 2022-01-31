@@ -47,7 +47,7 @@ class VnodeF2fs : public fs::Vnode,
   explicit VnodeF2fs(F2fs *fs, ino_t ino);
 
   uint32_t InlineDataOffset() const {
-    return kPageCacheSize - sizeof(NodeFooter) -
+    return kPageSize - sizeof(NodeFooter) -
            sizeof(uint32_t) * (kAddrsPerInode + kNidsPerInode - 1) + GetExtraISize();
   }
   uint32_t MaxInlineData() const {
@@ -110,7 +110,7 @@ class VnodeF2fs : public fs::Vnode,
 
   static zx_status_t Vget(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out);
   void UpdateInode(Page *node_page);
-  zx_status_t WriteInode(WritebackControl *wbc);
+  zx_status_t WriteInode(bool is_reclaim = false);
   zx_status_t DoTruncate(size_t len);
   int TruncateDataBlocksRange(DnodeOfData *dn, int count);
   void TruncateDataBlocks(DnodeOfData *dn);
@@ -124,14 +124,14 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t ReserveNewBlock(DnodeOfData *dn);
 
   void UpdateExtentCache(block_t blk_addr, DnodeOfData *dn);
-  zx_status_t FindDataPage(pgoff_t index, Page **out);
-  zx_status_t GetLockDataPage(pgoff_t index, Page **out);
-  zx_status_t GetNewDataPage(pgoff_t index, bool new_i_size, Page **out);
+  zx_status_t FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out);
+  zx_status_t GetLockDataPage(pgoff_t index, fbl::RefPtr<Page> *out);
+  zx_status_t GetNewDataPage(pgoff_t index, bool new_i_size, fbl::RefPtr<Page> *out);
 
   static zx_status_t Readpage(F2fs *fs, Page *page, block_t blk_addr, int type);
   zx_status_t DoWriteDataPage(Page *page);
-  zx_status_t WriteDataPageReq(Page *page, WritebackControl *wbc);
-  zx_status_t WriteBegin(size_t pos, size_t len, Page **page);
+  zx_status_t WriteDataPage(Page *page, bool is_reclaim = false);
+  zx_status_t WriteBegin(size_t pos, size_t len, fbl::RefPtr<Page> *page);
 
 #ifdef __Fuchsia__
   void Notify(std::string_view name, unsigned event) final;
@@ -178,6 +178,8 @@ class VnodeF2fs : public fs::Vnode,
   bool IsSock() const;
   bool IsFifo() const;
   bool HasGid() const;
+  bool IsMeta() __TA_EXCLUDES(mutex_);
+  bool IsNode() __TA_EXCLUDES(mutex_);
 
   void SetName(std::string_view name) { name_ = name; }
   bool IsSameName(std::string_view name) const {
@@ -280,14 +282,12 @@ class VnodeF2fs : public fs::Vnode,
     fi_.clevel = level;
   }
 
-  void AddDirtyDentry() {
-    // TODO: enable it when impl page cache
-    // atomic_fetch_add_explicit(&fi_.dirty_dents, 1, std::memory_order_relaxed);
+  void IncreaseDirtyDentries() {
+    atomic_fetch_add_explicit(&fi_.dirty_dents, 1, std::memory_order_relaxed);
   }
 
-  void RemoveDirtyDentry() {
-    // TODO: enable it when impl page cache
-    // atomic_fetch_sub_explicit(&fi_.dirty_dents, 1, std::memory_order_relaxed);
+  void DecreaseDirtyDentries() {
+    atomic_fetch_sub_explicit(&fi_.dirty_dents, 1, std::memory_order_relaxed);
   }
 
   uint8_t GetDirLevel() const { return fi_.i_dir_level; }
@@ -348,6 +348,21 @@ class VnodeF2fs : public fs::Vnode,
     flag_cvar_.notify_all();
   }
 
+  zx_status_t FindPage(pgoff_t index, fbl::RefPtr<Page> *out) { return ZX_ERR_NOT_FOUND; }
+  zx_status_t GrabCachePage(pgoff_t index, fbl::RefPtr<Page> *out) {
+    // TODO: FindPage() lookup FileCache::page_table_ to make |*out|. Unless it succeeds to find the
+    // page, it allocates and inserts |*out|into FileCache::page_table. Then, it initializes |*out|
+    // by calling Page::GetPage(). Everything should be done with held lock.
+    if (FindPage(index, out) == ZX_OK) {
+    } else {
+      *out = fbl::MakeRefCounted<Page>(this, index);
+      (*out)->Lock();
+    }
+    zx_status_t ret = (*out)->GetPage();
+    ZX_ASSERT(ret == ZX_OK);
+    return ret;
+  }
+
  protected:
   void RecycleNode() override;
   std::condition_variable_any flag_cvar_{};
@@ -358,6 +373,7 @@ class VnodeF2fs : public fs::Vnode,
       __TA_EXCLUDES(mutex_);
   zx_status_t CloseNode() final;
 
+  FileCache file_cache_{this};
   InodeInfo fi_;
   uid_t uid_ = 0;
   gid_t gid_ = 0;

@@ -201,7 +201,7 @@ void FileTester::CheckChildrenInBlock(Dir *vn, uint64_t bidx,
     childs.insert("..");
   }
 
-  Page *page = nullptr;
+  fbl::RefPtr<Page> page = nullptr;
 
   if (childs.empty()) {
     ASSERT_EQ(vn->FindDataPage(bidx, &page), ZX_ERR_NOT_FOUND);
@@ -209,7 +209,7 @@ void FileTester::CheckChildrenInBlock(Dir *vn, uint64_t bidx,
   }
 
   ASSERT_EQ(vn->FindDataPage(bidx, &page), ZX_OK);
-  DentryBlock *dentry_blk = reinterpret_cast<DentryBlock *>(page);
+  DentryBlock *dentry_blk = reinterpret_cast<DentryBlock *>(page->GetAddress());
 
   uint32_t bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
   while (bit_pos < kNrDentryInBlock) {
@@ -233,7 +233,7 @@ void FileTester::CheckChildrenInBlock(Dir *vn, uint64_t bidx,
 
   ASSERT_TRUE(childs.empty());
 
-  F2fsPutPage(page, 0);
+  Page::PutPage(std::move(page), false);
 }
 
 std::string FileTester::GetRandomName(unsigned int len) {
@@ -254,9 +254,9 @@ void FileTester::AppendToFile(File *file, const void *data, size_t len) {
 }
 
 void MapTester::CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, int level) {
-  Page *ipage = nullptr;
+  fbl::RefPtr<Page> ipage = nullptr;
   ASSERT_EQ(fs->GetNodeManager().GetNodePage(vn->Ino(), &ipage), ZX_OK);
-  Inode *inode = &(static_cast<Node *>(PageAddress(ipage))->i);
+  Inode *inode = &(static_cast<Node *>(ipage->GetAddress())->i);
 
   int i;
   for (i = 0; i < level; ++i)
@@ -265,7 +265,7 @@ void MapTester::CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, int level) {
   for (; i < kNidsPerInode; ++i)
     ASSERT_EQ(inode->i_nid[i], 0U);
 
-  F2fsPutPage(ipage, 0);
+  Page::PutPage(std::move(ipage), true);
 }
 
 void MapTester::CheckNidsFree(F2fs *fs, std::unordered_set<nid_t> &nids) {

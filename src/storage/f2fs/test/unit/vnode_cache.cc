@@ -69,7 +69,7 @@ TEST_F(VnodeCacheTest, Basic) {
     vn->Close();
     vn.reset();
   }
-  ASSERT_EQ(test_dir_vn->GetSize(), kPageCacheSize);
+  ASSERT_EQ(test_dir_vn->GetSize(), kPageSize);
 
   // flush dirty vnodes.
   fs_->WriteCheckpoint(false, false);

@@ -194,19 +194,19 @@ TEST(F2fsTest, FlushDirtyMetaPage) {
 
   FileTester::MountWithOptions(loop.dispatcher(), MountOptions{}, &bc, &fs);
 
-  fs->GetSuperblockInfo().AddPageCount(CountType::kDirtyMeta);
-
   Checkpoint &checkpoint = fs->GetSuperblockInfo().GetCheckpoint();
   block_t checkpoint_block = fs->GetSuperblockInfo().StartCpAddr();
-  Page *checkpoint_page = fs->GrabMetaPage(checkpoint_block);
-  void *kaddr = PageAddress(checkpoint_page);
-  memcpy(kaddr, &checkpoint, (1 << fs->GetSuperblockInfo().GetLogBlocksize()));
+  fbl::RefPtr<Page> checkpoint_page;
+  fs->GrabMetaPage(checkpoint_block, &checkpoint_page);
+  memcpy(checkpoint_page->GetAddress(), &checkpoint,
+         (1 << fs->GetSuperblockInfo().GetLogBlocksize()));
+  checkpoint_page->SetDirty();
 
   ASSERT_EQ(FlushDirtyMetaPage(fs.get(), *checkpoint_page), ZX_OK);
 
   ASSERT_EQ(fs->GetSuperblockInfo().GetPageCount(CountType::kDirtyMeta), 0);
 
-  F2fsPutPage(checkpoint_page, 1);
+  Page::PutPage(std::move(checkpoint_page), true);
 
   FileTester::Unmount(std::move(fs), &bc);
 }
@@ -221,16 +221,17 @@ TEST(F2fsTest, FlushDirtyNodePage) {
   FileTester::MountWithOptions(loop.dispatcher(), MountOptions{}, &bc, &fs);
 
   // read the root inode block
-  Page *root_node_page = nullptr;
+  fbl::RefPtr<Page> root_node_page = nullptr;
   SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
   fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
   ASSERT_NE(root_node_page, nullptr);
 
+  root_node_page->SetDirty();
   ASSERT_EQ(FlushDirtyNodePage(fs.get(), *root_node_page), ZX_OK);
 
   ASSERT_EQ(fs->GetSuperblockInfo().GetPageCount(CountType::kDirtyNodes), 0);
 
-  F2fsPutPage(root_node_page, 0);
+  Page::PutPage(std::move(root_node_page), true);
   FileTester::Unmount(std::move(fs), &bc);
 }
 
@@ -250,11 +251,14 @@ TEST(F2fsTest, FlushDirtyDataPage) {
   ASSERT_EQ(root_dir->Create("Data", S_IFREG, &vnode), ZX_OK);
   VnodeF2fs *vn = static_cast<VnodeF2fs *>(vnode.get());
 
-  Page *data_page = GrabCachePage(vn, vn->Ino(), 100);
+  fbl::RefPtr<Page> data_page;
 
+  vn->GrabCachePage(100, &data_page);
+
+  data_page->SetDirty();
   ASSERT_EQ(FlushDirtyDataPage(fs.get(), *data_page), ZX_OK);
 
-  F2fsPutPage(data_page, 0);
+  Page::PutPage(std::move(data_page), true);
 
   ASSERT_EQ(vnode->Close(), ZX_OK);
   vnode = nullptr;

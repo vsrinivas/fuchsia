@@ -204,7 +204,7 @@ zx_status_t Dir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out) {
 
 zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
   DirEntry *de;
-  Page *page = nullptr;
+  fbl::RefPtr<Page> page;
 
   de = FindEntry(name, &page);
   if (de == nullptr) {
@@ -218,15 +218,15 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
     // if (!f2fs_has_inline_dentry(dir))
     //   kunmap(page);
 #endif
-      F2fsPutPage(page, 0);
+      Page::PutPage(std::move(page), false);
       return err;
     }
 
-    DeleteEntry(de, page, vnode);
+    DeleteEntry(de, page.get(), vnode);
   }
 
   Vfs()->GetSegmentManager().BalanceFs();
-  F2fsPutPage(page, 0);
+  Page::PutPage(std::move(page), false);
   return ZX_OK;
 }
 
@@ -375,18 +375,24 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
   nid_t old_ino;
   VnodeF2fs *new_vnode = nullptr;
   nid_t new_ino;
-  Page *old_dir_page = nullptr;
-  Page *old_page = nullptr;
-  Page *new_page = nullptr;
+  fbl::RefPtr<Page> old_dir_page;
+  fbl::RefPtr<Page> old_page;
+  fbl::RefPtr<Page> new_page;
   DirEntry *old_dir_entry = nullptr;
   DirEntry *old_entry;
   DirEntry *new_entry;
   timespec cur_time;
 
   auto reset_pages = [&] {
-    F2fsPutPage(old_dir_page, 0);
-    F2fsPutPage(new_page, 0);
-    F2fsPutPage(old_page, 0);
+    if (old_dir_page) {
+      Page::PutPage(std::move(old_dir_page), false);
+    }
+    if (new_page) {
+      Page::PutPage(std::move(new_page), false);
+    }
+    if (old_page) {
+      Page::PutPage(std::move(old_page), false);
+    }
   };
 
   ZX_DEBUG_ASSERT(fs::IsValidName(oldname));
@@ -498,7 +504,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
       }
 
       old_vnode->SetName(newname);
-      new_dir->SetLink(new_entry, new_page, old_vnode);
+      new_dir->SetLink(new_entry, new_page.get(), old_vnode);
 
       new_vnode->SetCTime(cur_time);
       if (old_dir_entry)
@@ -506,7 +512,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
       new_vnode->DropNlink();
       if (!new_vnode->GetNlink())
         Vfs()->AddOrphanInode(new_vnode);
-      new_vnode->WriteInode(nullptr);
+      new_vnode->WriteInode(false);
     } else {
       if (old_dir == new_dir && oldname == newname) {
         reset_pages();
@@ -532,7 +538,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
 
       if (old_dir_entry) {
         new_dir->IncNlink();
-        new_dir->WriteInode(nullptr);
+        new_dir->WriteInode(false);
       }
     }
 
@@ -545,24 +551,24 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
     // If old_dir == new_dir, old_page is not up-to-date after add new entry with newname
     // Therefore, old_page should be read again, unless pager is implemented
     if (old_dir == new_dir) {
-      F2fsPutPage(old_page, 0);
+      Page::PutPage(std::move(old_page), false);
       old_entry = FindEntry(oldname, &old_page);
     }
 
-    DeleteEntry(old_entry, old_page, nullptr);
+    DeleteEntry(old_entry, old_page.get(), nullptr);
 
     if (old_dir_entry) {
       if (old_dir != new_dir) {
-        (static_cast<Dir *>(old_vnode))->SetLink(old_dir_entry, old_dir_page, new_dir);
+        (static_cast<Dir *>(old_vnode))->SetLink(old_dir_entry, old_dir_page.get(), new_dir);
       } else {
 #if 0  // porting needed
        // if (!f2fs_has_inline_dentry(old_inode))
        //   kunmap(old_dir_page);
 #endif
-        F2fsPutPage(old_dir_page, 0);
+        Page::PutPage(std::move(old_dir_page), false);
       }
       old_dir->DropNlink();
-      old_dir->WriteInode(nullptr);
+      old_dir->WriteInode(false);
     }
   } while (false);
 

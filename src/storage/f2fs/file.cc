@@ -72,7 +72,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //   //   if (((page->index + 1) << kPageCacheShift) > i_size) {
 //   //     unsigned offset;
 //   //     offset = i_size & ~PAGE_CACHE_MASK;
-//   //     ZeroUserSegment(page, offset, kPageCacheSize);
+//   //     ZeroUserSegment(page, offset, kPageSize);
 //   //   }
 //   //   // set_page_dirty(page);
 //   //   FlushDirtyDataPage(Vfs(), *page);
@@ -109,7 +109,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 // #else
 //     FlushDirtyDataPage(Vfs(), *page);
 // #endif
-//     F2fsPutPage(page, 1);
+//     Page::PutPage(page, 1);
 //   }
 // }
 
@@ -121,14 +121,14 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //   pg_start = ((uint64_t)offset) >> kPageCacheShift;
 //   pg_end = ((uint64_t)offset + len) >> kPageCacheShift;
 
-//   off_start = offset & (kPageCacheSize - 1);
-//   off_end = (offset + len) & (kPageCacheSize - 1);
+//   off_start = offset & (kPageSize - 1);
+//   off_end = (offset + len) & (kPageSize - 1);
 
 //   if (pg_start == pg_end) {
 //     FillZero(pg_start, off_start, off_end - off_start);
 //   } else {
 //     if (off_start)
-//       FillZero(pg_start++, off_start, kPageCacheSize - off_start);
+//       FillZero(pg_start++, off_start, kPageSize - off_start);
 //     if (off_end)
 //       FillZero(pg_end, 0, off_end);
 
@@ -169,8 +169,8 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //   pg_start = ((uint64_t)offset) >> kPageCacheShift;
 //   pg_end = ((uint64_t)offset + len) >> kPageCacheShift;
 
-//   off_start = offset & (kPageCacheSize - 1);
-//   off_end = (offset + len) & (kPageCacheSize - 1);
+//   off_start = offset & (kPageSize - 1);
+//   off_end = (offset + len) & (kPageSize - 1);
 
 //   for (pgoff_t index = pg_start; index <= pg_end; ++index) {
 //     DnodeOfData dn;
@@ -203,7 +203,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //     else if (index == pg_end)
 //       new_size = (index << kPageCacheShift) + off_end;
 //     else
-//       new_size += kPageCacheSize;
+//       new_size += kPageSize;
 //   }
 
 //   if (!(mode & FALLOC_FL_KEEP_SIZE) && i_size < new_size) {
@@ -306,8 +306,7 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
   uint64_t blk_end = (off + len) / kBlockSize;
   size_t off_in_block = off % kBlockSize;
   size_t off_in_buf = 0;
-  Page *data_page = nullptr;
-  void *data_buf = nullptr;
+  fbl::RefPtr<Page> data_page;
   size_t left = len;
   uint64_t npages = (GetSize() + kBlockSize - 1) / kBlockSize;
 
@@ -337,9 +336,8 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
     if (is_empty_page) {
       memset(static_cast<char *>(data) + off_in_buf, 0, cur_len);
     } else {
-      data_buf = PageAddress(data_page);
-      memcpy(static_cast<char *>(data) + off_in_buf, static_cast<char *>(data_buf) + off_in_block,
-             cur_len);
+      memcpy(static_cast<char *>(data) + off_in_buf,
+             static_cast<char *>(data_page->GetAddress()) + off_in_block, cur_len);
     }
 
     off_in_buf += cur_len;
@@ -347,8 +345,7 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
     off_in_block = 0;
 
     if (!is_empty_page) {
-      F2fsPutPage(data_page, 1);
-      data_page = nullptr;
+      Page::PutPage(std::move(data_page), true);
     }
 
     if (left == 0)
@@ -368,7 +365,6 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
   uint64_t blk_end = (offset + len) / kBlockSize;
   size_t off_in_block = offset % kBlockSize;
   size_t off_in_buf = 0;
-  void *data_buf = nullptr;
   size_t left = len;
 
   if (len == 0)
@@ -377,7 +373,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
   if (offset + len > static_cast<size_t>(Vfs()->MaxFileSize(Vfs()->RawSb().log_blocksize)))
     return ZX_ERR_INVALID_ARGS;
 
-  std::vector<Page *> data_pages(blk_end - blk_start + 1, nullptr);
+  std::vector<fbl::RefPtr<Page>> data_pages(blk_end - blk_start + 1, nullptr);
 
   for (uint64_t n = blk_start; n <= blk_end; ++n) {
     uint64_t index = n - blk_start;
@@ -393,7 +389,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
       // every data_pages[less than index] is released, and DoWrite() returns with the err code.
       for (uint64_t m = 0; m < index; ++m) {
         if (data_pages[m] != nullptr)
-          F2fsPutPage(data_pages[m], 1);
+          Page::PutPage(std::move(data_pages[m]), true);
       }
 
       *out_actual = 0;
@@ -418,10 +414,9 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
 
     ZX_ASSERT(index < data_pages.size());
 
-    Page *data_page = data_pages[index];
+    Page *data_page = data_pages[index].get();
 
-    data_buf = PageAddress(data_page);
-    memcpy(static_cast<char *>(data_buf) + off_in_block,
+    memcpy(static_cast<char *>(data_page->GetAddress()) + off_in_block,
            static_cast<const char *>(data) + off_in_buf, cur_len);
 
     off_in_block = 0;
@@ -433,10 +428,10 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
 #if 0  // porting needed
     // set_page_dirty(data_page, Vfs());
 #else
+    data_page->SetDirty();
     FlushDirtyDataPage(Vfs(), *data_page);
 #endif
-    F2fsPutPage(data_page, 1);
-    data_pages[index] = nullptr;
+    Page::PutPage(std::move(data_pages[index]), true);
 
     if (left == 0)
       break;

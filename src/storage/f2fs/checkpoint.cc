@@ -7,63 +7,55 @@
 namespace f2fs {
 
 // We guarantee no failure on the returned page.
-Page *F2fs::GrabMetaPage(pgoff_t index) {
-  Page *page = nullptr;
-
-  while (!(page = GrabCachePage(nullptr, superblock_info_->GetMetaIno(), index))) {
-    // TODO: When the page cache is available, remove it
-    // as GrabCachePage will always provide a valid page in a blocking manner.
-    // For now, it does busy-waiting for a valid allocation of the page
-    sleep(0);
+zx_status_t F2fs::GrabMetaPage(pgoff_t index, fbl::RefPtr<Page> *out) {
+  if (zx_status_t ret = GetMetaVnode().GrabCachePage(index, out); ret != ZX_OK) {
+    ZX_ASSERT(0);
+    return ZX_ERR_NO_MEMORY;
   }
   // We wait writeback only inside GrabMetaPage()
-  WaitOnPageWriteback(page);
-  SetPageUptodate(page);
-  return page;
+  (*out)->WaitOnWriteback();
+  (*out)->SetUptodate();
+  return ZX_OK;
 }
 
-Page *F2fs::GetMetaPage(pgoff_t index) {
-  Page *page = nullptr;
-  while (true) {
-    if (page = GrabCachePage(nullptr, superblock_info_->GetMetaIno(), index); page == nullptr) {
-      // TODO: When the page cache is available, remove it
-      // as GrabCachePage will always provide a valid page in a blocking manner.
-      // For now, it does busy-waiting for a valid allocation of the page
-      sleep(0);
-      continue;
-    }
-    if (zx_status_t err = VnodeF2fs::Readpage(this, static_cast<Page *>(PageAddress(page)),
-                                              static_cast<block_t>(index), kReadSync);
-        err != ZX_OK) {
-      F2fsPutPage(page, 1);
-      ZX_ASSERT(0);
-    }
-    break;
+zx_status_t F2fs::GetMetaPage(pgoff_t index, fbl::RefPtr<Page> *out) {
+  if (zx_status_t ret = GetMetaVnode().GrabCachePage(index, out); ret != ZX_OK) {
+    ZX_ASSERT(0);
+    return ZX_ERR_NO_MEMORY;
+  }
+  if (zx_status_t err =
+          VnodeF2fs::Readpage(this, (*out).get(), static_cast<block_t>(index), kReadSync);
+      err != ZX_OK) {
+    Page::PutPage(std::move(*out), true);
+    ZX_ASSERT(0);
+    return ZX_ERR_IO;
   }
 #if 0  // porting needed
   // mark_page_accessed(page);
 #endif
-
-  // We do not allow returning an errorneous page
-  return page;
+  return ZX_OK;
 }
 
-zx_status_t F2fs::F2fsWriteMetaPage(Page *page, WritebackControl *wbc) {
-  zx_status_t err;
+zx_status_t F2fs::F2fsWriteMetaPage(Page *page, bool is_reclaim) {
+  zx_status_t err = ZX_OK;
 
-  WaitOnPageWriteback(page);
+  page->WaitOnWriteback();
 
-  err = this->GetSegmentManager().WriteMetaPage(page, wbc);
-  if (err) {
+  if (page->ClearDirtyForIo()) {
+    GetSuperblockInfo().DecreasePageCount(CountType::kDirtyMeta);
+
+    if (err = this->GetSegmentManager().WriteMetaPage(page, is_reclaim); err != ZX_OK) {
+      ZX_ASSERT(0);
 #if 0  // porting needed
     // ++wbc->pages_skipped;
     // set_page_dirty(page, this);
 #else
-    FlushDirtyMetaPage(this, *page);
+      page->SetDirty();
+      FlushDirtyMetaPage(this, *page);
 #endif
+      return err;
+    }
   }
-
-  GetSuperblockInfo().SubtractPageCount(CountType::kDirtyMeta);
 
   // In this case, we should not unlock this page
 #if 0  // porting needed
@@ -135,20 +127,6 @@ int64_t F2fs::SyncMetaPages(PageType type, int64_t nr_to_write) {
   return 0;
 #endif
 }
-
-#if 0  // porting needed
-// int F2fs::F2fsSetMetaPageDirty(Page *page) {
-//   SetPageUptodate(page);
-//   if (!PageDirty(page)) {
-//     // __set_page_dirty_nobuffers(page);
-//     FlushDirtyMetaPage(this, *page);
-//     GetSuperblockInfo().AddPageCount(CountType::kDirtyMeta);
-//     GetSuperblockInfo().SetDirty();
-//     return 1;
-//   }
-//   return 0;
-// }
-#endif
 
 zx_status_t F2fs::CheckOrphanSpace() {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
@@ -260,10 +238,12 @@ zx_status_t F2fs::RecoverOrphanInodes() {
   orphan_blkaddr = superblock_info.StartSumAddr() - 1;
 
   for (block_t i = 0; i < orphan_blkaddr; ++i) {
-    Page *page = GetMetaPage(start_blk + i);
+    fbl::RefPtr<Page> page;
+    GetMetaPage(start_blk + i, &page);
+
     OrphanBlock *orphan_blk;
 
-    orphan_blk = static_cast<OrphanBlock *>(PageAddress(page));
+    orphan_blk = static_cast<OrphanBlock *>(page->GetAddress());
     uint32_t entry_count = LeToCpu(orphan_blk->entry_count);
     // TODO: Need to set NeedChkp flag to repair the fs when fsck repair is available.
     // For now, we trigger assertion.
@@ -272,7 +252,7 @@ zx_status_t F2fs::RecoverOrphanInodes() {
       nid_t ino = LeToCpu(orphan_blk->ino[j]);
       RecoverOrphanInode(ino);
     }
-    F2fsPutPage(page, 1);
+    Page::PutPage(std::move(page), true);
   }
   // clear Orphan Flag
   superblock_info.GetCheckpoint().ckpt_flags &= (~kCpOrphanPresentFlag);
@@ -284,7 +264,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   list_node_t *head, *this_node, *next;
   OrphanBlock *orphan_blk = nullptr;
-  Page *page = nullptr;
+  fbl::RefPtr<Page> page;
   uint32_t nentries = 0;
   uint16_t index = 1;
   uint16_t orphan_blocks;
@@ -295,35 +275,33 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
   std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
   head = &superblock_info.GetOrphanInodeList();
 
-  /* loop for each orphan inode entry and write them in Jornal block */
+  // loop for each orphan inode entry and write them in Jornal block
   list_for_every_safe(head, this_node, next) {
     OrphanInodeEntry *orphan;
 
     orphan = containerof(this_node, OrphanInodeEntry, list);
 
     if (nentries == kOrphansPerBlock) {
-      /*
-       * an orphan block is full of 1020 entries,
-       * then we need to flush current orphan blocks
-       * and bring another one in memory
-       */
+      // an orphan block is full of 1020 entries,
+      // then we need to flush current orphan blocks
+      // and bring another one in memory
       orphan_blk->blk_addr = CpuToLe(index);
       orphan_blk->blk_count = CpuToLe(orphan_blocks);
       orphan_blk->entry_count = CpuToLe(nentries);
 #if 0  // porting needed
       // set_page_dirty(page, this);
 #else
+      page->SetDirty();
       FlushDirtyMetaPage(this, *page);
 #endif
-      F2fsPutPage(page, 1);
+      Page::PutPage(std::move(page), true);
       ++index;
       ++start_blk;
       nentries = 0;
-      page = nullptr;
     }
     if (!page) {
-      page = GrabMetaPage(start_blk);
-      orphan_blk = static_cast<OrphanBlock *>(PageAddress(page));
+      GrabMetaPage(start_blk, &page);
+      orphan_blk = static_cast<OrphanBlock *>(page->GetAddress());
       memset(orphan_blk, 0, sizeof(*orphan_blk));
     }
     orphan_blk->ino[nentries++] = CpuToLe(orphan->ino);
@@ -335,66 +313,78 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
 #if 0  // porting needed
   // set_page_dirty(page, this);
 #else
+    page->SetDirty();
     FlushDirtyMetaPage(this, *page);
 #endif
-    F2fsPutPage(page, 1);
+    Page::PutPage(std::move(page), true);
   }
 }
 
-Page *F2fs::ValidateCheckpoint(block_t cp_addr, uint64_t *version) {
-  Page *cp_page_1 = nullptr, *cp_page_2 = nullptr;
+zx_status_t F2fs::ValidateCheckpoint(block_t cp_addr, uint64_t *version, fbl::RefPtr<Page> *out) {
+  fbl::RefPtr<Page> cp_page_1, cp_page_2;
   uint64_t blk_size = superblock_info_->GetBlocksize();
   Checkpoint *cp_block;
   uint64_t cur_version = 0, pre_version = 0;
   uint32_t crc = 0;
   size_t crc_offset;
+  auto put_pages = fit::defer([&] {
+    if (cp_page_2) {
+      Page::PutPage(std::move(cp_page_2), true);
+    }
+    if (cp_page_1) {
+      Page::PutPage(std::move(cp_page_1), true);
+    }
+  });
 
-  /* Read the 1st cp block in this CP pack */
-  cp_page_1 = GetMetaPage(cp_addr);
+  // Read the 1st cp block in this CP pack
+  GetMetaPage(cp_addr, &cp_page_1);
 
-  /* get the version number */
-  cp_block = static_cast<Checkpoint *>(PageAddress(cp_page_1));
+  // get the version number
+  cp_block = static_cast<Checkpoint *>(cp_page_1->GetAddress());
   crc_offset = LeToCpu(cp_block->checksum_offset);
-  if (crc_offset >= blk_size)
-    goto invalid_cp1;
+  if (crc_offset >= blk_size) {
+    return ZX_ERR_BAD_STATE;
+  }
 
   crc = *reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(cp_block) + crc_offset);
-  if (!F2fsCrcValid(crc, cp_block, static_cast<uint32_t>(crc_offset)))
-    goto invalid_cp1;
+  if (!F2fsCrcValid(crc, cp_block, static_cast<uint32_t>(crc_offset))) {
+    return ZX_ERR_BAD_STATE;
+  }
 
   pre_version = LeToCpu(cp_block->checkpoint_ver);
 
-  /* Read the 2nd cp block in this CP pack */
+  // Read the 2nd cp block in this CP pack
   cp_addr += LeToCpu(cp_block->cp_pack_total_block_count) - 1;
-  cp_page_2 = GetMetaPage(cp_addr);
+  GetMetaPage(cp_addr, &cp_page_2);
 
-  cp_block = static_cast<Checkpoint *>(PageAddress(cp_page_2));
+  cp_block = static_cast<Checkpoint *>(cp_page_2->GetAddress());
   crc_offset = LeToCpu(cp_block->checksum_offset);
-  if (crc_offset >= blk_size)
-    goto invalid_cp2;
+  if (crc_offset >= blk_size) {
+    return ZX_ERR_BAD_STATE;
+  }
 
   crc = *reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(cp_block) + crc_offset);
-  if (!F2fsCrcValid(crc, cp_block, static_cast<uint32_t>(crc_offset)))
-    goto invalid_cp2;
+  if (!F2fsCrcValid(crc, cp_block, static_cast<uint32_t>(crc_offset))) {
+    return ZX_ERR_BAD_STATE;
+  }
 
   cur_version = LeToCpu(cp_block->checkpoint_ver);
 
   if (cur_version == pre_version) {
+    put_pages.cancel();
     *version = cur_version;
-    F2fsPutPage(cp_page_2, 1);
-    return cp_page_1;
+    Page::PutPage(std::move(cp_page_2), true);
+    *out = std::move(cp_page_1);
+    return ZX_OK;
   }
-invalid_cp2:
-  F2fsPutPage(cp_page_2, 1);
-invalid_cp1:
-  F2fsPutPage(cp_page_1, 1);
-  return nullptr;
+  return ZX_ERR_BAD_STATE;
 }
 
 zx_status_t F2fs::GetValidCheckpoint() {
   Checkpoint *cp_block;
   Superblock &fsb = RawSb();
-  Page *cp1 = nullptr, *cp2 = nullptr, *cur_page = nullptr;
+  fbl::RefPtr<Page> cp1, cp2;
+  Page *cur_page = nullptr;
   uint64_t blk_size = superblock_info_->GetBlocksize();
   uint64_t cp1_version = 0, cp2_version = 0;
   block_t cp_start_blk_no;
@@ -404,113 +394,44 @@ zx_status_t F2fs::GetValidCheckpoint() {
    * sets( cp pack1 and cp pack 2)
    */
   cp_start_blk_no = LeToCpu(fsb.cp_blkaddr);
-  cp1 = ValidateCheckpoint(cp_start_blk_no, &cp1_version);
+  ValidateCheckpoint(cp_start_blk_no, &cp1_version, &cp1);
 
   /* The second checkpoint pack should start at the next segment */
   cp_start_blk_no += 1 << LeToCpu(fsb.log_blocks_per_seg);
-  cp2 = ValidateCheckpoint(cp_start_blk_no, &cp2_version);
+  ValidateCheckpoint(cp_start_blk_no, &cp2_version, &cp2);
 
   if (cp1 && cp2) {
     if (VerAfter(cp2_version, cp1_version)) {
-      cur_page = cp2;
+      cur_page = cp2.get();
     } else {
-      cur_page = cp1;
+      cur_page = cp1.get();
       cp_start_blk_no = LeToCpu(fsb.cp_blkaddr);
     }
   } else if (cp1) {
-    cur_page = cp1;
+    cur_page = cp1.get();
     cp_start_blk_no = LeToCpu(fsb.cp_blkaddr);
   } else if (cp2) {
-    cur_page = cp2;
+    cur_page = cp2.get();
   } else {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  cp_block = static_cast<Checkpoint *>(PageAddress(cur_page));
+  cp_block = static_cast<Checkpoint *>(cur_page->GetAddress());
   memcpy(&superblock_info_->GetCheckpoint(), cp_block, blk_size);
 
   std::vector<FsBlock> checkpoint_trailer(fsb.cp_payload);
   for (uint32_t i = 0; i < LeToCpu(fsb.cp_payload); ++i) {
-    Page *cp_page = GetMetaPage(cp_start_blk_no + 1 + i);
-    memcpy(&checkpoint_trailer[i], PageAddress(cp_page), blk_size);
-    F2fsPutPage(cp_page, 1);
+    fbl::RefPtr<Page> cp_page;
+    GetMetaPage(cp_start_blk_no + 1 + i, &cp_page);
+    memcpy(&checkpoint_trailer[i], cp_page->GetAddress(), blk_size);
+    Page::PutPage(std::move(cp_page), true);
   }
   superblock_info_->SetCheckpointTrailer(std::move(checkpoint_trailer));
 
-  F2fsPutPage(cp1, 1);
-  F2fsPutPage(cp2, 1);
+  Page::PutPage(std::move(cp1), true);
+  Page::PutPage(std::move(cp2), true);
   return ZX_OK;
 }
-
-#if 0  // porting needed
-// void F2fs::SetDirtyDirPage(VnodeF2fs *vnode, Page *page) {
-//   SuperblockInfo &superblock_info = GetSuperblockInfo();
-//   list_node_t *head = &superblock_info.dir_inode_list;
-//   DirInodeEntry *new_entry;
-//   list_node_t *this_node;
-
-//   if (!vnode->IsDir())
-//     return;
-// retry:
-//   // new = kmem_cache_alloc(inode_entry_slab, GFP_NOFS);
-//   new_entry = new DirInodeEntry;
-//   if (!new_entry) {
-//     // cond_resched();
-//     goto retry;
-//   }
-//   new_entry->vnode = vnode;
-//   list_initialize(&new_entry->list);
-
-//   SpinLock(&superblock_info.GetDirInodeLock());
-//   list_for_every(head, this_node) {
-//     DirInodeEntry *entry;
-//     entry = containerof(this_node, DirInodeEntry, list);
-//     if (entry->vnode == vnode) {
-//       // kmem_cache_free(inode_entry_slab, new_entry);
-//       delete new_entry;
-//       goto out;
-//     }
-//   }
-//   list_add_tail(&new_entry->list, head);
-//   ++superblock_info.n_dirty_dirs;
-
-//   BUG_ON(!S_ISDIR(inode->i_mode));
-// out:
-//   superblock_info.AddPageCount(CountType::kDirtyDents);
-//   AddDirtyDentry(vnode);
-//   // SetPagePrivate(page);
-
-//   SpinUnlock(&superblock_info.GetDirInodeLock());
-// }
-
-// void F2fs::RemoveDirtyDirInode(VnodeF2fs *vnode) {
-//   SuperblockInfo &superblock_info = GetSuperblockInfo();
-//   list_node_t *head = &superblock_info.dir_inode_list;
-//   list_node_t *this_node;
-
-//   if (!vnode->IsDir())
-//     return;
-
-//   SpinLock(&superblock_info.GetDirInodeLock());
-//   // if (AtomicRead(&F2FS_I(vnode)->dirty_dents))
-//   if (vnode->fi_.dirty_dents)
-//     goto out;
-
-//   list_for_every(head, this_node) {
-//     DirInodeEntry *entry;
-//     entry = containerof(this_node, DirInodeEntry, list);
-//     if (entry->vnode == vnode) {
-//       list_delete(&entry->list);
-//       // kmem_cache_free(inode_entry_slab, entry);
-//       delete entry;
-//       --superblock_info.n_dirty_dirs;
-//       break;
-//     }
-//   }
-// out:
-//   SpinUnlock(&superblock_info.GetDirInodeLock());
-// }
-#endif
 
 void F2fs::SyncDirtyDirInodes() {
   // Handle unlinked vnodes
@@ -559,20 +480,9 @@ void F2fs::SyncDirtyDirInodes() {
 #endif
 }
 
-/**
- * Freeze all the FS-operations for checkpoint.
- */
+// Freeze all the FS-operations for checkpoint.
 void F2fs::BlockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
-  struct WritebackControl wbc = {
-#if 0  // porting needed
-      // .nr_to_write = LONG_MAX,
-      // .sync_mode = WB_SYNC_ALL,
-
-      // .for_reclaim = 0,
-#endif
-  };
-
   while (true) {
     // write all the dirty dentry pages
     SyncDirtyDirInodes();
@@ -580,6 +490,8 @@ void F2fs::BlockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
     // Stop file operation
     superblock_info.mutex_lock_op(LockType::kFileOp);
     if (superblock_info.GetPageCount(CountType::kDirtyDents)) {
+      FX_LOGS(INFO) << " ** kDirtyDents kDirtyDents  >> "
+                    << superblock_info.GetPageCount(CountType::kDirtyDents);
       superblock_info.mutex_unlock_op(LockType::kFileOp);
     } else {
       break;
@@ -589,10 +501,12 @@ void F2fs::BlockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
   // POR: we should ensure that there is no dirty node pages
   // until finishing nat/sit flush.
   while (true) {
-    GetNodeManager().SyncNodePages(0, &wbc);
+    GetNodeManager().SyncNodePages(0, false);
 
     superblock_info.mutex_lock_op(LockType::kNodeOp);
     if (superblock_info.GetPageCount(CountType::kDirtyNodes)) {
+      FX_LOGS(INFO) << " ** kDirtyNodes kDirtyNodes  >> "
+                    << superblock_info.GetPageCount(CountType::kDirtyNodes);
       superblock_info.mutex_unlock_op(LockType::kNodeOp);
     } else {
       break;
@@ -611,22 +525,22 @@ void F2fs::DoCheckpoint(bool is_umount) {
   Checkpoint &ckpt = superblock_info.GetCheckpoint();
   nid_t last_nid = 0;
   block_t start_blk;
-  Page *cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page;
   uint32_t data_sum_blocks, orphan_blocks;
   void *kaddr;
   uint32_t crc32 = 0;
 
-  /* Flush all the NAT/SIT pages */
+  // Flush all the NAT/SIT pages
   while (superblock_info.GetPageCount(CountType::kDirtyMeta)) {
+    FX_LOGS(INFO) << " ** kDirtyNodes kDirtyMeta >> "
+                  << superblock_info.GetPageCount(CountType::kDirtyMeta);
     SyncMetaPages(PageType::kMeta, LONG_MAX);
   }
 
   GetNodeManager().NextFreeNid(&last_nid);
 
-  /*
-   * modify checkpoint
-   * version number is already updated
-   */
+  // modify checkpoint
+  // version number is already updated
   ckpt.elapsed_time = CpuToLe(static_cast<uint64_t>(GetSegmentManager().GetMtime()));
   ckpt.valid_block_count = CpuToLe(ValidUserBlocks());
   ckpt.free_segment_count = CpuToLe(GetSegmentManager().FreeSegments());
@@ -651,7 +565,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
   ckpt.valid_inode_count = CpuToLe(ValidInodeCount());
   ckpt.next_free_nid = CpuToLe(last_nid);
 
-  /* 2 cp  + n data seg summary + orphan inode blocks */
+  // 2 cp  + n data seg summary + orphan inode blocks
   data_sum_blocks = GetSegmentManager().NpagesForSummaryFlush();
   if (data_sum_blocks < 3) {
     ckpt.ckpt_flags |= kCpCompactSumFlag;
@@ -678,7 +592,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
     ckpt.ckpt_flags &= (~kCpOrphanPresentFlag);
   }
 
-  /* update SIT/NAT bitmap */
+  // update SIT/NAT bitmap
   GetSegmentManager().GetSitBitmap(superblock_info.BitmapPtr(MetaBitmap::kSitBitmap));
   GetNodeManager().GetNatBitmap(superblock_info.BitmapPtr(MetaBitmap::kNatBitmap));
 
@@ -688,28 +602,30 @@ void F2fs::DoCheckpoint(bool is_umount) {
 
   start_blk = superblock_info.StartCpAddr();
 
-  /* write out checkpoint buffer at block 0 */
-  cp_page = GrabMetaPage(start_blk++);
-  kaddr = PageAddress(cp_page);
+  // write out checkpoint buffer at block 0
+  GrabMetaPage(start_blk++, &cp_page);
+  kaddr = cp_page->GetAddress();
   memcpy(kaddr, &ckpt, (1 << superblock_info.GetLogBlocksize()));
 #if 0  // porting needed
   // set_page_dirty(cp_page, this);
 #else
+  cp_page->SetDirty();
   FlushDirtyMetaPage(this, *cp_page);
 #endif
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), true);
 
   for (uint32_t i = 0; i < LeToCpu(raw_sb_->cp_payload); ++i) {
-    cp_page = GrabMetaPage(start_blk++);
-    kaddr = PageAddress(cp_page);
+    GrabMetaPage(start_blk++, &cp_page);
+    kaddr = cp_page->GetAddress();
     memcpy(kaddr, &superblock_info.GetCheckpointTrailer()[i],
            (1 << superblock_info.GetLogBlocksize()));
 #if 0  // porting needed
     // set_page_dirty(cp_page, this);
 #else
+    cp_page->SetDirty();
     FlushDirtyMetaPage(this, *cp_page);
 #endif
-    F2fsPutPage(cp_page, 1);
+    Page::PutPage(std::move(cp_page), true);
   }
 
   if (superblock_info.GetOrphanCount() > 0) {
@@ -724,16 +640,17 @@ void F2fs::DoCheckpoint(bool is_umount) {
     start_blk += kNrCursegNodeType;
   }
 
-  /* writeout checkpoint block */
-  cp_page = GrabMetaPage(start_blk);
-  kaddr = PageAddress(cp_page);
+  // writeout checkpoint block
+  GrabMetaPage(start_blk, &cp_page);
+  kaddr = cp_page->GetAddress();
   memcpy(kaddr, &ckpt, (1 << superblock_info.GetLogBlocksize()));
 #if 0  // porting needed
   // set_page_dirty(cp_page, this);
 #else
+  cp_page->SetDirty();
   FlushDirtyMetaPage(this, *cp_page);
 #endif
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), true);
 
   /* wait for previous submitted node/meta pages writeback */
 #if 0  // porting needed

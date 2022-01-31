@@ -42,8 +42,8 @@ constexpr uint8_t kRootDirSitBit = 0x20;
 constexpr uint32_t kMapPerSitEntry = kSitVBlockMapSize * 8;
 constexpr uint32_t kOrphanInodeBlockCnt = 10;
 
-void ReadCheckpoint(F2fs *fs, block_t cp_addr, Page **cp_out) {
-  Page *cp_page[2] = {nullptr, nullptr};  // cp_page[0]: header, cp_page[1]: footer
+void ReadCheckpoint(F2fs *fs, block_t cp_addr, fbl::RefPtr<Page> *cp_out) {
+  fbl::RefPtr<Page> cp_page[2] = {nullptr, nullptr};  // cp_page[0]: header, cp_page[1]: footer
   uint64_t blk_size = fs->GetSuperblockInfo().GetBlocksize();
   Checkpoint *cp_block;
   uint64_t version[2];  // version[0]: header, version[1]: footer
@@ -52,10 +52,10 @@ void ReadCheckpoint(F2fs *fs, block_t cp_addr, Page **cp_out) {
 
   for (int i = 0; i < 2; ++i) {
     // Read checkpoint pack header/footer
-    cp_page[i] = fs->GetMetaPage(cp_addr);
+    fs->GetMetaPage(cp_addr, &cp_page[i]);
     ASSERT_NE(cp_page[i], nullptr);
     // Check header CRC
-    cp_block = static_cast<Checkpoint *>(PageAddress(cp_page[i]));
+    cp_block = static_cast<Checkpoint *>(cp_page[i]->GetAddress());
     ASSERT_NE(cp_block, nullptr);
     crc_offset = LeToCpu(cp_block->checksum_offset);
     ASSERT_LT(crc_offset, blk_size);
@@ -72,51 +72,51 @@ void ReadCheckpoint(F2fs *fs, block_t cp_addr, Page **cp_out) {
 
   ASSERT_EQ(version[0], version[1]);
 
-  F2fsPutPage(cp_page[1], 1);
+  Page::PutPage(std::move(cp_page[1]), true);
 
-  *cp_out = cp_page[0];
+  *cp_out = std::move(cp_page[0]);
 }
 
-void GetLastCheckpoint(F2fs *fs, uint32_t expect_cp_position, bool after_mkfs, Page **cp_out) {
+void GetLastCheckpoint(F2fs *fs, uint32_t expect_cp_position, bool after_mkfs,
+                       fbl::RefPtr<Page> *cp_out) {
   Superblock &fsb = fs->RawSb();
   Checkpoint *cp_block1 = nullptr, *cp_block2 = nullptr;
-  Page *cp_page1 = nullptr, *cp_page2 = nullptr, *cur_cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page1 = nullptr, cp_page2 = nullptr;
   block_t cp_addr;
   uint32_t cp_position = 0;
 
   cp_addr = LeToCpu(fsb.cp_blkaddr);
   ReadCheckpoint(fs, cp_addr, &cp_page1);
-  cp_block1 = static_cast<Checkpoint *>(PageAddress(cp_page1));
+  cp_block1 = static_cast<Checkpoint *>(cp_page1->GetAddress());
 
   if (!after_mkfs) {
     cp_addr += 1 << LeToCpu(fsb.log_blocks_per_seg);
     ReadCheckpoint(fs, cp_addr, &cp_page2);
-    cp_block2 = static_cast<Checkpoint *>(PageAddress(cp_page2));
+    cp_block2 = static_cast<Checkpoint *>(cp_page2->GetAddress());
   }
 
   if (after_mkfs) {
-    cur_cp_page = cp_page1;
+    *cp_out = cp_page1;
     cp_position = kCheckpointPack0;
   } else if (cp_block1 && cp_block2) {
     if (VerAfter(cp_block2->checkpoint_ver, cp_block1->checkpoint_ver)) {
-      cur_cp_page = cp_page2;
+      *cp_out = cp_page2;
       cp_position = kCheckpointPack1;
       ASSERT_EQ(cp_block1->checkpoint_ver, cp_block2->checkpoint_ver - 1);
     } else {
-      cur_cp_page = cp_page1;
+      *cp_out = cp_page1;
       cp_position = kCheckpointPack0;
       ASSERT_EQ(cp_block2->checkpoint_ver, cp_block1->checkpoint_ver - 1);
     }
   } else {
     ASSERT_EQ(0, 1);
   }
-  *cp_out = cur_cp_page;
 
   if (!after_mkfs) {
     if (cp_position == kCheckpointPack0) {
-      F2fsPutPage(cp_page2, 1);
+      Page::PutPage(std::move(cp_page2), true);
     } else {
-      F2fsPutPage(cp_page1, 1);
+      Page::PutPage(std::move(cp_page1), true);
     }
   }
 }
@@ -188,23 +188,23 @@ bool IsRootInode(CursegType curseg_type, uint32_t offset) {
 void CheckpointTestVersion(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                            bool after_mkfs) {
   Checkpoint *cp = nullptr;
-  Page *cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page = nullptr;
 
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  cp = static_cast<Checkpoint *>(PageAddress(cp_page));
+  cp = static_cast<Checkpoint *>(cp_page->GetAddress());
 
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), true);
 }
 
 void CheckpointTestNatBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                              bool after_mkfs, uint8_t *&pre_bitmap) {
-  Page *cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page = nullptr;
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(PageAddress(cp_page));
+  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   // 2. Get NAT version bitmap
@@ -256,18 +256,18 @@ void CheckpointTestNatBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
     CreateFiles(fs, 50, cp->checkpoint_ver * 10 + 4);  // 5 dirs + 450 files = 455
   }
 
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), true);
 }
 
 void CheckpointTestSitBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                              bool after_mkfs, uint8_t *&pre_bitmap) {
-  Page *cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page = nullptr;
   uint8_t *version_bitmap;
   uint8_t cur_sit_bit = 0;
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(PageAddress(cp_page));
+  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   // 2. Get SIT version bitmap
@@ -306,16 +306,16 @@ void CheckpointTestSitBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
         static_cast<uint32_t>((cp->checkpoint_ver - 1) * kSitEntryPerBlock + i / kMapPerSitEntry));
   }
 
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), true);
 }
 
 void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                                   bool after_mkfs) {
-  Page *cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page = nullptr;
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(PageAddress(cp_page));
+  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   uint32_t orphan_inos = kOrphansPerBlock * kOrphanInodeBlockCnt;
@@ -327,7 +327,7 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
     std::vector<uint32_t> exp_inos(orphan_inos);
     std::iota(exp_inos.begin(), exp_inos.end(), start_ino);
 
-    pgoff_t start_blk = cp_page->index + 1;
+    pgoff_t start_blk = cp_page->GetIndex() + 1;
     block_t orphan_blkaddr = cp->cp_pack_start_sum - 1;
 
     ASSERT_EQ(cp->ckpt_flags & kCpOrphanPresentFlag, kCpOrphanPresentFlag);
@@ -337,15 +337,16 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
     }
 
     for (block_t i = 0; i < orphan_blkaddr; ++i) {
-      Page *page = fs->GetMetaPage(start_blk + i);
+      fbl::RefPtr<Page> page;
+      fs->GetMetaPage(start_blk + i, &page);
       OrphanBlock *orphan_blk;
 
-      orphan_blk = static_cast<OrphanBlock *>(PageAddress(page));
+      orphan_blk = static_cast<OrphanBlock *>(page->GetAddress());
       for (block_t j = 0; j < LeToCpu(orphan_blk->entry_count); ++j) {
         nid_t ino = LeToCpu(orphan_blk->ino[j]);
         cp_inos.push_back(ino);
       }
-      F2fsPutPage(page, 1);
+      Page::PutPage(std::move(page), 1);
     }
 
     // 3. Check orphan inodes
@@ -353,7 +354,7 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
   }
 
   if (cp->checkpoint_ver > kCheckpointLoopCnt) {
-    F2fsPutPage(cp_page, 1);
+    Page::PutPage(std::move(cp_page), true);
     return;
   }
 
@@ -382,16 +383,16 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
     fs->AddOrphanInode(ino);
   }
 
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), true);
 }
 
 void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                                      bool after_mkfs) {
-  Page *cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page = nullptr;
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(PageAddress(cp_page));
+  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   uint32_t orphan_inos = kOrphansPerBlock * kOrphanInodeBlockCnt;
@@ -408,22 +409,23 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
       exp_inos.erase(exp_inos.begin() + (i * 10));
     }
 
-    pgoff_t start_blk = cp_page->index + 1;
+    pgoff_t start_blk = cp_page->GetIndex() + 1;
     block_t orphan_blkaddr = cp->cp_pack_start_sum - 1;
 
     ASSERT_EQ(cp->ckpt_flags & kCpOrphanPresentFlag, kCpOrphanPresentFlag);
 
     for (block_t i = 0; i < orphan_blkaddr; ++i) {
-      Page *page = fs->GetMetaPage(start_blk + i);
+      fbl::RefPtr<Page> page;
+      fs->GetMetaPage(start_blk + i, &page);
       OrphanBlock *orphan_blk;
 
-      orphan_blk = static_cast<OrphanBlock *>(PageAddress(page));
+      orphan_blk = static_cast<OrphanBlock *>(page->GetAddress());
       for (block_t j = 0; j < LeToCpu(orphan_blk->entry_count); ++j) {
         nid_t ino = LeToCpu(orphan_blk->ino[j]);
         cp_inos.push_back(ino);
         fs->RemoveOrphanInode(ino);
       }
-      F2fsPutPage(page, 1);
+      Page::PutPage(std::move(page), true);
     }
 
     // 3. Check orphan inodes
@@ -456,17 +458,17 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
     fs->RemoveOrphanInode(ino);
   }
 
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), true);
 }
 
 void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                                       bool after_mkfs,
                                       std::vector<fbl::RefPtr<VnodeF2fs>> &vnodes) {
-  Page *cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page = nullptr;
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(PageAddress(cp_page));
+  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   uint32_t orphan_inos = kOrphansPerBlock;
@@ -492,7 +494,7 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
   }
 
   if (cp->checkpoint_ver > kCheckpointLoopCnt) {
-    F2fsPutPage(cp_page, 1);
+    Page::PutPage(std::move(cp_page), 1);
     return;
   }
 
@@ -524,16 +526,16 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
 
   ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), orphan_inos);
 
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), 1);
 }
 
 void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                                       bool after_mkfs) {
-  Page *cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page = nullptr;
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(PageAddress(cp_page));
+  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   if (!after_mkfs) {
@@ -606,16 +608,16 @@ void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uin
   }
   ASSERT_LT(fs->GetSegmentManager().NpagesForSummaryFlush(), 3);
 
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), true);
 }
 
 void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                                    bool after_mkfs) {
-  Page *cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page = nullptr;
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(PageAddress(cp_page));
+  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   if (!after_mkfs) {
@@ -683,16 +685,16 @@ void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32
   }
   ASSERT_GT(fs->GetSegmentManager().NpagesForSummaryFlush(), 2);
 
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), 1);
 }
 
 void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                               bool after_mkfs, std::vector<uint32_t> &segnos) {
-  Page *cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page = nullptr;
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(PageAddress(cp_page));
+  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   if (!after_mkfs) {
@@ -751,19 +753,19 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
   }
   ASSERT_LT(fs->GetSegmentManager().NpagesForSummaryFlush(), 3);
 
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), true);
 }
 
 void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                               bool after_mkfs, std::vector<uint32_t> &nids) {
   SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
   NodeManager &node_manager = fs->GetNodeManager();
-  Page *cp_page = nullptr;
+  fbl::RefPtr<Page> cp_page = nullptr;
   CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
-  Checkpoint *cp = static_cast<Checkpoint *>(PageAddress(cp_page));
+  Checkpoint *cp = static_cast<Checkpoint *>(cp_page->GetAddress());
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   if (!after_mkfs) {
@@ -808,7 +810,7 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 
   // Flush NAT cache
   MapTester::RemoveAllNatEntries(node_manager);
-  F2fsPutPage(cp_page, 1);
+  Page::PutPage(std::move(cp_page), true);
 }
 
 void CheckpointTestMain(uint32_t test) {
@@ -918,14 +920,14 @@ TEST(CheckpointTest, UmountFlag) {
 
   fbl::RefPtr<VnodeF2fs> root;
   FileTester::CreateRoot(fs.get(), &root);
-  Page *root_node_page = nullptr;
+  fbl::RefPtr<Page> root_node_page = nullptr;
   SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
 
   // read the node block where the root inode is stored
   fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
   ASSERT_TRUE(root_node_page);
 
-  F2fsPutPage(root_node_page, 0);
+  Page::PutPage(std::move(root_node_page), true);
   ASSERT_EQ(root->Close(), ZX_OK);
   root = nullptr;
 

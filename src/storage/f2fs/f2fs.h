@@ -55,6 +55,7 @@
 #include "src/storage/f2fs/f2fs_types.h"
 #include "src/storage/f2fs/f2fs_lib.h"
 #include "src/storage/f2fs/f2fs_layout.h"
+#include "src/storage/f2fs/file_cache.h"
 #include "src/storage/f2fs/f2fs_internal.h"
 #include "src/storage/f2fs/namestring.h"
 #include "src/storage/f2fs/bcache.h"
@@ -204,9 +205,9 @@ class F2fs : public fs::Vfs {
 #endif
 
   // checkpoint.cc
-  Page *GetMetaPage(pgoff_t index);
-  Page *GrabMetaPage(pgoff_t index);
-  zx_status_t F2fsWriteMetaPage(Page *page, WritebackControl *wbc);
+  zx_status_t GrabMetaPage(pgoff_t index, fbl::RefPtr<Page> *out);
+  zx_status_t GetMetaPage(pgoff_t index, fbl::RefPtr<Page> *out);
+  zx_status_t F2fsWriteMetaPage(Page *page, bool is_reclaim = false);
   int64_t SyncMetaPages(PageType type, long nr_to_write);
   zx_status_t CheckOrphanSpace();
   void AddOrphanInode(VnodeF2fs *vnode);
@@ -216,7 +217,7 @@ class F2fs : public fs::Vfs {
   int RecoverOrphanInodes();
   void WriteOrphanInodes(block_t start_blk);
   zx_status_t GetValidCheckpoint();
-  Page *ValidateCheckpoint(block_t cp_addr, uint64_t *version);
+  zx_status_t ValidateCheckpoint(block_t cp_addr, uint64_t *version, fbl::RefPtr<Page> *out);
   void SyncDirtyDirInodes();
   void BlockOperations();
   void UnblockOperations();
@@ -254,9 +255,14 @@ class F2fs : public fs::Vfs {
   uint32_t ValidInodeCount();
   loff_t MaxFileSize(unsigned bits);
 
+  VnodeF2fs &GetNodeVnode() { return *node_vnode_; }
+  VnodeF2fs &GetMetaVnode() { return *meta_vnode_; }
+
  private:
   std::unique_ptr<f2fs::Bcache> bc_;
 
+  std::unique_ptr<VnodeF2fs> node_vnode_;
+  std::unique_ptr<VnodeF2fs> meta_vnode_;
   fbl::RefPtr<VnodeF2fs> root_vnode_;
   fit::closure on_unmount_;
   MountOptions mount_options_;

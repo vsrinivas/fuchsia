@@ -264,7 +264,7 @@ struct RawNatEntry {
   uint32_t block_addr = 0;  // block address
 } __attribute__((packed));
 
-constexpr uint32_t kNatEntryPerBlock = kPageCacheSize / sizeof(RawNatEntry);
+constexpr uint32_t kNatEntryPerBlock = kPageSize / sizeof(RawNatEntry);
 
 struct NatBlock {
   RawNatEntry entries[kNatEntryPerBlock];
@@ -294,7 +294,7 @@ struct SitEntry {
   uint64_t mtime = 0;                    // segment age for cleaning
 } __attribute__((packed));
 
-constexpr uint32_t kSitEntryPerBlock = kPageCacheSize / sizeof(SitEntry);
+constexpr uint32_t kSitEntryPerBlock = kPageSize / sizeof(SitEntry);
 constexpr uint32_t kMaxSitBitmapSize =
     1 << (32 - kDefaultLogBlocksPerSegment) / kSitEntryPerBlock / kBitsPerByte;
 
@@ -349,7 +349,7 @@ struct SummaryFooter {
 } __attribute__((packed));
 
 constexpr uint32_t kSumFooterSize = sizeof(SummaryFooter);
-constexpr size_t kSumJournalSize = kPageCacheSize - kSumFooterSize - kSumEntrySize;
+constexpr size_t kSumJournalSize = kPageSize - kSumFooterSize - kSumEntrySize;
 
 inline uint8_t GetSumType(SummaryFooter *footer) { return footer->entry_type; }
 inline void SetSumType(SummaryFooter *footer, uint8_t type) { footer->entry_type = type; }

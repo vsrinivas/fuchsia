@@ -19,15 +19,15 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   // Lookup
   zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out) final;
   zx_status_t DoLookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out);
-  DirEntry *FindEntryOnDevice(std::string_view name, Page **res_page)
+  DirEntry *FindEntryOnDevice(std::string_view name, fbl::RefPtr<Page> *res_page)
       __TA_REQUIRES_SHARED(io_lock_);
-  DirEntry *FindEntry(std::string_view name, Page **res_page) __TA_EXCLUDES(io_lock_);
+  DirEntry *FindEntry(std::string_view name, fbl::RefPtr<Page> *res_page) __TA_EXCLUDES(io_lock_);
   zx::status<DirEntry> FindEntry(std::string_view name) __TA_EXCLUDES(io_lock_);
-  DirEntry *FindInInlineDir(std::string_view name, Page **res_page);
-  DirEntry *FindInBlock(Page *dentry_page, std::string_view name, uint64_t *max_slots,
-                        f2fs_hash_t namehash, Page **res_page);
+  DirEntry *FindInInlineDir(std::string_view name, fbl::RefPtr<Page> *res_page);
+  DirEntry *FindInBlock(fbl::RefPtr<Page> dentry_page, std::string_view name, uint64_t *max_slots,
+                        f2fs_hash_t namehash, fbl::RefPtr<Page> *res_page);
   DirEntry *FindInLevel(unsigned int level, std::string_view name, f2fs_hash_t namehash,
-                        Page **res_page);
+                        fbl::RefPtr<Page> *res_page);
   zx_status_t Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size_t *out_actual) final
       __TA_EXCLUDES(io_lock_);
   zx_status_t ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len, size_t *out_actual);
@@ -36,8 +36,8 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   zx_status_t Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname,
                      std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir);
   void SetLink(DirEntry *de, Page *page, VnodeF2fs *inode) __TA_EXCLUDES(io_lock_);
-  DirEntry *ParentDir(Page **p);
-  DirEntry *ParentInlineDir(Page **p);
+  DirEntry *ParentDir(fbl::RefPtr<Page> *out);
+  DirEntry *ParentInlineDir(fbl::RefPtr<Page> *out);
   bool IsEmptyDir();
   bool IsEmptyInlineDir();
   zx::status<bool> IsSubdir(Dir *possible_dir);

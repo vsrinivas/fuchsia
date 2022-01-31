@@ -74,21 +74,25 @@ zx_status_t F2fs::Create(std::unique_ptr<f2fs::Bcache> bc, const MountOptions& o
 }
 
 zx_status_t LoadSuperblock(f2fs::Bcache* bc, Superblock* out_info, block_t bno) {
-  // TODO: define ino for superblock after cache impl.
-  // the 1st and the 2nd blocks each have a identical Superblock.
   ZX_ASSERT(bno <= 1);
-  Page* page = GrabCachePage(nullptr, 0, 0);
-  if (zx_status_t status = bc->Readblk(bno, PageAddress(page)); status != ZX_OK) {
-    F2fsPutPage(page, 1);
+  FsBlock super_block;
+#ifdef __Fuchsia__
+  if (zx_status_t status = bc->Readblk(bno, super_block.GetData().data()); status != ZX_OK) {
+#else   // __Fuchsia__
+  if (zx_status_t status = bc->Readblk(bno, super_block.GetData()); status != ZX_OK) {
+#endif  // __Fuchsia__
     return status;
   }
-  memcpy(out_info, static_cast<uint8_t*>(PageAddress(page)) + kSuperOffset, sizeof(Superblock));
-  F2fsPutPage(page, 1);
+#ifdef __Fuchsia__
+  memcpy(out_info, static_cast<uint8_t*>(super_block.GetData().data()) + kSuperOffset,
+         sizeof(Superblock));
+#else   // __Fuchsia__
+  memcpy(out_info, static_cast<uint8_t*>(super_block.GetData()) + kSuperOffset, sizeof(Superblock));
+#endif  // __Fuchsia__
   return ZX_OK;
 }
 
 zx_status_t LoadSuperblock(f2fs::Bcache* bc, Superblock* out_info) {
-  // TODO: define ino for superblock after cache impl.
   if (zx_status_t status = LoadSuperblock(bc, out_info, kSuperblockStart); status != ZX_OK) {
     if (zx_status_t status = LoadSuperblock(bc, out_info, kSuperblockStart + 1); status != ZX_OK) {
       FX_LOGS(ERROR) << "failed to read superblock." << status;
@@ -254,10 +258,10 @@ uint32_t F2fs::ValidInodeCount() {
 }
 
 zx_status_t FlushDirtyNodePage(F2fs* fs, Page& page) {
-  ZX_ASSERT(page.host == nullptr);
-  ZX_ASSERT(page.host_nid == fs->GetSuperblockInfo().GetNodeIno());
+  ZX_ASSERT(page.GetVnode() != nullptr);
+  ZX_ASSERT(page.GetVnodeId() == fs->GetSuperblockInfo().GetNodeIno());
 
-  if (zx_status_t ret = fs->GetNodeManager().F2fsWriteNodePage(page, nullptr); ret != ZX_OK) {
+  if (zx_status_t ret = fs->GetNodeManager().F2fsWriteNodePage(page, false); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Node page write error " << ret;
     return ret;
   }
@@ -307,10 +311,10 @@ bool F2fs::IsValid() const {
 }
 
 zx_status_t FlushDirtyMetaPage(F2fs* fs, Page& page) {
-  ZX_ASSERT(page.host == nullptr);
-  ZX_ASSERT(page.host_nid == fs->GetSuperblockInfo().GetMetaIno());
+  ZX_ASSERT(page.GetVnode() != nullptr);
+  ZX_ASSERT(page.GetVnodeId() == fs->GetSuperblockInfo().GetMetaIno());
 
-  if (zx_status_t ret = fs->F2fsWriteMetaPage(&page, nullptr); ret != ZX_OK) {
+  if (zx_status_t ret = fs->F2fsWriteMetaPage(&page, false); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Meta page write error " << ret;
     return ret;
   }
@@ -319,11 +323,11 @@ zx_status_t FlushDirtyMetaPage(F2fs* fs, Page& page) {
 }
 
 zx_status_t FlushDirtyDataPage(F2fs* fs, Page& page) {
-  ZX_ASSERT(page.host != nullptr);
+  ZX_ASSERT(page.GetVnode() != nullptr);
 
-  VnodeF2fs* vnode = static_cast<VnodeF2fs*>(page.host);
+  VnodeF2fs* vnode = page.GetVnode();
 
-  if (zx_status_t ret = vnode->WriteDataPageReq(&page, nullptr); ret != ZX_OK) {
+  if (zx_status_t ret = vnode->WriteDataPage(&page, false); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Data page write error " << ret;
     return ret;
   }

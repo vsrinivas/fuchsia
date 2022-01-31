@@ -7,31 +7,6 @@
 
 namespace f2fs {
 
-// Page cache helper
-// TODO: Need to be changed once Pager is available
-inline Page *GrabCachePage(void *vnode, uint32_t nid, pgoff_t index) {
-  Page *page = new Page();
-  page->index = index;
-  page->host = vnode;
-  page->host_nid = nid;
-  return page;
-}
-
-inline void *PageAddress(Page *page) { return (void *)page->data; }
-inline void *PageAddress(Page &page) { return (void *)page.data; }
-// TODO: impl
-inline Page *FindGetPage(void *vnode, pgoff_t index) { return nullptr; }
-inline int PageUptodate(struct Page *page) { return 0; }
-inline void SetPageUptodate(struct Page *page) {}
-inline void ClearPageUptodate(struct Page *page) {}
-inline void ClearPagePrivate(struct Page *) {}
-struct WritebackControl {};
-inline int PageDirty(struct Page *) { return 0; }
-// TODO: impl
-inline int ClearPageDirtyForIo(Page *page) { return 0; }
-inline void SetPageWriteback(Page *page) {}
-inline void WaitOnPageWriteback(Page *page) {}
-
 // Checkpoint
 inline bool VerAfter(uint64_t a, uint64_t b) { return a > b; }
 
@@ -170,16 +145,6 @@ inline void list_add(list_node_t *list, list_node_t *item) {
   item->next = list->next;
   item->prev = list;
   list->next = item;
-}
-
-inline void ZeroUserSegment(Page *page, uint32_t start, uint32_t end) {
-  uint8_t *data = static_cast<uint8_t *>(PageAddress(page));
-
-  ZX_ASSERT(end <= kPageSize && start <= kPageSize);
-
-  if (end > start) {
-    memset(data + start, 0, end - start);
-  }
 }
 
 inline bool IsDotOrDotDot(std::string_view name) { return (name == "." || name == ".."); }

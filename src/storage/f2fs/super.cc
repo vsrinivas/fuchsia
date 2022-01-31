@@ -17,6 +17,9 @@ void F2fs::PutSuper() {
 #endif
 
   WriteCheckpoint(false, true);
+  node_vnode_.reset();
+  meta_vnode_.reset();
+
   GetVCache().Reset();
 
 #ifdef __Fuchsia__
@@ -193,7 +196,7 @@ zx_status_t F2fs::SanityCheckRawSuper() {
 
   // Currently, support 512/1024/2048/4096 block size
   blocksize = 1 << LeToCpu(raw_sb_->log_blocksize);
-  if (blocksize != kPageCacheSize)
+  if (blocksize != kPageSize)
     return ZX_ERR_INVALID_ARGS;
   if (LeToCpu(raw_sb_->log_sectorsize) > kMaxLogSectorSize ||
       LeToCpu(raw_sb_->log_sectorsize) < kMinLogSectorSize)
@@ -294,11 +297,8 @@ zx_status_t F2fs::FillSuper() {
   superblock_info_->ClearOnRecovery();
   InitSuperblockInfo();
 
-  // TODO: Create node/meta vnode when impl dirty cache
-  // if (err = VnodeF2fs::Vget(this, superblock_info->GetMetaIno(), &superblock_info_->meta_vnode);
-  // err) {
-  //   goto free_sb_buf;
-  // }
+  node_vnode_ = std::make_unique<VnodeF2fs>(this, GetSuperblockInfo().GetNodeIno());
+  meta_vnode_ = std::make_unique<VnodeF2fs>(this, GetSuperblockInfo().GetMetaIno());
 
   if (err = GetValidCheckpoint(); err != ZX_OK) {
     return err;

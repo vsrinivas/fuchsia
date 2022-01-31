@@ -41,6 +41,16 @@ bool VnodeF2fs::IsFifo() const { return S_ISFIFO(mode_); }
 
 bool VnodeF2fs::HasGid() const { return mode_ & S_ISGID; }
 
+bool VnodeF2fs::IsNode() {
+  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+  return ino_ == superblock_info.GetNodeIno();
+}
+
+bool VnodeF2fs::IsMeta() {
+  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+  return ino_ == superblock_info.GetMetaIno();
+}
+
 #ifdef __Fuchsia__
 zx_status_t VnodeF2fs::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
                                               [[maybe_unused]] fs::Rights rights,
@@ -66,7 +76,7 @@ void VnodeF2fs::Allocate(F2fs *fs, ino_t ino, uint32_t mode, fbl::RefPtr<VnodeF2
 }
 
 zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
-  Page *node_page = nullptr;
+  fbl::RefPtr<Page> node_page;
 
   if (ino == fs->GetSuperblockInfo().GetNodeIno() || ino == fs->GetSuperblockInfo().GetMetaIno()) {
     *out = fbl::MakeRefCounted<VnodeF2fs>(fs, ino);
@@ -80,7 +90,7 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
     return ZX_ERR_NOT_FOUND;
   }
 
-  Node *rn = static_cast<Node *>(PageAddress(node_page));
+  Node *rn = static_cast<Node *>(node_page->GetAddress());
   Inode &ri = rn->i;
 
   if (S_ISDIR(ri.i_mode)) {
@@ -120,7 +130,7 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
     failed->SetFlag(InodeInfoFlag::kBad);
     failed.reset();
     out = nullptr;
-    F2fsPutPage(node_page, 1);
+    Page::PutPage(std::move(node_page), true);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -133,7 +143,7 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
     vnode->SetExtraISize(ri.i_extra_isize);
   }
 
-  F2fsPutPage(node_page, 1);
+  Page::PutPage(std::move(node_page), true);
   return ZX_OK;
 }
 
@@ -296,9 +306,9 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
   Node *rn;
   Inode *ri;
 
-  WaitOnPageWriteback(node_page);
+  node_page->WaitOnWriteback();
 
-  rn = static_cast<Node *>(PageAddress(node_page));
+  rn = static_cast<Node *>(node_page->GetAddress());
   ri = &(rn->i);
 
   ri->i_mode = CpuToLe(GetMode());
@@ -339,13 +349,13 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
 #if 0  // porting needed
   // set_page_dirty(node_page);
 #else
+  node_page->SetDirty();
   FlushDirtyNodePage(Vfs(), *node_page);
 #endif
 }
 
-zx_status_t VnodeF2fs::WriteInode(WritebackControl *wbc) {
+zx_status_t VnodeF2fs::WriteInode(bool is_reclaim) {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
-  Page *node_page = nullptr;
   zx_status_t ret = ZX_OK;
 
   if (ino_ == superblock_info.GetNodeIno() || ino_ == superblock_info.GetMetaIno()) {
@@ -358,12 +368,12 @@ zx_status_t VnodeF2fs::WriteInode(WritebackControl *wbc) {
 
   {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kNodeOp));
+    fbl::RefPtr<Page> node_page;
     if (ret = Vfs()->GetNodeManager().GetNodePage(ino_, &node_page); ret != ZX_OK)
       return ret;
-    UpdateInode(node_page);
+    UpdateInode(node_page.get());
+    Page::PutPage(std::move(node_page), true);
   }
-
-  F2fsPutPage(node_page, 1);
 
   return ZX_OK;
 }
@@ -389,8 +399,8 @@ int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
   Node *raw_node;
   uint32_t *addr;
 
-  raw_node = static_cast<Node *>(PageAddress(dn->node_page));
-  addr = BlkaddrInNode(raw_node) + ofs;
+  raw_node = static_cast<Node *>(dn->node_page->GetAddress());
+  addr = BlkaddrInNode(*raw_node) + ofs;
 
   for (; count > 0; --count, ++addr, ++dn->ofs_in_node) {
     block_t blkaddr = LeToCpu(*addr);
@@ -406,6 +416,7 @@ int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
 #if 0  // porting needed
     // set_page_dirty(dn->node_page);
 #else
+    dn->node_page->SetDirty();
     FlushDirtyNodePage(Vfs(), *dn->node_page);
 #endif
     Vfs()->GetNodeManager().SyncInodePage(*dn);
@@ -417,8 +428,8 @@ int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
 void VnodeF2fs::TruncateDataBlocks(DnodeOfData *dn) { TruncateDataBlocksRange(dn, kAddrsPerBlock); }
 
 void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
-  size_t offset = from & (kPageCacheSize - 1);
-  Page *page = nullptr;
+  size_t offset = from & (kPageSize - 1);
+  fbl::RefPtr<Page> page;
 
   if (!offset)
     return;
@@ -426,17 +437,16 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
   if (FindDataPage(from >> kPageCacheShift, &page) != ZX_OK)
     return;
 
-#if 0  // porting needed
-  // lock_page(page);
-#endif
-  WaitOnPageWriteback(page);
-  ZeroUserSegment(page, static_cast<uint32_t>(offset), kPageCacheSize);
+  page->Lock();
+  page->WaitOnWriteback();
+  page->ZeroUserSegment(static_cast<uint32_t>(offset), kPageSize);
 #if 0  // porting needed
   // set_page_dirty(page);
 #else
+  page->SetDirty();
   FlushDirtyDataPage(Vfs(), *page);
 #endif
-  F2fsPutPage(page, 1);
+  Page::PutPage(std::move(page), true);
 }
 
 zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
@@ -465,14 +475,14 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
         return err;
       }
 
-      if (IsInode(dn.node_page))
+      if (IsInode(*(dn.node_page)))
         count = kAddrsPerInode;
       else
         count = kAddrsPerBlock;
 
       count -= dn.ofs_in_node;
       ZX_ASSERT(count >= 0);
-      if (dn.ofs_in_node || IsInode(dn.node_page)) {
+      if (dn.ofs_in_node || IsInode(*(dn.node_page))) {
         TruncateDataBlocksRange(&dn, count);
         free_from += count;
       }
@@ -522,14 +532,13 @@ void VnodeF2fs::TruncateToSize() {
 // Called at Recycle if nlink_ is zero
 void VnodeF2fs::EvictVnode() {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
-  // [TODO] currently, there is no cache for node blocks
-  // truncate_inode_pages(&inode->i_data, 0);
+  // TODO: truncate_inode_pages(&inode->i_data, 0);
 
   if (ino_ == superblock_info.GetNodeIno() || ino_ == superblock_info.GetMetaIno())
     return;
 
   ZX_ASSERT(atomic_load_explicit(&fi_.dirty_dents, std::memory_order_relaxed) == 0);
-  // RemoveDirtyDirInode(this);
+  // TODO: RemoveDirtyDirInode(this);
 
   if (GetNlink() || IsBad())
     return;
@@ -555,6 +564,9 @@ void VnodeF2fs::Init() {
 
 void VnodeF2fs::MarkInodeDirty() {
   if (SetFlag(InodeInfoFlag::kDirty)) {
+    return;
+  }
+  if (IsNode() || IsMeta()) {
     return;
   }
   ZX_ASSERT(Vfs()->GetVCache().AddDirty(this) == ZX_OK);
@@ -620,14 +632,14 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
 
   if (need_cp) {
     // TODO: remove it after implementing cache
-    WriteInode(nullptr);
+    WriteInode(false);
     // all the dirty node pages should be flushed for POR
     ret = Vfs()->SyncFs(1);
     ClearFlag(InodeInfoFlag::kNeedCp);
   } else {
     // TODO: it intended to flush all dirty node pages on cache
     // remove it after cache
-    Page *node_page = nullptr;
+    fbl::RefPtr<Page> node_page;
     int mark = !Vfs()->GetNodeManager().IsCheckpointedNode(Ino());
     if (ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &node_page); ret != ZX_OK) {
       return ret;
@@ -636,8 +648,8 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
     NodeManager::SetFsyncMark(*node_page, 1);
     NodeManager::SetDentryMark(*node_page, mark);
 
-    UpdateInode(node_page);
-    F2fsPutPage(node_page, 1);
+    UpdateInode(node_page.get());
+    Page::PutPage(std::move(node_page), true);
 
 #if 0  // porting needed
     // while (Vfs()->GetNodeManager().SyncNodePages(Ino(), &wbc) == 0)

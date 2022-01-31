@@ -104,7 +104,7 @@ class NodeManager {
   zx_status_t BuildNodeManager();
   void DestroyNodeManager();
   zx_status_t ReadNodePage(Page &page, nid_t nid, int type);
-  zx_status_t GetNodePage(nid_t nid, Page **out);
+  zx_status_t GetNodePage(nid_t nid, fbl::RefPtr<Page> *out);
 
   // Caller should acquire LockType:kFileOp when |ro| = 0.
   zx_status_t GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro);
@@ -132,16 +132,17 @@ class NodeManager {
   // The file offset can be calcuated by using the node offset that |node_page| has.
   // See NodeMgt::IS_DNODE().
   static block_t StartBidxOfNode(Page &node_page);
-  static void SetNewDnode(DnodeOfData &dn, VnodeF2fs *vnode, Page *ipage, Page *npage, nid_t nid) {
+  static void SetNewDnode(DnodeOfData &dn, VnodeF2fs *vnode, fbl::RefPtr<Page> ipage,
+                          fbl::RefPtr<Page> npage, nid_t nid) {
     dn.vnode = vnode;
-    dn.inode_page = ipage;
-    dn.node_page = npage;
+    dn.inode_page = std::move(ipage);
+    dn.node_page = std::move(npage);
     dn.nid = nid;
     dn.inode_page_locked = 0;
   }
 
   void GetNodeInfo(nid_t nid, NodeInfo &out);
-  int SyncNodePages(nid_t ino, WritebackControl *wbc);
+  int SyncNodePages(nid_t ino, bool is_reclaim = false);
   void SyncInodePage(DnodeOfData &dn);
 
   bool AllocNid(nid_t &out);
@@ -160,8 +161,8 @@ class NodeManager {
   bool FlushNatsInJournal();
   void FlushNatEntries();
 
-  int F2fsWriteNodePage(Page &page, WritebackControl *wbc);
-  int F2fsWriteNodePages(struct address_space *mapping, WritebackControl *wbc);
+  int F2fsWriteNodePage(Page &page, bool is_reclaim = false);
+  int F2fsWriteNodePages(VnodeF2fs &vnode, bool is_reclaim = false);
 
   zx_status_t RecoverInodePage(Page &page);
   void RecoverNodePage(Page &page, Summary &sum, NodeInfo &ni, block_t new_blkaddr);
@@ -206,8 +207,8 @@ class NodeManager {
   nid_t GetNid(Page &p, int off, bool i);
 
   void ClearNodePageDirty(Page *page);
-  Page *GetCurrentNatPage(nid_t nid);
-  Page *GetNextNatPage(nid_t nid);
+  void GetCurrentNatPage(nid_t nid, fbl::RefPtr<Page> *out);
+  void GetNextNatPage(nid_t nid, fbl::RefPtr<Page> *out);
   void RaNatPages(nid_t nid);
 
   void SetNatCacheDirty(NatEntry &ne) __TA_REQUIRES(nat_tree_lock_);
@@ -226,7 +227,7 @@ class NodeManager {
   zx_status_t TruncateDnode(DnodeOfData &dn);
   zx_status_t TruncateNodes(DnodeOfData &dn, uint32_t nofs, int ofs, int depth);
   zx_status_t TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int (&offset)[4], int depth);
-  zx_status_t NewNodePage(DnodeOfData &dn, uint32_t ofs, Page **out);
+  zx_status_t NewNodePage(DnodeOfData &dn, uint32_t ofs, fbl::RefPtr<Page> *out);
 
 #if 0  // porting needed
   static int IsColdData(Page &page);

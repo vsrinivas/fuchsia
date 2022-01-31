@@ -403,9 +403,10 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   MapTester::SetCachedNatEntryBlockAddress(node_manager, dn.nid, kNewAddr);
   F2fsPutDnode(&dn);
 
-  Page *page = GrabCachePage(nullptr, superblock_info.GetNodeIno(), dn.nid);
+  fbl::RefPtr<Page> page = nullptr;
+  fs_->GetNodeVnode().GrabCachePage(dn.nid, &page);
   ASSERT_EQ(fs_->GetNodeManager().ReadNodePage(*page, dn.nid, kReadSync), ZX_ERR_INVALID_ARGS);
-  F2fsPutPage(page, 0);
+  Page::PutPage(std::move(page), true);
 
   vnode->SetBlocks(1);
 
@@ -662,15 +663,14 @@ TEST_F(NodeManagerTest, NodeFooter) {
   nid_t inode_nid = vnode->Ino();
 
   DnodeOfData dn;
-  SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
-
   NodeManager::SetNewDnode(dn, vnode.get(), nullptr, nullptr, 0);
   const pgoff_t direct_index = 1;
 
   ASSERT_EQ(fs_->GetNodeManager().GetDnodeOfData(dn, direct_index, 0), ZX_OK);
   MapTester::CheckDnodeOfData(&dn, inode_nid, direct_index, true);
 
-  Page *page = GrabCachePage(nullptr, superblock_info.GetMetaIno(), direct_index);
+  fbl::RefPtr<Page> page = nullptr;
+  fs_->GetMetaVnode().GrabCachePage(direct_index, &page);
 
   // Check CopyNodeFooter()
   NodeManager::CopyNodeFooter(*page, *dn.node_page);
@@ -705,7 +705,7 @@ TEST_F(NodeManagerTest, NodeFooter) {
   NodeManager::SetDentryMark(*page, mark);
   ASSERT_EQ(NodeManager::IsDentDnode(*page), 0x0 << static_cast<int>(BitShift::kDentBitShift));
 
-  F2fsPutPage(page, 0);
+  Page::PutPage(std::move(page), true);
   F2fsPutDnode(&dn);
 
   ASSERT_EQ(vnode->Close(), ZX_OK);
