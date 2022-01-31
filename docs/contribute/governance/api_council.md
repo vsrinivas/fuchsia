@@ -331,7 +331,7 @@ on early drafts of this document.
 
 <!-- Reference links -->
 
-[api-council-group]: https://groups.google.com/a/fuchsia.com/forum/#!forum/api-council
+[api-council-group]: https://groups.google.com/a/fuchsia.dev/forum/#!forum/api-council
 [api-design-template]: /docs/contribute/governance/api-design-template.md
 [eng-council]: /docs/contribute/governance/eng_council.md
 [review-labels]: https://gerrit-review.googlesource.com/Documentation/config-labels.html
