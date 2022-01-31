@@ -44,7 +44,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
-    "//sdk/fidl/fuchsia.ui.accessibility.view:fuchsia.ui.accessibility.view-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

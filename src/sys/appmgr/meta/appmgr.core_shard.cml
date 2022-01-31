@@ -325,7 +325,6 @@
                 "fuchsia.element.GraphicalPresenter",
                 "fuchsia.input.injection.InputDeviceRegistry",
                 "fuchsia.session.Launcher",
-                "fuchsia.ui.accessibility.view.Registry",
             ],
             from: "#session-manager",
             dependency: "weak_for_migration",
