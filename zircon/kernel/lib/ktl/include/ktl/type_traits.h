@@ -48,11 +48,23 @@ using std::is_copy_assignable_v;
 using std::is_default_constructible;
 using std::is_default_constructible_v;
 
+using std::is_enum;
+using std::is_enum_v;
+
 using std::is_floating_point;
 using std::is_floating_point_v;
 
+using std::is_function;
+using std::is_function_v;
+
 using std::is_integral;
 using std::is_integral_v;
+
+using std::invoke_result_t;
+using std::is_invocable;
+using std::is_invocable_r;
+using std::is_invocable_r_v;
+using std::is_invocable_v;
 
 using std::is_lvalue_reference;
 using std::is_lvalue_reference_v;
@@ -113,6 +125,9 @@ using std::remove_reference_t;
 
 using std::aligned_storage;
 using std::aligned_storage_t;
+
+using std::underlying_type;
+using std::underlying_type_t;
 
 }  // namespace ktl
 
