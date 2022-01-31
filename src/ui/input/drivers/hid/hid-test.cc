@@ -5,7 +5,6 @@
 #include "hid.h"
 
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <unistd.h>
 
 #include <thread>
@@ -16,44 +15,9 @@
 #include <hid/paradise.h>
 #include <zxtest/zxtest.h>
 
+#include "src/devices/testing/mock-ddk/mock-device.h"
+
 namespace hid_driver {
-
-struct ProtocolDeviceOps {
-  const zx_protocol_device_t* ops;
-  void* ctx;
-};
-
-// Create our own Fake Ddk Bind class. We want to save the last device arguments that
-// have been seen, so the test can get ahold of the instance device and test
-// Reads and Writes on it.
-class Binder : public fake_ddk::Bind {
- public:
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    zx_status_t status;
-
-    if (args && args->ops) {
-      if (args->ops->message) {
-        if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message)) < 0) {
-          return status;
-        }
-      }
-    }
-
-    *out = fake_ddk::kFakeDevice;
-    add_called_ = true;
-
-    last_ops_.ctx = args->ctx;
-    last_ops_.ops = args->ops;
-
-    return ZX_OK;
-  }
-
-  ProtocolDeviceOps GetLastDeviceOps() { return last_ops_; }
-
- private:
-  ProtocolDeviceOps last_ops_;
-};
 
 class FakeHidbus : public ddk::HidbusProtocol<FakeHidbus> {
  public:
@@ -162,21 +126,17 @@ class FakeHidbus : public ddk::HidbusProtocol<FakeHidbus> {
 
 class HidDeviceTest : public zxtest::Test {
  public:
+  HidDeviceTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   void SetUp() override {
+    fake_root_ = MockDevice::FakeRootParent();
     client_ = ddk::HidbusProtocolClient(fake_hidbus_.GetProto());
-    device_ = new HidDevice(fake_ddk::kFakeParent);
+    device_ = new HidDevice(fake_root_.get());
 
+    ASSERT_OK(loop_.StartThread("fidl-thread"));
     // Each test is responsible for calling Bind().
   }
 
-  void TearDown() override {
-    TeardownInstanceDriver();
-    device_->DdkAsyncRemove();
-    EXPECT_TRUE(ddk_.Ok());
-
-    // This should delete the object, which means this test should not leak.
-    device_->DdkRelease();
-  }
+  void TearDown() override { TeardownInstanceDriver(); }
 
   void SetupBootMouseDevice() {
     size_t desc_size;
@@ -194,10 +154,13 @@ class HidDeviceTest : public zxtest::Test {
 
   void SetupInstanceDriver() {
     ASSERT_OK(device_->DdkOpen(&instance_driver_, 0));
-    instance_ops_ = ddk_.GetLastDeviceOps();
 
-    sync_client_ =
-        fidl::WireSyncClient<fuchsia_hardware_input::Device>(std::move(ddk_.FidlClient()));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_input::Device>();
+    ASSERT_OK(endpoints.status_value());
+    sync_client_ = fidl::WireSyncClient(std::move(endpoints->client));
+    fidl::BindServer<fidl::WireServer<fuchsia_hardware_input::Device>>(
+        loop_.dispatcher(), std::move(endpoints->server),
+        instance_driver_->GetDeviceContext<hid_driver::HidInstance>());
 
     auto result = sync_client_->GetReportsEvent();
     ASSERT_OK(result.status());
@@ -209,9 +172,8 @@ class HidDeviceTest : public zxtest::Test {
     if (instance_driver_ == nullptr) {
       return;
     }
-
-    instance_ops_.ops->close(instance_ops_.ctx, 0);
-    instance_ops_.ops->release(instance_ops_.ctx);
+    instance_driver_->CloseOp(0);
+    instance_driver_->ReleaseOp();
     instance_driver_ = nullptr;
   }
 
@@ -243,12 +205,13 @@ class HidDeviceTest : public zxtest::Test {
 
  protected:
   zx_device_t* instance_driver_ = nullptr;
-  ProtocolDeviceOps instance_ops_;
   fidl::WireSyncClient<fuchsia_hardware_input::Device> sync_client_;
   zx::event report_event_;
 
   HidDevice* device_;
-  Binder ddk_;
+  async::Loop loop_;
+
+  std::shared_ptr<MockDevice> fake_root_;
   FakeHidbus fake_hidbus_;
   ddk::HidbusProtocolClient client_;
 };
@@ -279,10 +242,14 @@ TEST_F(HidDeviceTest, TestQuery) {
   ASSERT_OK(device_->DdkOpen(&open_dev, 0));
   // Opening the device created an instance device to be created, and we can
   // get its arguments here.
-  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
-
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_input::Device>();
+  ASSERT_OK(endpoints.status_value());
   auto sync_client =
-      fidl::WireSyncClient<fuchsia_hardware_input::Device>(std::move(ddk_.FidlClient()));
+      fidl::WireSyncClient<fuchsia_hardware_input::Device>(std::move(endpoints->client));
+  fidl::BindServer<fidl::WireServer<fuchsia_hardware_input::Device>>(
+      loop_.dispatcher(), std::move(endpoints->server),
+      open_dev->GetDeviceContext<hid_driver::HidInstance>());
+
   auto result = sync_client->GetDeviceIds();
   ASSERT_OK(result.status());
   fuchsia_hardware_input::wire::DeviceIds ids = result->ids;
@@ -292,8 +259,8 @@ TEST_F(HidDeviceTest, TestQuery) {
   ASSERT_EQ(kVersion, ids.version);
 
   // Close the instance device.
-  dev_ops.ops->close(dev_ops.ctx, 0);
-  dev_ops.ops->release(dev_ops.ctx);
+  open_dev->CloseOp(0);
+  open_dev->ReleaseOp();
 }
 
 TEST_F(HidDeviceTest, BootMouseSendReport) {
@@ -389,7 +356,8 @@ TEST_F(HidDeviceTest, BootMouseSendMultipleReports) {
 
 TEST(HidDeviceTest, FailToRegister) {
   FakeHidbus fake_hidbus;
-  HidDevice device(fake_ddk::kFakeParent);
+  auto fake_root = MockDevice::FakeRootParent();
+  HidDevice device(fake_root.get());
 
   fake_hidbus.SetStartStatus(ZX_ERR_INTERNAL);
   auto client = ddk::HidbusProtocolClient(fake_hidbus.GetProto());

@@ -70,7 +70,7 @@ test("hid-test") {
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.hiddevice:fuchsia.hardware.hiddevice_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/listnode",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
