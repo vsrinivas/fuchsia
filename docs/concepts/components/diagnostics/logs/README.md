@@ -59,4 +59,4 @@ from the previous boot. These messages appear when running [`fx snapshot`].
 [feedback data]: /src/developer/forensics/feedback_data
 [persistent disk store]: /src/developer/forensics/feedback_data/system_log_recorder/system_log_recorder.h
 [`fx snapshot`]: /src/developer/forensics/snapshot/README.md
-[Attributing LogSink connections]: /docs/concepts/diagnostics/logs/attribution.md
+[Attributing LogSink connections]: /docs/concepts/components/diagnostics/logs/attribution.md

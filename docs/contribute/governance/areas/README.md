@@ -56,7 +56,7 @@ The set of APIs that are used to publish and query diagnostics data from
 components on the system. This includes the ability to [stream
 logs](/docs/reference/diagnostics/logs/access.md), view and publish [Inspect
 data](/docs/development/diagnostics/inspect/README.md), and [observe lifecycle
-events](/docs/concepts/diagnostics/lifecycle_events/README.md).
+events](/docs/concepts/components/diagnostics/lifecycle_events/README.md).
 
 Examples:
 

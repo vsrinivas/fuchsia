@@ -102,4 +102,4 @@ streams in the system.
 [`ffx log`]: /docs/development/diagnostics/logs/viewing.md
 [dart-dev]: /docs/development/languages/dart/README.md
 [`stdout` & `stderr`]: /docs/development/diagnostics/logs/recording.md#stdout-stderr
-[language agnostic logging docs]: /docs/concepts/diagnostics/logs/README.md
+[language agnostic logging docs]: /docs/concepts/components/diagnostics/logs/README.md

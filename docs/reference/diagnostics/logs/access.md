@@ -161,7 +161,7 @@ the unsafe `fuchsia.logger.LogListener` API is [planned](https://fxbug.dev/48758
 
 [ArchiveAccessor]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor
 [ArchiveAccessor reference]: /src/diagnostics/docs/reference/access.md
-[attribution]: /docs/concepts/diagnostics/logs/attribution.md
+[attribution]: /docs/concepts/components/diagnostics/logs/attribution.md
 [BatchIterator]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#BatchIterator
 [ClientSelectorConfiguration]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ClientSelectorConfiguration
 [DataType]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#DataType

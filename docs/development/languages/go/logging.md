@@ -2,7 +2,7 @@
 
 Go programs on Fuchsia generally use the [syslog package] and its `syslog.Infof()` functions.
 
-See the [language agnostic logging docs](/docs/concepts/diagnostics/logs/README.md) for more information
+See the [language agnostic logging docs](/docs/concepts/components/diagnostics/logs/README.md) for more information
 about recording and viewing logs.
 
 ## Requirements

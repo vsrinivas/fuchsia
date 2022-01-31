@@ -39,6 +39,16 @@ toc:
   section:
   - title: "Hub"
     path: /docs/concepts/components/v2/hub.md
+  - title: "Lifecycle events"
+    section:
+    - title: "Overview"
+      path: /docs/concepts/components/diagnostics/lifecycle_events/README.md
+  - title: "Logs"
+    section:
+    - title: "Overview"
+      path: /docs/concepts/components/diagnostics/logs/README.md
+    - title: "Attributing LogSink connections"
+      path: /docs/concepts/components/diagnostics/logs/attribution.md
 - title: "Internals"
   section:
   - title: "Component Framework design principles"
@@ -65,3 +75,34 @@ toc:
     path: /docs/concepts/testing/v1_test_component.md
   - title: "Testing isolated cache storage"
     path: /docs/concepts/testing/testing_isolated_cache_storage.md
+
+# TODO(fxbug.dev/60771)
+# - title: "Overview"
+#   path: /docs/concepts/components/diagnostics/README.md
+
+# TODO(fxbug.dev/60763)
+# - title: "ArchiveAccessor"
+#   path: /docs/concepts/components/diagnostics/accessor.md
+
+# TODO(fxbug.dev/60768)
+# - title: "Component Lifecycle"
+#   path: /docs/concepts/components/diagnostics/lifecycle.md
+  # TODO(fxbug.dev/60767)
+  # - title: "Overview"
+  #   path: /docs/concepts/components/diagnostics/inspect/README.md
+
+  # TODO(fxbug.dev/60764)
+  # - title: "Principles"
+  #   path: /docs/concepts/components/diagnostics/inspect/principles.md
+
+
+  # TODO(fxbug.dev/60766)
+  # - title: "Principles"
+  #   path: /docs/concepts/components/diagnostics/logs/principles.md
+
+  # TODO(fxbug.dev/60767)
+  # - title: "Severity"
+  #   path: /docs/concepts/components/diagnostics/logs/severity.md
+# TODO(fxbug.dev/60772)
+# - title: "Triage & Detect"
+#   path: /docs/concepts/components/diagnostics/triage.md

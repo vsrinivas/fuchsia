@@ -416,7 +416,7 @@ offer: [
 [doc-trf-runner]: /docs/development/testing/components/test_runner_framework.md#test-runners
 [doc-trf]: /docs/development/testing/components/test_runner_framework.md
 [doc-intro]: /docs/concepts/components/v2/introduction.md
-[doc-logs]: /docs/concepts/diagnostics/logs/README.md
+[doc-logs]: /docs/concepts/components/diagnostics/logs/README.md
 [doc-manifests-program]: https://fuchsia.dev/reference/cml#program
 [doc-manifests]: /docs/concepts/components/v2/component_manifests.md
 [doc-monikers]: /docs/concepts/components/v2/monikers.md
