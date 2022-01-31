@@ -188,11 +188,11 @@ impl Node {
 
     /// Creates a new `StringArrayProperty` with the given `name` and `slots`.
     #[must_use]
-    pub fn create_string_array<'b>(
+    pub fn create_string_array<'a, 'b>(
         &self,
         name: impl Into<StringReference<'b>>,
         slots: usize,
-    ) -> StringArrayProperty<'_> {
+    ) -> StringArrayProperty<'a> {
         self.inner
             .inner_ref()
             .and_then(|inner_ref| {
@@ -603,7 +603,10 @@ mod tests {
     use super::*;
     use crate::{
         assert_json_diff, reader,
-        writer::{private::InspectTypeInternal, testing_utils::get_state, Error, NumericProperty},
+        writer::{
+            private::InspectTypeInternal, testing_utils::get_state, ArrayProperty, Error,
+            NumericProperty,
+        },
     };
     use diagnostics_hierarchy::{assert_data_tree, DiagnosticsHierarchy};
     use fuchsia_zircon::{AsHandleRef, Peered};
@@ -1043,6 +1046,25 @@ mod tests {
                 a: 1i64,
                 b: 2i64,
                 c: 3i64,
+            }
+        });
+    }
+
+    #[fuchsia::test]
+    fn string_arrays_on_record() {
+        let inspector = Inspector::new();
+        inspector.root().record_child("child", |node| {
+            node.record_int("my_int", 1i64);
+
+            let arr: crate::StringArrayProperty<'static> =
+                node.create_string_array("my_string_array", 1);
+            arr.set(0, "test");
+            node.record(arr);
+        });
+        assert_data_tree!(inspector, root: {
+            child: {
+                my_int: 1i64,
+                my_string_array: vec!["test"]
             }
         });
     }
