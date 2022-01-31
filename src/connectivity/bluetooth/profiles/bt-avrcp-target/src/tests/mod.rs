@@ -148,6 +148,16 @@ async fn send_get_notification(target_proxy: TargetHandlerProxy) {
         .expect("FIDL call should work");
     assert_eq!(Ok(Notification { track_id: Some(std::u64::MAX), ..Notification::EMPTY }), res);
 
+    // Send a GetNotification request for the current battery status - default is Normal.
+    let res = target_proxy
+        .get_notification(NotificationEvent::BattStatusChanged)
+        .await
+        .expect("FIDL call should work");
+    assert_eq!(
+        Ok(Notification { battery_status: Some(BatteryStatus::Normal), ..Notification::EMPTY }),
+        res
+    );
+
     // Send an unsupported `NotificationEvent`.
     let res = target_proxy
         .get_notification(NotificationEvent::AvailablePlayersChanged)
@@ -367,6 +377,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
                 NotificationEvent::PlaybackStatusChanged,
                 NotificationEvent::TrackChanged,
                 NotificationEvent::TrackPosChanged,
+                NotificationEvent::BattStatusChanged,
             ]),
             res
         );

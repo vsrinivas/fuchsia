@@ -57,7 +57,7 @@ impl NotificationData {
         value: Result<Notification, fidl_avrcp::TargetAvcError>,
     ) -> Result<(), fidl::Error> {
         if let Some(responder) = self.responder.take() {
-            responder.send(&mut value.map(|v| v.into()))
+            responder.send(&mut value.map(Into::into))
         } else {
             Err(fidl::Error::NotNullable)
         }
@@ -112,6 +112,9 @@ impl NotificationData {
                     || self.expected_response_time.map_or(false, |t| fasync::Time::now() >= t);
                 Ok(flag)
             }
+            fidl_avrcp::NotificationEvent::BattStatusChanged => {
+                Ok(self.current_value.battery_status != new_value.battery_status)
+            }
             fidl_avrcp::NotificationEvent::AddressedPlayerChanged => {
                 Ok(self.current_value.player_id != new_value.player_id)
             }
@@ -140,7 +143,6 @@ impl Drop for NotificationData {
 mod tests {
     use super::*;
 
-    use crate::media::media_types::ValidPlayerApplicationSettings;
     use crate::tests::generate_empty_watch_notification;
 
     use fidl::endpoints::create_proxy_and_stream;
@@ -155,20 +157,19 @@ mod tests {
         let (result_fut, responder) =
             generate_empty_watch_notification(&mut proxy, &mut stream).await?;
         {
-            let prev_value = Notification::new(
-                Some(fidl_avrcp::PlaybackStatus::Stopped),
-                Some(999),
-                Some(12345),
-                Some(ValidPlayerApplicationSettings::new(
-                    None,
-                    Some(fidl_avrcp::RepeatStatusMode::GroupRepeat),
-                    None,
-                    Some(fidl_avrcp::ScanMode::Off),
-                )),
-                None,
-                None,
-                None,
-            );
+            let prev_value: Notification = fidl_avrcp::Notification {
+                status: Some(fidl_avrcp::PlaybackStatus::Stopped),
+                track_id: Some(999),
+                pos: Some(12345),
+                application_settings: Some(fidl_avrcp::PlayerApplicationSettings {
+                    repeat_status_mode: Some(fidl_avrcp::RepeatStatusMode::GroupRepeat),
+                    scan_mode: Some(fidl_avrcp::ScanMode::Off),
+                    ..fidl_avrcp::PlayerApplicationSettings::EMPTY
+                }),
+                battery_status: Some(fidl_avrcp::BatteryStatus::Normal),
+                ..fidl_avrcp::Notification::EMPTY
+            }
+            .into();
             let data = NotificationData::new(
                 fidl_avrcp::NotificationEvent::TrackChanged,
                 prev_value,
@@ -177,20 +178,19 @@ mod tests {
                 responder,
             );
 
-            let curr_value = Notification::new(
-                Some(fidl_avrcp::PlaybackStatus::Playing),
-                Some(800),
-                Some(12345),
-                Some(ValidPlayerApplicationSettings::new(
-                    None,
-                    Some(fidl_avrcp::RepeatStatusMode::GroupRepeat),
-                    None,
-                    Some(fidl_avrcp::ScanMode::Off),
-                )),
-                None,
-                None,
-                None,
-            );
+            let curr_value: Notification = fidl_avrcp::Notification {
+                status: Some(fidl_avrcp::PlaybackStatus::Playing),
+                track_id: Some(800),
+                pos: Some(12345),
+                application_settings: Some(fidl_avrcp::PlayerApplicationSettings {
+                    repeat_status_mode: Some(fidl_avrcp::RepeatStatusMode::GroupRepeat),
+                    scan_mode: Some(fidl_avrcp::ScanMode::Off),
+                    ..fidl_avrcp::PlayerApplicationSettings::EMPTY
+                }),
+                battery_status: Some(fidl_avrcp::BatteryStatus::Critical),
+                ..fidl_avrcp::Notification::EMPTY
+            }
+            .into();
 
             let res1 = data.notification_value_changed(
                 &fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
@@ -217,10 +217,16 @@ mod tests {
             assert_eq!(res4.unwrap(), true);
 
             let res5 = data.notification_value_changed(
+                &fidl_avrcp::NotificationEvent::BattStatusChanged,
+                &curr_value,
+            );
+            assert_eq!(res5.unwrap(), true);
+
+            let res6 = data.notification_value_changed(
                 &fidl_avrcp::NotificationEvent::SystemStatusChanged,
                 &curr_value,
             );
-            assert!(res5.is_err());
+            assert!(res6.is_err());
         }
 
         assert!(result_fut.await.is_ok());
@@ -266,10 +272,7 @@ mod tests {
             status: Some(fidl_avrcp::PlaybackStatus::Paused),
             ..Notification::default()
         };
-        assert_eq!(
-            Ok(expected),
-            result_fut.await.expect("FIDL call should work").map(|v| v.into())
-        );
+        assert_eq!(Ok(expected), result_fut.await.expect("FIDL call should work").map(Into::into));
         Ok(())
     }
 
@@ -311,10 +314,7 @@ mod tests {
         // dropped at the end of the closure. Drop is impl'd for NotificationData, which
         // sends the current value.
         let expected = Notification::default();
-        assert_eq!(
-            Ok(expected),
-            result_fut.await.expect("FIDL call should work").map(|v| v.into())
-        );
+        assert_eq!(Ok(expected), result_fut.await.expect("FIDL call should work").map(Into::into));
         Ok(())
     }
 

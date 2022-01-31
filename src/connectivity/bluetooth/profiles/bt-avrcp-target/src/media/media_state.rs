@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp},
-    fidl_fuchsia_media::{self as fidl_media_types},
-    fidl_fuchsia_media_sessions2::{self as fidl_media, SessionControlProxy, SessionInfoDelta},
-    tracing::{trace, warn},
-};
+use fidl_fuchsia_bluetooth_avrcp as fidl_avrcp;
+use fidl_fuchsia_media as fidl_media_types;
+use fidl_fuchsia_media_sessions2::{self as fidl_media, SessionControlProxy, SessionInfoDelta};
+use tracing::{trace, warn};
 
 use crate::media::media_types::{
     avrcp_repeat_mode_to_media, avrcp_shuffle_mode_to_media, media_repeat_mode_to_avrcp,
@@ -38,9 +36,14 @@ impl MediaState {
         Self { session_control, session_info: SessionInfo::new() }
     }
 
-    // Updates `session_info` based on the given changes `info`.
+    /// Updates `session_info` with the new `info` changes.
     pub fn update_session_info(&mut self, info: SessionInfoDelta) {
         self.session_info.update_session_info(info.player_status, info.metadata);
+    }
+
+    /// Updates the saved battery status with the new `status`.
+    pub fn update_battery_status(&mut self, status: fidl_avrcp::BatteryStatus) {
+        self.session_info.update_battery_status(status);
     }
 
     pub fn session_info(&self) -> SessionInfo {
@@ -48,12 +51,12 @@ impl MediaState {
     }
 
     /// Set requested player application settings on the MediaPlayer.
-    /// Currently, MediaSession only supports RepeatStatusMode and ShuffleMode.
-    /// If an unsupported player application setting is provided, return a TargetAvcError.
+    /// Returns `RejectedInvalidParameter` if an unsupported player application setting is provided.
     pub async fn handle_set_player_application_settings(
         &self,
         requested_settings: ValidPlayerApplicationSettings,
     ) -> Result<ValidPlayerApplicationSettings, fidl_avrcp::TargetAvcError> {
+        // Currently, MediaSession only supports RepeatStatusMode and ShuffleMode.
         if requested_settings.unsupported_settings_set() {
             return Err(fidl_avrcp::TargetAvcError::RejectedInvalidParameter);
         }
@@ -151,6 +154,7 @@ pub(crate) struct SessionInfo {
     player_application_settings: ValidPlayerApplicationSettings,
     media_info: MediaInfo,
     playback_rate: PlaybackRate,
+    battery_status: fidl_avrcp::BatteryStatus,
 }
 
 impl SessionInfo {
@@ -162,6 +166,7 @@ impl SessionInfo {
             ),
             media_info: Default::default(),
             playback_rate: Default::default(),
+            battery_status: fidl_avrcp::BatteryStatus::Normal,
         }
     }
 
@@ -225,7 +230,7 @@ impl SessionInfo {
 
     /// Returns a `Notification` containing the currently set notification value specified
     /// by `event_id`.
-    /// If an unsupported id is provided, an error is returned.
+    /// Returns `RejectedInvalidParameter` for unsupported `NotificationEvent` IDs.
     // TODO(fxbug.dev/1216): Add VolumeChanged to supported events when scoped.
     pub fn get_notification_value(
         &self,
@@ -250,6 +255,9 @@ impl SessionInfo {
             }
             fidl_avrcp::NotificationEvent::AddressedPlayerChanged => {
                 notification.player_id = Some(self.get_player_id());
+            }
+            fidl_avrcp::NotificationEvent::BattStatusChanged => {
+                notification.battery_status = Some(self.battery_status);
             }
             _ => {
                 warn!(
@@ -291,6 +299,11 @@ impl SessionInfo {
             self.media_info.update_media_info(info.duration, metadata);
         }
     }
+
+    /// Updates the saved battery level for the session.
+    pub fn update_battery_status(&mut self, status: fidl_avrcp::BatteryStatus) {
+        self.battery_status = status;
+    }
 }
 
 impl From<SessionInfo> for Notification {
@@ -303,6 +316,7 @@ impl From<SessionInfo> for Notification {
         notification.track_id = Some(src.media_info.get_track_id());
         notification.pos = Some(src.play_status.get_playback_position());
         notification.player_id = Some(src.get_player_id());
+        notification.battery_status = Some(src.battery_status);
         notification
     }
 }
@@ -542,7 +556,7 @@ pub(crate) mod tests {
         let mut media_state = MediaState::new(session_proxy);
 
         // 1. Unsupported ID.
-        let unsupported_id = fidl_avrcp::NotificationEvent::BattStatusChanged;
+        let unsupported_id = fidl_avrcp::NotificationEvent::UidsChanged;
         let res = media_state.session_info().get_notification_value(&unsupported_id);
         assert!(res.is_err());
 
@@ -561,27 +575,41 @@ pub(crate) mod tests {
             ..fidl_media::SessionInfoDelta::EMPTY
         };
         media_state.update_session_info(info);
+        media_state.update_battery_status(fidl_avrcp::BatteryStatus::Critical);
 
         let expected_play_status = fidl_avrcp::PlaybackStatus::Playing;
-        let expected_pas = ValidPlayerApplicationSettings::new(
-            None,
-            Some(fidl_avrcp::RepeatStatusMode::Off),
-            Some(fidl_avrcp::ShuffleMode::AllTrackShuffle),
-            None,
-        );
-        // Supported = PAS, Playback, Track, TrackPos
-        let valid_events = vec![
+        let expected_pas = fidl_avrcp::PlayerApplicationSettings {
+            repeat_status_mode: Some(fidl_avrcp::RepeatStatusMode::Off),
+            shuffle_mode: Some(fidl_avrcp::ShuffleMode::AllTrackShuffle),
+            ..fidl_avrcp::PlayerApplicationSettings::EMPTY
+        };
+        let requested_events = vec![
             fidl_avrcp::NotificationEvent::PlayerApplicationSettingChanged,
             fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
             fidl_avrcp::NotificationEvent::TrackChanged,
+            fidl_avrcp::NotificationEvent::BattStatusChanged,
         ];
         let expected_values: Vec<Notification> = vec![
-            Notification::new(None, None, None, Some(expected_pas), None, None, None),
-            Notification::new(Some(expected_play_status), None, None, None, None, None, None),
-            Notification::new(None, Some(0), None, None, None, None, None),
+            fidl_avrcp::Notification {
+                application_settings: Some(expected_pas),
+                ..fidl_avrcp::Notification::EMPTY
+            }
+            .into(),
+            fidl_avrcp::Notification {
+                status: Some(expected_play_status),
+                ..fidl_avrcp::Notification::EMPTY
+            }
+            .into(),
+            fidl_avrcp::Notification { track_id: Some(0), ..fidl_avrcp::Notification::EMPTY }
+                .into(),
+            fidl_avrcp::Notification {
+                battery_status: Some(fidl_avrcp::BatteryStatus::Critical),
+                ..fidl_avrcp::Notification::EMPTY
+            }
+            .into(),
         ];
 
-        for (event_id, expected_v) in valid_events.iter().zip(expected_values.iter()) {
+        for (event_id, expected_v) in requested_events.iter().zip(expected_values.iter()) {
             assert_eq!(
                 media_state
                     .session_info()

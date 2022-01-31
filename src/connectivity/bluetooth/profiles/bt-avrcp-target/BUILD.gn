@@ -16,6 +16,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
     "//src/connectivity/bluetooth/fidl:component-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers",
+    "//src/connectivity/bluetooth/lib/battery-client",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl_table_validation",
@@ -31,8 +32,11 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tracing",
   ]
 
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
+
   sources = [
     "src/avrcp_handler.rs",
+    "src/battery_client.rs",
     "src/main.rs",
     "src/media/media_sessions.rs",
     "src/media/media_state.rs",

@@ -74,7 +74,7 @@ async fn handle_target_request(
                     state
                         .session_info()
                         .get_player_application_settings(attribute_ids)
-                        .map(|s| s.into())
+                        .map(Into::into)
                 },
             );
             responder.send(&mut response)?;
@@ -83,7 +83,7 @@ async fn handle_target_request(
             if let Ok(state) = media_sessions.get_active_session() {
                 let set_settings =
                     state.handle_set_player_application_settings(requested_settings.into()).await;
-                responder.send(&mut set_settings.map(|s| s.into()))?;
+                responder.send(&mut set_settings.map(Into::into))?;
             } else {
                 responder.send(&mut Err(TargetAvcError::RejectedNoAvailablePlayers))?;
             }
@@ -93,7 +93,7 @@ async fn handle_target_request(
                 Err(TargetAvcError::RejectedNoAvailablePlayers),
                 |state| {
                     let notification = state.session_info().get_notification_value(&event_id);
-                    notification.map(|n| n.into())
+                    notification.map(Into::into)
                 },
             );
             responder.send(&mut response)?;

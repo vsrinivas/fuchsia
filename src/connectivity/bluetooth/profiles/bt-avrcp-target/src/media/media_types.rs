@@ -291,10 +291,10 @@ impl ValidPlayerApplicationSettings {
 impl From<fidl_avrcp::PlayerApplicationSettings> for ValidPlayerApplicationSettings {
     fn from(src: fidl_avrcp::PlayerApplicationSettings) -> ValidPlayerApplicationSettings {
         ValidPlayerApplicationSettings::new(
-            src.equalizer.map(|v| v.into()),
-            src.repeat_status_mode.map(|v| v.into()),
-            src.shuffle_mode.map(|v| v.into()),
-            src.scan_mode.map(|v| v.into()),
+            src.equalizer.map(Into::into),
+            src.repeat_status_mode.map(Into::into),
+            src.shuffle_mode.map(Into::into),
+            src.scan_mode.map(Into::into),
         )
     }
 }
@@ -431,7 +431,7 @@ pub(crate) struct Notification {
     pub status: Option<fidl_avrcp::PlaybackStatus>,
     pub track_id: Option<u64>,
     pub pos: Option<u32>,
-    // BatteryStatus
+    pub battery_status: Option<fidl_avrcp::BatteryStatus>,
     // SystemStatus
     pub application_settings: Option<ValidPlayerApplicationSettings>,
     pub player_id: Option<u16>,
@@ -440,21 +440,30 @@ pub(crate) struct Notification {
 }
 
 impl Notification {
-    pub fn new(
+    fn new(
         status: Option<fidl_avrcp::PlaybackStatus>,
         track_id: Option<u64>,
         pos: Option<u32>,
+        battery_status: Option<fidl_avrcp::BatteryStatus>,
         application_settings: Option<ValidPlayerApplicationSettings>,
         player_id: Option<u16>,
         volume: Option<u8>,
         device_connected: Option<bool>,
     ) -> Self {
-        Self { status, track_id, pos, application_settings, player_id, volume, device_connected }
+        Self {
+            status,
+            track_id,
+            pos,
+            battery_status,
+            application_settings,
+            player_id,
+            volume,
+            device_connected,
+        }
     }
 
-    /// Returns a `Notification` with only the field specified by å`event_id` set.
-    /// If `event_id` is not supported, the default empty `Notification` will be
-    /// returned.
+    /// Returns a `Notification` with only the field specified by `event_id` set.
+    /// If `event_id` is not supported, the default empty `Notification` will be returned.
     pub fn only_event(&self, event_id: &fidl_avrcp::NotificationEvent) -> Self {
         let mut res = Notification::default();
         match event_id {
@@ -466,6 +475,9 @@ impl Notification {
             }
             fidl_avrcp::NotificationEvent::TrackPosChanged => {
                 res.pos = self.pos;
+            }
+            fidl_avrcp::NotificationEvent::BattStatusChanged => {
+                res.battery_status = self.battery_status;
             }
             fidl_avrcp::NotificationEvent::PlayerApplicationSettingChanged => {
                 res.application_settings = self.application_settings.clone();
@@ -485,9 +497,10 @@ impl Notification {
 impl From<fidl_avrcp::Notification> for Notification {
     fn from(src: fidl_avrcp::Notification) -> Notification {
         Notification::new(
-            src.status.map(|s| s.into()),
+            src.status.map(Into::into),
             src.track_id,
             src.pos,
+            src.battery_status,
             src.application_settings.map(|s| s.try_into().expect("Couldn't convert PAS")),
             src.player_id,
             src.volume,
@@ -500,10 +513,11 @@ impl From<Notification> for fidl_avrcp::Notification {
     fn from(src: Notification) -> fidl_avrcp::Notification {
         let mut res = fidl_avrcp::Notification::EMPTY;
 
-        res.status = src.status.map(|s| s.into());
+        res.status = src.status.map(Into::into);
         res.track_id = src.track_id;
         res.pos = src.pos;
-        res.application_settings = src.application_settings.map(|s| s.into());
+        res.battery_status = src.battery_status;
+        res.application_settings = src.application_settings.map(Into::into);
         res.player_id = src.player_id;
         res.volume = src.volume;
         res.device_connected = src.device_connected;
@@ -908,29 +922,38 @@ mod tests {
     #[fuchsia::test]
     /// Tests getting only a specific event_id of a `Notification` success.
     fn test_notification_only_event_encoding() {
-        let notif = Notification::new(
-            Some(fidl_avrcp::PlaybackStatus::Paused),
-            Some(1000),
-            Some(99),
-            None,
-            None,
-            None,
-            None,
-        );
+        let notif: Notification = fidl_avrcp::Notification {
+            status: Some(fidl_avrcp::PlaybackStatus::Paused),
+            track_id: Some(1000),
+            pos: Some(99),
+            battery_status: Some(fidl_avrcp::BatteryStatus::Critical),
+            ..fidl_avrcp::Notification::EMPTY
+        }
+        .into();
 
         // Supported event_id.
         let event_id = fidl_avrcp::NotificationEvent::TrackPosChanged;
-        let expected = Notification::new(None, None, Some(99), None, None, None, None);
+        let expected: Notification =
+            fidl_avrcp::Notification { pos: Some(99), ..fidl_avrcp::Notification::EMPTY }.into();
         assert_eq!(expected, notif.only_event(&event_id));
 
         // Supported event_id, volume is None.
         let event_id = fidl_avrcp::NotificationEvent::VolumeChanged;
-        let expected = Notification::default();
+        let expected: Notification = fidl_avrcp::Notification::EMPTY.into();
+        assert_eq!(expected, notif.only_event(&event_id));
+
+        // Supported event_id.
+        let event_id = fidl_avrcp::NotificationEvent::BattStatusChanged;
+        let expected: Notification = fidl_avrcp::Notification {
+            battery_status: Some(fidl_avrcp::BatteryStatus::Critical),
+            ..fidl_avrcp::Notification::EMPTY
+        }
+        .into();
         assert_eq!(expected, notif.only_event(&event_id));
 
         // Unsupported event_id.
-        let event_id = fidl_avrcp::NotificationEvent::BattStatusChanged;
-        let expected = Notification::default();
+        let event_id = fidl_avrcp::NotificationEvent::SystemStatusChanged;
+        let expected: Notification = fidl_avrcp::Notification::EMPTY.into();
         assert_eq!(expected, notif.only_event(&event_id));
     }
 }
