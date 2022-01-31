@@ -118,8 +118,8 @@ struct TypeTraits<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -136,7 +136,7 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>,
-        request) == 16);
+        request) == 0 + sizeof(fidl_message_header_t));
 #endif  // __Fuchsia__
 
 }  // namespace fidl
@@ -245,7 +245,7 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::test_inheritancewithrecursivedecl::Parent>> {
  public:
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_inheritancewithrecursivedecl::Parent::First> First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
@@ -460,8 +460,8 @@ struct TypeTraits<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -478,7 +478,7 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>,
-        request) == 16);
+        request) == 0 + sizeof(fidl_message_header_t));
 #endif  // __Fuchsia__
 
 template <>
@@ -502,8 +502,8 @@ struct TypeTraits<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -520,7 +520,7 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>,
-        request) == 16);
+        request) == 0 + sizeof(fidl_message_header_t));
 #endif  // __Fuchsia__
 
 }  // namespace fidl
@@ -666,7 +666,7 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::test_inheritancewithrecursivedecl::Child>> {
  public:
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::First> First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
@@ -678,7 +678,7 @@ class ::fidl::internal::WireSyncClientImpl<
                                                            &_request);
   }
 
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::Second> Second(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
@@ -786,7 +786,7 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
  public:
   using ClientImplBase::ClientImplBase;
 
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
@@ -880,12 +880,12 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
  public:
   using ClientImplBase::ClientImplBase;
 
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Second(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);

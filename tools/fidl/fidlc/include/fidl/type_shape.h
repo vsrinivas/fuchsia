@@ -69,9 +69,6 @@ struct TypeShape {
   // with no payload body.
   static TypeShape ForEmptyPayload();
 
-  // Returns another TypeShape as if the type had an extra transaction header.
-  TypeShape PrependTransactionHeader() const;
-
  private:
   explicit TypeShape(uint32_t inline_size, uint32_t alignment)
       : inline_size(inline_size),

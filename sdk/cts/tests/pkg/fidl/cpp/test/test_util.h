@@ -75,7 +75,10 @@ Output RoundTrip(const Input& input) {
   fidl::Clone(input).Encode(&encoder, offset);
   auto outgoing_msg = encoder.GetMessage();
   const char* err_msg = nullptr;
-  EXPECT_EQ(ZX_OK, outgoing_msg.Validate(Output::FidlType, &err_msg), "%s", err_msg);
+  EXPECT_EQ(ZX_OK,
+            outgoing_msg.ValidateWithVersion_InternalMayBreak(
+                ::fidl::internal::WireFormatVersion::kV1, Output::FidlType, false, &err_msg),
+            "%s", err_msg);
 
   std::vector<zx_handle_info_t> handle_infos(outgoing_msg.handles().actual());
   EXPECT_EQ(ZX_OK,
@@ -180,8 +183,8 @@ bool ValueToBytes(internal::WireFormatVersion wire_format, Input input,
         cmp_payload(msg_handles, msg.handles().actual(), expected_handles, handles.size());
   }
   const char* validation_error = nullptr;
-  zx_status_t validation_status =
-      msg.ValidateWithVersion_InternalMayBreak(wire_format, Input::FidlType, &validation_error);
+  zx_status_t validation_status = msg.ValidateWithVersion_InternalMayBreak(
+      wire_format, Input::FidlType, false, &validation_error);
   if (validation_status != ZX_OK) {
     std::cout << "Validator exited with status " << validation_status << std::endl;
   }
@@ -217,8 +220,8 @@ void CheckEncodeFailure(internal::WireFormatVersion wire_format, const Input& in
   auto msg = enc.GetMessage();
   const char* error = nullptr;
   EXPECT_EQ(expected_failure_code,
-            msg.ValidateWithVersion_InternalMayBreak(wire_format, Input::FidlType, &error), "%s",
-            error);
+            msg.ValidateWithVersion_InternalMayBreak(wire_format, Input::FidlType, false, &error),
+            "%s", error);
 }
 
 }  // namespace util

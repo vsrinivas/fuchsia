@@ -467,7 +467,7 @@ ExampleUseOfErrorSyntax_ComposedCallWhichMayFail_ResponseHandler(
         callback_(::fidl::DecodeAs<
                   ::test::errorsyntax::parent::
                       ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result>(
-            &decoder, 16));
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::errorsyntax::_internal::
@@ -502,8 +502,8 @@ ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseHandler(
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<
                   ::test::errorsyntax::
-                      ExampleUseOfErrorSyntax_CallWhichMayFail_Result>(&decoder,
-                                                                       16));
+                      ExampleUseOfErrorSyntax_CallWhichMayFail_Result>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::errorsyntax::_internal::
@@ -616,7 +616,8 @@ zx_status_t ExampleUseOfErrorSyntax_Stub::Dispatch_(
         kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->ComposedCallWhichMayFail(
-          ::fidl::DecodeAs<::std::string>(&decoder, 16),
+          ::fidl::DecodeAs<::std::string>(&decoder,
+                                          0 + sizeof(fidl_message_header_t)),
           ExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Responder(
               std::move(response)));
       break;
@@ -625,7 +626,8 @@ zx_status_t ExampleUseOfErrorSyntax_Stub::Dispatch_(
         kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->CallWhichMayFail(
-          ::fidl::DecodeAs<::std::string>(&decoder, 16),
+          ::fidl::DecodeAs<::std::string>(&decoder,
+                                          0 + sizeof(fidl_message_header_t)),
           ExampleUseOfErrorSyntax_CallWhichMayFail_Responder(
               std::move(response)));
       break;
@@ -666,7 +668,8 @@ zx_status_t ExampleUseOfErrorSyntax_SyncProxy::ComposedCallWhichMayFail(
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result = ::fidl::DecodeAs<
       ::test::errorsyntax::parent::
-          ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result>(&decoder_, 16);
+          ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result>(
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -691,7 +694,7 @@ zx_status_t ExampleUseOfErrorSyntax_SyncProxy::CallWhichMayFail(
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result = ::fidl::DecodeAs<
       ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>(
-      &decoder_, 16);
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

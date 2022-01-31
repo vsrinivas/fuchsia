@@ -16,7 +16,7 @@ namespace internal {
 void NaturalClientMessenger::TwoWay(const fidl_type_t* type, HLCPPOutgoingMessage&& message,
                                     fidl::internal::ResponseContext* context) const {
   ConvertFromHLCPPOutgoingMessageThen(
-      type, std::move(message),
+      type, true, std::move(message),
       [&](fidl::OutgoingMessage outgoing) { client_base_->SendTwoWay(outgoing, context); });
 }
 
@@ -24,7 +24,7 @@ void NaturalClientMessenger::TwoWay(const fidl_type_t* type, HLCPPOutgoingMessag
 fidl::Result NaturalClientMessenger::OneWay(const fidl_type_t* type,
                                             HLCPPOutgoingMessage&& message) const {
   return ConvertFromHLCPPOutgoingMessageThen(
-      type, std::move(message),
+      type, true, std::move(message),
       [&](fidl::OutgoingMessage outgoing) { return client_base_->SendOneWay(outgoing); });
 }
 

@@ -104,6 +104,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_emptystruct::
           test_emptystruct_EmptyProtocolReceiveEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {
@@ -119,6 +120,7 @@ fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>::Receive(
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_emptystruct::
           test_emptystruct_EmptyProtocolReceiveEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {

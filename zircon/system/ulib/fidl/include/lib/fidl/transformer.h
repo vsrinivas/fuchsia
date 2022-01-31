@@ -45,9 +45,9 @@ bool internal__fidl_tranform_is_noop__may_break(fidl_transformation_t transforma
 // to |out_error_msg|. The caller is not responsible for the memory backing the
 // error message.
 zx_status_t internal__fidl_transform__may_break(fidl_transformation_t transformation,
-                                                const fidl_type_t* type, const uint8_t* src_bytes,
-                                                uint32_t src_num_bytes, uint8_t* dst_bytes,
-                                                uint32_t dst_num_bytes_capacity,
+                                                const fidl_type_t* type, bool is_transactional,
+                                                const uint8_t* src_bytes, uint32_t src_num_bytes,
+                                                uint8_t* dst_bytes, uint32_t dst_num_bytes_capacity,
                                                 uint32_t* out_dst_num_bytes,
                                                 const char** out_error_msg);
 

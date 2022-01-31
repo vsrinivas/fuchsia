@@ -560,7 +560,19 @@ zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
     };
     msg->handles[i] = ZX_HANDLE_INVALID;
   }
-  return fidl_decode_etc(type, msg->bytes, msg->num_bytes, handle_infos, msg->num_handles,
+
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      msg->bytes, msg->num_bytes, &trimmed_bytes, &trimmed_num_bytes, out_error_msg);
+  if (unlikely(trim_status != ZX_OK)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (trimmed_num_bytes == 0) {
+    return ZX_OK;
+  }
+
+  return fidl_decode_etc(type, trimmed_bytes, trimmed_num_bytes, handle_infos, msg->num_handles,
                          out_error_msg);
 }
 

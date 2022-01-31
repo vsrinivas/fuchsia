@@ -671,7 +671,8 @@ SimpleProtocol_Add_ResponseHandler(SimpleProtocol::AddCallback&& callback) {
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<int32_t>(&decoder, 16));
+        callback_(::fidl::DecodeAs<int32_t>(&decoder,
+                                            0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::nullable::_internal::
@@ -749,8 +750,10 @@ zx_status_t SimpleProtocol_Stub::Dispatch_(
   switch (ordinal) {
     case ::test::nullable::internal::kSimpleProtocol_Add_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->Add(::fidl::DecodeAs<int32_t>(&decoder, 16),
-                 ::fidl::DecodeAs<int32_t>(&decoder, 20),
+      impl_->Add(::fidl::DecodeAs<int32_t>(&decoder,
+                                           0 + sizeof(fidl_message_header_t)),
+                 ::fidl::DecodeAs<int32_t>(&decoder,
+                                           4 + sizeof(fidl_message_header_t)),
                  SimpleProtocol_Add_Responder(std::move(response)));
       break;
     }
@@ -782,7 +785,8 @@ zx_status_t SimpleProtocol_SyncProxy::Add(int32_t a, int32_t b,
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_sum = ::fidl::DecodeAs<int32_t>(&decoder_, 16);
+  *out_sum =
+      ::fidl::DecodeAs<int32_t>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

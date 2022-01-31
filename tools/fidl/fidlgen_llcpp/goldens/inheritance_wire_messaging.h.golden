@@ -112,8 +112,8 @@ struct TypeTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_superfooRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 32;
-  static constexpr uint32_t kPrimarySizeV1 = 32;
+  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -126,7 +126,7 @@ static_assert(sizeof(::fidl::WireRequest<::test_inheritance::Super::Foo>) ==
               TypeTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>>::
                   kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_inheritance::Super::Foo>,
-                       s) == 16);
+                       s) == 0 + sizeof(fidl_message_header_t));
 
 template <>
 struct IsFidlType<::fidl::WireResponse<::test_inheritance::Super::Foo>>
@@ -140,8 +140,8 @@ struct TypeTraits<::fidl::WireResponse<::test_inheritance::Super::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_superfooResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -154,7 +154,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_inheritance::Super::Foo>) ==
               TypeTraits<::fidl::WireResponse<::test_inheritance::Super::Foo>>::
                   kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_inheritance::Super::Foo>,
-                       y) == 16);
+                       y) == 0 + sizeof(fidl_message_header_t));
 
 }  // namespace fidl
 namespace test_inheritance {
@@ -521,8 +521,8 @@ struct TypeTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_subfooRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 32;
-  static constexpr uint32_t kPrimarySizeV1 = 32;
+  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -535,7 +535,7 @@ static_assert(sizeof(::fidl::WireRequest<::test_inheritance::Sub::Foo>) ==
               TypeTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>>::
                   kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_inheritance::Sub::Foo>, s) ==
-              16);
+              0 + sizeof(fidl_message_header_t));
 
 template <>
 struct IsFidlType<::fidl::WireResponse<::test_inheritance::Sub::Foo>>
@@ -549,8 +549,8 @@ struct TypeTraits<::fidl::WireResponse<::test_inheritance::Sub::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_subfooResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -563,7 +563,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_inheritance::Sub::Foo>) ==
               TypeTraits<::fidl::WireResponse<::test_inheritance::Sub::Foo>>::
                   kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_inheritance::Sub::Foo>, y) ==
-              16);
+              0 + sizeof(fidl_message_header_t));
 
 }  // namespace fidl
 namespace test_inheritance {

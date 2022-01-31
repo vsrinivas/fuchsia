@@ -71,6 +71,8 @@ class Encoder final {
 
   HLCPPOutgoingMessage GetMessage();
 
+  bool HasHeader() { return has_header_; }
+
   void Reset(uint64_t ordinal);
 
   size_t CurrentLength() const { return bytes_.size(); }
@@ -86,6 +88,7 @@ class Encoder final {
 
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_disposition_t> handles_;
+  bool has_header_ = false;
 
   internal::WireFormatVersion wire_format_ = internal::DefaultHLCPPEncoderWireFormat();
 };

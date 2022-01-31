@@ -256,8 +256,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
+  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -292,8 +292,8 @@ struct TypeTraits<
       &::test_protocolrequest::
           test_protocolrequest_ParentGetChildResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -308,7 +308,7 @@ static_assert(
         kPrimarySize);
 static_assert(
     offsetof(::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>,
-             c) == 16);
+             c) == 0 + sizeof(fidl_message_header_t));
 #endif  // __Fuchsia__
 
 template <>
@@ -326,8 +326,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
+  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -363,8 +363,8 @@ struct TypeTraits<
       &::test_protocolrequest::
           test_protocolrequest_ParentGetChildRequestResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -381,7 +381,7 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>,
-        r) == 16);
+        r) == 0 + sizeof(fidl_message_header_t));
 #endif  // __Fuchsia__
 
 template <>
@@ -405,8 +405,8 @@ struct TypeTraits<
       &::test_protocolrequest::
           test_protocolrequest_ParentTakeChildRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -421,7 +421,7 @@ static_assert(
         kPrimarySize);
 static_assert(
     offsetof(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>,
-             c) == 16);
+             c) == 0 + sizeof(fidl_message_header_t));
 #endif  // __Fuchsia__
 
 template <>
@@ -445,8 +445,8 @@ struct TypeTraits<
       &::test_protocolrequest::
           test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -463,7 +463,7 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
-        r) == 16);
+        r) == 0 + sizeof(fidl_message_header_t));
 #endif  // __Fuchsia__
 
 }  // namespace fidl
@@ -903,7 +903,7 @@ class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Parent> final
         _client_end(), &_request);
   }
 
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_protocolrequest::Parent::TakeChild> TakeChild(
       ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
@@ -913,7 +913,7 @@ class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Parent> final
         _client_end(), &_request);
   }
 
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_protocolrequest::Parent::TakeChildRequest>
   TakeChildRequest(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
@@ -1241,12 +1241,12 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Parent>
  public:
   using ClientImplBase::ClientImplBase;
 
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result TakeChild(
       ::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
 
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result TakeChildRequest(
       ::fidl::ServerEnd<::test_protocolrequest::Child>&& r);

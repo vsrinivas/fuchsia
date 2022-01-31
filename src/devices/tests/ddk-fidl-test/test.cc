@@ -14,12 +14,15 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <vector>
 
 #include <zxtest/zxtest.h>
+
+#include "fidl/fuchsia.hardware.test/cpp/wire_messaging.h"
 
 using driver_integration_test::IsolatedDevmgr;
 
@@ -51,8 +54,16 @@ void CheckTransaction(const board_test::DeviceEntry& entry, const char* device_f
   zx_txid_t first_txid = 1;
   fidl_init_txn_header(&req.hdr, first_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
   uint32_t actual = 0;
-  status = fidl_encode(&fuchsia_hardware_test_DeviceGetChannelRequestMessageTable, &req,
-                       sizeof(req), nullptr, 0, &actual, nullptr);
+  uint32_t trimmed_req_len;
+  uint8_t* trimmed_req;
+
+  status = ::fidl::internal::fidl_exclude_header_bytes(reinterpret_cast<void*>(&req), sizeof(req),
+                                                       &trimmed_req, &trimmed_req_len, nullptr);
+  ASSERT_OK(status);
+
+  status =
+      fidl_encode(&fuchsia_hardware_test::fuchsia_hardware_test_DeviceGetChannelRequestMessageTable,
+                  &trimmed_req, trimmed_req_len, nullptr, 0, &actual, nullptr);
   ASSERT_OK(status);
   ASSERT_OK(zx_channel_write(driver_channel, 0, &req, sizeof(req), nullptr, 0));
 
@@ -61,8 +72,14 @@ void CheckTransaction(const board_test::DeviceEntry& entry, const char* device_f
   std::memset(&req, 0, sizeof(req));
   zx_txid_t second_txid = 2;
   fidl_init_txn_header(&req.hdr, second_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
-  status = fidl_encode(&fuchsia_hardware_test_DeviceGetChannelRequestMessageTable, &req,
-                       sizeof(req), nullptr, 0, &actual, nullptr);
+
+  status = ::fidl::internal::fidl_exclude_header_bytes(reinterpret_cast<void*>(&req), sizeof(req),
+                                                       &trimmed_req, &trimmed_req_len, nullptr);
+  ASSERT_OK(status);
+
+  status =
+      fidl_encode(&fuchsia_hardware_test::fuchsia_hardware_test_DeviceGetChannelRequestMessageTable,
+                  &trimmed_req, trimmed_req_len, nullptr, 0, &actual, nullptr);
   ASSERT_OK(status);
   ASSERT_OK(zx_channel_write(driver_channel, 0, &req, sizeof(req), nullptr, 0));
 

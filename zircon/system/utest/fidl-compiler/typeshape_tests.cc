@@ -61,12 +61,10 @@ void CheckTypeShape(const fidl::flat::Object* actual, Expected expected_v1_no_ee
                     Expected expected_v1_header, Expected expected_v2,
                     Expected expected_v2_header) {
   ASSERT_NO_FAILURES(
-      CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1NoEe).PrependTransactionHeader(),
-                     expected_v1_no_ee));
+      CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1NoEe), expected_v1_no_ee));
   ASSERT_NO_FAILURES(
       CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV1NoEe), expected_v1_header));
-  ASSERT_NO_FAILURES(CheckTypeShape(
-      fidl::TypeShape(actual, fidl::WireFormat::kV2).PrependTransactionHeader(), expected_v2));
+  ASSERT_NO_FAILURES(CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV2), expected_v2));
   ASSERT_NO_FAILURES(
       CheckTypeShape(fidl::TypeShape(actual, fidl::WireFormat::kV2), expected_v2_header));
 }
@@ -2289,6 +2287,41 @@ type ExternalSimpleStruct = struct {
                                                     }));
 }
 
+// TODO(fxbug.dev/76349): using empty structs as request/response payloads is
+//  only supported in the new syntax.  Until this is supported and we can write
+//  this test in the new syntax, we "fake" an empty struct payload by generating
+//  the flat::Struct ourselves, rather than using the compiled output.
+TEST(TypeshapeTests, GoodEmptyStructPayload) {
+  TestLibrary library(R"FIDL(library example;
+
+type Empty = struct {};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto empty = library.LookupStruct("Empty");
+  ASSERT_NOT_NULL(empty);
+
+  const fidl::flat::Struct fake_payload(
+      nullptr, empty->name, std::vector<fidl::flat::StructMember>(), std::nullopt, true);
+  ASSERT_NO_FAILURES(CheckTypeShape(&fake_payload,
+                                    Expected{
+                                        .inline_size = 8,
+                                        .alignment = 8,
+                                    },
+                                    Expected{
+                                        .inline_size = 8,
+                                        .alignment = 8,
+                                    },
+                                    Expected{
+                                        .inline_size = 8,
+                                        .alignment = 8,
+                                    },
+                                    Expected{
+                                        .inline_size = 8,
+                                        .alignment = 8,
+                                    }));
+}
+
 TEST(TypeshapeTests, GoodSimpleRequest) {
   TestLibrary library(R"FIDL(library example;
 
@@ -2312,7 +2345,7 @@ protocol Test {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 0,
                                         .has_padding = true,
@@ -2324,7 +2357,7 @@ protocol Test {
                                         .has_padding = true,
                                     },
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 0,
                                         .has_padding = true,
@@ -2366,7 +2399,7 @@ protocol Test {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 0,
                                         .has_padding = true,
@@ -2378,7 +2411,7 @@ protocol Test {
                                         .has_padding = true,
                                     },
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 0,
                                         .has_padding = true,
@@ -2438,7 +2471,7 @@ protocol MessagePort {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
@@ -2450,7 +2483,7 @@ protocol MessagePort {
                                         .has_padding = true,
                                     },
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
@@ -2504,7 +2537,7 @@ protocol MessagePort {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
@@ -2516,7 +2549,7 @@ protocol MessagePort {
                                         .has_padding = true,
                                     },
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
@@ -2567,7 +2600,7 @@ protocol MessagePort {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
@@ -2579,7 +2612,7 @@ protocol MessagePort {
                                         .has_padding = true,
                                     },
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
@@ -2630,7 +2663,7 @@ protocol MessagePort {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
@@ -2642,7 +2675,7 @@ protocol MessagePort {
                                         .has_padding = true,
                                     },
                                     Expected{
-                                        .inline_size = 24,
+                                        .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,

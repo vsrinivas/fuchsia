@@ -129,9 +129,18 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
   uint64_t ordinal = hdr->ordinal;
   switch (ordinal) {
     case fuchsia_tracing_provider_ProviderInitializeOrdinal: {
+      if (unlikely(num_bytes < sizeof(fidl_message_header_t))) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      uint32_t trimmed_num_bytes = num_bytes - (uint32_t)(sizeof(fidl_message_header_t));
+      if (unlikely(buffer == NULL)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      uint8_t* trimmed_bytes = (uint8_t*)buffer + sizeof(fidl_message_header_t);
+
       zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderInitializeRequestMessageTable, buffer,
-                          num_bytes, handles, num_handles, nullptr);
+          fidl_decode_etc(&fuchsia_tracing_provider_ProviderInitializeRequestMessageTable,
+                          trimmed_bytes, trimmed_num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }
@@ -166,9 +175,18 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
       return true;
     }
     case fuchsia_tracing_provider_ProviderStartOrdinal: {
+      if (unlikely(num_bytes < sizeof(fidl_message_header_t))) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      uint32_t trimmed_num_bytes = num_bytes - (uint32_t)(sizeof(fidl_message_header_t));
+      if (unlikely(buffer == NULL)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      uint8_t* trimmed_bytes = (uint8_t*)buffer + sizeof(fidl_message_header_t);
+
       zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderStartRequestMessageTable, buffer,
-                          num_bytes, handles, num_handles, nullptr);
+          fidl_decode_etc(&fuchsia_tracing_provider_ProviderStartRequestMessageTable, trimmed_bytes,
+                          trimmed_num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }
@@ -199,9 +217,18 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
       return true;
     }
     case fuchsia_tracing_provider_ProviderStopOrdinal: {
+      if (unlikely(num_bytes < sizeof(fidl_message_header_t))) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      uint32_t trimmed_num_bytes = num_bytes - (uint32_t)(sizeof(fidl_message_header_t));
+      if (unlikely(buffer == NULL)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      uint8_t* trimmed_bytes = (uint8_t*)buffer + sizeof(fidl_message_header_t);
+
       zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderStopRequestMessageTable, buffer,
-                          num_bytes, handles, num_handles, nullptr);
+          fidl_decode_etc(&fuchsia_tracing_provider_ProviderStopRequestMessageTable, trimmed_bytes,
+                          trimmed_num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }
@@ -210,9 +237,18 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
       return true;
     }
     case fuchsia_tracing_provider_ProviderTerminateOrdinal: {
+      if (unlikely(num_bytes < sizeof(fidl_message_header_t))) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      uint32_t trimmed_num_bytes = num_bytes - (uint32_t)(sizeof(fidl_message_header_t));
+      if (unlikely(buffer == NULL)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      uint8_t* trimmed_bytes = (uint8_t*)buffer + sizeof(fidl_message_header_t);
+
       zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderTerminateRequestMessageTable, buffer,
-                          num_bytes, handles, num_handles, nullptr);
+          fidl_decode_etc(&fuchsia_tracing_provider_ProviderTerminateRequestMessageTable,
+                          trimmed_bytes, trimmed_num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }

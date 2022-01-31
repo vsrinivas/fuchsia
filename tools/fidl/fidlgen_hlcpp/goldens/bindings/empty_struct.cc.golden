@@ -127,7 +127,8 @@ zx_status_t EmptyProtocol_Proxy::Dispatch_(
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
-      Receive(::fidl::DecodeAs<::test::emptystruct::Empty>(&decoder, 16));
+      Receive(::fidl::DecodeAs<::test::emptystruct::Empty>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -159,7 +160,8 @@ EmptyProtocol_SendAndReceive_ResponseHandler(
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::test::emptystruct::Empty>(&decoder, 16));
+        callback_(::fidl::DecodeAs<::test::emptystruct::Empty>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::emptystruct::_internal::
@@ -241,13 +243,15 @@ zx_status_t EmptyProtocol_Stub::Dispatch_(
   switch (ordinal) {
     case ::test::emptystruct::internal::kEmptyProtocol_Send_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->Send(::fidl::DecodeAs<::test::emptystruct::Empty>(&decoder, 16));
+      impl_->Send(::fidl::DecodeAs<::test::emptystruct::Empty>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     case ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->SendAndReceive(
-          ::fidl::DecodeAs<::test::emptystruct::Empty>(&decoder, 16),
+          ::fidl::DecodeAs<::test::emptystruct::Empty>(
+              &decoder, 0 + sizeof(fidl_message_header_t)),
           EmptyProtocol_SendAndReceive_Responder(std::move(response)));
       break;
     }
@@ -297,7 +301,8 @@ zx_status_t EmptyProtocol_SyncProxy::SendAndReceive(
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_e = ::fidl::DecodeAs<::test::emptystruct::Empty>(&decoder_, 16);
+  *out_e = ::fidl::DecodeAs<::test::emptystruct::Empty>(
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

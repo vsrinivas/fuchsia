@@ -23,6 +23,8 @@
 #include <lib/fidl/llcpp/internal/transport_channel.h>
 #else
 #include <lib/fidl/llcpp/internal/transport_channel_host.h>
+
+#include "lib/fidl/llcpp/traits.h"
 // The current build rules for zircon/system/ulib/zircon don't allow linking
 // zx_status_get_string on host. Consider changing in the future.
 #define zx_status_get_string(status) ((status))
@@ -75,6 +77,9 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
                    const std::vector<uint8_t>& expected_bytes,
                    const std::vector<zx_handle_disposition_t>& expected_handle_dispositions,
                    bool check_handle_rights) {
+  static_assert(!fidl::IsFidlMessage<FidlType>::value,
+                "EncodeSuccess assumes non-transactional messages");
+
   // Linearize the built objects using LLCPP encode -> decode.
   fidl::OwnedEncodedMessage<FidlType> llcpp_encoded(value);
   auto& outgoing_msg = llcpp_encoded.GetOutgoingMessage();
@@ -83,6 +88,14 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
       copied_bytes.data(), static_cast<uint32_t>(copied_bytes.size()), outgoing_msg.handles(),
       outgoing_msg.template handle_metadata<fidl::internal::ChannelTransport>(),
       outgoing_msg.handle_actual());
+
+  if (llcpp_decoded.status() != ZX_OK) {
+    std::cout << "Decoding target success value failed ("
+              << zx_status_get_string(llcpp_decoded.status())
+              << "): " << llcpp_decoded.FormatDescription().c_str() << std::endl;
+    return false;
+  }
+
   // Handles are now owned by |llcpp_decoded|.
   outgoing_msg.ReleaseHandles();
 

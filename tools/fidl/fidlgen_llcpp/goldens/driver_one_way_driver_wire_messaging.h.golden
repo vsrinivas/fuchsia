@@ -95,8 +95,8 @@ struct TypeTraits<::fidl::WireRequest<::test_driveroneway::OneWay::Send>> {
   static constexpr const fidl_type_t* kType =
       &::test_driveroneway::test_driveroneway_OneWaySendRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -110,7 +110,7 @@ static_assert(
     TypeTraits<
         ::fidl::WireRequest<::test_driveroneway::OneWay::Send>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
-                       payload) == 16);
+                       payload) == 0 + sizeof(fidl_message_header_t));
 
 }  // namespace fidl
 namespace test_driveroneway {

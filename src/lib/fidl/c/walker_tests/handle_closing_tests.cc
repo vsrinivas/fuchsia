@@ -52,7 +52,14 @@ TEST(Handles, close_single_present_handle) {
   helper_expect_peer_valid(channel_1.get());
 
   const char* error = nullptr;
-  auto status = fidl_close_handles(&nonnullable_handle_message_type, &message, &error);
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      reinterpret_cast<uint8_t*>(&message), sizeof(message), &trimmed_bytes, &trimmed_num_bytes,
+      &error);
+  EXPECT_EQ(trim_status, ZX_OK);
+
+  auto status = fidl_close_handles(&nonnullable_handle_message_type, trimmed_bytes, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -86,7 +93,15 @@ TEST(Handles, close_multiple_present_handles_with_some_invalid) {
   message.inline_struct.handle_2 = channels_0[2];
 
   const char* error = nullptr;
-  auto status = fidl_close_handles(&multiple_nonnullable_handles_message_type, &message, &error);
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      reinterpret_cast<uint8_t*>(&message), sizeof(message), &trimmed_bytes, &trimmed_num_bytes,
+      &error);
+  EXPECT_EQ(trim_status, ZX_OK);
+
+  auto status =
+      fidl_close_handles(&multiple_nonnullable_handles_message_type, trimmed_bytes, &error);
 
   // Since the message is invalid, fidl_close_handles will error, but all the handles
   // in the message must still be closed despite the error.
@@ -137,7 +152,15 @@ TEST(Arrays, close_array_of_present_handles) {
   helper_expect_peer_valid(channels_1[3].get());
 
   const char* error = nullptr;
-  auto status = fidl_close_handles(&array_of_nonnullable_handles_message_type, &message, &error);
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      reinterpret_cast<uint8_t*>(&message), sizeof(message), &trimmed_bytes, &trimmed_num_bytes,
+      &error);
+  EXPECT_EQ(trim_status, ZX_OK);
+
+  auto status =
+      fidl_close_handles(&array_of_nonnullable_handles_message_type, trimmed_bytes, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -181,8 +204,15 @@ TEST(Arrays, close_out_of_line_array_of_nonnullable_handles) {
   helper_expect_peer_valid(channels_1[3].get());
 
   const char* error = nullptr;
-  auto status =
-      fidl_close_handles(&out_of_line_array_of_nonnullable_handles_message_type, &message, &error);
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      reinterpret_cast<uint8_t*>(&message), sizeof(message), &trimmed_bytes, &trimmed_num_bytes,
+      &error);
+  EXPECT_EQ(trim_status, ZX_OK);
+
+  auto status = fidl_close_handles(&out_of_line_array_of_nonnullable_handles_message_type,
+                                   trimmed_bytes, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);

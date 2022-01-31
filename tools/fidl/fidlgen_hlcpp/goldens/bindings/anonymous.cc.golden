@@ -1695,7 +1695,7 @@ SomeProtocol_SomeMethod_ResponseHandler(
         ::fidl::Decoder decoder(std::move(message));
         callback_(
             ::fidl::DecodeAs<::test::anonymous::SomeProtocol_SomeMethod_Result>(
-                &decoder, 16));
+                &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::anonymous::_internal::
@@ -1777,10 +1777,11 @@ zx_status_t SomeProtocol_Stub::Dispatch_(
   switch (ordinal) {
     case ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->SomeMethod(
-          ::fidl::DecodeAs<::test::anonymous::UnionMember>(&decoder, 16),
-          ::fidl::DecodeAs<::test::anonymous::TableMember>(&decoder, 32),
-          SomeProtocol_SomeMethod_Responder(std::move(response)));
+      impl_->SomeMethod(::fidl::DecodeAs<::test::anonymous::UnionMember>(
+                            &decoder, 0 + sizeof(fidl_message_header_t)),
+                        ::fidl::DecodeAs<::test::anonymous::TableMember>(
+                            &decoder, 16 + sizeof(fidl_message_header_t)),
+                        SomeProtocol_SomeMethod_Responder(std::move(response)));
       break;
     }
     default: {
@@ -1816,7 +1817,7 @@ zx_status_t SomeProtocol_SyncProxy::SomeMethod(
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result =
       ::fidl::DecodeAs<::test::anonymous::SomeProtocol_SomeMethod_Result>(
-          &decoder_, 16);
+          &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

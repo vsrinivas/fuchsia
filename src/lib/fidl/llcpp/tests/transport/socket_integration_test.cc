@@ -27,8 +27,8 @@ const struct FidlCodedStruct CodingTableStruct = {
     .tag = kFidlTypeStruct,
     .contains_envelope = kFidlContainsEnvelope_DoesNotContainEnvelope,
     .element_count = 0u,
-    .size_v1 = 24u,
-    .size_v2 = 24u,
+    .size_v1 = 8u,
+    .size_v2 = 8u,
     .elements = nullptr,
     .name = "integration/TwoWayMessage"};
 

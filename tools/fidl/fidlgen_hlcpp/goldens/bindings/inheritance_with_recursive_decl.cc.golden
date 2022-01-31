@@ -117,9 +117,9 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
     case ::test::inheritancewithrecursivedecl::internal::
         kParent_First_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->First(
-          ::fidl::DecodeAs<::fidl::InterfaceRequest<
-              ::test::inheritancewithrecursivedecl::Parent>>(&decoder, 16));
+      impl_->First(::fidl::DecodeAs<::fidl::InterfaceRequest<
+                       ::test::inheritancewithrecursivedecl::Parent>>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -274,17 +274,17 @@ zx_status_t Child_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
   switch (ordinal) {
     case ::test::inheritancewithrecursivedecl::internal::kChild_First_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->First(
-          ::fidl::DecodeAs<::fidl::InterfaceRequest<
-              ::test::inheritancewithrecursivedecl::Parent>>(&decoder, 16));
+      impl_->First(::fidl::DecodeAs<::fidl::InterfaceRequest<
+                       ::test::inheritancewithrecursivedecl::Parent>>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     case ::test::inheritancewithrecursivedecl::internal::
         kChild_Second_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->Second(
-          ::fidl::DecodeAs<::fidl::InterfaceRequest<
-              ::test::inheritancewithrecursivedecl::Parent>>(&decoder, 16));
+      impl_->Second(::fidl::DecodeAs<::fidl::InterfaceRequest<
+                        ::test::inheritancewithrecursivedecl::Parent>>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {

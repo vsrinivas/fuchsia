@@ -115,7 +115,7 @@ class HLCPPIncomingMessage {
   //
   // |metadata| describes features/revision information about the wire format.
   zx_status_t Decode(const internal::WireFormatMetadata& metadata, const fidl_type_t* type,
-                     const char** error_msg_out);
+                     bool is_transactional, const char** error_msg_out);
 
   // Read a message from the given channel.
   //
@@ -225,6 +225,7 @@ class HLCPPOutgoingMessage {
   // Does not modify the message.
   zx_status_t ValidateWithVersion_InternalMayBreak(internal::WireFormatVersion wire_format_version,
                                                    const fidl_type_t* v1_type,
+                                                   bool is_transactional,
                                                    const char** error_msg_out) const;
 
   // Writes a message to the given channel.

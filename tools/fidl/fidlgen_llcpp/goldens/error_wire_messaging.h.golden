@@ -113,8 +113,8 @@ struct TypeTraits<::fidl::WireRequest<::test_error::Example::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_error::test_error_ExamplefooRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 32;
-  static constexpr uint32_t kPrimarySizeV1 = 32;
+  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -127,7 +127,7 @@ static_assert(
     sizeof(::fidl::WireRequest<::test_error::Example::Foo>) ==
     TypeTraits<::fidl::WireRequest<::test_error::Example::Foo>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_error::Example::Foo>, s) ==
-              16);
+              0 + sizeof(fidl_message_header_t));
 
 template <>
 struct IsFidlType<::fidl::WireResponse<::test_error::Example::Foo>>
@@ -141,8 +141,8 @@ struct TypeTraits<::fidl::WireResponse<::test_error::Example::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_error::test_error_ExamplefooResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 32;
-  static constexpr uint32_t kPrimarySizeV1 = 40;
+  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 24 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -155,7 +155,7 @@ static_assert(
     sizeof(::fidl::WireResponse<::test_error::Example::Foo>) ==
     TypeTraits<::fidl::WireResponse<::test_error::Example::Foo>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_error::Example::Foo>,
-                       result) == 16);
+                       result) == 0 + sizeof(fidl_message_header_t));
 
 }  // namespace fidl
 namespace test_error {

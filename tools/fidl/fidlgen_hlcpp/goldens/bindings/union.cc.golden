@@ -6246,7 +6246,7 @@ TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler(
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::test::union_::StrictBoundedXUnion>(
-            &decoder, 16));
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::union_::_internal::
@@ -6281,8 +6281,8 @@ TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler(
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(
-            ::fidl::DecodeAs<::test::union_::OlderSimpleUnion>(&decoder, 16));
+        callback_(::fidl::DecodeAs<::test::union_::OlderSimpleUnion>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::union_::_internal::
@@ -6433,8 +6433,8 @@ TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated(
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_xu =
-      ::fidl::DecodeAs<::test::union_::StrictBoundedXUnion>(&decoder_, 16);
+  *out_xu = ::fidl::DecodeAs<::test::union_::StrictBoundedXUnion>(
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -6456,7 +6456,8 @@ TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_xu = ::fidl::DecodeAs<::test::union_::OlderSimpleUnion>(&decoder_, 16);
+  *out_xu = ::fidl::DecodeAs<::test::union_::OlderSimpleUnion>(
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

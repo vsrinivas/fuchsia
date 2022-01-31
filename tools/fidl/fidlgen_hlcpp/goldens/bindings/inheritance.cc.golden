@@ -79,7 +79,8 @@ super_foo_ResponseHandler(super::fooCallback&& callback) {
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
+        callback_(::fidl::DecodeAs<int64_t>(&decoder,
+                                            0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::inheritance::_internal::
@@ -153,7 +154,8 @@ zx_status_t super_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
   switch (ordinal) {
     case ::test::inheritance::internal::ksuper_foo_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->foo(::fidl::DecodeAs<::std::string>(&decoder, 16),
+      impl_->foo(::fidl::DecodeAs<::std::string>(
+                     &decoder, 0 + sizeof(fidl_message_header_t)),
                  super_foo_Responder(std::move(response)));
       break;
     }
@@ -183,7 +185,8 @@ zx_status_t super_SyncProxy::foo(::std::string s, int64_t* out_y) {
                   &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_y = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
+  *out_y =
+      ::fidl::DecodeAs<int64_t>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 }  // namespace inheritance
@@ -257,7 +260,8 @@ sub_foo_ResponseHandler(sub::fooCallback&& callback) {
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
+        callback_(::fidl::DecodeAs<int64_t>(&decoder,
+                                            0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::inheritance::_internal::
@@ -330,7 +334,8 @@ zx_status_t sub_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
   switch (ordinal) {
     case ::test::inheritance::internal::ksub_foo_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->foo(::fidl::DecodeAs<::std::string>(&decoder, 16),
+      impl_->foo(::fidl::DecodeAs<::std::string>(
+                     &decoder, 0 + sizeof(fidl_message_header_t)),
                  sub_foo_Responder(std::move(response)));
       break;
     }
@@ -359,7 +364,8 @@ zx_status_t sub_SyncProxy::foo(::std::string s, int64_t* out_y) {
       ::test::inheritance::sub_RequestEncoder::foo(&_encoder, &s), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_y = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
+  *out_y =
+      ::fidl::DecodeAs<int64_t>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 }  // namespace inheritance

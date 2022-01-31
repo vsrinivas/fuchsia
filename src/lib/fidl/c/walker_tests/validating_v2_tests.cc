@@ -63,6 +63,20 @@ constexpr zx_handle_t dummy_handle_27 = static_cast<zx_handle_t>(50);
 constexpr zx_handle_t dummy_handle_28 = static_cast<zx_handle_t>(51);
 constexpr zx_handle_t dummy_handle_29 = static_cast<zx_handle_t>(52);
 
+zx_status_t fidl_validate_v2_transactional(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                                           uint32_t num_handles, const char** error_msg_out) {
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      bytes, num_bytes, &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
+  if (unlikely(trim_status != ZX_OK)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return internal__fidl_validate__v2__may_break(type, trimmed_bytes, trimmed_num_bytes, num_handles,
+                                                error_msg_out);
+}
+
 TEST(NullParameters, validate_v2_null_validate_parameters) {
   zx_handle_t handles[] = {static_cast<zx_handle_t>(23)};
 
@@ -71,7 +85,7 @@ TEST(NullParameters, validate_v2_null_validate_parameters) {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = FIDL_HANDLE_PRESENT;
     const char* error = nullptr;
-    auto status = internal__fidl_validate__v2__may_break(
+    auto status = fidl_validate_v2_transactional(
         nullptr, &message, sizeof(nonnullable_handle_message_layout), ArrayCount(handles), &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NOT_NULL(error);
@@ -109,9 +123,9 @@ TEST(NullParameters, validate_v2_null_validate_parameters) {
   {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = FIDL_HANDLE_PRESENT;
-    auto status = internal__fidl_validate__v2__may_break(&nonnullable_handle_message_type, &message,
-                                                         sizeof(nonnullable_handle_message_layout),
-                                                         ArrayCount(handles), nullptr);
+    auto status = fidl_validate_v2_transactional(&nonnullable_handle_message_type, &message,
+                                                 sizeof(nonnullable_handle_message_layout),
+                                                 ArrayCount(handles), nullptr);
     EXPECT_EQ(status, ZX_OK);
   }
 }
@@ -265,8 +279,8 @@ TEST(Handles, validate_v2_single_present_handle_unaligned_error) {
 
   // Validating the unaligned version of the struct should fail.
   const char* error = nullptr;
-  auto status = internal__fidl_validate__v2__may_break(
-      &nonnullable_handle_message_type, &message, sizeof(message), ArrayCount(handles), &error);
+  auto status = fidl_validate_v2_transactional(&nonnullable_handle_message_type, &message,
+                                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -287,8 +301,8 @@ TEST(Structs, validate_v2_nested_nonnullable_structs) {
   };
 
   const char* error = nullptr;
-  auto status = internal__fidl_validate__v2__may_break(
-      &nested_structs_message_type, &message, sizeof(message), ArrayCount(handles), &error);
+  auto status = fidl_validate_v2_transactional(&nested_structs_message_type, &message,
+                                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -339,8 +353,8 @@ TEST(Structs, validate_v2_nested_nonnullable_structs_check_padding) {
     buffer[padding_offset] = 0xAA;
 
     const char* error = nullptr;
-    auto status = internal__fidl_validate__v2__may_break(&nested_structs_message_type, &message,
-                                                         kBufferSize, kNumHandles, &error);
+    auto status = fidl_validate_v2_transactional(&nested_structs_message_type, &message,
+                                                 kBufferSize, kNumHandles, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     ASSERT_NOT_NULL(error);
@@ -434,8 +448,8 @@ TEST(Structs, validate_v2_nested_nullable_structs) {
   };
 
   const char* error = nullptr;
-  auto status = internal__fidl_validate__v2__may_break(
-      &nested_struct_ptrs_message_type, &message, sizeof(message), ArrayCount(handles), &error);
+  auto status = fidl_validate_v2_transactional(&nested_struct_ptrs_message_type, &message,
+                                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);

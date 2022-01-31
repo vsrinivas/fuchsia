@@ -57,10 +57,16 @@ TEST(OnErrorCloseHandle, EncodeErrorTest) {
       *reinterpret_cast<nonnullable_handle_message_layout*>(buffer.get());
   message.inline_struct.handle = ZX_HANDLE_INVALID;
 
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      &message, kMessageSize, &trimmed_bytes, &trimmed_num_bytes, nullptr);
+  ASSERT_EQ(trim_status, ZX_OK);
+
   const char* error = nullptr;
   uint32_t actual_handles;
-  auto status = fidl_encode(&nonnullable_handle_message_type, &message, kMessageSize, handles,
-                            std::size(handles), &actual_handles, &error);
+  auto status = fidl_encode(&nonnullable_handle_message_type, trimmed_bytes, trimmed_num_bytes,
+                            handles, std::size(handles), &actual_handles, &error);
 
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_NOT_NULL(error);
@@ -84,10 +90,16 @@ TEST(OnErrorCloseHandle, EncodeWithNullHandlesTest) {
         *reinterpret_cast<nonnullable_handle_message_layout*>(buffer.get());
     message.inline_struct.handle = eventpair_a.release();
 
+    uint8_t* trimmed_bytes;
+    uint32_t trimmed_num_bytes;
+    zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+        &message, kMessageSize, &trimmed_bytes, &trimmed_num_bytes, nullptr);
+    ASSERT_EQ(trim_status, ZX_OK);
+
     const char* error = nullptr;
     uint32_t actual_handles;
-    auto status = fidl_encode(&nonnullable_handle_message_type, &message, kMessageSize, nullptr,
-                              num_handles, &actual_handles, &error);
+    auto status = fidl_encode(&nonnullable_handle_message_type, trimmed_bytes, trimmed_num_bytes,
+                              nullptr, num_handles, &actual_handles, &error);
 
     ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
     ASSERT_NOT_NULL(error);
@@ -110,9 +122,15 @@ TEST(OnErrorCloseHandle, EncodeWithNullOutActualHandlesTest) {
       *reinterpret_cast<nonnullable_handle_message_layout*>(buffer.get());
   message.inline_struct.handle = eventpair_a.release();
 
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      &message, kMessageSize, &trimmed_bytes, &trimmed_num_bytes, nullptr);
+  ASSERT_EQ(trim_status, ZX_OK);
+
   const char* error = nullptr;
-  auto status = fidl_encode(&nonnullable_handle_message_type, &message, kMessageSize, handles,
-                            std::size(handles), nullptr, &error);
+  auto status = fidl_encode(&nonnullable_handle_message_type, trimmed_bytes, trimmed_num_bytes,
+                            handles, std::size(handles), nullptr, &error);
 
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_NOT_NULL(error);
@@ -164,8 +182,16 @@ TEST(OnErrorCloseHandle, DecodeErrorTest) {
           .rights = ZX_RIGHT_SAME_RIGHTS,
       },
   };
-  auto status = fidl_decode_etc(&fidl_test_coding_fuchsia_SmallerTableOfStructWithHandleTable,
-                                buffer, buf_size, handles, std::size(handles), &out_error);
+
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      &buffer, buf_size, &trimmed_bytes, &trimmed_num_bytes, nullptr);
+  ASSERT_EQ(trim_status, ZX_OK);
+
+  auto status =
+      fidl_decode_etc(&fidl_test_coding_fuchsia_SmallerTableOfStructWithHandleTable, trimmed_bytes,
+                      trimmed_num_bytes, handles, std::size(handles), &out_error);
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_NOT_NULL(out_error);
 

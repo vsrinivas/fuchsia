@@ -192,7 +192,7 @@ void {{ . }}::SizeAndOffsetAssertionHelper() {
 {{ . }}::~{{ .Name }}() {
   switch (ordinal_) {
   {{- range .Members }}
-    case {{ .WireOrdinalName }}: 
+    case {{ .WireOrdinalName }}:
       envelope_.As<{{ .Type }}>().clear_data();
       break;
   {{- end }}

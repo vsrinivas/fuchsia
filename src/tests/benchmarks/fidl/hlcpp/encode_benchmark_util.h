@@ -28,7 +28,9 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
       auto offset = enc.Alloc(fidl::EncodingInlineSize<FidlType, fidl::Encoder>(&enc));
       obj.Encode(&enc, offset);
       fidl::HLCPPOutgoingMessage msg = enc.GetMessage();
-      ZX_ASSERT(ZX_OK == msg.Validate(FidlType::FidlType, nullptr));
+      ZX_ASSERT(ZX_OK ==
+                msg.ValidateWithVersion_InternalMayBreak(::fidl::internal::WireFormatVersion::kV1,
+                                                         FidlType::FidlType, false, nullptr));
     }
 
     state->NextStep();  // End: Encode. Begin: Teardown.

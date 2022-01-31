@@ -767,9 +767,9 @@ bool internal__fidl_tranform_is_noop__may_break(fidl_transformation_t transforma
 }
 
 zx_status_t internal__fidl_transform__may_break(fidl_transformation_t transformation,
-                                                const fidl_type_t* type, const uint8_t* src_bytes,
-                                                uint32_t src_num_bytes, uint8_t* dst_bytes,
-                                                uint32_t dst_num_bytes_capacity,
+                                                const fidl_type_t* type, bool is_transactional,
+                                                const uint8_t* src_bytes, uint32_t src_num_bytes,
+                                                uint8_t* dst_bytes, uint32_t dst_num_bytes_capacity,
                                                 uint32_t* out_dst_num_bytes,
                                                 const char** out_error_msg) {
   if (internal__fidl_tranform_is_noop__may_break(transformation, type)) {
@@ -784,10 +784,35 @@ zx_status_t internal__fidl_transform__may_break(fidl_transformation_t transforma
   }
 
   memset(dst_bytes, 0, dst_num_bytes_capacity);
-  Transformer transformer(transformation, src_bytes, src_num_bytes, dst_bytes,
-                          dst_num_bytes_capacity);
-  zx_status_t status = transformer.Transform(type, 0, 0);
+  if (!is_transactional) {
+    Transformer transformer(transformation, src_bytes, src_num_bytes, dst_bytes,
+                            dst_num_bytes_capacity);
+    zx_status_t status = transformer.Transform(type, 0, 0);
+    *out_error_msg = transformer.err_msg();
+    *out_dst_num_bytes = transformer.dst_num_bytes();
+    return status;
+  }
+
+  // If the passed in message has a header attached, trim it from the buffer passed to the
+  // transformer and convert it separately.
+  uint8_t* trimmed_src_bytes;
+  uint32_t trimmed_src_num_bytes;
+  zx_status_t status = ::fidl::internal::fidl_exclude_header_bytes(
+      src_bytes, src_num_bytes, &trimmed_src_bytes, &trimmed_src_num_bytes, out_error_msg);
+  if (status != ZX_OK) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Copy the header into the destination manually.
+  memcpy(dst_bytes, src_bytes, sizeof(fidl_message_header_t));
+
+  // Transform only the body of the message (ie, everything in the src_bytes buffer from byte 16
+  // onwards).
+  uint8_t* dst_message_body_bytes = dst_bytes + sizeof(fidl_message_header_t);
+  Transformer transformer(transformation, trimmed_src_bytes, trimmed_src_num_bytes,
+                          dst_message_body_bytes, dst_num_bytes_capacity);
+  status = transformer.Transform(type, 0, 0);
   *out_error_msg = transformer.err_msg();
-  *out_dst_num_bytes = transformer.dst_num_bytes();
+  *out_dst_num_bytes = transformer.dst_num_bytes() + sizeof(fidl_message_header_t);
   return status;
 }

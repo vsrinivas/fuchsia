@@ -31,13 +31,13 @@ static const struct FidlCodedHandle Protocol28test_nullable_SimpleProtocolnullab
 static const struct FidlCodedHandle Handlevmo2147483648nullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable};
 
 __LOCAL extern const struct FidlCodedStruct test_nullable_SimpleProtocolAddRequestMessageTable;
-const struct FidlCodedStruct test_nullable_SimpleProtocolAddRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=24u, .size_v2=24u, .name="test.nullable/SimpleProtocolAddRequestMessage"};
+const struct FidlCodedStruct test_nullable_SimpleProtocolAddRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="test.nullable/SimpleProtocolAddRequestMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_nullable_SimpleProtocolAddResponseMessageTable;
 static const struct FidlStructElement Fields46test_nullable_SimpleProtocolAddResponseMessage[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=20u, .offset_v2=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=4u, .offset_v2=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct test_nullable_SimpleProtocolAddResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields46test_nullable_SimpleProtocolAddResponseMessage, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="test.nullable/SimpleProtocolAddResponseMessage"};
+const struct FidlCodedStruct test_nullable_SimpleProtocolAddResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields46test_nullable_SimpleProtocolAddResponseMessage, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="test.nullable/SimpleProtocolAddResponseMessage"};
 
 
 static const struct FidlStructElement Fields38test_nullable_StructWithNullableVector[] = {

@@ -16,10 +16,10 @@ __LOCAL extern const struct FidlCodedXUnion test_doccomments_FlexibleUnionNullab
 
 
 __LOCAL extern const struct FidlCodedStruct test_doccomments_InterfaceMethodRequestMessageTable;
-const struct FidlCodedStruct test_doccomments_InterfaceMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.doccomments/InterfaceMethodRequestMessage"};
+const struct FidlCodedStruct test_doccomments_InterfaceMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=0u, .size_v2=0u, .name="test.doccomments/InterfaceMethodRequestMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_doccomments_InterfaceOnEventEventMessageTable;
-const struct FidlCodedStruct test_doccomments_InterfaceOnEventEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.doccomments/InterfaceOnEventEventMessage"};
+const struct FidlCodedStruct test_doccomments_InterfaceOnEventEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=0u, .size_v2=0u, .name="test.doccomments/InterfaceOnEventEventMessage"};
 
 
 static const struct FidlTableField Fields22test_doccomments_Table[] = {

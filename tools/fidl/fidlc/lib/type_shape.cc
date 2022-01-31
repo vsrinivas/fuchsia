@@ -190,8 +190,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
     }
 
     for (const auto& member : object.members) {
-      const DataSize member_size =
-          UnalignedSize(member) + member.fieldshape(wire_format()).padding;
+      const DataSize member_size = UnalignedSize(member) + member.fieldshape(wire_format()).padding;
       size += member_size;
     }
 
@@ -1206,16 +1205,7 @@ TypeShape::TypeShape(const flat::Object& object, WireFormat wire_format)
 TypeShape::TypeShape(const flat::Object* object, WireFormat wire_format)
     : TypeShape(*object, wire_format) {}
 
-TypeShape TypeShape::ForEmptyPayload() {
-  return TypeShape(kSizeOfTransactionHeader, kAlignmentOfTransactionHeader);
-}
-
-TypeShape TypeShape::PrependTransactionHeader() const {
-  TypeShape typeshape = *this;
-  typeshape.inline_size += kSizeOfTransactionHeader;
-  typeshape.alignment = std::max(typeshape.alignment, kAlignmentOfTransactionHeader);
-  return typeshape;
-}
+TypeShape TypeShape::ForEmptyPayload() { return TypeShape(0, 0); }
 
 FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_format) {
   assert(member.parent);

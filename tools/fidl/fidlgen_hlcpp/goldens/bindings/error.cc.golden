@@ -381,8 +381,8 @@ Example_foo_ResponseHandler(Example::fooCallback&& callback) {
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(
-            ::fidl::DecodeAs<::test::error::Example_foo_Result>(&decoder, 16));
+        callback_(::fidl::DecodeAs<::test::error::Example_foo_Result>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::error::_internal::test_error_ExamplefooResponseMessageTable);
@@ -454,7 +454,8 @@ zx_status_t Example_Stub::Dispatch_(
   switch (ordinal) {
     case ::test::error::internal::kExample_foo_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->foo(::fidl::DecodeAs<::std::string>(&decoder, 16),
+      impl_->foo(::fidl::DecodeAs<::std::string>(
+                     &decoder, 0 + sizeof(fidl_message_header_t)),
                  Example_foo_Responder(std::move(response)));
       break;
     }
@@ -482,8 +483,8 @@ zx_status_t Example_SyncProxy::foo(
       ::test::error::Example_RequestEncoder::foo(&_encoder, &s), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_result =
-      ::fidl::DecodeAs<::test::error::Example_foo_Result>(&decoder_, 16);
+  *out_result = ::fidl::DecodeAs<::test::error::Example_foo_Result>(
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

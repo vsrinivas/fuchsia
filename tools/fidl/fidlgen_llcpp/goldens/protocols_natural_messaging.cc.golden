@@ -112,6 +112,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::
           test_protocols_HandleRightsProtocolAnEventEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {
@@ -128,6 +129,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::
           test_protocols_HandleRightsProtocolAnEventEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {
@@ -547,6 +549,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       [this](fidl::OutgoingMessage outgoing) {
         return _inner().SendEvent(outgoing);
@@ -561,6 +564,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       [this](fidl::OutgoingMessage outgoing) {
         outgoing.Write(_transport());
@@ -579,6 +583,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {
@@ -597,6 +602,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {
@@ -944,6 +950,7 @@ fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional>::Event(
   ::fidl::Encoder _encoder{::test_protocols::kTransitional_Event_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::test_protocols_TransitionalEventEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {
@@ -958,6 +965,7 @@ fidl::internal::NaturalEventSender<::test_protocols::Transitional>::Event(
   ::fidl::Encoder _encoder{::test_protocols::kTransitional_Event_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::test_protocols_TransitionalEventEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {
@@ -2110,6 +2118,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   ::fidl::Encoder _encoder{::test_protocols::kChannelProtocol_EventA_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::test_protocols_ChannelProtocolEventAEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {
@@ -2124,6 +2133,7 @@ fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>::EventA(
   ::fidl::Encoder _encoder{::test_protocols::kChannelProtocol_EventA_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::test_protocols_ChannelProtocolEventAEventMessageTable,
+      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {

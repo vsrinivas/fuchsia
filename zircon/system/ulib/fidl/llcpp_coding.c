@@ -11,8 +11,8 @@ extern const struct FidlCodedStruct _llcpp_coding_AnyZeroArgMessageTable;
 const struct FidlCodedStruct _llcpp_coding_AnyZeroArgMessageTable = {
     .tag = kFidlTypeStruct,
     .element_count = 0u,
-    .size_v1 = 16u,
-    .size_v2 = 16u,
+    .size_v1 = 0,
+    .size_v2 = 0,
     .elements = NULL,
     .name = "AnyZeroArgMessage",
 };

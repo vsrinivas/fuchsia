@@ -12,6 +12,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "lib/fidl/llcpp/traits.h"
+
 namespace transformer_conformance_utils {
 
 template <typename FidlType>
@@ -23,9 +25,9 @@ void FidlTransformSuccessCase(fidl_transformation_t transformation,
   uint32_t bytes_actual;
   const char* error = nullptr;
   zx_status_t status = internal__fidl_transform__may_break(
-      transformation, fidl::TypeTraits<FidlType>::kType, input_bytes.data(),
-      static_cast<uint32_t>(input_bytes.size()), buffer_bytes.get(), ZX_CHANNEL_MAX_MSG_BYTES,
-      &bytes_actual, &error);
+      transformation, fidl::TypeTraits<FidlType>::kType, fidl::IsFidlMessage<FidlType>::value,
+      input_bytes.data(), static_cast<uint32_t>(input_bytes.size()), buffer_bytes.get(),
+      ZX_CHANNEL_MAX_MSG_BYTES, &bytes_actual, &error);
   ASSERT_OK(status);
   ASSERT_NULL(error);
   ASSERT_EQ(expected_bytes.size(), bytes_actual);
@@ -41,9 +43,9 @@ void FidlTransformFailureCase(fidl_transformation_t transformation,
   uint32_t bytes_actual;
   const char* error = nullptr;
   internal__fidl_transform__may_break(transformation, fidl::TypeTraits<FidlType>::kType,
-                                      input_bytes.data(), static_cast<uint32_t>(input_bytes.size()),
-                                      buffer_bytes.get(), ZX_CHANNEL_MAX_MSG_BYTES, &bytes_actual,
-                                      &error);
+                                      fidl::IsFidlMessage<FidlType>::value, input_bytes.data(),
+                                      static_cast<uint32_t>(input_bytes.size()), buffer_bytes.get(),
+                                      ZX_CHANNEL_MAX_MSG_BYTES, &bytes_actual, &error);
 }
 }  // namespace transformer_conformance_utils
 

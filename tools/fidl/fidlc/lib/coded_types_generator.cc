@@ -28,19 +28,6 @@ CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::St
   assert(padding == member.fieldshape(WireFormat::kV2).padding);
 }
 
-CodedTypesGenerator::FlattenedStructMember
-CodedTypesGenerator::FlattenedStructMember::PrependTransactionHeader() const {
-  return FlattenedStructMember{
-      type,
-      name,
-      inline_size_v1,
-      inline_size_v2,
-      offset_v1 + kSizeOfTransactionHeader,
-      offset_v2 + kSizeOfTransactionHeader,
-      padding,
-  };
-}
-
 CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(
     const flat::Type* type, SourceSpan name, fidl::TypeShape typeshape_v1,
     fidl::TypeShape typeshape_v2, fidl::FieldShape fieldshape_v1, fidl::FieldShape fieldshape_v2)
@@ -348,8 +335,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
             auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
             assert(!as_struct->members.empty() && "cannot process empty message payloads");
 
-            for (const auto& no_header_parameter : FlattenedStructMembers(*as_struct)) {
-              const auto parameter = no_header_parameter.PrependTransactionHeader();
+            for (const auto& parameter : FlattenedStructMembers(*as_struct)) {
               auto coded_parameter_type =
                   CompileType(parameter.type, coded::CodingContext::kOutsideEnvelope);
               if (!coded_parameter_type->is_noop) {
@@ -537,8 +523,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
             auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
             assert(!as_struct->members.empty() && "cannot process empty message payloads");
 
-            typeshape_v1 = as_struct->typeshape(WireFormat::kV1NoEe).PrependTransactionHeader();
-            typeshape_v2 = as_struct->typeshape(WireFormat::kV2).PrependTransactionHeader();
+            typeshape_v1 = as_struct->typeshape(WireFormat::kV1NoEe);
+            typeshape_v2 = as_struct->typeshape(WireFormat::kV2);
           }
 
           protocol_messages.push_back(std::make_unique<coded::MessageType>(

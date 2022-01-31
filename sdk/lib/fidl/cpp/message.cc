@@ -39,24 +39,36 @@ HLCPPIncomingMessage& HLCPPIncomingMessage::operator=(HLCPPIncomingMessage&& oth
 }
 
 zx_status_t HLCPPIncomingMessage::Decode(const fidl_type_t* type, const char** error_msg_out) {
-  return Decode(internal::WireFormatMetadata::FromTransactionalHeader(header()), type,
+  return Decode(internal::WireFormatMetadata::FromTransactionalHeader(header()), type, true,
                 error_msg_out);
 }
 
 zx_status_t HLCPPIncomingMessage::DecodeWithExternalHeader_InternalMayBreak(
     const fidl_message_header_t& header, const fidl_type_t* type, const char** error_msg_out) {
-  return Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(header), type,
+  return Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(header), type, false,
                 error_msg_out);
 }
 
 zx_status_t HLCPPIncomingMessage::Decode(const internal::WireFormatMetadata& metadata,
-                                         const fidl_type_t* type, const char** error_msg_out) {
+                                         const fidl_type_t* type, bool is_transactional,
+                                         const char** error_msg_out) {
   internal::WireFormatVersion version = metadata.wire_format_version();
+  zx_status_t status;
   switch (version) {
     case internal::WireFormatVersion::kV1: {
       // Transform to V2.
-      zx_status_t status = internal__fidl_validate__v1__may_break(
-          type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
+      uint8_t* trimmed_bytes = bytes_.data();
+      uint32_t trimmed_num_bytes = bytes_.actual();
+      if (is_transactional) {
+        status = ::fidl::internal::fidl_exclude_header_bytes(
+            bytes_.data(), bytes_.actual(), &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
+        if (status != ZX_OK) {
+          return status;
+        }
+      }
+
+      status = internal__fidl_validate__v1__may_break(type, trimmed_bytes, trimmed_num_bytes,
+                                                      handles_.actual(), error_msg_out);
       if (status != ZX_OK) {
         return status;
       }
@@ -65,7 +77,7 @@ zx_status_t HLCPPIncomingMessage::Decode(const internal::WireFormatMetadata& met
 
       uint32_t num_bytes = 0;
       status = internal__fidl_transform__may_break(
-          FIDL_TRANSFORMATION_V1_TO_V2, type, bytes_.data(), bytes_.actual(),
+          FIDL_TRANSFORMATION_V1_TO_V2, type, is_transactional, bytes_.data(), bytes_.actual(),
           transformer_bytes.get(), ZX_CHANNEL_MAX_MSG_BYTES, &num_bytes, error_msg_out);
       if (status != ZX_OK) {
         return status;
@@ -85,9 +97,19 @@ zx_status_t HLCPPIncomingMessage::Decode(const internal::WireFormatMetadata& met
       break;
   }
 
+  uint8_t* trimmed_bytes = bytes_.data();
+  uint32_t trimmed_num_bytes = bytes_.actual();
+  if (is_transactional) {
+    status = ::fidl::internal::fidl_exclude_header_bytes(
+        bytes_.data(), bytes_.actual(), &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
   fidl_trace(WillHLCPPDecode, type, bytes_.data(), bytes_.actual(), handles_.actual());
-  zx_status_t status = internal__fidl_decode_etc_hlcpp__v2__may_break(
-      type, bytes_.data(), bytes_.actual(), handles_.data(), handles_.actual(), error_msg_out);
+  status = internal__fidl_decode_etc_hlcpp__v2__may_break(
+      type, trimmed_bytes, trimmed_num_bytes, handles_.data(), handles_.actual(), error_msg_out);
   fidl_trace(DidHLCPPDecode);
 
   ClearHandlesUnsafe();
@@ -145,10 +167,19 @@ HLCPPOutgoingMessage& HLCPPOutgoingMessage::operator=(HLCPPOutgoingMessage&& oth
 
 zx_status_t HLCPPOutgoingMessage::Encode(const fidl_type_t* type, const char** error_msg_out) {
   uint32_t actual_handles = 0u;
-  zx_status_t status = fidl_encode_etc(type, bytes_.data(), bytes_.actual(), handles_.data(),
+  uint8_t* trimmed_bytes = bytes_.data();
+  uint32_t trimmed_num_bytes = bytes_.actual();
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      bytes_.data(), bytes_.actual(), &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
+  if (unlikely(trim_status) != ZX_OK) {
+    return trim_status;
+  }
+
+  zx_status_t status = fidl_encode_etc(type, trimmed_bytes, trimmed_num_bytes, handles_.data(),
                                        handles_.capacity(), &actual_handles, error_msg_out);
-  if (status == ZX_OK)
+  if (status == ZX_OK) {
     handles_.set_actual(actual_handles);
+  }
 
   return status;
 }
@@ -160,21 +191,31 @@ zx_status_t HLCPPOutgoingMessage::Validate(const fidl_type_t* type,
     wire_format_version = internal::WireFormatVersion::kV2;
   }
 
-  return ValidateWithVersion_InternalMayBreak(wire_format_version, type, error_msg_out);
+  return ValidateWithVersion_InternalMayBreak(wire_format_version, type, true, error_msg_out);
 }
 
 zx_status_t HLCPPOutgoingMessage::ValidateWithVersion_InternalMayBreak(
-    internal::WireFormatVersion wire_format_version, const fidl_type_t* type,
+    internal::WireFormatVersion wire_format_version, const fidl_type_t* type, bool is_transactional,
     const char** error_msg_out) const {
   fidl_trace(WillHLCPPValidate, type, bytes_.data(), bytes_.actual(), handles_.actual());
+  uint8_t* trimmed_bytes = bytes_.data();
+  uint32_t trimmed_num_bytes = bytes_.actual();
+  if (is_transactional) {
+    zx_status_t status = ::fidl::internal::fidl_exclude_header_bytes(
+        bytes_.data(), bytes_.actual(), &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
   zx_status_t status;
   switch (wire_format_version) {
     case internal::WireFormatVersion::kV1:
-      status = internal__fidl_validate__v1__may_break(type, bytes_.data(), bytes_.actual(),
+      status = internal__fidl_validate__v1__may_break(type, trimmed_bytes, trimmed_num_bytes,
                                                       handles_.actual(), error_msg_out);
       break;
     case internal::WireFormatVersion::kV2:
-      status = internal__fidl_validate__v2__may_break(type, bytes_.data(), bytes_.actual(),
+      status = internal__fidl_validate__v2__may_break(type, trimmed_bytes, trimmed_num_bytes,
                                                       handles_.actual(), error_msg_out);
       break;
     default:

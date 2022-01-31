@@ -107,7 +107,7 @@ class FidlEncoder final : public ::fidl::Visitor<WireFormatVersion, fidl::Mutati
     ZX_DEBUG_ASSERT(backing_buffer_offset_ <= backing_buffer_capacity_);
     iovecs_[0] = {
         .buffer = args.backing_buffer,
-        .capacity = args.inline_object_size,
+        .capacity = static_cast<uint32_t>(args.inline_object_size),
     };
   }
 
@@ -410,11 +410,11 @@ namespace internal {
 
 template <FidlWireFormatVersion WireFormatVersion>
 zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fidl_type_t* type,
-                           void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs,
-                           fidl_handle_t* handles, void* handle_metadata, uint32_t num_handles,
-                           uint8_t* backing_buffer, uint32_t num_backing_buffer,
-                           uint32_t* out_actual_iovec, uint32_t* out_actual_handles,
-                           const char** out_error_msg) {
+                           bool is_transactional, void* value, zx_channel_iovec_t* iovecs,
+                           uint32_t num_iovecs, fidl_handle_t* handles, void* handle_metadata,
+                           uint32_t num_handles, uint8_t* backing_buffer,
+                           uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
+                           uint32_t* out_actual_handles, const char** out_error_msg) {
   // Use debug asserts for preconditions that are not user dependent to avoid the runtime cost.
   ZX_DEBUG_ASSERT(type != nullptr);
   ZX_DEBUG_ASSERT(iovecs != nullptr);
@@ -447,11 +447,17 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
     return status;
   }
 
+  // Ensure that we offset the primary_size and next_out_of_line values by the proper amount if a
+  // header is required.
+  uint32_t header_size = is_transactional ? sizeof(fidl_message_header_t) : 0;
+  primary_size += header_size;
+  next_out_of_line += header_size;
+
   // Zero the last 8 bytes so padding will be zero after memcpy.
   *reinterpret_cast<uint64_t*>(__builtin_assume_aligned(
       &backing_buffer[next_out_of_line - FIDL_ALIGNMENT], FIDL_ALIGNMENT)) = 0;
 
-  // Copy the primary object
+  // Copy the primary object, taking care to include space for the header if one was specified.
   memcpy(backing_buffer, value, primary_size);
 
   EncodeArgs args = {
@@ -467,7 +473,9 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
       .out_error_msg = out_error_msg,
   };
   FidlEncoder<WireFormatVersion> encoder(args);
-  ::fidl::Walk<WireFormatVersion>(encoder, type, {.source_object = value, .dest = backing_buffer});
+  ::fidl::Walk<WireFormatVersion>(encoder, type,
+                                  {.source_object = static_cast<uint8_t*>(value) + header_size,
+                                   .dest = backing_buffer + header_size});
   if (unlikely(encoder.status() != ZX_OK)) {
     *out_actual_handles = 0;
     FidlHandleCloseMany(handles, encoder.num_out_handles());
@@ -480,15 +488,17 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
 }
 
 template zx_status_t EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V1>(
-    const CodingConfig& encoding_configuration, const fidl_type_t* type, void* value,
-    zx_channel_iovec_t* iovecs, uint32_t num_iovecs, fidl_handle_t* handles, void* handle_metadata,
-    uint32_t num_handles, uint8_t* backing_buffer, uint32_t num_backing_buffer,
-    uint32_t* out_actual_iovec, uint32_t* out_actual_handles, const char** out_error_msg);
+    const CodingConfig& encoding_configuration, const fidl_type_t* type, bool is_transactional,
+    void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs, fidl_handle_t* handles,
+    void* handle_metadata, uint32_t num_handles, uint8_t* backing_buffer,
+    uint32_t num_backing_buffer, uint32_t* out_actual_iovec, uint32_t* out_actual_handles,
+    const char** out_error_msg);
 template zx_status_t EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
-    const CodingConfig& encoding_configuration, const fidl_type_t* type, void* value,
-    zx_channel_iovec_t* iovecs, uint32_t num_iovecs, fidl_handle_t* handles, void* handle_metadata,
-    uint32_t num_handles, uint8_t* backing_buffer, uint32_t num_backing_buffer,
-    uint32_t* out_actual_iovec, uint32_t* out_actual_handles, const char** out_error_msg);
+    const CodingConfig& encoding_configuration, const fidl_type_t* type, bool is_transactional,
+    void* value, zx_channel_iovec_t* iovecs, uint32_t num_iovecs, fidl_handle_t* handles,
+    void* handle_metadata, uint32_t num_handles, uint8_t* backing_buffer,
+    uint32_t num_backing_buffer, uint32_t* out_actual_iovec, uint32_t* out_actual_handles,
+    const char** out_error_msg);
 
 }  // namespace internal
 }  // namespace fidl

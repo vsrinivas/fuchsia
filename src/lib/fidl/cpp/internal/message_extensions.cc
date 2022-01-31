@@ -42,11 +42,11 @@ namespace internal {
 }
 
 ::fidl::OutgoingMessage ConvertFromHLCPPOutgoingMessage(
-    const fidl_type_t* type, HLCPPOutgoingMessage&& message, zx_handle_t* handles,
-    fidl_channel_handle_metadata_t* handle_metadata) {
+    const fidl_type_t* type, bool is_transactional, HLCPPOutgoingMessage&& message,
+    zx_handle_t* handles, fidl_channel_handle_metadata_t* handle_metadata) {
   const char* error_msg = nullptr;
-  zx_status_t status = message.ValidateWithVersion_InternalMayBreak(DefaultHLCPPEncoderWireFormat(),
-                                                                    type, &error_msg);
+  zx_status_t status = message.ValidateWithVersion_InternalMayBreak(
+      DefaultHLCPPEncoderWireFormat(), type, is_transactional, &error_msg);
   if (status != ZX_OK) {
     return fidl::OutgoingMessage(fidl::Result::EncodeError(status, error_msg));
   }

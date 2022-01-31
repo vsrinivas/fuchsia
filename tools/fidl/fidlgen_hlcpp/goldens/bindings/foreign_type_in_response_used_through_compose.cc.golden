@@ -81,7 +81,8 @@ Top_GetFoo_ResponseHandler(Top::GetFooCallback&& callback) {
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::test::bottom::Foo>(&decoder, 16));
+        callback_(::fidl::DecodeAs<::test::bottom::Foo>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::foreigntypeinresponseusedthroughcompose::_internal::
@@ -191,7 +192,8 @@ zx_status_t Top_SyncProxy::GetFoo(::test::bottom::Foo* out_foo) {
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_foo = ::fidl::DecodeAs<::test::bottom::Foo>(&decoder_, 16);
+  *out_foo = ::fidl::DecodeAs<::test::bottom::Foo>(
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 }  // namespace foreigntypeinresponseusedthroughcompose

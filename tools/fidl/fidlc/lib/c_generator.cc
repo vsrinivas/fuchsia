@@ -1252,12 +1252,27 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
     }
     if (encode_request) {
       file_ << kIndent << "uint32_t _wr_num_handles = 0u;\n";
-      file_ << kIndent << "zx_status_t _status = fidl_encode_etc(&"
-            << method_info.request->coded_name << ", _wr_bytes, _wr_num_bytes, "
+
+      file_ << kIndent << "if (unlikely(_wr_num_bytes < sizeof(fidl_message_header_t))) {\n";
+      file_ << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
+      file_ << kIndent << "}\n";
+      file_ << kIndent
+            << "uint32_t _trimmed_wr_num_bytes = _wr_num_bytes - "
+               "(uint32_t)(sizeof(fidl_message_header_t));\n";
+      file_ << kIndent << "if (unlikely(_wr_bytes == NULL)) {\n";
+      file_ << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
+      file_ << kIndent << "}\n";
+      file_ << kIndent
+            << "uint8_t* _trimmed_wr_bytes = (uint8_t*)_wr_bytes + "
+               "sizeof(fidl_message_header_t);\n";
+
+      file_ << kIndent << "zx_status_t _encode_status = fidl_encode_etc(&"
+            << method_info.request->coded_name << ", _trimmed_wr_bytes, _trimmed_wr_num_bytes, "
             << handle_dispositions_value << ", " << request_hcount
             << ", &_wr_num_handles, NULL);\n";
-      file_ << kIndent << "if (_status != ZX_OK)\n";
-      file_ << kIndent << kIndent << "return _status;\n";
+
+      file_ << kIndent << "if (_encode_status != ZX_OK)\n";
+      file_ << kIndent << kIndent << "return _encode_status;\n";
     } else {
       file_ << kIndent << "// OPTIMIZED AWAY fidl_encode() of POD-only request\n";
     }
@@ -1276,6 +1291,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
           break;
       }
     } else {
+      file_ << kIndent << "zx_status_t _status;\n";
       file_ << kIndent << "uint32_t _rd_num_bytes = sizeof(" << method_info.response->c_name << ")";
       EmitMeasureOutParams(&file_, response);
       file_ << ";\n";
@@ -1306,11 +1322,6 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
 
           file_ << kIndent << "uint32_t _actual_num_bytes = 0u;\n";
           file_ << kIndent << "uint32_t _actual_num_handles = 0u;\n";
-          if (encode_request) {
-            file_ << kIndent;
-          } else {
-            file_ << kIndent << "zx_status_t ";
-          }
           file_ << "_status = zx_channel_call_etc(_channel, 0u, ZX_TIME_INFINITE, &_args, "
                    "&_actual_num_bytes, &_actual_num_handles);\n";
           break;
@@ -1361,13 +1372,28 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
         // TODO(fxbug.dev/7499): Validate the response ordinal. C++ bindings also need to do that.
         switch (named_protocol.transport) {
           case Transport::Channel:
-            file_ << kIndent << "_status = fidl_decode_etc(&" << method_info.response->coded_name
-                  << ", _rd_bytes, _actual_num_bytes, " << handle_infos_value
+            file_ << kIndent
+                  << "if (unlikely(_actual_num_bytes < sizeof(fidl_message_header_t))) {\n";
+            file_ << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
+            file_ << kIndent << "}\n";
+            file_ << kIndent
+                  << "uint32_t _trimmed_rd_num_bytes = _actual_num_bytes - "
+                     "(uint32_t)(sizeof(fidl_message_header_t));\n";
+            file_ << kIndent << "if (unlikely(_rd_bytes == NULL)) {\n";
+            file_ << kIndent << kIndent << "return ZX_ERR_INVALID_ARGS;\n";
+            file_ << kIndent << "}\n";
+            file_ << kIndent
+                  << "uint8_t* _trimmed_rd_bytes = (uint8_t*)_rd_bytes + "
+                     "sizeof(fidl_message_header_t);\n";
+
+            file_ << kIndent << "zx_status_t _decode_status = fidl_decode_etc(&"
+                  << method_info.response->coded_name
+                  << ", _trimmed_rd_bytes, _trimmed_rd_num_bytes, " << handle_infos_value
                   << ", _actual_num_handles, NULL);\n";
             break;
         }
-        file_ << kIndent << "if (_status != ZX_OK)\n";
-        file_ << kIndent << kIndent << "return _status;\n";
+        file_ << kIndent << "if (_decode_status != ZX_OK)\n";
+        file_ << kIndent << kIndent << "return _decode_status;\n";
       } else {
         file_ << kIndent << "// OPTIMIZED AWAY fidl_decode() of POD-only response\n";
       }

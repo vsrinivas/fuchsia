@@ -115,8 +115,8 @@ struct TypeTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::test_nullable_SimpleProtocolAddRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -131,10 +131,10 @@ static_assert(
         kPrimarySize);
 static_assert(
     offsetof(::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, a) ==
-    16);
+    0 + sizeof(fidl_message_header_t));
 static_assert(
     offsetof(::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, b) ==
-    20);
+    4 + sizeof(fidl_message_header_t));
 
 template <>
 struct IsFidlType<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>>
@@ -148,8 +148,8 @@ struct TypeTraits<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::test_nullable_SimpleProtocolAddResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -164,7 +164,7 @@ static_assert(
         kPrimarySize);
 static_assert(
     offsetof(::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>, sum) ==
-    16);
+    0 + sizeof(fidl_message_header_t));
 
 }  // namespace fidl
 namespace test_nullable {

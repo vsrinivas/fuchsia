@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/internal.h>
 #include <stddef.h>
+#include <zircon/errors.h>
 
 #ifdef __Fuchsia__
 #include <lib/zx/eventpair.h>
@@ -71,6 +73,7 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
   if (handles == nullptr) {
     return fidl_decode_etc(type, bytes, num_bytes, nullptr, num_handles, error_msg_out);
   }
+
   std::vector<zx_handle_info_t> handle_infos;
   for (uint32_t i = 0; i < num_handles; i++) {
     handle_infos.push_back({
@@ -79,9 +82,47 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
         .rights = ZX_RIGHT_SAME_RIGHTS,
     });
   }
+
   return fidl_decode_etc(type, bytes, num_bytes, handle_infos.data(), handle_infos.size(),
                          error_msg_out);
 }
+
+zx_status_t fidl_decode_transactional(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                                      const zx_handle_t* handles, uint32_t num_handles,
+                                      const char** error_msg_out) {
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      bytes, num_bytes, &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
+  if (unlikely(trim_status != ZX_OK)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (trimmed_num_bytes == 0) {
+    return ZX_OK;
+  }
+
+  return fidl_decode(type, trimmed_bytes, trimmed_num_bytes, handles, num_handles, error_msg_out);
+}
+
+#ifdef __Fuchsia__
+zx_status_t fidl_decode_etc_transactional(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                                          const zx_handle_info_t* handle_infos,
+                                          uint32_t num_handles, const char** error_msg_out) {
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      bytes, num_bytes, &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
+  if (unlikely(trim_status != ZX_OK)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (trimmed_num_bytes == 0) {
+    return ZX_OK;
+  }
+
+  return fidl_decode_etc(type, trimmed_bytes, trimmed_num_bytes, handle_infos, num_handles,
+                         error_msg_out);
+}
+#endif  // __Fuchsia__
 
 // All sizes in fidl encoding tables are 32 bits. The fidl compiler
 // normally enforces this. Check manually in manual tests.
@@ -106,8 +147,9 @@ TEST(NullParameters, decode_null_decode_parameters) {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = FIDL_HANDLE_PRESENT;
     const char* error = nullptr;
-    auto status = fidl_decode(nullptr, &message, sizeof(nonnullable_handle_message_layout), handles,
-                              ArrayCount(handles), &error);
+    auto status =
+        fidl_decode_transactional(nullptr, &message, sizeof(nonnullable_handle_message_layout),
+                                  handles, ArrayCount(handles), &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NOT_NULL(error);
   }
@@ -128,8 +170,9 @@ TEST(NullParameters, decode_null_decode_parameters) {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = FIDL_HANDLE_PRESENT;
     const char* error = nullptr;
-    auto status = fidl_decode(&nonnullable_handle_message_type, &message,
-                              sizeof(nonnullable_handle_message_layout), nullptr, 0, &error);
+    auto status =
+        fidl_decode_transactional(&nonnullable_handle_message_type, &message,
+                                  sizeof(nonnullable_handle_message_layout), nullptr, 0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NOT_NULL(error);
   }
@@ -139,8 +182,9 @@ TEST(NullParameters, decode_null_decode_parameters) {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = FIDL_HANDLE_PRESENT;
     const char* error = nullptr;
-    auto status = fidl_decode(&nonnullable_handle_message_type, &message,
-                              sizeof(nonnullable_handle_message_layout), nullptr, 1, &error);
+    auto status =
+        fidl_decode_transactional(&nonnullable_handle_message_type, &message,
+                                  sizeof(nonnullable_handle_message_layout), nullptr, 1, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NOT_NULL(error);
   }
@@ -155,9 +199,9 @@ TEST(NullParameters, decode_null_decode_parameters) {
   {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = FIDL_HANDLE_PRESENT;
-    auto status = fidl_decode(&nonnullable_handle_message_type, &message,
-                              sizeof(nonnullable_handle_message_layout), handles,
-                              ArrayCount(handles), nullptr);
+    auto status = fidl_decode_transactional(&nonnullable_handle_message_type, &message,
+                                            sizeof(nonnullable_handle_message_layout), handles,
+                                            ArrayCount(handles), nullptr);
     EXPECT_EQ(status, ZX_OK);
   }
 }
@@ -191,8 +235,8 @@ TEST(Unaligned, decode_single_present_handle_unaligned_error) {
 
   // Decoding the unaligned version of the struct should fail.
   const char* error = nullptr;
-  auto status = fidl_decode(&nonnullable_handle_message_type, &message, sizeof(message), handles,
-                            ArrayCount(handles), &error);
+  auto status = fidl_decode_transactional(&nonnullable_handle_message_type, &message,
+                                          sizeof(message), handles, ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -210,8 +254,8 @@ TEST(Unaligned, decode_present_nonnullable_string_unaligned_error) {
   memcpy(unaligned_ptr, &message, sizeof(message));
 
   const char* error = nullptr;
-  auto status = fidl_decode(&unbounded_nonnullable_string_message_type, unaligned_ptr,
-                            sizeof(message), nullptr, 0, &error);
+  auto status = fidl_decode_transactional(&unbounded_nonnullable_string_message_type, unaligned_ptr,
+                                          sizeof(message), nullptr, 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -277,8 +321,8 @@ TEST(Structs, decode_nested_nonnullable_structs) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_decode(&nested_structs_message_type, &message, sizeof(message), handles,
-                            ArrayCount(handles), &error);
+  auto status = fidl_decode_transactional(&nested_structs_message_type, &message, sizeof(message),
+                                          handles, ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -335,8 +379,8 @@ TEST(Structs, decode_nested_nonnullable_structs_check_padding) {
     };
 
     const char* error = nullptr;
-    auto status = fidl_decode(&nested_structs_message_type, &message, kBufferSize, handles,
-                              ArrayCount(handles), &error);
+    auto status = fidl_decode_transactional(&nested_structs_message_type, &message, kBufferSize,
+                                            handles, ArrayCount(handles), &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     ASSERT_NOT_NULL(error);
@@ -430,8 +474,8 @@ TEST(Structs, decode_nested_nullable_structs) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_decode(&nested_struct_ptrs_message_type, &message, sizeof(message), handles,
-                            ArrayCount(handles), &error);
+  auto status = fidl_decode_transactional(&nested_struct_ptrs_message_type, &message,
+                                          sizeof(message), handles, ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -548,7 +592,7 @@ TEST(Structs, decode_nested_nullable_structs) {
 
 TEST(UnknownEnvelope, NumUnknownHandlesOverflows) {
   uint8_t bytes[] = {
-      3,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
+      3,   0,   0,   0,   0,   0,   0,   0,    // field count
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
 
       0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
@@ -572,7 +616,7 @@ TEST(UnknownEnvelope, NumUnknownHandlesOverflows) {
 
 TEST(UnknownEnvelope, NumIncomingHandlesOverflows) {
   uint8_t bytes[] = {
-      2,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
+      2,   0,   0,   0,   0,   0,   0,   0,    // field count
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
 
       0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
@@ -595,13 +639,13 @@ TEST(UnknownEnvelope, NumIncomingHandlesOverflows) {
 #ifdef __Fuchsia__
 TEST(UnknownEnvelope, NumUnknownHandlesExceedsUnknownArraySize) {
   uint8_t bytes[] = {
-      2,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
+      2,   0,   0,   0,   0,   0,   0,   0,    // field count
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
 
       0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
-      0,   0,   0,   0,   0,   0,   0,   0,  // alloc present
+      0,   0,   0,   0,   0,   0,   0,   0,  // alloc absent
 
-      0,   0,   0,   0,   65,  0,   0,   0,    // envelope 1: num bytes / num handles
+      0,   0,   0,   0,   65,  0,   0,   0,    // envelope 2: num bytes / num handles
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
   };
 
@@ -617,7 +661,7 @@ TEST(UnknownEnvelope, NumUnknownHandlesExceedsUnknownArraySize) {
 #ifdef __Fuchsia__
 TEST(UnknownEnvelope, DecodeUnknownHandle) {
   uint8_t bytes[] = {
-      2,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
+      2,   0,   0,   0,   0,   0,   0,   0,    // field count
       255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
 
       0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
@@ -759,8 +803,9 @@ TEST(FidlDecodeEtc, decode_invalid_handle_info) {
   }};
 
   const char* error = nullptr;
-  auto status = fidl_decode_etc(&nonnullable_handle_message_type, &message, sizeof(message),
-                                handle_infos, ArrayCount(handle_infos), &error);
+  auto status =
+      fidl_decode_etc_transactional(&nonnullable_handle_message_type, &message, sizeof(message),
+                                    handle_infos, ArrayCount(handle_infos), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_NOT_NULL(error);
@@ -780,8 +825,9 @@ TEST(FidlDecodeEtc, decode_single_present_handle_info_handle_rights_subtype_matc
   }};
 
   const char* error = nullptr;
-  auto status = fidl_decode_etc(&nonnullable_channel_message_type, &message, sizeof(message),
-                                handle_infos, ArrayCount(handle_infos), &error);
+  auto status =
+      fidl_decode_etc_transactional(&nonnullable_channel_message_type, &message, sizeof(message),
+                                    handle_infos, ArrayCount(handle_infos), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -800,8 +846,9 @@ TEST(FidlDecodeEtc, decode_single_present_handle_info_no_subtype_same_rights) {
   }};
 
   const char* error = nullptr;
-  auto status = fidl_decode_etc(&nonnullable_handle_message_type, &message, sizeof(message),
-                                handle_infos, ArrayCount(handle_infos), &error);
+  auto status =
+      fidl_decode_etc_transactional(&nonnullable_handle_message_type, &message, sizeof(message),
+                                    handle_infos, ArrayCount(handle_infos), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -820,8 +867,9 @@ TEST(FidlDecodeEtc, decode_single_present_handle_info_handle_rights_wrong_subtyp
   }};
 
   const char* error = nullptr;
-  auto status = fidl_decode_etc(&nonnullable_channel_message_type, &message, sizeof(message),
-                                handle_infos, ArrayCount(handle_infos), &error);
+  auto status =
+      fidl_decode_etc_transactional(&nonnullable_channel_message_type, &message, sizeof(message),
+                                    handle_infos, ArrayCount(handle_infos), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_SUBSTR(error, "object type does not match expected type");
@@ -839,8 +887,9 @@ TEST(FidlDecodeEtc, decode_single_present_handle_info_handle_rights_missing_requ
   }};
 
   const char* error = nullptr;
-  auto status = fidl_decode_etc(&nonnullable_channel_message_type, &message, sizeof(message),
-                                handle_infos, ArrayCount(handle_infos), &error);
+  auto status =
+      fidl_decode_etc_transactional(&nonnullable_channel_message_type, &message, sizeof(message),
+                                    handle_infos, ArrayCount(handle_infos), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_SUBSTR(error, "required rights");
@@ -862,8 +911,9 @@ TEST(FidlDecodeEtc, decode_single_present_handle_info_handle_rights_too_many_rig
   }};
 
   const char* error = nullptr;
-  status = fidl_decode_etc(&nonnullable_channel_message_type, &message, sizeof(message),
-                           handle_infos, ArrayCount(handle_infos), &error);
+  status =
+      fidl_decode_etc_transactional(&nonnullable_channel_message_type, &message, sizeof(message),
+                                    handle_infos, ArrayCount(handle_infos), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);

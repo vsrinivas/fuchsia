@@ -40,33 +40,33 @@ class {{ .RequestEncoder.Name }} {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc({{ .Request.TypeShapeV1.InlineSize }} - sizeof(fidl_message_header_t));
+        _encoder->Alloc({{ .Request.TypeShapeV1.InlineSize }});
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc({{ .Request.TypeShapeV2.InlineSize }} - sizeof(fidl_message_header_t));
+        _encoder->Alloc({{ .Request.TypeShapeV2.InlineSize }});
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       {{- range .RequestArgs }}
       {{- if .HandleInformation }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }}, ::fidl::HandleInformation {
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }} + sizeof(fidl_message_header_t), ::fidl::HandleInformation {
         .object_type = {{ .HandleInformation.ObjectType }},
         .rights = {{ .HandleInformation.Rights }},
       });
       {{ else }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }});
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }} + sizeof(fidl_message_header_t));
       {{ end -}}
       {{- end }}
     } else {
       {{- range .RequestArgs }}
       {{- if .HandleInformation }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }}, ::fidl::HandleInformation {
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }} + sizeof(fidl_message_header_t), ::fidl::HandleInformation {
         .object_type = {{ .HandleInformation.ObjectType }},
         .rights = {{ .HandleInformation.Rights }},
       });
       {{ else }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }});
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }} + sizeof(fidl_message_header_t));
       {{ end -}}
       {{- end }}
     }
@@ -97,10 +97,10 @@ class {{ .ResponseEncoder.Name }} {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc({{ .Response.TypeShapeV1.InlineSize }} - sizeof(fidl_message_header_t));
+        _encoder->Alloc({{ .Response.TypeShapeV1.InlineSize }});
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc({{ .Response.TypeShapeV2.InlineSize }} - sizeof(fidl_message_header_t));
+        _encoder->Alloc({{ .Response.TypeShapeV2.InlineSize }});
         break;
     }
 
@@ -108,23 +108,23 @@ class {{ .ResponseEncoder.Name }} {
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       {{- range .ResponseArgs }}
       {{- if .HandleInformation }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }}, ::fidl::HandleInformation {
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }} + sizeof(fidl_message_header_t), ::fidl::HandleInformation {
         .object_type = {{ .HandleInformation.ObjectType }},
         .rights = {{ .HandleInformation.Rights }},
       });
       {{ else }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }});
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }} + sizeof(fidl_message_header_t));
       {{ end -}}
       {{- end }}
     } else {
       {{- range .ResponseArgs }}
       {{- if .HandleInformation }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }}, ::fidl::HandleInformation {
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }} + sizeof(fidl_message_header_t), ::fidl::HandleInformation {
         .object_type = {{ .HandleInformation.ObjectType }},
         .rights = {{ .HandleInformation.Rights }},
       });
       {{ else }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }});
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }} + sizeof(fidl_message_header_t));
       {{ end -}}
       {{- end }}
     }

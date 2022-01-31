@@ -28,6 +28,31 @@
 namespace fidl {
 namespace internal {
 
+// Certain encoding/decoding/validating functions expect their input byte buffers to not contain a
+// transactional message header. This function trims the first 16 bytes from a buffer that
+// previously contained space for the header, to prepare it to be used as an input for such
+// functions.
+inline zx_status_t fidl_exclude_header_bytes(const void* bytes, uint32_t num_bytes,
+                                             uint8_t** out_bytes, uint32_t* out_num_bytes,
+                                             const char** out_error_msg) {
+  if (unlikely(num_bytes < sizeof(fidl_message_header_t))) {
+    if (out_error_msg) {
+      *out_error_msg = "Message too short to contain header";
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  *out_num_bytes = num_bytes - (uint32_t)(sizeof(fidl_message_header_t));
+
+  if (unlikely(bytes == NULL)) {
+    if (out_error_msg) {
+      *out_error_msg = "Cannot decode null bytes";
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  *out_bytes = (uint8_t*)bytes + sizeof(fidl_message_header_t);
+  return ZX_OK;
+}
+
 enum class WireFormatVersion {
   // V1 wire format: features extensible unions (xunions).
   // Starting at 1 to invalidate a default constructed |WireFormatVersion|.

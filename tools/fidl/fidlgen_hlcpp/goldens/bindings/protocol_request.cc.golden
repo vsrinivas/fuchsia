@@ -109,7 +109,7 @@ Parent_GetChild_ResponseHandler(Parent::GetChildCallback&& callback) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<
                   ::fidl::InterfaceHandle<::test::protocolrequest::Child>>(
-            &decoder, 16));
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocolrequest::_internal::
@@ -139,7 +139,7 @@ Parent_GetChildRequest_ResponseHandler(
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<
                   ::fidl::InterfaceRequest<::test::protocolrequest::Child>>(
-            &decoder, 16));
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocolrequest::_internal::
@@ -268,7 +268,7 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
       ::fidl::Decoder decoder(std::move(message));
       impl_->TakeChild(::fidl::DecodeAs<
                        ::fidl::InterfaceHandle<::test::protocolrequest::Child>>(
-          &decoder, 16));
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     case ::test::protocolrequest::internal::kParent_TakeChildRequest_Ordinal: {
@@ -276,7 +276,7 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
       impl_->TakeChildRequest(
           ::fidl::DecodeAs<
               ::fidl::InterfaceRequest<::test::protocolrequest::Child>>(
-              &decoder, 16));
+              &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -309,7 +309,7 @@ zx_status_t Parent_SyncProxy::GetChild(
   ::fidl::Decoder decoder_(std::move(response_));
   *out_c =
       ::fidl::DecodeAs<::fidl::InterfaceHandle<::test::protocolrequest::Child>>(
-          &decoder_, 16);
+          &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -330,7 +330,8 @@ zx_status_t Parent_SyncProxy::GetChildRequest(
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_r = ::fidl::DecodeAs<
-      ::fidl::InterfaceRequest<::test::protocolrequest::Child>>(&decoder_, 16);
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child>>(
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 

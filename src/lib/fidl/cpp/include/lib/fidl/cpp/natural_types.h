@@ -6,6 +6,7 @@
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_TYPES_H_
 
 #include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/wire_types.h>
 #include <lib/stdcompat/optional.h>
@@ -135,7 +136,7 @@ class EncodeResult {
  public:
   EncodeResult(const fidl_type_t* type, ::fidl::Encoder&& storage)
       : storage_(std::move(storage)),
-        message_(ConvertFromHLCPPOutgoingMessage(type, storage_.GetMessage(), handles_,
+        message_(ConvertFromHLCPPOutgoingMessage(type, false, storage_.GetMessage(), handles_,
                                                  handle_metadata_)) {}
 
   ::fidl::OutgoingMessage& message() { return message_; }
@@ -161,7 +162,7 @@ template <typename FidlType>
   ::fidl::HLCPPIncomingMessage hlcpp_msg =
       ConvertToHLCPPIncomingMessage(std::move(message), handles);
   const char* error_msg = nullptr;
-  zx_status_t status = hlcpp_msg.Decode(metadata, coding_table, &error_msg);
+  zx_status_t status = hlcpp_msg.Decode(metadata, coding_table, false, &error_msg);
   if (status != ZX_OK) {
     return ::fitx::error(::fidl::Result::DecodeError(status, error_msg));
   }

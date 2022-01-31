@@ -171,7 +171,7 @@ class OutgoingMessage : public ::fidl::Result {
   template <typename FidlType>
   void Encode(FidlType* data) {
     is_transactional_ = fidl::IsFidlMessage<FidlType>::value;
-    EncodeImpl(fidl::TypeTraits<FidlType>::kType, data);
+    EncodeImpl(fidl::TypeTraits<FidlType>::kType, is_transactional(), data);
   }
 
   // Various helper functions for writing to other channel-like types.
@@ -215,7 +215,7 @@ class OutgoingMessage : public ::fidl::Result {
   OutgoingMessage(fidl_outgoing_msg_t msg, uint32_t handle_capacity)
       : ::fidl::Result(::fidl::Result::Ok()), message_(msg), handle_capacity_(handle_capacity) {}
 
-  void EncodeImpl(const fidl_type_t* message_type, void* data);
+  void EncodeImpl(const fidl_type_t* message_type, bool is_transactional, void* data);
 
   uint32_t iovec_capacity() const { return iovec_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
@@ -489,7 +489,8 @@ class IncomingMessage : public ::fidl::Result {
   void Decode(internal::WireFormatVersion wire_format_version,
               std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
     ZX_ASSERT(!is_transactional_);
-    Decode(wire_format_version, fidl::TypeTraits<FidlType>::kType, out_transformed_buffer);
+    Decode(wire_format_version, fidl::TypeTraits<FidlType>::kType,
+           fidl::IsFidlMessage<FidlType>::value, out_transformed_buffer);
   }
 
   // Release the handle ownership after the message has been converted to its
@@ -528,7 +529,7 @@ class IncomingMessage : public ::fidl::Result {
   //
   // This method should be used after a read.
   void Decode(internal::WireFormatVersion wire_format_version, const fidl_type_t* message_type,
-              std::unique_ptr<uint8_t[]>* out_transformed_buffer);
+              bool is_transactional, std::unique_ptr<uint8_t[]>* out_transformed_buffer);
 
   // Performs basic transactional message header validation and sets the |fidl::Result| fields
   // accordingly.

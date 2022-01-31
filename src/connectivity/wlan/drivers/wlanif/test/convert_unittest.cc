@@ -11,6 +11,7 @@
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
+#include <lib/fidl/llcpp/traits.h>
 
 #include <vector>
 
@@ -41,11 +42,11 @@ zx_status_t ValidateMessage(T* msg) {
   msg->Encode(&enc, sizeof(fidl_message_header_t));
 
   auto encoded = enc.GetMessage();
-  auto msg_body = encoded.payload();
+  auto msg_data = encoded.payload();
   const char* err_msg = nullptr;
 
-  // fidl_decode_etc performs validation as part of decode.
-  return fidl_decode_etc(T::FidlType, msg_body.data(), msg_body.size(), nullptr, 0, &err_msg);
+  // |fidl_decode_etc| performs validation as part of decode.
+  return fidl_decode_etc(T::FidlType, msg_data.data(), msg_data.size(), nullptr, 0, &err_msg);
 }
 
 TEST(ConvertTest, ToFidlBssDescription) {

@@ -14,38 +14,38 @@ static const struct FidlCodedHandle Request26test_protocolrequest_Childnonnullab
 static const struct FidlCodedHandle Protocol26test_protocolrequest_ChildnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestMessageTable;
-const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.protocolrequest/ParentGetChildRequestMessage"};
+const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=0u, .size_v2=0u, .name="test.protocolrequest/ParentGetChildRequestMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildResponseMessageTable;
 static const struct FidlStructElement Fields50test_protocolrequest_ParentGetChildResponseMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&Protocol26test_protocolrequest_ChildnonnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=20u, .offset_v2=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Protocol26test_protocolrequest_ChildnonnullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=4u, .offset_v2=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct test_protocolrequest_ParentGetChildResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields50test_protocolrequest_ParentGetChildResponseMessage, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="test.protocolrequest/ParentGetChildResponseMessage"};
+const struct FidlCodedStruct test_protocolrequest_ParentGetChildResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields50test_protocolrequest_ParentGetChildResponseMessage, .element_count=2u, .size_v1=8u, .size_v2=8u, .name="test.protocolrequest/ParentGetChildResponseMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestRequestMessageTable;
-const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.protocolrequest/ParentGetChildRequestRequestMessage"};
+const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=0u, .size_v2=0u, .name="test.protocolrequest/ParentGetChildRequestRequestMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestResponseMessageTable;
 static const struct FidlStructElement Fields57test_protocolrequest_ParentGetChildRequestResponseMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&Request26test_protocolrequest_ChildnonnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=20u, .offset_v2=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Request26test_protocolrequest_ChildnonnullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=4u, .offset_v2=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields57test_protocolrequest_ParentGetChildRequestResponseMessage, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="test.protocolrequest/ParentGetChildRequestResponseMessage"};
+const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields57test_protocolrequest_ParentGetChildRequestResponseMessage, .element_count=2u, .size_v1=8u, .size_v2=8u, .name="test.protocolrequest/ParentGetChildRequestResponseMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentTakeChildRequestMessageTable;
 static const struct FidlStructElement Fields50test_protocolrequest_ParentTakeChildRequestMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&Protocol26test_protocolrequest_ChildnonnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=20u, .offset_v2=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Protocol26test_protocolrequest_ChildnonnullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=4u, .offset_v2=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct test_protocolrequest_ParentTakeChildRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields50test_protocolrequest_ParentTakeChildRequestMessage, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="test.protocolrequest/ParentTakeChildRequestMessage"};
+const struct FidlCodedStruct test_protocolrequest_ParentTakeChildRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields50test_protocolrequest_ParentTakeChildRequestMessage, .element_count=2u, .size_v1=8u, .size_v2=8u, .name="test.protocolrequest/ParentTakeChildRequestMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
 static const struct FidlStructElement Fields57test_protocolrequest_ParentTakeChildRequestRequestMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&Request26test_protocolrequest_ChildnonnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=20u, .offset_v2=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Request26test_protocolrequest_ChildnonnullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=4u, .offset_v2=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct test_protocolrequest_ParentTakeChildRequestRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields57test_protocolrequest_ParentTakeChildRequestRequestMessage, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="test.protocolrequest/ParentTakeChildRequestRequestMessage"};
+const struct FidlCodedStruct test_protocolrequest_ParentTakeChildRequestRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields57test_protocolrequest_ParentTakeChildRequestRequestMessage, .element_count=2u, .size_v1=8u, .size_v2=8u, .name="test.protocolrequest/ParentTakeChildRequestRequestMessage"};
 
 
 static const struct FidlStructElement Fields50test_protocolrequest_ParentTakeChildRequestRequest[] = {

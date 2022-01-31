@@ -742,10 +742,6 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 				requestChildren = c.anonymousChildren[toKey(val.NamingContext)]
 			}
 		}
-		if v.HasRequest {
-			requestTypeShapeV1.InlineSize += kMessageHeaderSize
-			requestTypeShapeV2.InlineSize += kMessageHeaderSize
-		}
 
 		var responseChildren []ScopedLayout
 		var responseTypeShapeV1 fidlgen.TypeShape
@@ -758,10 +754,6 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 				responsePayloadStruct = val
 				responseChildren = c.anonymousChildren[toKey(val.NamingContext)]
 			}
-		}
-		if v.HasResponse {
-			responseTypeShapeV1.InlineSize += kMessageHeaderSize
-			responseTypeShapeV2.InlineSize += kMessageHeaderSize
 		}
 
 		var maybeRequestPayload nameVariants
@@ -864,8 +856,8 @@ func (c *compiler) compileParameterArray(val fidlgen.Struct) []Parameter {
 		params = append(params, Parameter{
 			Type:              c.compileType(v.Type),
 			nameVariants:      structMemberContext.transform(v.Name),
-			OffsetV1:          v.FieldShapeV1.Offset + kMessageHeaderSize,
-			OffsetV2:          v.FieldShapeV2.Offset + kMessageHeaderSize,
+			OffsetV1:          v.FieldShapeV1.Offset,
+			OffsetV2:          v.FieldShapeV2.Offset,
 			HandleInformation: c.fieldHandleInformation(&v.Type),
 		})
 	}
@@ -929,7 +921,7 @@ func computeAllocation(maxTotalSize int, boundedness boundedness) allocation {
 		sizeString = "ZX_CHANNEL_MAX_MSG_BYTES"
 		size = channelMaxMessageSize
 	} else {
-		size = maxTotalSize
+		size = maxTotalSize + kMessageHeaderSize
 		sizeString = fmt.Sprintf("%d", size)
 	}
 

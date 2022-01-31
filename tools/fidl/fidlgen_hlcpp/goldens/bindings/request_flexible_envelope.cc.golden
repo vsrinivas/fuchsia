@@ -657,7 +657,7 @@ Protocol_RequestStrictResponseFlexible_ResponseHandler(
         ::fidl::Decoder decoder(std::move(message));
         callback_(
             ::fidl::DecodeAs<::test::requestflexibleenvelope::FlexibleFoo>(
-                &decoder, 16));
+                &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::requestflexibleenvelope::_internal::
@@ -691,7 +691,7 @@ Protocol_RequestFlexibleResponseStrict_ResponseHandler(
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(
-            &decoder, 16));
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::requestflexibleenvelope::_internal::
@@ -799,8 +799,8 @@ zx_status_t Protocol_Stub::Dispatch_(
         kProtocol_RequestStrictResponseFlexible_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->RequestStrictResponseFlexible(
-          ::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(&decoder,
-                                                                       16),
+          ::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(
+              &decoder, 0 + sizeof(fidl_message_header_t)),
           Protocol_RequestStrictResponseFlexible_Responder(
               std::move(response)));
       break;
@@ -810,7 +810,7 @@ zx_status_t Protocol_Stub::Dispatch_(
       ::fidl::Decoder decoder(std::move(message));
       impl_->RequestFlexibleResponseStrict(
           ::fidl::DecodeAs<::test::requestflexibleenvelope::FlexibleFoo>(
-              &decoder, 16),
+              &decoder, 0 + sizeof(fidl_message_header_t)),
           Protocol_RequestFlexibleResponseStrict_Responder(
               std::move(response)));
       break;
@@ -846,7 +846,7 @@ zx_status_t Protocol_SyncProxy::RequestStrictResponseFlexible(
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_f = ::fidl::DecodeAs<::test::requestflexibleenvelope::FlexibleFoo>(
-      &decoder_, 16);
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -868,7 +868,7 @@ zx_status_t Protocol_SyncProxy::RequestFlexibleResponseStrict(
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_f = ::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(
-      &decoder_, 16);
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

@@ -640,10 +640,19 @@ typedef struct admin_resp {
     void* msg_handle = (void*)&msg;                                                              \
     uint32_t actual_handle_count;                                                                \
                                                                                                  \
-    zx_status_t call_status =                                                                    \
+    if (unlikely(sizeof(msg) < sizeof(fidl_message_header_t))) {                                 \
+      return ZX_ERR_INVALID_ARGS;                                                                \
+    }                                                                                            \
+    uint32_t trimmed_num_bytes = sizeof(msg) - (uint32_t)(sizeof(fidl_message_header_t));        \
+    if (unlikely(msg_handle == NULL)) {                                                          \
+      return ZX_ERR_INVALID_ARGS;                                                                \
+    }                                                                                            \
+    uint8_t* trimmed_bytes = (uint8_t*)msg_handle + sizeof(fidl_message_header_t);               \
+    zx_status_t encode_status =                                                                  \
         fidl_encode(&fuchsia_hardware_power_statecontrol_Admin##name##RequestMessageTable,       \
-                    msg_handle, sizeof(msg), NULL, 0, &actual_handle_count, &errs);              \
-    if (call_status != ZX_OK) {                                                                  \
+                    trimmed_bytes, trimmed_num_bytes, NULL, 0, &actual_handle_count, &errs);     \
+    if (encode_status != ZX_OK) {                                                                \
+      printf("send_" #name ": fidl_encode failed: %i\n", encode_status);                         \
       return -1;                                                                                 \
     }                                                                                            \
                                                                                                  \
@@ -660,7 +669,7 @@ typedef struct admin_resp {
     call_args.rd_num_handles = 0;                                                                \
     uint32_t bytes_rx;                                                                           \
     uint32_t handles_rx;                                                                         \
-    call_status =                                                                                \
+    zx_status_t call_status =                                                                    \
         zx_channel_call(channel, 0, ZX_TIME_INFINITE, &call_args, &bytes_rx, &handles_rx);       \
     if (call_status != ZX_OK) {                                                                  \
       printf("send_" #name ": zx_channel_call failed: %i\n", call_status);                       \
@@ -705,10 +714,20 @@ static int send_Reboot() {
   void* msg_handle = (void*)&msg;
   uint32_t actual_handle_count;
 
-  zx_status_t call_status =
-      fidl_encode(&fuchsia_hardware_power_statecontrol_AdminRebootRequestMessageTable, msg_handle,
-                  sizeof(msg), NULL, 0, &actual_handle_count, &errs);
-  if (call_status != ZX_OK) {
+  if (unlikely(sizeof(msg) < sizeof(fidl_message_header_t))) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  uint32_t trimmed_num_bytes = sizeof(msg) - (uint32_t)(sizeof(fidl_message_header_t));
+  if (unlikely(msg_handle == NULL)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  uint8_t* trimmed_bytes = (uint8_t*)msg_handle + sizeof(fidl_message_header_t);
+
+  zx_status_t encode_status =
+      fidl_encode(&fuchsia_hardware_power_statecontrol_AdminRebootRequestMessageTable,
+                  trimmed_bytes, trimmed_num_bytes, NULL, 0, &actual_handle_count, &errs);
+  if (encode_status != ZX_OK) {
+    printf("send_AdminRebootRequest: fidl_encode failed: %i\n", encode_status);
     return -1;
   }
 
@@ -724,7 +743,8 @@ static int send_Reboot() {
   call_args.rd_num_handles = 0;
   uint32_t bytes_rx;
   uint32_t handles_rx;
-  call_status = zx_channel_call(channel, 0, ZX_TIME_INFINITE, &call_args, &bytes_rx, &handles_rx);
+  zx_status_t call_status =
+      zx_channel_call(channel, 0, ZX_TIME_INFINITE, &call_args, &bytes_rx, &handles_rx);
   if (call_status != ZX_OK) {
     printf("send_Reboot: zx_channel_call failed: %i\n", call_status);
     return -1;

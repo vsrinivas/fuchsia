@@ -37,22 +37,22 @@ class Parent_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, request, 16,
+      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, request, 16,
+      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
@@ -94,22 +94,22 @@ class Child_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, request, 16,
+      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, request, 16,
+      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
@@ -132,22 +132,22 @@ class Child_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, request, 16,
+      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, request, 16,
+      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,

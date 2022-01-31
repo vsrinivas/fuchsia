@@ -186,8 +186,8 @@ struct TypeTraits<
       &::test_emptystruct::
           test_emptystruct_EmptyProtocolSendRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -202,7 +202,7 @@ static_assert(
         kPrimarySize);
 static_assert(
     offsetof(::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>, e) ==
-    16);
+    0 + sizeof(fidl_message_header_t));
 
 template <>
 struct IsFidlType<::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>>
@@ -219,8 +219,8 @@ struct TypeTraits<
       &::test_emptystruct::
           test_emptystruct_EmptyProtocolReceiveEventMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -235,7 +235,7 @@ static_assert(
         kPrimarySize);
 static_assert(
     offsetof(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>,
-             e) == 16);
+             e) == 0 + sizeof(fidl_message_header_t));
 
 template <>
 struct IsFidlType<
@@ -253,8 +253,8 @@ struct TypeTraits<
       &::test_emptystruct::
           test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -271,7 +271,7 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>,
-        e) == 16);
+        e) == 0 + sizeof(fidl_message_header_t));
 
 template <>
 struct IsFidlType<
@@ -289,8 +289,8 @@ struct TypeTraits<
       &::test_emptystruct::
           test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -307,7 +307,7 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>,
-        e) == 16);
+        e) == 0 + sizeof(fidl_message_header_t));
 
 }  // namespace fidl
 namespace test_emptystruct {
@@ -548,7 +548,7 @@ class ::fidl::internal::WireSyncClientImpl<::test_emptystruct::EmptyProtocol>
                 ::fidl::internal::WireSyncClientImpl<
                     ::test_emptystruct::EmptyProtocol>> {
  public:
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_emptystruct::EmptyProtocol::Send> Send(
       const ::test_emptystruct::wire::Empty& e) {
@@ -690,7 +690,7 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
  public:
   using ClientImplBase::ClientImplBase;
 
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Send(const ::test_emptystruct::wire::Empty& e);
 };

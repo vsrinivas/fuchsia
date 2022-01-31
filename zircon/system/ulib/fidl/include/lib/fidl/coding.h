@@ -18,6 +18,8 @@ __BEGIN_CDECLS
 
 // See
 // https://fuchsia.dev/fuchsia-src/development/languages/fidl/tutorials/tutorial-c#fidl_encode-fidl_encode_msg
+//
+// These methods expect non-transactional messages.
 zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         zx_handle_t* handles, uint32_t max_handles, uint32_t* out_actual_handles,
                         const char** out_error_msg);
@@ -25,18 +27,24 @@ zx_status_t fidl_encode_etc(const fidl_type_t* type, void* bytes, uint32_t num_b
                             zx_handle_disposition_t* handle_dispositions,
                             uint32_t max_handle_dispositions,
                             uint32_t* out_actual_handle_dispositions, const char** out_error_msg);
+
+// This method assumes that the message being encoded is transactional (ie, that it includes a
+// leading 16-byte header).
+//
+// This method is only intended for use by the deprecated FIDL C bindings.
 zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* msg,
                             uint32_t* out_actual_handles, const char** out_error_msg);
 
-// Perform a fidl_decode and check handle types and rights against the types and rights specified
-// in the FIDL file.
+// Perform a fidl_decode and check handle types and rights against the types and rights specified in
+// the FIDL file.
 //
 // It is an error for a zx_handle_info_t to contain a handle type that does not match what is
-// expected from FIDL unless either the expected or actual type is ZX_OBJ_TYPE_NONE.
-// It is also error if there are fewer actual rights than expected rights and the actual or
-// expected rights are not ZX_RIGHT_SAME_RIGHTS. If there are more actual rights than expected
-// rights, the actual rights will be reduced to the expected rights via a call to
-// zx_handle_replace.
+// expected from FIDL unless either the expected or actual type is ZX_OBJ_TYPE_NONE. It is also
+// error if there are fewer actual rights than expected rights and the actual or expected rights are
+// not ZX_RIGHT_SAME_RIGHTS. If there are more actual rights than expected rights, the actual rights
+// will be reduced to the expected rights via a call to zx_handle_replace.
+//
+// This method expects non-transactional messages.
 zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                             const zx_handle_info_t* handle_infos, uint32_t num_handle_infos,
                             const char** error_msg_out);
@@ -54,6 +62,11 @@ zx_status_t internal__fidl_decode_etc_hlcpp__v2__may_break(const fidl_type_t* ty
                                                            const zx_handle_info_t* handles,
                                                            uint32_t num_handles,
                                                            const char** error_msg_out);
+
+// This function assumes that the message being passed in has a 16-byte transaction header
+// attached.
+//
+// This method is only intended for use by the deprecated FIDL C bindings.
 zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
                             const char** out_error_msg);
 
@@ -98,11 +111,15 @@ size_t fidl_format_type_name(const fidl_type_t* type, char* buffer, size_t capac
 
 #ifdef __Fuchsia__
 
-// Traverses a decoded FIDL message starting at |value|, closing all handles within it.
-// If the message is non-contiguous in memory, the function will follow pointers and close handles
-// in any scattered out-of-line objects.
+// Traverses a decoded FIDL message starting at |value|, closing all handles within it. If the
+// message is non-contiguous in memory, the function will follow pointers and close handles in any
+// scattered out-of-line objects.
 //
 // Handle values in |value| are replaced with ZX_HANDLE_INVALID.
+//
+// This method expects non-transactional messages. If callers want to call this function on
+// transacational inputs, they must first perform |::fidl::internal::fidl_exclude_header_bytes| on
+// the input |bytes| and |num_bytes| values to trim the header bytes.
 zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char** out_error_msg);
 
 #endif

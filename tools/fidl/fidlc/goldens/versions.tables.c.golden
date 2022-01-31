@@ -12,7 +12,7 @@ __LOCAL extern const struct FidlCodedBits test_versions_BitsTable;
 
 
 __LOCAL extern const struct FidlCodedStruct test_versions_ProtocolFooRequestMessageTable;
-const struct FidlCodedStruct test_versions_ProtocolFooRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.versions/ProtocolFooRequestMessage"};
+const struct FidlCodedStruct test_versions_ProtocolFooRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=0u, .size_v2=0u, .name="test.versions/ProtocolFooRequestMessage"};
 
 
 static const struct FidlXUnionField Fields19test_versions_Union[] = {

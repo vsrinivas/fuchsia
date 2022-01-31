@@ -49,8 +49,6 @@ class CodedTypesGenerator {
   struct FlattenedStructMember {
     explicit FlattenedStructMember(const flat::StructMember& member);
 
-    FlattenedStructMember PrependTransactionHeader() const;
-
     const flat::Type* type;
     const SourceSpan name;
     const uint32_t inline_size_v1;

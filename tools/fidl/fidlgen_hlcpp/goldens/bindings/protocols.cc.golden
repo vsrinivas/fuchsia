@@ -1809,7 +1809,8 @@ zx_status_t HandleRightsProtocol_Proxy::Dispatch_(
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
-      AnEvent(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
+      AnEvent(::fidl::DecodeAs<::zx::socket>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -1842,7 +1843,8 @@ HandleRightsProtocol_ResponseMethod_ResponseHandler(
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
+        callback_(::fidl::DecodeAs<::zx::socket>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -1926,14 +1928,16 @@ zx_status_t HandleRightsProtocol_Stub::Dispatch_(
     case ::test::protocols::internal::
         kHandleRightsProtocol_NoResponseMethod_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->NoResponseMethod(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
+      impl_->NoResponseMethod(::fidl::DecodeAs<::zx::socket>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     case ::test::protocols::internal::
         kHandleRightsProtocol_ResponseMethod_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->ResponseMethod(
-          ::fidl::DecodeAs<::zx::socket>(&decoder, 16),
+          ::fidl::DecodeAs<::zx::socket>(&decoder,
+                                         0 + sizeof(fidl_message_header_t)),
           HandleRightsProtocol_ResponseMethod_Responder(std::move(response)));
       break;
     }
@@ -1986,7 +1990,8 @@ zx_status_t HandleRightsProtocol_SyncProxy::ResponseMethod(
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_h = ::fidl::DecodeAs<::zx::socket>(&decoder_, 16);
+  *out_h = ::fidl::DecodeAs<::zx::socket>(&decoder_,
+                                          0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -2166,7 +2171,8 @@ zx_status_t WithAndWithoutRequestResponse_Proxy::Dispatch_(
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
-      OnWithResponse(::fidl::DecodeAs<::std::string>(&decoder, 16));
+      OnWithResponse(::fidl::DecodeAs<::std::string>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -2233,7 +2239,8 @@ WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler(
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::std::string>(&decoder, 16));
+        callback_(::fidl::DecodeAs<::std::string>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -2313,7 +2320,8 @@ WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler(
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::std::string>(&decoder, 16));
+        callback_(::fidl::DecodeAs<::std::string>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -2483,15 +2491,16 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
     case ::test::protocols::internal::
         kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->WithRequestNoResponse(
-          ::fidl::DecodeAs<::std::string>(&decoder, 16));
+      impl_->WithRequestNoResponse(::fidl::DecodeAs<::std::string>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     case ::test::protocols::internal::
         kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->WithRequestEmptyResponse(
-          ::fidl::DecodeAs<::std::string>(&decoder, 16),
+          ::fidl::DecodeAs<::std::string>(&decoder,
+                                          0 + sizeof(fidl_message_header_t)),
           WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder(
               std::move(response)));
       break;
@@ -2500,7 +2509,8 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
         kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->WithRequestWithResponse(
-          ::fidl::DecodeAs<::std::string>(&decoder, 16),
+          ::fidl::DecodeAs<::std::string>(&decoder,
+                                          0 + sizeof(fidl_message_header_t)),
           WithAndWithoutRequestResponse_WithRequestWithResponse_Responder(
               std::move(response)));
       break;
@@ -2586,7 +2596,8 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestWithResponse(
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_ret = ::fidl::DecodeAs<::std::string>(&decoder_, 16);
+  *out_ret = ::fidl::DecodeAs<::std::string>(&decoder_,
+                                             0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -2638,7 +2649,8 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestWithResponse(
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_ret = ::fidl::DecodeAs<::std::string>(&decoder_, 16);
+  *out_ret = ::fidl::DecodeAs<::std::string>(&decoder_,
+                                             0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -2726,7 +2738,8 @@ zx_status_t Transitional_Proxy::Dispatch_(
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
-      Event(::fidl::DecodeAs<int64_t>(&decoder, 16));
+      Event(::fidl::DecodeAs<int64_t>(&decoder,
+                                      0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -2747,7 +2760,8 @@ Transitional_Request_ResponseHandler(Transitional::RequestCallback&& callback) {
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
+        callback_(::fidl::DecodeAs<int64_t>(&decoder,
+                                            0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -2834,13 +2848,15 @@ zx_status_t Transitional_Stub::Dispatch_(
   switch (ordinal) {
     case ::test::protocols::internal::kTransitional_Request_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->Request(::fidl::DecodeAs<int64_t>(&decoder, 16),
+      impl_->Request(::fidl::DecodeAs<int64_t>(
+                         &decoder, 0 + sizeof(fidl_message_header_t)),
                      Transitional_Request_Responder(std::move(response)));
       break;
     }
     case ::test::protocols::internal::kTransitional_OneWay_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->OneWay(::fidl::DecodeAs<int64_t>(&decoder, 16));
+      impl_->OneWay(::fidl::DecodeAs<int64_t>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -2878,7 +2894,8 @@ zx_status_t Transitional_SyncProxy::Request(int64_t x, int64_t* out_y) {
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_y = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
+  *out_y =
+      ::fidl::DecodeAs<int64_t>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -2996,8 +3013,8 @@ zx_status_t MethodWithUnion_Stub::Dispatch_(
   switch (ordinal) {
     case ::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->UnionMethod(
-          ::fidl::DecodeAs<::test::protocols::TheUnion>(&decoder, 16));
+      impl_->UnionMethod(::fidl::DecodeAs<::test::protocols::TheUnion>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -3125,7 +3142,8 @@ WithProtocolEnds_ClientEnds_ResponseHandler(
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::fidl::InterfaceHandle<
-                      ::test::protocols::DiscoverableProtocol>>(&decoder, 16));
+                      ::test::protocols::DiscoverableProtocol>>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -3158,7 +3176,8 @@ WithProtocolEnds_ServerEnds_ResponseHandler(
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::fidl::InterfaceRequest<
-                      ::test::protocols::DiscoverableProtocol>>(&decoder, 16));
+                      ::test::protocols::DiscoverableProtocol>>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -3190,8 +3209,8 @@ WithProtocolEnds_StructContainingEnds_ResponseHandler(
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(
-            ::fidl::DecodeAs<::test::protocols::ProtocolEnds>(&decoder, 16));
+        callback_(::fidl::DecodeAs<::test::protocols::ProtocolEnds>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -3320,7 +3339,7 @@ zx_status_t WithProtocolEnds_Stub::Dispatch_(
       impl_->ClientEnds(
           ::fidl::DecodeAs<
               ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>>(
-              &decoder, 16),
+              &decoder, 0 + sizeof(fidl_message_header_t)),
           WithProtocolEnds_ClientEnds_Responder(std::move(response)));
       break;
     }
@@ -3328,7 +3347,8 @@ zx_status_t WithProtocolEnds_Stub::Dispatch_(
       ::fidl::Decoder decoder(std::move(message));
       impl_->ServerEnds(
           ::fidl::DecodeAs<::fidl::InterfaceRequest<
-              ::test::protocols::DiscoverableProtocol>>(&decoder, 16),
+              ::test::protocols::DiscoverableProtocol>>(
+              &decoder, 0 + sizeof(fidl_message_header_t)),
           WithProtocolEnds_ServerEnds_Responder(std::move(response)));
       break;
     }
@@ -3336,7 +3356,8 @@ zx_status_t WithProtocolEnds_Stub::Dispatch_(
         kWithProtocolEnds_StructContainingEnds_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->StructContainingEnds(
-          ::fidl::DecodeAs<::test::protocols::ProtocolEnds>(&decoder, 16),
+          ::fidl::DecodeAs<::test::protocols::ProtocolEnds>(
+              &decoder, 0 + sizeof(fidl_message_header_t)),
           WithProtocolEnds_StructContainingEnds_Responder(std::move(response)));
       break;
     }
@@ -3372,7 +3393,7 @@ zx_status_t WithProtocolEnds_SyncProxy::ClientEnds(
   ::fidl::Decoder decoder_(std::move(response_));
   *out_out = ::fidl::DecodeAs<
       ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>>(
-      &decoder_, 16);
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -3396,7 +3417,7 @@ zx_status_t WithProtocolEnds_SyncProxy::ServerEnds(
   ::fidl::Decoder decoder_(std::move(response_));
   *out_out = ::fidl::DecodeAs<
       ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>>(
-      &decoder_, 16);
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -3417,7 +3438,8 @@ zx_status_t WithProtocolEnds_SyncProxy::StructContainingEnds(
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_out = ::fidl::DecodeAs<::test::protocols::ProtocolEnds>(&decoder_, 16);
+  *out_out = ::fidl::DecodeAs<::test::protocols::ProtocolEnds>(
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -3529,21 +3551,22 @@ zx_status_t ManyParameters_Stub::Dispatch_(
   switch (ordinal) {
     case ::test::protocols::internal::kManyParameters_Fifteen_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->Fifteen(::fidl::DecodeAs<bool>(&decoder, 16),
-                     ::fidl::DecodeAs<bool>(&decoder, 17),
-                     ::fidl::DecodeAs<bool>(&decoder, 18),
-                     ::fidl::DecodeAs<bool>(&decoder, 19),
-                     ::fidl::DecodeAs<bool>(&decoder, 20),
-                     ::fidl::DecodeAs<bool>(&decoder, 21),
-                     ::fidl::DecodeAs<bool>(&decoder, 22),
-                     ::fidl::DecodeAs<bool>(&decoder, 23),
-                     ::fidl::DecodeAs<bool>(&decoder, 24),
-                     ::fidl::DecodeAs<bool>(&decoder, 25),
-                     ::fidl::DecodeAs<bool>(&decoder, 26),
-                     ::fidl::DecodeAs<bool>(&decoder, 27),
-                     ::fidl::DecodeAs<bool>(&decoder, 28),
-                     ::fidl::DecodeAs<bool>(&decoder, 29),
-                     ::fidl::DecodeAs<bool>(&decoder, 30));
+      impl_->Fifteen(
+          ::fidl::DecodeAs<bool>(&decoder, 0 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 1 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 2 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 3 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 4 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 5 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 6 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 7 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 8 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 9 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 10 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 11 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 12 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 13 + sizeof(fidl_message_header_t)),
+          ::fidl::DecodeAs<bool>(&decoder, 14 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -3687,7 +3710,7 @@ WithErrorSyntax_ResponseAsStruct_ResponseHandler(
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<
                   ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>(
-            &decoder, 16));
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -3720,7 +3743,7 @@ WithErrorSyntax_ErrorAsPrimitive_ResponseHandler(
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<
                   ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>(
-            &decoder, 16));
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -3753,7 +3776,7 @@ WithErrorSyntax_ErrorAsEnum_ResponseHandler(
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<
                   ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>(
-            &decoder, 16));
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -3784,7 +3807,7 @@ WithErrorSyntax_HandleInResult_ResponseHandler(
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<
                   ::test::protocols::WithErrorSyntax_HandleInResult_Result>(
-            &decoder, 16));
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -3979,8 +4002,8 @@ zx_status_t WithErrorSyntax_SyncProxy::ResponseAsStruct(
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result = ::fidl::DecodeAs<
-      ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>(&decoder_,
-                                                                  16);
+      ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>(
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -4001,8 +4024,8 @@ zx_status_t WithErrorSyntax_SyncProxy::ErrorAsPrimitive(
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result = ::fidl::DecodeAs<
-      ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>(&decoder_,
-                                                                  16);
+      ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>(
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -4023,7 +4046,7 @@ zx_status_t WithErrorSyntax_SyncProxy::ErrorAsEnum(
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result =
       ::fidl::DecodeAs<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>(
-          &decoder_, 16);
+          &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -4044,7 +4067,8 @@ zx_status_t WithErrorSyntax_SyncProxy::HandleInResult(
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result = ::fidl::DecodeAs<
-      ::test::protocols::WithErrorSyntax_HandleInResult_Result>(&decoder_, 16);
+      ::test::protocols::WithErrorSyntax_HandleInResult_Result>(
+      &decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__
@@ -4292,8 +4316,10 @@ zx_status_t ChannelProtocol_Proxy::Dispatch_(
         break;
       }
       ::fidl::Decoder decoder(std::move(message));
-      EventA(::fidl::DecodeAs<int64_t>(&decoder, 16),
-             ::fidl::DecodeAs<int64_t>(&decoder, 24));
+      EventA(::fidl::DecodeAs<int64_t>(&decoder,
+                                       0 + sizeof(fidl_message_header_t)),
+             ::fidl::DecodeAs<int64_t>(&decoder,
+                                       8 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {
@@ -4325,7 +4351,8 @@ ChannelProtocol_MethodB_ResponseHandler(
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
+        callback_(::fidl::DecodeAs<int64_t>(&decoder,
+                                            0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -4385,7 +4412,8 @@ ChannelProtocol_MutateSocket_ResponseHandler(
       [callback_ =
            std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
+        callback_(::fidl::DecodeAs<::zx::socket>(
+            &decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
       &::test::protocols::_internal::
@@ -4506,28 +4534,34 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
   switch (ordinal) {
     case ::test::protocols::internal::kChannelProtocol_MethodA_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->MethodA(::fidl::DecodeAs<int64_t>(&decoder, 16),
-                     ::fidl::DecodeAs<int64_t>(&decoder, 24));
+      impl_->MethodA(::fidl::DecodeAs<int64_t>(
+                         &decoder, 0 + sizeof(fidl_message_header_t)),
+                     ::fidl::DecodeAs<int64_t>(
+                         &decoder, 8 + sizeof(fidl_message_header_t)));
       break;
     }
     case ::test::protocols::internal::kChannelProtocol_MethodB_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->MethodB(::fidl::DecodeAs<int64_t>(&decoder, 16),
-                     ::fidl::DecodeAs<int64_t>(&decoder, 24),
+      impl_->MethodB(::fidl::DecodeAs<int64_t>(
+                         &decoder, 0 + sizeof(fidl_message_header_t)),
+                     ::fidl::DecodeAs<int64_t>(
+                         &decoder, 8 + sizeof(fidl_message_header_t)),
                      ChannelProtocol_MethodB_Responder(std::move(response)));
       break;
     }
     case ::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->TakeHandle(
-          ::fidl::DecodeAs<::zx::handle>(&decoder, 16),
+          ::fidl::DecodeAs<::zx::handle>(&decoder,
+                                         0 + sizeof(fidl_message_header_t)),
           ChannelProtocol_TakeHandle_Responder(std::move(response)));
       break;
     }
     case ::test::protocols::internal::kChannelProtocol_MutateSocket_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->MutateSocket(
-          ::fidl::DecodeAs<::zx::socket>(&decoder, 16),
+          ::fidl::DecodeAs<::zx::socket>(&decoder,
+                                         0 + sizeof(fidl_message_header_t)),
           ChannelProtocol_MutateSocket_Responder(std::move(response)));
       break;
     }
@@ -4578,7 +4612,8 @@ zx_status_t ChannelProtocol_SyncProxy::MethodB(int64_t a, int64_t b,
                   &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_result = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
+  *out_result =
+      ::fidl::DecodeAs<int64_t>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 
@@ -4615,7 +4650,8 @@ zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a,
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_b = ::fidl::DecodeAs<::zx::socket>(&decoder_, 16);
+  *out_b = ::fidl::DecodeAs<::zx::socket>(&decoder_,
+                                          0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
 #endif  // __Fuchsia__

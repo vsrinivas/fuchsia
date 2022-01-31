@@ -731,8 +731,8 @@ zx_status_t ExampleProtocol_Stub::Dispatch_(
     case ::test::placementofattributes::internal::
         kExampleProtocol_Method_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->Method(
-          ::fidl::DecodeAs<::test::exampleusing::Empty>(&decoder, 16));
+      impl_->Method(::fidl::DecodeAs<::test::exampleusing::Empty>(
+          &decoder, 0 + sizeof(fidl_message_header_t)));
       break;
     }
     default: {

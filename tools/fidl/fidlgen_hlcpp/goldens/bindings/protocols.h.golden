@@ -364,22 +364,22 @@ class HandleRightsProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, h, 16,
+      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x3,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, h, 16,
+      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x3,
@@ -400,22 +400,22 @@ class HandleRightsProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, h, 16,
+      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x3,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, h, 16,
+      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x3,
@@ -447,22 +447,22 @@ class HandleRightsProtocol_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, h, 16,
+      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x1,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, h, 16,
+      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x1,
@@ -482,22 +482,22 @@ class HandleRightsProtocol_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, h, 16,
+      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x3,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, h, 16,
+      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x3,
@@ -923,10 +923,10 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -948,10 +948,10 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -973,10 +973,10 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -998,18 +998,18 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, arg, 16);
+      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, arg, 16);
+      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -1026,18 +1026,18 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, arg, 16);
+      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, arg, 16);
+      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -1054,18 +1054,18 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, arg, 16);
+      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, arg, 16);
+      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -1105,10 +1105,10 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -1129,18 +1129,18 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, ret, 16);
+      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, ret, 16);
+      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -1156,10 +1156,10 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -1180,18 +1180,18 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, ret, 16);
+      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, ret, 16);
+      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -1207,10 +1207,10 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -1231,18 +1231,18 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, ret, 16);
+      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, ret, 16);
+      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -1273,18 +1273,18 @@ class Transitional_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, x, 16);
+      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, x, 16);
+      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(DidHLCPPEncode,
@@ -1300,18 +1300,18 @@ class Transitional_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, x, 16);
+      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, x, 16);
+      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(DidHLCPPEncode,
@@ -1338,18 +1338,18 @@ class Transitional_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, y, 16);
+      ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, y, 16);
+      ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(DidHLCPPEncode,
@@ -1364,18 +1364,18 @@ class Transitional_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, x, 16);
+      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, x, 16);
+      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(DidHLCPPEncode,
@@ -1489,18 +1489,18 @@ class MethodWithUnion_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(24);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, u, 16);
+      ::fidl::Encode(_encoder, u, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, u, 16);
+      ::fidl::Encode(_encoder, u, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(DidHLCPPEncode,
@@ -1574,22 +1574,22 @@ class WithProtocolEnds_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, in, 16,
+      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, in, 16,
+      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
@@ -1610,22 +1610,22 @@ class WithProtocolEnds_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, in, 16,
+      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, in, 16,
+      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
@@ -1645,18 +1645,18 @@ class WithProtocolEnds_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, in, 16);
+      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, in, 16);
+      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -1688,22 +1688,22 @@ class WithProtocolEnds_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, out, 16,
+      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, out, 16,
+      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
@@ -1724,22 +1724,22 @@ class WithProtocolEnds_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, out, 16,
+      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, out, 16,
+      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
                          .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
@@ -1759,18 +1759,18 @@ class WithProtocolEnds_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, out, 16);
+      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, out, 16);
+      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -1802,74 +1802,74 @@ class ManyParameters_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, p1, 16);
+      ::fidl::Encode(_encoder, p1, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p2, 17);
+      ::fidl::Encode(_encoder, p2, 1 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p3, 18);
+      ::fidl::Encode(_encoder, p3, 2 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p4, 19);
+      ::fidl::Encode(_encoder, p4, 3 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p5, 20);
+      ::fidl::Encode(_encoder, p5, 4 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p6, 21);
+      ::fidl::Encode(_encoder, p6, 5 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p7, 22);
+      ::fidl::Encode(_encoder, p7, 6 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p8, 23);
+      ::fidl::Encode(_encoder, p8, 7 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p9, 24);
+      ::fidl::Encode(_encoder, p9, 8 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p10, 25);
+      ::fidl::Encode(_encoder, p10, 9 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p11, 26);
+      ::fidl::Encode(_encoder, p11, 10 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p12, 27);
+      ::fidl::Encode(_encoder, p12, 11 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p13, 28);
+      ::fidl::Encode(_encoder, p13, 12 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p14, 29);
+      ::fidl::Encode(_encoder, p14, 13 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p15, 30);
+      ::fidl::Encode(_encoder, p15, 14 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, p1, 16);
+      ::fidl::Encode(_encoder, p1, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p2, 17);
+      ::fidl::Encode(_encoder, p2, 1 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p3, 18);
+      ::fidl::Encode(_encoder, p3, 2 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p4, 19);
+      ::fidl::Encode(_encoder, p4, 3 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p5, 20);
+      ::fidl::Encode(_encoder, p5, 4 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p6, 21);
+      ::fidl::Encode(_encoder, p6, 5 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p7, 22);
+      ::fidl::Encode(_encoder, p7, 6 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p8, 23);
+      ::fidl::Encode(_encoder, p8, 7 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p9, 24);
+      ::fidl::Encode(_encoder, p9, 8 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p10, 25);
+      ::fidl::Encode(_encoder, p10, 9 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p11, 26);
+      ::fidl::Encode(_encoder, p11, 10 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p12, 27);
+      ::fidl::Encode(_encoder, p12, 11 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p13, 28);
+      ::fidl::Encode(_encoder, p13, 12 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p14, 29);
+      ::fidl::Encode(_encoder, p14, 13 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p15, 30);
+      ::fidl::Encode(_encoder, p15, 14 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(DidHLCPPEncode,
@@ -2039,10 +2039,10 @@ class WithErrorSyntax_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -2064,10 +2064,10 @@ class WithErrorSyntax_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -2088,10 +2088,10 @@ class WithErrorSyntax_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -2112,10 +2112,10 @@ class WithErrorSyntax_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -2155,18 +2155,18 @@ class WithErrorSyntax_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(24);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 16);
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, result, 16);
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -2183,18 +2183,18 @@ class WithErrorSyntax_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(24);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 16);
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, result, 16);
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -2211,18 +2211,18 @@ class WithErrorSyntax_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(24);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 16);
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, result, 16);
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -2239,18 +2239,18 @@ class WithErrorSyntax_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(24);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 16);
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, result, 16);
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(
@@ -2277,10 +2277,10 @@ class DiscoverableProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -2326,22 +2326,22 @@ class ChannelProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, b, 24);
+      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, b, 24);
+      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(DidHLCPPEncode,
@@ -2357,22 +2357,22 @@ class ChannelProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, b, 24);
+      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, b, 24);
+      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(DidHLCPPEncode,
@@ -2388,22 +2388,22 @@ class ChannelProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, h, 16,
+      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_NONE,
                          .rights = 0x80000000,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, h, 16,
+      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_NONE,
                          .rights = 0x80000000,
@@ -2423,22 +2423,22 @@ class ChannelProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 16,
+      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x80000000,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, a, 16,
+      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x80000000,
@@ -2476,22 +2476,22 @@ class ChannelProtocol_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(16);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, b, 24);
+      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, a, 16);
+      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, b, 24);
+      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(DidHLCPPEncode,
@@ -2506,18 +2506,18 @@ class ChannelProtocol_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 16);
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     } else {
-      ::fidl::Encode(_encoder, result, 16);
+      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
     }
 
     fidl_trace(DidHLCPPEncode,
@@ -2531,10 +2531,10 @@ class ChannelProtocol_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(0);
         break;
     }
 
@@ -2554,22 +2554,22 @@ class ChannelProtocol_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        _encoder->Alloc(8);
         break;
     }
 
     if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, b, 16,
+      ::fidl::Encode(_encoder, b, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x80000000,
                      });
 
     } else {
-      ::fidl::Encode(_encoder, b, 16,
+      ::fidl::Encode(_encoder, b, 0 + sizeof(fidl_message_header_t),
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_SOCKET,
                          .rights = 0x80000000,

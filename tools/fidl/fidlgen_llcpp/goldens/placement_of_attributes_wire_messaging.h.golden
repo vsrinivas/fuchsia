@@ -107,8 +107,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_placementofattributes::
           test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 24;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
+  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -125,7 +125,7 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireRequest<
                  ::test_placementofattributes::ExampleProtocol::Method>,
-             arg) == 16);
+             arg) == 0 + sizeof(fidl_message_header_t));
 
 }  // namespace fidl
 namespace test_placementofattributes {
@@ -235,7 +235,7 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::test_placementofattributes::ExampleProtocol>> {
  public:
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_placementofattributes::ExampleProtocol::Method>
   Method(const ::test_exampleusing::wire::Empty& arg) {
@@ -324,7 +324,7 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
  public:
   using ClientImplBase::ClientImplBase;
 
-  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Method(const ::test_exampleusing::wire::Empty& arg);
 };

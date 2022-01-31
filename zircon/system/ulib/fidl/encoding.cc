@@ -377,11 +377,20 @@ zx_status_t fidl_encode_etc(const fidl_type_t* type, void* bytes, uint32_t num_b
 zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* msg,
                             uint32_t* out_actual_handles, const char** out_error_msg) {
   zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
-  zx_status_t status = fidl_encode_etc(type, msg->bytes, msg->num_bytes, handle_dispositions,
+  uint8_t* trimmed_bytes;
+  uint32_t trimmed_num_bytes;
+  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
+      msg->bytes, msg->num_bytes, &trimmed_bytes, &trimmed_num_bytes, out_error_msg);
+  if (unlikely(trim_status != ZX_OK)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx_status_t status = fidl_encode_etc(type, trimmed_bytes, trimmed_num_bytes, handle_dispositions,
                                        msg->num_handles, out_actual_handles, out_error_msg);
   if (status != ZX_OK) {
     return status;
   }
+
   fidl_channel_handle_metadata_t* handle_metadata =
       reinterpret_cast<fidl_channel_handle_metadata_t*>(msg->handle_metadata);
   for (uint32_t i = 0; i < *out_actual_handles; i++) {
