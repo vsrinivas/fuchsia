@@ -321,12 +321,13 @@ bool EthernetDevice::IrqRingUpdateInternal() {
     unrecycled_ = 0;
   }
 
-  rx_.ClearNoInterrupt();
+  bool has_work = rx_.ClearNoInterruptCheckHasWork();
+  hw_mb();
   // If we have re-queued any rx buffers, poke the virtqueue to pick them up.
   if (need_kick && !rx_.NoNotify()) {
     rx_.Kick();
   }
-  return rx_.HasWork();
+  return has_work;
 }
 
 void EthernetDevice::IrqConfigChange() {

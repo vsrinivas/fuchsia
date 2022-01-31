@@ -41,8 +41,21 @@ class Ring {
 
   bool NoNotify() { return ring_.used->flags & VRING_USED_F_NO_NOTIFY; }
   void SetNoInterrupt() { ring_.avail->flags |= VRING_AVAIL_F_NO_INTERRUPT; }
+  // Note that unless you are performing you own memory barriers, you most likely want to use the
+  // combined ClearNoInterruptCheckHasWork below.
   void ClearNoInterrupt() { ring_.avail->flags &= ~VRING_AVAIL_F_NO_INTERRUPT; }
   bool HasWork() { return ring_.used->idx != ring_.last_used; }
+
+  // Re-enables interrupts and then checks if there is any work pending. This is performed with an
+  // appropriate barrier to ensure the driver cannot observe a state that would cause it to fail to
+  // an inject an interrupt, whilst at the same time we are waiting for one.
+  bool ClearNoInterruptCheckHasWork() {
+    ClearNoInterrupt();
+    // Perform a memory barrier to ensure the load in HasWork does not get reordered before the
+    // store in ClearNoInterrupt.
+    hw_mb();
+    return HasWork();
+  }
 
   // Provides access to the underlying memory. Meant for use in tests.
   vring& vring_unsafe() { return ring_; }

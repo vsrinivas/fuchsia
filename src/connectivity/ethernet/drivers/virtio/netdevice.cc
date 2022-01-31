@@ -162,8 +162,7 @@ bool NetworkDevice::IrqRingUpdateInternal() {
       *tx_it++ = {.id = desc.buffer_id, .status = ZX_OK};
       tx_.FreeDesc(id);
     });
-    tx_.ClearNoInterrupt();
-    more_work |= tx_.HasWork();
+    more_work |= tx_.ClearNoInterruptCheckHasWork();
   }
   if (size_t count = std::distance(tx_results.begin(), tx_it); count != 0) {
     ifc_.CompleteTx(tx_results.data(), count);
@@ -213,8 +212,7 @@ bool NetworkDevice::IrqRingUpdateInternal() {
       };
       rx_.FreeDesc(id);
     });
-    rx_.ClearNoInterrupt();
-    more_work |= rx_.HasWork();
+    more_work |= rx_.ClearNoInterruptCheckHasWork();
   }
   if (size_t count = std::distance(rx_buffers.begin(), rx_it); count != 0) {
     ifc_.CompleteRx(rx_buffers.data(), count);
