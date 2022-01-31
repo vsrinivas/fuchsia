@@ -1,0 +1,52 @@
+{
+    "netstacks": [
+        {
+            "name": "local",
+            "interfaces": [
+                {
+                    "name": "local-ep",
+                    "static_ips": [
+                        "192.168.0.2/24"
+                    ]
+                },
+                {
+                    "name": "local-ep2",
+                    "static_ips": [
+                        "192.168.0.3/24"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "remote",
+            "interfaces": [
+                {
+                    "name": "remote-ep",
+                    "static_ips": [
+                        "192.168.0.1/24"
+                    ]
+                }
+            ]
+        }
+    ],
+    "networks": [
+        {
+            "name": "net",
+            "endpoints": [
+                {
+                    "name": "local-ep",
+                    "mac": "aa:bb:cc:dd:ee:ff",
+                    "mtu": 999,
+                    "up": false,
+                    "backing": "network_device"
+                },
+                {
+                    "name": "local-ep2"
+                },
+                {
+                    "name": "remote-ep"
+                }
+            ]
+        }
+    ]
+}

@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 {
     include: [ "//src/connectivity/network/testing/netemul-v2/runner/default.shard.cml" ],
+    program: {
+        network_config: "config.json",
+    },
     children: [
         {
             name: "test-driver",

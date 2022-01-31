@@ -16,13 +16,25 @@ fuchsia_test_component("test-driver") {
   deps = [ ":bin" ]
 }
 
+# TODO(https://fxbug.dev/92247): read the configuration directly from the
+# `program` section of the component's manifest rather than from a packaged
+# config file, once the CML schema supports it.
+resource("network-config") {
+  sources = [ "config.json" ]
+  outputs = [ "config.json" ]
+}
+
 fuchsia_test_component("test-root") {
   manifest = "meta/test-root.cml"
-  deps = [ ":test-driver" ]
+  deps = [
+    ":network-config",
+    ":test-driver",
+  ]
 }
 
 fuchsia_test_package("netemul-runner-tests") {
   test_components = [ ":test-root" ]
+  deps = [ "//src/connectivity/network/testing/netemul-v2/runner:package" ]
 }
 
 group("tests") {

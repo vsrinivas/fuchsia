@@ -11,6 +11,8 @@ use fuchsia_zircon as zx;
 use futures_util::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 use log::{error, info, warn};
 
+mod config;
+
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
     diagnostics_log::init!();
@@ -32,39 +34,66 @@ async fn main() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-const SVC_DIR: &str = "/svc";
-
 async fn handle_runner_request(
     request: frunner::ComponentRunnerRequest,
 ) -> Result<(), anyhow::Error> {
     match request {
         frunner::ComponentRunnerRequest::Start { start_info, controller, control_handle: _ } => {
-            let frunner::ComponentStartInfo { resolved_url, ns, outgoing_dir, .. } = start_info;
+            let frunner::ComponentStartInfo { resolved_url, program, ns, outgoing_dir, .. } =
+                start_info;
 
             let resolved_url = resolved_url.context("component URL missing from start info")?;
+            let program = program.context("program missing from start info")?;
+            let namespace = ns.context("namespace missing from start info")?;
+            let outgoing_dir =
+                outgoing_dir.context("outgoing directory missing from start info")?;
 
-            // Retrieve the '/svc' directory from the test root's namespace, so we can access the
-            // `fuchsia.test/Suite` protocol from the test driver.
-            let svc_dir = ns
-                .context("namespace missing from start info")?
-                .into_iter()
-                .find_map(|frunner::ComponentNamespaceEntry { path, directory, .. }| {
-                    path.as_ref().and_then(|path| (path == SVC_DIR).then(|| directory))
-                })
+            // Retrieve the '/svc' and '/pkg' directories from the test root's namespace, so we can
+            // access the fuchsia.test/Suite protocol from the test driver, the network
+            // configuration file, and any netstacks that need to be configured.
+            let (svc_dir, pkg_dir) = namespace.into_iter().fold(
+                (None, None),
+                |(svc_dir, pkg_dir), frunner::ComponentNamespaceEntry { path, directory, .. }| {
+                    match path.as_ref().map(|s| s.as_str()) {
+                        Some("/svc") => {
+                            assert_eq!(svc_dir, None);
+                            (Some(directory), pkg_dir)
+                        }
+                        Some("/pkg") => {
+                            assert_eq!(pkg_dir, None);
+                            (svc_dir, Some(directory))
+                        }
+                        _ => (svc_dir, pkg_dir),
+                    }
+                },
+            );
+            let svc_dir = svc_dir
                 .context("/svc directory not in namespace")?
-                .context("directory field not set in namespace entry")?;
+                .context("directory field not set for /svc namespace entry")?;
+            let pkg_dir = pkg_dir
+                .context("/pkg directory not in namespace")?
+                .context("directory field not set for /pkg namespace entry")?
+                .into_proxy()
+                .context("client end into proxy")?;
+
+            let config::Config { networks, netstacks } =
+                config::load_from_program(program, &pkg_dir)
+                    .await
+                    .context("retrieving and parsing network configuration")?;
+            info!(
+                "configuring environment with networks: {:#?} and netstacks: {:#?}",
+                networks, netstacks
+            );
 
             // Proxy the `fuchsia.test/Suite` protocol from the test root's namespace (where it was
             // routed from the test driver) to its outgoing directory, where the Test Runner
             // Framework can access it.
             let svc_dir = std::sync::Arc::new(svc_dir.into_channel());
-            let outgoing_dir =
-                outgoing_dir.context("outgoing directory not set in start info")?.into_channel();
             let mut fs = ServiceFs::new_local();
             let _: &mut ServiceFsDir<'_, _> =
                 fs.dir("svc").add_proxy_service_to::<fidl_fuchsia_test::SuiteMarker, ()>(svc_dir);
             let serve_test_suite = fs
-                .serve_connection(outgoing_dir)
+                .serve_connection(outgoing_dir.into_channel())
                 .context("serve connection on test component's outgoing dir")?
                 .collect::<()>();
 
