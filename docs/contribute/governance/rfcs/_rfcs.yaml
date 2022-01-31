@@ -1942,4 +1942,17 @@
   status: ''
   reviewers: [ 'pascallouis@google.com', 'yifeit@google.com', 'mkember@google.com']
   submitted: '2021-11-19'
-  reviewed: ''
+
+- name: 'RFC-0150'
+  title: 'Update opt-out'
+  short_description: 'Policy and features for product owners to allow users to opt out of software updates.'
+  authors: ['wittrock@google.com', 'ampearce@google.com']
+  file: '0150_update_opt_out.md'
+  area: ['Software Delivery']
+  issue: ['91299']
+  gerrit_change_id: ['631609']
+  status: 'Accepted'
+  reviewers: ['kevinwells@google.com', 'ampearce@google.com', 'pascallouis@google.com']
+  consulted: ['borthakur@google.com', 'marvinpaul@google.com', 'gtsai@google.com', 'leannogasawara@google.com']
+  submitted: '2022-01-14'
+  reviewed: '2022-01-31'

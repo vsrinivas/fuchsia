@@ -311,3 +311,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0148_ci_guidelines.md
 - title: "RFC-0149: FIDL encode validation not mandatory"
   path: /docs/contribute/governance/rfcs/0149_fidl_encode_validation_not_mandatory.md
+- title: "RFC-0150: Update Opt-out"
+  path: /docs/contribute/governance/rfcs/0150_update_opt_out.md
