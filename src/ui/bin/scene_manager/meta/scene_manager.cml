@@ -60,6 +60,7 @@
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
             to: [ "#cursor" ],

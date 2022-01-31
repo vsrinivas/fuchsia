@@ -45,6 +45,7 @@
                 "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
+                "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
             to: [ "#scene_manager" ],
@@ -70,7 +71,6 @@
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
-                "fuchsia.input.keymap.Configuration",
                 "fuchsia.session.scene.Manager",
             ],
             from: "#scene_manager",

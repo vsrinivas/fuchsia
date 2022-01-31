@@ -44,3 +44,17 @@ fuchsia_component("ui-component") {
 core_shard("ui-core-shard") {
   shard_file = "meta/ui.core_shard.cml"
 }
+
+fuchsia_package("ui_pkg") {
+  package_name = "ui"
+
+  deps = [ ":ui-component" ]
+}
+
+group("workstation") {
+  deps = [
+    ":ui_pkg",
+    "a11y",
+    "bin/scene_manager",
+  ]
+}
