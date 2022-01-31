@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_LIB_INTEL_HDA_INCLUDE_INTEL_HDA_UTILS_UTILS_H_
 
 #include <lib/edid/edid.h>
+#include <lib/fit/function.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
@@ -17,7 +18,6 @@
 #include <utility>
 
 #include <abs_clock/clock.h>
-#include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
@@ -30,7 +30,7 @@ using abs_clock::Clock;
 using abs_clock::RealClock;
 
 static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
-using WaitConditionFn = fbl::InlineFunction<bool(), MAX_HANDLER_CAPTURE_SIZE>;
+using WaitConditionFn = fit::inline_function<bool(), MAX_HANDLER_CAPTURE_SIZE>;
 zx_status_t WaitCondition(zx_duration_t timeout, zx_duration_t poll_interval, WaitConditionFn cond,
                           Clock* clock = RealClock::Get());
 
