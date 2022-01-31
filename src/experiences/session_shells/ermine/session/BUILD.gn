@@ -38,20 +38,65 @@ dart_component("session_component") {
   deps = [ ":lib" ]
 }
 
-fuchsia_component("routing_component") {
-  component_name = "workstation_routing"
-  manifest = "meta/workstation_routing.cml"
+_variants = [
+  "jit",
+  "jit_product",
+  "aot",
+  "aot_product",
+]
+
+pkg_deps = []
+foreach(variant, _variants) {
+  fuchsia_component("${variant}_routing_component") {
+    component_name = "workstation_routing_${variant}"
+    manifest = "meta/workstation_routing_${variant}.cml"
+  }
+
+  pkg_deps += [ ":${variant}_routing_component" ]
 }
 
 fuchsia_package("workstation_session_pkg") {
   package_name = "workstation_session"
 
-  deps = [
-    ":routing_component",
-    ":session_component",
-  ]
+  deps = pkg_deps
+  deps += [ ":session_component" ]
 }
 
-session_manager_package("session_manager") {
-  config = "//src/experiences/session_shells/ermine/session/session_config.json"
+session_manager_package("session_manager_jit") {
+  config =
+      "//src/experiences/session_shells/ermine/session/session_config_jit.json"
+}
+
+session_manager_package("session_manager_jit_product") {
+  config = "//src/experiences/session_shells/ermine/session/session_config_jit_product.json"
+}
+
+session_manager_package("session_manager_aot") {
+  config =
+      "//src/experiences/session_shells/ermine/session/session_config_aot.json"
+}
+
+session_manager_package("session_manager_aot_product") {
+  config = "//src/experiences/session_shells/ermine/session/session_config_aot_product.json"
+}
+
+# TODO(fxbug.dev/91803): Remove this after transitioning the workstation product configuration to
+# one of the above.
+group("session_manager") {
+  if (!dart_default_build_cfg.is_aot && !dart_default_build_cfg.is_product) {
+    public_deps = [ ":session_manager_jit" ]
+  } else if (!dart_default_build_cfg.is_aot &&
+             dart_default_build_cfg.is_product) {
+    public_deps = [ ":session_manager_jit_product" ]
+  } else if (dart_default_build_cfg.is_aot &&
+             !dart_default_build_cfg.is_product) {
+    public_deps = [ ":session_manager_aot" ]
+  } else if (dart_default_build_cfg.is_aot &&
+             dart_default_build_cfg.is_product) {
+    public_deps = [ ":session_manager_aot_product" ]
+  }
+}
+
+group("session") {
+  public_deps = [ ":workstation_session_pkg" ]
 }
