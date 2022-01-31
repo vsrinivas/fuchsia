@@ -57,7 +57,10 @@
             to: "#session-manager",
         },
         {
-            protocol: "fuchsia.memory.Monitor",
+            protocol: [
+                "fuchsia.memory.Monitor",
+                "fuchsia.memorypressure.Provider",
+            ],
             from: "#memory_monitor",
             to: "#session-manager",
         },

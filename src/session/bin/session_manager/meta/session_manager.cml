@@ -57,6 +57,7 @@
                 "fuchsia.logger.LogSink",
                 "fuchsia.media.AudioCore",
                 "fuchsia.memory.Monitor",
+                "fuchsia.memorypressure.Provider",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.power.BatteryManager",
