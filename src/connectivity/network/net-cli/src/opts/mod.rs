@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Context as _;
+use argh::FromArgs;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_ext as fnet_ext;
-
-use argh::FromArgs;
+use fidl_fuchsia_net_interfaces as finterfaces;
+use fidl_fuchsia_net_interfaces_ext as finterfaces_ext;
+use std::convert::{TryFrom as _, TryInto as _};
 
 pub(crate) mod dhcpd;
 
@@ -117,8 +120,8 @@ pub enum FwdEnum {
 #[argh(subcommand, name = "add-device")]
 /// adds a forwarding table entry to route to a device
 pub struct FwdAddDevice {
-    #[argh(positional)]
-    pub id: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
     #[argh(positional)]
     pub addr: String,
     #[argh(positional)]
@@ -178,6 +181,70 @@ pub enum IfEnum {
     List(IfList),
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum InterfaceIdentifier {
+    Id(u64),
+    Name(String),
+}
+
+impl InterfaceIdentifier {
+    pub async fn find_nicid<C>(&self, connector: &C) -> Result<u64, anyhow::Error>
+    where
+        C: crate::ServiceConnector<finterfaces::StateMarker>,
+    {
+        match self {
+            Self::Id(id) => Ok(*id),
+            Self::Name(name) => {
+                let interfaces_state = crate::connect_with_context(connector).await?;
+                let stream = finterfaces_ext::event_stream_from_state(&interfaces_state)?;
+                let response =
+                    finterfaces_ext::existing(stream, std::collections::HashMap::new()).await?;
+                response
+                    .values()
+                    .find_map(|interface| (&interface.name == name).then(|| interface.id))
+                    .ok_or_else(|| anyhow::anyhow!("No interface with name {}", name))
+            }
+        }
+    }
+
+    pub async fn find_u32_nicid<C>(&self, connector: &C) -> Result<u32, anyhow::Error>
+    where
+        C: crate::ServiceConnector<finterfaces::StateMarker>,
+    {
+        let id = self.find_nicid(connector).await?;
+        u32::try_from(id).with_context(|| format!("nicid {} does not fit in u32", id))
+    }
+}
+
+impl core::str::FromStr for InterfaceIdentifier {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let nicid_parse_result = s.parse::<u64>();
+        nicid_parse_result.map_or_else(
+            |nicid_parse_error| {
+                if !s.starts_with("name:") {
+                    Err(anyhow::anyhow!(
+                        "Failed to parse as NICID (error: {}) or as interface name \
+                        (error: interface names must be specified as `name:ifname`, where \
+                        ifname is the actual interface name in this example)",
+                        nicid_parse_error
+                    ))
+                } else {
+                    Ok(Self::Name(s["name:".len()..].to_string()))
+                }
+            },
+            |nicid| Ok(Self::Id(nicid)),
+        )
+    }
+}
+
+impl From<u64> for InterfaceIdentifier {
+    fn from(nicid: u64) -> InterfaceIdentifier {
+        InterfaceIdentifier::Id(nicid)
+    }
+}
+
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "add")]
 /// adds a network interface by path
@@ -207,8 +274,8 @@ pub enum IfAddrEnum {
 #[argh(subcommand, name = "add")]
 /// adds an address to the network interface
 pub struct IfAddrAdd {
-    #[argh(positional)]
-    pub id: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
     #[argh(positional)]
     pub addr: String,
     #[argh(positional)]
@@ -219,8 +286,8 @@ pub struct IfAddrAdd {
 #[argh(subcommand, name = "del")]
 /// deletes an address from the network interface
 pub struct IfAddrDel {
-    #[argh(positional)]
-    pub id: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
     #[argh(positional)]
     pub addr: String,
     #[argh(positional)]
@@ -231,40 +298,40 @@ pub struct IfAddrDel {
 #[argh(subcommand, name = "bridge")]
 /// creates a bridge between network interfaces
 pub struct IfBridge {
-    #[argh(positional)]
-    pub ids: Vec<u32>,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interfaces: Vec<InterfaceIdentifier>,
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "del")]
 /// removes a network interface
 pub struct IfDel {
-    #[argh(positional)]
-    pub id: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "disable")]
 /// disables a network interface
 pub struct IfDisable {
-    #[argh(positional)]
-    pub id: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "enable")]
 /// enables a network interface
 pub struct IfEnable {
-    #[argh(positional)]
-    pub id: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "get")]
 /// queries a network interface
 pub struct IfGet {
-    #[argh(positional)]
-    pub id: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
@@ -286,8 +353,8 @@ pub enum IfIpForwardEnum {
 #[argh(subcommand, name = "show")]
 /// get IP forwarding for an interface
 pub struct IfIpForwardShow {
-    #[argh(positional)]
-    pub id: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
 
     #[argh(positional, from_str_fn(parse_ip_version_str))]
     pub ip_version: fnet::IpVersion,
@@ -297,8 +364,8 @@ pub struct IfIpForwardShow {
 #[argh(subcommand, name = "set")]
 /// set IP forwarding for an interface
 pub struct IfIpForwardSet {
-    #[argh(positional)]
-    pub id: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
 
     #[argh(positional, from_str_fn(parse_ip_version_str))]
     pub ip_version: fnet::IpVersion,
@@ -388,8 +455,8 @@ pub enum NeighEnum {
 #[argh(subcommand, name = "add")]
 /// adds an entry to the neighbor table
 pub struct NeighAdd {
-    #[argh(positional)]
-    pub interface: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
     #[argh(positional)]
     pub ip: fnet_ext::IpAddress,
     #[argh(positional)]
@@ -400,8 +467,8 @@ pub struct NeighAdd {
 #[argh(subcommand, name = "clear")]
 /// removes all entries associated with a network interface from the neighbor table
 pub struct NeighClear {
-    #[argh(positional)]
-    pub interface: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
 
     #[argh(positional, from_str_fn(parse_ip_version_str))]
     pub ip_version: fnet::IpVersion,
@@ -420,8 +487,8 @@ pub struct NeighList {
 #[argh(subcommand, name = "del")]
 /// removes an entry from the neighbor table
 pub struct NeighDel {
-    #[argh(positional)]
-    pub interface: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
     #[argh(positional)]
     pub ip: fnet_ext::IpAddress,
 }
@@ -454,8 +521,8 @@ pub enum NeighConfigEnum {
 #[argh(subcommand, name = "get")]
 /// returns the current NUD configuration options for the provided interface
 pub struct NeighGetConfig {
-    #[argh(positional)]
-    pub interface: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
 
     #[argh(positional, from_str_fn(parse_ip_version_str))]
     pub ip_version: fnet::IpVersion,
@@ -465,8 +532,8 @@ pub struct NeighGetConfig {
 #[argh(subcommand, name = "update")]
 /// updates the current NUD configuration options for the provided interface
 pub struct NeighUpdateConfig {
-    #[argh(positional)]
-    pub interface: u64,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
 
     #[argh(positional, from_str_fn(parse_ip_version_str))]
     pub ip_version: fnet::IpVersion,
@@ -563,8 +630,6 @@ fn parse_netmask_or_prefix_length(s: &str) -> Result<u8, String> {
 }
 
 fn subnet_mask_to_prefix_length(addr: std::net::IpAddr) -> u8 {
-    use core::convert::TryInto as _;
-
     match addr {
         std::net::IpAddr::V4(addr) => (!u32::from_be_bytes(addr.octets())).leading_zeros(),
         std::net::IpAddr::V6(addr) => (!u128::from_be_bytes(addr.octets())).leading_zeros(),
@@ -602,17 +667,20 @@ macro_rules! route_struct {
             #[argh(option)]
             /// the ip address of the first hop router
             pub gateway: Option<std::net::IpAddr>,
-            #[argh(option)]
-            /// the outgoing network interface id of the route
-            pub nicid: u32,
+            #[argh(option, arg_name = "nicid or name:ifname", long = "nicid")]
+            /// the outgoing network interface of the route
+            pub interface: InterfaceIdentifier,
             #[argh(option)]
             /// the metric for the route
             pub metric: u32,
         }
 
-        impl From<$ty_name> for fidl_fuchsia_netstack::RouteTableEntry {
-            fn from(entry: $ty_name) -> fidl_fuchsia_netstack::RouteTableEntry {
-                let $ty_name { destination, prefix_len, gateway, nicid, metric } = entry;
+        impl $ty_name {
+            pub fn into_route_table_entry(
+                self,
+                nicid: u32,
+            ) -> fidl_fuchsia_netstack::RouteTableEntry {
+                let Self { destination, prefix_len, gateway, interface: _, metric } = self;
                 fidl_fuchsia_netstack::RouteTableEntry {
                     destination: fidl_fuchsia_net::Subnet {
                         addr: fidl_fuchsia_net_ext::IpAddress(destination).into(),
@@ -651,16 +719,16 @@ pub enum DhcpEnum {
 #[argh(subcommand, name = "start")]
 /// starts a dhcp client on the interface
 pub struct DhcpStart {
-    #[argh(positional)]
-    pub id: u32,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "stop")]
 /// stops the dhcp client on the interface
 pub struct DhcpStop {
-    #[argh(positional)]
-    pub id: u32,
+    #[argh(positional, arg_name = "nicid or name:ifname")]
+    pub interface: InterfaceIdentifier,
 }
 
 #[cfg(test)]
@@ -684,5 +752,19 @@ mod tests {
             let prefix_len_parse_result = s.parse::<u8>();
             assert_matches!((netmask_parse_result, prefix_len_parse_result), (Ok(_), Err(_)) | (Err(_), Ok(_)) | (Err(_), Err(_)));
         }
+    }
+
+    #[test_case("1", InterfaceIdentifier::Id(1) ; "as nicid")]
+    #[test_case("name:lo", InterfaceIdentifier::Name("lo".to_string()) ; "as ifname")]
+    #[test_case("name:name:lo", InterfaceIdentifier::Name("name:lo".to_string()) ; "as ifname with 'name:' as part of name")]
+    #[test_case("name:1", InterfaceIdentifier::Name("1".to_string()) ; "as numerical ifname")]
+    fn parse_interface(to_parse: &str, want: InterfaceIdentifier) {
+        let got = to_parse.parse::<InterfaceIdentifier>().unwrap();
+        assert_eq!(got, want)
+    }
+
+    #[test]
+    fn parse_interface_without_prefix_fails() {
+        assert_matches!("lo".parse::<InterfaceIdentifier>(), Err(_))
     }
 }

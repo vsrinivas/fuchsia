@@ -24,7 +24,7 @@ use netfilter::FidlReturn as _;
 use prettytable::{cell, format, row, Row, Table};
 use serde_json::{json, value::Value};
 use std::collections::hash_map::HashMap;
-use std::{iter::FromIterator as _, str::FromStr as _};
+use std::{convert::TryFrom as _, iter::FromIterator as _, str::FromStr as _};
 
 mod opts;
 pub use opts::{Command, CommandEnum};
@@ -190,7 +190,7 @@ fn write_tabulated_interfaces_info<
     Ok(())
 }
 
-async fn connect_with_context<S, C>(connector: &C) -> Result<S::Proxy, Error>
+pub(crate) async fn connect_with_context<S, C>(connector: &C) -> Result<S::Proxy, Error>
 where
     C: ServiceConnector<S>,
     S: fidl::endpoints::ProtocolMarker,
@@ -251,7 +251,8 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                 writeln!(out, "{}", e)?;
             }
         },
-        opts::IfEnum::Del(opts::IfDel { id }) => {
+        opts::IfEnum::Del(opts::IfDel { interface }) => {
+            let id = interface.find_nicid(connector).await?;
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let () = fstack_ext::exec_fidl!(
                 stack.del_ethernet_interface(id),
@@ -259,7 +260,8 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
             )?;
             info!("Deleted interface {}", id);
         }
-        opts::IfEnum::Get(opts::IfGet { id }) => {
+        opts::IfEnum::Get(opts::IfGet { interface }) => {
+            let id = interface.find_nicid(connector).await?;
             let debug_interfaces =
                 connect_with_context::<fdebug::InterfacesMarker, _>(connector).await?;
             let interface_state =
@@ -292,14 +294,20 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
         opts::IfEnum::IpForward(opts::IfIpForward { cmd }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             match cmd {
-                opts::IfIpForwardEnum::Show(opts::IfIpForwardShow { id, ip_version }) => {
+                opts::IfIpForwardEnum::Show(opts::IfIpForwardShow { interface, ip_version }) => {
+                    let id = interface.find_nicid(connector).await?;
                     let enabled = fstack_ext::exec_fidl!(
                         stack.get_interface_ip_forwarding(id, ip_version),
                         "error getting interface IP forwarding"
                     )?;
                     info!("IP forwarding for {:?} is {} on interface {}", ip_version, enabled, id);
                 }
-                opts::IfIpForwardEnum::Set(opts::IfIpForwardSet { id, ip_version, enable }) => {
+                opts::IfIpForwardEnum::Set(opts::IfIpForwardSet {
+                    interface,
+                    ip_version,
+                    enable,
+                }) => {
+                    let id = interface.find_nicid(connector).await?;
                     let () = fstack_ext::exec_fidl!(
                         stack.set_interface_ip_forwarding(id, ip_version, enable),
                         "error setting interface IP forwarding"
@@ -311,13 +319,15 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                 }
             }
         }
-        opts::IfEnum::Enable(opts::IfEnable { id }) => {
+        opts::IfEnum::Enable(opts::IfEnable { interface }) => {
+            let id = interface.find_nicid(connector).await?;
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let () =
                 fstack_ext::exec_fidl!(stack.enable_interface(id), "error enabling interface")?;
             info!("Interface {} enabled", id);
         }
-        opts::IfEnum::Disable(opts::IfDisable { id }) => {
+        opts::IfEnum::Disable(opts::IfDisable { interface }) => {
+            let id = interface.find_nicid(connector).await?;
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let () =
                 fstack_ext::exec_fidl!(stack.disable_interface(id), "error disabling interface")?;
@@ -326,7 +336,8 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
         opts::IfEnum::Addr(opts::IfAddr { addr_cmd }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             match addr_cmd {
-                opts::IfAddrEnum::Add(opts::IfAddrAdd { id, addr, prefix }) => {
+                opts::IfAddrEnum::Add(opts::IfAddrAdd { interface, addr, prefix }) => {
+                    let id = interface.find_nicid(connector).await?;
                     let parsed_addr = fnet_ext::IpAddress::from_str(&addr)?.into();
                     let mut fidl_addr = fnet::Subnet { addr: parsed_addr, prefix_len: prefix };
                     let () = fstack_ext::exec_fidl!(
@@ -339,7 +350,8 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                         id
                     );
                 }
-                opts::IfAddrEnum::Del(opts::IfAddrDel { id, addr, prefix }) => {
+                opts::IfAddrEnum::Del(opts::IfAddrDel { interface, addr, prefix }) => {
+                    let id = interface.find_nicid(connector).await?;
                     let parsed_addr = fnet_ext::IpAddress::from_str(&addr)?.into();
                     let prefix_len = prefix.unwrap_or_else(|| match parsed_addr {
                         fnet::IpAddress::Ipv4(_) => 32,
@@ -358,8 +370,66 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                 }
             }
         }
-        opts::IfEnum::Bridge(opts::IfBridge { ids }) => {
-            let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
+        opts::IfEnum::Bridge(opts::IfBridge { interfaces }) => {
+            let netstack: fnetstack::NetstackProxy =
+                connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
+
+            let build_name_to_id_map = || async {
+                let interface_state =
+                    connect_with_context::<finterfaces::StateMarker, _>(connector).await?;
+                let stream = finterfaces_ext::event_stream_from_state(&interface_state)?;
+                let response = finterfaces_ext::existing(stream, HashMap::new()).await?;
+                Ok::<HashMap<String, u64>, Error>(
+                    response
+                        .into_iter()
+                        .map(
+                            |(
+                                id,
+                                finterfaces_ext::Properties {
+                                    name,
+                                    id: _,
+                                    device_class: _,
+                                    online: _,
+                                    addresses: _,
+                                    has_default_ipv4_route: _,
+                                    has_default_ipv6_route: _,
+                                },
+                            )| (name, id),
+                        )
+                        .collect(),
+                )
+            };
+
+            let num_interfaces = interfaces.len();
+
+            let (_name_to_id, ids): (Option<HashMap<String, u64>>, Vec<u32>) =
+                futures::stream::iter(interfaces)
+                    .map(Ok::<_, Error>)
+                    .try_fold(
+                        (None, Vec::with_capacity(num_interfaces)),
+                        |(name_to_id, mut ids), interface| async move {
+                            let (name_to_id, id) = match interface {
+                                opts::InterfaceIdentifier::Id(id) => (name_to_id, id),
+                                opts::InterfaceIdentifier::Name(name) => {
+                                    let name_to_id = match name_to_id {
+                                        Some(name_to_id) => name_to_id,
+                                        None => build_name_to_id_map().await?,
+                                    };
+                                    let id = name_to_id.get(&name).copied().ok_or_else(|| {
+                                        anyhow::anyhow!("no interface named {}", name)
+                                    })?;
+                                    (Some(name_to_id), id)
+                                }
+                            };
+                            ids.push(
+                                u32::try_from(id)
+                                    .with_context(|| format!("nicid {} does not fit in u32", id))?,
+                            );
+                            Ok((name_to_id, ids))
+                        },
+                    )
+                    .await?;
+
             let (result, bridge_id) = netstack.bridge_interfaces(&ids).await?;
             if result.status != fnetstack::Status::Ok {
                 return Err(anyhow::anyhow!("{:?}: {}", result.status, result.message));
@@ -394,7 +464,8 @@ async fn do_fwd<W: std::io::Write, C: NetCliDepsConnector>(
                 }
             }
         }
-        opts::FwdEnum::AddDevice(opts::FwdAddDevice { id, addr, prefix }) => {
+        opts::FwdEnum::AddDevice(opts::FwdAddDevice { interface, addr, prefix }) => {
+            let id = interface.find_nicid(connector).await?;
             let mut entry = fstack::ForwardingEntry {
                 subnet: fnet::Subnet {
                     addr: fnet_ext::IpAddress::from_str(&addr)?.into(),
@@ -477,14 +548,18 @@ async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
             }
         }
         opts::RouteEnum::Add(route) => {
+            let nicid = route.interface.find_u32_nicid(connector).await?;
+            let mut entry = route.into_route_table_entry(nicid);
             let () = with_route_table_transaction_and_entry(&netstack, |transaction| {
-                transaction.add_route(&mut route.into())
+                transaction.add_route(&mut entry)
             })
             .await?;
         }
         opts::RouteEnum::Del(route) => {
+            let nicid = route.interface.find_u32_nicid(connector).await?;
+            let mut entry = route.into_route_table_entry(nicid);
             let () = with_route_table_transaction_and_entry(&netstack, |transaction| {
-                transaction.del_route(&mut route.into())
+                transaction.del_route(&mut entry)
             })
             .await?;
         }
@@ -603,13 +678,15 @@ async fn do_dhcp<C: NetCliDepsConnector>(cmd: opts::DhcpEnum, connector: &C) -> 
     let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
     let (dhcp, server_end) = fidl::endpoints::create_proxy::<fdhcp::ClientMarker>()?;
     match cmd {
-        opts::DhcpEnum::Start(opts::DhcpStart { id }) => {
+        opts::DhcpEnum::Start(opts::DhcpStart { interface }) => {
+            let id = interface.find_u32_nicid(connector).await?;
             let () =
                 netstack.get_dhcp_client(id, server_end).await?.map_err(zx::Status::from_raw)?;
             let () = dhcp.start().await?.map_err(zx::Status::from_raw)?;
             info!("dhcp client started on interface {}", id);
         }
-        opts::DhcpEnum::Stop(opts::DhcpStop { id }) => {
+        opts::DhcpEnum::Stop(opts::DhcpStop { interface }) => {
+            let id = interface.find_u32_nicid(connector).await?;
             let () =
                 netstack.get_dhcp_client(id, server_end).await?.map_err(zx::Status::from_raw)?;
             let () = dhcp.stop().await?.map_err(zx::Status::from_raw)?;
@@ -649,6 +726,7 @@ async fn do_neigh<C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     match cmd {
         opts::NeighEnum::Add(opts::NeighAdd { interface, ip, mac }) => {
+            let interface = interface.find_nicid(connector).await?;
             let controller =
                 connect_with_context::<fneighbor::ControllerMarker, _>(connector).await?;
             let () = do_neigh_add(interface, ip.into(), mac.into(), controller)
@@ -657,6 +735,7 @@ async fn do_neigh<C: NetCliDepsConnector>(
             info!("Added entry ({}, {}) for interface {}", ip, mac, interface);
         }
         opts::NeighEnum::Clear(opts::NeighClear { interface, ip_version }) => {
+            let interface = interface.find_nicid(connector).await?;
             let controller =
                 connect_with_context::<fneighbor::ControllerMarker, _>(connector).await?;
             let () = do_neigh_clear(interface, ip_version, controller)
@@ -665,6 +744,7 @@ async fn do_neigh<C: NetCliDepsConnector>(
             info!("Cleared entries for interface {}", interface);
         }
         opts::NeighEnum::Del(opts::NeighDel { interface, ip }) => {
+            let interface = interface.find_nicid(connector).await?;
             let controller =
                 connect_with_context::<fneighbor::ControllerMarker, _>(connector).await?;
             let () = do_neigh_del(interface, ip.into(), controller)
@@ -696,6 +776,7 @@ async fn do_neigh<C: NetCliDepsConnector>(
         }
         opts::NeighEnum::Config(opts::NeighConfig { neigh_config_cmd }) => match neigh_config_cmd {
             opts::NeighConfigEnum::Get(opts::NeighGetConfig { interface, ip_version }) => {
+                let interface = interface.find_nicid(connector).await?;
                 let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
                 let () = print_neigh_config(interface, ip_version, view)
                     .await
@@ -730,6 +811,7 @@ async fn do_neigh<C: NetCliDepsConnector>(
                     max_reachability_confirmations,
                     ..fneighbor::UnreachabilityConfig::EMPTY
                 };
+                let interface = interface.find_nicid(connector).await?;
                 let controller =
                     connect_with_context::<fneighbor::ControllerMarker, _>(connector).await?;
                 let () = update_neigh_config(interface, ip_version, updates, controller)
@@ -808,7 +890,7 @@ fn jsonify_neigh_iter_item(
         .map(fneighbor_ext::Entry::from)
         .map(ser::NeighborTableEntry::from)
         .map(serde_json::to_value)
-        .map(|res| res.map_err(Error::msg))
+        .map(|res| res.map_err(Error::new))
         .unwrap_or(Err(anyhow::anyhow!("failed to jsonify NeighborTableEntry")))?;
     if include_entry_state {
         Ok(json!({
@@ -1085,11 +1167,12 @@ mod tests {
     use super::*;
 
     use anyhow::Error;
+    use assert_matches::assert_matches;
     use fidl::endpoints::ProtocolMarker;
     use fidl_fuchsia_hardware_network as fhardware_network;
     use fuchsia_async::{self as fasync, TimeoutExt as _};
     use net_declare::{fidl_mac, fidl_subnet};
-    use std::convert::TryFrom as _;
+    use std::convert::TryInto as _;
     use test_case::test_case;
 
     const SUBNET_V4: fnet::Subnet = fidl_subnet!("192.168.0.1/32");
@@ -1305,7 +1388,7 @@ mod tests {
             std::io::sink(),
             opts::IfEnum::IpForward(opts::IfIpForward {
                 cmd: opts::IfIpForwardEnum::Set(opts::IfIpForwardSet {
-                    id: INTERFACE_ID,
+                    interface: INTERFACE_ID.into(),
                     ip_version: IP_VERSION,
                     enable: IP_FORWARD,
                 }),
@@ -1334,7 +1417,7 @@ mod tests {
             std::io::sink(),
             opts::IfEnum::IpForward(opts::IfIpForward {
                 cmd: opts::IfIpForwardEnum::Show(opts::IfIpForwardShow {
-                    id: INTERFACE_ID,
+                    interface: INTERFACE_ID.into(),
                     ip_version: IP_VERSION,
                 }),
             }),
@@ -1358,9 +1441,75 @@ mod tests {
             .expect("getting interface ip forwarding should succeed");
     }
 
+    async fn always_answer_with_interfaces(
+        interfaces_state_requests: finterfaces::StateRequestStream,
+        interfaces: Vec<finterfaces::Properties>,
+    ) {
+        interfaces_state_requests
+            .try_for_each(|request| {
+                let interfaces = interfaces.clone();
+                async move {
+                    let (finterfaces::WatcherOptions { .. }, server_end, _): (
+                        _,
+                        _,
+                        finterfaces::StateControlHandle,
+                    ) = request.into_get_watcher().expect("request type should be GetWatcher");
+
+                    let mut watcher_request_stream: finterfaces::WatcherRequestStream =
+                        server_end.into_stream().expect("watcher FIDL error");
+
+                    for mut event in interfaces
+                        .into_iter()
+                        .map(finterfaces::Event::Existing)
+                        .chain(std::iter::once(finterfaces::Event::Idle(finterfaces::Empty)))
+                    {
+                        let () = watcher_request_stream
+                            .try_next()
+                            .await
+                            .expect("watcher watch FIDL error")
+                            .expect("watcher request stream should not have ended")
+                            .into_watch()
+                            .expect("request should be of type Watch")
+                            .send(&mut event)
+                            .expect("responder.send should succeed");
+                    }
+
+                    assert_matches!(
+                        watcher_request_stream.try_next().await.expect("watcher watch FIDL error"),
+                        None,
+                        "remaining watcher request stream should be empty"
+                    );
+                    Ok(())
+                }
+            })
+            .await
+            .expect("interfaces state FIDL error")
+    }
+
+    #[derive(Clone)]
+    struct TestInterface {
+        nicid: u64,
+        name: &'static str,
+    }
+
+    impl TestInterface {
+        fn identifier(&self, use_ifname: bool) -> opts::InterfaceIdentifier {
+            let Self { nicid, name } = self;
+            if use_ifname {
+                opts::InterfaceIdentifier::Name(name.to_string())
+            } else {
+                opts::InterfaceIdentifier::Id(*nicid)
+            }
+        }
+    }
+
+    #[test_case(false ; "providing nicids")]
+    #[test_case(true ; "providing interface names")]
     #[fasync::run_singlethreaded(test)]
-    async fn if_del_addr() {
-        async fn next_request(
+    async fn if_del_addr(use_ifname: bool) {
+        let interface1 = TestInterface { nicid: 1, name: "interface1" };
+        let interface2 = TestInterface { nicid: 2, name: "interface2" };
+        async fn next_stack_request(
             requests: &mut fstack::StackRequestStream,
         ) -> (u64, fnet::Subnet, fstack::StackDelInterfaceAddressResponder) {
             requests
@@ -1374,58 +1523,96 @@ mod tests {
 
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
-        let connector = TestConnector { stack: Some(stack), ..Default::default() };
+        let (interfaces_state, interfaces_requests) =
+            fidl::endpoints::create_proxy_and_stream::<finterfaces::StateMarker>().unwrap();
+
+        let (interface1_properties, _mac) = get_fake_interface(
+            interface1.nicid,
+            interface1.name,
+            finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Ethernet),
+            None,
+        );
+
+        let interfaces_fut =
+            always_answer_with_interfaces(interfaces_requests, vec![interface1_properties.into()])
+                .fuse();
+        futures::pin_mut!(interfaces_fut);
+
+        let connector = TestConnector {
+            stack: Some(stack),
+            interfaces_state: Some(interfaces_state),
+            ..Default::default()
+        };
 
         // Make the first request.
         let succeeds = do_if(
             std::io::sink(),
             opts::IfEnum::Addr(opts::IfAddr {
                 addr_cmd: opts::IfAddrEnum::Del(opts::IfAddrDel {
-                    id: 1,
+                    interface: interface1.identifier(use_ifname),
                     addr: fnet_ext::IpAddress::from(SUBNET_V4.addr).to_string(),
                     prefix: None, // The prefix should be set to the default of 32 for IPv4.
                 }),
             }),
             &connector,
         );
-        let success_response = async {
+        let success_stack_response = async {
             // Verify that the first request is as expected and return OK.
-            let (id, addr, responder) = next_request(&mut requests).await;
-            assert_eq!(id, 1);
+            let (id, addr, responder) = next_stack_request(&mut requests).await;
+            assert_eq!(id, interface1.nicid);
             assert_eq!(addr, SUBNET_V4);
             responder.send(&mut Ok(())).map_err(anyhow::Error::new)
         };
-        let ((), ()) = futures::future::try_join(success_response, succeeds)
-            .await
-            .expect("do_if should succeed");
+
+        futures::select! {
+            () = interfaces_fut => panic!("interfaces_fut should never complete"),
+            result = futures::future::try_join(success_stack_response, succeeds).fuse() => {
+                let ((), ()) = result.expect("if bridge should succeed");
+            }
+        }
 
         // Make the second request.
         let fails = do_if(
             std::io::sink(),
             opts::IfEnum::Addr(opts::IfAddr {
                 addr_cmd: opts::IfAddrEnum::Del(opts::IfAddrDel {
-                    id: 2,
+                    interface: interface2.identifier(use_ifname),
                     addr: fnet_ext::IpAddress::from(SUBNET_V6.addr).to_string(),
                     prefix: None, // The prefix should be set to the default of 128 for IPv6.
                 }),
             }),
             &connector,
         );
+
         let fail_response = async {
-            // Verify that the second request is as expected and return a NotFound error.
-            let (id, addr, responder) = next_request(&mut requests).await;
-            assert_eq!(id, 2);
-            assert_eq!(addr, SUBNET_V6);
-            responder.send(&mut Err(fstack::Error::NotFound)).map_err(anyhow::Error::new)
+            if use_ifname {
+                // The caller will have failed to find an interface matching the name "interface2",
+                // so we don't expect a stack request to make it to us.
+            } else {
+                // Verify that the second request is as expected and return a NotFound error.
+                let (id, addr, responder) = next_stack_request(&mut requests).await;
+                assert_eq!(id, 2);
+                assert_eq!(addr, SUBNET_V6);
+                responder
+                    .send(&mut Err(fstack::Error::NotFound))
+                    .expect("responder.send should succeed");
+            }
         };
-        let (fails_response, fails) = futures::future::join(fail_response, fails).await;
-        let () = fails_response.expect("responder.send should succeed");
-        let fidl_err = fails.expect_err("do_if should fail");
-        let fstack_ext::NetstackError(underlying_error) = fidl_err
-            .root_cause()
-            .downcast_ref::<fstack_ext::NetstackError>()
-            .expect("fidl_err should downcast to NetstackError");
-        assert_eq!(*underlying_error, fstack::Error::NotFound);
+
+        futures::select! {
+            () = interfaces_fut => panic!("interfaces_fut should never complete"),
+            ((), fails) = futures::future::join(fail_response, fails).fuse() => {
+                let fidl_err = fails.expect_err("do_if should fail");
+
+                if !use_ifname {
+                    let fstack_ext::NetstackError(underlying_error) = fidl_err
+                        .root_cause()
+                        .downcast_ref::<fstack_ext::NetstackError>()
+                        .expect("fidl_err should downcast to NetstackError");
+                    assert_eq!(*underlying_error, fstack::Error::NotFound);
+                }
+            },
+        }
     }
 
     fn wanted_net_if_list_json() -> String {
@@ -1728,8 +1915,8 @@ mac             -
                 .send(&mut Ok(()))
                 .expect("netstack_responder.send should succeed");
             match cmd {
-                opts::DhcpEnum::Start(opts::DhcpStart { id: expected_id }) => {
-                    assert_eq!(received_id, expected_id);
+                opts::DhcpEnum::Start(opts::DhcpStart { interface: expected_id }) => {
+                    assert_eq!(opts::InterfaceIdentifier::Id(u64::from(received_id)), expected_id);
                     dhcp_requests
                         .try_next()
                         .await
@@ -1740,8 +1927,8 @@ mac             -
                         .send(&mut Ok(()))
                         .map_err(anyhow::Error::new)
                 }
-                opts::DhcpEnum::Stop(opts::DhcpStop { id: expected_id }) => {
-                    assert_eq!(received_id, expected_id);
+                opts::DhcpEnum::Stop(opts::DhcpStop { interface: expected_id }) => {
+                    assert_eq!(opts::InterfaceIdentifier::Id(u64::from(received_id)), expected_id);
                     dhcp_requests
                         .try_next()
                         .await
@@ -1760,15 +1947,28 @@ mac             -
 
     #[fasync::run_singlethreaded(test)]
     async fn dhcp_start() {
-        let () = test_do_dhcp(opts::DhcpEnum::Start(opts::DhcpStart { id: 1 })).await;
+        let () = test_do_dhcp(opts::DhcpEnum::Start(opts::DhcpStart { interface: 1.into() })).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn dhcp_stop() {
-        let () = test_do_dhcp(opts::DhcpEnum::Stop(opts::DhcpStop { id: 1 })).await;
+        let () = test_do_dhcp(opts::DhcpEnum::Stop(opts::DhcpStop { interface: 1.into() })).await;
     }
 
     async fn test_modify_route(cmd: opts::RouteEnum) {
+        let expected_interface = match &cmd {
+            opts::RouteEnum::List(_) => panic!("test_modify_route should not take a List command"),
+            opts::RouteEnum::Add(opts::RouteAdd { interface, .. }) => interface,
+            opts::RouteEnum::Del(opts::RouteDel { interface, .. }) => interface,
+        }
+        .clone();
+        let expected_id = match expected_interface {
+            opts::InterfaceIdentifier::Id(ref id) => *id,
+            opts::InterfaceIdentifier::Name(_) => {
+                panic!("expected test to work only with ids")
+            }
+        };
+
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
         let connector = TestConnector { netstack: Some(netstack), ..Default::default() };
@@ -1791,7 +1991,9 @@ mac             -
                     panic!("test_modify_route should not take a List command")
                 }
                 opts::RouteEnum::Add(route) => {
-                    let expected_entry = route.into();
+                    let expected_entry = route.into_route_table_entry(
+                        expected_id.try_into().expect("nicid does not fit in u32"),
+                    );
                     let (entry, responder) = route_table_requests
                         .try_next()
                         .await
@@ -1803,7 +2005,9 @@ mac             -
                     responder.send(zx::Status::OK.into_raw())
                 }
                 opts::RouteEnum::Del(route) => {
-                    let expected_entry = route.into();
+                    let expected_entry = route.into_route_table_entry(
+                        expected_id.try_into().expect("nicid does not fit in u32"),
+                    );
                     let (entry, responder) = route_table_requests
                         .try_next()
                         .await
@@ -1828,7 +2032,7 @@ mac             -
             destination: std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 0)),
             prefix_len: 24,
             gateway: None,
-            nicid: 2,
+            interface: 2.into(),
             metric: 100,
         }))
         .await;
@@ -1841,7 +2045,7 @@ mac             -
             destination: std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 0)),
             prefix_len: 24,
             gateway: None,
-            nicid: 2,
+            interface: 2.into(),
             metric: 100,
         }))
         .await;
@@ -1943,19 +2147,54 @@ mac             -
         }
     }
 
+    #[test_case(false ; "providing nicids")]
+    #[test_case(true ; "providing interface names")]
     #[fasync::run_singlethreaded(test)]
-    async fn bridge() {
+    async fn bridge(use_ifname: bool) {
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector { netstack: Some(netstack), ..Default::default() };
-        // interface id test values have been selected arbitrarily
-        let bridge_ifs = vec![1, 2, 3];
+        let (interfaces_state, interfaces_state_requests) =
+            fidl::endpoints::create_proxy_and_stream::<finterfaces::StateMarker>().unwrap();
+        let connector = TestConnector {
+            netstack: Some(netstack),
+            interfaces_state: Some(interfaces_state),
+            ..Default::default()
+        };
+
+        let bridge_ifs = vec![
+            TestInterface { nicid: 1, name: "interface1" },
+            TestInterface { nicid: 2, name: "interface2" },
+            TestInterface { nicid: 3, name: "interface3" },
+        ];
+
+        let interface_fidls = bridge_ifs
+            .iter()
+            .map(|interface| {
+                let (interface, _mac) = get_fake_interface(
+                    interface.nicid,
+                    interface.name,
+                    finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Ethernet),
+                    None,
+                );
+                interface.into()
+            })
+            .collect::<Vec<_>>();
+
+        let interfaces_fut =
+            always_answer_with_interfaces(interfaces_state_requests, interface_fidls);
+
         let bridge_id = 4;
         let bridge = do_if(
             std::io::sink(),
-            opts::IfEnum::Bridge(opts::IfBridge { ids: bridge_ifs.clone() }),
+            opts::IfEnum::Bridge(opts::IfBridge {
+                interfaces: bridge_ifs
+                    .iter()
+                    .map(|interface| interface.identifier(use_ifname))
+                    .collect(),
+            }),
             &connector,
         );
+
         let bridge_succeeds = async move {
             let (requested_ifs, netstack_responder) = requests
                 .try_next()
@@ -1964,7 +2203,16 @@ mac             -
                 .expect("request stream should not have ended")
                 .into_bridge_interfaces()
                 .expect("request should be of type BridgeInterfaces");
-            assert_eq!(requested_ifs, bridge_ifs);
+            assert_eq!(
+                requested_ifs,
+                bridge_ifs
+                    .iter()
+                    .map(|interface| u32::try_from(interface.nicid).unwrap_or_else(|_| panic!(
+                        "nicid {} does not fit in u32",
+                        interface.nicid
+                    )))
+                    .collect::<Vec<_>>()
+            );
             let () = netstack_responder
                 .send(
                     &mut fnetstack::NetErr {
@@ -1976,9 +2224,12 @@ mac             -
                 .expect("responder.send should succeed");
             Ok(())
         };
-        let ((), ()) = futures::future::try_join(bridge, bridge_succeeds)
-            .await
-            .expect("if bridge should succeed");
+        futures::select! {
+            () = interfaces_fut.fuse() => panic!("interfaces_fut should never complete"),
+            result = futures::future::try_join(bridge, bridge_succeeds).fuse() => {
+                let ((), ()) = result.expect("if bridge should succeed");
+            }
+        }
     }
 
     async fn test_get_neigh_entries(
