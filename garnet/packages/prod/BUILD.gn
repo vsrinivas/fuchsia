@@ -298,7 +298,6 @@ group("sbase") {
     "//third_party/sbase:uuencode",
     "//third_party/sbase:wc",
     "//third_party/sbase:which",
-    "//third_party/sbase:whoami",
     "//third_party/sbase:xargs",
     "//third_party/sbase:xinstall",
     "//third_party/sbase:yes",
