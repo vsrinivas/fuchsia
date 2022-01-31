@@ -190,4 +190,14 @@ var additionalSkipFiles = []string{
 	"third_party/dart-pkg/pub/README.md",
 	"third_party/rust_crates/README.md",
 	"zircon/prebuilt/config.gni", // b/178734726
+
+	// TODO(fxbug.dev/92168): Cleanup these.
+	"third_party/intel/libva/doc/Doxyfile.in",
+	"third_party/intel/libva/pkgconfig/libva-drm.pc.in",
+	"third_party/intel/libva/pkgconfig/libva-glx.pc.in",
+	"third_party/intel/libva/pkgconfig/libva-wayland.pc.in",
+	"third_party/intel/libva/pkgconfig/libva-x11.pc.in",
+	"third_party/intel/libva/pkgconfig/libva.pc.in",
+	"third_party/intel/libva/doc/ghdeploydoxy.sh",
+	"third_party/intel/libva/meson_options.txt",
 }
