@@ -29,6 +29,7 @@
 #include <zircon/types.h>
 
 #include "fuchsia/sysmem/cpp/fidl.h"
+#include "lib/sys/component/cpp/testing/realm_builder_types.h"
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace accessibility_test {
@@ -37,96 +38,83 @@ using ScenicEvent = fuchsia::ui::scenic::Event;
 using GfxEvent = fuchsia::ui::gfx::Event;
 
 using fuchsia::accessibility::semantics::Node;
-using sys::testing::AboveRoot;
-using sys::testing::LegacyComponentUrl;
-using sys::testing::Mock;
+using sys::testing::ParentRef;
 using sys::testing::Protocol;
+using sys::testing::Route;
 
 void AddBaseComponents(RealmBuilder* realm_builder) {
   FX_LOGS(INFO) << "Add root presenter";
-  realm_builder->AddComponent(
-      SemanticsIntegrationTestV2::kRootPresenterMoniker,
-      Component{
-          .source = LegacyComponentUrl{
-              "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/root_presenter.cmx"}});
+  realm_builder->AddLegacyChild(
+      SemanticsIntegrationTestV2::kRootPresenter,
+      "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/root_presenter.cmx");
   FX_LOGS(INFO) << "Add scenic";
-  realm_builder->AddComponent(
-      SemanticsIntegrationTestV2::kScenicMoniker,
-      Component{.source = LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"}});
+  realm_builder->AddLegacyChild(SemanticsIntegrationTestV2::kScenic,
+                                "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx");
   FX_LOGS(INFO) << "Add cobalt";
-  realm_builder->AddComponent(
-      SemanticsIntegrationTestV2::kMockCobaltMoniker,
-      Component{.source = LegacyComponentUrl{
-                    "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"}});
+  realm_builder->AddLegacyChild(SemanticsIntegrationTestV2::kMockCobalt,
+                                "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx");
   FX_LOGS(INFO) << "Add hdcp";
-  realm_builder->AddComponent(
-      SemanticsIntegrationTestV2::kHdcpMoniker,
-      Component{.source =
-                    LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/"
-                                       "fake-hardware-display-controller-provider#meta/hdcp.cmx"}});
+  realm_builder->AddLegacyChild(
+      SemanticsIntegrationTestV2::kHdcp,
+      "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx");
 }
 
 void AddBaseRoutes(RealmBuilder* realm_builder) {
   // Capabilities routed from test_manager to components in realm.
   FX_LOGS(INFO) << "Add fuchsia::vulkan::loader::Loader";
-  realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                      .source = AboveRoot(),
-                      .targets = {SemanticsIntegrationTestV2::kScenicMoniker}});
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::vulkan::loader::Loader::Name_}},
+                                .source = ParentRef(),
+                                .targets = {SemanticsIntegrationTestV2::kScenicRef}});
   FX_LOGS(INFO) << "Add fuchsia::scheduler::ProfileProvider";
   realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-                      .source = AboveRoot(),
-                      .targets = {SemanticsIntegrationTestV2::kScenicMoniker}});
+      Route{.capabilities = {Protocol{fuchsia::scheduler::ProfileProvider::Name_}},
+            .source = ParentRef(),
+            .targets = {SemanticsIntegrationTestV2::kScenicRef}});
   FX_LOGS(INFO) << "Add fuchsia::sysmem::Allocator";
-  realm_builder->AddRoute(CapabilityRoute{.capability = Protocol{fuchsia::sysmem::Allocator::Name_},
-                                          .source = AboveRoot(),
-                                          .targets = {SemanticsIntegrationTestV2::kScenicMoniker,
-                                                      SemanticsIntegrationTestV2::kHdcpMoniker}});
+  realm_builder->AddRoute(Route{
+      .capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
+      .source = ParentRef(),
+      .targets = {SemanticsIntegrationTestV2::kScenicRef, SemanticsIntegrationTestV2::kHdcpRef}});
   FX_LOGS(INFO) << "Add fuchsia::tracing::provider::Registry";
   realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::tracing::provider::Registry::Name_},
-                      .source = AboveRoot(),
-                      .targets = {SemanticsIntegrationTestV2::kScenicMoniker,
-                                  SemanticsIntegrationTestV2::kRootPresenterMoniker,
-                                  SemanticsIntegrationTestV2::kHdcpMoniker}});
+      Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
+            .source = ParentRef(),
+            .targets = {SemanticsIntegrationTestV2::kScenicRef,
+                        SemanticsIntegrationTestV2::kRootPresenterRef,
+                        SemanticsIntegrationTestV2::kHdcpRef}});
 
   // Capabilities routed between siblings in realm.
   FX_LOGS(INFO) << "Add fuchsia::cobalt::LoggerFactory";
-  realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::cobalt::LoggerFactory::Name_},
-                      .source = SemanticsIntegrationTestV2::kMockCobaltMoniker,
-                      .targets = {SemanticsIntegrationTestV2::kScenicMoniker}});
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
+                                .source = SemanticsIntegrationTestV2::kMockCobaltRef,
+                                .targets = {SemanticsIntegrationTestV2::kScenicRef}});
   FX_LOGS(INFO) << "Add fuchsia::hardware::display::Provider";
   realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::hardware::display::Provider::Name_},
-                      .source = SemanticsIntegrationTestV2::kHdcpMoniker,
-                      .targets = {SemanticsIntegrationTestV2::kScenicMoniker}});
+      Route{.capabilities = {Protocol{fuchsia::hardware::display::Provider::Name_}},
+            .source = SemanticsIntegrationTestV2::kHdcpRef,
+            .targets = {SemanticsIntegrationTestV2::kScenicRef}});
   FX_LOGS(INFO) << "Add fuchsia::ui::scenic::Scenic";
-  realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                      .source = SemanticsIntegrationTestV2::kScenicMoniker,
-                      .targets = {SemanticsIntegrationTestV2::kRootPresenterMoniker}});
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+                                .source = SemanticsIntegrationTestV2::kScenicRef,
+                                .targets = {SemanticsIntegrationTestV2::kRootPresenterRef}});
   FX_LOGS(INFO) << "Add fuchsia::ui::pointerinjector::Registry";
   realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::ui::pointerinjector::Registry::Name_},
-                      .source = SemanticsIntegrationTestV2::kScenicMoniker,
-                      .targets = {SemanticsIntegrationTestV2::kRootPresenterMoniker}});
+      Route{.capabilities = {Protocol{fuchsia::ui::pointerinjector::Registry::Name_}},
+            .source = SemanticsIntegrationTestV2::kScenicRef,
+            .targets = {SemanticsIntegrationTestV2::kRootPresenterRef}});
 
   // Capabilities routed up to test driver (this component).
   FX_LOGS(INFO) << "Add fuchsia::ui::policy::Presenter";
-  realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::ui::policy::Presenter::Name_},
-                      .source = SemanticsIntegrationTestV2::kRootPresenterMoniker,
-                      .targets = {AboveRoot()}});
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::policy::Presenter::Name_}},
+                                .source = SemanticsIntegrationTestV2::kRootPresenterRef,
+                                .targets = {ParentRef()}});
   FX_LOGS(INFO) << "Add fuchsia::ui::scenic::Scenic";
-  realm_builder->AddRoute(
-      CapabilityRoute{.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                      .source = SemanticsIntegrationTestV2::kScenicMoniker,
-                      .targets = {AboveRoot()}});
+  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+                                .source = SemanticsIntegrationTestV2::kScenicRef,
+                                .targets = {ParentRef()}});
 }
 
-void SemanticsManagerProxy::Start(std::unique_ptr<MockHandles> mock_handles) {
+void SemanticsManagerProxy::Start(std::unique_ptr<LocalComponentHandles> mock_handles) {
   FX_CHECK(mock_handles->outgoing()->AddPublicService(
                fidl::InterfaceRequestHandler<fuchsia::accessibility::semantics::SemanticsManager>(
                    [this](auto request) {
@@ -152,7 +140,7 @@ void SemanticsIntegrationTestV2::SetUp() {
       std::make_unique<a11y::A11ySemanticsEventManager>(),
       std::make_unique<MockAccessibilityView>(), context_.get(), context_->outgoing()->debug_dir());
 
-  BuildRealm(this->GetTestComponents(), this->GetTestRoutes());
+  BuildRealm();
 
   // Wait until scenic is initialized to continue.
   FX_LOGS(INFO) << "Waiting for scenic to be initialized";
@@ -254,32 +242,23 @@ void SemanticsIntegrationTestV2::LaunchClient(std::string debug_name) {
       });
 }
 
-void SemanticsIntegrationTestV2::BuildRealm(
-    const std::vector<std::pair<Moniker, Component>>& components,
-    const std::vector<CapabilityRoute>& routes) {
+void SemanticsIntegrationTestV2::BuildRealm() {
   FX_LOGS(INFO) << "Building realm";
   semantics_manager_proxy_ = std::make_unique<SemanticsManagerProxy>(view_manager(), dispatcher());
-  builder()->AddComponent(SemanticsIntegrationTestV2::kSemanticsManagerMoniker,
-                          Component{.source = Mock{semantics_manager_proxy()}});
+  builder()->AddLocalChild(SemanticsIntegrationTestV2::kSemanticsManager,
+                           semantics_manager_proxy());
 
   // Add all components shared by each test to the realm.
   AddBaseComponents(builder());
 
-  // Add components specific for this test case to the realm.
-  for (const auto& [moniker, component] : components) {
-    builder()->AddComponent(moniker, component);
-  }
+  // Let subclass configure Realm beyond this base setup.
+  ConfigureRealm(builder());
 
   // Add the necessary routing for each of the base components added above.
   AddBaseRoutes(builder());
 
-  // Add the necessary routing for each of the extra components added above.
-  for (const auto& route : routes) {
-    builder()->AddRoute(route);
-  }
-
   // Finally, build the realm using the provided components and routes.
-  realm_ = std::make_unique<Realm>(builder()->Build());
+  realm_ = std::make_unique<RealmRoot>(builder()->Build());
 }
 
 const Node* SemanticsIntegrationTestV2::FindNodeWithLabel(const Node* node, zx_koid_t view_ref_koid,

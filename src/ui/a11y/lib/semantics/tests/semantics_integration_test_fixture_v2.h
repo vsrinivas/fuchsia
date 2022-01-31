@@ -30,26 +30,24 @@ namespace accessibility_test {
 // Types imported for the realm_builder library.
 using fuchsia::accessibility::semantics::Node;
 
-using sys::testing::CapabilityRoute;
-using sys::testing::Component;
-using sys::testing::MockComponent;
-using sys::testing::MockHandles;
-using sys::testing::Moniker;
-using sys::testing::Realm;
+using sys::testing::ChildRef;
+using sys::testing::LocalComponent;
+using sys::testing::LocalComponentHandles;
+using sys::testing::experimental::RealmRoot;
 
-using RealmBuilder = sys::testing::Realm::Builder;
+using RealmBuilder = sys::testing::experimental::RealmBuilder;
 
 // Mock component that will proxy SemanticsManager and SemanticTree requests to the ViewManager
 // owned by the test fixture.
 class SemanticsManagerProxy : public fuchsia::accessibility::semantics::SemanticsManager,
-                              public MockComponent {
+                              public LocalComponent {
  public:
   SemanticsManagerProxy(fuchsia::accessibility::semantics::SemanticsManager* semantics_manager,
                         async_dispatcher_t* dispatcher)
       : dispatcher_(dispatcher), semantics_manager_(semantics_manager) {}
   ~SemanticsManagerProxy() override = default;
 
-  void Start(std::unique_ptr<MockHandles> mock_handles) override;
+  void Start(std::unique_ptr<LocalComponentHandles> mock_handles) override;
 
   // |fuchsia::accessibility::semantics::SemanticsManager|
   void RegisterViewForSemantics(
@@ -60,19 +58,25 @@ class SemanticsManagerProxy : public fuchsia::accessibility::semantics::Semantic
 
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
-  std::vector<std::unique_ptr<MockHandles>> mock_handles_{};
+  std::vector<std::unique_ptr<LocalComponentHandles>> mock_handles_{};
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> bindings_;
   fuchsia::accessibility::semantics::SemanticsManager* semantics_manager_ = nullptr;
 };
 
 class SemanticsIntegrationTestV2 : public gtest::RealLoopFixture {
  public:
-  static constexpr auto kSemanticsManagerMoniker = Moniker{"semantics_manager"};
-  static constexpr auto kRootPresenterMoniker = Moniker{"root_presenter"};
-  static constexpr auto kScenicMoniker = Moniker{"scenic"};
-  static constexpr auto kMockCobaltMoniker = Moniker{"cobalt"};
-  static constexpr auto kHdcpMoniker = Moniker{"hdcp"};
-  static constexpr auto kNetstackMoniker = Moniker{"netstack"};
+  static constexpr auto kSemanticsManager = "semantics_manager";
+  static constexpr auto kSemanticsManagerRef = ChildRef{kSemanticsManager};
+  static constexpr auto kRootPresenter = "root_presenter";
+  static constexpr auto kRootPresenterRef = ChildRef{kRootPresenter};
+  static constexpr auto kScenic = "scenic";
+  static constexpr auto kScenicRef = ChildRef{kScenic};
+  static constexpr auto kMockCobalt = "cobalt";
+  static constexpr auto kMockCobaltRef = ChildRef{kMockCobalt};
+  static constexpr auto kHdcp = "hdcp";
+  static constexpr auto kHdcpRef = ChildRef{kHdcp};
+  static constexpr auto kNetstack = "netstack";
+  static constexpr auto kNetstackRef = ChildRef{kNetstack};
 
   SemanticsIntegrationTestV2()
       : context_(sys::ComponentContext::Create()),
@@ -82,18 +86,14 @@ class SemanticsIntegrationTestV2 : public gtest::RealLoopFixture {
 
   void SetUp() override;
 
-  // Subclass should implement this method to add components to the test realm
-  // next to the base ones added.
-  virtual std::vector<std::pair<Moniker, Component>> GetTestComponents() { return {}; }
-
-  // Subclass should implement this method to add capability routes to the test
-  // realm next to the base ones added.
-  virtual std::vector<CapabilityRoute> GetTestRoutes() { return {}; }
+  // Subclass should implement this method if it wishes to modify the realm
+  // beyond the base setup that this class does.
+  virtual void ConfigureRealm(RealmBuilder* realm_builder) {}
 
  protected:
   sys::ComponentContext* context() { return context_.get(); }
   RealmBuilder* builder() { return realm_builder_.get(); }
-  Realm* realm() { return realm_.get(); }
+  RealmRoot* realm() { return realm_.get(); }
   a11y::ViewManager* view_manager() { return view_manager_.get(); }
   SemanticsManagerProxy* semantics_manager_proxy() { return semantics_manager_proxy_.get(); }
   zx_koid_t view_ref_koid() const { return view_ref_koid_; }
@@ -126,12 +126,11 @@ class SemanticsIntegrationTestV2 : public gtest::RealLoopFixture {
                                   fuchsia::accessibility::semantics::Action action);
 
  private:
-  void BuildRealm(const std::vector<std::pair<Moniker, Component>>& components,
-                  const std::vector<CapabilityRoute>& routes);
+  void BuildRealm();
 
   std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<RealmBuilder> realm_builder_;
-  std::unique_ptr<Realm> realm_;
+  std::unique_ptr<RealmRoot> realm_;
   std::unique_ptr<a11y::ViewManager> view_manager_;
   std::unique_ptr<SemanticsManagerProxy> semantics_manager_proxy_;
   fuchsia::ui::scenic::ScenicPtr scenic_;

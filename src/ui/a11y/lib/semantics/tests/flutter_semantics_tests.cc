@@ -18,18 +18,17 @@
 namespace accessibility_test {
 namespace {
 
-using sys::testing::AboveRoot;
-using sys::testing::CapabilityRoute;
-using sys::testing::Component;
-using sys::testing::LegacyComponentUrl;
-using sys::testing::Moniker;
+using sys::testing::ChildRef;
+using sys::testing::LocalComponent;
+using sys::testing::ParentRef;
 using sys::testing::Protocol;
+using sys::testing::Route;
 
 class FlutterSemanticsTests : public SemanticsIntegrationTestV2 {
  public:
-  static constexpr auto kFlutterMoniker = Moniker{"flutter"};
-  static constexpr auto kClientUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/a11y-demo#meta/a11y-demo.cmx"};
+  static constexpr auto kFlutter = "flutter";
+  static constexpr auto kFlutterRef = ChildRef{kFlutter};
+  static constexpr auto kClientUrl = "fuchsia-pkg://fuchsia.com/a11y-demo#meta/a11y-demo.cmx";
 
   FlutterSemanticsTests() = default;
   ~FlutterSemanticsTests() override = default;
@@ -47,36 +46,35 @@ class FlutterSemanticsTests : public SemanticsIntegrationTestV2 {
     });
   }
 
-  // Subclass should implement this method to add components to the test realm
-  // next to the base ones added.
-  std::vector<std::pair<Moniker, Component>> GetTestComponents() override {
-    return {std::make_pair(kFlutterMoniker, Component{.source = kClientUrl})};
-  }
+  void ConfigureRealm(RealmBuilder* realm_builder) override {
+    // First, add all child components of this test suite.
+    realm_builder->AddLegacyChild(kFlutter, kClientUrl);
 
-  // Subclass should implement this method to add capability routes to the test
-  // realm next to the base ones added.
-  virtual std::vector<CapabilityRoute> GetTestRoutes() override {
-    return {{.capability = Protocol{fuchsia::ui::app::ViewProvider::Name_},
-             .source = kFlutterMoniker,
-             .targets = {AboveRoot()}},
-            {.capability = Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_},
-             .source = kSemanticsManagerMoniker,
-             .targets = {kFlutterMoniker}},
-            {.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
-             .source = kScenicMoniker,
-             .targets = {kFlutterMoniker}},
-            {.capability = Protocol{fuchsia::sys::Environment::Name_},
-             .source = AboveRoot(),
-             .targets = {kFlutterMoniker}},
-            {.capability = Protocol{fuchsia::vulkan::loader::Loader::Name_},
-             .source = AboveRoot(),
-             .targets = {kFlutterMoniker}},
-            {.capability = Protocol{fuchsia::tracing::provider::Registry::Name_},
-             .source = AboveRoot(),
-             .targets = {kFlutterMoniker}},
-            {.capability = Protocol{fuchsia::sysmem::Allocator::Name_},
-             .source = AboveRoot(),
-             .targets = {kFlutterMoniker}}};
+    // Second, add all necessary routing.
+    realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                                  .source = kFlutterRef,
+                                  .targets = {ParentRef()}});
+    realm_builder->AddRoute(Route{
+        .capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
+        .source = kSemanticsManagerRef,
+        .targets = {kFlutterRef}});
+    realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+                                  .source = kScenicRef,
+                                  .targets = {kFlutterRef}});
+    realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
+                                  .source = ParentRef(),
+                                  .targets = {kFlutterRef}});
+    realm_builder->AddRoute(
+        Route{.capabilities = {Protocol{fuchsia::vulkan::loader::Loader::Name_}},
+              .source = ParentRef(),
+              .targets = {kFlutterRef}});
+    realm_builder->AddRoute(
+        Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
+              .source = ParentRef(),
+              .targets = {kFlutterRef}});
+    realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
+                                  .source = ParentRef(),
+                                  .targets = {kFlutterRef}});
   }
 };
 

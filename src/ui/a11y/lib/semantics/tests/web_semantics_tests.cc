@@ -43,13 +43,11 @@
 namespace accessibility_test {
 namespace {
 
-using sys::testing::AboveRoot;
-using sys::testing::CapabilityRoute;
-using sys::testing::Component;
-using sys::testing::LegacyComponentUrl;
-using sys::testing::Mock;
-using sys::testing::Moniker;
+using sys::testing::ChildRef;
+using sys::testing::LocalComponent;
+using sys::testing::ParentRef;
 using sys::testing::Protocol;
+using sys::testing::Route;
 
 static constexpr auto kStaticHtml = R"(
 <html>
@@ -136,7 +134,7 @@ class NavListener : public fuchsia::web::NavigationEventListener {
 };
 
 // Mock component that will own a web view and route ViewProvider requests through it.
-class WebViewProxy : public fuchsia::ui::app::ViewProvider, public MockComponent {
+class WebViewProxy : public fuchsia::ui::app::ViewProvider, public LocalComponent {
  public:
   explicit WebViewProxy(async_dispatcher_t* dispatcher)
       : dispatcher_(dispatcher),
@@ -145,7 +143,7 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public MockComponent
 
   ~WebViewProxy() override = default;
 
-  void Start(std::unique_ptr<MockHandles> mock_handles) override {
+  void Start(std::unique_ptr<LocalComponentHandles> mock_handles) override {
     FX_LOGS(INFO) << "Starting WebViewProxy";
     // Connect to services in the realm.
     auto svc = mock_handles->svc();
@@ -226,7 +224,7 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public MockComponent
 
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
-  std::vector<std::unique_ptr<MockHandles>> mock_handles_{};
+  std::vector<std::unique_ptr<LocalComponentHandles>> mock_handles_{};
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> bindings_;
   NavListener navigation_event_listener_;
@@ -239,107 +237,114 @@ class WebViewProxy : public fuchsia::ui::app::ViewProvider, public MockComponent
 
 class WebSemanticsTest : public SemanticsIntegrationTestV2 {
  public:
-  static constexpr auto kWebViewMoniker = Moniker{"web_view"};
+  static constexpr auto kWebView = "web_view";
+  static constexpr auto kWebViewRef = ChildRef{kWebView};
 
-  static constexpr auto kFontsProvider = Moniker{"fonts_provider"};
-  static constexpr auto kFontsProviderUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx"};
+  static constexpr auto kFontsProvider = "fonts_provider";
+  static constexpr auto kFontsProviderRef = ChildRef{kFontsProvider};
+  static constexpr auto kFontsProviderUrl = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
 
-  static constexpr auto kTextManager = Moniker{"text_manager"};
+  static constexpr auto kTextManager = "text_manager";
+  static constexpr auto kTextManagerRef = ChildRef{kTextManager};
   static constexpr auto kTextManagerUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"};
+      "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx";
 
-  static constexpr auto kIntl = Moniker{"intl"};
-  static constexpr auto kIntlUrl = LegacyComponentUrl{
-      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx"};
+  static constexpr auto kIntl = "intl";
+  static constexpr auto kIntlRef = ChildRef{kIntl};
+  static constexpr auto kIntlUrl =
+      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
 
-  static constexpr auto kMemoryPressureProvider = Moniker{"memory_pressure_provider"};
+  static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
+  static constexpr auto kMemoryPressureProviderRef = ChildRef{kMemoryPressureProvider};
   static constexpr auto kMemoryPressureProviderUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx"};
+      "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx";
 
-  static constexpr auto kNetstack = Moniker{"netstack"};
+  static constexpr auto kNetstack = "netstack";
+  static constexpr auto kNetstackRef = ChildRef{kNetstack};
   static constexpr auto kNetstackUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/netstack.cmx"};
+      "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/netstack.cmx";
 
-  static constexpr auto kWebContextProvider = Moniker{"web_context_provider"};
+  static constexpr auto kWebContextProvider = "web_context_provider";
+  static constexpr auto kWebContextProviderRef = ChildRef{kWebContextProvider};
   static constexpr auto kWebContextProviderUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx"};
+      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
 
   WebSemanticsTest() = default;
   ~WebSemanticsTest() override = default;
 
   WebViewProxy* web_view_proxy() const { return web_view_proxy_.get(); }
 
-  std::vector<std::pair<Moniker, Component>> GetTestComponents() override {
-    return {
-        std::make_pair(kWebViewMoniker, Component{.source = Mock{web_view_proxy()}}),
-        std::make_pair(kFontsProvider, Component{.source = kFontsProviderUrl}),
-        std::make_pair(kTextManager, Component{.source = kTextManagerUrl}),
-        std::make_pair(kIntl, Component{.source = kIntlUrl}),
-        std::make_pair(kMemoryPressureProvider, Component{.source = kMemoryPressureProviderUrl}),
-        std::make_pair(kNetstack, Component{.source = kNetstackUrl}),
-        std::make_pair(kWebContextProvider, Component{.source = kWebContextProviderUrl}),
-    };
-  }
+  void ConfigureRealm(RealmBuilder* realm_builder) override {
+    // First, add all child components of this test suite.
+    realm_builder->AddLocalChild(kWebView, web_view_proxy());
+    realm_builder->AddLegacyChild(kFontsProvider, kFontsProviderUrl);
+    realm_builder->AddLegacyChild(kTextManager, kTextManagerUrl);
+    realm_builder->AddLegacyChild(kIntl, kIntlUrl);
+    realm_builder->AddLegacyChild(kMemoryPressureProvider, kMemoryPressureProviderUrl);
+    realm_builder->AddLegacyChild(kNetstack, kNetstackUrl);
+    realm_builder->AddLegacyChild(kWebContextProvider, kWebContextProviderUrl);
 
-  std::vector<CapabilityRoute> GetTestRoutes() override {
-    return {{.capability = Protocol{fuchsia::fonts::Provider::Name_},
-             .source = kFontsProvider,
-             .targets = {kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::ui::input::ImeService::Name_},
-             .source = kTextManager,
-             .targets = {kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::ui::input::ImeVisibilityService::Name_},
-             .source = kTextManager,
-             .targets = {kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::intl::PropertyProvider::Name_},
-             .source = kIntl,
-             .targets = {kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::memorypressure::Provider::Name_},
-             .source = kMemoryPressureProvider,
-             .targets = {kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::netstack::Netstack::Name_},
-             .source = kNetstack,
-             .targets = {kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::net::interfaces::State::Name_},
-             .source = kNetstack,
-             .targets = {kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_},
-             .source = kSemanticsManagerMoniker,
-             .targets = {kWebViewMoniker, kWebContextProvider}},
-            {.capability = Protocol{fuchsia::web::ContextProvider::Name_},
-             .source = kWebContextProvider,
-             .targets = {kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::sys::Environment::Name_},
-             .source = AboveRoot(),
-             .targets = {kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::cobalt::LoggerFactory::Name_},
-             .source = kMockCobaltMoniker,
-             .targets = {kMemoryPressureProvider}},
-            {.capability = Protocol{fuchsia::sysmem::Allocator::Name_},
-             .source = AboveRoot(),
-             .targets = {kMemoryPressureProvider, kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-             .source = AboveRoot(),
-             .targets = {kMemoryPressureProvider}},
-            {.capability = Protocol{fuchsia::kernel::RootJobForInspect::Name_},
-             .source = AboveRoot(),
-             .targets = {kMemoryPressureProvider}},
-            {.capability = Protocol{fuchsia::kernel::Stats::Name_},
-             .source = AboveRoot(),
-             .targets = {kMemoryPressureProvider}},
-            {.capability = Protocol{fuchsia::tracing::provider::Registry::Name_},
-             .source = AboveRoot(),
-             .targets = {kFontsProvider, kMemoryPressureProvider}},
-            {.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
-             .source = kScenicMoniker,
-             .targets = {kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::posix::socket::Provider::Name_},
-             .source = kNetstack,
-             .targets = {kWebViewMoniker}},
-            {.capability = Protocol{fuchsia::ui::app::ViewProvider::Name_},
-             .source = kWebViewMoniker,
-             .targets = {AboveRoot()}}};
+    // Second, add all necessary routing.
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::fonts::Provider::Name_}},
+                             .source = kFontsProviderRef,
+                             .targets = {kWebViewRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::ui::input::ImeService::Name_}},
+                             .source = kTextManagerRef,
+                             .targets = {kWebViewRef}});
+    realm_builder->AddRoute(
+        {.capabilities = {Protocol{fuchsia::ui::input::ImeVisibilityService::Name_}},
+         .source = kTextManagerRef,
+         .targets = {kWebViewRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::intl::PropertyProvider::Name_}},
+                             .source = kIntlRef,
+                             .targets = {kWebViewRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
+                             .source = kMemoryPressureProviderRef,
+                             .targets = {kWebViewRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::netstack::Netstack::Name_}},
+                             .source = kNetstackRef,
+                             .targets = {kWebViewRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::net::interfaces::State::Name_}},
+                             .source = kNetstackRef,
+                             .targets = {kWebViewRef}});
+    realm_builder->AddRoute(
+        {.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
+         .source = kSemanticsManagerRef,
+         .targets = {kWebViewRef, kWebContextProviderRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
+                             .source = kWebContextProviderRef,
+                             .targets = {kWebViewRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
+                             .source = ParentRef(),
+                             .targets = {kWebViewRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
+                             .source = kMockCobaltRef,
+                             .targets = {kMemoryPressureProviderRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
+                             .source = ParentRef(),
+                             .targets = {kMemoryPressureProviderRef, kWebViewRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::scheduler::ProfileProvider::Name_}},
+                             .source = ParentRef(),
+                             .targets = {kMemoryPressureProviderRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::kernel::RootJobForInspect::Name_}},
+                             .source = ParentRef(),
+                             .targets = {kMemoryPressureProviderRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::kernel::Stats::Name_}},
+                             .source = ParentRef(),
+                             .targets = {kMemoryPressureProviderRef}});
+    realm_builder->AddRoute(
+        {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
+         .source = ParentRef(),
+         .targets = {kFontsProviderRef, kMemoryPressureProviderRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+                             .source = kScenicRef,
+                             .targets = {kWebViewRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
+                             .source = kNetstackRef,
+                             .targets = {kWebViewRef}});
+    realm_builder->AddRoute({.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                             .source = kWebViewRef,
+                             .targets = {ParentRef()}});
   }
 
   void SetUp() override {
