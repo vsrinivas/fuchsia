@@ -179,9 +179,12 @@ impl<'a, N: DriverNotify> Queue<'a, N> {
         let submitted = self.state.lock().return_chain(used);
         // Must ensure the read of flags or used_event occurs *after* we have returned the chain
         // and published the index. We also need to ensure that in the event we do send an
-        // interrupt that any state and idx updates have been written, so therefore this becomes
-        // acquire and release.
-        atomic::fence(atomic::Ordering::AcqRel);
+        // interrupt that any state and idx updates have been written. In this case acquire/release
+        // is not sufficient since the 'acquire' will prevent future loads re-ordering earlier, and
+        // the release will prevent past writes from re-ordering later, but we need a past write and
+        // a future load to not be re-ordered. Therefore we require sequentially consistent
+        // semantics.
+        atomic::fence(atomic::Ordering::SeqCst);
         if self.driver.needs_notification(self.feature_event_idx, submitted) {
             self.notify.notify();
         }

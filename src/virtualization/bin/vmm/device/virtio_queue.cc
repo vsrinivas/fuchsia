@@ -140,6 +140,14 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len, uint8_t actions) {
     // can use the cheaper __atomic_store instead of __atomic_add_fetch
     __atomic_store_n(&ring_.used->idx, ring_.used->idx + 1, __ATOMIC_RELEASE);
 
+    // Must ensure the read of flags or used_event occurs *after* we have returned the chain and
+    // published the index. We also need to ensure that in the event we do send an interrupt that
+    // any state and idx updates have been written. In this case acquire/release is not sufficient
+    // since the 'acquire' will prevent future loads re-ordering earlier, and the release will
+    // prevent past writes from re-ordering later, but we need a past write and a future load to not
+    // be re-ordered. Therefore we require sequentially consistent semantics.
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+
     // Virtio 1.0 Section 2.4.7.2: Virtqueue Interrupt Suppression
     if (!use_event_index_) {
       // If the VIRTIO_F_EVENT_IDX feature bit is not negotiated:
