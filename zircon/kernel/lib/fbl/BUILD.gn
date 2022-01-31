@@ -30,7 +30,6 @@ source_set("tests") {
   visibility = [ ":*" ]
   sources = [
     "arena_tests.cc",
-    "function_tests.cc",
     "gparena_tests.cc",
     "name_tests.cc",
   ]

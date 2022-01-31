@@ -33,7 +33,6 @@ test("fbl") {
     "confine_array_index_tests.cc",
     "enum_bits.cc",
     "forward_tests.cc",
-    "function_tests.cc",
     "hard_int_tests.cc",
     "inline_array_tests.cc",
     "intrusive_container_node_tests.cc",
