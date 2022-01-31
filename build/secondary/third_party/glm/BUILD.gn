@@ -8,6 +8,7 @@ group("glm") {
 
 config("headers") {
   include_dirs = [ "//third_party/glm" ]
+  cflags = [ "-Wno-deprecated-volatile" ]
 }
 
 config("enable_experimental") {
