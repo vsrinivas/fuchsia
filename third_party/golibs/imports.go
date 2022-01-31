@@ -61,6 +61,7 @@ import (
 	_ "gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
 	_ "gvisor.dev/gvisor/pkg/tcpip/link/loopback"
 	_ "gvisor.dev/gvisor/pkg/tcpip/link/nested"
+	_ "gvisor.dev/gvisor/pkg/tcpip/link/packetsocket"
 	_ "gvisor.dev/gvisor/pkg/tcpip/link/pipe"
 	_ "gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	_ "gvisor.dev/gvisor/pkg/tcpip/network/arp"

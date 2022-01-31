@@ -33,6 +33,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
 	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
+	"gvisor.dev/gvisor/pkg/tcpip/link/packetsocket"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -1096,7 +1097,7 @@ func (ns *Netstack) addEndpoint(
 	// Put sniffer as close as the NIC.
 	// A wrapper LinkEndpoint should encapsulate the underlying
 	// one, and manifest itself to 3rd party netstack.
-	ifs.bridgeable = bridge.NewEndpoint(sniffer.NewWithPrefix(ep, fmt.Sprintf("[%s(id=%d)] ", name, ifs.nicid)))
+	ifs.bridgeable = bridge.NewEndpoint(sniffer.NewWithPrefix(packetsocket.New(ep), fmt.Sprintf("[%s(id=%d)] ", name, ifs.nicid)))
 	ep = ifs.bridgeable
 	ifs.endpoint = ep
 

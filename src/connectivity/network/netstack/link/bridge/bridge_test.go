@@ -127,6 +127,10 @@ func (t *testNetworkDispatcher) DeliverNetworkPacket(_ tcpip.NetworkProtocolNumb
 	t.pkt = pkt
 }
 
+func (*testNetworkDispatcher) DeliverLinkPacket(tcpip.NetworkProtocolNumber, *stack.PacketBuffer, bool) {
+	panic("not implemented")
+}
+
 var _ stack.LinkEndpoint = (*stubEndpoint)(nil)
 
 // A stack.LinkEndpoint implementation which queues packets written to it so

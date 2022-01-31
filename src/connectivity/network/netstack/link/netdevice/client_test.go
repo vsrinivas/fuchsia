@@ -56,6 +56,10 @@ func (ch dispatcherChan) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumb
 	}
 }
 
+func (dispatcherChan) DeliverLinkPacket(tcpip.NetworkProtocolNumber, *stack.PacketBuffer, bool) {
+	panic("not implemented")
+}
+
 func (ch dispatcherChan) release() {
 	close(ch)
 	for args := range ch {

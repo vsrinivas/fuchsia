@@ -2249,6 +2249,8 @@ go_library("gvisor.dev/gvisor") {
     "pkg/tcpip/link/loopback/loopback_state_autogen.go",
     "pkg/tcpip/link/nested/nested.go",
     "pkg/tcpip/link/nested/nested_state_autogen.go",
+    "pkg/tcpip/link/packetsocket/packetsocket.go",
+    "pkg/tcpip/link/packetsocket/packetsocket_state_autogen.go",
     "pkg/tcpip/link/pipe/pipe.go",
     "pkg/tcpip/link/pipe/pipe_state_autogen.go",
     "pkg/tcpip/link/sniffer/pcap.go",
