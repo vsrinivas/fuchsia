@@ -157,16 +157,17 @@ template <typename FidlType>
 ::fitx::result<::fidl::Error, FidlType> DecodeFrom(::fidl::IncomingMessage&& message,
                                                    ::fidl::internal::WireFormatMetadata metadata) {
   static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
+  ZX_ASSERT(!message.is_transactional());
+
   const fidl_type_t* coding_table = TypeTraits<FidlType>::kCodingTable;
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  ::fidl::HLCPPIncomingMessage hlcpp_msg =
-      ConvertToHLCPPIncomingMessage(std::move(message), handles);
+  ::fidl::HLCPPIncomingBody hlcpp_body = ConvertToHLCPPIncomingBody(std::move(message), handles);
   const char* error_msg = nullptr;
-  zx_status_t status = hlcpp_msg.Decode(metadata, coding_table, false, &error_msg);
+  zx_status_t status = hlcpp_body.Decode(metadata, coding_table, &error_msg);
   if (status != ZX_OK) {
     return ::fitx::error(::fidl::Result::DecodeError(status, error_msg));
   }
-  ::fidl::Decoder decoder{std::move(hlcpp_msg)};
+  ::fidl::Decoder decoder{std::move(hlcpp_body)};
   FidlType value{};
   ::fidl::CodingTraits<FidlType>::Decode(&decoder, &value, 0);
   return ::fitx::ok(std::move(value));

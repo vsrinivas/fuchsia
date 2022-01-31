@@ -14,6 +14,7 @@
 #include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/clone.h"
+#include "sdk/lib/fidl/cpp/message.h"
 
 namespace fidl {
 namespace test {
@@ -84,15 +85,17 @@ Output RoundTrip(const Input& input) {
   EXPECT_EQ(ZX_OK,
             FidlHandleDispositionsToHandleInfos(outgoing_msg.handles().data(), handle_infos.data(),
                                                 outgoing_msg.handles().actual()));
-  fidl::HLCPPIncomingMessage incoming_message(
+  fidl::HLCPPIncomingBody incoming_body(
       std::move(outgoing_msg.bytes()),
       HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size())));
   outgoing_msg.ClearHandlesUnsafe();
-  EXPECT_EQ(ZX_OK,
-            incoming_message.DecodeWithExternalHeader_InternalMayBreak(kV1Header, Output::FidlType,
-                                                                       &err_msg),
-            "%s", err_msg);
-  fidl::Decoder decoder(std::move(incoming_message));
+  EXPECT_EQ(
+      ZX_OK,
+      incoming_body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV1Header),
+                           Output::FidlType, &err_msg),
+      "%s", err_msg);
+
+  fidl::Decoder decoder(std::move(incoming_body));
   Output output;
   Output::Decode(&decoder, &output, 0);
   return output;
@@ -100,16 +103,17 @@ Output RoundTrip(const Input& input) {
 
 template <class Output>
 Output DecodedBytes(std::vector<uint8_t> input) {
-  HLCPPIncomingMessage message(BytePart(input.data(), static_cast<uint32_t>(input.capacity()),
-                                        static_cast<uint32_t>(input.size())),
-                               HandleInfoPart());
+  HLCPPIncomingBody body(BytePart(input.data(), static_cast<uint32_t>(input.capacity()),
+                                  static_cast<uint32_t>(input.size())),
+                         HandleInfoPart());
 
   const char* error = nullptr;
   EXPECT_EQ(ZX_OK,
-            message.DecodeWithExternalHeader_InternalMayBreak(kV1Header, Output::FidlType, &error),
+            body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV1Header),
+                        Output::FidlType, &error),
             "%s", error);
 
-  fidl::Decoder decoder(std::move(message));
+  fidl::Decoder decoder(std::move(body));
   Output output;
   Output::Decode(&decoder, &output, 0);
 
@@ -119,7 +123,7 @@ Output DecodedBytes(std::vector<uint8_t> input) {
 template <class Output>
 Output DecodedBytes(const fidl_message_header_t& header, std::vector<uint8_t> bytes,
                     std::vector<zx_handle_info_t> handle_infos) {
-  HLCPPIncomingMessage message(
+  HLCPPIncomingBody body(
       BytePart(bytes.data(), static_cast<uint32_t>(bytes.capacity()),
                static_cast<uint32_t>(bytes.size())),
       HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.capacity()),
@@ -128,10 +132,11 @@ Output DecodedBytes(const fidl_message_header_t& header, std::vector<uint8_t> by
 
   const char* error = nullptr;
   EXPECT_EQ(ZX_OK,
-            message.DecodeWithExternalHeader_InternalMayBreak(header, Output::FidlType, &error),
+            body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(header),
+                        Output::FidlType, &error),
             "%s", error);
 
-  fidl::Decoder decoder(std::move(message));
+  fidl::Decoder decoder(std::move(body));
   Output output;
   Output::Decode(&decoder, &output, 0);
 
@@ -198,7 +203,7 @@ template <class Output>
 void CheckDecodeFailure(const fidl_message_header_t& header, std::vector<uint8_t> input,
                         std::vector<zx_handle_info_t> handle_infos,
                         const zx_status_t expected_failure_code) {
-  HLCPPIncomingMessage message(
+  HLCPPIncomingBody body(
       BytePart(input.data(), static_cast<uint32_t>(input.capacity()),
                static_cast<uint32_t>(input.size())),
       HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.capacity()),
@@ -207,7 +212,8 @@ void CheckDecodeFailure(const fidl_message_header_t& header, std::vector<uint8_t
 
   const char* error = nullptr;
   EXPECT_EQ(expected_failure_code,
-            message.DecodeWithExternalHeader_InternalMayBreak(header, Output::FidlType, &error),
+            body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(header),
+                        Output::FidlType, &error),
             "%s", error);
 }
 

@@ -10,6 +10,8 @@
 #include <lib/fidl/transformer.h>
 #include <string.h>
 
+#include "zircon/fidl.h"
+
 #ifdef __Fuchsia__
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
@@ -17,67 +19,62 @@
 
 namespace fidl {
 
-HLCPPIncomingMessage::HLCPPIncomingMessage() = default;
+HLCPPIncomingBody::HLCPPIncomingBody() = default;
 
-HLCPPIncomingMessage::HLCPPIncomingMessage(BytePart bytes, HandleInfoPart handles)
+HLCPPIncomingBody::HLCPPIncomingBody(BytePart bytes, HandleInfoPart handles)
     : bytes_(std::move(bytes)), handles_(std::move(handles)) {}
 
-HLCPPIncomingMessage::~HLCPPIncomingMessage() {
+HLCPPIncomingBody::~HLCPPIncomingBody() {
 #ifdef __Fuchsia__
   FidlHandleInfoCloseMany(handles_.data(), handles_.actual());
 #endif
   ClearHandlesUnsafe();
 }
 
-HLCPPIncomingMessage::HLCPPIncomingMessage(HLCPPIncomingMessage&& other)
+HLCPPIncomingBody::HLCPPIncomingBody(HLCPPIncomingBody&& other)
     : bytes_(std::move(other.bytes_)), handles_(std::move(other.handles_)) {}
 
-HLCPPIncomingMessage& HLCPPIncomingMessage::operator=(HLCPPIncomingMessage&& other) {
+HLCPPIncomingBody& HLCPPIncomingBody::operator=(HLCPPIncomingBody&& other) {
   bytes_ = std::move(other.bytes_);
   handles_ = std::move(other.handles_);
   return *this;
 }
 
-zx_status_t HLCPPIncomingMessage::Decode(const fidl_type_t* type, const char** error_msg_out) {
-  return Decode(internal::WireFormatMetadata::FromTransactionalHeader(header()), type, true,
-                error_msg_out);
+zx_status_t HLCPPIncomingBody::Decode(const internal::WireFormatMetadata& metadata,
+                                      const fidl_type_t* type, const char** error_msg_out) {
+  uint32_t transformed_num_bytes = bytes_.actual();
+  zx_status_t status = Transform(metadata, type, &transformed_num_bytes, error_msg_out);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fidl_trace(WillHLCPPDecode, type, bytes_.data(), bytes_.actual(), handles_.actual());
+  status = internal__fidl_decode_etc_hlcpp__v2__may_break(
+      type, bytes_.data(), bytes_.actual(), handles_.data(), handles_.actual(), error_msg_out);
+  fidl_trace(DidHLCPPDecode);
+
+  ClearHandlesUnsafe();
+  return status;
 }
 
-zx_status_t HLCPPIncomingMessage::DecodeWithExternalHeader_InternalMayBreak(
-    const fidl_message_header_t& header, const fidl_type_t* type, const char** error_msg_out) {
-  return Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(header), type, false,
-                error_msg_out);
-}
-
-zx_status_t HLCPPIncomingMessage::Decode(const internal::WireFormatMetadata& metadata,
-                                         const fidl_type_t* type, bool is_transactional,
+zx_status_t HLCPPIncomingBody::Transform(const internal::WireFormatMetadata& metadata,
+                                         const fidl_type_t* type, uint32_t* new_num_bytes,
                                          const char** error_msg_out) {
   internal::WireFormatVersion version = metadata.wire_format_version();
-  zx_status_t status;
+  zx_status_t status = ZX_OK;
   switch (version) {
     case internal::WireFormatVersion::kV1: {
       // Transform to V2.
-      uint8_t* trimmed_bytes = bytes_.data();
-      uint32_t trimmed_num_bytes = bytes_.actual();
-      if (is_transactional) {
-        status = ::fidl::internal::fidl_exclude_header_bytes(
-            bytes_.data(), bytes_.actual(), &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
-        if (status != ZX_OK) {
-          return status;
-        }
-      }
-
-      status = internal__fidl_validate__v1__may_break(type, trimmed_bytes, trimmed_num_bytes,
+      status = internal__fidl_validate__v1__may_break(type, bytes_.data(), bytes_.actual(),
                                                       handles_.actual(), error_msg_out);
       if (status != ZX_OK) {
         return status;
       }
 
       auto transformer_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
-
       uint32_t num_bytes = 0;
       status = internal__fidl_transform__may_break(
-          FIDL_TRANSFORMATION_V1_TO_V2, type, is_transactional, bytes_.data(), bytes_.actual(),
+          FIDL_TRANSFORMATION_V1_TO_V2, type, false, bytes_.data(), bytes_.actual(),
           transformer_bytes.get(), ZX_CHANNEL_MAX_MSG_BYTES, &num_bytes, error_msg_out);
       if (status != ZX_OK) {
         return status;
@@ -96,23 +93,42 @@ zx_status_t HLCPPIncomingMessage::Decode(const internal::WireFormatMetadata& met
       // No-op: the native format of HLCPP domain objects is V2.
       break;
   }
+  return status;
+}
 
-  uint8_t* trimmed_bytes = bytes_.data();
-  uint32_t trimmed_num_bytes = bytes_.actual();
-  if (is_transactional) {
-    status = ::fidl::internal::fidl_exclude_header_bytes(
-        bytes_.data(), bytes_.actual(), &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
-    if (status != ZX_OK) {
-      return status;
-    }
+void HLCPPIncomingBody::ClearHandlesUnsafe() { handles_.set_actual(0u); }
+
+HLCPPIncomingMessage::HLCPPIncomingMessage() = default;
+
+HLCPPIncomingMessage::HLCPPIncomingMessage(BytePart bytes, HandleInfoPart handles)
+    : bytes_(std::move(bytes)),
+      body_view_(
+          HLCPPIncomingBody(BytePart(bytes_, sizeof(fidl_message_header_t)), std::move(handles))) {}
+
+HLCPPIncomingMessage::HLCPPIncomingMessage(HLCPPIncomingMessage&& other)
+    : bytes_(std::move(other.bytes_)), body_view_(std::move(other.body_view_)) {}
+
+HLCPPIncomingMessage& HLCPPIncomingMessage::operator=(HLCPPIncomingMessage&& other) {
+  bytes_ = std::move(other.bytes_);
+  body_view_ = std::move(other.body_view_);
+  return *this;
+}
+
+zx_status_t HLCPPIncomingMessage::Decode(const fidl_type_t* type, const char** error_msg_out) {
+  zx_status_t status = body_view_.Decode(
+      internal::WireFormatMetadata::FromTransactionalHeader(header()), type, error_msg_out);
+  return status;
+}
+
+zx_status_t HLCPPIncomingMessage::Transform(const internal::WireFormatMetadata& metadata,
+                                            const fidl_type_t* type, const char** error_msg_out) {
+  uint32_t transformed_num_bytes = bytes_.actual();
+  zx_status_t status = body_view_.Transform(metadata, type, &transformed_num_bytes, error_msg_out);
+  if (status != ZX_OK) {
+    return status;
   }
 
-  fidl_trace(WillHLCPPDecode, type, bytes_.data(), bytes_.actual(), handles_.actual());
-  status = internal__fidl_decode_etc_hlcpp__v2__may_break(
-      type, trimmed_bytes, trimmed_num_bytes, handles_.data(), handles_.actual(), error_msg_out);
-  fidl_trace(DidHLCPPDecode);
-
-  ClearHandlesUnsafe();
+  bytes_.set_actual(transformed_num_bytes + sizeof(fidl_message_header_t));
   return status;
 }
 
@@ -122,8 +138,8 @@ zx_status_t HLCPPIncomingMessage::Read(zx_handle_t channel, uint32_t flags) {
   uint32_t actual_handles = 0u;
   fidl_trace(WillHLCPPChannelRead);
   zx_status_t status =
-      zx_channel_read_etc(channel, flags, bytes_.data(), handles_.data(), bytes_.capacity(),
-                          handles_.capacity(), &actual_bytes, &actual_handles);
+      zx_channel_read_etc(channel, flags, bytes_.data(), handles().data(), bytes_.capacity(),
+                          handles().capacity(), &actual_bytes, &actual_handles);
   if (status != ZX_OK) {
     return status;
   }
@@ -134,13 +150,13 @@ zx_status_t HLCPPIncomingMessage::Read(zx_handle_t channel, uint32_t flags) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  bytes_.set_actual(actual_bytes);
-  handles_.set_actual(actual_handles);
+  resize_bytes(actual_bytes);
+  handles().set_actual(actual_handles);
   return ZX_OK;
 }
 #endif
 
-void HLCPPIncomingMessage::ClearHandlesUnsafe() { handles_.set_actual(0u); }
+void HLCPPIncomingMessage::ClearHandlesUnsafe() { body_view_.ClearHandlesUnsafe(); }
 
 HLCPPOutgoingMessage::HLCPPOutgoingMessage() = default;
 
@@ -257,7 +273,7 @@ zx_status_t HLCPPOutgoingMessage::Call(zx_handle_t channel, uint32_t flags, zx_t
       zx_channel_call_etc(channel, flags, deadline, &args, &actual_bytes, &actual_handles);
   ClearHandlesUnsafe();
   if (status == ZX_OK) {
-    response->bytes().set_actual(actual_bytes);
+    response->resize_bytes(actual_bytes);
     response->handles().set_actual(actual_handles);
   }
   return status;

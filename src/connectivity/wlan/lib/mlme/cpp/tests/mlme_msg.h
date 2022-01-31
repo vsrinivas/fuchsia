@@ -76,20 +76,19 @@ class MlmeMsg : public BaseMlmeMsg {
     // out-of-line pointers to be offsets into the span).
     auto payload = span.subspan(reader.ReadBytes());
 
-    // Construct a fidl Message and decode it into M.
-    fidl::HLCPPIncomingMessage msg(fidl::BytePart(payload.data(), payload.size(), payload.size()),
-                                   fidl::HandleInfoPart());
+    // Construct a fidl message body and decode it into M.
+    fidl::HLCPPIncomingBody body(fidl::BytePart(payload.data(), payload.size(), payload.size()),
+                                 fidl::HandleInfoPart());
     const char* err_msg = nullptr;
     // TODO(fxbug.dev/82681): This uses an internal type to decode the payload based on flags
     // specified in the FIDL message header. Move to public API when FIDL-at-rest is ready.
-    zx_status_t status =
-        msg.Decode(::fidl::internal::WireFormatMetadata::FromTransactionalHeader(*h), M::FidlType,
-                   fidl::IsFidlMessage<M>::value, &err_msg);
+    zx_status_t status = body.Decode(
+        ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(*h), M::FidlType, &err_msg);
     if (status != ZX_OK) {
       errorf("could not decode received message: %s\n", err_msg);
       return {};
     }
-    fidl::Decoder decoder(std::move(msg));
+    fidl::Decoder decoder(std::move(body));
     return {{fidl::DecodeAs<M>(&decoder, 0), h->ordinal, h->txid}};
   }
 

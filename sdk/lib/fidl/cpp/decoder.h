@@ -18,11 +18,12 @@ namespace fidl {
 class Decoder final {
  public:
   explicit Decoder(HLCPPIncomingMessage message);
+  explicit Decoder(HLCPPIncomingBody body);
   ~Decoder();
 
   template <typename T>
   T* GetPtr(size_t offset) {
-    return reinterpret_cast<T*>(message_.bytes().data() + offset);
+    return reinterpret_cast<T*>((body_.bytes().data() - body_offset_) + offset);
   }
 
   size_t GetOffset(const void* ptr) const { return GetOffset(reinterpret_cast<uintptr_t>(ptr)); }
@@ -30,7 +31,7 @@ class Decoder final {
     // The |ptr| value comes from the message buffer, which we've already
     // validated. That means it should correspond to a valid offset within the
     // message.
-    return ptr - reinterpret_cast<uintptr_t>(message_.bytes().data());
+    return ptr - reinterpret_cast<uintptr_t>(body_.bytes().data() - body_offset_);
   }
 
 #ifdef __Fuchsia__
@@ -44,7 +45,7 @@ class Decoder final {
   }
 
   zx::handle ClaimUnknownHandle() {
-    return zx::handle(message_.handles().data()[handle_index_++].handle);
+    return zx::handle(body_.handles().data()[handle_index_++].handle);
   }
 #endif
 
@@ -81,7 +82,12 @@ class Decoder final {
   }
 
  private:
-  HLCPPIncomingMessage message_;
+  HLCPPIncomingBody body_;
+
+  // The body_offset_ is either 16 (when decoding the body of a transactional message, which is
+  // itself a concatenation of 2 FIDL messages, the header and body), or 0 (when decoding a
+  // standalone "at-rest" message body).
+  uint32_t body_offset_ = 0;
 #ifdef __Fuchsia__
   uint32_t handle_index_ = 0;
 #endif

@@ -6,9 +6,14 @@
 
 #include <utility>
 
+#include "lib/fidl/cpp/message.h"
+
 namespace fidl {
 
-Decoder::Decoder(HLCPPIncomingMessage message) : message_(std::move(message)) {}
+Decoder::Decoder(HLCPPIncomingMessage message)
+    : body_(std::move(message.body_view())), body_offset_(sizeof(fidl_message_header_t)) {}
+
+Decoder::Decoder(HLCPPIncomingBody body) : body_(std::move(body)) {}
 
 Decoder::~Decoder() = default;
 

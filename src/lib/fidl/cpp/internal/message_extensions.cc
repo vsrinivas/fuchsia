@@ -41,6 +41,26 @@ namespace internal {
   };
 }
 
+::fidl::HLCPPIncomingBody ConvertToHLCPPIncomingBody(
+    fidl::IncomingMessage message,
+    ::cpp20::span<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES> handle_storage) {
+  ZX_ASSERT(!message.is_transactional());
+  fidl_incoming_msg_t c_msg = std::move(message).ReleaseToEncodedCMessage();
+  auto* handle_metadata = reinterpret_cast<fidl_channel_handle_metadata_t*>(c_msg.handle_metadata);
+  for (size_t i = 0; i < c_msg.num_handles && i < ZX_CHANNEL_MAX_MSG_HANDLES; i++) {
+    handle_storage[i] = zx_handle_info_t{
+        .handle = c_msg.handles[i],
+        .type = handle_metadata[i].obj_type,
+        .rights = handle_metadata[i].rights,
+        .unused = 0,
+    };
+  }
+
+  return ::fidl::HLCPPIncomingBody(
+      ::fidl::BytePart(static_cast<uint8_t*>(c_msg.bytes), c_msg.num_bytes, c_msg.num_bytes),
+      ::fidl::HandleInfoPart(handle_storage.data(), c_msg.num_handles, c_msg.num_handles));
+}
+
 ::fidl::OutgoingMessage ConvertFromHLCPPOutgoingMessage(
     const fidl_type_t* type, bool is_transactional, HLCPPOutgoingMessage&& message,
     zx_handle_t* handles, fidl_channel_handle_metadata_t* handle_metadata) {

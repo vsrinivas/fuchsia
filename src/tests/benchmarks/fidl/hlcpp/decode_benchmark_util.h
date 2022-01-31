@@ -6,8 +6,18 @@
 #define SRC_TESTS_BENCHMARKS_FIDL_HLCPP_DECODE_BENCHMARK_UTIL_H_
 
 #include "coding_table.h"
+#include "lib/fidl/cpp/message.h"
+#include "lib/fidl/internal.h"
 
 namespace hlcpp_benchmarks {
+
+namespace {
+constexpr uint64_t kOrdinal = 1234;
+constexpr fidl_message_header_t kV1Header = {
+    .magic_number = kFidlWireFormatMagicNumberInitial,
+    .ordinal = kOrdinal,
+};
+}  // namespace
 
 template <typename BuilderFunc>
 bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
@@ -39,19 +49,17 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Decode.
 
     {
-      fidl::HLCPPIncomingMessage decode_msg(
+      fidl::HLCPPIncomingBody decode_body(
           fidl::BytePart(buffer.data(), static_cast<uint32_t>(buffer.size()),
                          static_cast<uint32_t>(buffer.size())),
           fidl::HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size()),
                                static_cast<uint32_t>(handle_infos.size())));
       const char* error_msg;
-      constexpr fidl_message_header_t kV1Header = {
-          .magic_number = kFidlWireFormatMagicNumberInitial,
-      };
-      ZX_ASSERT_MSG(ZX_OK == decode_msg.DecodeWithExternalHeader_InternalMayBreak(
-                                 kV1Header, FidlType::FidlType, &error_msg),
-                    "%s", error_msg);
-      fidl::Decoder decoder(std::move(decode_msg));
+      const auto metadata = fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV1Header);
+
+      ZX_ASSERT_MSG(ZX_OK == decode_body.Decode(metadata, FidlType::FidlType, &error_msg), "%s",
+                    error_msg);
+      fidl::Decoder decoder(std::move(decode_body));
       FidlType output;
       FidlType::Decode(&decoder, &output, 0);
       // Note: `output` goes out of scope here, so we include its destruction time in the

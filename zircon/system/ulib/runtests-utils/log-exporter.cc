@@ -205,7 +205,7 @@ zx_status_t LogExporter::Log(fidl::HLCPPIncomingMessage message) {
     return status;
   }
 
-  fuchsia_logger_LogMessage* log_message = message.GetPayloadAs<fuchsia_logger_LogMessage>();
+  fuchsia_logger_LogMessage* log_message = message.GetBodyViewAs<fuchsia_logger_LogMessage>();
   if (LogMessage(log_message) < 0) {
     NotifyFileError(strerror(errno));
     return ZX_OK;
@@ -226,7 +226,7 @@ zx_status_t LogExporter::LogMany(fidl::HLCPPIncomingMessage message) {
     return status;
   }
 
-  fidl_vector_t* log_messages = message.GetPayloadAs<fidl_vector_t>();
+  fidl_vector_t* log_messages = message.GetBodyViewAs<fidl_vector_t>();
   fuchsia_logger_LogMessage* msgs = static_cast<fuchsia_logger_LogMessage*>(log_messages->data);
   for (size_t i = 0; i < log_messages->count; ++i) {
     if (LogMessage(&msgs[i]) < 0) {

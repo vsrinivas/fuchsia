@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_CPP_MESSAGE_PART_H_
 #define LIB_FIDL_CPP_MESSAGE_PART_H_
 
+#include <lib/fidl/internal.h>
 #include <stdint.h>
 #include <string.h>
 #include <zircon/types.h>
@@ -36,6 +37,8 @@ class MessagePart {
   MessagePart(T* data, uint32_t capacity, uint32_t actual = 0u)
       : data_(data), capacity_(capacity), actual_(actual) {}
 
+  // The copy constructor is deleted because a MessagePart may own handles (see
+  // HandlePart/HandleDispositionPart/HandleInfoPart below), which may not be copied.
   MessagePart(const MessagePart& other) = delete;
   MessagePart& operator=(const MessagePart& other) = delete;
 
@@ -44,6 +47,19 @@ class MessagePart {
     other.data_ = nullptr;
     other.capacity_ = 0u;
     other.actual_ = 0u;
+  }
+
+  // A copy constructor for |other|, which trims the first |pos| number of |T|s from it when
+  // copying.  This should not be invoked on any |Handle*Part| specialization of the |MessagePart|
+  // class, as handle containing classes may not be copied (handles must be unique).
+  MessagePart(const MessagePart& other, uint32_t pos)
+      : data_(other.data_ + (pos * sizeof(T))),
+        capacity_(other.capacity_ > pos * sizeof(T) ? other.capacity_ - (pos * sizeof(T)) : 0),
+        actual_(other.actual_ > pos * sizeof(T) ? other.actual_ - (pos * sizeof(T)) : 0) {
+    static_assert(
+        !(std::is_same<zx_handle_t, T>::value || std::is_same<zx_handle_disposition_t, T>::value ||
+          std::is_same<zx_handle_info_t, T>::value),
+        "Handle holding containers may not be copied");
   }
 
   MessagePart& operator=(MessagePart&& other) {
