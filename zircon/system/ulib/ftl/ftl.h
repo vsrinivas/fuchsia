@@ -344,8 +344,8 @@ const NDMPartition* ndmGetPartition(CNDM ndm, uint32_t part_num);
 int ndmWritePartition(NDM ndm, const NDMPartition* part, uint32_t part_num, const char* name);
 void ndmDeletePartitionTable(NDM ndm);
 int ndmSavePartitionTable(NDM ndm);
-int ndmDelVols(CNDM ndm);
-int ndmDelVol(CNDM ndm, uint32_t part_num);
+int ndmDelVols(NDM ndm);
+int ndmDelVol(NDM ndm, uint32_t part_num);
 
 // FTL Volume API.
 void* ndmAddVolFTL(NDM ndm, uint32_t part_no, FtlNdmVol* ftl, XfsVol* fs);

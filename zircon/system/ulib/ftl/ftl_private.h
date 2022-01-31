@@ -149,8 +149,8 @@ int ndmTransferPage(uint32_t old_vpn, uint32_t new_vpn, uint8_t* buf, uint8_t* s
 int ndmCheckPage(uint32_t pn, uint8_t* data, uint8_t* spare, NDM ndm);
 uint32_t ndmPairOffset(uint32_t page_offset, CNDM ndm);
 uint32_t ndmPastPrevPair(CNDM ndm, uint32_t pn);
-int FtlNdmDelVol(const char* name);
-void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* ftl_inf);
+int FtlNdmDelVol(CircLink* vols, const char* name);
+void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* ftl_inf, CircLink* vols);
 
 void free_clear(void* alloc_ptr_addr);
 

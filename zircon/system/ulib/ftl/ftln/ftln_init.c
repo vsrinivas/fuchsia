@@ -13,7 +13,6 @@
 #define COPY_BLK_MARK 0xFFFFFFFE
 
 // Global Variable Declarations
-CircLink FtlnVols = {&FtlnVols, &FtlnVols};
 #if FTLN_DEBUG_PTR
 FTLN Ftln;
 #endif
@@ -1289,7 +1288,7 @@ static int rd_map_pg(void* vol, ui32 mpn, void* buf, int* unmapped) {
 //
 //     Returns: FTL handle on success, NULL on error.
 //
-void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
+void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs, CircLink* vols) {
   ui32 n, vol_blks;
   ui8* buf;
   FTLN ftl;
@@ -1583,7 +1582,7 @@ void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
 
   // Add FTL to FTL-NDM volume list while holding access semaphore.
   semPend(FileSysSem, WAIT_FOREVER);
-  CIRC_LIST_APPEND(&ftl->link, &FtlnVols);
+  CIRC_LIST_APPEND(&ftl->link, vols);
   semPostBin(FileSysSem);
 
   // Return pointer to FTL control block.
@@ -1617,18 +1616,18 @@ void FtlnDelVol(FTLN ftl) {
 //
 //        Note: Called with FileSysSem semaphore held
 //
-int FtlNdmDelVol(const char* name) {
+int FtlNdmDelVol(CircLink* vols, const char* name) {
   CircLink* circ;
 
   // Acquire global file system semaphore.
   semPend(FileSysSem, WAIT_FOREVER);
 
   // Search all TargetFTL-NDM volume for name match.
-  for (circ = CIRC_LIST_HEAD(&FtlnVols);; circ = circ->next_bck) {
+  for (circ = CIRC_LIST_HEAD(vols);; circ = circ->next_bck) {
     FTLN ftln;
 
     // Stop when end of list is reached.
-    if (CIRC_LIST_AT_END(circ, &FtlnVols)) {
+    if (CIRC_LIST_AT_END(circ, vols)) {
       // Release file system exclusive access.
       semPostBin(FileSysSem);
 

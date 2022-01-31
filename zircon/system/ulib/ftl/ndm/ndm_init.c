@@ -1205,6 +1205,8 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
     return NULL;
   }
 
+  ndm->vols.next_fwd = ndm->vols.next_bck = &ndm->vols;
+
   // Set the number of virtual blocks.
   ndm->num_vblks = dvr->num_blocks - dvr->max_bad_blocks - NDM_META_BLKS;
 

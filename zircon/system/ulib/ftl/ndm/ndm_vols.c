@@ -14,7 +14,7 @@
 //
 //     Returns: 0 on success, -1 on error
 //
-int ndmDelVol(CNDM ndm, ui32 part_num) {
+int ndmDelVol(NDM ndm, ui32 part_num) {
   const NDMPartition* part;
 
   // Get handle to entry in partitions table. Return if error.
@@ -23,10 +23,7 @@ int ndmDelVol(CNDM ndm, ui32 part_num) {
     return -1;
 
   // Remove partition's FTL volume. Return status.
-  return FtlNdmDelVol(part->name);
-
-  // Return error if partition type is not handled.
-  return -1;
+  return FtlNdmDelVol(&ndm->vols, part->name);
 }
 
 //  ndmDelVols: Loop through partition table un-initializing valid
@@ -36,7 +33,7 @@ int ndmDelVol(CNDM ndm, ui32 part_num) {
 //
 //     Returns: 0 on success, -1 on failure
 //
-int ndmDelVols(CNDM ndm) {
+int ndmDelVols(NDM ndm) {
   ui32 i, num_partitions;
   int status = 0;
 

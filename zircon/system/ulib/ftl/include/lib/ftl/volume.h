@@ -107,7 +107,6 @@ class __EXPORT Volume {
 class __EXPORT VolumeImpl final : public Volume {
  public:
   VolumeImpl(FtlInstance* owner) : owner_(owner) {}
-  ~VolumeImpl() final {}
 
   // Volume interface.
   const char* Init(std::unique_ptr<NdmDriver> driver) final;

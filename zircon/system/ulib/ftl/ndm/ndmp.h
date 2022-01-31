@@ -96,6 +96,7 @@ typedef struct {
 // NDM Control Block
 struct ndm {
   CircLink link;       // linked list of NDM devices
+  CircLink vols;       // head of volume list
   ui32 num_vblks;      // number of virtual blocks
   SEM sem;             // access semaphore
   ui8* main_buf;       // main page data buffer

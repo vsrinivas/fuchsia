@@ -1472,7 +1472,7 @@ void* ndmAddVolFTL(NDM ndm, ui32 part_num, FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   xfs->name = part->name;
 
   // Add an FTL to this partition. Return status.
-  return FtlnAddVol(ftl_cfg, xfs);
+  return FtlnAddVol(ftl_cfg, xfs, &ndm->vols);
 }
 
 // ndmReadPages: FTL driver function - read multiple consecutive
