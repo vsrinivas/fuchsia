@@ -667,7 +667,12 @@ macro_rules! route_struct {
             #[argh(option)]
             /// the ip address of the first hop router
             pub gateway: Option<std::net::IpAddr>,
-            #[argh(option, arg_name = "nicid or name:ifname", long = "nicid")]
+            #[argh(
+                option,
+                arg_name = "nicid or name:ifname",
+                default = "InterfaceIdentifier::Id(0)",
+                long = "nicid"
+            )]
             /// the outgoing network interface of the route
             pub interface: InterfaceIdentifier,
             #[argh(option)]
