@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -54,7 +55,13 @@ func (*fsshCmd) Synopsis() string {
 }
 
 func (*fsshCmd) Usage() string {
-	return fmt.Sprintf("fssh [-%s device-name -%s device-ip -%s private-key -%s sshconfig -%s data-path -%s -%s log-level] [ssh_command]\n", deviceNameFlag, deviceIPFlag, privateKeyFlag, sshConfigFlag, dataPathFlag, verboseFlag, logLevelFlag)
+	return fmt.Sprintf(`fssh [-%s device-name -%s device-ip -%s private-key -%s sshconfig -%s data-path -%s -%s log-level] [ssh_command]
+
+Subcommands:
+sync-keys        Sync SSH key files associated with Fuchsia between a local and remote workstation.
+tunnel           Creates a tunnel between a local Fuchsia device and a remote host
+
+`, deviceNameFlag, deviceIPFlag, privateKeyFlag, sshConfigFlag, dataPathFlag, verboseFlag, logLevelFlag)
 }
 
 func (c *fsshCmd) SetFlags(f *flag.FlagSet) {
@@ -102,7 +109,14 @@ func (c *fsshCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 	log.Debugf("Running SSH with %s %s %s %s %t %s ", deviceConfig.DeviceIP, c.sshConfig,
 		c.privateKey, sshPort, c.verbose, f.Args())
 	if err := sdk.RunSSHShell(deviceConfig.DeviceIP, c.sshConfig, c.privateKey, sshPort, c.verbose, f.Args()); err != nil {
-		log.Fatalf("Error running ssh: %v", err)
+		var exitError *exec.ExitError
+		// If there is an exit code, exit the subcommand with the same exit code.
+		if errors.As(err, &exitError) {
+			log.Errorf("Error running ssh: %v", err)
+			os.Exit(exitError.ExitCode())
+		} else {
+			log.Fatalf("Error running ssh: %v", err)
+		}
 	}
 	return subcommands.ExitSuccess
 }

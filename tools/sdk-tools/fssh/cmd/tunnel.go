@@ -131,10 +131,10 @@ func (c *tunnelCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface
 	}
 	cmd.Stdout = os.Stdout
 
-	if err = pipeStderrToFatalLog(ctx, cmd); err != nil {
+	if err := pipeStderrToFatalLog(ctx, cmd, c.verbose); err != nil {
 		log.Fatalf("Could not pipe command standard err to logger: %s", err)
 	}
-	if err = cmd.Start(); err != nil {
+	if err := cmd.Start(); err != nil {
 		log.Fatalf("Could not start the SSH tunnel: %s", err)
 	}
 
@@ -155,7 +155,7 @@ func isThisFailedConnectionPortMessage(message string) bool {
 	return r.MatchString(message)
 }
 
-func pipeStderrToFatalLog(ctx context.Context, cmd *exec.Cmd) error {
+func pipeStderrToFatalLog(ctx context.Context, cmd *exec.Cmd, verbose bool) error {
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return err
@@ -164,7 +164,11 @@ func pipeStderrToFatalLog(ctx context.Context, cmd *exec.Cmd) error {
 		in := bufio.NewScanner(stderr)
 		for in.Scan() {
 			errorMessage := in.Text()
-			logger.Debugf(ctx, errorMessage)
+			if !verbose && isThisFailedConnectionPortMessage(errorMessage) {
+				logger.Debugf(ctx, "%s", errorMessage)
+			} else {
+				logger.Errorf(ctx, "%s", errorMessage)
+			}
 		}
 		if err := in.Err(); err != nil {
 			// Usually the error here is that the pipe is closed
