@@ -2,16 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-function use-legacy-package-server {
-  if is_feature_enabled "legacy_serve" || is_feature_enabled "incremental"; then
-    return 0
-  else
-    return 1
-  fi
-}
-
 function check-for-package-server {
-  if use-legacy-package-server; then
+  if is_feature_enabled "legacy_serve"; then
     # Make sure it is running.
     if [[ -z "$(pgrep -f 'pm serve .*/amber-files')" ]]; then
       fx-error "It looks like serve-updates is not running."
@@ -188,7 +180,7 @@ function ffx-repository-check-server-address {
 }
 
 function default-repository-url {
-    if use-legacy-package-server; then
+    if is_feature_enabled "legacy_serve"; then
         echo "fuchsia-pkg://devhost"
     else
         local ffx_repo="$(ffx-default-repository-name)" || return $?

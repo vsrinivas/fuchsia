@@ -71,7 +71,7 @@ function main {
     shift
   done
 
-  if use-legacy-package-server; then
+  if is_feature_enabled "legacy_serve"; then
     if [[ -z "${port}" ]]; then
       port="8083"
     fi

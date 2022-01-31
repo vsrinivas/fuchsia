@@ -119,7 +119,7 @@ log() {
 serve_updates_target_addr=""
 target-addr() {
   if [[ -z "${serve_updates_target_addr}" ]]; then
-    if use-legacy-package-server; then
+    if is_feature_enabled "legacy_serve"; then
       serve_updates_target_addr="$(get-device-addr-resource)"
 
       if [[ -n "${serve_updates_target_addr}" && -n "$(get-fuchsia-device-port)" ]]; then
@@ -192,7 +192,7 @@ else
   fi
 fi
 
-if use-legacy-package-server; then
+if is_feature_enabled "legacy_serve"; then
   # Default the port to 8083 if it is unset.
   if [[ -z "${port}" ]]; then
     port="8083"
@@ -223,7 +223,7 @@ if [[ "${auto_config}" == false ]]; then
   log "Use 'fx -d DEVICE add-update-source --port ${port}' to reconfigure devices as needed, since it is not persistent accross reboots."
   log "Serving packages on port ${port}..."
 
-  if use-legacy-package-server; then
+  if is_feature_enabled "legacy_serve"; then
     fx-command-exec host-tool pm "${pm_serve_args[@]}"
   else
     log "Repository is being served in the background by ffx"
@@ -231,7 +231,7 @@ if [[ "${auto_config}" == false ]]; then
   fi
 fi
 
-if use-legacy-package-server; then
+if is_feature_enabled "legacy_serve"; then
   fx-command-exec host-tool pm "${pm_serve_args[@]}" &
   background_pid=$!
 
