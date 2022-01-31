@@ -94,22 +94,6 @@ impl Into<zx::Status> for CreateRealmError {
             CreateRealmError::RealmBuilderError(error) => match error {
                 // The following types of errors from the realm builder library are likely due to
                 // client error (e.g. attempting to create a realm with an invalid configuration).
-                fcomponent::error::Error::Builder(e) => {
-                    let _: fcomponent::error::BuilderError = e;
-                    zx::Status::INVALID_ARGS
-                }
-                fcomponent::error::Error::Event(e) => {
-                    let _: fcomponent::error::EventError = e;
-                    zx::Status::INVALID_ARGS
-                }
-                fcomponent::error::Error::FailedToSetDecl(fcomponent::Moniker { .. }, e)
-                | fcomponent::error::Error::FailedToGetDecl(fcomponent::Moniker { .. }, e)
-                | fcomponent::error::Error::FailedToMarkAsEager(fcomponent::Moniker { .. }, e)
-                | fcomponent::error::Error::FailedToCommit(e)
-                | fcomponent::error::Error::FailedToRoute(e) => {
-                    let _: ftest::RealmBuilderError = e;
-                    zx::Status::INVALID_ARGS
-                }
                 fcomponent::error::Error::ServerError(
                     ftest::RealmBuilderError2::ChildAlreadyExists
                     | ftest::RealmBuilderError2::InvalidManifestExtension
@@ -128,16 +112,8 @@ impl Into<zx::Status> for CreateRealmError {
                 // The following types of realm builder errors are unlikely to be attributable to
                 // the client, and are more likely to indicate e.g. a transport error or an
                 // unexpected failure in the underlying system.
-                fcomponent::error::Error::Realm(e) => {
-                    let _: fcomponent::error::RealmError = e;
-                    zx::Status::INTERNAL
-                }
                 fcomponent::error::Error::FidlError(e) => {
                     let _: fidl::Error = e;
-                    zx::Status::INTERNAL
-                }
-                fcomponent::error::Error::FailedToSetPkgDir(e) => {
-                    let _: ftest::RealmBuilderError = e;
                     zx::Status::INTERNAL
                 }
                 fcomponent::error::Error::FailedToOpenPkgDir(anyhow::Error { .. })
@@ -157,8 +133,7 @@ impl Into<zx::Status> for CreateRealmError {
                 ) => zx::Status::INTERNAL,
                 fcomponent::error::Error::DestroyWaiterTaken
                 | fcomponent::error::Error::MissingSource
-                | fcomponent::error::Error::LegacyChildrenUnsupportedInNestedComponentManager
-                | fcomponent::error::Error::EventRoutesOnlySupportedOnBuilder => {
+                | fcomponent::error::Error::LegacyChildrenUnsupportedInNestedComponentManager => {
                     zx::Status::INTERNAL
                 }
             },
