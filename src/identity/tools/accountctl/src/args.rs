@@ -14,14 +14,14 @@ pub struct Command {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
 pub enum Subcommand {
-    AccountIds(AccountIds),
+    List(List),
     RemoveAll(RemoveAll),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "account-ids")]
-/// List the IDs of all accounts on the device.
-pub struct AccountIds {}
+#[argh(subcommand, name = "list")]
+/// List the IDs and names of all accounts on the device.
+pub struct List {}
 
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "remove-all")]
