@@ -160,24 +160,7 @@ if (is_fuchsia) {
 # See //third_party/boringssl/tool/CMakeLists.txt
 executable("bssl") {
   visibility = [ ":*" ]
-  sources = [
-    "src/tool/args.cc",
-    "src/tool/ciphers.cc",
-    "src/tool/client.cc",
-    "src/tool/const.cc",
-    "src/tool/digest.cc",
-    "src/tool/fd.cc",
-    "src/tool/file.cc",
-    "src/tool/generate_ed25519.cc",
-    "src/tool/genrsa.cc",
-    "src/tool/pkcs12.cc",
-    "src/tool/rand.cc",
-    "src/tool/server.cc",
-    "src/tool/sign.cc",
-    "src/tool/speed.cc",
-    "src/tool/tool.cc",
-    "src/tool/transport_common.cc",
-  ]
+  sources = tool_sources
   configs += [ "//third_party/boringssl:internal_config" ]
   deps = [
     ":crypto",
