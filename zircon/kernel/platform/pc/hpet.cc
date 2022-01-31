@@ -8,6 +8,7 @@
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/structures.h>
 #include <lib/affine/ratio.h>
+#include <lib/console.h>
 #include <lib/fit/defer.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -204,3 +205,66 @@ void hpet_wait_ms(uint16_t ms) {
   while (hpet_regs->main_counter_value - init_timer_value <= target)
     ;
 }
+
+namespace {
+
+int cmd_show_hpet_regs() {
+  if (!hpet_is_present()) {
+    printf("HPET is not present.\n");
+    return -1;
+  }
+
+  if (hpet_regs == nullptr) {
+    printf("HPET registers are NULL.\n");
+    return -1;
+  }
+
+  auto Dump = [](uint64_t reg_val, uint32_t high_bit, uint32_t low_bit, const char* name) {
+    uint64_t mask = (static_cast<uint64_t>(0x1) << (high_bit - low_bit + 1)) - 1;
+    uint64_t val = (reg_val >> low_bit) & mask;
+    printf("%16s : 0x%lx (%lu)\n", name, val, val);
+  };
+
+  printf("HPET registers are mapped at %p\n", hpet_regs);
+  Dump(hpet_regs->general_caps, 63, 0, "CAPS (all)");
+  Dump(hpet_regs->general_caps, 63, 32, "CLK_PERIOD");
+  Dump(hpet_regs->general_caps, 31, 16, "VENDOR_ID");
+  Dump(hpet_regs->general_caps, 15, 15, "LEG_RT_CAP");
+  Dump(hpet_regs->general_caps, 13, 13, "COUNT_SIZE_CAP");
+  Dump(hpet_regs->general_caps, 12, 8, "NUM_TIM_CAP");
+  Dump(hpet_regs->general_caps, 7, 0, "REV_ID");
+  printf("\n");
+  Dump(hpet_regs->general_config, 63, 0, "CONFIG (all)");
+  Dump(hpet_regs->general_config, 1, 1, "LEG_RT_CNF");
+  Dump(hpet_regs->general_config, 0, 0, "ENABLE_CNF");
+  printf("\n");
+  Dump(hpet_regs->general_int_status, 63, 0, "INT_STS (all)");
+  printf("\n");
+  Dump(hpet_regs->general_int_status, 63, 0, "COUNT");
+
+  return 0;
+}
+
+int cmd_hpet(int argc, const cmd_args* argv, uint32_t flags) {
+  auto usage = [prog_name = argv[0].str]() -> int {
+    printf("Usage:\n");
+    printf("%s regs : show the HPET registers\n", prog_name);
+    return -1;
+  };
+
+  if (argc < 2) {
+    return usage();
+  }
+
+  if (!strcmp(argv[1].str, "regs")) {
+    return cmd_show_hpet_regs();
+  } else {
+    printf("Unrecognized command \"%s\".\n", argv[1].str);
+    return usage();
+  }
+}
+}  // namespace
+
+STATIC_COMMAND_START
+STATIC_COMMAND_MASKED("hpet", "HPET commands", &cmd_hpet, CMD_AVAIL_ALWAYS)
+STATIC_COMMAND_END(kernel)
