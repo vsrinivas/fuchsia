@@ -19,8 +19,8 @@ fn convert_debuglog_to_log_message_fuzzer(record: RandomLogRecord) -> Option<Log
     logs::convert_debuglog_to_log_message(&record.0)
 }
 
-impl Arbitrary for RandomLogRecord {
-    fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self> {
+impl<'a> Arbitrary<'a> for RandomLogRecord {
+    fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
         let sequence = u64::arbitrary(u)?;
         let padding1: [zx::sys::PadByte; 4] = Default::default();
         let mut datalen = u16::arbitrary(u)?;

@@ -33,8 +33,8 @@ fn initialize_logging() {
 /// from generating Duration values that, when added up, would cause overflow.
 struct SmallDuration(Duration);
 
-impl Arbitrary for SmallDuration {
-    fn arbitrary(u: &mut Unstructured<'_>) -> arbitrary::Result<Self> {
+impl<'a> Arbitrary<'a> for SmallDuration {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // The maximum time increment to advance by in a single step.
         const MAX_DURATION: Duration = Duration::from_secs(60 * 60);
 

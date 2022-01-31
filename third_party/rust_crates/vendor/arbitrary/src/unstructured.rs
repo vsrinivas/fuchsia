@@ -165,9 +165,9 @@ impl<'a> Unstructured<'a> {
     /// ```
     pub fn arbitrary<A>(&mut self) -> Result<A>
     where
-        A: Arbitrary,
+        A: Arbitrary<'a>,
     {
-        <A as Arbitrary>::arbitrary(self)
+        <A as Arbitrary<'a>>::arbitrary(self)
     }
 
     /// Get the number of elements to insert when building up a collection of
@@ -190,11 +190,11 @@ impl<'a> Unstructured<'a> {
     /// #     pub fn insert(&mut self, element: T) {}
     /// # }
     ///
-    /// impl<T> Arbitrary for MyCollection<T>
+    /// impl<'a, T> Arbitrary<'a> for MyCollection<T>
     /// where
-    ///     T: Arbitrary,
+    ///     T: Arbitrary<'a>,
     /// {
-    ///     fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self> {
+    ///     fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
     ///         // Get the number of `T`s we should insert into our collection.
     ///         let len = u.arbitrary_len::<T>()?;
     ///
@@ -211,7 +211,7 @@ impl<'a> Unstructured<'a> {
     /// ```
     pub fn arbitrary_len<ElementType>(&mut self) -> Result<usize>
     where
-        ElementType: Arbitrary,
+        ElementType: Arbitrary<'a>,
     {
         let byte_size = self.arbitrary_byte_size()?;
         let (lower, upper) = <ElementType as Arbitrary>::size_hint(0);
@@ -221,8 +221,8 @@ impl<'a> Unstructured<'a> {
     }
 
     fn arbitrary_byte_size(&mut self) -> Result<usize> {
-        if self.data.len() == 0 {
-            Err(Error::NotEnoughData)
+        if self.data.is_empty() {
+            Ok(0)
         } else if self.data.len() == 1 {
             self.data = &[];
             Ok(0)
@@ -233,7 +233,8 @@ impl<'a> Unstructured<'a> {
             //
             // https://github.com/rust-fuzz/libfuzzer-sys/blob/0c450753/libfuzzer/utils/FuzzedDataProvider.h#L92-L97
 
-            // We only consume as many bytes as necessary to cover the entire range of the byte string
+            // We only consume as many bytes as necessary to cover the entire
+            // range of the byte string.
             let len = if self.data.len() <= std::u8::MAX as usize + 1 {
                 let bytes = 1;
                 let max_size = self.data.len() - bytes;
@@ -310,12 +311,18 @@ impl<'a> Unstructured<'a> {
             "`arbitrary::Unstructured::int_in_range` requires a non-empty range"
         );
 
+        // When there is only one possible choice, don't waste any entropy from
+        // the underlying data.
+        if start == end {
+            return Ok((*start, 0));
+        }
+
         let range: T::Widest = end.as_widest() - start.as_widest();
         let mut result = T::Widest::ZERO;
         let mut offset: usize = 0;
 
         while offset < mem::size_of::<T>()
-            && (range >> T::Widest::from_usize(offset)) > T::Widest::ZERO
+            && (range >> T::Widest::from_usize(offset * 8)) > T::Widest::ZERO
         {
             let byte = bytes.next().ok_or(Error::NotEnoughData)?;
             result = (result << 8) | T::Widest::from_u8(byte);
@@ -338,29 +345,39 @@ impl<'a> Unstructured<'a> {
     /// This should only be used inside of `Arbitrary` implementations.
     ///
     /// Returns an error if there is not enough underlying data to make a
-    /// choice.
+    /// choice or if no choices are provided.
     ///
-    /// # Panics
+    /// # Examples
     ///
-    /// Panics if `choices` is empty.
-    ///
-    /// # Example
+    /// Selecting from an array of choices:
     ///
     /// ```
     /// use arbitrary::Unstructured;
     ///
     /// let mut u = Unstructured::new(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
-    ///
     /// let choices = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
-    /// if let Ok(ch) = u.choose(&choices) {
-    ///     println!("chose {}", ch);
-    /// }
+    ///
+    /// let choice = u.choose(&choices).unwrap();
+    ///
+    /// println!("chose {}", choice);
+    /// ```
+    ///
+    /// An error is returned if no choices are provided:
+    ///
+    /// ```
+    /// use arbitrary::Unstructured;
+    ///
+    /// let mut u = Unstructured::new(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
+    /// let choices: [char; 0] = [];
+    ///
+    /// let result = u.choose(&choices);
+    ///
+    /// assert!(result.is_err());
     /// ```
     pub fn choose<'b, T>(&mut self, choices: &'b [T]) -> Result<&'b T> {
-        assert!(
-            !choices.is_empty(),
-            "`arbitrary::Unstructured::choose` must be given a non-empty set of choices"
-        );
+        if choices.is_empty() {
+            return Err(Error::EmptyChoose);
+        }
         let idx = self.int_in_range(0..=choices.len() - 1)?;
         Ok(&choices[idx])
     }
@@ -372,8 +389,8 @@ impl<'a> Unstructured<'a> {
     /// `Arbitrary` implementations like `<Vec<u8>>::arbitrary` and
     /// `String::arbitrary` over using this method directly.
     ///
-    /// If this `Unstructured` does not have enough data to fill the whole
-    /// `buffer`, an error is returned.
+    /// If this `Unstructured` does not have enough underlying data to fill the
+    /// whole `buffer`, it pads the buffer out with zeros.
     ///
     /// # Example
     ///
@@ -383,13 +400,23 @@ impl<'a> Unstructured<'a> {
     /// let mut u = Unstructured::new(&[1, 2, 3, 4]);
     ///
     /// let mut buf = [0; 2];
+    ///
     /// assert!(u.fill_buffer(&mut buf).is_ok());
+    /// assert_eq!(buf, [1, 2]);
+    ///
     /// assert!(u.fill_buffer(&mut buf).is_ok());
-    /// assert!(u.fill_buffer(&mut buf).is_err());
+    /// assert_eq!(buf, [3, 4]);
+    ///
+    /// assert!(u.fill_buffer(&mut buf).is_ok());
+    /// assert_eq!(buf, [0, 0]);
     /// ```
     pub fn fill_buffer(&mut self, buffer: &mut [u8]) -> Result<()> {
-        let bytes = self.get_bytes(buffer.len())?;
-        buffer.copy_from_slice(bytes);
+        let n = std::cmp::min(buffer.len(), self.data.len());
+        buffer[..n].copy_from_slice(&self.data[..n]);
+        for byte in buffer[n..].iter_mut() {
+            *byte = 0;
+        }
+        self.data = &self.data[n..];
         Ok(())
     }
 
@@ -399,6 +426,7 @@ impl<'a> Unstructured<'a> {
     /// a very low-level operation. You should generally prefer calling nested
     /// `Arbitrary` implementations like `<Vec<u8>>::arbitrary` and
     /// `String::arbitrary` over using this method directly.
+    ///
     /// # Example
     ///
     /// ```
@@ -406,10 +434,10 @@ impl<'a> Unstructured<'a> {
     ///
     /// let mut u = Unstructured::new(&[1, 2, 3, 4]);
     ///
-    /// assert!(u.get_bytes(2).unwrap() == &[1, 2]);
-    /// assert!(u.get_bytes(2).unwrap() == &[3, 4]);
+    /// assert!(u.bytes(2).unwrap() == &[1, 2]);
+    /// assert!(u.bytes(2).unwrap() == &[3, 4]);
     /// ```
-    pub fn get_bytes(&mut self, size: usize) -> Result<&'a [u8]> {
+    pub fn bytes(&mut self, size: usize) -> Result<&'a [u8]> {
         if self.data.len() < size {
             return Err(Error::NotEnoughData);
         }
@@ -417,6 +445,31 @@ impl<'a> Unstructured<'a> {
         let (for_buf, rest) = self.data.split_at(size);
         self.data = rest;
         Ok(for_buf)
+    }
+
+    /// Peek at `size` number of bytes of the underlying raw input.
+    ///
+    /// Does not consume the bytes, only peeks at them.
+    ///
+    /// Returns `None` if there are not `size` bytes left in the underlying raw
+    /// input.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use arbitrary::Unstructured;
+    ///
+    /// let u = Unstructured::new(&[1, 2, 3]);
+    ///
+    /// assert_eq!(u.peek_bytes(0).unwrap(), []);
+    /// assert_eq!(u.peek_bytes(1).unwrap(), [1]);
+    /// assert_eq!(u.peek_bytes(2).unwrap(), [1, 2]);
+    /// assert_eq!(u.peek_bytes(3).unwrap(), [1, 2, 3]);
+    ///
+    /// assert!(u.peek_bytes(4).is_none());
+    /// ```
+    pub fn peek_bytes(&self, size: usize) -> Option<&'a [u8]> {
+        self.data.get(..size)
     }
 
     /// Consume all of the rest of the remaining underlying bytes.
@@ -442,12 +495,10 @@ impl<'a> Unstructured<'a> {
     ///
     /// This is useful for implementing [`Arbitrary::arbitrary`] on collections
     /// since the implementation is simply `u.arbitrary_iter()?.collect()`
-    pub fn arbitrary_iter<'b, ElementType: Arbitrary>(
+    pub fn arbitrary_iter<'b, ElementType: Arbitrary<'a>>(
         &'b mut self,
     ) -> Result<ArbitraryIter<'a, 'b, ElementType>> {
-        let size = self.arbitrary_len::<ElementType>()?;
         Ok(ArbitraryIter {
-            size,
             u: &mut *self,
             _marker: PhantomData,
         })
@@ -458,7 +509,7 @@ impl<'a> Unstructured<'a> {
     ///
     /// This is useful for implementing [`Arbitrary::arbitrary_take_rest`] on collections
     /// since the implementation is simply `u.arbitrary_take_rest_iter()?.collect()`
-    pub fn arbitrary_take_rest_iter<ElementType: Arbitrary>(
+    pub fn arbitrary_take_rest_iter<ElementType: Arbitrary<'a>>(
         self,
     ) -> Result<ArbitraryTakeRestIter<'a, ElementType>> {
         let (lower, upper) = ElementType::size_hint(0);
@@ -477,18 +528,17 @@ impl<'a> Unstructured<'a> {
 /// Utility iterator produced by [`Unstructured::arbitrary_iter`]
 pub struct ArbitraryIter<'a, 'b, ElementType> {
     u: &'b mut Unstructured<'a>,
-    size: usize,
     _marker: PhantomData<ElementType>,
 }
 
-impl<'a, 'b, ElementType: Arbitrary> Iterator for ArbitraryIter<'a, 'b, ElementType> {
+impl<'a, 'b, ElementType: Arbitrary<'a>> Iterator for ArbitraryIter<'a, 'b, ElementType> {
     type Item = Result<ElementType>;
     fn next(&mut self) -> Option<Result<ElementType>> {
-        if self.size == 0 {
-            None
-        } else {
-            self.size -= 1;
+        let keep_going = self.u.arbitrary().unwrap_or(false);
+        if keep_going {
             Some(Arbitrary::arbitrary(self.u))
+        } else {
+            None
         }
     }
 }
@@ -500,7 +550,7 @@ pub struct ArbitraryTakeRestIter<'a, ElementType> {
     _marker: PhantomData<ElementType>,
 }
 
-impl<'a, ElementType: Arbitrary> Iterator for ArbitraryTakeRestIter<'a, ElementType> {
+impl<'a, ElementType: Arbitrary<'a>> Iterator for ArbitraryTakeRestIter<'a, ElementType> {
     type Item = Result<ElementType>;
     fn next(&mut self) -> Option<Result<ElementType>> {
         if let Some(mut u) = self.u.take() {
@@ -655,5 +705,17 @@ mod tests {
         assert_eq!(x, 0);
         let choice = *u.choose(&[42]).unwrap();
         assert_eq!(choice, 42)
+    }
+
+    #[test]
+    fn int_in_range_uses_minimal_amount_of_bytes() {
+        let mut u = Unstructured::new(&[1]);
+        u.int_in_range::<u8>(0..=u8::MAX).unwrap();
+
+        let mut u = Unstructured::new(&[1]);
+        u.int_in_range::<u32>(0..=u8::MAX as u32).unwrap();
+
+        let mut u = Unstructured::new(&[1]);
+        u.int_in_range::<u32>(0..=u8::MAX as u32 + 1).unwrap_err();
     }
 }

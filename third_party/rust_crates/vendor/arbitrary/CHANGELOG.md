@@ -28,6 +28,186 @@ Released YYYY-MM-DD.
 
 --------------------------------------------------------------------------------
 
+## 1.0.3
+
+Released 2021-11-20.
+
+### Fixed
+
+* Fixed documentation for `Unstructured::fill_bytes`. We forgot to update this
+  way back in [#53](https://github.com/rust-fuzz/arbitrary/pull/53) when the
+  behavior changed.
+
+--------------------------------------------------------------------------------
+
+## 1.0.2
+
+Released 2021-08-25.
+
+### Added
+
+* `Arbitrary` impls for `HashMap`s and `HashSet`s with custom `Hasher`s
+  [#87](https://github.com/rust-fuzz/arbitrary/pull/87)
+
+--------------------------------------------------------------------------------
+
+## 1.0.1
+
+Released 2021-05-20.
+
+### Added
+
+* `Arbitrary` impls for `NonZeroX` types [#79](https://github.com/rust-fuzz/arbitrary/pull/79)
+* `Arbitrary` impls for all arrays using const generics [#55](https://github.com/rust-fuzz/arbitrary/pull/55)
+* `Arbitrary` impls for `Ipv4Addr` and `Ipv6Addr` [#84](https://github.com/rust-fuzz/arbitrary/pull/84)
+
+### Fixed
+
+* Use fewer bytes for `Unstructured::int_in_range()` [#80](https://github.com/rust-fuzz/arbitrary/pull/80)
+* Use correct range for `char` generation [#83](https://github.com/rust-fuzz/arbitrary/pull/83)
+
+--------------------------------------------------------------------------------
+
+## 1.0.0
+
+Released 2020-02-24.
+
+See 1.0.0-rc1 and 1.0.0-rc2 for changes since 0.4.7, which was the last main
+line release.
+
+--------------------------------------------------------------------------------
+
+## 1.0.0-rc2
+
+Released 2021-02-09.
+
+### Added
+
+* The `Arbitrary` trait is now implemented for `&[u8]`. [#67](https://github.com/rust-fuzz/arbitrary/pull/67)
+
+### Changed
+
+* Rename `Unstructured#get_bytes` to `Unstructured#bytes`. [#70](https://github.com/rust-fuzz/arbitrary/pull/70)
+* Passing an empty slice of choices to `Unstructured#choose` returns an error. Previously it would panic. [71](https://github.com/rust-fuzz/arbitrary/pull/71)
+
+--------------------------------------------------------------------------------
+
+## 1.0.0-rc1
+
+Released 2020-11-25.
+
+### Added
+
+* The `Arbitrary` trait is now implemented for `&str`. [#63](https://github.com/rust-fuzz/arbitrary/pull/63)
+
+### Changed
+
+* The `Arbitrary` trait now has a lifetime parameter, allowing `Arbitrary` implementations that borrow from the raw input (e.g. the new `&str` implementaton). The `derive(Arbitrary)` macro also supports deriving `Arbitrary` on types with lifetimes now. [#63](https://github.com/rust-fuzz/arbitrary/pull/63)
+
+### Removed
+
+* The `shrink` method on the `Arbitrary` trait has been removed.
+
+  We have found that, in practice, using [internal reduction](https://drmaciver.github.io/papers/reduction-via-generation-preview.pdf) via approaches like `cargo fuzz tmin`, where the raw input bytes are reduced rather than the `T: Arbitrary` type constructed from those raw bytes, has the best efficiency-to-maintenance ratio. To the best of our knowledge, no one is relying on or using the `Arbitrary::shrink` method. If you *are* using and relying on the `Arbitrary::shrink` method, please reach out by [dropping a comment here](https://github.com/rust-fuzz/arbitrary/issues/62) and explaining how you're using it and what your use case is. We'll figure out what the best solution is, including potentially adding shrinking functionality back to the `arbitrary` crate.
+
+--------------------------------------------------------------------------------
+
+## 0.4.7
+
+Released 2020-10-14.
+
+### Added
+
+* Added an optimization to avoid unnecessarily consuming bytes from the
+  underlying data when there is only one possible choice in
+  `Unstructured::{int_in_range, choose, etc..}`.
+
+* Added license files to the derive crate.
+
+### Changed
+
+* The `Arbitrary` implementation for `std::time::Duration` should now be faster
+  and produce durations with a more-uniform distribution of nanoseconds.
+
+--------------------------------------------------------------------------------
+
+## 0.4.6
+
+Released 2020-08-22.
+
+### Added
+
+* Added the `Unstructured::peek_bytes` method.
+
+### Changed
+
+* Test case reduction via `cargo fuzz tmin` should be much more effective at
+  reducing the sizes of collections now. (See
+  [#53](https://github.com/rust-fuzz/arbitrary/pull/53) and the commit messages
+  for details.)
+
+* Fuzzing with mutation-based fuzzers (like libFuzzer) should be more efficient
+  now. (See [#53](https://github.com/rust-fuzz/arbitrary/pull/53) and the commit
+  messages for details)
+
+--------------------------------------------------------------------------------
+
+## 0.4.5
+
+Released 2020-06-18.
+
+### Added
+
+* Implement `Arbitrary` for zero length arrays.
+* Implement `Arbitrary` for `Range` and `RangeInclusive`.
+
+--------------------------------------------------------------------------------
+
+## 0.4.4
+
+Released 2020-04-29.
+
+### Fixed
+
+* Fixed the custom derive for enums when used via its full path (like
+  `#[derive(arbitrary::Arbitrary)]` rather than like `#[derive(Arbitrary)]`).
+
+
+## 0.4.3
+
+Released 2020-04-28.
+
+### Fixed
+
+* Fixed the custom derive when used via its full path (like
+  `#[derive(arbitrary::Arbitrary)]` rather than like `#[derive(Arbitrary)]`).
+
+--------------------------------------------------------------------------------
+
+## 0.4.2
+
+Released 2020-04-17.
+
+### Changed
+
+* We forgot to release a new version of the `derive_arbitrary` crate last
+  release. This release fixes that and so the `synstructure` dependency is
+  finally actually removed in the cargo releases.
+
+--------------------------------------------------------------------------------
+
+## 0.4.1
+
+Released 2020-03-18.
+
+### Removed
+
+* Removed an internal dependency on the `synstructure` crate when the `derive`
+  feature is enabled. This should not have any visible downstream effects other
+  than faster build times!
+
+--------------------------------------------------------------------------------
+
 ## 0.4.0
 
 Released 2020-01-22.

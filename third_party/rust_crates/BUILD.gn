@@ -17,7 +17,7 @@ group("anyhow") {
 }
 
 group("arbitrary") {
-  deps = [ ":arbitrary-v0_4_0" ]
+  deps = [ ":arbitrary-v1_0_3" ]
 }
 
 group("argh") {
@@ -1196,25 +1196,25 @@ rust_library("anyhow-v1_0_38") {
   visibility = [ ":*" ]
 }
 
-rust_library("arbitrary-v0_4_0") {
+rust_library("arbitrary-v1_0_3") {
   crate_name = "arbitrary"
   crate_root = "//third_party/rust_crates/vendor/arbitrary/src/lib.rs"
-  output_name = "arbitrary-7339b6a6d9177c8a"
+  output_name = "arbitrary-a91f002c1ed551ed"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":derive_arbitrary-v0_4_0($host_toolchain)" ]
+  deps += [ ":derive_arbitrary-v1_0_2($host_toolchain)" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=7339b6a6d9177c8a",
-    "-Cextra-filename=-7339b6a6d9177c8a",
+    "-Cmetadata=a91f002c1ed551ed",
+    "-Cextra-filename=-a91f002c1ed551ed",
     "--cfg=feature=\"derive\"",
     "--cfg=feature=\"derive_arbitrary\"",
   ]
@@ -3530,10 +3530,10 @@ rust_proc_macro("derivative-v2_1_1") {
   visibility = [ ":*" ]
 }
 
-rust_proc_macro("derive_arbitrary-v0_4_0") {
+rust_proc_macro("derive_arbitrary-v1_0_2") {
   crate_name = "derive_arbitrary"
   crate_root = "//third_party/rust_crates/vendor/derive_arbitrary/src/lib.rs"
-  output_name = "derive_arbitrary-707386e28fd45df8"
+  output_name = "derive_arbitrary-cbcb745c5e452a00"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -3541,16 +3541,16 @@ rust_proc_macro("derive_arbitrary-v0_4_0") {
 
   deps = []
   deps += [ ":proc-macro2-v1_0_28" ]
+  deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_74" ]
-  deps += [ ":synstructure-v0_12_1" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=707386e28fd45df8",
-    "-Cextra-filename=-707386e28fd45df8",
+    "-Cmetadata=cbcb745c5e452a00",
+    "-Cextra-filename=-cbcb745c5e452a00",
   ]
 
   visibility = [ ":*" ]

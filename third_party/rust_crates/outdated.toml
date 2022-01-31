@@ -2,7 +2,6 @@
 skip_updating = [
     "ansi_term",
     "anyhow",
-    "arbitrary",
     "async-broadcast",
     "async-io",
     "async-lock",
