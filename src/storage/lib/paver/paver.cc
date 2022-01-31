@@ -42,8 +42,6 @@
 #include "src/storage/lib/paver/vmo-reader.h"
 #include "sysconfig-fidl.h"
 
-#define ZXCRYPT_DRIVER_LIB "/boot/driver/zxcrypt.so"
-
 namespace paver {
 namespace {
 
