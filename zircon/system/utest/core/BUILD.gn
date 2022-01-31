@@ -17,7 +17,6 @@ core_tests = [
   "channel-iovec",
   "channel-write-etc",
   "clock",
-  "elf-tls",
   "event-pair",
   "fifo",
   "fpu",
@@ -56,6 +55,7 @@ core_tests_with_custom_manifests =
     [
       # Some tests require ZX_POL_NEW_PROCESS.
       "channel",
+      "elf-tls",
       "memory-mapping",
 
       # Some tests require ZX_POL_AMBIENT_MARK_VMO_EXEC.

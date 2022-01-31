@@ -143,7 +143,7 @@ class Runner {
     int repeat = 1;
 
     // When set test order within a test case are randomized.
-    bool shuffle = false;
+    bool shuffle = true;
 
     // When set prints the help message.
     bool help = false;

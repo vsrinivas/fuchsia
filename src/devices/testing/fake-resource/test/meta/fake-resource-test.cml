@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_runners/elf/default.shard.cml",
+    ],
+    program: {
+        binary: "test/fake-resource-test",
+
+        // TODO(fxb/92565): Remove shuffle disable flag after fixing the test.
+        args: [
+            "--gtest_shuffle",
+            "false",
+        ],
+    },
+}

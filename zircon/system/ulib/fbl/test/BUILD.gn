@@ -17,6 +17,14 @@ group("tests") {
 test("fbl") {
   output_name = "fbl-test"
   include_dirs = [ "include" ]
+
+  # TODO(fxb/92566): Remove shuffle disable flag after fixing the test.
+  if (is_host) {
+    host_args = [
+      "--gtest_shuffle",
+      "false",
+    ]
+  }
   sources = [
     "algorithm_tests.cc",
     "array_tests.cc",
@@ -105,5 +113,6 @@ test("fbl-gmock-test") {
 
 fuchsia_unittest_package("fbl-test-pkg") {
   package_name = "fbl-test"
+  manifest = "meta/fbl-test.cml"
   deps = [ ":fbl" ]
 }
