@@ -41,8 +41,8 @@ use crate::{
         arp::{self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId},
         link::LinkDevice,
         ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId},
-        BufferIpDeviceContext, DadTimerId, DeviceIdContext, FrameDestination, IpDeviceContext,
-        RecvIpFrameMeta,
+        BufferIpLinkDeviceContext, DadTimerId, DeviceIdContext, FrameDestination,
+        IpLinkDeviceContext, RecvIpFrameMeta,
     },
     ip::{
         device::state::{
@@ -72,10 +72,10 @@ impl From<Mac> for FrameDestination {
     }
 }
 
-/// A shorthand for `IpDeviceContext` with all of the appropriate type arguments
+/// A shorthand for `IpLinkDeviceContext` with all of the appropriate type arguments
 /// fixed to their Ethernet values.
-pub(crate) trait EthernetIpDeviceContext:
-    IpDeviceContext<
+pub(crate) trait EthernetIpLinkDeviceContext:
+    IpLinkDeviceContext<
     EthernetLinkDevice,
     EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
 >
@@ -83,18 +83,18 @@ pub(crate) trait EthernetIpDeviceContext:
 }
 
 impl<
-        C: IpDeviceContext<
+        C: IpLinkDeviceContext<
             EthernetLinkDevice,
             EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
         >,
-    > EthernetIpDeviceContext for C
+    > EthernetIpLinkDeviceContext for C
 {
 }
 
-/// A shorthand for `BufferIpDeviceContext` with all of the appropriate type
+/// A shorthand for `BufferIpLinkDeviceContext` with all of the appropriate type
 /// arguments fixed to their Ethernet values.
-pub(super) trait BufferEthernetIpDeviceContext<B: BufferMut>:
-    BufferIpDeviceContext<
+pub(super) trait BufferEthernetIpLinkDeviceContext<B: BufferMut>:
+    BufferIpLinkDeviceContext<
     EthernetLinkDevice,
     EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     B,
@@ -104,16 +104,16 @@ pub(super) trait BufferEthernetIpDeviceContext<B: BufferMut>:
 
 impl<
         B: BufferMut,
-        C: BufferIpDeviceContext<
+        C: BufferIpLinkDeviceContext<
             EthernetLinkDevice,
             EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
             B,
         >,
-    > BufferEthernetIpDeviceContext<B> for C
+    > BufferEthernetIpLinkDeviceContext<B> for C
 {
 }
 
-impl<C: EthernetIpDeviceContext>
+impl<C: EthernetIpLinkDeviceContext>
     DualStateContext<MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, C::Rng, C::DeviceId>
     for C
 {
@@ -136,7 +136,7 @@ impl<C: EthernetIpDeviceContext>
     }
 }
 
-impl<C: EthernetIpDeviceContext>
+impl<C: EthernetIpLinkDeviceContext>
     DualStateContext<MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, C::Rng, C::DeviceId>
     for C
 {
@@ -159,7 +159,7 @@ impl<C: EthernetIpDeviceContext>
     }
 }
 
-impl<C: EthernetIpDeviceContext> FrameContext<EmptyBuf, IgmpPacketMetadata<C::DeviceId>> for C {
+impl<C: EthernetIpLinkDeviceContext> FrameContext<EmptyBuf, IgmpPacketMetadata<C::DeviceId>> for C {
     fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
         meta: IgmpPacketMetadata<C::DeviceId>,
@@ -169,7 +169,7 @@ impl<C: EthernetIpDeviceContext> FrameContext<EmptyBuf, IgmpPacketMetadata<C::De
     }
 }
 
-impl<C: EthernetIpDeviceContext> FrameContext<EmptyBuf, MldFrameMetadata<C::DeviceId>> for C {
+impl<C: EthernetIpLinkDeviceContext> FrameContext<EmptyBuf, MldFrameMetadata<C::DeviceId>> for C {
     fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
         meta: MldFrameMetadata<C::DeviceId>,
@@ -179,7 +179,7 @@ impl<C: EthernetIpDeviceContext> FrameContext<EmptyBuf, MldFrameMetadata<C::Devi
     }
 }
 
-impl<C: EthernetIpDeviceContext> IgmpContext<EthernetLinkDevice> for C {
+impl<C: EthernetIpLinkDeviceContext> IgmpContext<EthernetLinkDevice> for C {
     fn get_ip_addr_subnet(&self, device: C::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
         self.get_state_with(device).ip.ipv4.ip_state.iter_addrs().next().cloned()
     }
@@ -189,7 +189,7 @@ impl<C: EthernetIpDeviceContext> IgmpContext<EthernetLinkDevice> for C {
     }
 }
 
-impl<C: EthernetIpDeviceContext> MldContext<EthernetLinkDevice> for C {
+impl<C: EthernetIpLinkDeviceContext> MldContext<EthernetLinkDevice> for C {
     fn get_ipv6_link_local_addr(
         &self,
         device: C::DeviceId,
@@ -379,7 +379,7 @@ impl<D> From<MldReportDelay<EthernetLinkDevice, D>> for EthernetTimerId<D> {
 }
 
 /// Handle an Ethernet timer firing.
-pub(super) fn handle_timer<C: EthernetIpDeviceContext>(
+pub(super) fn handle_timer<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     id: EthernetTimerId<C::DeviceId>,
 ) {
@@ -440,7 +440,10 @@ impl_timer_context!(
 ///
 /// `device_id` MUST be ready to send packets before `initialize_device` is
 /// called.
-pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_id: C::DeviceId) {
+pub(super) fn initialize_device<C: EthernetIpLinkDeviceContext>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
+) {
     // Assign a link-local address.
 
     let state = ctx.get_state_with(device_id);
@@ -466,7 +469,8 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
 #[specialize_ip_address]
 pub(super) fn send_ip_frame<
     B: BufferMut,
-    C: EthernetIpDeviceContext + FrameContext<B, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+    C: EthernetIpLinkDeviceContext
+        + FrameContext<B, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
@@ -534,7 +538,7 @@ pub(super) fn send_ip_frame<
 }
 
 /// Receive an Ethernet frame from the network.
-pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpDeviceContext<B>>(
+pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpLinkDeviceContext<B>>(
     ctx: &mut C,
     device_id: C::DeviceId,
     mut buffer: B,
@@ -592,7 +596,7 @@ pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpDeviceContext<B>>(
 }
 
 /// Set the promiscuous mode flag on `device_id`.
-pub(super) fn set_promiscuous_mode<C: EthernetIpDeviceContext>(
+pub(super) fn set_promiscuous_mode<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
     enabled: bool,
@@ -607,7 +611,7 @@ pub(super) fn set_promiscuous_mode<C: EthernetIpDeviceContext>(
 ///
 /// For IPv6, this only returns global (not link-local) addresses.
 #[specialize_ip_address]
-pub(super) fn get_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
+pub(super) fn get_ip_addr_subnet<C: EthernetIpLinkDeviceContext, A: IpAddress>(
     ctx: &C,
     device_id: C::DeviceId,
 ) -> Option<AddrSubnet<A>> {
@@ -632,7 +636,7 @@ pub(super) fn get_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
 ///
 /// See [`Tentative`] and [`AddrSubnet`] for more information.
 #[specialize_ip_address]
-pub(super) fn get_assigned_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddress>(
+pub(super) fn get_assigned_ip_addr_subnets<C: EthernetIpLinkDeviceContext, A: IpAddress>(
     ctx: &C,
     device_id: C::DeviceId,
 ) -> Box<dyn Iterator<Item = AddrSubnet<A>> + '_> {
@@ -655,7 +659,7 @@ pub(super) fn get_assigned_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddr
 ///
 /// For IPv6, this function also joins the solicited-node multicast group and
 /// begins performing Duplicate Address Detection (DAD).
-pub(super) fn add_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
+pub(super) fn add_ip_addr_subnet<C: EthernetIpLinkDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr_sub: AddrSubnet<A>,
@@ -676,7 +680,7 @@ pub(super) fn add_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
 ///
 /// `add_ip_addr_subnet_inner` panics if `A = Ipv4Addr` and `config != AddrConfig::Manual`.
 #[specialize_ip_address]
-fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
+fn add_ip_addr_subnet_inner<C: EthernetIpLinkDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr_sub: AddrSubnet<A>,
@@ -730,7 +734,7 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
 /// # Panics
 ///
 /// Panics if tentative state for the address is not found.
-fn do_duplicate_address_detection<C: EthernetIpDeviceContext>(
+fn do_duplicate_address_detection<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr: UnicastAddr<Ipv6Addr>,
@@ -787,7 +791,7 @@ fn do_duplicate_address_detection<C: EthernetIpDeviceContext>(
 ///
 /// Panics if `addr` is a link-local address.
 // TODO(ghanan): Use a witness type to guarantee non-link-local-ness for `addr`.
-pub(super) fn del_ip_addr<C: EthernetIpDeviceContext, A: IpAddress>(
+pub(super) fn del_ip_addr<C: EthernetIpLinkDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr: &SpecifiedAddr<A>,
@@ -803,7 +807,7 @@ pub(super) fn del_ip_addr<C: EthernetIpDeviceContext, A: IpAddress>(
 /// # Panics
 ///
 /// `del_ip_addr_inner` panics if `A = Ipv4Addr` and `config_type != None`.
-fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
+fn del_ip_addr_inner<C: EthernetIpLinkDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr: &A,
@@ -877,7 +881,7 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
 ///
 /// Returns `None` if `device_id` does not have a non-tentative link-local
 /// address.
-pub(super) fn get_ipv6_link_local_addr<C: EthernetIpDeviceContext>(
+pub(super) fn get_ipv6_link_local_addr<C: EthernetIpLinkDeviceContext>(
     ctx: &C,
     device_id: C::DeviceId,
 ) -> Option<LinkLocalUnicastAddr<Ipv6Addr>> {
@@ -905,7 +909,7 @@ pub(super) fn get_ipv6_link_local_addr<C: EthernetIpDeviceContext>(
 /// `join_link_multicast` is different from [`join_ip_multicast`] as
 /// `join_link_multicast` joins an L2 multicast group, whereas
 /// `join_ip_multicast` joins an L3 multicast group.
-pub(super) fn join_link_multicast<C: EthernetIpDeviceContext>(
+pub(super) fn join_link_multicast<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<Mac>,
@@ -945,7 +949,7 @@ pub(super) fn join_link_multicast<C: EthernetIpDeviceContext>(
 /// # Panics
 ///
 /// If `device_id` is not in the multicast group `multicast_addr`.
-fn leave_link_multicast<C: EthernetIpDeviceContext>(
+fn leave_link_multicast<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<Mac>,
@@ -990,7 +994,7 @@ fn leave_link_multicast<C: EthernetIpDeviceContext>(
 /// `join_ip_multicast` joins an L3 multicast group, whereas
 /// `join_link_multicast` joins an L2 multicast group.
 #[specialize_ip_address]
-pub(super) fn join_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
+pub(super) fn join_ip_multicast<C: EthernetIpLinkDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<A>,
@@ -1039,7 +1043,7 @@ pub(super) fn join_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
 ///
 /// If `device_id` is not currently in the multicast group `multicast_addr`.
 #[specialize_ip_address]
-pub(super) fn leave_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
+pub(super) fn leave_ip_multicast<C: EthernetIpLinkDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<A>,
@@ -1075,7 +1079,7 @@ pub(super) fn leave_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
 
 /// Is `device` in the IP multicast group `multicast_addr`?
 #[specialize_ip_address]
-pub(super) fn is_in_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
+pub(super) fn is_in_ip_multicast<C: EthernetIpLinkDeviceContext, A: IpAddress>(
     ctx: &C,
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<A>,
@@ -1100,13 +1104,13 @@ pub(super) fn is_in_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
 }
 
 /// Get the MTU associated with this device.
-pub(super) fn get_mtu<C: EthernetIpDeviceContext>(ctx: &C, device_id: C::DeviceId) -> u32 {
+pub(super) fn get_mtu<C: EthernetIpLinkDeviceContext>(ctx: &C, device_id: C::DeviceId) -> u32 {
     ctx.get_state_with(device_id).link.mtu
 }
 
 /// Get the hop limit for new IPv6 packets that will be sent out from
 /// `device_id`.
-pub(super) fn get_ipv6_hop_limit<C: EthernetIpDeviceContext>(
+pub(super) fn get_ipv6_hop_limit<C: EthernetIpLinkDeviceContext>(
     ctx: &C,
     device_id: C::DeviceId,
 ) -> NonZeroU8 {
@@ -1119,7 +1123,7 @@ pub(super) fn get_ipv6_hop_limit<C: EthernetIpDeviceContext>(
 /// packets. It only means that `device` is allowed to route packets. To route
 /// packets, this netstack must be configured to allow IP packets to be routed
 /// if it was not destined for this node.
-pub(super) fn is_routing_enabled<C: EthernetIpDeviceContext, I: Ip>(
+pub(super) fn is_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
     ctx: &C,
     device_id: C::DeviceId,
 ) -> bool {
@@ -1136,7 +1140,7 @@ pub(super) fn is_routing_enabled<C: EthernetIpDeviceContext, I: Ip>(
 /// [`crate::device::set_routing_enabled`].
 ///
 /// See [`crate::device::set_routing_enabled`] for more information.
-pub(super) fn set_routing_enabled_inner<C: EthernetIpDeviceContext, I: Ip>(
+pub(super) fn set_routing_enabled_inner<C: EthernetIpLinkDeviceContext, I: Ip>(
     ctx: &mut C,
     device_id: C::DeviceId,
     enabled: bool,
@@ -1155,7 +1159,7 @@ pub(super) fn set_routing_enabled_inner<C: EthernetIpDeviceContext, I: Ip>(
 // TODO(rheacock): remove `cfg(test)` when this is used. Will probably be called
 // by a pub fn in the device mod.
 #[cfg(test)]
-pub(super) fn insert_static_arp_table_entry<C: EthernetIpDeviceContext>(
+pub(super) fn insert_static_arp_table_entry<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr: Ipv4Addr,
@@ -1171,7 +1175,7 @@ pub(super) fn insert_static_arp_table_entry<C: EthernetIpDeviceContext>(
 /// resolution.
 // TODO(rheacock): Remove when this is called from non-test code.
 #[cfg(test)]
-pub(super) fn insert_ndp_table_entry<C: EthernetIpDeviceContext>(
+pub(super) fn insert_ndp_table_entry<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr: UnicastAddr<Ipv6Addr>,
@@ -1180,7 +1184,7 @@ pub(super) fn insert_ndp_table_entry<C: EthernetIpDeviceContext>(
     <C as NdpHandler<_>>::insert_static_neighbor(ctx, device_id, addr, mac)
 }
 
-pub(super) fn set_ipv6_configuration<C: EthernetIpDeviceContext>(
+pub(super) fn set_ipv6_configuration<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
     config: Ipv6DeviceConfiguration,
@@ -1192,13 +1196,13 @@ pub(super) fn set_ipv6_configuration<C: EthernetIpDeviceContext>(
 ///
 /// After this function is called, the ethernet device should not be used and
 /// nothing else should be done with the state.
-pub(super) fn deinitialize<C: EthernetIpDeviceContext>(ctx: &mut C, device_id: C::DeviceId) {
+pub(super) fn deinitialize<C: EthernetIpLinkDeviceContext>(ctx: &mut C, device_id: C::DeviceId) {
     arp::deinitialize(ctx, device_id);
     <C as NdpHandler<_>>::deinitialize(ctx, device_id);
 }
 
-impl<C: EthernetIpDeviceContext> StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, C::DeviceId>
-    for C
+impl<C: EthernetIpLinkDeviceContext>
+    StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, C::DeviceId> for C
 {
     fn get_state_with(&self, id: C::DeviceId) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
         &self.get_state_with(id).link.ipv4_arp
@@ -1214,7 +1218,7 @@ impl<C: EthernetIpDeviceContext> StateContext<ArpState<EthernetLinkDevice, Ipv4A
 
 impl<
         B: BufferMut,
-        C: EthernetIpDeviceContext
+        C: EthernetIpLinkDeviceContext
             + FrameContext<B, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     > FrameContext<B, ArpFrameMetadata<EthernetLinkDevice, C::DeviceId>> for C
 {
@@ -1232,11 +1236,11 @@ impl<
     }
 }
 
-impl<C: EthernetIpDeviceContext> ArpDeviceIdContext<EthernetLinkDevice> for C {
+impl<C: EthernetIpLinkDeviceContext> ArpDeviceIdContext<EthernetLinkDevice> for C {
     type DeviceId = <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId;
 }
 
-impl<C: EthernetIpDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C {
+impl<C: EthernetIpLinkDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C {
     fn get_protocol_addr(
         &self,
         device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
@@ -1280,7 +1284,7 @@ impl<C: EthernetIpDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C 
     }
 }
 
-impl<C: EthernetIpDeviceContext> StateContext<NdpState<EthernetLinkDevice>, C::DeviceId> for C {
+impl<C: EthernetIpLinkDeviceContext> StateContext<NdpState<EthernetLinkDevice>, C::DeviceId> for C {
     fn get_state_with(&self, id: C::DeviceId) -> &NdpState<EthernetLinkDevice> {
         &self.get_state_with(id).link.ndp
     }
@@ -1290,7 +1294,7 @@ impl<C: EthernetIpDeviceContext> StateContext<NdpState<EthernetLinkDevice>, C::D
     }
 }
 
-impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
+impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
     fn get_link_layer_addr(&self, device_id: C::DeviceId) -> UnicastAddr<Mac> {
         self.get_state_with(device_id).link.mac
     }
@@ -1450,7 +1454,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
     }
 
     fn is_router(&self) -> bool {
-        IpDeviceContext::is_router::<Ipv6>(self)
+        IpLinkDeviceContext::is_router::<Ipv6>(self)
     }
 }
 
@@ -1468,7 +1472,7 @@ impl LinkDevice for EthernetLinkDevice {
 ///
 /// `mac_resolved` is the common logic used when a link layer address is
 /// resolved either by ARP or NDP.
-fn mac_resolved<C: EthernetIpDeviceContext>(
+fn mac_resolved<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
     address: IpAddr,
@@ -1505,7 +1509,7 @@ fn mac_resolved<C: EthernetIpDeviceContext>(
 ///
 /// `mac_resolution_failed` is the common logic used when a link layer address
 /// fails to resolve either by ARP or NDP.
-fn mac_resolution_failed<C: EthernetIpDeviceContext>(
+fn mac_resolution_failed<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
     address: IpAddr,
@@ -1613,7 +1617,7 @@ mod tests {
         type DeviceId = DummyDeviceId;
     }
 
-    impl IpDeviceContext<EthernetLinkDevice, EthernetTimerId<DummyDeviceId>> for DummyCtx {
+    impl IpLinkDeviceContext<EthernetLinkDevice, EthernetTimerId<DummyDeviceId>> for DummyCtx {
         fn is_router<I: Ip>(&self) -> bool {
             unimplemented!()
         }

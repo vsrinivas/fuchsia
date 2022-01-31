@@ -79,7 +79,7 @@ impl<D, I: Ip> RecvIpFrameMeta<D, I> {
 
 /// The context provided by the device layer to a particular IP device
 /// implementation.
-pub(crate) trait IpDeviceContext<D: LinkDevice, TimerId>:
+pub(crate) trait IpLinkDeviceContext<D: LinkDevice, TimerId>:
     DeviceIdContext<D>
     + CounterContext
     + RngContext
@@ -105,7 +105,7 @@ pub(crate) trait IpDeviceContext<D: LinkDevice, TimerId>:
     fn is_device_usable(&self, device: <Self as DeviceIdContext<D>>::DeviceId) -> bool;
 }
 
-impl<D: EventDispatcher> IpDeviceContext<EthernetLinkDevice, EthernetTimerId<EthernetDeviceId>>
+impl<D: EventDispatcher> IpLinkDeviceContext<EthernetLinkDevice, EthernetTimerId<EthernetDeviceId>>
     for Ctx<D>
 {
     fn is_router<I: Ip>(&self) -> bool {
@@ -117,11 +117,11 @@ impl<D: EventDispatcher> IpDeviceContext<EthernetLinkDevice, EthernetTimerId<Eth
     }
 }
 
-/// `IpDeviceContext` with an extra `B: BufferMut` parameter.
+/// `IpLinkDeviceContext` with an extra `B: BufferMut` parameter.
 ///
-/// `BufferIpDeviceContext` is used when sending a frame is required.
-trait BufferIpDeviceContext<D: LinkDevice, TimerId, B: BufferMut>:
-    IpDeviceContext<D, TimerId>
+/// `BufferIpLinkDeviceContext` is used when sending a frame is required.
+trait BufferIpLinkDeviceContext<D: LinkDevice, TimerId, B: BufferMut>:
+    IpLinkDeviceContext<D, TimerId>
     + FrameContext<B, <Self as DeviceIdContext<D>>::DeviceId>
     + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
     + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>
@@ -132,11 +132,11 @@ impl<
         D: LinkDevice,
         TimerId,
         B: BufferMut,
-        C: IpDeviceContext<D, TimerId>
+        C: IpLinkDeviceContext<D, TimerId>
             + FrameContext<B, <Self as DeviceIdContext<D>>::DeviceId>
             + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
             + RecvFrameContext<B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>,
-    > BufferIpDeviceContext<D, TimerId, B> for C
+    > BufferIpLinkDeviceContext<D, TimerId, B> for C
 {
 }
 
