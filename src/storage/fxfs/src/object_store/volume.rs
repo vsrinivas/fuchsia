@@ -54,6 +54,7 @@ impl RootVolume {
         .await?;
 
         store = ObjectStore::new_encrypted(root_store, store_handle).await?;
+        store.set_trace(self.filesystem.trace());
 
         let object_id = store.get_next_object_id();
 
@@ -97,7 +98,9 @@ impl RootVolume {
                 (object_id, ObjectDescriptor::Volume) => object_id,
                 _ => bail!(anyhow!(FxfsError::Inconsistent).context("Expected volume")),
             };
-        self.filesystem.object_manager().open_store(object_id).await
+        let store = self.filesystem.object_manager().open_store(object_id).await?;
+        store.set_trace(self.filesystem.trace());
+        Ok(store)
     }
 
     pub async fn open_or_create_volume(

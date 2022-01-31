@@ -15,7 +15,7 @@ use {
         object_store::{
             crypt::{Crypt, InsecureCrypt},
             filesystem::OpenOptions,
-            fsck::fsck,
+            fsck::{self},
         },
         remote_crypt::RemoteCrypt,
         server::FxfsServer,
@@ -30,6 +30,10 @@ use {
 struct TopLevel {
     #[argh(subcommand)]
     nested: SubCommand,
+
+    /// enable additional logging
+    #[argh(switch)]
+    verbose: bool,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -91,14 +95,15 @@ async fn main() -> Result<(), Error> {
     };
 
     match args {
-        TopLevel { nested: SubCommand::Format(_) } => {
+        TopLevel { nested: SubCommand::Format(_), .. } => {
             mkfs::mkfs(DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?), crypt)
                 .await?;
             Ok(())
         }
-        TopLevel { nested: SubCommand::Mount(_) } => {
-            let fs = mount::mount(
+        TopLevel { nested: SubCommand::Mount(_), verbose } => {
+            let fs = mount::mount_with_options(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?),
+                OpenOptions { trace: verbose, ..Default::default() },
                 crypt,
             )
             .await?;
@@ -108,14 +113,16 @@ async fn main() -> Result<(), Error> {
                     .ok_or(MissingStartupHandle)?;
             server.run(zx::Channel::from(startup_handle)).await
         }
-        TopLevel { nested: SubCommand::Fsck(_) } => {
+        TopLevel { nested: SubCommand::Fsck(_), verbose } => {
             let fs = mount::mount_with_options(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), true).await?),
-                OpenOptions { read_only: true, ..Default::default() },
+                OpenOptions { read_only: true, trace: verbose, ..Default::default() },
                 crypt,
             )
             .await?;
-            fsck(&fs).await
+            let mut options = fsck::default_options();
+            options.verbose = verbose;
+            fsck::fsck_with_options(&fs, options).await
         }
     }
 }

@@ -74,6 +74,11 @@ pub trait Filesystem: TransactionHandler {
     /// Returns the graveyard manager (whilst there exists a graveyard per store, the manager
     /// handles all of them).
     fn graveyard(&self) -> &Arc<Graveyard>;
+
+    /// Whether to enable verbose logging.
+    fn trace(&self) -> bool {
+        false
+    }
 }
 
 /// The context in which a transaction is being applied.
@@ -187,6 +192,7 @@ pub struct FxFilesystem {
     device_sender: OnceCell<Sender<DeviceHolder>>,
     closed: AtomicBool,
     read_only: bool,
+    trace: bool,
     crypt: Arc<dyn Crypt>,
     graveyard: Arc<Graveyard>,
 }
@@ -216,6 +222,7 @@ impl FxFilesystem {
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(false),
             read_only: false,
+            trace: false,
             crypt,
             graveyard: Graveyard::new(objects.clone()),
         });
@@ -265,6 +272,7 @@ impl FxFilesystem {
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(false),
             read_only: options.read_only,
+            trace: options.trace,
             crypt,
             graveyard: Graveyard::new(objects.clone()),
         });
@@ -275,6 +283,8 @@ impl FxFilesystem {
         }
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await.context("Journal replay failed")?;
+        filesystem.journal.set_trace(filesystem.trace);
+        filesystem.root_store().set_trace(filesystem.trace);
         if !options.read_only {
             // Start the async reaper.
             filesystem.graveyard.clone().reap_async();
@@ -427,6 +437,10 @@ impl Filesystem for FxFilesystem {
 
     fn graveyard(&self) -> &Arc<Graveyard> {
         &self.graveyard
+    }
+
+    fn trace(&self) -> bool {
+        self.trace
     }
 }
 

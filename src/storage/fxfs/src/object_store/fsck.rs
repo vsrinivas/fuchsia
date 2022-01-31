@@ -58,14 +58,8 @@ pub struct FsckOptions<F: Fn(&FsckIssue)> {
     pub verbose: bool,
 }
 
-/// Verifies the integrity of Fxfs.  See errors.rs for a list of checks performed.
-// TODO(fxbug.dev/87381): add checks for:
-//  + The root parent object store ID and root object store ID must not conflict with any other
-//    stores or the allocator.
-// TODO(csuter): This currently takes a write lock on the filesystem.  It would be nice if we could
-// take a snapshot.
-pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
-    let options = FsckOptions {
+pub fn default_options() -> FsckOptions<impl Fn(&FsckIssue)> {
+    FsckOptions {
         fail_on_warning: false,
         halt_on_error: false,
         do_slow_passes: true,
@@ -76,9 +70,18 @@ pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
                 log::warn!("{:?}", err.to_string())
             }
         },
-        verbose: true,
-    };
-    fsck_with_options(filesystem, options).await
+        verbose: false,
+    }
+}
+
+/// Verifies the integrity of Fxfs.  See errors.rs for a list of checks performed.
+// TODO(fxbug.dev/87381): add checks for:
+//  + The root parent object store ID and root object store ID must not conflict with any other
+//    stores or the allocator.
+// TODO(csuter): This currently takes a write lock on the filesystem.  It would be nice if we could
+// take a snapshot.
+pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
+    fsck_with_options(filesystem, default_options()).await
 }
 
 pub async fn fsck_with_options<F: Fn(&FsckIssue)>(

@@ -291,8 +291,9 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 
         let block_device = self.get_channel()?;
 
-        let mut args = vec![self.config.binary_path(), cstr!("mount")];
+        let mut args = vec![self.config.binary_path()];
         args.append(&mut self.config.generic_args());
+        args.push(cstr!("mount"));
         args.append(&mut self.config.mount_args());
 
         self.instance = Some(FSInstance::mount(block_device, args, mount_point)?);
@@ -308,8 +309,9 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 
         let block_device = self.get_channel()?;
 
-        let mut args = vec![self.config.binary_path(), cstr!("mkfs")];
+        let mut args = vec![self.config.binary_path()];
         args.append(&mut self.config.generic_args());
+        args.push(cstr!("mkfs"));
         args.append(&mut self.config.format_args());
 
         run_command_and_wait_for_clean_exit(args, block_device).context("failed to format device")
@@ -324,8 +326,9 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 
         let block_device = self.get_channel()?;
 
-        let mut args = vec![self.config.binary_path(), cstr!("fsck")];
+        let mut args = vec![self.config.binary_path()];
         args.append(&mut self.config.generic_args());
+        args.push(cstr!("fsck"));
 
         run_command_and_wait_for_clean_exit(args, block_device).context("failed to fsck device")
     }

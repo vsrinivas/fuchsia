@@ -69,7 +69,10 @@ use {
         collections::VecDeque,
         convert::TryFrom,
         ops::Bound,
-        sync::{Arc, Mutex, Weak},
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc, Mutex, Weak,
+        },
     },
     storage_device::Device,
 };
@@ -326,6 +329,7 @@ pub struct ObjectStore {
 
     // False if the keys are available and the store can be used.
     locked: Mutex<bool>,
+    trace: AtomicBool,
 }
 
 impl ObjectStore {
@@ -355,6 +359,7 @@ impl ObjectStore {
             mutations_cipher: Mutex::new(mutations_cipher),
             encrypted_mutations: Mutex::new(None),
             locked: Mutex::new(locked),
+            trace: AtomicBool::new(false),
         });
         store
     }
@@ -425,6 +430,15 @@ impl ObjectStore {
         };
 
         self.store_info_handle.get().unwrap().txn_write(transaction, 0u64, buf.as_ref()).await
+    }
+
+    pub fn set_trace(&self, trace: bool) {
+        log::info!(
+            "OS {} tracing {}",
+            self.store_object_id(),
+            if trace { "enabled" } else { "disabled" },
+        );
+        self.trace.store(trace, Ordering::Relaxed);
     }
 
     pub fn is_root(&self) -> bool {
@@ -1164,6 +1178,11 @@ impl Mutations for ObjectStore {
             return Ok(());
         }
 
+        let trace = self.trace.load(Ordering::Relaxed);
+        if trace {
+            log::info!("OS {} begin flush", self.store_object_id());
+        }
+
         let parent_store = self.parent_store.as_ref().unwrap();
 
         let reservation = object_manager.metadata_reservation();
@@ -1388,6 +1407,17 @@ impl Mutations for ObjectStore {
         parent_store.remove_from_graveyard(&mut transaction, new_object_tree_layer_object_id);
         parent_store.remove_from_graveyard(&mut transaction, new_extent_tree_layer_object_id);
 
+        if trace {
+            log::info!(
+                "OS {} compacting {} obj, {} ext -> {} obj, {} ext layers (sz {})",
+                self.store_object_id(),
+                old_object_tree_layers.len(),
+                old_extent_tree_layers.len(),
+                new_object_tree_layers.as_ref().map(|v| v.len()).unwrap_or(0),
+                new_extent_tree_layers.len(),
+                total_layer_size
+            );
+        }
         transaction
             .commit_with_callback(|_| {
                 let mut store_info = self.store_info.lock().unwrap();
@@ -1423,6 +1453,9 @@ impl Mutations for ObjectStore {
             parent_store.tombstone(encrypted_mutations_object_id, txn_options).await?;
         }
 
+        if trace {
+            log::info!("OS {} end flush", self.store_object_id());
+        }
         Ok(())
     }
 

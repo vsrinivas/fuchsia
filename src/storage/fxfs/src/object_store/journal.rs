@@ -59,7 +59,10 @@ use {
     std::{
         clone::Clone,
         ops::Bound,
-        sync::{Arc, Mutex},
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc, Mutex,
+        },
         task::{Poll, Waker},
         vec::Vec,
     },
@@ -160,6 +163,7 @@ pub struct Journal {
     commit_mutex: futures::lock::Mutex<()>,
     writer_mutex: futures::lock::Mutex<()>,
     sync_mutex: futures::lock::Mutex<()>,
+    trace: AtomicBool,
 }
 
 struct Inner {
@@ -235,7 +239,13 @@ impl Journal {
             commit_mutex: futures::lock::Mutex::new(()),
             writer_mutex: futures::lock::Mutex::new(()),
             sync_mutex: futures::lock::Mutex::new(()),
+            trace: AtomicBool::new(false),
         }
+    }
+
+    pub fn set_trace(&self, trace: bool) {
+        log::info!("J tracing {}", if trace { "enabled" } else { "disabled" },);
+        self.trace.store(trace, Ordering::Relaxed);
     }
 
     pub fn journal_file_offset(&self) -> u64 {
@@ -918,7 +928,14 @@ impl Journal {
 
         let needs_flush = self.inner.lock().unwrap().device_flushed_offset < checkpoint_offset;
         if needs_flush {
+            let trace = self.trace.load(Ordering::Relaxed);
+            if trace {
+                log::info!("J start flush device");
+            }
             self.handle.get().unwrap().flush_device().await?;
+            if trace {
+                log::info!("J end flush device");
+            }
 
             // We need to write a DidFlushDevice record at some point, but if we are in the
             // process of shutting down the filesystem, we want to leave to journal clean to
@@ -936,6 +953,9 @@ impl Journal {
             // Tell the allocator that we flushed the device so that it can now start using
             // space that was deallocated.
             self.objects.allocator().did_flush_device(checkpoint_offset).await;
+            if trace {
+                log::info!("J did flush device");
+            }
         }
 
         Ok(())
@@ -1107,10 +1127,17 @@ impl Journal {
     }
 
     async fn compact(&self) -> Result<(), Error> {
+        let trace = self.trace.load(Ordering::Relaxed);
         log::debug!("Compaction starting");
+        if trace {
+            log::info!("J start compaction");
+        }
         trace_duration!("Journal::compact");
         self.objects.flush().await?;
         self.write_super_block().await?;
+        if trace {
+            log::info!("J end compaction");
+        }
         log::debug!("Compaction finished");
         Ok(())
     }

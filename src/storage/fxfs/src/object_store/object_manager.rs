@@ -577,7 +577,12 @@ impl ObjectManager {
                     .cloned()
                     .unwrap()
                     .reserve(inner.required_reservation() - inner.borrowed_metadata_space)
-                    .unwrap(),
+                    .expect(&format!(
+                        "Failed to reserve {} - {} = {} bytes",
+                        inner.required_reservation(),
+                        inner.borrowed_metadata_space,
+                        inner.required_reservation() - inner.borrowed_metadata_space
+                    )),
             )
             .unwrap();
     }
