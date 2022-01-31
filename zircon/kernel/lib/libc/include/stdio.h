@@ -49,6 +49,22 @@ class FILE {
 
 #define stdout (&FILE::stdout_)
 
+inline int fputc(int c, FILE* f) {
+  const unsigned char uc = static_cast<unsigned char>(c);
+  return f->Write({reinterpret_cast<const char*>(&uc), 1}) == 1 ? uc : -1;
+}
+
+inline int putc(int c, FILE* f) { return fputc(c, f); }
+
+inline int putchar(int c) { return fputc(c, stdout); }
+
+inline int fputs(const char* s, FILE* f) {
+  ktl::string_view str(s);
+  return f->Write(str) == static_cast<int>(str.size()) ? 0 : -1;
+}
+
+inline int puts(const char* s) { return fputs(s, stdout) == 0 ? putchar('\n') : -1; }
+
 #else  // !__cplusplus
 
 // C users just need the function declarations.
