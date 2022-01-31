@@ -31,31 +31,10 @@ size_checker_input = {
       creep_limit = 40136  # 0.038 MiB
     },
     {
-      component = "Software Delivery"
-      src = [ "src/sys/pkg" ]
+      component = "Cobalt"
+      src = [ "src/cobalt" ]
       limit = 104857600
-      creep_limit = 73728  # 0.070 MiB
-    },
-    {
-      component = "Connectivity"
-      src = [ "src/connectivity" ]
-      limit = 104857600
-      creep_limit = 75072  # 0.072 MiB
-    },
-    {
-      component = "Time"
-      src = [ "src/sys/time" ]
-      limit = 104857600
-      creep_limit = 16384  # 0.016 MiB
-    },
-    {
-      component = "Diagnostics"
-      src = [
-        "garnet/bin/log_listener",
-        "src/diagnostics",
-      ]
-      limit = 104857600
-      creep_limit = 49144  # 0.047 MiB
+      creep_limit = 32768  # 0.031 MiB
     },
     {
       component = "Component Framework"
@@ -68,6 +47,27 @@ size_checker_input = {
       ]
       limit = 104857600
       creep_limit = 200648  # 0.191 MiB
+    },
+    {
+      component = "Config Data"
+      src = [ "build/images/fuchsia/fuchsia_config-data" ]
+      limit = 104857600
+      creep_limit = 507080  # 0.484 MiB
+    },
+    {
+      component = "Connectivity"
+      src = [ "src/connectivity" ]
+      limit = 104857600
+      creep_limit = 75072  # 0.072 MiB
+    },
+    {
+      component = "Diagnostics"
+      src = [
+        "garnet/bin/log_listener",
+        "src/diagnostics",
+      ]
+      limit = 104857600
+      creep_limit = 49144  # 0.047 MiB
     },
     {
       component = "Graphics"
@@ -85,22 +85,22 @@ size_checker_input = {
       creep_limit = 24576  # 0.023 MiB
     },
     {
-      component = "Cobalt"
-      src = [ "src/cobalt" ]
-      limit = 104857600
-      creep_limit = 32768  # 0.031 MiB
-    },
-    {
-      component = "Config Data"
-      src = [ "build/images/fuchsia/fuchsia_config-data" ]
-      limit = 104857600
-      creep_limit = 507080  # 0.484 MiB
-    },
-    {
       component = "SetUI"
       src = [ "garnet/bin/setui" ]
       limit = 104857600
       creep_limit = 57504  # 0.055 MiB
+    },
+    {
+      component = "Software Delivery"
+      src = [ "src/sys/pkg" ]
+      limit = 104857600
+      creep_limit = 73728  # 0.070 MiB
+    },
+    {
+      component = "Time"
+      src = [ "src/sys/time" ]
+      limit = 104857600
+      creep_limit = 16384  # 0.016 MiB
     },
   ]
 
