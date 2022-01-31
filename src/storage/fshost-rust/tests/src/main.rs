@@ -10,8 +10,8 @@ use {
     },
     fidl_fuchsia_boot as fboot, fidl_fuchsia_fshost as fshost, fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_logger as flogger,
-    fuchsia_component_test::{
-        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    fuchsia_component_test::new::{
+        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
     },
     futures::FutureExt,
 };
@@ -27,41 +27,33 @@ async fn new_realm() -> Result<RealmInstance, Error> {
     let mocks = mocks::new_mocks().await;
     let builder = RealmBuilder::new().await?;
     println!("using {} as fshost", FSHOST_URL);
+    let fshost = builder.add_child("fshost", FSHOST_URL, ChildOptions::new().eager()).await?;
     builder
-        .add_child("fshost", FSHOST_URL, ChildOptions::new())
-        .await?
-        .mark_as_eager("fshost")
-        .await?
         .add_route(
-            RouteBuilder::protocol_marker::<fshost::AdminMarker>()
-                .source(RouteEndpoint::component("fshost"))
-                .targets(vec![RouteEndpoint::AboveRoot]),
+            Route::new()
+                .capability(Capability::protocol::<fshost::AdminMarker>())
+                .from(&fshost)
+                .to(Ref::parent()),
         )
-        .await?
+        .await?;
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<flogger::LogSinkMarker>()
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component("fshost")]),
+            Route::new()
+                .capability(Capability::protocol::<flogger::LogSinkMarker>())
+                .from(Ref::parent())
+                .to(&fshost),
         )
-        .await?
-        .add_mock_child("mocks", move |h| mocks(h).boxed(), ChildOptions::new())
-        .await?
+        .await?;
+    let mocks =
+        builder.add_local_child("mocks", move |h| mocks(h).boxed(), ChildOptions::new()).await?;
+    builder
         .add_route(
-            RouteBuilder::protocol_marker::<fboot::ArgumentsMarker>()
-                .source(RouteEndpoint::component("mocks"))
-                .targets(vec![RouteEndpoint::component("fshost")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol_marker::<fboot::ItemsMarker>()
-                .source(RouteEndpoint::component("mocks"))
-                .targets(vec![RouteEndpoint::component("fshost")]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::directory("dev", "/dev", fio2::RW_STAR_DIR)
-                .source(RouteEndpoint::component("mocks"))
-                .targets(vec![RouteEndpoint::component("fshost")]),
+            Route::new()
+                .capability(Capability::protocol::<fboot::ArgumentsMarker>())
+                .capability(Capability::protocol::<fboot::ItemsMarker>())
+                .capability(Capability::directory("dev").path("/dev").rights(fio2::RW_STAR_DIR))
+                .from(&mocks)
+                .to(&fshost),
         )
         .await?;
     Ok(builder.build().await?)

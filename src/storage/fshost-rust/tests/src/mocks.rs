@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_boot as fboot, fidl_fuchsia_io as fio,
-    fuchsia_component_test::mock::MockHandles,
+    fuchsia_component_test::LocalComponentHandles,
     futures::{future::BoxFuture, FutureExt, StreamExt},
     vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path, service},
 };
@@ -15,13 +15,14 @@ use {
 const ZBI_TYPE_STORAGE_RAMDISK: u32 = 0x4b534452;
 
 pub async fn new_mocks(
-) -> impl Fn(MockHandles) -> BoxFuture<'static, Result<(), Error>> + Sync + Send + 'static {
-    let mock = move |mock_handles: MockHandles| run_mocks(mock_handles).boxed();
+) -> impl Fn(LocalComponentHandles) -> BoxFuture<'static, Result<(), Error>> + Sync + Send + 'static
+{
+    let mock = move |handles: LocalComponentHandles| run_mocks(handles).boxed();
 
     mock
 }
 
-async fn run_mocks(mock_handles: MockHandles) -> Result<(), Error> {
+async fn run_mocks(handles: LocalComponentHandles) -> Result<(), Error> {
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
             fboot::ArgumentsMarker::NAME => service::host(run_boot_args),
@@ -41,7 +42,7 @@ async fn run_mocks(mock_handles: MockHandles) -> Result<(), Error> {
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         fio::MODE_TYPE_DIRECTORY,
         Path::dot(),
-        fidl::endpoints::ServerEnd::from(mock_handles.outgoing_dir.into_channel()),
+        fidl::endpoints::ServerEnd::from(handles.outgoing_dir.into_channel()),
     );
     scope.wait().await;
 
