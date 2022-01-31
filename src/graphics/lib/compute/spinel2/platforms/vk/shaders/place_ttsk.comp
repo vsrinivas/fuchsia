@@ -141,17 +141,16 @@ SPN_BUFFER_DEFINE_PLACE(readonly);
 //  0                      +----------------+                 63
 //  | PAYLOAD/TTSB/TTPB ID | ZERO | IS_TTSK | SPAN |  X  |  Y  |
 //  +----------------------+------+---------+------+-----+-----+
-//  |          27          |   4  |    1    |  15  |  9  |  8  |
+//  |          27          |   4  |    1    |  14  |  9  |  9  |
 //
 //  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //
 // TTCK (64-BIT COMPARE) -- DEFAULT
 //
-//  0                                                           63
-//  | PAYLOAD/TTSB/TTPB_ID | PREFIX | ESCAPE | LAYER |  X  |  Y  |
-//  +----------------------+--------+--------+-------+-----+-----+
-//  |          27          |    1   |    1   |   18  |  9  |  8  |
-//
+//  0                                                  63
+//  | PAYLOAD/TTSB/TTPB_ID | PREFIX | LAYER |  X  |  Y  |
+//  +----------------------+--------+-------+-----+-----+
+//  |          27          |    1   |   18  |  9  |  9  |
 //
 // TTSK keys are simpler than TTPK keys so we can be fast and testing
 // one bit in the span is enough.

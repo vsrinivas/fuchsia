@@ -433,9 +433,9 @@
 //
 //   - A virtual surface of at least 8K x 8K
 //
-//   - A physical surface of __don't really care__ because it's
-//     advantageous to tile the physical surface since it's likely
-//     to shrink the post-place TTCK sorting step.
+//   - A very large physical surface because it's advantageous to tile the
+//     physical surface since it's likely to shrink the post-place TTCK sorting
+//     step.
 //
 //                             TTXB BITS
 //    EXTENT     +------------------------------------+
@@ -451,7 +451,7 @@
 //               |   5     6     7     8*    9*   10    11    12    13  |
 //          +----+------------------------------------------------------+
 //    TILE  |  2 |  128   256   512  1024  2048  4096  8192 16384 32768 |
-//    AXIST |  3 |  256   512  1024  2048  4096  8192 16384 32768 65536 |
+//    AXIS  |  3 |  256   512  1024  2048  4096  8192 16384 32768 65536 |
 //    LOG2  |  4 |  512  1024  2048  4096  8192 16384 32768 65536  128K |
 //          +----+------------------------------------------------------+
 //   TILES^2     | 1024  4096 16384 65536  256K    1M    4M   16M   64M |
@@ -641,15 +641,17 @@
 //
 // TTCK (64-BIT COMPARE) -- DEFAULT
 //
-//  0                                                           63
-//  | PAYLOAD/TTSB/TTPB_ID | PREFIX | ESCAPE | LAYER |  X  |  Y  |
-//  +----------------------+--------+--------+-------+-----+-----+
-//  |          27          |    1   |    1   |   18  |  9  |  8  |
+// NOTE(allanmac): Forthcoming changes will increase the TTCK keyval to 96 bits.
 //
-//  0                                                  32                     63
-//  | PAYLOAD/TTSB/TTPB_ID | PREFIX | ESCAPE | LAYER_LO | LAYER_HI |  X  |  Y  |
-//  +----------------------+--------+--------+----------+----------+-----+-----+
-//  |          27          |    1   |    1   |     3    |    15    |  9  |  8  |
+//  0                                                  63
+//  | PAYLOAD/TTSB/TTPB_ID | PREFIX | LAYER |  X  |  Y  |
+//  +----------------------+--------+-------+-----+-----+
+//  |          27          |    1   |   18  |  9  |  9  |
+//
+//  0                                         32                     63
+//  | PAYLOAD/TTSB/TTPB_ID | PREFIX | LAYER_LO | LAYER_HI |  X  |  Y  |
+//  +----------------------+--------+----------+----------+-----+-----+
+//  |          27          |    1   |     4    |    14    |  9  |  9  |
 //
 //
 // TTCK.X and TTCK.Y are unsigned
@@ -657,28 +659,26 @@
 //  +-----------+-------------+
 //  | TILE SIZE | MAX SURFACE |
 //  +-----------+-------------+
-//  |   16x16   |   8K x 4K   | NVIDIA, AMD
-//  |    8x8    |   4K x 2K   | INTEL GEN, Mali G52+
-//  |    4x4    |   2K x 1K   | Mali G31, SwiftShader
+//  |   16x16   |   8K x 8K   | NVIDIA, AMD
+//  |    8x8    |   4K x 4K   | INTEL GEN+, Mali G52+
+//  |    4x4    |   2K x 2K   | Mali G31, SwiftShader
 //  +-----------+-------------+
 //
 
 #define SPN_TTCK_LO_BITS_TTXB_ID                 SPN_TAGGED_BLOCK_ID_BITS_ID
 #define SPN_TTCK_LO_BITS_PREFIX                  1
-#define SPN_TTCK_LO_BITS_ESCAPE                  1
 
 #define SPN_TTCK_LO_HI_BITS_LAYER                18
-#define SPN_TTCK_LO_BITS_LAYER                   3
-#define SPN_TTCK_HI_BITS_LAYER                   15
+#define SPN_TTCK_LO_BITS_LAYER                   4
+#define SPN_TTCK_HI_BITS_LAYER                   14
 
 #define SPN_TTCK_HI_BITS_X                       9
-#define SPN_TTCK_HI_BITS_Y                       8
+#define SPN_TTCK_HI_BITS_Y                       9
 #define SPN_TTCK_HI_BITS_XY                      (SPN_TTCK_HI_BITS_X + SPN_TTCK_HI_BITS_Y)
 #define SPN_TTCK_HI_BITS_LXY                     (SPN_TTCK_LO_HI_BITS_LAYER + SPN_TTCK_HI_BITS_X + SPN_TTCK_HI_BITS_Y)
 
 #define SPN_TTCK_LO_OFFSET_PREFIX                SPN_TTCK_LO_BITS_TTXB_ID
-#define SPN_TTCK_LO_OFFSET_ESCAPE                (SPN_TTCK_LO_OFFSET_PREFIX + SPN_TTCK_LO_BITS_PREFIX)
-#define SPN_TTCK_LO_OFFSET_LAYER                 (SPN_TTCK_LO_OFFSET_ESCAPE + SPN_TTCK_LO_BITS_ESCAPE)
+#define SPN_TTCK_LO_OFFSET_LAYER                 (SPN_TTCK_LO_OFFSET_PREFIX + SPN_TTCK_LO_BITS_PREFIX)
 
 #define SPN_TTCK_HI_OFFSET_X                     (32 - SPN_TTCK_HI_BITS_XY)
 #define SPN_TTCK_HI_OFFSET_Y                     (32 - SPN_TTCK_HI_BITS_Y)
@@ -686,7 +686,6 @@
 
 #define SPN_TTCK_LO_MASK_TTXB_ID                 SPN_BITS_TO_MASK(SPN_TTCK_LO_BITS_TTXB_ID)
 #define SPN_TTCK_LO_MASK_PREFIX                  SPN_BITS_TO_MASK_AT(SPN_TTCK_LO_OFFSET_PREFIX,SPN_TTCK_LO_BITS_PREFIX)
-#define SPN_TTCK_LO_MASK_ESCAPE                  SPN_BITS_TO_MASK_AT(SPN_TTCK_LO_OFFSET_ESCAPE,SPN_TTCK_LO_BITS_ESCAPE)
 #define SPN_TTCK_LO_MASK_LAYER                   SPN_BITS_TO_MASK_AT(SPN_TTCK_LO_OFFSET_LAYER,SPN_TTCK_LO_BITS_LAYER)
 
 #define SPN_TTCK_HI_MASK_LAYER                   SPN_BITS_TO_MASK(SPN_TTCK_HI_BITS_LAYER)
@@ -697,8 +696,6 @@
 
 #define SPN_TTCK_IS_PREFIX(t_)                   ((t_[0] & SPN_TTCK_LO_MASK_PREFIX) != 0)
 #define SPN_TTCK_LO_IS_PREFIX(t_lo_)             ((t_lo_ & SPN_TTCK_LO_MASK_PREFIX) != 0)
-
-#define SPN_TTCK_IS_ESCAPE(t_)                   ((t_[0] & SPN_TTCK_LO_MASK_ESCAPE) != 0)
 
 #define SPN_TTCK_GET_LAYER(t_)                   SPN_GLSL_EXTRACT_UVEC2_UINT(t_,SPN_TTCK_LO_OFFSET_LAYER,SPN_TTCK_LO_HI_BITS_LAYER)
 #define SPN_TTCK_SET_LAYER(t_,l_)                SPN_GLSL_INSERT_UVEC2_UINT(t_,l_,SPN_TTCK_LO_OFFSET_LAYER,SPN_TTCK_LO_HI_BITS_LAYER)
