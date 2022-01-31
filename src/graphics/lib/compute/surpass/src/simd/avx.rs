@@ -26,6 +26,9 @@ impl Default for m8x16 {
 }
 
 #[derive(Clone, Copy, Debug)]
+pub struct m32x4(__m128i);
+
+#[derive(Clone, Copy, Debug)]
 pub struct m32x8(__m256i);
 
 impl m32x8 {
@@ -74,24 +77,6 @@ impl Default for m32x8 {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct u8x8(i64);
-
-impl From<f32x8> for u8x8 {
-    fn from(val: f32x8) -> Self {
-        unsafe {
-            let _i32x8 = _mm256_cvtps_epi32(val.0);
-            let _i16x16 = _mm256_packs_epi32(_i32x8, _mm256_setzero_si256());
-            let _i16x16 =
-                _mm256_permutevar8x32_epi32(_i16x16, _mm256_setr_epi32(0, 1, 4, 5, 0, 0, 0, 0));
-            let _i16x8 = _mm256_castsi256_si128(_i16x16);
-            let _u8x16 = _mm_packus_epi16(_i16x8, _mm_setzero_si128());
-
-            Self(_mm_cvtsi128_si64x(_u8x16))
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct u8x32(__m256i);
 
@@ -100,94 +85,27 @@ impl u8x32 {
         Self(unsafe { _mm256_set1_epi8(i8::from_ne_bytes(val.to_ne_bytes())) })
     }
 
-    pub fn swizzle<
-        const I0: usize,
-        const I1: usize,
-        const I2: usize,
-        const I3: usize,
-        const I4: usize,
-        const I5: usize,
-        const I6: usize,
-        const I7: usize,
-        const I8: usize,
-        const I9: usize,
-        const I10: usize,
-        const I11: usize,
-        const I12: usize,
-        const I13: usize,
-        const I14: usize,
-        const I15: usize,
-        const I16: usize,
-        const I17: usize,
-        const I18: usize,
-        const I19: usize,
-        const I20: usize,
-        const I21: usize,
-        const I22: usize,
-        const I23: usize,
-        const I24: usize,
-        const I25: usize,
-        const I26: usize,
-        const I27: usize,
-        const I28: usize,
-        const I29: usize,
-        const I30: usize,
-        const I31: usize,
-    >(
-        self,
-    ) -> Self {
-        Self(unsafe {
+    pub fn from_u32_interleaved(vals: [u32x8; 4]) -> Self {
+        unsafe {
+            let mask = _mm256_set1_epi32(0xFF);
+
+            let _01 = _mm256_packus_epi32(
+                _mm256_and_si256(vals[0].0, mask),
+                _mm256_and_si256(vals[1].0, mask),
+            );
+            let _23 = _mm256_packus_epi32(
+                _mm256_and_si256(vals[2].0, mask),
+                _mm256_and_si256(vals[3].0, mask),
+            );
+            let _0123 = _mm256_packus_epi16(_01, _23);
+
             let shuffle = _mm256_set_epi8(
-                I31 as i8,
-                I30 as i8,
-                I29 as i8,
-                I28 as i8,
-                I27 as i8,
-                I26 as i8,
-                I25 as i8,
-                I24 as i8,
-                I23 as i8,
-                I22 as i8,
-                I21 as i8,
-                I20 as i8,
-                I19 as i8,
-                I18 as i8,
-                I17 as i8,
-                I16 as i8,
-                I15 as i8 ^ 0b1_0000,
-                I14 as i8 ^ 0b1_0000,
-                I13 as i8 ^ 0b1_0000,
-                I12 as i8 ^ 0b1_0000,
-                I11 as i8 ^ 0b1_0000,
-                I10 as i8 ^ 0b1_0000,
-                I9 as i8 ^ 0b1_0000,
-                I8 as i8 ^ 0b1_0000,
-                I7 as i8 ^ 0b1_0000,
-                I6 as i8 ^ 0b1_0000,
-                I5 as i8 ^ 0b1_0000,
-                I4 as i8 ^ 0b1_0000,
-                I3 as i8 ^ 0b1_0000,
-                I2 as i8 ^ 0b1_0000,
-                I1 as i8 ^ 0b1_0000,
-                I0 as i8 ^ 0b1_0000,
+                15, 11, 7, 3, 14, 10, 6, 2, 13, 9, 5, 1, 12, 8, 4, 0, 15, 11, 7, 3, 14, 10, 6, 2,
+                13, 9, 5, 1, 12, 8, 4, 0,
             );
 
-            let shuffle_lo = _mm256_shuffle_epi8(self.0, shuffle);
-
-            let mut _i16x8_lo = _mm_undefined_si128();
-            let mut _i16x8_hi = _mm_undefined_si128();
-            _mm256_storeu2_m128i(
-                ptr::addr_of_mut!(_i16x8_hi),
-                ptr::addr_of_mut!(_i16x8_lo),
-                self.0,
-            );
-            let swapped = _mm256_loadu2_m128i(&_i16x8_lo, &_i16x8_hi);
-
-            let shuffle_hi = _mm256_shuffle_epi8(swapped, shuffle);
-            let mask = _mm256_cmpgt_epi8(shuffle, _mm256_set1_epi8(15));
-
-            _mm256_blendv_epi8(shuffle_hi, shuffle_lo, mask)
-        })
+            Self(_mm256_shuffle_epi8(_0123, shuffle))
+        }
     }
 }
 
@@ -338,6 +256,104 @@ impl Shr for i32x8 {
 }
 
 #[derive(Clone, Copy, Debug)]
+pub struct u32x4(__m128i);
+
+impl u32x4 {
+    pub fn splat(val: u32) -> Self {
+        Self(unsafe { _mm_set1_epi32(val as i32) })
+    }
+}
+
+impl From<u32x4> for [u8; 4] {
+    fn from(val: u32x4) -> Self {
+        unsafe {
+            let mask = _mm_set1_epi32(0xFF);
+            let val = _mm_and_si128(val.0, mask);
+
+            let val = _mm_packus_epi32(val, val);
+            let val = _mm_packus_epi16(val, val);
+
+            _mm_cvtsi128_si32(val).to_ne_bytes()
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct u32x8(__m256i);
+
+impl u32x8 {
+    pub fn splat(val: u32) -> Self {
+        Self(unsafe { _mm256_set1_epi32(val as i32) })
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct f32x4(__m128);
+
+impl f32x4 {
+    pub fn new(vals: [f32; 4]) -> Self {
+        Self(unsafe { _mm_set_ps(vals[3], vals[2], vals[1], vals[0]) })
+    }
+
+    pub fn splat(val: f32) -> Self {
+        Self(unsafe { _mm_set1_ps(val) })
+    }
+
+    pub fn from_bits(val: u32x4) -> Self {
+        Self(unsafe { _mm_castsi128_ps(val.0) })
+    }
+
+    pub fn to_bits(self) -> u32x4 {
+        u32x4(unsafe { _mm_castps_si128(self.0) })
+    }
+
+    pub fn insert<const INDEX: i32>(self, val: f32) -> Self {
+        Self(unsafe {
+            _mm_castsi128_ps(_mm_insert_epi32::<INDEX>(
+                _mm_castps_si128(self.0),
+                val.to_bits() as i32,
+            ))
+        })
+    }
+
+    pub fn le(self, other: Self) -> m32x4 {
+        m32x4(unsafe { _mm_castps_si128(_mm_cmp_ps(self.0, other.0, _CMP_LE_OQ)) })
+    }
+
+    pub fn select(self, other: Self, mask: m32x4) -> Self {
+        Self(unsafe { _mm_blendv_ps(other.0, self.0, _mm_castsi128_ps(mask.0)) })
+    }
+
+    pub fn clamp(self, min: Self, max: Self) -> Self {
+        Self(unsafe { _mm_min_ps(_mm_max_ps(self.0, min.0), max.0) })
+    }
+
+    pub fn sqrt(self) -> Self {
+        Self(unsafe { _mm_sqrt_ps(self.0) })
+    }
+
+    pub fn mul_add(self, a: Self, b: Self) -> Self {
+        Self(unsafe { _mm_fmadd_ps(self.0, a.0, b.0) })
+    }
+}
+
+impl Add for f32x4 {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(unsafe { _mm_add_ps(self.0, rhs.0) })
+    }
+}
+
+impl Mul for f32x4 {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self(unsafe { _mm_mul_ps(self.0, rhs.0) })
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct f32x8(__m256);
 
 impl f32x8 {
@@ -347,6 +363,14 @@ impl f32x8 {
 
     pub fn indexed() -> Self {
         Self(unsafe { _mm256_set_ps(7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0) })
+    }
+
+    pub fn from_bits(val: u32x8) -> Self {
+        Self(unsafe { _mm256_castsi256_ps(val.0) })
+    }
+
+    pub fn to_bits(self) -> u32x8 {
+        u32x8(unsafe { _mm256_castps_si256(self.0) })
     }
 
     #[cfg(test)]
@@ -375,13 +399,11 @@ impl f32x8 {
     }
 
     pub fn min(self, other: Self) -> Self {
-        let mask = self.le(other);
-        self.select(other, mask)
+        Self(unsafe { _mm256_min_ps(self.0, other.0) })
     }
 
     pub fn max(self, other: Self) -> Self {
-        let mask = other.le(self);
-        self.select(other, mask)
+        Self(unsafe { _mm256_max_ps(self.0, other.0) })
     }
 
     pub fn clamp(self, min: Self, max: Self) -> Self {

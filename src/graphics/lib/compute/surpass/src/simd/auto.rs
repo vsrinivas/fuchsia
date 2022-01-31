@@ -16,6 +16,9 @@ impl m8x16 {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
+pub struct m32x4([u32; 4]);
+
+#[derive(Clone, Copy, Debug, Default)]
 pub struct m32x8([u32; 8]);
 
 impl m32x8 {
@@ -90,75 +93,40 @@ impl u8x32 {
         ])
     }
 
-    pub fn swizzle<
-        const I0: usize,
-        const I1: usize,
-        const I2: usize,
-        const I3: usize,
-        const I4: usize,
-        const I5: usize,
-        const I6: usize,
-        const I7: usize,
-        const I8: usize,
-        const I9: usize,
-        const I10: usize,
-        const I11: usize,
-        const I12: usize,
-        const I13: usize,
-        const I14: usize,
-        const I15: usize,
-        const I16: usize,
-        const I17: usize,
-        const I18: usize,
-        const I19: usize,
-        const I20: usize,
-        const I21: usize,
-        const I22: usize,
-        const I23: usize,
-        const I24: usize,
-        const I25: usize,
-        const I26: usize,
-        const I27: usize,
-        const I28: usize,
-        const I29: usize,
-        const I30: usize,
-        const I31: usize,
-    >(
-        self,
-    ) -> Self {
+    pub fn from_u32_interleaved(vals: [u32x8; 4]) -> Self {
         Self([
-            self.0[I0],
-            self.0[I1],
-            self.0[I2],
-            self.0[I3],
-            self.0[I4],
-            self.0[I5],
-            self.0[I6],
-            self.0[I7],
-            self.0[I8],
-            self.0[I9],
-            self.0[I10],
-            self.0[I11],
-            self.0[I12],
-            self.0[I13],
-            self.0[I14],
-            self.0[I15],
-            self.0[I16],
-            self.0[I17],
-            self.0[I18],
-            self.0[I19],
-            self.0[I20],
-            self.0[I21],
-            self.0[I22],
-            self.0[I23],
-            self.0[I24],
-            self.0[I25],
-            self.0[I26],
-            self.0[I27],
-            self.0[I28],
-            self.0[I29],
-            self.0[I30],
-            self.0[I31],
+            vals[0].0[0] as u8,
+            vals[1].0[0] as u8,
+            vals[2].0[0] as u8,
+            vals[3].0[0] as u8,
+            vals[0].0[1] as u8,
+            vals[1].0[1] as u8,
+            vals[2].0[1] as u8,
+            vals[3].0[1] as u8,
+            vals[0].0[2] as u8,
+            vals[1].0[2] as u8,
+            vals[2].0[2] as u8,
+            vals[3].0[2] as u8,
+            vals[0].0[3] as u8,
+            vals[1].0[3] as u8,
+            vals[2].0[3] as u8,
+            vals[3].0[3] as u8,
+            vals[0].0[4] as u8,
+            vals[1].0[4] as u8,
+            vals[2].0[4] as u8,
+            vals[3].0[4] as u8,
+            vals[0].0[5] as u8,
+            vals[1].0[5] as u8,
+            vals[2].0[5] as u8,
+            vals[3].0[5] as u8,
+            vals[0].0[6] as u8,
+            vals[1].0[6] as u8,
+            vals[2].0[6] as u8,
+            vals[3].0[6] as u8,
+            vals[0].0[7] as u8,
+            vals[1].0[7] as u8,
+            vals[2].0[7] as u8,
+            vals[3].0[7] as u8,
         ])
     }
 }
@@ -349,6 +317,118 @@ impl Shr for i32x8 {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
+pub struct u32x4([u32; 4]);
+
+impl u32x4 {
+    pub fn splat(val: u32) -> Self {
+        Self([val, val, val, val])
+    }
+}
+
+impl From<u32x4> for [u8; 4] {
+    fn from(val: u32x4) -> Self {
+        [val.0[0] as u8, val.0[1] as u8, val.0[2] as u8, val.0[3] as u8]
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct u32x8([u32; 8]);
+
+impl u32x8 {
+    pub fn splat(val: u32) -> Self {
+        Self([val, val, val, val, val, val, val, val])
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct f32x4([f32; 4]);
+
+impl f32x4 {
+    pub fn new(vals: [f32; 4]) -> Self {
+        Self(vals)
+    }
+
+    pub fn splat(val: f32) -> Self {
+        Self([val, val, val, val])
+    }
+
+    pub fn from_bits(val: u32x4) -> Self {
+        Self([
+            f32::from_bits(val.0[0]),
+            f32::from_bits(val.0[1]),
+            f32::from_bits(val.0[2]),
+            f32::from_bits(val.0[3]),
+        ])
+    }
+
+    pub fn to_bits(self) -> u32x4 {
+        u32x4([self.0[0].to_bits(), self.0[1].to_bits(), self.0[2].to_bits(), self.0[3].to_bits()])
+    }
+
+    pub fn insert<const INDEX: i32>(mut self, val: f32) -> Self {
+        self.0[INDEX as usize] = val;
+        self
+    }
+
+    pub fn le(self, other: Self) -> m32x4 {
+        m32x4([
+            if self.0[0] <= other.0[0] { u32::MAX } else { 0 },
+            if self.0[1] <= other.0[1] { u32::MAX } else { 0 },
+            if self.0[2] <= other.0[2] { u32::MAX } else { 0 },
+            if self.0[3] <= other.0[3] { u32::MAX } else { 0 },
+        ])
+    }
+
+    pub fn select(self, other: Self, mask: m32x4) -> Self {
+        Self([
+            if mask.0[0] == u32::MAX { self.0[0] } else { other.0[0] },
+            if mask.0[1] == u32::MAX { self.0[1] } else { other.0[1] },
+            if mask.0[2] == u32::MAX { self.0[2] } else { other.0[2] },
+            if mask.0[3] == u32::MAX { self.0[3] } else { other.0[3] },
+        ])
+    }
+
+    pub fn clamp(mut self, min: Self, max: Self) -> Self {
+        self.0
+            .iter_mut()
+            .zip(min.0.iter().zip(max.0.iter()))
+            .for_each(|(t, (&min, &max))| *t = t.clamp(min, max));
+        self
+    }
+
+    pub fn sqrt(mut self) -> Self {
+        self.0.iter_mut().for_each(|val| *val = val.sqrt());
+        self
+    }
+
+    pub fn mul_add(mut self, a: Self, b: Self) -> Self {
+        self.0
+            .iter_mut()
+            .zip(a.0.iter().zip(b.0.iter()))
+            .for_each(|(t, (&a, &b))| *t = t.mul_add(a, b));
+        self
+    }
+}
+
+impl Add for f32x4 {
+    type Output = Self;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self.0.iter_mut().zip(rhs.0.iter()).for_each(|(t, &o)| *t += o);
+        self
+    }
+}
+
+impl Mul for f32x4 {
+    type Output = Self;
+
+    fn mul(mut self, rhs: Self) -> Self::Output {
+        self.0.iter_mut().zip(rhs.0.iter()).for_each(|(t, &o)| *t *= o);
+        self
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
 pub struct f32x8([f32; 8]);
 
 impl f32x8 {
@@ -358,6 +438,32 @@ impl f32x8 {
 
     pub fn indexed() -> Self {
         Self([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
+    }
+
+    pub fn from_bits(val: u32x8) -> Self {
+        Self([
+            f32::from_bits(val.0[0]),
+            f32::from_bits(val.0[1]),
+            f32::from_bits(val.0[2]),
+            f32::from_bits(val.0[3]),
+            f32::from_bits(val.0[4]),
+            f32::from_bits(val.0[5]),
+            f32::from_bits(val.0[6]),
+            f32::from_bits(val.0[7]),
+        ])
+    }
+
+    pub fn to_bits(self) -> u32x8 {
+        u32x8([
+            self.0[0].to_bits(),
+            self.0[1].to_bits(),
+            self.0[2].to_bits(),
+            self.0[3].to_bits(),
+            self.0[4].to_bits(),
+            self.0[5].to_bits(),
+            self.0[6].to_bits(),
+            self.0[7].to_bits(),
+        ])
     }
 
     #[cfg(test)]

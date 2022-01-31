@@ -7,7 +7,7 @@ use std::{borrow::Cow, cell::Cell, collections::BTreeMap, mem, slice::ChunksExac
 use crate::{
     painter::layer_workbench::TileWriteOp,
     rasterizer::{search_last_by_key, PixelSegment},
-    simd::{f32x8, i16x16, i32x8, i8x16, u8x32, u8x8, Simd},
+    simd::{f32x4, f32x8, i16x16, i32x8, i8x16, u32x4, u32x8, u8x32, Simd},
     PIXEL_DOUBLE_WIDTH, PIXEL_WIDTH, TILE_SIZE,
 };
 
@@ -28,6 +28,9 @@ const PIXEL_DOUBLE_AREA: usize = 2 * PIXEL_AREA;
 
 const MAGNITUDE_BIT_LEN: usize = PIXEL_DOUBLE_AREA.trailing_zeros() as usize;
 const MAGNITUDE_MASK: usize = MAGNITUDE_BIT_LEN - 1;
+
+// From Hacker's Delight, p. 378-380. 2 ^ 23 as f32.
+const C23: u32 = 0x4B00_0000;
 
 macro_rules! cols {
     ( & $array:expr, $x0:expr, $x1:expr ) => {{
@@ -75,7 +78,7 @@ fn doubled_area_to_coverage(doubled_area: i32x8, fill_rule: FillRule) -> f32x8 {
 
 #[allow(clippy::many_single_char_names)]
 #[inline]
-fn linear_to_srgb_approx_simd(l: f32x8) -> f32x8 {
+fn linear_to_srgb_approx_simdx8(l: f32x8) -> f32x8 {
     let a = f32x8::splat(0.201_017_72f32);
     let b = f32x8::splat(-0.512_801_47f32);
     let c = f32x8::splat(1.344_401f32);
@@ -93,38 +96,59 @@ fn linear_to_srgb_approx_simd(l: f32x8) -> f32x8 {
 
 #[allow(clippy::many_single_char_names)]
 #[inline]
-fn linear_to_srgb_approx(l: f32) -> f32 {
-    let a = 0.201_017_72f32;
-    let b = -0.512_801_47f32;
-    let c = 1.344_401f32;
-    let d = -0.030_656_587f32;
+fn linear_to_srgb_approx_simdx4(l: f32x4) -> f32x4 {
+    let a = f32x4::splat(0.201_017_72f32);
+    let b = f32x4::splat(-0.512_801_47f32);
+    let c = f32x4::splat(1.344_401f32);
+    let d = f32x4::splat(-0.030_656_587f32);
 
     let s = l.sqrt();
     let s2 = l;
     let s3 = s2 * s;
 
-    if l <= 0.003_130_8 {
-        l * 12.92
-    } else {
-        a.mul_add(s3, b.mul_add(s2, c.mul_add(s, d)))
-    }
+    let m = l * f32x4::splat(12.92);
+    let n = a.mul_add(s3, b.mul_add(s2, c.mul_add(s, d)));
+
+    m.select(n, l.le(f32x4::splat(0.003_130_8)))
+}
+
+// From Hacker's Delight, p. 378-380.
+
+#[inline]
+fn to_u32x8(val: f32x8) -> u32x8 {
+    let max = f32x8::splat(u8::MAX as f32);
+    let c23 = u32x8::splat(C23);
+
+    let scaled = (val * max).clamp(f32x8::splat(0.0), max);
+    let val = scaled + f32x8::from_bits(c23);
+
+    val.to_bits()
 }
 
 #[inline]
-fn to_byte(n: f32) -> u8 {
-    n.mul_add(255.0, 0.5) as u8
+fn to_u32x4(val: f32x4) -> u32x4 {
+    let max = f32x4::splat(u8::MAX as f32);
+    let c23 = u32x4::splat(C23);
+
+    let scaled = (val * max).clamp(f32x4::splat(0.0), max);
+    let val = scaled + f32x4::from_bits(c23);
+
+    val.to_bits()
 }
 
 #[inline]
-fn to_bytes(color: [f32; 4]) -> [u8; 4] {
+fn to_srgb_bytes(color: [f32; 4]) -> [u8; 4] {
     let alpha_recip = color[3].recip();
+    let srgb = linear_to_srgb_approx_simdx4(f32x4::new([
+        color[0] * alpha_recip,
+        color[1] * alpha_recip,
+        color[2] * alpha_recip,
+        0.0,
+    ]));
 
-    [
-        to_byte(linear_to_srgb_approx(color[0] * alpha_recip)),
-        to_byte(linear_to_srgb_approx(color[1] * alpha_recip)),
-        to_byte(linear_to_srgb_approx(color[2] * alpha_recip)),
-        to_byte(color[3]),
-    ]
+    let srgb = to_u32x4(srgb.insert::<3>(color[3]));
+
+    srgb.into()
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -398,38 +422,26 @@ impl Painter {
 
     fn compute_srgb(&mut self) {
         for (channel, alpha) in self.c0.iter_mut().zip(self.alpha.iter()) {
-            *channel = (linear_to_srgb_approx_simd(*channel) * *alpha) * f32x8::splat(255.0);
+            *channel = linear_to_srgb_approx_simdx8(*channel) * *alpha;
         }
         for (channel, alpha) in self.c1.iter_mut().zip(self.alpha.iter()) {
-            *channel = (linear_to_srgb_approx_simd(*channel) * *alpha) * f32x8::splat(255.0);
+            *channel = linear_to_srgb_approx_simdx8(*channel) * *alpha;
         }
         for (channel, alpha) in self.c2.iter_mut().zip(self.alpha.iter()) {
-            *channel = (linear_to_srgb_approx_simd(*channel) * *alpha) * f32x8::splat(255.0);
-        }
-        for alpha in self.alpha.iter_mut() {
-            *alpha = alpha.mul_add(f32x8::splat(255.0), f32x8::splat(0.5));
+            *channel = linear_to_srgb_approx_simdx8(*channel) * *alpha;
         }
 
-        let srgb: &mut [u8x8; TILE_SIZE * TILE_SIZE * 4 / 8] =
-            unsafe { mem::transmute(&mut self.srgb) };
-
-        for ((((c0, c1), c2), alpha), srgb) in self
+        for ((((&c0, &c1), &c2), &alpha), srgb) in self
             .c0
             .iter()
             .zip(self.c1.iter())
             .zip(self.c2.iter())
             .zip(self.alpha.iter())
-            .zip(srgb.chunks_mut(4))
+            .zip(self.srgb.iter_mut())
         {
-            srgb[0] = (*c0).into();
-            srgb[1] = (*c1).into();
-            srgb[2] = (*c2).into();
-            srgb[3] = (*alpha).into();
-        }
+            let unpacked = [to_u32x8(c0), to_u32x8(c1), to_u32x8(c2), to_u32x8(alpha)];
 
-        for srgb in self.srgb.iter_mut() {
-            *srgb = srgb.swizzle::<0, 8, 16, 24, 1, 9, 17, 25, 2, 10, 18, 26, 3, 11, 19, 27, 4, 12, 20, 28, 5, 13,
-            21, 29, 6, 14, 22, 30, 7, 15, 23, 31>();
+            *srgb = u8x32::from_u32_interleaved(unpacked);
         }
     }
 
@@ -563,7 +575,7 @@ impl Painter {
             match workbench.drive_tile_painting(self, &context) {
                 TileWriteOp::None => (),
                 TileWriteOp::Solid(color) => {
-                    self.write_to_tile(tile, Some(to_bytes(color)), flusher)
+                    self.write_to_tile(tile, Some(to_srgb_bytes(color)), flusher)
                 }
                 TileWriteOp::ColorBuffer => {
                     self.write_to_tile(tile, None, flusher);
@@ -884,5 +896,35 @@ mod tests {
         workbench.drive_tile_painting(&mut painter, &context);
 
         assert_eq!(painter.colors(), [RED; TILE_SIZE * TILE_SIZE]);
+    }
+
+    #[test]
+    fn f32_to_u8_scaled() {
+        fn convert(val: f32) -> u8 {
+            let vals: [u8; 4] = to_u32x4(f32x4::splat(val)).into();
+            vals[0]
+        }
+
+        assert_eq!(convert(-0.001), 0);
+        assert_eq!(convert(1.001), 255);
+
+        for i in 0..255 {
+            assert_eq!(convert(i as f32 * 255.0f32.recip()), i);
+        }
+    }
+
+    #[test]
+    fn srgb() {
+        let premultiplied = [
+            // Small values will still result in > 0 in sRGB.
+            0.001 * 0.5,
+            // Expected to be < 128.
+            0.2 * 0.5,
+            // Expected to be > 128.
+            0.5 * 0.5,
+            // Should convert linearly.
+            0.5,
+        ];
+        assert_eq!(to_srgb_bytes(premultiplied), [3, 124, 187, 128]);
     }
 }
