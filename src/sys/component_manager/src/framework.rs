@@ -202,7 +202,8 @@ impl RealmCapabilityHost {
                     Err(fcomponent::Error::InstanceAlreadyExists)
                 }
                 ModelError::CollectionNotFound { .. } => Err(fcomponent::Error::CollectionNotFound),
-                ModelError::DynamicOffersNotAllowed { .. } => {
+                ModelError::DynamicOffersNotAllowed { .. }
+                | ModelError::DynamicOfferInvalid { .. } => {
                     Err(fcomponent::Error::InvalidArguments)
                 }
                 ModelError::Unsupported { .. } => Err(fcomponent::Error::Unsupported),
@@ -628,6 +629,12 @@ mod tests {
                                 .durability(fdecl::Durability::Persistent)
                                 .build(),
                         )
+                        .add_collection(
+                            CollectionDeclBuilder::new()
+                                .name("dynoff")
+                                .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                                .build(),
+                        )
                         .build(),
                 ),
             ],
@@ -766,6 +773,39 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("foo".to_string()),
                             target_name: Some("foo".to_string()),
+                            dependency_type: Some(fdecl::DependencyType::Strong),
+                            ..fdecl::OfferProtocol::EMPTY
+                        })]),
+                        ..fcomponent::CreateChildArgs::EMPTY
+                    },
+                )
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InvalidArguments);
+        }
+
+        // Malformed dynamic offers specified.
+        {
+            let mut collection_ref = fdecl::CollectionRef { name: "dynoff".to_string() };
+            let child_decl = fdecl::Child {
+                name: Some("b".to_string()),
+                url: Some("test:///b".to_string()),
+                startup: Some(fdecl::StartupMode::Lazy),
+                environment: None,
+                ..fdecl::Child::EMPTY
+            };
+            let err = test
+                .realm_proxy
+                .create_child(
+                    &mut collection_ref,
+                    child_decl,
+                    fcomponent::CreateChildArgs {
+                        dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            source_name: Some("foo".to_string()),
+                            target_name: Some("foo".to_string()),
+                            // Note: has no `dependency_type`.
                             ..fdecl::OfferProtocol::EMPTY
                         })]),
                         ..fcomponent::CreateChildArgs::EMPTY
