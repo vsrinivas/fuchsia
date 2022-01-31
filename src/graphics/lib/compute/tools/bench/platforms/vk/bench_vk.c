@@ -349,14 +349,14 @@ bench_statistics(struct bench_config const * const      config,
                       "Warmup, "
                       "Bytes, "
                       "GBytes/sec, "
-                      "Host Start Msecs, "
-                      "Device Start Msecs, "
-                      "Device Stop Msecs, "
-                      "Host Stop MSecs, "
-                      "(Device Start - Host Start) MSecs, "
-                      "(Device Stop - Device Start) MSecs, "
-                      "(Host Stop - Device Stop) Msecs, "
-                      "(Host - Device) Msecs\n");
+                      "Host Start USecs, "
+                      "Device Start USecs, "
+                      "Device Stop USecs, "
+                      "Host Stop USecs, "
+                      "(Device Start - Host Start) USecs, "
+                      "(Device Stop - Device Start) USecs, "
+                      "(Host Stop - Device Stop) USecs, "
+                      "(Host - Device) USecs\n");
             }
 
           double const h_ns_calib   = BENCH_HOST_NS(calibration.named.timestamps.host);
@@ -397,16 +397,16 @@ bench_statistics(struct bench_config const * const      config,
                 {
                   fprintf(
                     stdout,
-                    "%8.3f, %10.3f, %10.3f, %10.3f, %10.3f, %+10.3f, %+10.3f, %+10.3f, %+10.3f\n",
+                    "%8.3f, %10.6f, %10.6f, %10.6f, %10.6f, %+10.6f, %+10.6f, %+10.6f, %+10.6f\n",
                     (double)bytes / (d_h_ns_elapsed),
                     0.0,
-                    (d_h_ns_start - h_ns_start) / 1e6,
-                    (d_h_ns_stop - h_ns_start) / 1e6,
-                    (h_ns_stop - h_ns_start) / 1e6,
-                    (d_h_ns_start - h_ns_start) / 1e6,
-                    (d_h_ns_stop - d_h_ns_start) / 1e6,
-                    (h_ns_stop - d_h_ns_stop) / 1e6,
-                    (h_ns_elapsed - d_h_ns_elapsed) / 1e6);
+                    (d_h_ns_start - h_ns_start) / 1e3,
+                    (d_h_ns_stop - h_ns_start) / 1e3,
+                    (h_ns_stop - h_ns_start) / 1e3,
+                    (d_h_ns_start - h_ns_start) / 1e3,
+                    (d_h_ns_stop - d_h_ns_start) / 1e3,
+                    (h_ns_stop - d_h_ns_stop) / 1e3,
+                    (h_ns_elapsed - d_h_ns_elapsed) / 1e3);
                 }
             }
         }
@@ -424,9 +424,9 @@ bench_statistics(struct bench_config const * const      config,
                       "Warmup, "
                       "Bytes, "
                       "GBytes/sec, "
-                      "(Host Stop - Host Start) MSecs, "
-                      "(Device Stop - Device Start) MSecs, "
-                      "(Host - Device) Msecs\n");
+                      "(Host Stop - Host Start) USecs, "
+                      "(Device Stop - Device Start) USecs, "
+                      "(Host - Device) USecs\n");
             }
 
           for (uint32_t ii = 0; ii < iter->repetitions; ii++)
@@ -457,11 +457,11 @@ bench_statistics(struct bench_config const * const      config,
               if (!config->is_quiet)
                 {
                   fprintf(stdout,
-                          "%8.3f, %+10.3f, %+10.3f, %+10.3f\n",
+                          "%8.3f, %+10.6f, %+10.6f, %+10.6f\n",
                           (double)bytes / d_ns_elapsed,
-                          h_ns_elapsed / 1e6,
-                          d_ns_elapsed / 1e6,
-                          (h_ns_elapsed - d_ns_elapsed) / 1e6);
+                          h_ns_elapsed / 1e3,
+                          d_ns_elapsed / 1e3,
+                          (h_ns_elapsed - d_ns_elapsed) / 1e3);
                 }
             }
         }
