@@ -41,6 +41,7 @@
 #include "fidl/fuchsia.io/cpp/wire.h"
 #include "src/devices/bin/driver_manager/devfs_exporter.h"
 #include "src/devices/bin/driver_manager/device_watcher.h"
+#include "src/devices/bin/driver_manager/driver_development_service.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -366,6 +367,7 @@ int main(int argc, char** argv) {
   devfs_init(coordinator.root_device(), loop.dispatcher());
 
   std::optional<DriverRunner> driver_runner;
+  std::optional<driver_manager::DriverDevelopmentService> driver_development_service;
   std::optional<driver_manager::DevfsExporter> devfs_exporter;
 
   // Find and load v1 or v2 Drivers.
@@ -405,19 +407,25 @@ int main(int argc, char** argv) {
 
     driver_runner.emplace(std::move(realm_result.value()), std::move(driver_index_result.value()),
                           inspect_manager.inspector(), loop.dispatcher());
-    auto publish = driver_runner->PublishComponentRunner(outgoing.svc_dir());
-    if (publish.is_error()) {
-      return publish.error_value();
+    auto publish_component_runner = driver_runner->PublishComponentRunner(outgoing.svc_dir());
+    if (publish_component_runner.is_error()) {
+      return publish_component_runner.error_value();
     }
     auto start = driver_runner->StartRootDriver(driver_manager_args.sys_device_driver);
     if (start.is_error()) {
       return start.error_value();
     }
+    driver_development_service.emplace(driver_runner.value(), loop.dispatcher());
+    auto publish_driver_development_service =
+        driver_development_service->Publish(outgoing.svc_dir());
+    if (publish_driver_development_service.is_error()) {
+      return publish_driver_development_service.error_value();
+    }
 
     devfs_exporter.emplace(coordinator.root_device()->devnode(), loop.dispatcher());
     auto devfs_publish = devfs_exporter->PublishExporter(outgoing.svc_dir());
     if (devfs_publish.is_error()) {
-      return publish.error_value();
+      return devfs_publish.error_value();
     }
   }
 

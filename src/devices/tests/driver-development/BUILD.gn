@@ -14,7 +14,10 @@ group("tests") {
 rustc_test("driver_development_test") {
   testonly = true
   source_root = "test.rs"
-  sources = [ "test.rs" ]
+  sources = [
+    "test.rs",
+    "test_utils.rs",
+  ]
   deps = [
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
@@ -25,7 +28,6 @@ rustc_test("driver_development_test") {
     "//src/lib/fuchsia-component-test",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:lazy_static",
   ]
 }
 

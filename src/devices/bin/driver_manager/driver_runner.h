@@ -32,8 +32,10 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
                         public fbl::DoublyLinkedListable<std::unique_ptr<DriverComponent>> {
  public:
   explicit DriverComponent(fidl::ClientEnd<fuchsia_driver_framework::Driver> driver,
-                           async_dispatcher_t* dispatcher);
+                           async_dispatcher_t* dispatcher, std::string_view url);
   ~DriverComponent();
+
+  std::string_view url() const;
 
   void set_driver_ref(
       fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_ref);
@@ -84,6 +86,9 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
   // When this is closed with an epitath it signals to the Component Framework
   // that this driver component has stopped.
   std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>> driver_ref_;
+
+  // URL of the driver's component manifest
+  std::string url_;
 };
 
 class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<DriverHostComponent>> {
@@ -157,6 +162,8 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   ~Node() override;
 
   const std::string& name() const;
+  const std::optional<DriverComponent*>& driver_component() const;
+  const std::vector<Node*>& parents() const;
   const std::vector<std::shared_ptr<Node>>& children() const;
   std::vector<OwnedOffer>& offers() const;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols() const;
@@ -165,6 +172,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void set_collection(Collection collection);
   void set_driver_host(DriverHostComponent* driver_host);
   void set_node_ref(fidl::ServerBindingRef<fuchsia_driver_framework::Node> node_ref);
+  void set_bound_driver_url(std::optional<std::string_view> bound_driver_url);
   void set_controller_ref(
       fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);
   void set_driver_component(std::optional<DriverComponent*> driver_component);
@@ -209,6 +217,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   // The driver_component is not guaranteed to outlive the node, but if
   // the driver_component is freed, it will reset this field.
   std::optional<DriverComponent*> driver_component_;
+  std::optional<std::string> bound_driver_url_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
 };
@@ -224,6 +233,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   size_t NumOrphanedNodes() const;
   zx::status<> PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   zx::status<> StartRootDriver(std::string_view url);
+  const Node* root_node() const;
 
  private:
   using CompositeArgs = std::vector<std::weak_ptr<Node>>;
