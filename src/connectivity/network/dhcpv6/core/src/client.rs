@@ -365,7 +365,7 @@ struct IdentityAssociation {
 #[derive(Debug, Clone)]
 struct AdvertiseMessage {
     server_id: Vec<u8>,
-    addresses: HashMap<u32, IdentityAssociation>,
+    addresses: HashMap<v6::IAID, IdentityAssociation>,
     dns_servers: Vec<Ipv6Addr>,
     preference: u8,
     receive_time: Instant,
@@ -375,7 +375,7 @@ struct AdvertiseMessage {
 impl AdvertiseMessage {
     fn is_complete(
         &self,
-        configured_addresses: &HashMap<u32, Option<Ipv6Addr>>,
+        configured_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
         options_to_request: &[v6::OptionCode],
     ) -> bool {
         let Self {
@@ -463,8 +463,8 @@ impl PartialEq for AdvertiseMessage {
 impl Eq for AdvertiseMessage {}
 
 fn compute_preferred_address_count(
-    got_addresses: &HashMap<u32, IdentityAssociation>,
-    configured_addresses: &HashMap<u32, Option<Ipv6Addr>>,
+    got_addresses: &HashMap<v6::IAID, IdentityAssociation>,
+    configured_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
 ) -> usize {
     configured_addresses.iter().fold(0, |count, (iaid, address)| {
         count
@@ -499,9 +499,9 @@ fn get_common_value(values: &Vec<u32>) -> Option<Duration> {
 // Advertise with the configured IAs that were not received in the Advertise
 // message.
 fn build_addresses_to_request(
-    advertised_addresses: &HashMap<u32, IdentityAssociation>,
-    configured_addresses: &HashMap<u32, Option<Ipv6Addr>>,
-) -> HashMap<u32, Option<Ipv6Addr>> {
+    advertised_addresses: &HashMap<v6::IAID, IdentityAssociation>,
+    configured_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
+) -> HashMap<v6::IAID, Option<Ipv6Addr>> {
     let mut addresses_to_request =
         advertised_addresses.iter().fold(HashMap::new(), |mut addrs_to_request, (iaid, ia)| {
             let IdentityAssociation { address, preferred_lifetime: _, valid_lifetime: _ } = ia;
@@ -536,7 +536,7 @@ struct ServerDiscovery {
     /// [Client Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
     client_id: [u8; CLIENT_ID_LEN],
     /// The addresses the client is configured to negotiate, indexed by IAID.
-    configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+    configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
     /// The time of the first solicit. `None` before a solicit is sent. Used in
     /// calculating the [elapsed time].
     ///
@@ -565,7 +565,7 @@ impl ServerDiscovery {
     fn start<R: Rng>(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
-        configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+        configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
         options_to_request: &[v6::OptionCode],
         solicit_max_rt: Duration,
         rng: &mut R,
@@ -745,7 +745,7 @@ impl ServerDiscovery {
         let mut solicit_max_rt_option = None;
         let mut server_id = None;
         let mut preference = 0;
-        let mut addresses: HashMap<u32, IdentityAssociation> = HashMap::new();
+        let mut addresses: HashMap<v6::IAID, IdentityAssociation> = HashMap::new();
         let mut status_code = None;
         let mut dns_servers: Option<Vec<Ipv6Addr>> = None;
 
@@ -795,7 +795,7 @@ impl ServerDiscovery {
                     //
                     //    A DHCP message may contain multiple IA_NA options
                     //    (though each must have a unique IAID).
-                    let vacant_ia_entry = match addresses.entry(iana_data.iaid()) {
+                    let vacant_ia_entry = match addresses.entry(v6::IAID::new(iana_data.iaid())) {
                         Entry::Occupied(entry) => {
                             log::debug!(
                                 "received unexpected IA_NA option with
@@ -1087,7 +1087,7 @@ struct Requesting {
     client_id: [u8; CLIENT_ID_LEN],
     /// The addresses the client is configured to negotiate, indexed by IAID.
     /// Used when server discovery is restarted.
-    configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+    configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
     /// The [server identifier] of the server to which the client sends
     /// requests.
     ///
@@ -1095,7 +1095,7 @@ struct Requesting {
     /// https://datatracker.ietf.org/doc/html/rfc8415#section-21.3
     server_id: Vec<u8>,
     /// The addresses requested by the client.
-    addresses_to_request: HashMap<u32, Option<Ipv6Addr>>,
+    addresses_to_request: HashMap<v6::IAID, Option<Ipv6Addr>>,
     /// The advertise collected from servers during [server discovery].
     ///
     /// [server discovery]:
@@ -1122,7 +1122,7 @@ struct Requesting {
 // other collected servers, restart server discovery.
 fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
     client_id: [u8; CLIENT_ID_LEN],
-    configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+    configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
     options_to_request: &[v6::OptionCode],
     mut collected_advertise: BinaryHeap<AdvertiseMessage>,
     solicit_max_rt: Duration,
@@ -1163,7 +1163,7 @@ impl Requesting {
     /// [RFC 8415, Section 18.2.2]: https://tools.ietf.org/html/rfc8415#section-18.2.2
     fn start<R: Rng>(
         client_id: [u8; CLIENT_ID_LEN],
-        configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+        configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
         advertise: AdvertiseMessage,
         options_to_request: &[v6::OptionCode],
         collected_advertise: BinaryHeap<AdvertiseMessage>,
@@ -1435,10 +1435,10 @@ impl Requesting {
         let mut t2 = v6::TimeValue::Zero;
         let mut min_preferred_lifetime = v6::TimeValue::Zero;
         let mut min_valid_lifetime = v6::TimeValue::Zero;
-        let mut assigned_addresses: HashMap<u32, IdentityAssociation> = HashMap::new();
+        let mut assigned_addresses: HashMap<v6::IAID, IdentityAssociation> = HashMap::new();
 
         let mut dns_servers: Option<Vec<Ipv6Addr>> = None;
-        let mut iaids_not_on_link: HashSet<u32> = HashSet::new();
+        let mut iaids_not_on_link: HashSet<v6::IAID> = HashSet::new();
 
         // Process options; the client does not check whether an option is
         // present in the Reply message multiple times because each option is
@@ -1504,17 +1504,18 @@ impl Requesting {
                     //
                     //    A DHCP message may contain multiple IA_NA options
                     //    (though each must have a unique IAID).
-                    let vacant_ia_entry = match assigned_addresses.entry(iana_data.iaid()) {
-                        Entry::Occupied(entry) => {
-                            log::debug!(
-                                "received unexpected IA_NA option with
+                    let vacant_ia_entry =
+                        match assigned_addresses.entry(v6::IAID::new(iana_data.iaid())) {
+                            Entry::Occupied(entry) => {
+                                log::debug!(
+                                    "received unexpected IA_NA option with
                                 non-unique IAID {:?}.",
-                                entry.key()
-                            );
-                            continue;
-                        }
-                        Entry::Vacant(entry) => entry,
-                    };
+                                    entry.key()
+                                );
+                                continue;
+                            }
+                            Entry::Vacant(entry) => entry,
+                        };
                     // If T1/T2 are set by the server to values greater than 0,
                     // compute the minimum T1 and T2 values, per RFC 8415,
                     // section 18.2.4:
@@ -1630,7 +1631,7 @@ impl Requesting {
                         v6::StatusCode::NotOnLink => {
                             // If the client receives IAs with NotOnLink status,
                             // try to obtain other addresses in follow-up messages.
-                            assert!(iaids_not_on_link.insert(iana_data.iaid()));
+                            assert!(iaids_not_on_link.insert(v6::IAID::new(iana_data.iaid())));
                         }
                         v6::StatusCode::UnspecFail
                         | v6::StatusCode::NoAddrsAvail
@@ -1773,7 +1774,7 @@ impl Requesting {
                 // The client reissues the message without specifying addresses, leaving
                 // it up to the server to assign addresses appropriate for the client's
                 // link.
-                let addresses_to_request: HashMap<u32, Option<Ipv6Addr>> =
+                let addresses_to_request: HashMap<v6::IAID, Option<Ipv6Addr>> =
                     addresses_to_request.into_keys().zip(std::iter::repeat(None)).collect();
                 return Requesting {
                     client_id,
@@ -1947,14 +1948,14 @@ struct AddressAssigned {
     client_id: [u8; CLIENT_ID_LEN],
     /// The addresses the client is configured to negotiate, indexed by IAID.
     /// Used when server discovery is restarted.
-    configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+    configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
     /// The [server identifier] of the server to which the client sends
     /// requests.
     ///
     /// [Server Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.3
     server_id: Vec<u8>,
     /// The addresses assigned to the client.
-    assigned_addresses: HashMap<u32, IdentityAssociation>,
+    assigned_addresses: HashMap<v6::IAID, IdentityAssociation>,
     /// The time interval after which the client contacts the server that
     /// assigned addresses to the client, to extend the lifetimes of the
     /// assigned addresses.
@@ -1963,7 +1964,7 @@ struct AddressAssigned {
     /// the lifetimes of the assigned addresses.
     t2: Duration,
     /// Stores addresses to be requested in follow-up messages.
-    addresses_to_request: HashMap<u32, Option<Ipv6Addr>>,
+    addresses_to_request: HashMap<v6::IAID, Option<Ipv6Addr>>,
     /// Stores the DNS servers received from the reply.
     dns_servers: Vec<Ipv6Addr>,
     /// The [SOL_MAX_RT](https://datatracker.ietf.org/doc/html/rfc8415#section-21.24)
@@ -2153,7 +2154,7 @@ impl<R: Rng> ClientStateMachine<R> {
     pub fn start_stateful(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
-        configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+        configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
         options_to_request: Vec<v6::OptionCode>,
         mut rng: R,
     ) -> (Self, Actions) {
@@ -2275,14 +2276,15 @@ pub(crate) mod testutil {
     pub(crate) fn to_configured_addresses(
         address_count: u32,
         preferred_addresses: Vec<Ipv6Addr>,
-    ) -> HashMap<u32, Option<Ipv6Addr>> {
+    ) -> HashMap<v6::IAID, Option<Ipv6Addr>> {
         let addresses = preferred_addresses
             .into_iter()
             .map(Some)
             .chain(std::iter::repeat(None))
             .take(usize::try_from(address_count).unwrap());
 
-        let configured_addresses: HashMap<u32, Option<Ipv6Addr>> = (0..).zip(addresses).collect();
+        let configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>> =
+            (0..).map(v6::IAID::new).zip(addresses).collect();
         configured_addresses
     }
 
@@ -2296,7 +2298,7 @@ pub(crate) mod testutil {
     pub(crate) fn start_and_assert_server_discovery<R: Rng + std::fmt::Debug>(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
-        configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+        configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
         options_to_request: Vec<v6::OptionCode>,
         rng: R,
     ) -> ClientStateMachine<R> {
@@ -2367,9 +2369,10 @@ pub(crate) mod testutil {
             server_id: Vec<u8>,
             addresses: &[Ipv6Addr],
             dns_servers: &[Ipv6Addr],
-            configured_addresses: &HashMap<u32, Option<Ipv6Addr>>,
+            configured_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
         ) -> AdvertiseMessage {
             let addresses = (0..)
+                .map(v6::IAID::new)
                 .zip(addresses.iter().fold(Vec::new(), |mut addrs, address| {
                     addrs.push(IdentityAssociation::new_default(*address));
                     addrs
@@ -2451,8 +2454,8 @@ pub(crate) mod testutil {
             v6::DhcpOption::ServerId(&server_id),
             v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE),
         ];
-        let addresses_to_assign: HashMap<u32, TestIdentityAssociation> =
-            (0..).zip(addresses_to_assign).collect();
+        let addresses_to_assign: HashMap<v6::IAID, TestIdentityAssociation> =
+            (0..).map(v6::IAID::new).zip(addresses_to_assign).collect();
         let mut iaaddr_opts = HashMap::new();
         for (iaid, ia) in &addresses_to_assign {
             assert_matches!(
@@ -2589,7 +2592,7 @@ pub(crate) mod testutil {
         expected_client_id: &[u8; CLIENT_ID_LEN],
         expected_server_id: Option<&Vec<u8>>,
         expected_oro: &[v6::OptionCode],
-        expected_addresses: &HashMap<u32, Option<Ipv6Addr>>,
+        expected_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
     ) {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_eq!(msg.msg_type(), expected_msg_type);
@@ -2637,17 +2640,20 @@ pub(crate) mod testutil {
 
         // Check that the IA options are correct.
         let sent_addresses = {
-            let mut sent_addresses: HashMap<u32, Option<Ipv6Addr>> = HashMap::new();
+            let mut sent_addresses: HashMap<v6::IAID, Option<Ipv6Addr>> = HashMap::new();
             for iana_data in ia_opts.iter() {
                 if iana_data.iter_options().count() == 0 {
-                    assert_eq!(sent_addresses.insert(iana_data.iaid(), None), None);
+                    assert_eq!(sent_addresses.insert(v6::IAID::new(iana_data.iaid()), None), None);
                     continue;
                 }
                 for iana_option in iana_data.iter_options() {
                     match iana_option {
                         v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
                             assert_eq!(
-                                sent_addresses.insert(iana_data.iaid(), Some(iaaddr_data.addr())),
+                                sent_addresses.insert(
+                                    v6::IAID::new(iana_data.iaid()),
+                                    Some(iaaddr_data.addr())
+                                ),
                                 None
                             );
                         }
@@ -2849,7 +2855,8 @@ mod tests {
     #[test]
     fn compute_preferred_address_count() {
         // No preferred addresses configured.
-        let got_addresses: HashMap<u32, IdentityAssociation> = (0..)
+        let got_addresses: HashMap<v6::IAID, IdentityAssociation> = (0..)
+            .map(v6::IAID::new)
             .zip(vec![IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff"))].into_iter())
             .collect();
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
@@ -2863,7 +2870,8 @@ mod tests {
         );
 
         // All obtained addresses are preferred addresses.
-        let got_addresses: HashMap<u32, IdentityAssociation> = (0..)
+        let got_addresses: HashMap<v6::IAID, IdentityAssociation> = (0..)
+            .map(v6::IAID::new)
             .zip(
                 vec![
                     IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff")),
@@ -2882,7 +2890,8 @@ mod tests {
         );
 
         // Only one of the obtained addresses is a preferred address.
-        let got_addresses: HashMap<u32, IdentityAssociation> = (0..)
+        let got_addresses: HashMap<v6::IAID, IdentityAssociation> = (0..)
+            .map(v6::IAID::new)
             .zip(
                 vec![
                     IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff")),
@@ -3026,7 +3035,7 @@ mod tests {
             v6::DhcpOption::ClientId(&client_id),
             v6::DhcpOption::ServerId(&[1, 2, 3]),
             v6::DhcpOption::Preference(42),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
             &client;
@@ -3050,7 +3059,7 @@ mod tests {
             v6::DhcpOption::ClientId(&client_id),
             v6::DhcpOption::ServerId(&[4, 5, 6]),
             v6::DhcpOption::Preference(255),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
             &client;
@@ -3132,7 +3141,7 @@ mod tests {
         let options = [
             v6::DhcpOption::ClientId(&client_id),
             v6::DhcpOption::ServerId(&[1, 2, 3]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, t1, t2, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), t1, t2, &iana_options)),
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -3173,7 +3182,7 @@ mod tests {
                     }) => addresses,
                     advertise => panic!("unexpected advertise {:?}", advertise),
                 };
-                assert_eq!(*addresses, HashMap::from([(0, ia)]));
+                assert_eq!(*addresses, HashMap::from([(v6::IAID::new(0), ia)]));
             }
         }
     }
@@ -3223,7 +3232,7 @@ mod tests {
         let options = [
             v6::DhcpOption::ClientId(&client_id),
             v6::DhcpOption::ServerId(&[1, 2, 3]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Advertise, *transaction_id, &options);
@@ -3309,8 +3318,10 @@ mod tests {
             }
             actions => panic!("unexpected actions {:?}", actions),
         };
-        let expected_addresses =
-            (0..).zip(advertised_addresses.map(Some)).collect::<HashMap<u32, Option<Ipv6Addr>>>();
+        let expected_addresses = (0..)
+            .map(v6::IAID::new)
+            .zip(advertised_addresses.map(Some))
+            .collect::<HashMap<v6::IAID, Option<Ipv6Addr>>>();
         testutil::assert_outgoing_stateful_message(
             &mut buf,
             v6::MessageType::Request,
@@ -3374,8 +3385,9 @@ mod tests {
         };
         assert_eq!(*server_id, vec![1, 2, 3]);
         let addresses_to_request = (0..)
+            .map(v6::IAID::new)
             .zip(advertised_addresses.iter().map(|addr| Some(*addr)))
-            .collect::<HashMap<u32, Option<Ipv6Addr>>>();
+            .collect::<HashMap<v6::IAID, Option<Ipv6Addr>>>();
         assert_eq!(addresses_to_request, *got_addresses_to_request);
 
         // If the reply contains an top level UnspecFail status code, the
@@ -3383,7 +3395,7 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&[1, 2, 3]),
             v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &[])),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
             v6::DhcpOption::StatusCode(v6::StatusCode::UnspecFail.into(), ""),
         ];
         let request_transaction_id = transaction_id.unwrap();
@@ -3418,7 +3430,7 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&[1, 2, 3]),
             v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &[])),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
             v6::DhcpOption::StatusCode(v6::StatusCode::NotOnLink.into(), ""),
         ];
         let request_transaction_id = transaction_id.unwrap();
@@ -3431,8 +3443,8 @@ mod tests {
         let Transition { state, actions: _, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg);
 
-        let expected_addresses_to_request: HashMap<u32, Option<Ipv6Addr>> =
-            HashMap::from([(0, None)]);
+        let expected_addresses_to_request: HashMap<v6::IAID, Option<Ipv6Addr>> =
+            HashMap::from([(v6::IAID::new(0), None)]);
         let (server_id, got_addresses_to_request) = match &state {
             ClientState::Requesting(Requesting {
                 client_id: _,
@@ -3457,7 +3469,7 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&[1, 2, 3]),
             v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &[])),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
             v6::DhcpOption::StatusCode(v6::StatusCode::NoAddrsAvail.into(), ""),
         ];
         let builder =
@@ -3495,7 +3507,7 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&[4, 5, 6]),
             v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
@@ -3564,8 +3576,8 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&[1, 2, 3]),
             v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options1)),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(1, 60, 60, &iana_options2)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options1)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(1), 60, 60, &iana_options2)),
         ];
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
@@ -3575,7 +3587,7 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg);
-        let expected_addresses_to_request = HashMap::from([(0, None)]);
+        let expected_addresses_to_request = HashMap::from([(v6::IAID::new(0), None)]);
         let (server_id, addresses_to_request) = match state {
             ClientState::AddressAssigned(AddressAssigned {
                 client_id: _,
@@ -3638,7 +3650,7 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&server_id),
             v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
@@ -3747,8 +3759,18 @@ mod tests {
             let options = [
                 v6::DhcpOption::ServerId(&[1, 2, 3]),
                 v6::DhcpOption::ClientId(&client_id),
-                v6::DhcpOption::Iana(v6::IanaSerializer::new(0, ia1_t1, ia1_t2, &iana_options1)),
-                v6::DhcpOption::Iana(v6::IanaSerializer::new(1, ia2_t1, ia2_t2, &iana_options2)),
+                v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                    v6::IAID::new(0),
+                    ia1_t1,
+                    ia1_t2,
+                    &iana_options1,
+                )),
+                v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                    v6::IAID::new(1),
+                    ia2_t1,
+                    ia2_t2,
+                    &iana_options2,
+                )),
             ];
             let builder =
                 v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
@@ -3800,7 +3822,7 @@ mod tests {
         let options = [
             v6::DhcpOption::ClientId(&client_id),
             v6::DhcpOption::ServerId(&server_id_1),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -3833,7 +3855,7 @@ mod tests {
         let options = [
             v6::DhcpOption::ClientId(&client_id),
             v6::DhcpOption::ServerId(&server_id_2),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -4106,7 +4128,7 @@ mod tests {
             [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(address, 60, 120, &[]))];
         let options = [
             v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 30, 45, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 30, 45, &iana_options)),
             v6::DhcpOption::SolMaxRt(received_sol_max_rt),
         ];
         let request_transaction_id = transaction_id.unwrap();
@@ -4138,7 +4160,7 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&server_id),
             v6::DhcpOption::ClientId(&other_client_id),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 30, 45, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 30, 45, &iana_options)),
             v6::DhcpOption::SolMaxRt(received_sol_max_rt),
         ];
         let builder =
@@ -4168,7 +4190,7 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&server_id),
             v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 30, 45, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 30, 45, &iana_options)),
             v6::DhcpOption::SolMaxRt(received_sol_max_rt),
         ];
         let builder =

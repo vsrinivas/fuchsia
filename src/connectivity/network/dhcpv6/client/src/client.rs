@@ -129,7 +129,7 @@ fn to_dhcpv6_option_codes(information_config: InformationConfig) -> Vec<v6::Opti
 /// `address_config.address_count`.
 fn to_configured_addresses(
     address_config: AddressConfig,
-) -> Result<HashMap<u32, Option<Ipv6Addr>>, ClientError> {
+) -> Result<HashMap<v6::IAID, Option<Ipv6Addr>>, ClientError> {
     let AddressConfig { address_count, preferred_addresses, .. } = address_config;
     let address_count =
         address_count.and_then(NonZeroU8::new).ok_or(ClientError::UnsupportedConfigs)?;
@@ -149,8 +149,7 @@ fn to_configured_addresses(
     // TODO(https://fxbug.dev/77790): make IAID consistent across
     // configurations.
     for (iaid, addr) in (0..).zip(addresses) {
-        let entry = configured_addresses.insert(iaid, addr);
-        assert_matches!(entry, None);
+        assert_matches!(configured_addresses.insert(v6::IAID::new(iaid), addr), None);
     }
 
     Ok(configured_addresses)

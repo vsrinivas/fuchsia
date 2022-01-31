@@ -657,10 +657,29 @@ pub enum DhcpOption<'a> {
     DomainList(&'a [checked::Domain]),
 }
 
+/// Identity Association identifier, as defined in [RFC 8415, Section 4.2].
+///
+/// [RFC 8415, Section 4.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-4.2
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
+pub struct IAID(u32);
+
+impl IAID {
+    /// Constructs an `IAID`.
+    pub fn new(iaid: u32) -> Self {
+        Self(iaid)
+    }
+
+    /// Returns the `u32` value inside `self`.
+    pub fn get(&self) -> u32 {
+        let IAID(iaid) = self;
+        *iaid
+    }
+}
+
 /// A serializer for the IA_NA DHCPv6 option.
 #[derive(Debug)]
 pub struct IanaSerializer<'a> {
-    iaid: u32,
+    iaid: IAID,
     t1: u32,
     t2: u32,
     options: RecordSequenceBuilder<DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
@@ -668,7 +687,7 @@ pub struct IanaSerializer<'a> {
 
 impl<'a> IanaSerializer<'a> {
     /// Constructs a new `IanaSerializer`.
-    pub fn new(iaid: u32, t1: u32, t2: u32, options: &'a [DhcpOption<'a>]) -> IanaSerializer<'a> {
+    pub fn new(iaid: IAID, t1: u32, t2: u32, options: &'a [DhcpOption<'a>]) -> IanaSerializer<'a> {
         IanaSerializer { iaid, t1, t2, options: RecordSequenceBuilder::new(options.iter()) }
     }
 }
@@ -800,7 +819,7 @@ impl<'a> RecordBuilder for DhcpOption<'a> {
                 let len =
                     u16::try_from(IANA_HEADER_LEN + options.serialized_len()).expect("overflows");
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
-                let () = buf.write_obj_front(&U32::new(*iaid)).expect("buffer is too small");
+                let () = buf.write_obj_front(&U32::new(iaid.get())).expect("buffer is too small");
                 let () = buf.write_obj_front(&U32::new(*t1)).expect("buffer is too small");
                 let () = buf.write_obj_front(&U32::new(*t2)).expect("buffer is too small");
                 let () = options.serialize_into(buf);
@@ -1053,7 +1072,7 @@ mod tests {
         let options = [
             DhcpOption::ClientId(&[4, 5, 6]),
             DhcpOption::ServerId(&[8]),
-            DhcpOption::Iana(IanaSerializer::new(42, 3000, 6500, &iana_options)),
+            DhcpOption::Iana(IanaSerializer::new(IAID::new(42), 3000, 6500, &iana_options)),
             DhcpOption::Oro(&[OptionCode::ClientId, OptionCode::ServerId]),
             DhcpOption::Preference(42),
             DhcpOption::ElapsedTime(3600),
@@ -1118,7 +1137,7 @@ mod tests {
         let options = [
             DhcpOption::ClientId(&[4, 5, 6]),
             DhcpOption::ServerId(&[8]),
-            DhcpOption::Iana(IanaSerializer::new(1234, 7000, 8800, &iana_suboptions)),
+            DhcpOption::Iana(IanaSerializer::new(IAID::new(1234), 7000, 8800, &iana_suboptions)),
             DhcpOption::Oro(&[OptionCode::ClientId, OptionCode::ServerId]),
             DhcpOption::Preference(42),
             DhcpOption::ElapsedTime(3600),
@@ -1286,7 +1305,7 @@ mod tests {
     #[test]
     fn test_iana_no_suboptions_serialization_parsing_roundtrip() {
         let mut buf = [0u8; 16];
-        let option = DhcpOption::Iana(IanaSerializer::new(3456, 1024, 54321, &[]));
+        let option = DhcpOption::Iana(IanaSerializer::new(IAID::new(3456), 1024, 54321, &[]));
 
         option.serialize_into(&mut buf);
         assert_eq!(buf, [0, 3, 0, 12, 0, 0, 13, 128, 0, 0, 4, 0, 0, 0, 212, 49]);
