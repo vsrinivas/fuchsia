@@ -79,33 +79,25 @@ class Device : public DeviceType,
                public ddk::AcpiProtocol<Device, ddk::base_protocol>,
                public fidl::WireAsyncEventHandler<fuchsia_hardware_acpi::NotifyHandler> {
  public:
-  Device(acpi::Manager* manager, zx_device_t* parent, ACPI_HANDLE acpi_handle,
-         zx_device_t* platform_bus)
-      : DeviceType{parent},
-        manager_{manager},
-        acpi_{manager->acpi()},
-        acpi_handle_{acpi_handle},
-        platform_bus_{platform_bus} {}
+  Device(acpi::Manager* manager, zx_device_t* parent, ACPI_HANDLE acpi_handle)
+      : DeviceType{parent}, manager_{manager}, acpi_{manager->acpi()}, acpi_handle_{acpi_handle} {}
 
   Device(acpi::Manager* manager, zx_device_t* parent, ACPI_HANDLE acpi_handle,
-         zx_device_t* platform_bus, std::vector<uint8_t> metadata, BusType bus_type,
-         uint32_t bus_id)
+         std::vector<uint8_t> metadata, BusType bus_type, uint32_t bus_id)
       : DeviceType{parent},
         manager_{manager},
         acpi_{manager->acpi()},
         acpi_handle_{acpi_handle},
-        platform_bus_{platform_bus},
         metadata_{std::move(metadata)},
         bus_type_{bus_type},
         bus_id_{bus_id} {}
 
   Device(acpi::Manager* manager, zx_device_t* parent, ACPI_HANDLE acpi_handle,
-         zx_device_t* platform_bus, std::vector<pci_bdf_t> pci_bdfs)
+         std::vector<pci_bdf_t> pci_bdfs)
       : DeviceType{parent},
         manager_{manager},
         acpi_{manager->acpi()},
         acpi_handle_{acpi_handle},
-        platform_bus_{platform_bus},
         pci_bdfs_{std::move(pci_bdfs)} {}
 
   // DDK mix-in impls.
@@ -114,12 +106,9 @@ class Device : public DeviceType,
   void DdkUnbind(ddk::UnbindTxn txn);
 
   ACPI_HANDLE acpi_handle() const { return acpi_handle_; }
-  zx_device_t* platform_bus() const { return platform_bus_; }
   zx_device_t** mutable_zxdev() { return &zxdev_; }
 
   zx_status_t AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti);
-  zx_status_t AcpiConnectSysmem(zx::channel connection);
-  zx_status_t AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection);
   void AcpiConnectServer(zx::channel server);
 
   // FIDL impls
@@ -158,8 +147,6 @@ class Device : public DeviceType,
   acpi::Acpi* acpi_;
   // Handle to the corresponding ACPI node
   ACPI_HANDLE acpi_handle_;
-
-  zx_device_t* platform_bus_;
 
   mutable std::mutex lock_;
   bool got_resources_ = false;

@@ -117,7 +117,7 @@ acpi::status<> Manager::PublishDevices(zx_device_t* platform_bus) {
       continue;
     }
 
-    auto status = d->Build(this, platform_bus);
+    auto status = d->Build(this);
     if (status.is_error()) {
       return acpi::error(AE_ERROR);
     }
@@ -184,7 +184,8 @@ acpi::status<bool> Manager::DiscoverDevice(ACPI_HANDLE handle) {
     return acpi::error(AE_NOT_FOUND);
   }
 
-  DeviceBuilder device(std::move(name), handle, parent_ptr, state);
+  DeviceBuilder device(std::move(name), handle, parent_ptr, state, device_id_);
+  device_id_++;
   if (info->Flags & ACPI_PCI_ROOT_BRIDGE) {
     device.SetBusType(BusType::kPci);
   }

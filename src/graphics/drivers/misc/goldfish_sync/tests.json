@@ -9,7 +9,7 @@
     {
         "device": {
             "fuchsia.acpi.hid": "\"GFSH0000\"",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_COMPOSITE": "1"
         },
         "expected": "abort",
         "name": "Device-id"
@@ -17,7 +17,7 @@
     {
         "device": {
             "fuchsia.acpi.hid": "\"GFSH0006\"",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_COMPOSITE": "1"
         },
         "expected": "match",
         "name": "goldfish-sync"

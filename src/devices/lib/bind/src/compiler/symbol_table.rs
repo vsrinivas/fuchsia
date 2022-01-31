@@ -233,6 +233,7 @@ fn deprecated_keys() -> Vec<(String, u32)> {
 
     // ACPI binding variables at 0x04XX
     keys.push(("BIND_ACPI_BUS_TYPE".to_string(), 0x0400));
+    keys.push(("BIND_ACPI_ID".to_string(), 0x0401));
 
     // Intel HDA Codec binding variables at 0x05XX
     keys.push(("BIND_IHDA_CODEC_VID".to_string(), 0x0500));

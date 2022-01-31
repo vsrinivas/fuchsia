@@ -3,7 +3,7 @@
         "name": "HID Match",
         "expected": "match",
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.acpi.hid": "\"PNP0B00\""
         }
     },
@@ -11,7 +11,7 @@
         "name": "CID Match",
         "expected": "match",
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.acpi.first_cid": "\"PNP0B00\""
         }
     },
@@ -19,7 +19,7 @@
         "name": "HID Mismatch",
         "expected": "abort",
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.acpi.hid": "\"PNP0B01\""
         }
     },
@@ -27,7 +27,7 @@
         "name": "CID Mismatch",
         "expected": "abort",
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.acpi.first_cid": "\"PNP0B01\""
         }
     },

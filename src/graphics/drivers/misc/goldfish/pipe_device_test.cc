@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/acpi/cpp/banjo-mock.h>
 #include <fuchsia/hardware/goldfish/pipe/c/banjo.h>
+#include <fuchsia/hardware/sysmem/cpp/banjo-mock.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -211,7 +212,7 @@ class PipeDeviceTest : public zxtest::Test {
 
     mock_acpi_.ExpectGetBti(ZX_OK, kGoldfishBtiId, 0, std::move(out_bti));
 
-    mock_acpi_.mock_connect_sysmem().ExpectCallWithMatcher([this](const zx::channel& connection) {
+    mock_sysmem_.mock_connect().ExpectCallWithMatcher([this](const zx::channel& connection) {
       zx_info_handle_basic_t info;
       connection.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
       sysmem_request_koid_ = info.koid;
@@ -233,7 +234,7 @@ class PipeDeviceTest : public zxtest::Test {
 
     for (const auto heap : kSysmemHeaps) {
       uint64_t heap_id = static_cast<uint64_t>(heap);
-      mock_acpi_.mock_register_sysmem_heap().ExpectCallWithMatcher(
+      mock_sysmem_.mock_register_heap().ExpectCallWithMatcher(
           [register_heap, heap_id](uint64_t heap, const zx::channel& connection) {
             EXPECT_EQ(heap, heap_id);
             return register_heap(heap, connection);
@@ -242,8 +243,37 @@ class PipeDeviceTest : public zxtest::Test {
 
     auto acpi_client = mock_acpi_fidl_.CreateClient(async_loop_.dispatcher());
     ASSERT_OK(acpi_client.status_value());
+    auto entries = fbl::MakeArray<fake_ddk::FragmentEntry>(2);
 
-    ddk_.SetProtocol(ZX_PROTOCOL_ACPI, mock_acpi_.GetProto());
+    entries[0] = fake_ddk::FragmentEntry{
+        .name = "acpi",
+        .protocols =
+            std::vector<fake_ddk::ProtocolEntry>{
+                fake_ddk::ProtocolEntry{
+                    .id = ZX_PROTOCOL_ACPI,
+                    .proto =
+                        {
+                            .ops = mock_acpi_.GetProto()->ops,
+                            .ctx = mock_acpi_.GetProto()->ctx,
+                        },
+                },
+            },
+    };
+    entries[1] = fake_ddk::FragmentEntry{
+        .name = "sysmem",
+        .protocols =
+            std::vector<fake_ddk::ProtocolEntry>{
+                fake_ddk::ProtocolEntry{
+                    .id = ZX_PROTOCOL_SYSMEM,
+                    .proto =
+                        {
+                            .ops = mock_sysmem_.GetProto()->ops,
+                            .ctx = mock_sysmem_.GetProto()->ctx,
+                        },
+                },
+            },
+    };
+    ddk_.SetFragments(std::move(entries));
     dut_ = std::make_unique<PipeDevice>(fake_ddk::FakeParent(), std::move(acpi_client.value()));
     dut_child_ = std::make_unique<PipeChildDevice>(dut_.get());
   }
@@ -261,6 +291,7 @@ class PipeDeviceTest : public zxtest::Test {
   }
 
  protected:
+  ddk::MockSysmem mock_sysmem_;
   ddk::MockAcpi mock_acpi_;
   acpi::mock::Device mock_acpi_fidl_;
   async::Loop async_loop_;

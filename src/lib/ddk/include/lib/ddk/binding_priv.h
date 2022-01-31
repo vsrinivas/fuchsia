@@ -93,6 +93,8 @@ __BEGIN_CDECLS
 
 // ACPI binding variables at 0x04XX
 #define BIND_ACPI_BUS_TYPE 0x0400
+// Internal use only.
+#define BIND_ACPI_ID 0x0401
 
 // Intel HDA Codec binding variables at 0x05XX
 #define BIND_IHDA_CODEC_VID 0x0500

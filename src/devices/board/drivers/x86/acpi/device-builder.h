@@ -80,17 +80,27 @@ using DeviceChildEntry = std::variant<PciTopo, fuchsia_hardware_spi::wire::SpiCh
 // Represents a device that's been discovered inside the ACPI tree.
 class DeviceBuilder {
  public:
-  DeviceBuilder(std::string name, ACPI_HANDLE handle, DeviceBuilder* parent, uint64_t state)
-      : name_(std::move(name)), handle_(handle), parent_(parent), state_(state) {}
+  DeviceBuilder(std::string name, ACPI_HANDLE handle, DeviceBuilder* parent, uint64_t state,
+                uint32_t device_id)
+      : name_(std::move(name)),
+        handle_(handle),
+        parent_(parent),
+        state_(state),
+        device_id_(device_id) {
+    dev_props_.emplace_back(zx_device_prop_t{
+        .id = BIND_ACPI_ID,
+        .value = device_id_,
+    });
+  }
 
   static DeviceBuilder MakeRootDevice(ACPI_HANDLE handle, zx_device_t* acpi_root) {
-    DeviceBuilder builder("acpi-root", handle, nullptr, false);
+    DeviceBuilder builder("acpi-root", handle, nullptr, false, 0);
     builder.zx_device_ = acpi_root;
     return builder;
   }
 
   // Creates an actual device from this DeviceBuilder, returning a pointer to its zx_device_t.
-  zx::status<zx_device_t*> Build(acpi::Manager* acpi, zx_device_t* platform_bus);
+  zx::status<zx_device_t*> Build(acpi::Manager* acpi);
 
   // Set the bus type of this device. A device can only have a single bus type.
   void SetBusType(BusType t) {
@@ -143,8 +153,7 @@ class DeviceBuilder {
   // Build a composite for this device that binds to all of its parents.
   // For instance, if a device had an i2c and spi resource, this would generate a composite device
   // that binds to the i2c device, the spi device, and the acpi device.
-  zx::status<> BuildComposite(acpi::Manager* acpi, zx_device_t* platform_bus,
-                              std::vector<zx_device_str_prop_t>& str_props);
+  zx::status<> BuildComposite(acpi::Manager* acpi, std::vector<zx_device_str_prop_t>& str_props);
   // Get bind instructions for the |child_index|th child of this bus.
   // Used by |BuildComposite| to generate the bus bind rules.
   std::vector<zx_bind_inst_t> GetFragmentBindInsnsForChild(size_t child_index);
@@ -183,6 +192,10 @@ class DeviceBuilder {
 
   // ACPI_STA_* flags for this device.
   uint64_t state_;
+
+  // TODO(fxbug.dev/91510): remove device_id and use dynamic binding to bind against string props
+  // once that is supported.
+  uint32_t device_id_;
 };
 
 }  // namespace acpi

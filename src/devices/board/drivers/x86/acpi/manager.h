@@ -64,6 +64,7 @@ class Manager {
   bool published_pci_bus_ = false;
   async::Loop loop_;
   async::Executor executor_;
+  uint32_t device_id_ = 1;
 };
 
 }  // namespace acpi

@@ -1,7 +1,7 @@
 [
     {
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.acpi.hid": "\"GGL0001\""
         },
         "expected": "match",
@@ -9,7 +9,7 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.acpi.hid": "\"GOOG0016\""
         },
         "expected": "match",
@@ -17,7 +17,7 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_COMPOSITE": "1",
             "fuchsia.acpi.hid": "\"GOOG0015\""
         },
         "expected": "abort",

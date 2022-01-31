@@ -24,6 +24,7 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
+#include "fuchsia/hardware/sysmem/cpp/banjo.h"
 #include "src/devices/lib/acpi/client.h"
 
 namespace goldfish {
@@ -71,6 +72,7 @@ class PipeDevice : public DeviceType {
   };
 
   ddk::AcpiProtocolClient acpi_;
+  ddk::SysmemProtocolClient sysmem_;
   acpi::Client acpi_fidl_;
   zx::interrupt irq_;
   zx::bti bti_;

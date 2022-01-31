@@ -1,19 +1,17 @@
 [
-  {
-    "name": "Protocol",
-    "expected": "abort",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    {
+        "name": "Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        }
+    },
+    {
+        "name": "goldfish-pipe",
+        "expected": "match",
+        "device": {
+            "fuchsia.acpi.hid": "\"GFSH0003\"",
+            "fuchsia.BIND_COMPOSITE": "1"
+        }
     }
-  },
-
-  {
-    "name": "goldfish-pipe",
-    "expected": "match",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
-      "fuchsia.acpi.hid": "\"GFSH0003\""
-    }
-  }
 ]
-

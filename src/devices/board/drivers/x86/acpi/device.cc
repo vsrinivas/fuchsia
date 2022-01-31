@@ -282,26 +282,6 @@ zx_status_t Device::AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
   return zx::bti::create(*zx::unowned_iommu{iommu_handle}, 0, bdf, bti);
 }
 
-zx_status_t Device::AcpiConnectSysmem(zx::channel connection) {
-  std::scoped_lock guard{lock_};
-  sysmem_protocol_t sysmem;
-  zx_status_t st = device_get_protocol(platform_bus_, ZX_PROTOCOL_SYSMEM, &sysmem);
-  if (st != ZX_OK) {
-    return st;
-  }
-  return sysmem_connect(&sysmem, connection.release());
-}
-
-zx_status_t Device::AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection) {
-  std::scoped_lock guard{lock_};
-  sysmem_protocol_t sysmem;
-  zx_status_t st = device_get_protocol(platform_bus_, ZX_PROTOCOL_SYSMEM, &sysmem);
-  if (st != ZX_OK) {
-    return st;
-  }
-  return sysmem_register_heap(&sysmem, heap, connection.release());
-}
-
 void Device::AcpiConnectServer(zx::channel server) {
   zx_status_t status = ZX_OK;
   if (status != ZX_OK) {

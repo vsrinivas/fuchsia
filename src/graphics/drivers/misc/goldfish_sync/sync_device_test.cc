@@ -120,7 +120,7 @@ class SyncDeviceTest : public zxtest::Test {
 
     fake_parent_ = MockDevice::FakeRootParent();
     fake_parent_->AddProtocol(ZX_PROTOCOL_ACPI, mock_acpi_.GetProto()->ops,
-                              mock_acpi_.GetProto()->ctx);
+                              mock_acpi_.GetProto()->ctx, "acpi");
   }
 
   // |zxtest::Test|

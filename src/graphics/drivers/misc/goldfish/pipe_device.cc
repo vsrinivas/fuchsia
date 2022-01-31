@@ -112,7 +112,10 @@ zx_status_t PipeDevice::Create(void* ctx, zx_device_t* device) {
 }
 
 PipeDevice::PipeDevice(zx_device_t* parent, acpi::Client client)
-    : DeviceType(parent), acpi_(parent), acpi_fidl_(std::move(client)) {}
+    : DeviceType(parent),
+      acpi_(parent, "acpi"),
+      sysmem_(parent, "sysmem"),
+      acpi_fidl_(std::move(client)) {}
 
 PipeDevice::~PipeDevice() {
   if (irq_.is_valid()) {
@@ -310,13 +313,13 @@ zx_status_t PipeDevice::GetBti(zx::bti* out_bti) {
 zx_status_t PipeDevice::ConnectSysmem(zx::channel connection) {
   TRACE_DURATION("gfx", "PipeDevice::ConnectSysmem");
 
-  return acpi_.ConnectSysmem(std::move(connection));
+  return sysmem_.Connect(std::move(connection));
 }
 
 zx_status_t PipeDevice::RegisterSysmemHeap(uint64_t heap, zx::channel connection) {
   TRACE_DURATION("gfx", "PipeDevice::RegisterSysmemHeap");
 
-  return acpi_.RegisterSysmemHeap(heap, std::move(connection));
+  return sysmem_.RegisterHeap(heap, std::move(connection));
 }
 
 int PipeDevice::IrqHandler() {

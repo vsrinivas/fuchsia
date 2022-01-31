@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <zircon/compiler.h>
 
 #include <fbl/string_printf.h>
 
@@ -18,6 +19,9 @@
 
 namespace acpi {
 namespace {
+static const zx_bind_inst_t kSysmemFragment[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
+};
 
 template <typename T>
 zx::status<std::vector<uint8_t>> DoFidlEncode(T data) {
@@ -153,7 +157,7 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyArena& al
   return result;
 }
 
-zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager, zx_device_t* platform_bus) {
+zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager) {
   if (parent_->zx_device_ == nullptr) {
     zxlogf(ERROR, "Parent has not been added to the tree yet!");
     return zx::error(ZX_ERR_BAD_STATE);
@@ -169,10 +173,10 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager, zx_device_
       zxlogf(ERROR, "Error while encoding metadata for '%s': %s", name(), metadata.status_string());
       return metadata.take_error();
     }
-    device = std::make_unique<Device>(manager, manager->acpi_root(), handle_, platform_bus,
-                                      std::move(*metadata), bus_type_, GetBusId());
+    device = std::make_unique<Device>(manager, manager->acpi_root(), handle_, std::move(*metadata),
+                                      bus_type_, GetBusId());
   } else {
-    device = std::make_unique<Device>(manager, manager->acpi_root(), handle_, platform_bus);
+    device = std::make_unique<Device>(manager, manager->acpi_root(), handle_);
   }
 
   // Narrow our custom type down to zx_device_str_prop_t.
@@ -206,7 +210,7 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager, zx_device_
     return zx::error(result);
   }
   zx_device_ = device.release()->zxdev();
-  auto status = BuildComposite(manager, platform_bus, str_props_for_ddkadd);
+  auto status = BuildComposite(manager, str_props_for_ddkadd);
   if (status.is_error()) {
     zxlogf(WARNING, "failed to publish composite acpi device '%s-composite': %d", name(),
            status.error_value());
@@ -270,15 +274,15 @@ zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
       bus_children_);
 }
 
-zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager, zx_device_t* platform_bus,
+zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
                                            std::vector<zx_device_str_prop_t>& str_props) {
-  if (!has_address_ || buses_.empty()) {
-    // If a device doesn't have any bus resources or doesn't have an address on any of its buses,
+  if (parent_->GetBusType() == BusType::kPci) {
+    // If a device is on a PCI bus, the PCI bus driver will publish a composite device, so we
     // don't try to publish a composite.
     return zx::ok();
   }
 
-  size_t fragment_count = buses_.size() + 1;
+  size_t fragment_count = buses_.size() + 2;
   // Bookkeeping.
   // We use fixed-size arrays here rather than std::vector because we don't want
   // pointers to array members to become invalidated when the vector resizes.
@@ -327,6 +331,18 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager, zx_device_t* 
       .parts_count = 1,
       .parts = &fragment_parts[bus_index],
   };
+  bus_index++;
+
+  // Generate the sysmem fragment.
+  fragment_parts[bus_index] = device_fragment_part_t{
+      .instruction_count = sizeof(kSysmemFragment) / sizeof(kSysmemFragment[0]),
+      .match_program = kSysmemFragment,
+  };
+  fragments[bus_index] = device_fragment_t{
+      .name = "sysmem",
+      .parts_count = 1,
+      .parts = &fragment_parts[bus_index],
+  };
 
   __UNUSED composite_device_desc_t composite_desc = {
       .props = dev_props_.data(),
@@ -343,8 +359,7 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager, zx_device_t* 
   // TODO(fxbug.dev/79923): re-enable this in tests once mock_ddk supports composites.
   auto composite_name = fbl::StringPrintf("%s-composite", name());
   // Don't worry about any metadata, since it's present in the "acpi" parent.
-  auto composite_device =
-      std::make_unique<Device>(manager, parent_->zx_device_, handle_, platform_bus);
+  auto composite_device = std::make_unique<Device>(manager, parent_->zx_device_, handle_);
   zx_status_t status = composite_device->DdkAddComposite(composite_name.data(), &composite_desc);
 
   if (status == ZX_OK) {

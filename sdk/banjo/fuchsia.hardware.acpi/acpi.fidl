@@ -29,17 +29,6 @@ protocol Acpi {
         s zx.status;
         bti zx.handle:BTI;
     });
-    ConnectSysmem(resource struct {
-        connection zx.handle:CHANNEL;
-    }) -> (struct {
-        s zx.status;
-    });
-    RegisterSysmemHeap(resource struct {
-        heap uint64;
-        connection zx.handle:CHANNEL;
-    }) -> (struct {
-        s zx.status;
-    });
 };
 
 /// A generic ACPI device. This will allow devices to query information directly

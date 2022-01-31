@@ -84,7 +84,7 @@ zx_status_t ChromiumosEcLpc::Bind() {
       fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
       fbl::MakeRefCounted<fs::Service>(
           [this](fidl::ServerEnd<fuchsia_hardware_acpi::Device> request) mutable {
-            ddk::AcpiProtocolClient client(parent());
+            ddk::AcpiProtocolClient client(parent(), "acpi");
             client.ConnectServer(request.TakeChannel());
             return ZX_OK;
           }));

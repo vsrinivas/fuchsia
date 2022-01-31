@@ -4,7 +4,7 @@
 
 using fuchsia.acpi;
 
-fuchsia.BIND_PROTOCOL == fuchsia.acpi.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_COMPOSITE == 1;
 
 accept fuchsia.acpi.hid {
 	"GOOG0016",

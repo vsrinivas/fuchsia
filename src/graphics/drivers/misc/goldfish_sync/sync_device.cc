@@ -61,7 +61,7 @@ zx_status_t SyncDevice::Create(void* ctx, zx_device_t* device) {
 SyncDevice::SyncDevice(zx_device_t* parent, bool can_read_multiple_commands, acpi::Client client)
     : SyncDeviceType(parent),
       can_read_multiple_commands_(can_read_multiple_commands),
-      acpi_(parent),
+      acpi_(parent, "acpi"),
       acpi_fidl_(std::move(client)),
       loop_(&kAsyncLoopConfigNeverAttachToThread) {
   loop_.StartThread("goldfish-sync-loop-thread");
