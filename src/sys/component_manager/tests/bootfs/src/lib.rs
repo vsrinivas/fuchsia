@@ -17,11 +17,9 @@ use {
 const SAMPLE_UTF8_READONLY_FILE: &str = "/boot/config/build_info/minimum_utc_stamp";
 const SAMPLE_REQUIRED_DIRECTORY: &str = "/boot/lib";
 const KERNEL_VDSO_DIRECTORY: &str = "/boot/kernel/vdso";
-const BOOTFS_READONLY_FILES: &[&str] = &[
-    "/boot/config/component_manager",
-    "/boot/data/ssh/authorized_keys",
-    "/boot/meta/driver_manager.cm",
-];
+const BOOTFS_READONLY_FILES: &[&str] =
+    &["/boot/config/component_manager", "/boot/meta/driver_manager.cm"];
+const BOOTFS_DATA_DIRECTORY: &str = "/boot/data";
 const BOOTFS_EXECUTABLE_LIB_FILES: &[&str] = &["ld.so.1", "libdriver_runtime.so"];
 const BOOTFS_EXECUTABLE_NON_LIB_FILES: &[&str] =
     &["/boot/driver/fragment.so", "/boot/bin/component_manager"];
@@ -165,16 +163,38 @@ async fn check_executable_files() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn check_readonly_files() -> Result<(), Error> {
-    for path in BOOTFS_READONLY_FILES {
+    // There is a large variation in what different products have in the data directory, so
+    // just search it during the test time and find some files. Every file in the data directory
+    // should be readonly.
+    let directory = directory::open_in_namespace(
+        BOOTFS_DATA_DIRECTORY,
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+    )
+    .context("failed to open data directory")?;
+    let data_paths = files_async::readdir_recursive(&directory, None)
+        .filter_map(|result| async {
+            assert!(result.is_ok());
+            Some(format!("{}/{}", BOOTFS_DATA_DIRECTORY, result.unwrap().name))
+        })
+        .collect::<Vec<String>>()
+        .await;
+    directory::close(directory).await?;
+
+    let paths =
+        [data_paths, BOOTFS_READONLY_FILES.iter().map(|val| val.to_string()).collect::<Vec<_>>()]
+            .concat();
+
+    for path in paths {
         // A readonly file should not be usable when opened as executable.
-        let mut file = file::open_in_namespace(path, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)
+        let mut file = file::open_in_namespace(&path, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)
             .context("failed to open file")?;
         let result = file::read_num_bytes(&file, 1).await;
         assert!(result.is_err());
         // Don't close the file proxy -- the access error above has already closed the channel.
 
         // Reopen as readonly, and confirm that it can be read from.
-        file = file::open_in_namespace(path, OPEN_RIGHT_READABLE).context("failed to open file")?;
+        file =
+            file::open_in_namespace(&path, OPEN_RIGHT_READABLE).context("failed to open file")?;
         let data = file::read_num_bytes(&file, 1).await.context(format!(
             "failed to read a single byte from a file opened as readonly: {}",
             path
