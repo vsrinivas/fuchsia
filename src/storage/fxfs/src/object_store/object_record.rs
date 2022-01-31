@@ -154,7 +154,7 @@ pub enum EncryptionKeys {
     AES256XTS(AES256XTSKeys),
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct AES256XTSKeys {
     /// The identifier of the wrapping key.  The identifier has meaning to whatever is doing the
     /// unwrapping.
@@ -165,6 +165,15 @@ pub struct AES256XTSKeys {
     /// requires a 512 bit key, which is made of two 256 bit keys, one for the data and one for the
     /// tweak.  Both those keys are derived from the single 256 bit key we have here.
     pub keys: Vec<(/* id= */ u64, [u8; 32])>,
+}
+
+impl std::fmt::Debug for AES256XTSKeys {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AES256XTSKeys")
+            .field("wrapping_key_id", &self.wrapping_key_id)
+            .field("keys", &self.keys.iter().map(|k| k.0).collect::<Vec<_>>())
+            .finish()
+    }
 }
 
 /// Object-level attributes.  Note that these are not the same as "attributes" in the
