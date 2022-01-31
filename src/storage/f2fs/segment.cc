@@ -320,27 +320,26 @@ bool SegmentManager::NeedToFlush() {
   if (superblock_info_->IsOnRecovery())
     return false;
 
+  // TODO: Determine a proper threshold for memory usage
+  if (superblock_info_->GetPageCount(CountType::kDirtyData) >= kMaxDirtyDataPages) {
+    FX_LOGS(INFO) << "Flush dirty pages....";
+    return true;
+  }
+
   return FreeSections() <= static_cast<uint32_t>(node_secs + 2 * dent_secs + ReservedSections());
 }
 
 // This function balances dirty node and dentry pages.
 // In addition, it controls garbage collection.
 void SegmentManager::BalanceFs() {
-#if 0  // porting needed
-  WritebackControl wbc = {
-      // .nr_to_write = LONG_MAX,
-      // .sync_mode = WB_SYNC_ALL,
-      // .for_reclaim = 0,
-  };
-#endif
-
   if (superblock_info_->IsOnRecovery())
     return;
 
   // We should do checkpoint when there are so many dirty node pages
   // with enough free segments. After then, we should do GC.
+  // TODO: Do writeback in an asynchronous manner if it is not urgent.
   if (NeedToFlush()) {
-    fs_->SyncDirtyDirInodes();
+    fs_->SyncDirtyDataPages();
     fs_->GetNodeManager().SyncNodePages(0, false);
   }
 
@@ -565,11 +564,7 @@ void SegmentManager::WriteSumPage(SummaryBlock *sum_blk, block_t blk_addr) {
   fbl::RefPtr<Page> page;
   fs_->GrabMetaPage(blk_addr, &page);
   memcpy(page->GetAddress(), sum_blk, kPageSize);
-#if 0  // porting needed
-  // set_page_dirty(page);
-#endif
   page->SetDirty();
-  FlushDirtyMetaPage(fs_, *page);
   Page::PutPage(std::move(page), true);
 }
 
@@ -955,9 +950,9 @@ CursegType SegmentManager::GetSegmentType2(Page &page, PageType p_type) {
 
 CursegType SegmentManager::GetSegmentType4(Page &page, PageType p_type) {
   if (p_type == PageType::kData) {
-    VnodeF2fs *vnode = page.GetVnode();
+    VnodeF2fs &vnode = page.GetVnode();
 
-    if (vnode->IsDir()) {
+    if (vnode.IsDir()) {
       return CursegType::kCursegHotData;
     }
     return CursegType::kCursegColdData;
@@ -971,11 +966,11 @@ CursegType SegmentManager::GetSegmentType4(Page &page, PageType p_type) {
 
 CursegType SegmentManager::GetSegmentType6(Page &page, PageType p_type) {
   if (p_type == PageType::kData) {
-    VnodeF2fs *vnode = page.GetVnode();
+    VnodeF2fs &vnode = page.GetVnode();
 
-    if (vnode->IsDir()) {
+    if (vnode.IsDir()) {
       return CursegType::kCursegHotData;
-    } else if (/*NodeManager::IsColdData(*page) ||*/ NodeManager::IsColdFile(*vnode)) {
+    } else if (/*NodeManager::IsColdData(*page) ||*/ NodeManager::IsColdFile(vnode)) {
       return CursegType::kCursegColdData;
     }
     return CursegType::kCursegWarmData;
@@ -1163,7 +1158,7 @@ void SegmentManager::RewriteNodePage(Page *page, Summary *sum, block_t old_blkad
   LocateDirtySegment(GetSegmentNumber(new_blkaddr));
 }
 
-int SegmentManager::ReadCompactedSummaries() {
+zx_status_t SegmentManager::ReadCompactedSummaries() {
   Checkpoint &ckpt = superblock_info_->GetCheckpoint();
   CursegInfo *seg_i;
   uint8_t *kaddr;
@@ -1203,8 +1198,7 @@ int SegmentManager::ReadCompactedSummaries() {
       blk_off = static_cast<uint16_t>(superblock_info_->GetBlocksPerSeg());
 
     for (int j = 0; j < blk_off; ++j) {
-      Summary *s;
-      s = reinterpret_cast<Summary *>(kaddr + offset);
+      Summary *s = reinterpret_cast<Summary *>(kaddr + offset);
       seg_i->sum_blk->entries[j] = *s;
       offset += kSummarySize;
       if (offset + kSummarySize <= kPageSize - kSumFooterSize)
@@ -1218,10 +1212,10 @@ int SegmentManager::ReadCompactedSummaries() {
     }
   }
   Page::PutPage(std::move(page), true);
-  return 0;
+  return ZX_OK;
 }
 
-int SegmentManager::ReadNormalSummaries(int type) {
+zx_status_t SegmentManager::ReadNormalSummaries(int type) {
   Checkpoint &ckpt = superblock_info_->GetCheckpoint();
   SummaryBlock *sum;
   CursegInfo *curseg;
@@ -1260,7 +1254,7 @@ int SegmentManager::ReadNormalSummaries(int type) {
     } else {
       if (NodeManager::RestoreNodeSummary(*fs_, segno, *sum)) {
         Page::PutPage(std::move(new_page), true);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
       }
     }
   }
@@ -1276,7 +1270,7 @@ int SegmentManager::ReadNormalSummaries(int type) {
     curseg->next_blkoff = blk_off;
   }
   Page::PutPage(std::move(new_page), true);
-  return 0;
+  return ZX_OK;
 }
 
 zx_status_t SegmentManager::RestoreCursegSummaries() {
@@ -1298,26 +1292,24 @@ zx_status_t SegmentManager::RestoreCursegSummaries() {
 
 void SegmentManager::WriteCompactedSummaries(block_t blkaddr) {
   fbl::RefPtr<Page> page;
-  uint8_t *kaddr;
   Summary *summary;
   CursegInfo *seg_i;
   int written_size = 0;
 
   fs_->GrabMetaPage(blkaddr++, &page);
-  kaddr = static_cast<uint8_t *>(page->GetAddress());
+  uint8_t *vaddr = static_cast<uint8_t *>(page->GetAddress());
 
   // Step 1: write nat cache
   seg_i = CURSEG_I(CursegType::kCursegHotData);
-  memcpy(kaddr, &seg_i->sum_blk->n_nats, kSumJournalSize);
+  memcpy(vaddr, &seg_i->sum_blk->n_nats, kSumJournalSize);
   written_size += kSumJournalSize;
 
   // Step 2: write sit cache
   seg_i = CURSEG_I(CursegType::kCursegColdData);
-  memcpy(kaddr + written_size, &seg_i->sum_blk->n_sits, kSumJournalSize);
+  memcpy(vaddr + written_size, &seg_i->sum_blk->n_sits, kSumJournalSize);
   written_size += kSumJournalSize;
 
   page->SetDirty();
-  FlushDirtyMetaPage(fs_, *page);
 
   // Step 3: write summary entries
   for (int i = static_cast<int>(CursegType::kCursegHotData);
@@ -1333,17 +1325,13 @@ void SegmentManager::WriteCompactedSummaries(block_t blkaddr) {
     for (int j = 0; j < blkoff; ++j) {
       if (!page) {
         fs_->GrabMetaPage(blkaddr++, &page);
-        kaddr = static_cast<uint8_t *>(page->GetAddress());
+        vaddr = static_cast<uint8_t *>(page->GetAddress());
         written_size = 0;
+        page->SetDirty();
       }
-      summary = reinterpret_cast<Summary *>(kaddr + written_size);
+      summary = reinterpret_cast<Summary *>(vaddr + written_size);
       *summary = seg_i->sum_blk->entries[j];
       written_size += kSummarySize;
-#if 0  // porting needed
-      // set_page_dirty(page);
-#endif
-      page->SetDirty();
-      FlushDirtyMetaPage(fs_, *page);
 
       if (written_size + kSummarySize <= kPageSize - kSumFooterSize)
         continue;
@@ -1431,9 +1419,6 @@ void SegmentManager::GetNextSitPage(uint32_t start, fbl::RefPtr<Page> *out) {
 
   memcpy(dst_page->GetAddress(), src_page->GetAddress(), kPageSize);
 
-#if 0  // porting needed
-  // set_page_dirty(dst_page);
-#endif
   dst_page->SetDirty();
   Page::PutPage(std::move(src_page), true);
 
@@ -1499,7 +1484,6 @@ void SegmentManager::FlushSitEntries() {
         if (!page || (start > segno) || (segno > end)) {
           if (page) {
             page->SetDirty();
-            FlushDirtyMetaPage(fs_, *page);
             Page::PutPage(std::move(page), true);
           }
 
@@ -1521,11 +1505,7 @@ void SegmentManager::FlushSitEntries() {
 
   // Write out last modified SIT block
   if (page != nullptr) {
-#if 0  // porting needed
-  // set_page_dirty(page, fs_);
-#endif
     page->SetDirty();
-    FlushDirtyMetaPage(fs_, *page);
     Page::PutPage(std::move(page), true);
   }
 

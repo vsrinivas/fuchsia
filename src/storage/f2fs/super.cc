@@ -26,7 +26,6 @@ void F2fs::PutSuper() {
   GetDirEntryCache().Reset();
 #endif  // __Fuchsia__
 
-  // destroy f2fs internal modules
   node_manager_->DestroyNodeManager();
   segment_manager_->DestroySegmentManager();
 
@@ -319,9 +318,6 @@ zx_status_t F2fs::FillSuper() {
       static_cast<block_t>(LeToCpu(superblock_info_->GetCheckpoint().valid_block_count)));
   superblock_info_->SetLastValidBlockCount(superblock_info_->GetTotalValidBlockCount());
   superblock_info_->SetAllocValidBlockCount(0);
-#if 0  // porting needed
-  list_initialize(&superblock_info_->GetDirInodeList());
-#endif
 
   InitOrphanInfo();
 

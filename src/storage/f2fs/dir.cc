@@ -192,8 +192,6 @@ DirEntry *Dir::FindEntryOnDevice(std::string_view name, fbl::RefPtr<Page> *res_p
 }
 
 DirEntry *Dir::FindEntry(std::string_view name, fbl::RefPtr<Page> *res_page) {
-  fs::SharedLock read_lock(io_lock_);
-
 #ifdef __Fuchsia__
   if (auto cache_page_index = Vfs()->GetDirEntryCache().LookupDataPageIndex(Ino(), name);
       !cache_page_index.is_error()) {
@@ -210,7 +208,7 @@ DirEntry *Dir::FindEntry(std::string_view name, fbl::RefPtr<Page> *res_page) {
     f2fs_hash_t name_hash = DentryHash(name);
     if (DirEntry *de = FindInBlock(dentry_page, name, &max_slots, name_hash, res_page);
         de != nullptr) {
-      return de;  // TODO: SK
+      return de;
     }
     Page::PutPage(std::move(dentry_page), false);
   }
@@ -221,8 +219,6 @@ DirEntry *Dir::FindEntry(std::string_view name, fbl::RefPtr<Page> *res_page) {
 
 zx::status<DirEntry> Dir::FindEntry(std::string_view name) {
   DirEntry *de = nullptr;
-
-  fs::SharedLock read_lock(io_lock_);
 
 #ifdef __Fuchsia__
   auto element = Vfs()->GetDirEntryCache().LookupDirEntry(Ino(), name);
@@ -272,26 +268,17 @@ ino_t Dir::InodeByName(std::string_view name) {
 }
 
 void Dir::SetLink(DirEntry *de, Page *page, VnodeF2fs *vnode) {
-  std::lock_guard write_lock(io_lock_);
-#if 0  // porting needed
-  // lock_page(page);
-#endif
+  page->Lock();
   page->WaitOnWriteback();
   de->ino = CpuToLe(vnode->Ino());
   SetDeType(de, vnode);
 #if 0  // porting needed
   // if (!TestFlag(InodeInfoFlag::kInlineDentry))
   //   kunmap(page);
-  // set_page_dirty(page);
 #else
   // If |de| is an inline dentry, the inode block should be flushed.
   // Otherwise, it writes out the data block.
   page->SetDirty();
-  if (page->GetVnode() == this) {
-    FlushDirtyDataPage(Vfs(), *page);
-  } else {
-    FlushDirtyNodePage(Vfs(), *page);
-  }
 #endif
 
 #ifdef __Fuchsia__
@@ -303,37 +290,24 @@ void Dir::SetLink(DirEntry *de, Page *page, VnodeF2fs *vnode) {
   SetCTime(cur_time);
   SetMTime(cur_time);
 
+  page->Unlock();
   MarkInodeDirty();
 }
 
 void Dir::InitDentInode(VnodeF2fs *vnode, Page *ipage) {
-#if 0  // porting needed
-  // inode *dir = dentry->d_parent->d_inode;
-#endif
-  Node *rn;
-
   if (!ipage)
     return;
 
   ipage->WaitOnWriteback();
 
-  /* copy dentry info. to this inode page */
-  rn = static_cast<Node *>(ipage->GetAddress());
+  // copy dentry info. to this inode page
+  Node *rn = static_cast<Node *>(ipage->GetAddress());
   rn->i.i_namelen = CpuToLe(vnode->GetNameLen());
   memcpy(rn->i.i_name, vnode->GetName(), vnode->GetNameLen());
-#if 0  // porting needed
-  // set_page_dirty(ipage);
-#else
   ipage->SetDirty();
-  FlushDirtyNodePage(Vfs(), *ipage);
-#endif
 }
 
 zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
-#if 0  // porting needed
-  // inode *dir = dentry->d_parent->d_inode;
-#endif
-
   if (vnode->TestFlag(InodeInfoFlag::kNewInode)) {
     if (zx_status_t err = Vfs()->GetNodeManager().NewInodePage(this, vnode); err != ZX_OK)
       return err;
@@ -371,12 +345,9 @@ zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
 }
 
 void Dir::UpdateParentMetadata(VnodeF2fs *vnode, unsigned int current_depth) {
-  bool need_dir_update = false;
-
   if (vnode->TestFlag(InodeInfoFlag::kNewInode)) {
     if (vnode->IsDir()) {
       IncNlink();
-      need_dir_update = true;
     }
     vnode->ClearFlag(InodeInfoFlag::kNewInode);
   }
@@ -389,14 +360,9 @@ void Dir::UpdateParentMetadata(VnodeF2fs *vnode, unsigned int current_depth) {
 
   if (GetCurDirDepth() != current_depth) {
     SetCurDirDepth(current_depth);
-    need_dir_update = true;
   }
 
-  if (need_dir_update) {
-    WriteInode(false);
-  } else {
-    MarkInodeDirty();
-  }
+  MarkInodeDirty();
 
   if (vnode->TestFlag(InodeInfoFlag::kIncLink)) {
     vnode->ClearFlag(InodeInfoFlag::kIncLink);
@@ -439,7 +405,6 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
 
   if (TestFlag(InodeInfoFlag::kInlineDentry)) {
     bool is_converted = false;
-    std::lock_guard write_lock(io_lock_);
     if (err = AddInlineEntry(name, vnode, &is_converted); err != ZX_OK)
       return err;
 
@@ -469,7 +434,6 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
     bidx = DirBlockIndex(level, GetDirLevel(), (dentry_hash % nbucket));
 
     for (uint64_t block = bidx; block <= (bidx + nblock - 1); ++block) {
-      std::lock_guard write_lock(io_lock_);
       if (err = GetNewDataPage(safemath::checked_cast<pgoff_t>(block), true, &dentry_page);
           err != ZX_OK) {
         return err;
@@ -492,13 +456,7 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
           for (int i = 0; i < slots; ++i) {
             TestAndSetBit(bit_pos + i, dentry_blk->dentry_bitmap);
           }
-#if 0  // porting needed
-       // set_page_dirty(dentry_page);
-#else
           dentry_page->SetDirty();
-          FlushDirtyDataPage(Vfs(), *dentry_page);
-#endif
-
 #ifdef __Fuchsia__
           if (de != nullptr) {
             Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, dentry_page->GetIndex());
@@ -531,13 +489,7 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
 void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   DentryBlock *dentry_blk;
   unsigned int bit_pos;
-#if 0  // porting needed
-  // address_space *mapping = page->mapping;
-#endif
   int slots = (LeToCpu(dentry->name_len) + kNameLen - 1) / kNameLen;
-  void *kaddr = page->GetAddress();
-
-  std::lock_guard write_lock(io_lock_);
 
   if (TestFlag(InodeInfoFlag::kInlineDentry)) {
     DeleteInlineEntry(dentry, page, vnode);
@@ -547,7 +499,7 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   page->Lock();
   page->WaitOnWriteback();
 
-  dentry_blk = static_cast<DentryBlock *>(kaddr);
+  dentry_blk = static_cast<DentryBlock *>(page->GetAddress());
   bit_pos = static_cast<uint32_t>(dentry - dentry_blk->dentry);
   for (int i = 0; i < slots; ++i) {
     TestAndClearBit(bit_pos + i, dentry_blk->dentry_bitmap);
@@ -555,10 +507,8 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 
 #if 0  // porting needed
   // kunmap(page); /* kunmap - pair of f2fs_find_entry */
-  // set_page_dirty(page);
-#else
-  page->SetDirty();
 #endif
+  page->SetDirty();
 
 #ifdef __Fuchsia__
   std::string_view remove_name(reinterpret_cast<char *>(dentry_blk->filename[bit_pos]),
@@ -572,17 +522,16 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   SetCTime(cur_time);
   SetMTime(cur_time);
 
-  if (vnode && vnode->IsDir()) {
-    DropNlink();
-    WriteInode(false);
-  } else {
+  if (!vnode || !vnode->IsDir()) {
     MarkInodeDirty();
   }
 
   if (vnode) {
-    clock_gettime(CLOCK_REALTIME, &cur_time);
-    SetCTime(cur_time);
-    SetMTime(cur_time);
+    if (vnode->IsDir()) {
+      DropNlink();
+      WriteInode(false);
+    }
+
     vnode->SetCTime(cur_time);
     vnode->DropNlink();
     if (vnode->IsDir()) {
@@ -597,19 +546,11 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 
   // check and deallocate dentry page if all dentries of the page are freed
   bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
+  page->Unlock();
 
   if (bit_pos == kNrDentryInBlock) {
-    __UNUSED loff_t page_offset;
     TruncateHole(page->GetIndex(), page->GetIndex() + 1);
-    page->ClearDirtyForIo();
-    page->ClearUptodate();
-    Vfs()->GetSuperblockInfo().DecreasePageCount(CountType::kDirtyDents);
-    DecreaseDirtyDentries();
-    page_offset = page->GetIndex() << kPageCacheShift;
-  } else {
-    FlushDirtyDataPage(Vfs(), *page);
   }
-  page->Unlock();
 }
 
 zx_status_t Dir::MakeEmpty(VnodeF2fs *vnode) {
@@ -621,8 +562,6 @@ zx_status_t Dir::MakeEmpty(VnodeF2fs *vnode) {
     return err;
 #if 0  // porting needed
   // kaddr = kmap_atomic(dentry_page);
-#else
-    // kaddr = dentry_page->GetAddress();
 #endif
   DentryBlock *dentry_blk = static_cast<DentryBlock *>(dentry_page->GetAddress());
 
@@ -644,11 +583,8 @@ zx_status_t Dir::MakeEmpty(VnodeF2fs *vnode) {
   TestAndSetBit(1, dentry_blk->dentry_bitmap);
 #if 0  // porting needed
   // kunmap_atomic(kaddr);
-  // set_page_dirty(dentry_page);
-#else
-  dentry_page->SetDirty();
-  FlushDirtyDataPage(Vfs(), *dentry_page);
 #endif
+  dentry_page->SetDirty();
   Page::PutPage(std::move(dentry_page), true);
   return 0;
 }
@@ -673,8 +609,6 @@ bool Dir::IsEmptyDir() {
 
 #if 0  // porting needed
     // kaddr = kmap_atomic(dentry_page);
-#else
-    // kaddr = dentry_page->data;
 #endif
     dentry_blk = static_cast<DentryBlock *>(dentry_page->GetAddress());
     if (bidx == 0)
@@ -707,8 +641,6 @@ zx_status_t Dir::Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size
   int slots;
   zx_status_t ret = ZX_OK;
   bool done = false;
-
-  fs::SharedLock read_lock(io_lock_);
 
   if (GetSize() == 0) {
     *out_actual = 0;

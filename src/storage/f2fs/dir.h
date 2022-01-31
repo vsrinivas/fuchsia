@@ -19,23 +19,21 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   // Lookup
   zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out) final;
   zx_status_t DoLookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out);
-  DirEntry *FindEntryOnDevice(std::string_view name, fbl::RefPtr<Page> *res_page)
-      __TA_REQUIRES_SHARED(io_lock_);
-  DirEntry *FindEntry(std::string_view name, fbl::RefPtr<Page> *res_page) __TA_EXCLUDES(io_lock_);
-  zx::status<DirEntry> FindEntry(std::string_view name) __TA_EXCLUDES(io_lock_);
+  DirEntry *FindEntryOnDevice(std::string_view name, fbl::RefPtr<Page> *res_page);
+  DirEntry *FindEntry(std::string_view name, fbl::RefPtr<Page> *res_page);
+  zx::status<DirEntry> FindEntry(std::string_view name);
   DirEntry *FindInInlineDir(std::string_view name, fbl::RefPtr<Page> *res_page);
   DirEntry *FindInBlock(fbl::RefPtr<Page> dentry_page, std::string_view name, uint64_t *max_slots,
                         f2fs_hash_t namehash, fbl::RefPtr<Page> *res_page);
   DirEntry *FindInLevel(unsigned int level, std::string_view name, f2fs_hash_t namehash,
                         fbl::RefPtr<Page> *res_page);
-  zx_status_t Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size_t *out_actual) final
-      __TA_EXCLUDES(io_lock_);
+  zx_status_t Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size_t *out_actual) final;
   zx_status_t ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len, size_t *out_actual);
 
   // delete & set link
   zx_status_t Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname,
                      std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir);
-  void SetLink(DirEntry *de, Page *page, VnodeF2fs *inode) __TA_EXCLUDES(io_lock_);
+  void SetLink(DirEntry *de, Page *page, VnodeF2fs *inode);
   DirEntry *ParentDir(fbl::RefPtr<Page> *out);
   DirEntry *ParentInlineDir(fbl::RefPtr<Page> *out);
   bool IsEmptyDir();
@@ -48,8 +46,7 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   zx_status_t DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode> *out);
   zx_status_t NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out);
   zx_status_t Mkdir(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode> *out);
-  zx_status_t AddLink(std::string_view name, VnodeF2fs *vnode) __TA_EXCLUDES(io_lock_)
-      __TA_EXCLUDES(io_lock_);
+  zx_status_t AddLink(std::string_view name, VnodeF2fs *vnode);
   zx_status_t AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *is_converted);
   unsigned int RoomInInlineDir(Page *ipage, int slots);
   zx_status_t ConvertInlineDir();
@@ -64,8 +61,7 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   zx_status_t Unlink(std::string_view name, bool must_be_dir) final;
   zx_status_t Rmdir(Dir *vnode, std::string_view name);
   zx_status_t DoUnlink(VnodeF2fs *vnode, std::string_view name);
-  void DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) __TA_EXCLUDES(io_lock_)
-      __TA_EXCLUDES(io_lock_);
+  void DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode);
   void DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode);
 
   // helper

@@ -36,23 +36,20 @@ zx_status_t F2fs::GetMetaPage(pgoff_t index, fbl::RefPtr<Page> *out) {
   return ZX_OK;
 }
 
-zx_status_t F2fs::F2fsWriteMetaPage(Page *page, bool is_reclaim) {
+zx_status_t F2fs::F2fsWriteMetaPage(Page &page, bool is_reclaim) {
   zx_status_t err = ZX_OK;
 
-  page->WaitOnWriteback();
+  page.WaitOnWriteback();
 
-  if (page->ClearDirtyForIo()) {
+  if (page.ClearDirtyForIo()) {
     GetSuperblockInfo().DecreasePageCount(CountType::kDirtyMeta);
 
-    if (err = this->GetSegmentManager().WriteMetaPage(page, is_reclaim); err != ZX_OK) {
+    if (err = this->GetSegmentManager().WriteMetaPage(&page, is_reclaim); err != ZX_OK) {
       ZX_ASSERT(0);
 #if 0  // porting needed
     // ++wbc->pages_skipped;
-    // set_page_dirty(page, this);
-#else
-      page->SetDirty();
-      FlushDirtyMetaPage(this, *page);
 #endif
+      page.SetDirty();
       return err;
     }
   }
@@ -86,6 +83,7 @@ zx_status_t F2fs::F2fsWriteMetaPage(Page *page, bool is_reclaim) {
 #endif
 
 int64_t F2fs::SyncMetaPages(PageType type, int64_t nr_to_write) {
+  return GetMetaVnode().Writeback();
 #if 0  // porting needed
   // address_space *mapping = superblock_info->meta_inode->i_mapping;
   // pgoff_t index = 0, end = LONG_MAX;
@@ -123,8 +121,6 @@ int64_t F2fs::SyncMetaPages(PageType type, int64_t nr_to_write) {
   // 	f2fs_submit_bio(superblock_info, type, nr_to_write == LONG_MAX);
 
   // return nwritten;
-#else
-  return 0;
 #endif
 }
 
@@ -288,12 +284,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
       orphan_blk->blk_addr = CpuToLe(index);
       orphan_blk->blk_count = CpuToLe(orphan_blocks);
       orphan_blk->entry_count = CpuToLe(nentries);
-#if 0  // porting needed
-      // set_page_dirty(page, this);
-#else
       page->SetDirty();
-      FlushDirtyMetaPage(this, *page);
-#endif
       Page::PutPage(std::move(page), true);
       ++index;
       ++start_blk;
@@ -303,6 +294,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
       GrabMetaPage(start_blk, &page);
       orphan_blk = static_cast<OrphanBlock *>(page->GetAddress());
       memset(orphan_blk, 0, sizeof(*orphan_blk));
+      page->SetDirty();
     }
     orphan_blk->ino[nentries++] = CpuToLe(orphan->ino);
   }
@@ -310,12 +302,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
     orphan_blk->blk_addr = CpuToLe(index);
     orphan_blk->blk_count = CpuToLe(orphan_blocks);
     orphan_blk->entry_count = CpuToLe(nentries);
-#if 0  // porting needed
-  // set_page_dirty(page, this);
-#else
     page->SetDirty();
-    FlushDirtyMetaPage(this, *page);
-#endif
     Page::PutPage(std::move(page), true);
   }
 }
@@ -433,65 +420,32 @@ zx_status_t F2fs::GetValidCheckpoint() {
   return ZX_OK;
 }
 
-void F2fs::SyncDirtyDirInodes() {
-  // Handle unlinked vnodes
-  GetVCache().ForDirtyVnodesIf(
-      [this](fbl::RefPtr<VnodeF2fs> &vnode) {
-        if (!vnode->ShouldFlush()) {
-          GetVCache().RemoveDirty(vnode.get());
-          return ZX_OK;
-        }
-        return ZX_ERR_NEXT;
-      },
-      [](fbl::RefPtr<VnodeF2fs> &vnode) {
-        if (!vnode->ShouldFlush()) {
-          return ZX_OK;
-        }
-        return ZX_ERR_NEXT;
-      });
-
-  // TODO: Do flush dirty entry blocks when pager is available.
-#if 0  // porting needed
-  SuperblockInfo &superblock_info = GetSuperblockInfo();
-  list_node_t *head = &superblock_info.GetDirInodeList();
-  DirInodeEntry *entry;
-  fbl::RefPtr<VnodeF2fs> vnode;
-
-  while (true) {
-    std::lock_guard lock(superblock_info.GetDirInodeLock());
-    if (list_is_empty(head)) {
-      break;
-    }
-    entry = containerof(head->next, DirInodeEntry, list);
-    vnode.reset(static_cast<VnodeF2fs *>(Igrab(entry->vnode)));
-    SpinUnlock(&superblock_info.GetDirInodeLock());
-    if (vnode) {
-    // filemap_flush(vnode->i_mapping);
-      vnode.reset();
+uint64_t F2fs::SyncDirtyDataPages() {
+  uint64_t nwritten = 0;
+  // Flush all dirty data blocks for file and dir
+  GetVCache().ForDirtyVnodesIf([&](fbl::RefPtr<VnodeF2fs> &vnode) {
+    if (!vnode->ShouldFlush()) {
+      GetVCache().RemoveDirty(vnode.get());
     } else {
-      /*
-       * We should submit bio, since it exists several
-       * wribacking dentry pages in the freeing inode.
-       */
-      // TODO(unknown): bio[type] is empty
-      // GetSegmentManager().SubmitBio(DATA, true);
+      nwritten += vnode->Writeback();
     }
-  }
-#endif
+    return ZX_ERR_NEXT;
+  });
+  // TODO: Do flush merged data pages when merging is available
+  return nwritten;
 }
 
 // Freeze all the FS-operations for checkpoint.
 void F2fs::BlockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   while (true) {
-    // write all the dirty dentry pages
-    SyncDirtyDirInodes();
+    // write out all the dirty dentry/data pages
+    SyncDirtyDataPages();
 
     // Stop file operation
     superblock_info.mutex_lock_op(LockType::kFileOp);
-    if (superblock_info.GetPageCount(CountType::kDirtyDents)) {
-      FX_LOGS(INFO) << " ** kDirtyDents kDirtyDents  >> "
-                    << superblock_info.GetPageCount(CountType::kDirtyDents);
+    if (superblock_info.GetPageCount(CountType::kDirtyDents) ||
+        superblock_info.GetPageCount(CountType::kDirtyData)) {
       superblock_info.mutex_unlock_op(LockType::kFileOp);
     } else {
       break;
@@ -505,8 +459,6 @@ void F2fs::BlockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
 
     superblock_info.mutex_lock_op(LockType::kNodeOp);
     if (superblock_info.GetPageCount(CountType::kDirtyNodes)) {
-      FX_LOGS(INFO) << " ** kDirtyNodes kDirtyNodes  >> "
-                    << superblock_info.GetPageCount(CountType::kDirtyNodes);
       superblock_info.mutex_unlock_op(LockType::kNodeOp);
     } else {
       break;
@@ -527,14 +479,11 @@ void F2fs::DoCheckpoint(bool is_umount) {
   block_t start_blk;
   fbl::RefPtr<Page> cp_page;
   uint32_t data_sum_blocks, orphan_blocks;
-  void *kaddr;
   uint32_t crc32 = 0;
 
   // Flush all the NAT/SIT pages
   while (superblock_info.GetPageCount(CountType::kDirtyMeta)) {
-    FX_LOGS(INFO) << " ** kDirtyNodes kDirtyMeta >> "
-                  << superblock_info.GetPageCount(CountType::kDirtyMeta);
-    SyncMetaPages(PageType::kMeta, LONG_MAX);
+    SyncMetaPages(PageType::kMeta, kPgOffMax);
   }
 
   GetNodeManager().NextFreeNid(&last_nid);
@@ -604,27 +553,15 @@ void F2fs::DoCheckpoint(bool is_umount) {
 
   // write out checkpoint buffer at block 0
   GrabMetaPage(start_blk++, &cp_page);
-  kaddr = cp_page->GetAddress();
-  memcpy(kaddr, &ckpt, (1 << superblock_info.GetLogBlocksize()));
-#if 0  // porting needed
-  // set_page_dirty(cp_page, this);
-#else
+  memcpy(cp_page->GetAddress(), &ckpt, (1 << superblock_info.GetLogBlocksize()));
   cp_page->SetDirty();
-  FlushDirtyMetaPage(this, *cp_page);
-#endif
   Page::PutPage(std::move(cp_page), true);
 
   for (uint32_t i = 0; i < LeToCpu(raw_sb_->cp_payload); ++i) {
     GrabMetaPage(start_blk++, &cp_page);
-    kaddr = cp_page->GetAddress();
-    memcpy(kaddr, &superblock_info.GetCheckpointTrailer()[i],
+    memcpy(cp_page->GetAddress(), &superblock_info.GetCheckpointTrailer()[i],
            (1 << superblock_info.GetLogBlocksize()));
-#if 0  // porting needed
-    // set_page_dirty(cp_page, this);
-#else
     cp_page->SetDirty();
-    FlushDirtyMetaPage(this, *cp_page);
-#endif
     Page::PutPage(std::move(cp_page), true);
   }
 
@@ -642,17 +579,11 @@ void F2fs::DoCheckpoint(bool is_umount) {
 
   // writeout checkpoint block
   GrabMetaPage(start_blk, &cp_page);
-  kaddr = cp_page->GetAddress();
-  memcpy(kaddr, &ckpt, (1 << superblock_info.GetLogBlocksize()));
-#if 0  // porting needed
-  // set_page_dirty(cp_page, this);
-#else
+  memcpy(cp_page->GetAddress(), &ckpt, (1 << superblock_info.GetLogBlocksize()));
   cp_page->SetDirty();
-  FlushDirtyMetaPage(this, *cp_page);
-#endif
   Page::PutPage(std::move(cp_page), true);
 
-  /* wait for previous submitted node/meta pages writeback */
+  // wait for previous submitted node/meta pages writeback
 #if 0  // porting needed
   // while (superblock_info.GetPageCount(kWriteback))
   //	congestion_wait(BLK_RW_ASYNC, HZ / 50);
@@ -661,17 +592,17 @@ void F2fs::DoCheckpoint(bool is_umount) {
   // filemap_fdatawait_range(superblock_info.meta_inode->i_mapping, 0, LONG_MAX);
 #endif
 
-  /* update user_block_counts */
+  // update user_block_counts
   superblock_info.SetLastValidBlockCount(superblock_info.GetTotalValidBlockCount());
   superblock_info.SetAllocValidBlockCount(0);
 
-  /* Here, we only have one bio having CP pack */
+  // Here, we only have one bio having CP pack
 #if 0  // porting needed
   // if (superblock_info.ckpt.ckpt_flags & kCpErrorFlag)
   //	superblock_info->sb->s_flags |= MS_RDONLY;
   // else
 #endif
-  SyncMetaPages(PageType::kMetaFlush, LONG_MAX);
+  SyncMetaPages(PageType::kMetaFlush, kPgOffMax);
 
   GetSegmentManager().ClearPrefreeSegments();
   superblock_info.ClearDirty();

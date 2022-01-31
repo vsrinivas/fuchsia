@@ -207,7 +207,7 @@ class F2fs : public fs::Vfs {
   // checkpoint.cc
   zx_status_t GrabMetaPage(pgoff_t index, fbl::RefPtr<Page> *out);
   zx_status_t GetMetaPage(pgoff_t index, fbl::RefPtr<Page> *out);
-  zx_status_t F2fsWriteMetaPage(Page *page, bool is_reclaim = false);
+  zx_status_t F2fsWriteMetaPage(Page &page, bool is_reclaim = false);
   int64_t SyncMetaPages(PageType type, long nr_to_write);
   zx_status_t CheckOrphanSpace();
   void AddOrphanInode(VnodeF2fs *vnode);
@@ -218,7 +218,7 @@ class F2fs : public fs::Vfs {
   void WriteOrphanInodes(block_t start_blk);
   zx_status_t GetValidCheckpoint();
   zx_status_t ValidateCheckpoint(block_t cp_addr, uint64_t *version, fbl::RefPtr<Page> *out);
-  void SyncDirtyDirInodes();
+  uint64_t SyncDirtyDataPages();
   void BlockOperations();
   void UnblockOperations();
   void DoCheckpoint(bool is_umount);

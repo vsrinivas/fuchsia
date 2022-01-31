@@ -19,7 +19,7 @@ TEST(SuperblockTest, LoadSuperblockException) {
 
   auto device =
       std::make_unique<block_client::FakeBlockDevice>(block_client::FakeBlockDevice::Config{
-          .block_count = 1, .block_size = kDefaultSectorSize, .supports_trim = true});
+          .block_count = 8, .block_size = kDefaultSectorSize, .supports_trim = true});
   bool readonly_device = false;
   ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
 
@@ -154,7 +154,7 @@ TEST(F2fsTest, CreateException) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   ASSERT_EQ(F2fs::Create(loop.dispatcher(), std::move(bc), MountOptions{}, &fs),
-            ZX_ERR_INVALID_ARGS);
+            ZX_ERR_OUT_OF_RANGE);
 }
 
 TEST(F2fsTest, CreateFsAndRootException) {
@@ -182,7 +182,7 @@ TEST(F2fsTest, CreateFsAndRootException) {
 
   auto fs_or = CreateFsAndRoot(MountOptions{}, loop.dispatcher(), std::move(bc),
                                std::move(export_root), std::move(on_unmount), serve_layout);
-  ASSERT_EQ(fs_or.error_value(), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(fs_or.error_value(), ZX_ERR_OUT_OF_RANGE);
 }
 
 TEST(F2fsTest, FlushDirtyMetaPage) {

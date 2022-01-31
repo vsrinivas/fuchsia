@@ -203,6 +203,7 @@ TEST_F(SegmentManagerTest, GetVictimByDefault) {
   // 3. Skip if victim_segmap is set (kBgGc)
   curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
   FileTester::CreateChild(root_dir_.get(), S_IFDIR, "GetVictimByDefault_kBgGc");
+  fs_->WriteCheckpoint(false, false);
   ASSERT_NE(fs_->GetSegmentManager().GetValidBlocks(curseg->segno, 0), 0U);
   fs_->GetSegmentManager().AllocateSegmentByDefault(CursegType::kCursegHotNode, true);
   fs_->GetSegmentManager().LocateDirtySegment(curseg->segno);
@@ -217,6 +218,7 @@ TEST_F(SegmentManagerTest, GetVictimByDefault) {
     CursegInfo *curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
     FileTester::CreateChild(root_dir_.get(), S_IFDIR,
                             "GetVictimByDefault_kMaxSearchLimit_" + std::to_string(i));
+    fs_->WriteCheckpoint(false, false);
     ASSERT_NE(fs_->GetSegmentManager().GetValidBlocks(curseg->segno, 0), 0U);
     fs_->GetSegmentManager().AllocateSegmentByDefault(CursegType::kCursegHotNode, true);
     fs_->GetSegmentManager().LocateDirtySegment(curseg->segno);
@@ -231,6 +233,7 @@ TEST_F(SegmentManagerTest, GetVictimByDefault) {
     CursegInfo *curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
     FileTester::CreateChild(root_dir_.get(), S_IFDIR,
                             "GetVictimByDefault_last_victim_" + std::to_string(i));
+    fs_->WriteCheckpoint(false, false);
     ASSERT_NE(fs_->GetSegmentManager().GetValidBlocks(curseg->segno, 0), 0U);
     fs_->GetSegmentManager().AllocateSegmentByDefault(CursegType::kCursegHotNode, true);
     fs_->GetSegmentManager().LocateDirtySegment(curseg->segno);

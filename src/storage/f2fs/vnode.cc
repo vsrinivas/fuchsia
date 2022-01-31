@@ -161,6 +161,8 @@ void VnodeF2fs::RecycleNode() {
                   GetKey(), open_count());
   }
   if (GetNlink()) {
+    Writeback();
+    file_cache_.Reset();
     Vfs()->GetVCache().Downgrade(this);
   } else {
     EvictVnode();
@@ -346,12 +348,7 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
     ri->i_extra_isize = GetExtraISize();
   }
 
-#if 0  // porting needed
-  // set_page_dirty(node_page);
-#else
   node_page->SetDirty();
-  FlushDirtyNodePage(Vfs(), *node_page);
-#endif
 }
 
 zx_status_t VnodeF2fs::WriteInode(bool is_reclaim) {
@@ -362,15 +359,12 @@ zx_status_t VnodeF2fs::WriteInode(bool is_reclaim) {
     return ret;
   }
 
-  if (!IsDirty()) {
-    return ZX_OK;
-  }
-
-  {
+  if (IsDirty()) {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kNodeOp));
     fbl::RefPtr<Page> node_page;
-    if (ret = Vfs()->GetNodeManager().GetNodePage(ino_, &node_page); ret != ZX_OK)
+    if (ret = Vfs()->GetNodeManager().GetNodePage(ino_, &node_page); ret != ZX_OK) {
       return ret;
+    }
     UpdateInode(node_page.get());
     Page::PutPage(std::move(node_page), true);
   }
@@ -410,15 +404,21 @@ int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
     UpdateExtentCache(kNullAddr, dn);
     Vfs()->GetSegmentManager().InvalidateBlocks(blkaddr);
     Vfs()->DecValidBlockCount(dn->vnode, 1);
+    uint32_t bidx = NodeManager::StartBidxOfNode(*dn->node_page) + LeToCpu(dn->ofs_in_node);
+    fbl::RefPtr<Page> data_page;
+    if (FindPage(bidx, &data_page) == ZX_OK) {
+      if (data_page->IsUptodate()) {
+        data_page->Lock();
+        data_page->Invalidate();
+        data_page->Unlock();
+      }
+      Page::PutPage(std::move(data_page), false);
+    }
+
     ++nr_free;
   }
   if (nr_free) {
-#if 0  // porting needed
-    // set_page_dirty(dn->node_page);
-#else
     dn->node_page->SetDirty();
-    FlushDirtyNodePage(Vfs(), *dn->node_page);
-#endif
     Vfs()->GetNodeManager().SyncInodePage(*dn);
   }
   dn->ofs_in_node = ofs;
@@ -440,12 +440,7 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
   page->Lock();
   page->WaitOnWriteback();
   page->ZeroUserSegment(static_cast<uint32_t>(offset), kPageSize);
-#if 0  // porting needed
-  // set_page_dirty(page);
-#else
   page->SetDirty();
-  FlushDirtyDataPage(Vfs(), *page);
-#endif
   Page::PutPage(std::move(page), true);
 }
 
@@ -464,7 +459,6 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
 
   {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
-    std::lock_guard write_lock(io_lock_);
 
     do {
       NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
@@ -482,6 +476,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
 
       count -= dn.ofs_in_node;
       ZX_ASSERT(count >= 0);
+
       if (dn.ofs_in_node || IsInode(*(dn.node_page))) {
         TruncateDataBlocksRange(&dn, count);
         free_from += count;
@@ -510,8 +505,9 @@ zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
       return err;
     }
 
-    if (dn.data_blkaddr != kNullAddr)
+    if (dn.data_blkaddr != kNullAddr) {
       TruncateDataBlocksRange(&dn, 1);
+    }
     F2fsPutDnode(&dn);
   }
   return ZX_OK;
@@ -537,8 +533,8 @@ void VnodeF2fs::EvictVnode() {
   if (ino_ == superblock_info.GetNodeIno() || ino_ == superblock_info.GetMetaIno())
     return;
 
+  InvalidateAllPages();
   ZX_ASSERT(atomic_load_explicit(&fi_.dirty_dents, std::memory_order_relaxed) == 0);
-  // TODO: RemoveDirtyDirInode(this);
 
   if (GetNlink() || IsBad())
     return;
@@ -688,18 +684,22 @@ zx_status_t VnodeF2fs::WatchDir(fs::Vfs *vfs, uint32_t mask, uint32_t options,
 }
 #endif  // __Fuchsia__
 
-inline void VnodeF2fs::GetExtentInfo(const Extent &i_ext) {
+void VnodeF2fs::GetExtentInfo(const Extent &i_ext) {
   std::lock_guard lock(fi_.ext.ext_lock);
   fi_.ext.fofs = LeToCpu(i_ext.fofs);
   fi_.ext.blk_addr = LeToCpu(i_ext.blk_addr);
   fi_.ext.len = LeToCpu(i_ext.len);
 }
 
-inline void VnodeF2fs::SetRawExtent(Extent &i_ext) {
+void VnodeF2fs::SetRawExtent(Extent &i_ext) {
   fs::SharedLock lock(fi_.ext.ext_lock);
   i_ext.fofs = CpuToLe(static_cast<uint32_t>(fi_.ext.fofs));
   i_ext.blk_addr = CpuToLe(fi_.ext.blk_addr);
   i_ext.len = CpuToLe(fi_.ext.len);
+}
+
+void VnodeF2fs::UpdateVersion() {
+  fi_.data_version = LeToCpu(Vfs()->GetSuperblockInfo().GetCheckpoint().checkpoint_ver);
 }
 
 }  // namespace f2fs

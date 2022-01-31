@@ -254,8 +254,8 @@ class SegmentManager {
   void RewriteDataPage(Page *page, block_t old_blk_addr);
   void RecoverDataPage(Page *page, Summary *sum, block_t old_blkaddr, block_t new_blkaddr);
 
-  int ReadCompactedSummaries();
-  int ReadNormalSummaries(int type);
+  zx_status_t ReadCompactedSummaries();
+  zx_status_t ReadNormalSummaries(int type);
   int RestoreCursegSummaries();
   void WriteCompactedSummaries(block_t blkaddr);
   void WriteNormalSummaries(block_t blkaddr, CursegType type);

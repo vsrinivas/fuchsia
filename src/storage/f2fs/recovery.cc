@@ -61,7 +61,6 @@ out:
 }
 
 zx_status_t F2fs::RecoverInode(VnodeF2fs *vnode, Page *node_page) {
-  // void *kaddr = PageAddress(node_page);
   struct Node *raw_node = static_cast<Node *>(node_page->GetAddress());
   struct Inode *raw_inode = &(raw_node->i);
 
@@ -183,7 +182,6 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
                                           (superblock_info.GetBlocksPerSeg() - 1));
   Summary sum;
   nid_t ino;
-  // void *kaddr;
   fbl::RefPtr<VnodeF2fs> vnode_refptr;
   VnodeF2fs *vnode;
   fbl::RefPtr<Page> node_page;
@@ -208,7 +206,6 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
     fbl::RefPtr<Page> sum_page;
     GetSegmentManager().GetSumPage(segno, &sum_page);
     SummaryBlock *sum_node;
-    // kaddr = PageAddress(sum_page);
     sum_node = static_cast<SummaryBlock *>(sum_page->GetAddress());
     sum = sum_node->entries[blkoff];
     Page::PutPage(std::move(sum_page), true);
@@ -264,31 +261,26 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, Page *page, block_t blkaddr) {
         ZX_ASSERT(err == ZX_OK);
       }
 
-      /* Check the previous node page having this index */
+      // Check the previous node page having this index
       CheckIndexInPrevNodes(dest);
 
       GetSegmentManager().SetSummary(&sum, dn.nid, dn.ofs_in_node, ni.version);
 
-      /* write dummy data page */
+      // write dummy data page
       GetSegmentManager().RecoverDataPage(nullptr, &sum, src, dest);
       vnode->UpdateExtentCache(dest, &dn);
     }
     ++dn.ofs_in_node;
   }
 
-  /* write node page in place */
+  // write node page in place
   GetSegmentManager().SetSummary(&sum, dn.nid, 0, 0);
   if (IsInode(*(dn.node_page)))
     GetNodeManager().SyncInodePage(dn);
 
   NodeManager::CopyNodeFooter(*dn.node_page, *page);
   NodeManager::FillNodeFooter(*dn.node_page, dn.nid, ni.ino, NodeManager::OfsOfNode(*page), false);
-#if 0  // porting needed
-  // set_page_dirty(dn.node_page, this);
-#else
   dn.node_page->SetDirty();
-  FlushDirtyNodePage(this, *dn.node_page);
-#endif
 
   GetNodeManager().RecoverNodePage(*dn.node_page, sum, ni, blkaddr);
   F2fsPutDnode(&dn);
@@ -302,11 +294,11 @@ void F2fs::RecoverData(list_node_t *head, CursegType type) {
   blkaddr = segment_manager_->NextFreeBlkAddr(type);
 
   // Alloc a tempotal page to read a chain of node blocks
+  // TODO: need to request read IOs w/ uncached pages
   fbl::RefPtr<Page> page;
   if (zx_status_t ret = GetMetaVnode().GrabCachePage(-1, &page); ret != ZX_OK) {
     return;
   }
-  // page->Lock();
   while (true) {
     if (VnodeF2fs::Readpage(this, page.get(), blkaddr, kReadSync)) {
       break;
@@ -329,7 +321,6 @@ void F2fs::RecoverData(list_node_t *head, CursegType type) {
     blkaddr = NodeManager::NextBlkaddrOfNode(*page);
     page->ClearUptodate();
   }
-  page->Unlock();
 #if 0  // porting needed
   //__free_pages(page, 0);
 #endif

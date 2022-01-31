@@ -69,6 +69,9 @@ std::unique_ptr<block_client::BlockDevice> Bcache::Destroy(std::unique_ptr<Bcach
 #ifdef __Fuchsia__
 zx_status_t Bcache::Readblk(block_t bno, void* data) {
   TRACE_DURATION("f2fs", "Bcache::Readblk", "blk", bno);
+  if (bno >= max_blocks_) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
   storage::Operation operation = {};
   operation.type = storage::OperationType::kRead;
   operation.vmo_offset = 0;
@@ -99,6 +102,9 @@ zx_status_t Bcache::Readblk(block_t bno, void* data) {
 
 #ifdef __Fuchsia__
 zx_status_t Bcache::Writeblk(block_t bno, const void* data) {
+  if (bno >= max_blocks_) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
   TRACE_DURATION("f2fs", "Bcache::Writeblk", "blk", bno);
   storage::Operation operation = {};
   operation.type = storage::OperationType::kWrite;

@@ -258,7 +258,6 @@ uint32_t F2fs::ValidInodeCount() {
 }
 
 zx_status_t FlushDirtyNodePage(F2fs* fs, Page& page) {
-  ZX_ASSERT(page.GetVnode() != nullptr);
   ZX_ASSERT(page.GetVnodeId() == fs->GetSuperblockInfo().GetNodeIno());
 
   if (zx_status_t ret = fs->GetNodeManager().F2fsWriteNodePage(page, false); ret != ZX_OK) {
@@ -311,10 +310,9 @@ bool F2fs::IsValid() const {
 }
 
 zx_status_t FlushDirtyMetaPage(F2fs* fs, Page& page) {
-  ZX_ASSERT(page.GetVnode() != nullptr);
   ZX_ASSERT(page.GetVnodeId() == fs->GetSuperblockInfo().GetMetaIno());
 
-  if (zx_status_t ret = fs->F2fsWriteMetaPage(&page, false); ret != ZX_OK) {
+  if (zx_status_t ret = fs->F2fsWriteMetaPage(page, false); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Meta page write error " << ret;
     return ret;
   }
@@ -323,11 +321,7 @@ zx_status_t FlushDirtyMetaPage(F2fs* fs, Page& page) {
 }
 
 zx_status_t FlushDirtyDataPage(F2fs* fs, Page& page) {
-  ZX_ASSERT(page.GetVnode() != nullptr);
-
-  VnodeF2fs* vnode = page.GetVnode();
-
-  if (zx_status_t ret = vnode->WriteDataPage(&page, false); ret != ZX_OK) {
+  if (zx_status_t ret = page.GetVnode().WriteDataPage(&page, false); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Data page write error " << ret;
     return ret;
   }

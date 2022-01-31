@@ -225,7 +225,7 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
     DeleteEntry(de, page.get(), vnode);
   }
 
-  Vfs()->GetSegmentManager().BalanceFs();
+  // Vfs()->GetSegmentManager().BalanceFs();
   Page::PutPage(std::move(page), false);
   return ZX_OK;
 }
@@ -546,14 +546,6 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
     old_vnode->SetCTime(cur_time);
     old_vnode->SetFlag(InodeInfoFlag::kNeedCp);
     old_vnode->MarkInodeDirty();
-
-    // TODO(djkim): remove this after pager is available
-    // If old_dir == new_dir, old_page is not up-to-date after add new entry with newname
-    // Therefore, old_page should be read again, unless pager is implemented
-    if (old_dir == new_dir) {
-      Page::PutPage(std::move(old_page), false);
-      old_entry = FindEntry(oldname, &old_page);
-    }
 
     DeleteEntry(old_entry, old_page.get(), nullptr);
 

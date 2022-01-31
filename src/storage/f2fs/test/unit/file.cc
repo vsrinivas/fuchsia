@@ -104,6 +104,8 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
     FileTester::AppendToFile(test_file_ptr, buf, kPageSize);
   }
 
+  fs_->WriteCheckpoint(false, false);
+
   MapTester::CheckNodeLevel(fs_.get(), test_file_ptr, level);
 
   // Build nid and blkaddr set

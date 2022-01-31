@@ -317,7 +317,6 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
 
   for (pgoff_t n = blk_start; n <= blk_end; ++n) {
     bool is_empty_page = false;
-    fs::SharedLock read_lock(io_lock_);
     if (zx_status_t ret = GetLockDataPage(n, &data_page); ret != ZX_OK) {
       if (ret == ZX_ERR_NOT_FOUND) {  // truncated page
         is_empty_page = true;
@@ -423,14 +422,8 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
     off_in_buf += cur_len;
     left -= cur_len;
 
-    std::lock_guard write_lock(io_lock_);
     SetSize(std::max(static_cast<size_t>(GetSize()), offset + off_in_buf));
-#if 0  // porting needed
-    // set_page_dirty(data_page, Vfs());
-#else
     data_page->SetDirty();
-    FlushDirtyDataPage(Vfs(), *data_page);
-#endif
     Page::PutPage(std::move(data_pages[index]), true);
 
     if (left == 0)

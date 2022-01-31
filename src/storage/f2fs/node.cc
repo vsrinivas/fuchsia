@@ -198,11 +198,7 @@ void NodeManager::SetNid(Page &page, int off, nid_t nid, bool is_inode) {
     rn->in.nid[off] = CpuToLe(nid);
   }
 
-#if 0  // porting needed
-  // set_page_dirty(p);
-#endif
   page.SetDirty();
-  FlushDirtyNodePage(fs_, page);
 }
 
 nid_t NodeManager::GetNid(Page &page, int off, bool is_inode) {
@@ -295,22 +291,6 @@ void NodeManager::DecValidNodeCount(VnodeF2fs *vnode, uint32_t count) {
                                               count);
 }
 
-void NodeManager::ClearNodePageDirty(Page *page) {
-  if (page->IsDirty()) {
-#if 0  // porting needed
-    // TODO: IMPL
-    // SpinLock_irqsave(&mapping->tree_lock, flags);
-    // radix_tree_tag_clear(&mapping->page_tree,
-    //		page_index(page),
-    //		PAGECACHE_TAG_DIRTY);
-    // SpinUnlock_irqrestore(&mapping->tree_lock, flags);
-#endif
-    page->ClearDirtyForIo();
-    GetSuperblockInfo().DecreasePageCount(CountType::kDirtyNodes);
-  }
-  page->ClearUptodate();
-}
-
 void NodeManager::GetCurrentNatPage(nid_t nid, fbl::RefPtr<Page> *out) {
   pgoff_t index = CurrentNatAddr(nid);
   fs_->GetMetaPage(index, out);
@@ -338,9 +318,6 @@ void NodeManager::GetNextNatPage(nid_t nid, fbl::RefPtr<Page> *out) {
   fs_->GrabMetaPage(dst_off, &dst_page);
 
   memcpy(dst_page->GetAddress(), src_page->GetAddress(), kPageSize);
-#if 0  // porting needed
-  //   set_page_dirty(dst_page);
-#endif
   dst_page->SetDirty();
   Page::PutPage(std::move(src_page), true);
 
@@ -686,9 +663,6 @@ zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro) 
     if (i == 1) {
       dn.inode_page_locked = false;
       parent->Unlock();
-#if 0  // porting needed
-      // unlock_page(parent);
-#endif
     } else {
       Page::PutPage(std::move(parent), true);
     }
@@ -735,7 +709,7 @@ void NodeManager::TruncateNode(DnodeOfData &dn) {
     SyncInodePage(dn);
   }
 
-  ClearNodePageDirty(dn.node_page.get());
+  dn.node_page->Invalidate();
   GetSuperblockInfo().SetDirty();
 
   Page::PutPage(std::move(dn.node_page), true);
@@ -970,11 +944,7 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
       page->Lock();
       page->WaitOnWriteback();
       rn->i.i_nid[offset[0] - kNodeDir1Block] = 0;
-#if 0  // porting needed
-      // set_page_dirty(page);
-#endif
       page->SetDirty();
-      FlushDirtyNodePage(fs_, *page);
       page->Unlock();
     }
     offset[1] = 0;
@@ -1063,6 +1033,7 @@ zx_status_t NodeManager::NewNodePage(DnodeOfData &dn, uint32_t ofs, fbl::RefPtr<
   new_ni.ino = dn.vnode->Ino();
 
   if (!IncValidNodeCount(dn.vnode, 1)) {
+    (*out)->ClearUptodate();
     Page::PutPage(std::move(*out), true);
     return ZX_ERR_NO_SPACE;
   }
@@ -1071,12 +1042,8 @@ zx_status_t NodeManager::NewNodePage(DnodeOfData &dn, uint32_t ofs, fbl::RefPtr<
   dn.node_page = *out;
   SyncInodePage(dn);
 
-#if 0  // porting needed
-  //   set_page_dirty(page);
-#endif
   (*out)->SetDirty();
   SetColdNode(*dn.vnode, **out);
-  FlushDirtyNodePage(fs_, **out);
   if (ofs == 0)
     fs_->IncValidInodeCount();
 
@@ -1090,10 +1057,6 @@ zx_status_t NodeManager::ReadNodePage(Page &page, nid_t nid, int type) {
 
   if (ni.blk_addr == kNullAddr)
     return ZX_ERR_NOT_FOUND;
-
-  if (ni.blk_addr == kNewAddr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
 
   return VnodeF2fs::Readpage(fs_, &page, ni.blk_addr, type);
 }
@@ -1131,24 +1094,27 @@ Page *NodeManager::GetNodePageRa(Page *parent, int start) {
 #endif
 
 void NodeManager::SyncInodePage(DnodeOfData &dn) {
-  if (dn.vnode->GetNlink())
-    dn.vnode->MarkInodeDirty();
-#if 0  // porting needed
-  if (IsInode(dn->node_page) || dn->inode_page == dn->node_page) {
-    dn->vnode->UpdateInode(dn->node_page);
-  } else if (dn->inode_page) {
-    if (!dn->inode_page_locked)
-      // lock_page(dn->inode_page);
-      dn->vnode->UpdateInode(dn->inode_page);
-    // if (!dn->inode_page_locked)
-    //  unlock_page(dn->inode_page);
-  } else {
-    dn->vnode->WriteInode(nullptr);
+  if (!dn.vnode->GetNlink()) {
+    return;
   }
-#endif
+
+  dn.vnode->MarkInodeDirty();
+  if (IsInode(*dn.node_page) || dn.inode_page == dn.node_page) {
+    dn.vnode->UpdateInode(dn.node_page.get());
+  } else if (dn.inode_page) {
+    if (!dn.inode_page_locked) {
+      dn.inode_page->Lock();
+    }
+    dn.vnode->UpdateInode(dn.inode_page.get());
+    if (!dn.inode_page_locked) {
+      dn.inode_page->Unlock();
+    }
+  } else {
+    dn.vnode->WriteInode(false);
+  }
 }
 
-int NodeManager::SyncNodePages(nid_t ino, bool is_reclaim) {
+uint64_t NodeManager::SyncNodePages(nid_t ino, bool is_reclaim) {
   zx_status_t status = fs_->GetVCache().ForDirtyVnodesIf(
       [this](fbl::RefPtr<VnodeF2fs> &vnode) {
         if (!vnode->ShouldFlush()) {
@@ -1167,7 +1133,11 @@ int NodeManager::SyncNodePages(nid_t ino, bool is_reclaim) {
       });
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to flush dirty vnodes ";
+    return status;
   }
+
+  // TODO: Consider ordered writeback
+  return fs_->GetNodeVnode().Writeback();
 
 #if 0  // porting needed
   // SuperblockInfo &superblock_info = GetSuperblockInfo();
@@ -1273,7 +1243,6 @@ int NodeManager::SyncNodePages(nid_t ino, bool is_reclaim) {
 
   //	return nwritten;
 #endif
-  return 0;
 }
 
 zx_status_t NodeManager::F2fsWriteNodePage(Page &page, bool is_reclaim) {
@@ -1334,29 +1303,6 @@ int NodeManager::F2fsWriteNodePages(struct address_space *mapping, WritebackCont
   // wbc->nr_to_write = nr_to_write -
   // 	(bio_get_nr_vecs(bdev) - wbc->nr_to_write);
   // return 0;
-  return 0;
-}
-
-int NodeManager::F2fsSetNodePageDirty(Page *page) {
-  SetPageUptodate(page);
-  if (!PageDirty(page)) {
-    // __set_page_dirty_nobuffers(page);
-    FlushDirtyNodePage(fs_, page);
-    GetSuperblockInfo().IncreasePageCount(CountType::kDirtyNodes);
-    // SetPagePrivate(page);
-    return 1;
-  }
-  return 0;
-}
-
-void NodeManager::F2fsInvalidateNodePage(Page *page, uint64_t offset) {
-  if (PageDirty(page))
-    GetSuperblockInfo().DecreasePageCount(CountType::kDirtyNodes);
-  ClearPagePrivate(page);
-}
-
-int F2fsReleaseNodePage(Page *page, gfp_t wait) {
-  ClearPagePrivate(page);
   return 0;
 }
 #endif
@@ -1545,7 +1491,7 @@ void NodeManager::AllocNidFailed(nid_t nid) {
 void NodeManager::RecoverNodePage(Page &page, Summary &sum, NodeInfo &ni, block_t new_blkaddr) {
   fs_->GetSegmentManager().RewriteNodePage(&page, &sum, ni.blk_addr, new_blkaddr);
   SetNodeAddr(ni, new_blkaddr);
-  ClearNodePageDirty(&page);
+  page.Invalidate();
 }
 
 zx_status_t NodeManager::RecoverInodePage(Page &page) {
@@ -1706,11 +1652,7 @@ void NodeManager::FlushNatEntries() {
       } else {  // flush to NAT block
         if (!page || (start_nid > nid || nid > end_nid)) {
           if (page) {
-#if 0  // porting needed
-       // set_page_dirty(page, fs_);
-#endif
             page->SetDirty();
-            FlushDirtyMetaPage(fs_, *page);
             Page::PutPage(std::move(page), true);
           }
           start_nid = StartNid(nid);
@@ -1753,11 +1695,7 @@ void NodeManager::FlushNatEntries() {
 
   // Write out last modified NAT block
   if (page != nullptr) {
-#if 0  // porting needed
-  //    set_page_dirty(page, fs_);
-#endif
     page->SetDirty();
-    FlushDirtyMetaPage(fs_, *page);
     Page::PutPage(std::move(page), true);
   }
 

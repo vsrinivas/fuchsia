@@ -142,7 +142,7 @@ class NodeManager {
   }
 
   void GetNodeInfo(nid_t nid, NodeInfo &out);
-  int SyncNodePages(nid_t ino, bool is_reclaim = false);
+  uint64_t SyncNodePages(nid_t ino, bool is_reclaim = false);
   void SyncInodePage(DnodeOfData &dn);
 
   bool AllocNid(nid_t &out);
@@ -206,7 +206,6 @@ class NodeManager {
   void SetNid(Page &p, int off, nid_t nid, bool i);
   nid_t GetNid(Page &p, int off, bool i);
 
-  void ClearNodePageDirty(Page *page);
   void GetCurrentNatPage(nid_t nid, fbl::RefPtr<Page> *out);
   void GetNextNatPage(nid_t nid, fbl::RefPtr<Page> *out);
   void RaNatPages(nid_t nid);
@@ -238,9 +237,6 @@ class NodeManager {
 
   int F2fsWriteNodePages(address_space *mapping,
             WritebackControl *wbc);
-  int F2fsSetNodePageDirty(Page *page);
-  void F2fsInvalidateNodePage(Page *page, uint64_t offset);
-  int F2fsReleaseNodePage(Page *page, gfp_t wait);
 #endif
 
   FreeNid *LookupFreeNidList(nid_t n);

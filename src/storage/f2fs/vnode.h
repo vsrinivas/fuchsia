@@ -302,6 +302,7 @@ class VnodeF2fs : public fs::Vnode,
 
   uint16_t GetExtraISize() const { return fi_.i_extra_isize; }
   void SetExtraISize(const uint16_t size) { fi_.i_extra_isize = size; }
+  void UpdateVersion();
 
   bool IsBad() { return TestFlag(InodeInfoFlag::kBad); }
 
@@ -348,25 +349,20 @@ class VnodeF2fs : public fs::Vnode,
     flag_cvar_.notify_all();
   }
 
-  zx_status_t FindPage(pgoff_t index, fbl::RefPtr<Page> *out) { return ZX_ERR_NOT_FOUND; }
-  zx_status_t GrabCachePage(pgoff_t index, fbl::RefPtr<Page> *out) {
-    // TODO: FindPage() lookup FileCache::page_table_ to make |*out|. Unless it succeeds to find the
-    // page, it allocates and inserts |*out|into FileCache::page_table. Then, it initializes |*out|
-    // by calling Page::GetPage(). Everything should be done with held lock.
-    if (FindPage(index, out) == ZX_OK) {
-    } else {
-      *out = fbl::MakeRefCounted<Page>(this, index);
-      (*out)->Lock();
-    }
-    zx_status_t ret = (*out)->GetPage();
-    ZX_ASSERT(ret == ZX_OK);
-    return ret;
+  zx_status_t FindPage(pgoff_t index, fbl::RefPtr<Page> *out) {
+    return file_cache_.FindPage(index, out);
   }
+  zx_status_t GrabCachePage(pgoff_t index, fbl::RefPtr<Page> *out) {
+    return file_cache_.GetPage(index, out);
+  }
+  uint64_t Writeback(const pgoff_t start = 0, const pgoff_t end = kPgOffMax) {
+    return file_cache_.Writeback(start, end);
+  }
+  void InvalidateAllPages() { file_cache_.InvalidateAllPages(); }
 
  protected:
   void RecycleNode() override;
   std::condition_variable_any flag_cvar_{};
-  fs::SharedMutex io_lock_;
 
  private:
   zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode> *out_redirect) final

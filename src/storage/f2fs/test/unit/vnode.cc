@@ -39,7 +39,6 @@ void VgetFaultInjetionAndTest(F2fs &fs, Dir &root_dir, std::string_view name, T 
   fault_injection(rn);
 
   node_page->SetDirty();
-  FlushDirtyNodePage(&fs, *node_page);
   Page::PutPage(std::move(node_page), true);
 
   ASSERT_EQ(fs.GetVCache().RemoveDirty(test_vnode.get()), ZX_OK);
@@ -175,9 +174,9 @@ TEST_F(VnodeTest, WriteInode) {
   ASSERT_EQ(test_vnode->WriteInode(false), ZX_OK);
 
   // 3. Is clean inode
-  node_manager.SyncNodePages(nid, false);
+  ASSERT_TRUE(test_vnode->IsDirty());
+  fs_->WriteCheckpoint(false, false);
   ASSERT_FALSE(test_vnode->IsDirty());
-  ASSERT_EQ(test_vnode->WriteInode(false), ZX_OK);
 
   ASSERT_EQ(test_vnode->Close(), ZX_OK);
   test_vnode = nullptr;

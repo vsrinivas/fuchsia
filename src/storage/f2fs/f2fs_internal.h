@@ -84,6 +84,7 @@ enum class CountType {
   kDirtyDents,
   kDirtyNodes,
   kDirtyMeta,
+  kDirtyData,
   kNrCountType,
 };
 
@@ -419,8 +420,7 @@ inline void F2fsPutDnode(DnodeOfData *dn) {
     Page::PutPage(std::move(dn->node_page), true);
   }
   if (dn->inode_page) {
-    // TODO: revisit unlock arg.
-    Page::PutPage(std::move(dn->inode_page), true);
+    Page::PutPage(std::move(dn->inode_page), false);
   }
 }
 

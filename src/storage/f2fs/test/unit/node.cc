@@ -29,16 +29,24 @@ void FaultInjectToDnodeAndTruncate(NodeManager &node_manager, fbl::RefPtr<VnodeF
   NodeManager::SetNewDnode(dn, vnode.get(), nullptr, nullptr, 0);
 
   ASSERT_EQ(node_manager.GetDnodeOfData(dn, page_index, 0), ZX_OK);
+  ino_t node_id = dn.nid;
+  fbl::RefPtr page = dn.node_page;
+  F2fsPutDnode(&dn);
   block_t temp_block_address;
-  MapTester::GetCachedNatEntryBlockAddress(node_manager, dn.nid, temp_block_address);
 
-  // Enable fault injection to dnode
-  MapTester::SetCachedNatEntryBlockAddress(node_manager, dn.nid, fault_address);
+  // Write out dirty nodes to allocate lba
+  F2fs *fs = vnode->Vfs();
+  FlushDirtyNodePage(fs, *page);
+  MapTester::GetCachedNatEntryBlockAddress(node_manager, node_id, temp_block_address);
+  // Set fault_address to the NAT entry
+  MapTester::SetCachedNatEntryBlockAddress(node_manager, node_id, fault_address);
+  // Clear the update flag of page to prevent a cache hit
+  page->ClearUptodate();
+  page.reset();
   ASSERT_EQ(node_manager.TruncateInodeBlocks(*vnode, page_index), exception_type);
 
-  // Disable fault injection
-  MapTester::SetCachedNatEntryBlockAddress(node_manager, dn.nid, temp_block_address);
-  F2fsPutDnode(&dn);
+  // Restore the NAT entry
+  MapTester::SetCachedNatEntryBlockAddress(node_manager, node_id, temp_block_address);
 
   // Retry truncate
   ASSERT_EQ(node_manager.TruncateInodeBlocks(*vnode, page_index), ZX_OK);
@@ -66,8 +74,8 @@ TEST_F(NodeManagerTest, NatCache) {
 
   MapTester::GetNatCacheEntryCount(node_manager, num_tree, num_clean, num_dirty);
   ASSERT_EQ(num_tree, static_cast<size_t>(kMaxNodeCnt + 1));
-  ASSERT_EQ(num_clean, static_cast<size_t>(0));
-  ASSERT_EQ(num_dirty, static_cast<size_t>(kMaxNodeCnt + 1));
+  ASSERT_EQ(num_clean, static_cast<size_t>(1));
+  ASSERT_EQ(num_dirty, static_cast<size_t>(kMaxNodeCnt));
   ASSERT_EQ(node_manager.GetNatCount(), static_cast<nid_t>(kMaxNodeCnt + 1));
 
   // Lookup NAT cache
@@ -79,7 +87,7 @@ TEST_F(NodeManagerTest, NatCache) {
   }
 
   // Move dirty entries to clean entries
-  fs_->GetNodeManager().FlushNatEntries();
+  fs_->WriteCheckpoint(false, false);
 
   // 3. Check NAT entry is cached in clean NAT entries list
   MapTester::GetNatCacheEntryCount(node_manager, num_tree, num_clean, num_dirty);
@@ -131,7 +139,7 @@ TEST_F(NodeManagerTest, NatCache) {
   ASSERT_EQ(inos.size() + journal_inos.size(), kNatJournalEntries - 2);
 
   // Fill NAT journal
-  fs_->GetNodeManager().FlushNatEntries();
+  fs_->WriteCheckpoint(false, false);
   ASSERT_EQ(NatsInCursum(sum), static_cast<int>(kNatJournalEntries - 1));
 
   // Fill NAT cache over journal size
@@ -140,7 +148,7 @@ TEST_F(NodeManagerTest, NatCache) {
   ASSERT_EQ(inos.size() + journal_inos.size(), kNatJournalEntries);
 
   // Flush NAT journal
-  fs_->GetNodeManager().FlushNatEntries();
+  fs_->WriteCheckpoint(false, false);
   ASSERT_EQ(NatsInCursum(sum), static_cast<int>(0));
 
   // Flush NAT cache
@@ -360,7 +368,10 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   ASSERT_EQ(fs_->GetNodeManager().GetDnodeOfData(dn, indirect_index_lv3 + 1, 0), ZX_OK);
 
   // fault injection for ReadNodePage()
+  fs_->WriteCheckpoint(false, false);
   MapTester::SetCachedNatEntryBlockAddress(node_manager, dn.nid, kNullAddr);
+  dn.node_page->ClearUptodate();
+  dn.node_page->ClearDirtyForIo();
   F2fsPutDnode(&dn);
 
   ASSERT_EQ(fs_->GetNodeManager().GetDnodeOfData(dn, indirect_index_lv3 + 1, 0), ZX_ERR_NOT_FOUND);
@@ -371,14 +382,12 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   ASSERT_EQ(fs_->GetNodeManager().GetDnodeOfData(dn, indirect_index_lv1 + direct_blks, 0),
             ZX_ERR_NO_SPACE);
   superblock_info.SetTotalValidBlockCount(tmp_total_valid_block_count);
-  F2fsPutDnode(&dn);
 
   block_t tmp_total_valid_node_count = superblock_info.GetTotalValidNodeCount();
   superblock_info.SetTotalValidNodeCount(superblock_info.GetTotalNodeCount());
   ASSERT_EQ(fs_->GetNodeManager().GetDnodeOfData(dn, indirect_index_lv1 + direct_blks, 0),
             ZX_ERR_NO_SPACE);
   superblock_info.SetTotalValidNodeCount(tmp_total_valid_node_count);
-  F2fsPutDnode(&dn);
 
   // Check NewNodePage() exception case
   fbl::RefPtr<VnodeF2fs> test_vnode;
@@ -395,18 +404,6 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   ASSERT_EQ(test_vnode->Close(), ZX_OK);
   test_vnode.reset();
   superblock_info.SetTotalValidBlockCount(tmp_total_valid_block_count);
-
-  // Check ReadNodePage() exception case
-  ASSERT_EQ(fs_->GetNodeManager().GetDnodeOfData(dn, indirect_index_lv1 + 1, 0), ZX_OK);
-
-  // fault injection for ReadNodePage()
-  MapTester::SetCachedNatEntryBlockAddress(node_manager, dn.nid, kNewAddr);
-  F2fsPutDnode(&dn);
-
-  fbl::RefPtr<Page> page = nullptr;
-  fs_->GetNodeVnode().GrabCachePage(dn.nid, &page);
-  ASSERT_EQ(fs_->GetNodeManager().ReadNodePage(*page, dn.nid, kReadSync), ZX_ERR_INVALID_ARGS);
-  Page::PutPage(std::move(page), true);
 
   vnode->SetBlocks(1);
 
@@ -506,7 +503,6 @@ TEST_F(NodeManagerTest, TruncateIndirect) {
   const pgoff_t direct_index = kAddrsPerInode + 1;
   const pgoff_t indirect_index = direct_index + direct_blks * 2;
   const uint32_t inode_cnt = 2;
-
   ASSERT_EQ(superblock_info.GetTotalValidInodeCount(), inode_cnt);
   ASSERT_EQ(superblock_info.GetTotalValidNodeCount(), inode_cnt);
 
@@ -618,21 +614,21 @@ TEST_F(NodeManagerTest, TruncateExceptionCase) {
 
   // 2. Check exception case of TruncatePartialNodes()
   FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv3 + kNidsPerBlock, kNewAddr,
-                                ZX_ERR_INVALID_ARGS);
+                                ZX_ERR_OUT_OF_RANGE);
   FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv2 + kNidsPerBlock, kNewAddr,
-                                ZX_ERR_INVALID_ARGS);
+                                ZX_ERR_OUT_OF_RANGE);
   --indirect_node_cnt;
 
   // 3. Check exception case of TruncateNodes()
   FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv3, kNewAddr,
-                                ZX_ERR_INVALID_ARGS);
+                                ZX_ERR_OUT_OF_RANGE);
   FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv2, kNewAddr,
-                                ZX_ERR_INVALID_ARGS);
+                                ZX_ERR_OUT_OF_RANGE);
   --indirect_node_cnt;
 
   // 4. Check exception case of TruncateDnode()
   FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv1_2nd, kNewAddr,
-                                ZX_ERR_INVALID_ARGS);
+                                ZX_ERR_OUT_OF_RANGE);
   --indirect_node_cnt;
 
   // 5. Check exception case truncation of invalid address
@@ -648,6 +644,7 @@ TEST_F(NodeManagerTest, TruncateExceptionCase) {
   ASSERT_EQ(superblock_info.GetTotalValidInodeCount(), inode_cnt);
 
   fs_->WriteCheckpoint(false, false);
+
   // After checkpoint, we can reuse the removed nodes
   ASSERT_EQ(node_manager.GetFreeNidCount(), initial_free_nid_cnt);
 
