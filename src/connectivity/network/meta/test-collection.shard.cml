@@ -27,7 +27,7 @@
             // actions with the system.
             protocol: [
                 "fuchsia.net.debug.Interfaces",
-                "fuchsia.net.stack.Stack",
+                "fuchsia.net.interfaces.State",
             ],
             from: "#netstack",
             to: [ "#test-components" ],
