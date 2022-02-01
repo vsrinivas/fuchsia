@@ -8,6 +8,7 @@ use {
         measurement::{Measurement, MeasurementsQueue},
         runtime_stats_source::RuntimeStatsSource,
     },
+    cm_moniker::ExtendedMoniker,
     fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, HistogramProperty, UintLinearHistogramProperty},
     fuchsia_zircon as zx,
@@ -15,7 +16,6 @@ use {
     futures::{future::BoxFuture, lock::Mutex, FutureExt},
     injectable_time::{MonotonicTime, TimeSource},
     lazy_static::lazy_static,
-    moniker::ExtendedMoniker,
     std::{
         fmt::Debug,
         sync::{Arc, Weak},

@@ -36,6 +36,7 @@ use {
     anyhow::Error,
     assert_matches::assert_matches,
     async_trait::async_trait,
+    cm_moniker::InstancedAbsoluteMoniker,
     cm_rust::*,
     cm_rust_testing::*,
     cm_task_scope::TaskScope,
@@ -48,7 +49,7 @@ use {
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
     maplit::hashmap,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, InstancedAbsoluteMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
     routing_test_helpers::{
         default_service_capability, instantiate_common_routing_tests, RoutingTestModel,
     },

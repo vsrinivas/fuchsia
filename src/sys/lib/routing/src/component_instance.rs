@@ -12,9 +12,10 @@ use {
         DebugRouteMapper,
     },
     async_trait::async_trait,
+    cm_moniker::{InstancedAbsoluteMoniker, InstancedChildMoniker},
     cm_rust::{CapabilityDecl, CollectionDecl, ExposeDecl, OfferDecl, UseDecl},
     derivative::Derivative,
-    moniker::{AbsoluteMoniker, ChildMoniker, InstancedAbsoluteMoniker, InstancedChildMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker},
     std::{
         clone::Clone,
         sync::{Arc, Weak},

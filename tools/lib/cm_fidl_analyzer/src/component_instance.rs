@@ -8,13 +8,11 @@ use {
         node_path::NodePath, route::RouteMapper,
     },
     async_trait::async_trait,
+    cm_moniker::{InstancedAbsoluteMoniker, InstancedChildMoniker},
     cm_rust::{
         CapabilityDecl, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl, OfferDecl, UseDecl,
     },
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase,
-        InstancedAbsoluteMoniker, InstancedChildMoniker,
-    },
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
     routing::{
         capability_source::{BuiltinCapabilities, NamespaceCapabilities},
         component_id_index::ComponentIdIndex,

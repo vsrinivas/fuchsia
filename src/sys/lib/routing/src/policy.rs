@@ -10,11 +10,10 @@ use {
             AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource, RuntimeConfig,
         },
     },
+    cm_moniker::ExtendedMoniker,
     fuchsia_zircon_status as zx,
     log::{error, warn},
-    moniker::{
-        AbsoluteMoniker, ChildMonikerBase, ExtendedMoniker, RelativeMoniker, RelativeMonikerBase,
-    },
+    moniker::{AbsoluteMoniker, ChildMonikerBase, RelativeMoniker, RelativeMonikerBase},
     std::sync::{Arc, Weak},
     thiserror::Error,
 };

@@ -6,8 +6,8 @@ use {
     crate::model::{
         addable_directory::AddableDirectory, component::WeakComponentInstance, error::ModelError,
     },
+    cm_moniker::InstancedAbsoluteMoniker,
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
-    moniker::InstancedAbsoluteMoniker,
     std::collections::HashMap,
     vfs::directory::immutable::simple as pfs,
     vfs::remote::{remote_boxed, RoutingFn},

@@ -11,6 +11,7 @@ pub mod storage_admin;
 use {
     assert_matches::assert_matches,
     async_trait::async_trait,
+    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker, InstancedRelativeMoniker},
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ComponentDecl,
         DependencyType, DictionaryValue, EventDecl, EventMode, ExposeDecl, ExposeDirectoryDecl,
@@ -28,10 +29,7 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_data as fdata, fuchsia_zircon_status as zx,
     maplit::hashmap,
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker,
-        InstancedAbsoluteMoniker, InstancedRelativeMoniker, RelativeMonikerBase,
-    },
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, RelativeMonikerBase},
     routing::{
         capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
         component_id_index::ComponentInstanceId,

@@ -12,13 +12,12 @@ use {
     ::routing_test_helpers::{
         component_id_index::make_index_file, storage::CommonStorageTest, RoutingTestModel,
     },
+    cm_moniker::InstancedRelativeMoniker,
     cm_rust::*,
     cm_rust_testing::*,
     component_id_index::gen_instance_id,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, InstancedRelativeMoniker, RelativeMonikerBase,
-    },
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMonikerBase},
     routing::{error::RoutingError, RouteRequest},
     std::{convert::TryInto, path::PathBuf},
 };

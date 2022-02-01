@@ -36,6 +36,7 @@ use {
         },
         walk_state::WalkState,
     },
+    cm_moniker::InstancedRelativeMoniker,
     cm_rust::{
         CapabilityDecl, CapabilityName, DirectoryDecl, EventDecl, ExposeDecl, ExposeDirectoryDecl,
         ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource,
@@ -47,7 +48,7 @@ use {
     },
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io2 as fio2,
     from_enum::FromEnum,
-    moniker::{AbsoluteMoniker, ChildMoniker, InstancedRelativeMoniker, RelativeMonikerBase},
+    moniker::{AbsoluteMoniker, ChildMoniker, RelativeMonikerBase},
     std::{
         path::{Path, PathBuf},
         sync::Arc,

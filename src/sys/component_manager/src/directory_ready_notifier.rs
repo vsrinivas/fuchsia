@@ -16,6 +16,7 @@ use {
         component_instance::ComponentInstanceInterface, event::EventFilter, rights::Rights,
     },
     async_trait::async_trait,
+    cm_moniker::InstancedAbsoluteMoniker,
     cm_rust::{
         CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
         ExposeSource, ExposeTarget,
@@ -26,7 +27,7 @@ use {
     futures::stream::StreamExt,
     io_util,
     log::*,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, InstancedAbsoluteMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::{
         sync::{Arc, Mutex, Weak},
         time::Duration,

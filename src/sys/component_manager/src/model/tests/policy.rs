@@ -14,8 +14,8 @@ use {
         resolver::ResolverRegistry,
     },
     anyhow::Error,
+    cm_moniker::InstancedAbsoluteMoniker,
     fidl_fuchsia_component_decl as fdecl,
-    moniker::InstancedAbsoluteMoniker,
     routing::environment::{DebugRegistry, RunnerRegistry},
     routing_test_helpers::{
         instantiate_global_policy_checker_tests, policy::GlobalPolicyCheckerTest,

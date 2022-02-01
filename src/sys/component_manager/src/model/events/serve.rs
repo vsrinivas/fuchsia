@@ -14,6 +14,7 @@ use {
             },
         },
     },
+    cm_moniker::ExtendedMoniker,
     cm_rust::{CapabilityName, EventMode},
     fidl::endpoints::{create_request_stream, ClientEnd, Proxy},
     fidl_fuchsia_component as fcomponent,
@@ -24,9 +25,7 @@ use {
         TryStreamExt,
     },
     log::{debug, error, info, warn},
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, RelativeMoniker, RelativeMonikerBase,
-    },
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
     std::sync::Arc,
 };
 

@@ -69,6 +69,7 @@ mod tests {
             capability::CapabilitySource,
             model::hooks::{Event, EventPayload, Hooks},
         },
+        cm_moniker::InstancedAbsoluteMoniker,
         cm_task_scope::TaskScope,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
@@ -76,7 +77,7 @@ mod tests {
         fuchsia_zircon::sys,
         fuchsia_zircon::AsHandleRef,
         futures::lock::Mutex,
-        moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker},
+        moniker::AbsoluteMonikerBase,
         std::path::PathBuf,
         std::sync::Weak,
     };

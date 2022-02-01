@@ -1,4 +1,4 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -28,12 +28,8 @@
 ///
 /// Display notation: ".", "./down1", ".\up1/down1", ".\up1\up2/down1", ...
 use {
-    crate::{
-        child_moniker::{ChildMoniker, ChildMonikerBase},
-        error::MonikerError,
-        instanced_child_moniker::InstancedChildMoniker,
-        relative_moniker::RelativeMonikerBase,
-    },
+    crate::instanced_child_moniker::InstancedChildMoniker,
+    moniker::{ChildMoniker, ChildMonikerBase, MonikerError, RelativeMonikerBase},
     std::{convert::TryFrom, fmt},
 };
 
@@ -112,12 +108,8 @@ impl TryFrom<&str> for InstancedRelativeMoniker {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::{
-            abs_moniker::AbsoluteMonikerBase, instanced_abs_moniker::InstancedAbsoluteMoniker,
-        },
-        anyhow::Error,
-        std::convert::TryInto,
+        super::*, crate::instanced_abs_moniker::InstancedAbsoluteMoniker, anyhow::Error,
+        moniker::AbsoluteMonikerBase, std::convert::TryInto,
     };
 
     #[test]

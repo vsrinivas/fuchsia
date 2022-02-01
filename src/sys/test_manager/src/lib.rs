@@ -1431,15 +1431,15 @@ impl RunningSuite {
             // Monikers should be reported relative to the test root, so strip away the wrapping
             // components from the path.
             let moniker_parsed =
-                moniker::InstancedRelativeMoniker::try_from(storage_moniker.as_str()).unwrap();
+                cm_moniker::InstancedRelativeMoniker::try_from(storage_moniker.as_str()).unwrap();
             let down_path = moniker_parsed
                 .down_path()
                 .iter()
                 .skip(3)
                 .map(Clone::clone)
-                .collect::<Vec<moniker::InstancedChildMoniker>>();
+                .collect::<Vec<cm_moniker::InstancedChildMoniker>>();
             let moniker_relative_to_test_root =
-                moniker::InstancedRelativeMoniker::new(vec![], down_path);
+                cm_moniker::InstancedRelativeMoniker::new(vec![], down_path);
             sender
                 .send(Ok(SuiteEvents::suite_custom_artifact(ftest_manager::CustomArtifact {
                     directory_and_token: Some(ftest_manager::DirectoryAndToken {

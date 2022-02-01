@@ -1,15 +1,11 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
-    crate::{
-        abs_moniker::AbsoluteMonikerBase,
-        child_moniker::{ChildMoniker, ChildMonikerBase},
-        error::MonikerError,
-        instanced_child_moniker::InstancedChildMoniker,
-    },
+    crate::instanced_child_moniker::InstancedChildMoniker,
     core::cmp::{self, Ord, Ordering},
+    moniker::{AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, MonikerError},
     std::{fmt, hash::Hash},
 };
 
@@ -21,7 +17,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// A root moniker is a moniker with an empty path.
 ///
-/// Absolute monikers are only used internally within the component manager.  Externally,
+/// Instanced absolute monikers are only used internally within the component manager.  Externally,
 /// components are referenced by encoded relative moniker so as to minimize the amount of
 /// information which is disclosed about the overall structure of the component instance tree.
 ///

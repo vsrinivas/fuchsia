@@ -7,14 +7,12 @@ use {
         component_id_index::make_index_file, generate_storage_path, CheckUse, ExpectedResult,
         RoutingTestModel, RoutingTestModelBuilder,
     },
+    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker, InstancedRelativeMoniker},
     cm_rust::*,
     cm_rust_testing::{ComponentDeclBuilder, DirectoryDeclBuilder},
     component_id_index::gen_instance_id,
     fidl_fuchsia_component_decl as fdecl, fuchsia_zircon_status as zx_status,
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, InstancedAbsoluteMoniker,
-        InstancedRelativeMoniker, RelativeMonikerBase,
-    },
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMonikerBase},
     routing::{
         config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
         rights::{READ_RIGHTS, WRITE_RIGHTS},

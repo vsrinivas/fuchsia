@@ -120,8 +120,8 @@ pub trait RelativeMonikerBase: Sized {
     /// Parses n `RelativeMoniker` from a string.
     ///
     /// Input strings should be of the format
-    /// `.(\<name>(:<collection>)?:<instance_id>)*(/<name>(:<collection>)?:<instance_id>)*`, such
-    /// as `.\foo:42/bar:12/baz:54` or `./biz:foo:42`.
+    /// `.(\<name>(:<collection>)?)*(/<name>(:<collection>)?)*`, such
+    /// as `.\foo/bar/baz` or `./biz:foo`.
     fn parse(rep: &str) -> Result<Self, MonikerError> {
         let (up_path, down_path) = Self::parse_up_down_paths(rep)?;
 

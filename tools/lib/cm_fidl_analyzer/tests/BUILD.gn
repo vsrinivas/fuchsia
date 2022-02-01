@@ -21,6 +21,7 @@ rustc_test("tests") {
 
     # Depend on fuchsia_zircon_status crate instead of fuchsia_zircon so that this builds for host.
     "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//src/sys/lib/cm_moniker",
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/cm_rust/testing",
     "//src/sys/lib/cm_types",

@@ -10,15 +10,14 @@ use {
     },
     anyhow::Error,
     clonable_error::ClonableError,
+    cm_moniker::{InstancedAbsoluteMoniker, InstancedRelativeMoniker},
     cm_rust::CapabilityPath,
     fidl::endpoints,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
-    moniker::{
-        ChildMonikerBase, InstancedAbsoluteMoniker, InstancedRelativeMoniker, RelativeMonikerBase,
-    },
+    moniker::{ChildMonikerBase, RelativeMonikerBase},
     routing::{
         component_id_index::ComponentInstanceId, component_instance::ComponentInstanceInterface,
     },
@@ -423,10 +422,11 @@ mod tests {
             },
         },
         assert_matches::assert_matches,
+        cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::*,
         cm_rust_testing::ComponentDeclBuilder,
         component_id_index, fidl_fuchsia_io2 as fio2,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, InstancedAbsoluteMoniker},
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         rand::{self, distributions::Alphanumeric, Rng},
         std::{
             convert::{TryFrom, TryInto},

@@ -26,6 +26,7 @@ use {
     ::routing_test_helpers::{generate_storage_path, RoutingTestModel, RoutingTestModelBuilder},
     anyhow::anyhow,
     async_trait::async_trait,
+    cm_moniker::InstancedRelativeMoniker,
     cm_rust::*,
     cm_types::Url,
     fidl::{
@@ -45,8 +46,7 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase,
-        InstancedRelativeMoniker, RelativeMonikerBase,
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, RelativeMonikerBase,
     },
     std::{
         collections::{HashMap, HashSet},

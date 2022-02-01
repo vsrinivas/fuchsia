@@ -9,6 +9,7 @@ use {
         error::ModelError,
     },
     async_trait::async_trait,
+    cm_moniker::InstancedChildMoniker,
     cm_rust::{
         CapabilityDecl, CapabilityName, ChildRef, ComponentDecl, DependencyType, OfferDecl,
         OfferDeclCommon, OfferDirectoryDecl, OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl,
@@ -18,7 +19,7 @@ use {
     },
     futures::future::select_all,
     maplit::hashset,
-    moniker::{ChildMoniker, ChildMonikerBase, InstancedChildMoniker},
+    moniker::{ChildMoniker, ChildMonikerBase},
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::sync::Arc,
@@ -817,6 +818,7 @@ mod tests {
             },
         },
         async_trait::async_trait,
+        cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::{
             CapabilityName, CapabilityPath, ChildDecl, DependencyType, ExposeDecl,
             ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl,
@@ -827,7 +829,7 @@ mod tests {
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
         },
         fidl_fuchsia_component_decl as fdecl,
-        moniker::{AbsoluteMonikerBase, ChildMoniker, InstancedAbsoluteMoniker},
+        moniker::{AbsoluteMonikerBase, ChildMoniker},
         std::collections::HashMap,
         std::{convert::TryFrom, sync::Weak},
         test_case::test_case,

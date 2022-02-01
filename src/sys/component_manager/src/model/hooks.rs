@@ -13,6 +13,7 @@ use {
     },
     anyhow::format_err,
     async_trait::async_trait,
+    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     cm_rust::{CapabilityName, ComponentDecl},
     config_encoder::ConfigFields,
     fidl_fuchsia_diagnostics_types as fdiagnostics,
@@ -20,7 +21,6 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{channel::oneshot, future::BoxFuture, lock::Mutex},
     io_util,
-    moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     rand::random,
     routing::component_instance::ComponentInstanceInterface,
     std::{

@@ -12,10 +12,6 @@ use {
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// A child moniker locally identifies a child component instance using the name assigned by
-/// its parent and its collection (if present). It is a building block for more complex monikers.
-///
-/// Display notation: "[collection:]name:instance_id".
 pub trait ChildMonikerBase: Eq + PartialOrd + Clone + Default + fmt::Display {
     fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError>
     where
@@ -40,7 +36,10 @@ pub fn validate_moniker_part(name: Option<&str>) -> Result<(), MonikerError> {
     Ok(())
 }
 
-/// A variant of child moniker that does not distinguish between instances
+/// An child moniker locally identifies a child component instance using the name assigned by
+/// its parent and its collection (if present). It is a building block for more complex monikers.
+///
+/// The child moniker does not distinguish between instances.
 ///
 /// Display notation: "name[:collection]".
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]

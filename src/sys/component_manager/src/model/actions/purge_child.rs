@@ -10,7 +10,7 @@ use {
         hooks::{Event, EventPayload},
     },
     async_trait::async_trait,
-    moniker::InstancedChildMoniker,
+    cm_moniker::InstancedChildMoniker,
     std::sync::Arc,
 };
 

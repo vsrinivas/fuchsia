@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::hooks::Event as ComponentEvent, cm_rust::EventMode, fuchsia_trace as trace,
-    futures::channel::oneshot, moniker::ExtendedMoniker,
+    crate::model::hooks::Event as ComponentEvent, cm_moniker::ExtendedMoniker, cm_rust::EventMode,
+    fuchsia_trace as trace, futures::channel::oneshot,
 };
 
 /// Created for a particular component event.

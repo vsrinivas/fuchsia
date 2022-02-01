@@ -1,4 +1,4 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,31 +6,25 @@ import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
-rustc_library("moniker") {
+rustc_library("cm_moniker") {
   with_unit_tests = true
   edition = "2018"
 
+  # Moniker types defined in this library are restricted to component_manager.
+  # Please use Moniker types included in //src/sys/lib/moniker for development.
   visibility = [
-    "//src/developer/ffx/plugins/component/*",
-    "//src/lib/component_hub/*",
-    "//src/security/scrutiny/*",
     "//src/sys/component_manager/*",
     "//src/sys/lib/cm_moniker/*",
-    "//src/sys/lib/component_id_index/*",
-    "//src/sys/lib/moniker/*",
+
+    # TODO(fxbug.dev/92611): Have StorageAdminRequest pass a non-InstancedRelativeMoniker.
     "//src/sys/lib/routing/*",
     "//src/sys/test_manager/*",
-    "//tools/component_id_index/*",
     "//tools/lib/cm_fidl_analyzer/*",
   ]
 
-  deps = [
-    "//src/sys/lib/cm_types",
-    "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:thiserror",
-  ]
+  deps = [ "//src/sys/lib/moniker" ]
 
+  # For ExtendedMoniker:
   # Some host tools use serde to serialize/deserialize moniker types. This
   # dependency is guarded in code via #[cfg(feature = "serde")] and
   # #[cfg_attr(feature = "serde", ...)] to prevent serde dependencies in
@@ -44,14 +38,14 @@ rustc_library("moniker") {
   test_deps = [ "//third_party/rust_crates:anyhow" ]
 
   sources = [
-    "src/abs_moniker.rs",
-    "src/child_moniker.rs",
-    "src/error.rs",
-    "src/lib.rs",
-    "src/relative_moniker.rs",
+    "src//lib.rs",
+    "src/extended_moniker.rs",
+    "src/instanced_abs_moniker.rs",
+    "src/instanced_child_moniker.rs",
+    "src/instanced_relative_moniker.rs",
   ]
 }
 
-fuchsia_unittest_package("moniker-tests") {
-  deps = [ ":moniker_test" ]
+fuchsia_unittest_package("tests") {
+  deps = [ ":cm_moniker_test" ]
 }

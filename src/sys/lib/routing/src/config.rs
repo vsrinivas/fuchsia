@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Context, Error},
+    cm_moniker::ExtendedMoniker,
     cm_rust::{CapabilityName, CapabilityTypeName, FidlIntoNative},
     cm_types::{Name, Url},
     fidl::encoding::decode_persistent,
@@ -13,7 +14,7 @@ use {
         CapabilityPolicyAllowlists, DebugRegistrationPolicyAllowlists, LogDestination,
         OutDirContents, RealmBuilderResolverAndRunner,
     },
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, MonikerError},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, MonikerError},
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,
@@ -573,8 +574,8 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, assert_matches::assert_matches, cm_types::ParseError, fidl_fuchsia_io2 as fio2,
-        moniker::InstancedAbsoluteMoniker, std::path::PathBuf, tempfile::TempDir,
+        super::*, assert_matches::assert_matches, cm_moniker::InstancedAbsoluteMoniker,
+        cm_types::ParseError, fidl_fuchsia_io2 as fio2, std::path::PathBuf, tempfile::TempDir,
     };
 
     const FOO_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx";

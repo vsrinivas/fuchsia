@@ -12,11 +12,12 @@ use {
     },
     ::routing::{component_instance::ComponentInstanceInterface, event::EventFilter},
     async_trait::async_trait,
+    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     cm_rust::CapabilityName,
     fuchsia_async as fasync,
     futures::{channel::mpsc, future::join_all, stream, SinkExt, StreamExt},
     log::error,
-    moniker::{AbsoluteMonikerBase, ExtendedMoniker, InstancedAbsoluteMoniker},
+    moniker::AbsoluteMonikerBase,
     std::{
         collections::{HashMap, HashSet},
         sync::{Arc, Weak},

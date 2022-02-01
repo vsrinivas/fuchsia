@@ -1,19 +1,20 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
-    crate::{
-        child_moniker::{validate_moniker_part, ChildMoniker, ChildMonikerBase},
-        error::MonikerError,
-    },
     core::cmp::{Ord, Ordering},
+    moniker::{validate_moniker_part, ChildMoniker, ChildMonikerBase, MonikerError},
     std::fmt,
 };
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+/// An instanced child moniker locally identifies a child component instance using the name assigned by
+/// its parent and its collection (if present). It is a building block for more complex monikers.
+///
+/// Display notation: "[collection:]name:instance_id".
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Eq, PartialEq, Debug, Clone, Hash, Default)]
 pub struct InstancedChildMoniker {

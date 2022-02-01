@@ -33,6 +33,7 @@ rustc_library("routing") {
     "//src/lib/from-enum",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//src/sys/lib/cm_fidl_validator",
+    "//src/sys/lib/cm_moniker",
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/cm_types",
     "//src/sys/lib/component_id_index",

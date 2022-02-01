@@ -137,11 +137,12 @@ pub mod tests {
             },
         },
         assert_matches::assert_matches,
+        cm_moniker::{InstancedAbsoluteMoniker, InstancedChildMoniker},
         cm_rust::EventMode,
         cm_rust_testing::ComponentDeclBuilder,
         fidl_fuchsia_component_decl as fdecl, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{join, FutureExt},
-        moniker::{ChildMoniker, InstancedAbsoluteMoniker, InstancedChildMoniker},
+        moniker::ChildMoniker,
         std::sync::atomic::Ordering,
         std::sync::Weak,
     };

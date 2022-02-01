@@ -28,6 +28,7 @@ use {
     },
     anyhow::{format_err, Error},
     async_trait::async_trait,
+    cm_moniker::InstancedRelativeMoniker,
     cm_rust::{CapabilityName, ExposeDecl, OfferDecl, StorageDecl, UseDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
@@ -38,10 +39,7 @@ use {
     futures::{TryFutureExt, TryStreamExt},
     lazy_static::lazy_static,
     log::*,
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, InstancedRelativeMoniker, RelativeMoniker,
-        RelativeMonikerBase,
-    },
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
     routing::component_instance::ComponentInstanceInterface,
     std::{
         convert::TryFrom,

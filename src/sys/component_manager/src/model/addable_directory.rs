@@ -4,7 +4,8 @@
 
 use {
     crate::model::error::ModelError,
-    moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker},
+    cm_moniker::InstancedAbsoluteMoniker,
+    moniker::AbsoluteMonikerBase,
     std::sync::Arc,
     vfs::directory::{entry::DirectoryEntry, helper::DirectlyMutable, immutable::simple as pfs},
 };

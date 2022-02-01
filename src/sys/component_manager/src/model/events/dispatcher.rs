@@ -15,6 +15,7 @@ use {
     },
     ::routing::event::{EventFilter, EventModeSet},
     anyhow::Error,
+    cm_moniker::ExtendedMoniker,
     cm_rust::{DictionaryValue, EventMode},
     fuchsia_trace as trace,
     futures::{
@@ -23,7 +24,6 @@ use {
         sink::SinkExt,
     },
     maplit::hashmap,
-    moniker::ExtendedMoniker,
 };
 
 /// EventDispatcher and EventStream are two ends of a channel.
@@ -233,9 +233,10 @@ mod tests {
         crate::{capability::CapabilitySource, model::events::registry::ExecutionMode},
         ::routing::capability_source::InternalCapability,
         assert_matches::assert_matches,
+        cm_moniker::InstancedAbsoluteMoniker,
         fuchsia_zircon as zx,
         futures::StreamExt,
-        moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker},
+        moniker::AbsoluteMonikerBase,
         std::{
             convert::TryInto,
             sync::{Arc, Weak},

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    cm_moniker::InstancedRelativeMoniker,
     component_events::{events::*, matcher::*},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
@@ -15,7 +16,7 @@ use {
         channel::mpsc, future::BoxFuture, sink::SinkExt, Future, FutureExt, StreamExt, TryStreamExt,
     },
     maplit::hashset,
-    moniker::{InstancedRelativeMoniker, RelativeMonikerBase},
+    moniker::RelativeMonikerBase,
     std::collections::HashSet,
 };
 

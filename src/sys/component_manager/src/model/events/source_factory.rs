@@ -18,9 +18,9 @@ use {
     },
     ::routing::capability_source::InternalCapability,
     async_trait::async_trait,
+    cm_moniker::InstancedAbsoluteMoniker,
     cm_rust::CapabilityName,
     lazy_static::lazy_static,
-    moniker::InstancedAbsoluteMoniker,
     std::sync::{Arc, Weak},
 };
 

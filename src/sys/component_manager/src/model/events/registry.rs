@@ -28,10 +28,11 @@ use {
         route_capability,
     },
     async_trait::async_trait,
+    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     cm_rust::{CapabilityName, EventMode, UseDecl, UseEventDecl},
     fuchsia_trace as trace,
     futures::lock::Mutex,
-    moniker::{AbsoluteMonikerBase, ExtendedMoniker, InstancedAbsoluteMoniker},
+    moniker::AbsoluteMonikerBase,
     std::{
         collections::HashMap,
         sync::{Arc, Weak},
@@ -445,9 +446,9 @@ mod tests {
             error::ComponentInstanceError,
         },
         assert_matches::assert_matches,
+        cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::ProtocolDecl,
         fuchsia_async as fasync, fuchsia_zircon as zx,
-        moniker::InstancedAbsoluteMoniker,
     };
 
     async fn dispatch_capability_requested_event(

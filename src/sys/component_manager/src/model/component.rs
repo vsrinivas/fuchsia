@@ -36,6 +36,7 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     clonable_error::ClonableError,
+    cm_moniker::{InstanceId, InstancedAbsoluteMoniker, InstancedChildMoniker},
     cm_runner::{component_controller::ComponentController, NullRunner, RemoteRunner, Runner},
     cm_rust::{self, CapabilityName, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
     cm_task_scope::TaskScope,
@@ -58,10 +59,7 @@ use {
         lock::{MappedMutexGuard, Mutex, MutexGuard},
     },
     log::{error, warn},
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, InstanceId,
-        InstancedAbsoluteMoniker, InstancedChildMoniker,
-    },
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
     std::iter::Iterator,
     std::{
         boxed::Box,

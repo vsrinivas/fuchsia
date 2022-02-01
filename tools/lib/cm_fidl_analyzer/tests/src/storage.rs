@@ -5,6 +5,7 @@
 mod tests {
     use {
         crate::routing::RoutingTestBuilderForAnalyzer,
+        cm_moniker::InstancedRelativeMoniker,
         cm_rust::{
             OfferDecl, OfferSource, OfferStorageDecl, OfferTarget, StorageDecl,
             StorageDirectorySource, UseDecl, UseStorageDecl,
@@ -12,9 +13,7 @@ mod tests {
         cm_rust_testing::{ComponentDeclBuilder, DirectoryDeclBuilder},
         component_id_index::gen_instance_id,
         fidl_fuchsia_component_decl as fdecl, fuchsia_zircon_status as zx_status,
-        moniker::{
-            AbsoluteMoniker, AbsoluteMonikerBase, InstancedRelativeMoniker, RelativeMonikerBase,
-        },
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMonikerBase},
         routing::rights::{READ_RIGHTS, WRITE_RIGHTS},
         routing_test_helpers::{
             component_id_index::make_index_file, storage::CommonStorageTest, CheckUse,

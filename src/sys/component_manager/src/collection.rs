@@ -14,8 +14,9 @@ use {
         },
     },
     async_trait::async_trait,
+    cm_moniker::ExtendedMoniker,
     cm_rust::CapabilityTypeName,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     routing::capability_source::{AggregateCapability, AggregateCapabilityProvider},
     std::sync::{Arc, Weak},
 };

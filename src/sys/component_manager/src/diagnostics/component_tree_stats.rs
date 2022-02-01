@@ -17,6 +17,7 @@ use {
         model::hooks::{Event, EventPayload, EventType, HasEventType, Hook, HooksRegistration},
     },
     async_trait::async_trait,
+    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     fidl_fuchsia_diagnostics_types::Task as DiagnosticsTask,
     fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, HistogramProperty},
@@ -30,7 +31,7 @@ use {
     },
     injectable_time::MonotonicTime,
     log::warn,
-    moniker::{AbsoluteMonikerBase, ExtendedMoniker, InstancedAbsoluteMoniker},
+    moniker::AbsoluteMonikerBase,
     std::{
         collections::BTreeMap,
         fmt::Debug,
@@ -424,11 +425,11 @@ mod tests {
             diagnostics::testing::{FakeDiagnosticsContainer, FakeRuntime, FakeTask},
             model::testing::routing_test_helpers::RoutingTest,
         },
+        cm_moniker::InstancedAbsoluteMoniker,
         cm_rust_testing::ComponentDeclBuilder,
         diagnostics_hierarchy::DiagnosticsHierarchy,
         fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
         fuchsia_zircon::{AsHandleRef, DurationNum},
-        moniker::InstancedAbsoluteMoniker,
     };
 
     #[fuchsia::test]

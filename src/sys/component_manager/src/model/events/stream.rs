@@ -11,10 +11,10 @@ use {
         },
         hooks::{EventType, HasEventType},
     },
+    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     cm_rust::EventMode,
     fuchsia_trace as trace,
     futures::{channel::mpsc, StreamExt},
-    moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     std::sync::{Arc, Weak},
 };
 

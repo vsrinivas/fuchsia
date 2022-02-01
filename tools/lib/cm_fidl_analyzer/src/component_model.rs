@@ -9,6 +9,7 @@ use {
         route::{RouteMap, RouteSegment, VerifyRouteResult},
     },
     anyhow::{anyhow, Result},
+    cm_moniker::InstancedRelativeMoniker,
     cm_rust::{
         CapabilityDecl, CapabilityPath, CapabilityTypeName, ComponentDecl, ExposeDecl,
         ExposeDeclCommon, ProgramDecl, ResolverRegistration, UseDecl, UseStorageDecl,
@@ -16,7 +17,7 @@ use {
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     futures::FutureExt,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, InstancedRelativeMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker},
     routing::{
         capability_source::{
             CapabilitySourceInterface, ComponentCapability, StorageCapabilitySource,
@@ -821,6 +822,7 @@ mod tests {
         super::*,
         crate::environment::BOOT_SCHEME,
         anyhow::Result,
+        cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::{
             CapabilityName, DependencyType, RegistrationSource, RunnerRegistration,
             UseProtocolDecl, UseSource,
@@ -828,7 +830,7 @@ mod tests {
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
         fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
-        moniker::{AbsoluteMoniker, InstancedAbsoluteMoniker},
+        moniker::AbsoluteMoniker,
         routing::{
             component_instance::WeakExtendedInstanceInterface, environment::EnvironmentInterface,
         },

@@ -24,6 +24,7 @@ use {
         path::PathBufExt, route_capability, route_storage_and_backing_directory,
     },
     async_trait::async_trait,
+    cm_moniker::{ExtendedMoniker, InstancedRelativeMoniker},
     cm_rust::{self, CapabilityName, CapabilityPath, ExposeDecl, UseDecl, UseStorageDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
@@ -31,7 +32,6 @@ use {
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::*,
-    moniker::{ExtendedMoniker, InstancedRelativeMoniker},
     std::{path::PathBuf, sync::Arc},
 };
 

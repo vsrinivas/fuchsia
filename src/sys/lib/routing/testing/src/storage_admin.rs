@@ -4,10 +4,11 @@
 
 use {
     crate::{CheckUse, ExpectedResult, RoutingTestModel, RoutingTestModelBuilder},
+    cm_moniker::InstancedRelativeMoniker,
     cm_rust::*,
     cm_rust_testing::*,
     fidl_fuchsia_component_decl as fdecl,
-    moniker::{InstancedRelativeMoniker, RelativeMonikerBase},
+    moniker::RelativeMonikerBase,
     routing::rights::{READ_RIGHTS, WRITE_RIGHTS},
     std::{
         convert::{TryFrom, TryInto},

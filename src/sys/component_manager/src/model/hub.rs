@@ -18,6 +18,7 @@ use {
     },
     ::routing::capability_source::InternalCapability,
     async_trait::async_trait,
+    cm_moniker::InstancedAbsoluteMoniker,
     cm_rust::{CapabilityPath, ComponentDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
@@ -27,7 +28,7 @@ use {
     fidl_fuchsia_sys2::LifecycleControllerMarker,
     fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    moniker::{AbsoluteMonikerBase, ChildMonikerBase, InstancedAbsoluteMoniker},
+    moniker::{AbsoluteMonikerBase, ChildMonikerBase},
     std::{
         collections::HashMap,
         convert::TryFrom,

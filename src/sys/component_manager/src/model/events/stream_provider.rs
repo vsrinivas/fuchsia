@@ -16,11 +16,11 @@ use {
         hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
     },
     async_trait::async_trait,
+    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     cm_rust::{CapabilityName, ComponentDecl, EventMode, UseDecl, UseEventStreamDeprecatedDecl},
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::lock::Mutex,
-    moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     std::{
         collections::HashMap,
         sync::{Arc, Weak},

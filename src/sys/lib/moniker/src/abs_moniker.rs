@@ -178,8 +178,10 @@ pub trait AbsoluteMonikerBase:
 
 /// AbsoluteMoniker describes the identity of a component instance
 /// in terms of its path relative to the root of the component instance
-/// tree. Unlike InstancedAbsoluteMoniker, the constituent parts of a AbsoluteMoniker
-/// do not need to include the instance ID of the child.
+/// tree. The constituent parts of a AbsoluteMoniker do not include the
+/// instance ID of the child.
+///
+/// Display notation: "/", "/name1", "/name1/name2", ...
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]
 pub struct AbsoluteMoniker {

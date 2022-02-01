@@ -70,6 +70,7 @@ pub use {
 use {
     crate::model::component::ComponentInstance,
     async_trait::async_trait,
+    cm_moniker::InstancedChildMoniker,
     fuchsia_async as fasync,
     futures::{
         channel::oneshot,
@@ -77,7 +78,7 @@ use {
         task::{Context, Poll},
         Future,
     },
-    moniker::{ChildMoniker, InstancedChildMoniker},
+    moniker::ChildMoniker,
     std::any::Any,
     std::collections::HashMap,
     std::fmt::Debug,
@@ -405,7 +406,8 @@ pub mod tests {
 pub(crate) mod test_utils {
     use {
         crate::model::component::{ComponentInstance, InstanceState},
-        moniker::{AbsoluteMonikerBase, ChildMonikerBase, InstancedChildMoniker},
+        cm_moniker::InstancedChildMoniker,
+        moniker::{AbsoluteMonikerBase, ChildMonikerBase},
         routing::component_instance::ComponentInstanceInterface,
     };
 

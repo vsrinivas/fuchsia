@@ -8,6 +8,7 @@ group("tests") {
   deps = [
     "cm_fidl_validator:tests",
     "cm_json:tests",
+    "cm_moniker:tests",
     "cm_rust:tests",
     "cm_types:tests",
     "component-events:tests",

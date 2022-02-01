@@ -21,12 +21,12 @@ use {
         },
     },
     async_trait::async_trait,
+    cm_moniker::ExtendedMoniker,
     cm_rust::EventMode,
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    moniker::ExtendedMoniker,
     std::{path::PathBuf, sync::Weak},
 };
 

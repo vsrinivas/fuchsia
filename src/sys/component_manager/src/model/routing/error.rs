@@ -5,8 +5,8 @@
 use {
     anyhow::Error,
     clonable_error::ClonableError,
+    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker, InstancedRelativeMoniker},
     fidl_fuchsia_component as fcomponent, fuchsia_zircon as zx,
-    moniker::{ExtendedMoniker, InstancedAbsoluteMoniker, InstancedRelativeMoniker},
     thiserror::Error,
 };
 
