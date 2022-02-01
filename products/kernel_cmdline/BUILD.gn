@@ -29,9 +29,8 @@ kernel_cmdline("devmgr.enable-ephemeral--false") {
   args = [ "devmgr.enable-ephemeral=false" ]
 }
 
-kernel_cmdline("driver_manager.root-driver--platform-bus.so") {
-  args =
-      [ "driver_manager.root-driver=fuchsia-boot:///#driver/platform-bus.so" ]
+kernel_cmdline("driver_manager.root-meta--platform-bus.cm") {
+  args = [ "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" ]
 }
 
 kernel_cmdline("driver_manager.use_driver_framework_v2--true") {
