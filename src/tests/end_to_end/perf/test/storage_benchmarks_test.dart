@@ -119,7 +119,7 @@ void main() {
   enableLoggingOutput();
   _addOduTest('memfs', []);
   _addOduTest('minfs', ['--zxcrypt']);
-  _addOduTest('fxfs', ['--partition-size=${64 * 1024 * 1024}', '--zxcrypt']);
+  _addOduTest('fxfs', ['--partition-size=${64 * 1024 * 1024}']);
 
   // TODO(fxbug.dev/91758): Add zxcrypt to f2fs.
   _addOduTest('f2fs', ['--partition-size=${64 * 1024 * 1024}']);
