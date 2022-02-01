@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,23 +12,24 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/threads.h>
 
-#include <test-utils/test-utils.h>
 #include <zxtest/zxtest.h>
 
-static void get_rights(zx_handle_t handle, zx_rights_t* rights) {
+namespace {
+
+void get_rights(zx_handle_t handle, zx_rights_t* rights) {
   zx_info_handle_basic_t info;
   ASSERT_EQ(zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL),
             ZX_OK, "");
   *rights = info.rights;
 }
 
-static void get_new_rights(zx_handle_t handle, zx_rights_t new_rights, zx_handle_t* new_handle) {
+void get_new_rights(zx_handle_t handle, zx_rights_t new_rights, zx_handle_t* new_handle) {
   ASSERT_EQ(zx_handle_duplicate(handle, new_rights, new_handle), ZX_OK, "");
 }
 
 // |object| must have ZX_RIGHT_{GET,SET}_PROPERTY.
 
-static void test_name_property(zx_handle_t object) {
+void test_name_property(zx_handle_t object) {
   char set_name[ZX_MAX_NAME_LEN];
   char get_name[ZX_MAX_NAME_LEN];
 
@@ -60,10 +62,10 @@ static void test_name_property(zx_handle_t object) {
   EXPECT_EQ(zx_object_set_property(object, ZX_PROP_NAME, set_name, sizeof(set_name)), ZX_OK, "");
 
   zx_rights_t current_rights;
-  get_rights(object, &current_rights);
+  ASSERT_NO_FATAL_FAILURE(get_rights(object, &current_rights));
   zx_rights_t cant_set_rights = current_rights &= ~ZX_RIGHT_SET_PROPERTY;
   zx_handle_t cant_set;
-  get_new_rights(object, cant_set_rights, &cant_set);
+  ASSERT_NO_FATAL_FAILURE(get_new_rights(object, cant_set_rights, &cant_set));
   EXPECT_EQ(zx_object_set_property(cant_set, ZX_PROP_NAME, "", 0), ZX_ERR_ACCESS_DENIED, "");
   zx_handle_close(cant_set);
 }
@@ -195,107 +197,4 @@ TEST(Property, SocketBuffer) {
   zx_handle_close_many(sockets, 2);
 }
 
-#if defined(__x86_64__)
-
-static uintptr_t read_gs(void) {
-  uintptr_t gs;
-  __asm__ __volatile__("mov %%gs:0,%0" : "=r"(gs));
-  return gs;
-}
-
-static int do_nothing(void* unused) {
-  for (;;) {
-  }
-  return 0;
-}
-
-TEST(Property, FsInvalid) {
-  // The success case of fs is hard to explicitly test, but is
-  // exercised all the time (ie userspace would explode instantly if
-  // it was broken). Since we will be soon adding a corresponding
-  // mechanism for gs, don't worry about testing success.
-
-  uintptr_t fs_storage;
-  uintptr_t fs_location = (uintptr_t)&fs_storage;
-
-  // All the failures:
-
-  // Try a thread other than the current one.
-  thrd_t t;
-  int success = thrd_create(&t, &do_nothing, NULL);
-  ASSERT_EQ(success, thrd_success, "");
-  zx_handle_t other_thread = thrd_get_zx_handle(t);
-  zx_status_t status =
-      zx_object_set_property(other_thread, ZX_PROP_REGISTER_FS, &fs_location, sizeof(fs_location));
-  ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED, "");
-
-  // Try a non-thread object type.
-  status = zx_object_set_property(zx_process_self(), ZX_PROP_REGISTER_FS, &fs_location,
-                                  sizeof(fs_location));
-  ASSERT_EQ(status, ZX_ERR_WRONG_TYPE, "");
-
-  // Not enough buffer to hold the property value.
-  status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_FS, &fs_location,
-                                  sizeof(fs_location) - 1);
-  ASSERT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL, "");
-
-  // A non-canonical vaddr.
-  uintptr_t noncanonical_fs_location = fs_location | (1ull << 47);
-  status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_FS, &noncanonical_fs_location,
-                                  sizeof(noncanonical_fs_location));
-  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
-
-  // A non-userspace vaddr.
-  uintptr_t nonuserspace_fs_location = 0xffffffff40000000;
-  status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_FS, &nonuserspace_fs_location,
-                                  sizeof(nonuserspace_fs_location));
-  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
-}
-
-TEST(Property, Gs) {
-  // First test the success case.
-  const uintptr_t expected = 0xfeedfacefeedface;
-
-  uintptr_t gs_storage = expected;
-  uintptr_t gs_location = (uintptr_t)&gs_storage;
-
-  zx_status_t status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_GS, &gs_location,
-                                              sizeof(gs_location));
-  ASSERT_EQ(status, ZX_OK, "");
-  ASSERT_EQ(read_gs(), expected, "");
-
-  // All the failures:
-
-  // Try a thread other than the current one.
-  thrd_t t;
-  int success = thrd_create(&t, &do_nothing, NULL);
-  ASSERT_EQ(success, thrd_success, "");
-  zx_handle_t other_thread = thrd_get_zx_handle(t);
-  status =
-      zx_object_set_property(other_thread, ZX_PROP_REGISTER_GS, &gs_location, sizeof(gs_location));
-  ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED, "");
-
-  // Try a non-thread object type.
-  status = zx_object_set_property(zx_process_self(), ZX_PROP_REGISTER_GS, &gs_location,
-                                  sizeof(gs_location));
-  ASSERT_EQ(status, ZX_ERR_WRONG_TYPE, "");
-
-  // Not enough buffer to hold the property value.
-  status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_GS, &gs_location,
-                                  sizeof(gs_location) - 1);
-  ASSERT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL, "");
-
-  // A non-canonical vaddr.
-  uintptr_t noncanonical_gs_location = gs_location | (1ull << 47);
-  status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_GS, &noncanonical_gs_location,
-                                  sizeof(noncanonical_gs_location));
-  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
-
-  // A non-userspace vaddr.
-  uintptr_t nonuserspace_gs_location = 0xffffffff40000000;
-  status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_GS, &nonuserspace_gs_location,
-                                  sizeof(nonuserspace_gs_location));
-  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
-}
-
-#endif  // defined(__x86_64__)
+}  // namespace

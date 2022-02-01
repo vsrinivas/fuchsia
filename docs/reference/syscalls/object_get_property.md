@@ -58,10 +58,10 @@ The name of the object, as a NUL-terminated string.
 
 *value* type: `uintptr_t`
 
-Allowed operations: **set**
+Allowed operations: **get**, **set**
 
-The value of the x86 FS or GS segment register. `value` must be a
-canonical address, and must be a userspace address.
+The value of the x86 FS.BASE or GS.BASE register, respectively. `value` must
+be a canonical address, and must be a userspace address.
 
 Only defined for x86-64.
 

@@ -4,17 +4,16 @@
 
 source_set("property") {
   testonly = true
-  sources = [ "property.cc" ]
+  sources = [
+    "fsgsbase.cc",
+    "property.cc",
+  ]
   deps = [
+    "//sdk/lib/fit",
     "//src/zircon/lib/zircon",
-    "//zircon/system/ulib/test-utils",
+    "//zircon/kernel/lib/arch",
+    "//zircon/system/ulib/elf-psabi",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(fxbug.dev/76395): This test contains an infinite loop, which is
-  # undefined behavior in C++. It was only recently exposed in the latest
-  # clang roll. We can temporarily the disable the feature that uncovered this
-  # UB to unblock the clang roll, but we should go back and fix it and remove
-  # this flag.
-  cflags_cc = [ "-fno-finite-loops" ]
 }

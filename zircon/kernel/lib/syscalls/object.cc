@@ -176,6 +176,19 @@ zx_status_t single_record_result(user_out_ptr<void> dst_buffer, size_t dst_buffe
   return ZX_OK;
 }
 
+#if ARCH_X86
+zx_status_t RequireCurrentThread(fbl::RefPtr<Dispatcher> dispatcher) {
+  auto thread_dispatcher = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
+  if (!thread_dispatcher) {
+    return ZX_ERR_WRONG_TYPE;
+  }
+  if (thread_dispatcher.get() != ThreadDispatcher::GetCurrent()) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+  return ZX_OK;
+}
+#endif
+
 }  // namespace
 
 // actual is an optional return parameter for the number of records returned
@@ -937,7 +950,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<Dispatcher> dispatcher;
-  auto status =
+  zx_status_t status =
       up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_GET_PROPERTY, &dispatcher);
   if (status != ZX_OK)
     return status;
@@ -1050,23 +1063,37 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
       uint64_t value = vmo->GetContentSize();
       return _value.reinterpret<uint64_t>().copy_to_user(value);
     }
+#if ARCH_X86
+    case ZX_PROP_REGISTER_FS: {
+      if (size < sizeof(uintptr_t)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      status = RequireCurrentThread(ktl::move(dispatcher));
+      if (status != ZX_OK) {
+        return status;
+      }
+      uintptr_t value = read_msr(X86_MSR_IA32_FS_BASE);
+      return _value.reinterpret<uintptr_t>().copy_to_user(value);
+    }
+    case ZX_PROP_REGISTER_GS: {
+      if (size < sizeof(uintptr_t)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      status = RequireCurrentThread(ktl::move(dispatcher));
+      if (status != ZX_OK) {
+        return status;
+      }
+      uintptr_t value = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
+      return _value.reinterpret<uintptr_t>().copy_to_user(value);
+    }
+#endif
+
     default:
       return ZX_ERR_INVALID_ARGS;
   }
 
   __UNREACHABLE;
 }
-
-#if ARCH_X86
-static zx_status_t is_current_thread(fbl::RefPtr<Dispatcher>* dispatcher) {
-  auto thread_dispatcher = DownCastDispatcher<ThreadDispatcher>(dispatcher);
-  if (!thread_dispatcher)
-    return ZX_ERR_WRONG_TYPE;
-  if (thread_dispatcher.get() != ThreadDispatcher::GetCurrent())
-    return ZX_ERR_ACCESS_DENIED;
-  return ZX_OK;
-}
-#endif
 
 // zx_status_t zx_object_set_property
 zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
@@ -1095,7 +1122,7 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
     case ZX_PROP_REGISTER_FS: {
       if (size < sizeof(uintptr_t))
         return ZX_ERR_BUFFER_TOO_SMALL;
-      zx_status_t status = is_current_thread(&dispatcher);
+      zx_status_t status = RequireCurrentThread(ktl::move(dispatcher));
       if (status != ZX_OK)
         return status;
       uintptr_t addr;
@@ -1112,7 +1139,7 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
     case ZX_PROP_REGISTER_GS: {
       if (size < sizeof(uintptr_t))
         return ZX_ERR_BUFFER_TOO_SMALL;
-      zx_status_t status = is_current_thread(&dispatcher);
+      zx_status_t status = RequireCurrentThread(ktl::move(dispatcher));
       if (status != ZX_OK)
         return status;
       uintptr_t addr;
