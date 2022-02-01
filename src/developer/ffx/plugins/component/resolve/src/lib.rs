@@ -31,7 +31,7 @@ async fn resolve_impl<W: std::io::Write>(
     writeln!(writer, "Moniker: {}", moniker)?;
     writeln!(writer, "Resolving component instance...")?;
 
-    // LifecycleController accepts PartialRelativeMonikers only
+    // LifecycleController accepts RelativeMonikers only
     let moniker = format!(".{}", moniker.to_string_without_instances());
     match lifecycle_controller.resolve(&moniker).await {
         Ok(Ok(())) => Ok(()),

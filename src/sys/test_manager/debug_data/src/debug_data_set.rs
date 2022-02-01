@@ -13,7 +13,7 @@ use fidl_fuchsia_test_manager as ftest_manager;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, lock::Mutex, SinkExt, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use log::{error, warn};
-use moniker::{ChildMoniker, PartialRelativeMoniker, RelativeMonikerBase};
+use moniker::{ChildMoniker, RelativeMoniker, RelativeMonikerBase};
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Weak},
@@ -101,7 +101,7 @@ async fn route_events(
             }
         };
         let header = event.header.as_ref().unwrap();
-        let moniker = PartialRelativeMoniker::parse(&header.moniker.as_ref().unwrap()).unwrap();
+        let moniker = RelativeMoniker::parse(&header.moniker.as_ref().unwrap()).unwrap();
         let mut locked_sets = sets.lock().await;
         let mut active_sets = vec![];
         locked_sets.retain(|weak_set| match Weak::upgrade(weak_set) {
@@ -193,8 +193,8 @@ mod inner {
     /// A container that tracks the current known state of realms in a debug data set.
     pub(super) struct DebugDataSet {
         realms: HashMap<ChildMoniker, String>,
-        running_components: HashSet<PartialRelativeMoniker>,
-        destroyed_before_start: HashSet<PartialRelativeMoniker>,
+        running_components: HashSet<RelativeMoniker>,
+        destroyed_before_start: HashSet<RelativeMoniker>,
         seen_realms: HashSet<ChildMoniker>,
         done_adding_realms: bool,
         sender: mpsc::Sender<DebugDataRequestMessage>,
@@ -217,7 +217,7 @@ mod inner {
             }
         }
 
-        pub fn includes_moniker(&self, moniker: &PartialRelativeMoniker) -> bool {
+        pub fn includes_moniker(&self, moniker: &RelativeMoniker) -> bool {
             // Assumes that the test realm is contained in a collection under test_manager.
             if !moniker.up_path().is_empty() {
                 return false;
@@ -255,7 +255,7 @@ mod inner {
             let header = event.header.as_ref().ok_or(anyhow!("Event contained no header"))?;
             let unparsed_moniker =
                 header.moniker.as_ref().ok_or(anyhow!("Event contained no moniker"))?;
-            let moniker = PartialRelativeMoniker::parse(unparsed_moniker)?;
+            let moniker = RelativeMoniker::parse(unparsed_moniker)?;
             let realm_id = moniker
                 .down_path()
                 .iter()
@@ -305,7 +305,7 @@ mod inner {
     }
 
     fn realm_moniker_child(realm_moniker: String) -> Result<ChildMoniker, Error> {
-        let moniker = PartialRelativeMoniker::parse(&realm_moniker)?;
+        let moniker = RelativeMoniker::parse(&realm_moniker)?;
         let moniker_is_valid = moniker.up_path().is_empty() && moniker.down_path().len() == 1;
         match moniker_is_valid {
             true => Ok(moniker.down_path()[0].clone()),
@@ -363,11 +363,11 @@ mod inner {
                 set.add_realm(realm.to_string(), url.to_string()).expect("add realm");
             }
             for moniker in included_monikers {
-                let parsed = PartialRelativeMoniker::parse(moniker).unwrap();
+                let parsed = RelativeMoniker::parse(moniker).unwrap();
                 assert!(set.includes_moniker(&parsed), "Expected {} to be in the set", moniker);
             }
             for moniker in excluded_monikers {
-                let parsed = PartialRelativeMoniker::parse(moniker).unwrap();
+                let parsed = RelativeMoniker::parse(moniker).unwrap();
                 assert!(
                     !set.includes_moniker(&parsed),
                     "Expected {} to not be in the set",

@@ -103,7 +103,7 @@ async fn run_impl<W: std::io::Write>(
 
     writeln!(writer, "Starting component instance...")?;
 
-    // LifecycleController accepts PartialRelativeMonikers only
+    // LifecycleController accepts RelativeMonikers only
     let moniker = format!(".{}", moniker.to_string_without_instances());
 
     let start_result = lifecycle_controller

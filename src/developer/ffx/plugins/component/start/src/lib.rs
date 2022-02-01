@@ -28,7 +28,7 @@ async fn start_impl<W: std::io::Write>(
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     writeln!(writer, "Moniker: {}", moniker)?;
 
-    // LifecycleController accepts PartialRelativeMonikers only
+    // LifecycleController accepts RelativeMonikers only
     let moniker = format!(".{}", moniker.to_string_without_instances());
     let res = lifecycle_controller.start(&moniker).await;
     match res {

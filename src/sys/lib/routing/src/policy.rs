@@ -13,8 +13,7 @@ use {
     fuchsia_zircon_status as zx,
     log::{error, warn},
     moniker::{
-        AbsoluteMoniker, ChildMonikerBase, ExtendedMoniker, PartialRelativeMoniker,
-        RelativeMonikerBase,
+        AbsoluteMoniker, ChildMonikerBase, ExtendedMoniker, RelativeMoniker, RelativeMonikerBase,
     },
     std::sync::{Arc, Weak},
     thiserror::Error,
@@ -309,14 +308,14 @@ fn allowlist_entry_matches(
             // For a Realm entry we are looking for the target_moniker to be
             // contained in the realm (i.e. empty up path) and the down_path to be
             // non-empty (i.e. children are allowed but not the realm itself).
-            let relative = PartialRelativeMoniker::from_absolute(realm, target_moniker);
+            let relative = RelativeMoniker::from_absolute(realm, target_moniker);
             relative.up_path().is_empty() && !relative.down_path().is_empty()
         }
         AllowlistEntry::Collection(realm, collection) => {
             // For a Collection entry we are looking for the target_moniker to be
             // contained in the realm (i.e. empty up path) and that the first element of
             // the down path is in a collection with a matching name.
-            let relative = PartialRelativeMoniker::from_absolute(realm, target_moniker);
+            let relative = RelativeMoniker::from_absolute(realm, target_moniker);
             relative.up_path().is_empty()
                 && relative
                     .down_path()

@@ -50,7 +50,7 @@ async fn destroy_impl<W: std::io::Write>(
     let mut child =
         fdecl::ChildRef { name: name.to_string(), collection: Some(collection.to_string()) };
 
-    // LifecycleController accepts PartialRelativeMonikers only
+    // LifecycleController accepts RelativeMonikers only
     let parent_moniker = format!(".{}", parent.to_string_without_instances());
 
     let result = lifecycle_controller

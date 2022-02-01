@@ -6,7 +6,7 @@ use {
     crate::{
         child_moniker::{ChildMoniker, ChildMonikerBase},
         error::MonikerError,
-        partial_relative_moniker::RelativeMonikerBase,
+        relative_moniker::RelativeMonikerBase,
     },
     core::cmp::{self, Ord, Ordering},
     itertools,

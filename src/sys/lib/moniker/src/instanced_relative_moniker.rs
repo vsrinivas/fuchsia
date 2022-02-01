@@ -32,7 +32,7 @@ use {
         child_moniker::{ChildMoniker, ChildMonikerBase},
         error::MonikerError,
         instanced_child_moniker::InstancedChildMoniker,
-        partial_relative_moniker::RelativeMonikerBase,
+        relative_moniker::RelativeMonikerBase,
     },
     std::{convert::TryFrom, fmt},
 };

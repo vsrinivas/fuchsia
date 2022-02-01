@@ -15,8 +15,7 @@ use {
     futures::prelude::*,
     log::*,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, MonikerError, PartialRelativeMoniker,
-        RelativeMonikerBase,
+        AbsoluteMoniker, AbsoluteMonikerBase, MonikerError, RelativeMoniker, RelativeMonikerBase,
     },
     std::convert::TryFrom,
     std::sync::{Arc, Weak},
@@ -34,11 +33,10 @@ impl LifecycleController {
     }
 
     fn construct_moniker(&self, input: &str) -> Result<AbsoluteMoniker, fcomponent::Error> {
-        let relative_moniker =
-            PartialRelativeMoniker::try_from(input).map_err(|e: MonikerError| {
-                debug!("lifecycle controller received invalid component moniker: {}", e);
-                fcomponent::Error::InvalidArguments
-            })?;
+        let relative_moniker = RelativeMoniker::try_from(input).map_err(|e: MonikerError| {
+            debug!("lifecycle controller received invalid component moniker: {}", e);
+            fcomponent::Error::InvalidArguments
+        })?;
         if !relative_moniker.up_path().is_empty() {
             debug!(
                 "lifecycle controller received moniker that attempted to reach outside its scope"

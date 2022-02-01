@@ -56,7 +56,7 @@ async fn create_impl<W: std::io::Write>(
         environment: None,
         ..fdecl::Child::EMPTY
     };
-    // LifecycleController accepts PartialRelativeMonikers only
+    // LifecycleController accepts RelativeMonikers only
     let parent_moniker = format!(".{}", parent.to_string_without_instances());
 
     let result = lifecycle_controller

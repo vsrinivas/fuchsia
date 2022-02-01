@@ -34,7 +34,7 @@ async fn stop_impl<W: std::io::Write>(
         writeln!(writer, "Stopping component instance...")?;
     }
 
-    // LifecycleController accepts PartialRelativeMonikers only
+    // LifecycleController accepts RelativeMonikers only
     let moniker = format!(".{}", moniker.to_string_without_instances());
     match lifecycle_controller.stop(&moniker, recursive).await {
         Ok(Ok(())) => Ok(()),

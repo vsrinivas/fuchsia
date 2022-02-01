@@ -39,7 +39,7 @@ use {
     lazy_static::lazy_static,
     log::*,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, InstancedRelativeMoniker, PartialRelativeMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, InstancedRelativeMoniker, RelativeMoniker,
         RelativeMonikerBase,
     },
     routing::component_instance::ComponentInstanceInterface,
@@ -235,7 +235,7 @@ impl StorageAdmin {
                 } => {
                     let fut = async {
                         let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
-                        let relative_moniker = PartialRelativeMoniker::parse(&relative_moniker)
+                        let relative_moniker = RelativeMoniker::parse(&relative_moniker)
                             .map_err(|_| fcomponent::Error::InvalidArguments)?;
                         let absolute_moniker = AbsoluteMoniker::from_relative(
                             &component.abs_moniker,

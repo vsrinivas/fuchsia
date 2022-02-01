@@ -9,7 +9,7 @@ mod extended_moniker;
 mod instanced_abs_moniker;
 mod instanced_child_moniker;
 mod instanced_relative_moniker;
-mod partial_relative_moniker;
+mod relative_moniker;
 
 pub use self::{
     abs_moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
@@ -19,5 +19,5 @@ pub use self::{
     instanced_abs_moniker::InstancedAbsoluteMoniker,
     instanced_child_moniker::{InstanceId, InstancedChildMoniker},
     instanced_relative_moniker::InstancedRelativeMoniker,
-    partial_relative_moniker::{PartialRelativeMoniker, RelativeMonikerBase},
+    relative_moniker::{RelativeMoniker, RelativeMonikerBase},
 };

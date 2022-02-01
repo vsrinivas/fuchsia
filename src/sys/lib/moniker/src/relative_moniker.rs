@@ -137,20 +137,20 @@ pub trait RelativeMonikerBase: Sized {
         Ok(Self::new(up_path, down_path))
     }
 
-    fn to_partial(&self) -> PartialRelativeMoniker {
+    fn to_partial(&self) -> RelativeMoniker {
         let up_path: Vec<ChildMoniker> = self.up_path().iter().map(|p| p.to_partial()).collect();
         let down_path: Vec<ChildMoniker> =
             self.down_path().iter().map(|p| p.to_partial()).collect();
-        PartialRelativeMoniker::new(up_path, down_path)
+        RelativeMoniker::new(up_path, down_path)
     }
 }
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]
-pub struct PartialRelativeMoniker {
+pub struct RelativeMoniker {
     up_path: Vec<ChildMoniker>,
     down_path: Vec<ChildMoniker>,
 }
 
-impl RelativeMonikerBase for PartialRelativeMoniker {
+impl RelativeMonikerBase for RelativeMoniker {
     type Part = ChildMoniker;
 
     fn new(up_path: Vec<Self::Part>, down_path: Vec<Self::Part>) -> Self {
@@ -174,7 +174,7 @@ impl RelativeMonikerBase for PartialRelativeMoniker {
     }
 }
 
-impl fmt::Display for PartialRelativeMoniker {
+impl fmt::Display for RelativeMoniker {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, ".")?;
         for segment in self.up_path() {
@@ -187,7 +187,7 @@ impl fmt::Display for PartialRelativeMoniker {
     }
 }
 
-impl TryFrom<&str> for PartialRelativeMoniker {
+impl TryFrom<&str> for RelativeMoniker {
     type Error = MonikerError;
 
     fn try_from(input: &str) -> Result<Self, MonikerError> {
@@ -199,15 +199,12 @@ impl TryFrom<&str> for PartialRelativeMoniker {
 mod tests {
     use {super::*, crate::abs_moniker::AbsoluteMoniker};
     #[test]
-    fn partial_relative_monikers_from_absolute() {
-        let me = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
-            &vec![].into(),
-            &vec![].into(),
-        );
+    fn relative_monikers_from_absolute() {
+        let me = RelativeMoniker::from_absolute::<AbsoluteMoniker>(&vec![].into(), &vec![].into());
         assert_eq!(true, me.is_self());
         assert_eq!(".", format!("{}", me));
 
-        let me = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
+        let me = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a:1", "b:2", "c:3"].into(),
             &vec!["a:1", "b:2", "c:3"].into(),
         );
@@ -215,56 +212,56 @@ mod tests {
         assert_eq!(true, me.is_self());
         assert_eq!(".", format!("{}", me));
 
-        let ancestor = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
+        let ancestor = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a:1", "b:2"].into(),
             &vec![].into(),
         );
         assert_eq!(false, ancestor.is_self());
         assert_eq!(".\\b:2\\a:1", format!("{}", ancestor));
 
-        let ancestor = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
+        let ancestor = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a:1", "b:2", "c:3", "d:4"].into(),
             &vec!["a:1", "b:2"].into(),
         );
         assert_eq!(false, ancestor.is_self());
         assert_eq!(".\\d:4\\c:3", format!("{}", ancestor));
 
-        let descendant = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
+        let descendant = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec![].into(),
             &vec!["a:1", "b:2"].into(),
         );
         assert_eq!(false, descendant.is_self());
         assert_eq!("./a:1/b:2", format!("{}", descendant));
 
-        let descendant = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
+        let descendant = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a:1", "b:2"].into(),
             &vec!["a:1", "b:2", "c:3", "d:4"].into(),
         );
         assert_eq!(false, descendant.is_self());
         assert_eq!("./c:3/d:4", format!("{}", descendant));
 
-        let sibling = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
+        let sibling = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a:1"].into(),
             &vec!["b:2"].into(),
         );
         assert_eq!(false, sibling.is_self());
         assert_eq!(".\\a:1/b:2", format!("{}", sibling));
 
-        let sibling = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
+        let sibling = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["c:3", "a:1"].into(),
             &vec!["c:3", "b:2"].into(),
         );
         assert_eq!(false, sibling.is_self());
         assert_eq!(".\\a:1/b:2", format!("{}", sibling));
 
-        let cousin = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
+        let cousin = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a0:1", "a:1"].into(),
             &vec!["b0:2", "b:2"].into(),
         );
         assert_eq!(false, cousin.is_self());
         assert_eq!(".\\a:1\\a0:1/b0:2/b:2", format!("{}", cousin));
 
-        let cousin = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
+        let cousin = RelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["c:3", "d:4", "a0:1", "a:1"].into(),
             &vec!["c:3", "d:4", "b0:2", "b:2"].into(),
         );
