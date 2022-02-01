@@ -44,12 +44,42 @@ __EXPORT zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type, const
                                          void* context, svc_connector_t* handler)
     ZX_AVAILABLE_SINCE(1);
 
+// Adds a service named |service_name| to the given |dir| in the provided
+// |path|.
+//
+// |path| should be a directory path delimited by "/". No leading nor trailing
+// slash is allowed. If one is encountered, this function will return an
+// error. If the path is empty or NULL, then the service will be installed
+// under the root of |dir|.
+//
+// When a client requests the service, |handler| will be called on the async_t
+// passed to |svc_dir_create|. The |context| will be passed to |handler| as its
+// first argument.
+//
+// This may fail in the following ways.
+// If an entry with the given |service_name| already exists, this returns
+// ZX_ERR_ALREADY_EXISTS.
+// If |service_name| is invalid, then ZX_ERR_INVALID_ARGS is returned.
+// If |path| is malformed, then ZX_ERR_INVALID_ARGS is returned.
+// Otherwise, this returns ZX_OK.
+__EXPORT zx_status_t svc_dir_add_service_by_path(svc_dir_t* dir, const char* path,
+                                                 const char* service_name, void* context,
+                                                 svc_connector_t* handler) ZX_AVAILABLE_SINCE(7);
+
 // Removes the service named |service_name| of type |type| from the
 // given |dir|. This reports a failure if the entry does not exist, by
 // returning ZX_ERR_NOT_FOUND. Otherwise, the service entry is
 // removed, and ZX_OK is returned.
 __EXPORT zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type,
                                             const char* service_name) ZX_AVAILABLE_SINCE(1);
+
+// Remove the service entry named |service_name| from the provided |path| under
+// the given |dir|. This reports a failure if the entry does not exist, by
+// returning ZX_ERR_NOT_FOUND. If |path| is malformed, or if either |path| or
+// |service_name| is NULL, then ZX_ERR_INVALID_ARGS is returned. Otherwise,
+// the service entry is removed, and ZX_OK is returned.
+__EXPORT zx_status_t svc_dir_remove_service_by_path(svc_dir_t* dir, const char* path,
+                                                    const char* service_name) ZX_AVAILABLE_SINCE(7);
 
 // Destroy the provided directory. This currently cannot fail, and
 // returns ZX_OK.

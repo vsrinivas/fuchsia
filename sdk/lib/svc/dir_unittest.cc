@@ -112,5 +112,64 @@ TEST_F(ServiceTest, PublishLegacyService) {
   EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
 }
 
+TEST_F(ServiceTest, ConnectsByPath) {
+  zx::channel dir, dir_request;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &dir, &dir_request));
+
+  std::thread child([this, dir_request = std::move(dir_request)]() mutable {
+    svc_dir_t* dir = nullptr;
+    ASSERT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
+    ASSERT_EQ(ZX_OK, svc_dir_add_service_by_path(dir, "svc/fuchsia.logger.LogSink/default",
+                                                 "foobar", nullptr, connect));
+
+    RunLoop();
+
+    ASSERT_EQ(svc_dir_destroy(dir), ZX_OK);
+  });
+
+  // Verify that we can connect to svc/fuchsia.logger.LogSink/default/foobar
+  // and get a response.
+  zx::channel svc, request;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc, &request));
+  fdio_service_connect_at(dir.get(), "svc/fuchsia.logger.LogSink/default/foobar",
+                          request.release());
+  EXPECT_EQ(ZX_OK, svc.write(0, "hello", 5, 0, 0));
+  zx_signals_t observed;
+  EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
+  EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
+            svc.read(ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr, 0, 0, nullptr, nullptr));
+
+  // Shutdown the service thread.
+  QuitLoop();
+  child.join();
+}
+
+TEST_F(ServiceTest, RejectsMalformedPaths) {
+  zx::channel _directory, dir_request;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &_directory, &dir_request));
+
+  svc_dir_t* dir = nullptr;
+  ASSERT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
+
+  // The following paths should all fail.
+  EXPECT_EQ(svc_dir_add_service_by_path(dir, "/", "foobar", nullptr, connect), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(svc_dir_add_service_by_path(dir, "/svc", "foobar", nullptr, connect),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(svc_dir_add_service_by_path(dir, "/svc//foo", "foobar", nullptr, connect),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(svc_dir_add_service_by_path(dir, "svc/", "foobar", nullptr, connect),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(svc_dir_add_service_by_path(dir, ".", "foobar", nullptr, connect), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(svc_dir_add_service_by_path(dir, "..", "foobar", nullptr, connect),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(svc_dir_add_service_by_path(dir, "...", "foobar", nullptr, connect),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(svc_dir_add_service_by_path(dir, "svc/..", "foobar", nullptr, connect),
+            ZX_ERR_INVALID_ARGS);
+
+  // Cleanup resources.
+  ASSERT_EQ(svc_dir_destroy(dir), ZX_OK);
+}
+
 }  // namespace
 }  // namespace svc

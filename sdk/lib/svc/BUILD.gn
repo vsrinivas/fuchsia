@@ -6,6 +6,11 @@ import("//build/components.gni")
 import("//build/cpp/sdk_shared_library.gni")
 import("//build/test.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":svc_tests" ]
+}
+
 sdk_shared_library("svc") {
   category = "partner"
 
@@ -16,10 +21,7 @@ sdk_shared_library("svc") {
 
   public_deps = [ "//zircon/system/ulib/async" ]
 
-  deps = [
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/vfs/cpp",
-  ]
+  deps = [ "//sdk/lib/vfs/cpp" ]
 
   include_base = "//sdk"
 
@@ -47,5 +49,4 @@ test("svc_unittests") {
 
 fuchsia_unittest_package("svc_tests") {
   deps = [ ":svc_unittests" ]
-  manifest = "meta/svc_unittests.cmx"
 }
