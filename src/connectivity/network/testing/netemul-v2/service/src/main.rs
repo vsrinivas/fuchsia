@@ -488,7 +488,7 @@ impl ManagedRealm {
         while let Some(request) = stream.try_next().await.context("FIDL error")? {
             match request {
                 ManagedRealmRequest::GetMoniker { responder } => {
-                    let moniker = moniker(&realm);
+                    let moniker = format!("{}:{}", REALM_COLLECTION_NAME, realm.root.child_name());
                     let () =
                         responder.send(&moniker).context("responding to GetMoniker request")?;
                 }
@@ -714,10 +714,6 @@ impl ManagedRealm {
         }
         Ok(())
     }
-}
-
-fn moniker(realm: &RealmInstance) -> String {
-    format!("{}:{}", REALM_COLLECTION_NAME, realm.root.child_name())
 }
 
 fn split_path_into_dir_and_file_name<'a>(
@@ -975,10 +971,11 @@ async fn handle_sandbox(
     });
     let realms_fut = rx
         .for_each_concurrent(None, |realm| async {
+            let name = realm.realm.root.child_name().to_owned();
             realm
                 .run_service()
                 .await
-                .unwrap_or_else(|e| error!("error running ManagedRealm service: {:?}", e))
+                .unwrap_or_else(|e| error!("error managing realm '{}': {:?}", name, e))
         })
         .fuse();
     pin_mut!(sandbox_fut, realms_fut);
