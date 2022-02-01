@@ -16,7 +16,7 @@ std::atomic_int hlcpp_enable_v1_encode(0);
 namespace {
 
 const size_t kSmallAllocSize = 512;
-const size_t kLargeAllocSize = 65536;
+const size_t kLargeAllocSize = ZX_CHANNEL_MAX_MSG_BYTES;
 
 size_t Align(size_t size) {
   constexpr size_t alignment_mask = FIDL_ALIGNMENT - 1;
