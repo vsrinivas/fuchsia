@@ -57,7 +57,7 @@ static_library("zxio") {
 
 group("magma_deps") {
   deps = [
-    ":libmagma_complete",
-    ":zxio",
+    ":libmagma_complete($shlib_toolchain)",
+    ":zxio($shlib_toolchain)",
   ]
 }
