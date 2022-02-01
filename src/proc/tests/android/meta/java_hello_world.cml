@@ -1,0 +1,19 @@
+{
+    include: [ "//src/proc/tests/android/starnix_test.shard.cml" ],
+    program: {
+        binary: "system/apex/com.android.art.debug/bin/dalvikvm64",
+        args: [
+            "--XXlib:/system/apex/com.android.art.debug/lib64/libart.so",
+            "-Xbootclasspath:/system/apex/com.android.art.debug/javalib/core-libart.jar:/system/apex/com.android.art.debug/javalib/apache-xml.jar:/system/apex/com.android.art.debug/javalib/okhttp.jar:/system/apex/com.android.art.debug/javalib/core-oj.jar:/system/apex/com.android.art.debug/javalib/service-art.jar:/system/apex/com.android.art.debug/javalib/bouncycastle.jar:/system/apex/com.android.conscrypt/javalib/conscrypt.jar:/system/apex/com.android.i18n/javalib/core-icu4j.jar",
+            "-classpath",
+            "/system/framework/java-hello-world.jar",
+            "Main",
+        ],
+        environ: [
+            "ANDROID_I18N_ROOT=/system",
+            "ANDROID_TZDATA_ROOT=/system",
+            "ANDROID_DATA=/data",
+            "LD_LIBRARY_PATH=/system/apex/com.android.art.debug/lib64:/system/apex/com.android.i18n/lib64",
+        ],
+    },
+}

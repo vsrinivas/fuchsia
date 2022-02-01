@@ -33,6 +33,10 @@ fuchsia_component("sh") {
   manifest = "meta/sh.cml"
 }
 
+fuchsia_test_component("java_hello_world") {
+  manifest = "meta/java_hello_world.cml"
+}
+
 fuchsia_component("sh_test") {
   testonly = true
   check_references = false
@@ -62,6 +66,7 @@ fuchsia_test_package("test_android_distro") {
 
   test_components = [
     ":boringssl_self_test64",
+    ":java_hello_world",
     ":sh_test",
   ]
 
