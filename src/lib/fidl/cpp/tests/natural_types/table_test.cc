@@ -6,12 +6,14 @@
 
 #include <gtest/gtest.h>
 
+namespace {
 test_types::HandleStruct MakeHandleStruct() {
   zx::event event;
   zx_status_t status = zx::event::create(0, &event);
   ZX_ASSERT(status == ZX_OK);
   return test_types::HandleStruct{std::move(event)};
 }
+}  // namespace
 
 TEST(Table, AggregateInitializationCopyable) {
   test_types::SampleTable table{{.x = 3, .y = 100}};
@@ -116,6 +118,25 @@ TEST(Table, SetAndClear) {
   EXPECT_TRUE(sample_table.IsEmpty());
   EXPECT_FALSE(sample_table.x());
   EXPECT_FALSE(sample_table.x().has_value());
+}
+
+TEST(Table, AccessorsAfterMove) {
+  test_types::SampleTable table{
+      {.x = 1, .y = 2, .vector_of_struct = std::vector<test_types::CopyableStruct>{{3}, {4}}}};
+  const test_types::SampleTable& const_table = table;
+
+  auto& mutable_x = table.x();
+  auto& mutable_vec = table.vector_of_struct();
+  const auto& const_x = const_table.x();
+  const auto& const_vec = const_table.vector_of_struct();
+
+  test_types::SampleTable moved = std::move(table);
+  moved.x() = 42;
+
+  ASSERT_EQ(mutable_x, 1);
+  ASSERT_EQ(const_x, 1);
+  ASSERT_EQ(mutable_vec->size(), 0UL);
+  ASSERT_EQ(const_vec->size(), 0UL);
 }
 
 TEST(Table, Copy) {
