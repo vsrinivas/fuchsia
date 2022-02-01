@@ -321,9 +321,17 @@ func execute(
 				// specified by test name.
 				// Remove the ffx test out dirs which would now only contain empty directories
 				// and summary.jsons that don't point to real paths anymore.
-				if err := ffxTester.RemoveAllOutputDirs(); err != nil {
-					logger.Debugf(ctx, "%s", err)
+				ffxExperimental, err := strconv.ParseBool(os.Getenv(botanistconstants.FFXExperimentalEnvKey))
+				if err != nil {
+					ffxExperimental = flags.ffxExperimental
 				}
+				if ffxExperimental {
+					// Leave the summary.jsons for debugging.
+					err = ffxTester.RemoveAllEmptyOutputDirs()
+				} else {
+					err = ffxTester.RemoveAllOutputDirs()
+				}
+				logger.Debugf(ctx, "%s", err)
 			}()
 			fuchsiaTester = ffxTester
 		}

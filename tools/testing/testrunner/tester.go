@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"math"
 	"net"
@@ -597,6 +598,36 @@ func (t *FFXTester) RemoveAllOutputDirs() error {
 	for _, outDir := range t.testOutDirs {
 		if err := os.RemoveAll(outDir); err != nil {
 			errs = append(errs, fmt.Sprintf("failed to remove %s: %s", outDir, err))
+		}
+	}
+	return fmt.Errorf(strings.Join(errs, "; "))
+}
+
+// RemoveAllEmptyOutputDirs cleans up the output dirs by removing all empty
+// directories. This leaves the run_summary and suite_summaries for debugging.
+func (t *FFXTester) RemoveAllEmptyOutputDirs() error {
+	var errs []string
+	for _, outDir := range t.testOutDirs {
+		err := filepath.WalkDir(outDir, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() {
+				files, err := os.ReadDir(path)
+				if err != nil {
+					return err
+				}
+				if len(files) == 0 {
+					if err := os.RemoveAll(path); err != nil {
+						return fmt.Errorf("failed to remove %s: %s", path, err)
+					}
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("%v", err))
 		}
 	}
 	return fmt.Errorf(strings.Join(errs, "; "))
