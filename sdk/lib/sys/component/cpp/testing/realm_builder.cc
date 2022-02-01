@@ -78,6 +78,11 @@ fuchsia::component::test::Capability2 ConvertToFidl(Capability capability) {
     fidl_capability.set_name(std::string(protocol->name));
     return fuchsia::component::test::Capability2::WithProtocol(std::move(fidl_capability));
   }
+  if (auto service = cpp17_get_if<Service>(&capability)) {
+    fuchsia::component::test::Service fidl_capability;
+    fidl_capability.set_name(std::string(service->name));
+    return fuchsia::component::test::Capability2::WithService(std::move(fidl_capability));
+  }
   if (auto directory = cpp17_get_if<Directory>(&capability)) {
     fuchsia::component::test::Directory fidl_capability;
     fidl_capability.set_name(std::string(directory->name));

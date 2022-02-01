@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/examples/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -30,6 +32,7 @@ constexpr char kEchoServerUrl[] =
 constexpr char kEchoServerLegacyUrl[] =
     "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/echo_server.cmx";
 constexpr char kEchoServerRelativeUrl[] = "#meta/echo_server.cm";
+constexpr char kEchoServiceServerUrl[] = "#meta/echo_service_server.cm";
 
 class RealmBuilderTest : public gtest::RealLoopFixture {};
 
@@ -161,6 +164,35 @@ TEST_F(RealmBuilderTest, RoutesProtocolToLocalComponent) {
   auto realm = realm_builder.Build(dispatcher());
   RunLoop();
   EXPECT_TRUE(local_echo_client.WasCalled());
+}
+
+TEST_F(RealmBuilderTest, RoutesServiceFromChild) {
+  static constexpr char kEchoServiceServer[] = "echo_service_server";
+
+  auto realm_builder = RealmBuilder::Create();
+  realm_builder.AddChild(kEchoServiceServer, kEchoServiceServerUrl);
+  realm_builder.AddRoute(Route{.capabilities = {Service{fuchsia::examples::EchoService::Name}},
+                               .source = ChildRef{kEchoServiceServer},
+                               .targets = {ParentRef()}});
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_}},
+                               .source = ParentRef(),
+                               .targets = {ChildRef{kEchoServiceServer}}});
+  auto realm = realm_builder.Build(dispatcher());
+
+  auto default_service = sys::OpenServiceAt<fuchsia::examples::EchoService>(realm.CloneRoot());
+  auto regular = default_service.regular_echo().Connect().Bind();
+
+  constexpr char kMessage[] = "Ping!";
+  bool message_replied = false;
+  regular->EchoString(kMessage, [expected_reply = kMessage, &message_replied,
+                                 quit_loop = QuitLoopClosure()](fidl::StringPtr value) {
+    EXPECT_EQ(value, expected_reply);
+    message_replied = true;
+    quit_loop();
+  });
+
+  RunLoop();
+  EXPECT_TRUE(message_replied);
 }
 
 TEST_F(RealmBuilderTest, ConnectsToChannelDirectly) {

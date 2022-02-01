@@ -29,6 +29,13 @@ struct Protocol final {
   std::string_view name;
 };
 
+// A service capability. The name refers to the name of the FIDL service,
+// e.g. `fuchsia.examples.EchoService`.
+// See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/service.
+struct Service final {
+  std::string_view name;
+};
+
 // A directory capability.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/directory.
 struct Directory final {
@@ -39,7 +46,7 @@ struct Directory final {
 
 // A capability to be routed from one component to another.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities
-using Capability = cpp17::variant<Protocol, Directory>;
+using Capability = cpp17::variant<Protocol, Service, Directory>;
 
 // [START mock_handles_cpp]
 // Handles provided to mock component.
