@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1653
+From //build/config/BUILDCONFIG.gn:1666
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -133,7 +133,7 @@ be visible to Driver Manager. These package labels are also considered to be in 
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:54
+From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
@@ -141,7 +141,7 @@ From //BUILD.gn:26
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:54
+From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
@@ -506,7 +506,7 @@ otherwise be /system/... at runtime is /boot/... instead.
 
 **Current value for `target_cpu = "arm64"`:** `true`
 
-From //products/bringup.gni:7
+From //products/bringup.gni:5
 
 **Overridden from the default:** `false`
 
@@ -514,7 +514,7 @@ From //build/images/args.gni:14
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //products/bringup.gni:7
+From //products/bringup.gni:5
 
 **Overridden from the default:** `false`
 
@@ -1353,7 +1353,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1400
+From //build/config/BUILDCONFIG.gn:1413
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
@@ -2386,7 +2386,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1231
+From //build/config/BUILDCONFIG.gn:1244
 
 ### launch_basemgr_on_boot
 Indicates whether to start basemgr.cmx on boot.
@@ -2582,7 +2582,7 @@ they must be separated into their own list.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:52
+From //products/bringup.gni:43
 
 **Overridden from the default:** `[]`
 
@@ -2590,7 +2590,7 @@ From //build/images/args.gni:80
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:52
+From //products/bringup.gni:43
 
 **Overridden from the default:** `[]`
 
@@ -3221,7 +3221,7 @@ package flavors.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:72
+From //products/bringup.gni:63
 
 **Overridden from the default:** `[]`
 
@@ -3229,7 +3229,7 @@ From //build/packages/prebuilt_package_with_flavors.gni:29
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:72
+From //products/bringup.gni:63
 
 **Overridden from the default:** `[]`
 
@@ -3310,7 +3310,7 @@ A list of binary labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:49
+From //products/bringup.gni:40
 
 **Overridden from the default:** `[]`
 
@@ -3318,7 +3318,7 @@ From //build/product.gni:7
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:49
+From //products/bringup.gni:40
 
 **Overridden from the default:** `[]`
 
@@ -3707,7 +3707,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1643
+From //build/config/BUILDCONFIG.gn:1656
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3716,7 +3716,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1648
+From //build/config/BUILDCONFIG.gn:1661
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3766,7 +3766,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1446
+From //build/config/BUILDCONFIG.gn:1459
 
 ### size_checker_input
 The input to the size checker.
@@ -4091,7 +4091,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1430
+From //build/config/BUILDCONFIG.gn:1443
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
