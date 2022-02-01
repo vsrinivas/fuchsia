@@ -860,8 +860,6 @@ spinel_deps_immediate_submit(struct spinel_deps *                             de
   //
   // Gather delayed signalling semaphores and their incremented values.
   //
-  // Note that the
-  //
   struct spinel_deps_signalset signalset;  // Do not zero-initialize
 
   spinel_deps_signalset_init_delayed(deps, &signalset, info);

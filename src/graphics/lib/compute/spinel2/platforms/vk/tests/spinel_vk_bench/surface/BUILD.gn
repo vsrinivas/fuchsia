@@ -36,7 +36,7 @@ source_set("surface") {
     "${graphics_compute_dir}/common/vk",
   ]
 
-  if (is_host) {
+  if (is_linux) {
     sources += [ "surface_xcb.c" ]
     public += [ "include/surface/surface_xcb.h" ]
     libs = [ "xcb" ]

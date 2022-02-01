@@ -30,7 +30,7 @@ struct widget_fps
   float glyph_width;
 
   uint64_t timestamps[3];
-  uint32_t frames;
+  uint64_t frames[2];
   uint32_t fps;
   bool     is_quiet;
 
@@ -80,13 +80,15 @@ impl_fps(struct widget_fps * impl, struct widget_control const * const control)
 {
   impl->timestamps[2] = impl_timestamp();
 
-  impl->frames += 1;
+  impl->frames[1] += 1;
 
   double const delta = (double)(impl->timestamps[2] - impl->timestamps[1]);
 
   if (delta >= SPN_FPS_PERIOD)
     {
-      double const fps = (1e+9 * impl->frames) / delta;
+      double const fps = (1e+9 * (double)impl->frames[1]) / delta;
+
+      impl->frames[0] += impl->frames[1];
 
       if (!impl->is_quiet)
         {
@@ -104,22 +106,28 @@ impl_fps(struct widget_fps * impl, struct widget_control const * const control)
             // clang-format on
           };
 
+          double const secs = elapsed / 1e+9;
+          double const hh   = floor(secs / 3600.0);
+          double const mm   = floor((secs - (hh * 3600.0)) / 60.0);
+          double const ss   = secs - (hh * 3600) - (mm * 60);
+
           fprintf(stderr,
-                  "HH:MM:SS/Frames/Msecs/FPS[%s]: "
+                  "HH:MM:SS/TotalFrames/PeriodFrames/FrameMsecs/FPS[%s]: "
                   "%05.0f:%02.0f:%02.0f, "
-                  "%5u, %7.3f, %.1f\n",
+                  "%10lu, %5lu, %7.3f, %.1f\n",
                   pls,
-                  (elapsed / 3.6e+12),
-                  fmod((elapsed / 6e+10), 60),
-                  fmod((elapsed / 1e+9), 60),
-                  impl->frames,
-                  delta / (1e+6 * impl->frames),
+                  hh,
+                  mm,
+                  ss,
+                  impl->frames[0],
+                  impl->frames[1],
+                  delta / (1e+6 * (double)impl->frames[1]),
                   fps);
         }
 
       impl->fps           = (uint32_t)round(fps);
       impl->timestamps[1] = impl->timestamps[2];
-      impl->frames        = 0;
+      impl->frames[1]     = 0UL;
 
       //
       // FIXME(allanmac): this needs to run on a timer
@@ -400,7 +408,7 @@ widget_fps_create(float glyph_width)
 
     .glyph_width = glyph_width,
 
-    .timestamps = { timestamp, timestamp },
+    .timestamps = { timestamp, timestamp, /* don't care about [2] */ },
 
     .is_quiet = false,
 

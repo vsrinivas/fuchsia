@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define VK_USE_PLATFORM_XCB_KHR
-
+//
+// See Chapter 33 of Window System Integration.
+//
+// Include <vulkan_core.h> and XCB headers before the platform-specific Vulkan
+// WSI header.
+//
 #include "surface/surface_xcb.h"
 
 #include <X11/keysym.h>
@@ -16,6 +20,11 @@
 #include "common/macros.h"
 #include "common/vk/assert.h"
 #include "surface_default.h"
+
+//
+// WSI
+//
+#include <vulkan/vulkan_xcb.h>
 
 //
 // from xcb_util.h
@@ -580,6 +589,19 @@ surface_xcb_create(VkInstance                    vk_i,  //
                    char const *                  win_title)
 {
   //
+  // is XCB WSI layer present?
+  //
+  PFN_vkCreateXcbSurfaceKHR const pfn_vkCreateXcbSurfaceKHR =
+    (PFN_vkCreateXcbSurfaceKHR)vkGetInstanceProcAddr(vk_i, "vkCreateXcbSurfaceKHR");
+
+  if (pfn_vkCreateXcbSurfaceKHR == NULL)
+    {
+      fprintf(stderr, "Error: vkGetInstanceProcAddr(\"vkCreateXcbSurfaceKHR\") = NULL\n");
+
+      return NULL;
+    }
+
+  //
   // connect using the $DISPLAY environment variable
   //
   int                screen_count;
@@ -587,11 +609,11 @@ surface_xcb_create(VkInstance                    vk_i,  //
 
   connection = xcb_connect(NULL, &screen_count);
 
-  if (xcb_connection_has_error(connection) > 0)
+  int const xcb_err = xcb_connection_has_error(connection);
+
+  if (xcb_err > 0)
     {
-      fprintf(stderr,
-              "Cannot find a compatible Vulkan ICD.\n"
-              "Exiting ...\n");
+      fprintf(stderr, "Error: xcb_connection_has_error() = %d\n", xcb_err);
 
       return NULL;
     }
@@ -760,7 +782,7 @@ surface_xcb_create(VkInstance                    vk_i,  //
     .window     = platform->xid
   };
 
-  vk(CreateXcbSurfaceKHR(vk_i, &xcb_sci, vk_ac, &surface->vk.surface));
+  vk_ok(pfn_vkCreateXcbSurfaceKHR(vk_i, &xcb_sci, vk_ac, &surface->vk.surface));
 
   // map the window
   xcb_map_window(platform->connection, platform->xid);
