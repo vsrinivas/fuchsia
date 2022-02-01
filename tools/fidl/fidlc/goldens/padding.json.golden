@@ -20,7 +20,6 @@
         "column": 6,
         "length": 15
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -132,7 +131,6 @@
         "column": 6,
         "length": 15
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -244,7 +242,6 @@
         "column": 6,
         "length": 15
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -356,7 +353,6 @@
         "column": 6,
         "length": 15
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -468,7 +464,6 @@
         "column": 6,
         "length": 15
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -619,7 +614,6 @@
         "column": 6,
         "length": 15
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -731,7 +725,6 @@
         "column": 6,
         "length": 15
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -843,7 +836,6 @@
         "column": 6,
         "length": 18
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -955,7 +947,6 @@
         "column": 6,
         "length": 18
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -1067,7 +1058,6 @@
         "column": 6,
         "length": 18
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -1179,7 +1169,6 @@
         "column": 6,
         "length": 18
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -1291,7 +1280,6 @@
         "column": 6,
         "length": 18
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -1442,7 +1430,6 @@
         "column": 6,
         "length": 18
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -1554,7 +1541,6 @@
         "column": 6,
         "length": 18
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -1666,7 +1652,6 @@
         "column": 6,
         "length": 29
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -1856,7 +1841,6 @@
         "column": 6,
         "length": 28
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {

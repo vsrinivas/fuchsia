@@ -155,7 +155,6 @@
         "column": 35,
         "length": 35
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -231,7 +230,6 @@
         "column": 12,
         "length": 37
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -307,7 +305,6 @@
         "column": 35,
         "length": 37
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -383,7 +380,6 @@
         "column": 12,
         "length": 35
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {

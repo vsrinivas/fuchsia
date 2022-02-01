@@ -47,16 +47,14 @@ class ConsumeStep : public StepBase {
                               Decl** out_decl);
   bool ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
                            const std::shared_ptr<NamingContext>& context,
-                           std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                           bool is_request_or_response, Decl** out_decl);
+                           std::unique_ptr<raw::AttributeList> raw_attribute_list, Decl** out_decl);
   template <typename T>  // T should be Bits or Enum
   bool ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
                           const std::shared_ptr<NamingContext>& context,
                           std::unique_ptr<raw::AttributeList> raw_attribute_list, Decl** out_decl);
   bool ConsumeLayout(std::unique_ptr<raw::Layout> layout,
                      const std::shared_ptr<NamingContext>& context,
-                     std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                     bool is_request_or_response, Decl** out_decl);
+                     std::unique_ptr<raw::AttributeList> raw_attribute_list, Decl** out_decl);
 
   // Other elements
   void ConsumeAttribute(std::unique_ptr<raw::Attribute> raw_attribute,
@@ -74,7 +72,7 @@ class ConsumeStep : public StepBase {
   bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
                               const std::shared_ptr<NamingContext>& context,
                               std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                              bool is_request_or_response,
+
                               std::unique_ptr<TypeConstructor>* out_type, Decl** out_inline_decl);
   bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
                               const std::shared_ptr<NamingContext>& context,

@@ -2287,41 +2287,6 @@ type ExternalSimpleStruct = struct {
                                                     }));
 }
 
-// TODO(fxbug.dev/76349): using empty structs as request/response payloads is
-//  only supported in the new syntax.  Until this is supported and we can write
-//  this test in the new syntax, we "fake" an empty struct payload by generating
-//  the flat::Struct ourselves, rather than using the compiled output.
-TEST(TypeshapeTests, GoodEmptyStructPayload) {
-  TestLibrary library(R"FIDL(library example;
-
-type Empty = struct {};
-)FIDL");
-  ASSERT_COMPILED(library);
-
-  auto empty = library.LookupStruct("Empty");
-  ASSERT_NOT_NULL(empty);
-
-  const fidl::flat::Struct fake_payload(
-      nullptr, empty->name, std::vector<fidl::flat::StructMember>(), std::nullopt, true);
-  ASSERT_NO_FAILURES(CheckTypeShape(&fake_payload,
-                                    Expected{
-                                        .inline_size = 1,
-                                        .alignment = 1,
-                                    },
-                                    Expected{
-                                        .inline_size = 1,
-                                        .alignment = 1,
-                                    },
-                                    Expected{
-                                        .inline_size = 1,
-                                        .alignment = 1,
-                                    },
-                                    Expected{
-                                        .inline_size = 1,
-                                        .alignment = 1,
-                                    }));
-}
-
 TEST(TypeshapeTests, GoodSimpleRequest) {
   TestLibrary library(R"FIDL(library example;
 

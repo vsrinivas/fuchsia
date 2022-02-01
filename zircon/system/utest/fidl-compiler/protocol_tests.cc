@@ -10,6 +10,7 @@
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
+#include "fidl/diagnostics.h"
 #include "fidl/flat/types.h"
 #include "test_library.h"
 
@@ -373,7 +374,7 @@ protocol P {
   MethodWithDuplicateParams(struct {foo uint8; foo uint8; });
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodParameterName);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberName);
 }
 
 TEST(ProtocolTests, BadParameterizedTypedChannel) {
@@ -463,6 +464,17 @@ type Foo = resource struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, BadMethodStructLayoutDefaultMember) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+  MyMethod(struct {foo uint8 = 1; });
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrPayloadStructHasDefaultMembers);
 }
 
 TEST(ProtocolTests, BadMethodEnumLayout) {

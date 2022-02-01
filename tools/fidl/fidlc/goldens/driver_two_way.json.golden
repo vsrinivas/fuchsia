@@ -128,7 +128,6 @@
         "column": 9,
         "length": 62
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -242,7 +241,6 @@
         "column": 12,
         "length": 34
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {

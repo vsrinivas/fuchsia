@@ -455,7 +455,6 @@
         "column": 35,
         "length": 50
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -530,7 +529,6 @@
         "column": 28,
         "length": 267
       },
-      "is_request_or_response": true,
       "maybe_attributes": [
         {
           "name": "on_request",
@@ -660,7 +658,6 @@
         "column": 12,
         "length": 108
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -736,7 +733,6 @@
         "column": 11,
         "length": 110
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -811,7 +807,6 @@
         "column": 47,
         "length": 184
       },
-      "is_request_or_response": false,
       "maybe_attributes": [
         {
           "name": "generated_name",

@@ -141,7 +141,6 @@
         "column": 6,
         "length": 14
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {

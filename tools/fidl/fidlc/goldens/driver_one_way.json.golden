@@ -105,7 +105,6 @@
         "column": 10,
         "length": 39
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -179,7 +178,6 @@
         "column": 6,
         "length": 7
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {

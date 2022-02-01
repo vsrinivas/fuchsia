@@ -473,12 +473,10 @@ struct Struct final : public TypeDecl {
   using Member = StructMember;
 
   Struct(std::unique_ptr<AttributeList> attributes, Name name,
-         std::vector<Member> unparented_members, std::optional<types::Resourceness> resourceness,
-         bool is_request_or_response = false)
+         std::vector<Member> unparented_members, std::optional<types::Resourceness> resourceness)
       : TypeDecl(Kind::kStruct, std::move(attributes), std::move(name)),
         members(std::move(unparented_members)),
-        resourceness(resourceness),
-        is_request_or_response(is_request_or_response) {
+        resourceness(resourceness) {
     for (auto& member : members) {
       member.parent = this;
     }
@@ -490,9 +488,6 @@ struct Struct final : public TypeDecl {
   // structs (requests/responses, error result success payload) it is set during
   // compilation based on the struct's members.
   std::optional<types::Resourceness> resourceness;
-
-  // This is true iff this struct is a method request/response in a transaction header.
-  const bool is_request_or_response;
   std::any AcceptAny(VisitorAny* visitor) const override;
 };
 

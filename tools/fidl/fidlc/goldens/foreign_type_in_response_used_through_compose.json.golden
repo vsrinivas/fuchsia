@@ -138,7 +138,6 @@
         "column": 18,
         "length": 43
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {

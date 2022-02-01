@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <optional>
 
+#include "fidl/diagnostics.h"
 #include "fidl/flat/attribute_schema.h"
 #include "fidl/flat_ast.h"
 #include "fidl/names.h"
@@ -1033,6 +1034,26 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
 
   CheckScopes(protocol_declaration, CheckScopes);
 
+  // Ensure that structs used as message payloads do not have default values.
+  auto CheckNoDefaultMembers = [this](const Decl* decl) -> void {
+    switch (decl->kind) {
+      case Decl::Kind::kStruct: {
+        auto struct_decl = static_cast<const Struct*>(decl);
+        for (auto& member : struct_decl->members) {
+          if (member.maybe_default_value != nullptr) {
+            Fail(ErrPayloadStructHasDefaultMembers, member.name);
+            break;
+          }
+        }
+
+        break;
+      }
+      default: {
+        return;
+      }
+    }
+  };
+
   for (auto& method : protocol_declaration->methods) {
     if (method.maybe_request != nullptr) {
       const Name name = method.maybe_request->name;
@@ -1043,6 +1064,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
         continue;
       }
       CompileDecl(decl);
+      CheckNoDefaultMembers(decl);
     }
     if (method.maybe_response != nullptr) {
       const Name name = method.maybe_response->name;
@@ -1053,6 +1075,26 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
         continue;
       }
       CompileDecl(decl);
+
+      if (method.has_error) {
+        assert(method.maybe_response->type->kind == Type::Kind::kIdentifier);
+        auto response_id = static_cast<const flat::IdentifierType*>(method.maybe_response->type);
+
+        assert(response_id->type_decl->kind == Decl::Kind::kStruct);
+        auto response_struct = static_cast<const flat::Struct*>(response_id->type_decl);
+        const auto* result_union_type =
+            static_cast<const flat::IdentifierType*>(response_struct->members[0].type_ctor->type);
+
+        assert(result_union_type->type_decl->kind == Decl::Kind::kUnion);
+        const auto* result_union = static_cast<const flat::Union*>(result_union_type->type_decl);
+        const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
+            result_union->members[0].maybe_used->type_ctor->type);
+
+        assert(success_variant_type != nullptr);
+        CheckNoDefaultMembers(success_variant_type->type_decl);
+      } else {
+        CheckNoDefaultMembers(decl);
+      }
     }
   }
 }
@@ -1106,13 +1148,10 @@ void CompileStep::CompileStruct(Struct* struct_declaration) {
     if (!name_result.ok()) {
       const auto previous_span = name_result.previous_occurrence();
       if (original_name == previous_span.data()) {
-        Fail(struct_declaration->is_request_or_response ? ErrDuplicateMethodParameterName
-                                                        : ErrDuplicateStructMemberName,
-             member.name, original_name, previous_span);
+        Fail(ErrDuplicateStructMemberName, member.name, original_name, previous_span);
       } else {
-        Fail(struct_declaration->is_request_or_response ? ErrDuplicateMethodParameterNameCanonical
-                                                        : ErrDuplicateStructMemberNameCanonical,
-             member.name, original_name, previous_span.data(), previous_span, canonical_name);
+        Fail(ErrDuplicateStructMemberNameCanonical, member.name, original_name,
+             previous_span.data(), previous_span, canonical_name);
       }
     }
 
@@ -1120,8 +1159,6 @@ void CompileStep::CompileStruct(Struct* struct_declaration) {
     if (!member.type_ctor->type) {
       continue;
     }
-    assert(!(struct_declaration->is_request_or_response && member.maybe_default_value) &&
-           "method parameters cannot have default values");
     if (member.maybe_default_value) {
       const auto* default_value_type = member.type_ctor->type;
       if (!TypeCanBeConst(default_value_type)) {

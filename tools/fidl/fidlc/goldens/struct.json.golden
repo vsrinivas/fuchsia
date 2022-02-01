@@ -20,7 +20,6 @@
         "column": 6,
         "length": 6
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -132,7 +131,6 @@
         "column": 6,
         "length": 11
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {

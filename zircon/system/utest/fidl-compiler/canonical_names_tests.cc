@@ -338,7 +338,7 @@ protocol Example {
   example(struct { fooBar bool; FooBar bool; }) -> ();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodParameterNameCanonical);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberNameCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
@@ -352,7 +352,7 @@ protocol Example {
   example() -> (struct { fooBar bool; FooBar bool; });
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodParameterNameCanonical);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateStructMemberNameCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");

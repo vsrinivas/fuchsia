@@ -302,7 +302,6 @@
         "column": 12,
         "length": 51
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -376,7 +375,6 @@
         "column": 6,
         "length": 13
       },
-      "is_request_or_response": false,
       "maybe_attributes": [
         {
           "name": "on_struct",

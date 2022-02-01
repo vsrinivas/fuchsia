@@ -109,7 +109,6 @@
         "column": 56,
         "length": 46
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -185,7 +184,6 @@
         "column": 58,
         "length": 43
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -259,7 +257,6 @@
         "column": 6,
         "length": 5
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -355,7 +352,6 @@
         "column": 6,
         "length": 5
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -429,7 +425,6 @@
         "column": 6,
         "length": 19
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -503,7 +498,6 @@
         "column": 6,
         "length": 5
       },
-      "is_request_or_response": false,
       "members": [],
       "resource": false,
       "type_shape_v1": {
@@ -536,7 +530,6 @@
         "column": 6,
         "length": 24
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -610,7 +603,6 @@
         "column": 6,
         "length": 13
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {

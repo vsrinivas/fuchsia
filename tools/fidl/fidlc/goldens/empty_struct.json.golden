@@ -169,7 +169,6 @@
         "column": 10,
         "length": 31
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -245,7 +244,6 @@
         "column": 16,
         "length": 31
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -321,7 +319,6 @@
         "column": 20,
         "length": 31
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -397,7 +394,6 @@
         "column": 12,
         "length": 31
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -471,7 +467,6 @@
         "column": 6,
         "length": 5
       },
-      "is_request_or_response": false,
       "members": [],
       "resource": false,
       "type_shape_v1": {

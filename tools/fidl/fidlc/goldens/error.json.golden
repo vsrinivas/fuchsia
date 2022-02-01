@@ -163,7 +163,6 @@
         "column": 9,
         "length": 32
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -240,7 +239,6 @@
         "column": 12,
         "length": 31
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -315,7 +313,6 @@
         "column": 11,
         "length": 33
       },
-      "is_request_or_response": true,
       "members": [
         {
           "type": {

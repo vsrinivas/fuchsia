@@ -65,7 +65,6 @@
         "column": 6,
         "length": 16
       },
-      "is_request_or_response": false,
       "maybe_attributes": [
         {
           "name": "bindings_denylist",
@@ -173,7 +172,6 @@
         "column": 6,
         "length": 16
       },
-      "is_request_or_response": false,
       "maybe_attributes": [
         {
           "name": "bindings_denylist",

@@ -80,7 +80,6 @@
         "column": 6,
         "length": 8
       },
-      "is_request_or_response": false,
       "maybe_attributes": [
         {
           "name": "attr1",

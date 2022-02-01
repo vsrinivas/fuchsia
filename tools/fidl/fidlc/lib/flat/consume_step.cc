@@ -442,7 +442,7 @@ bool ConsumeStep::CreateMethodResult(const std::shared_ptr<NamingContext>& succe
   auto struct_decl = std::make_unique<Struct>(
       /* attributes = */ std::make_unique<AttributeList>(), response_name,
       std::move(response_members),
-      /* resourceness = */ std::nullopt, /* is_request_or_response = */ true);
+      /* resourceness = */ std::nullopt);
   auto payload = IdentifierTypeForDecl(struct_decl.get());
   if (!RegisterDecl(std::move(struct_decl)))
     return false;
@@ -585,8 +585,7 @@ bool ConsumeStep::ConsumeParameterList(SourceSpan method_name,
   std::unique_ptr<TypeConstructor> type_ctor;
   Decl* inline_decl = nullptr;
   if (!ConsumeTypeConstructor(std::move(parameter_layout->type_ctor), context,
-                              /*raw_attribute_list=*/nullptr, is_request_or_response, &type_ctor,
-                              &inline_decl))
+                              /*raw_attribute_list=*/nullptr, &type_ctor, &inline_decl))
     return false;
 
   if (!inline_decl) {
@@ -793,7 +792,7 @@ bool ConsumeStep::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
 bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
                                       const std::shared_ptr<NamingContext>& context,
                                       std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                                      bool is_request_or_response, Decl** out_decl) {
+                                      Decl** out_decl) {
   std::vector<Struct::Member> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::StructLayoutMember*>(mem.get());
@@ -823,9 +822,9 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
   if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness != std::nullopt)
     resourceness = layout->modifiers->maybe_resourceness.value_or(types::Resourceness::kValue);
 
-  Decl* decl = RegisterDecl(
-      std::make_unique<Struct>(std::move(attributes), context->ToName(library_, layout->span()),
-                               std::move(members), resourceness, is_request_or_response));
+  Decl* decl = RegisterDecl(std::make_unique<Struct>(std::move(attributes),
+                                                     context->ToName(library_, layout->span()),
+                                                     std::move(members), resourceness));
   if (out_decl) {
     *out_decl = decl;
   }
@@ -835,7 +834,7 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
 bool ConsumeStep::ConsumeLayout(std::unique_ptr<raw::Layout> layout,
                                 const std::shared_ptr<NamingContext>& context,
                                 std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                                bool is_request_or_response, Decl** out_decl) {
+                                Decl** out_decl) {
   switch (layout->kind) {
     case raw::Layout::Kind::kBits: {
       return ConsumeValueLayout<Bits>(std::move(layout), context, std::move(raw_attribute_list),
@@ -847,7 +846,7 @@ bool ConsumeStep::ConsumeLayout(std::unique_ptr<raw::Layout> layout,
     }
     case raw::Layout::Kind::kStruct: {
       return ConsumeStructLayout(std::move(layout), context, std::move(raw_attribute_list),
-                                 is_request_or_response, out_decl);
+                                 out_decl);
     }
     case raw::Layout::Kind::kTable: {
       return ConsumeOrdinaledLayout<Table>(std::move(layout), context,
@@ -865,7 +864,6 @@ bool ConsumeStep::ConsumeLayout(std::unique_ptr<raw::Layout> layout,
 bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
                                          const std::shared_ptr<NamingContext>& context,
                                          std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                                         bool is_request_or_response,
                                          std::unique_ptr<TypeConstructor>* out_type_ctor,
                                          Decl** out_inline_decl) {
   std::vector<std::unique_ptr<LayoutParameter>> params;
@@ -891,8 +889,8 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
           auto type_param = static_cast<raw::TypeLayoutParameter*>(param.get());
           std::unique_ptr<TypeConstructor> type_ctor;
           if (!ConsumeTypeConstructor(std::move(type_param->type_ctor), context,
-                                      /*raw_attribute_list=*/nullptr, is_request_or_response,
-                                      &type_ctor, /*out_inline_decl=*/nullptr))
+                                      /*raw_attribute_list=*/nullptr, &type_ctor,
+                                      /*out_inline_decl=*/nullptr))
             return false;
 
           std::unique_ptr<LayoutParameter> consumed =
@@ -936,7 +934,7 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
     if (inline_ref->attributes != nullptr)
       attributes = std::move(inline_ref->attributes);
     if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(attributes),
-                       is_request_or_response, out_inline_decl))
+                       out_inline_decl))
       return false;
 
     if (out_type_ctor) {
@@ -967,8 +965,7 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
                                          const std::shared_ptr<NamingContext>& context,
                                          std::unique_ptr<TypeConstructor>* out_type) {
   return ConsumeTypeConstructor(std::move(raw_type_ctor), context, /*raw_attribute_list=*/nullptr,
-                                /*is_request_or_response=*/false, out_type,
-                                /*out_inline_decl=*/nullptr);
+                                out_type, /*out_inline_decl=*/nullptr);
 }
 
 void ConsumeStep::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
@@ -983,7 +980,6 @@ void ConsumeStep::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
 
   ConsumeTypeConstructor(std::move(type_decl->type_ctor), NamingContext::Create(name),
                          std::move(type_decl->attributes),
-                         /*is_request_or_response=*/false,
                          /*out_type=*/nullptr, /*out_inline_decl=*/nullptr);
 }
 

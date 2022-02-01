@@ -29,7 +29,6 @@
         "column": 6,
         "length": 3
       },
-      "is_request_or_response": false,
       "members": [
         {
           "type": {

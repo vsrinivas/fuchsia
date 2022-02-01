@@ -1323,10 +1323,6 @@
                 "^experimental_": {}
             },
             "properties": {
-                "is_request_or_response": {
-                    "description": "Flag indicating that struct is used as a top level method request/response struct",
-                    "type": "boolean"
-                },
                 "location": {
                     "$ref": "#/definitions/location",
                     "description": "Source location of the declaration"
