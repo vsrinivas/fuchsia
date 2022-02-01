@@ -8,7 +8,7 @@ use {
     fuchsia_async::TimeoutExt,
     futures::future::{join, join_all, BoxFuture},
     futures::FutureExt,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
 };
 
 static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
@@ -33,7 +33,7 @@ fn find_components_internal(
         let children_dir = hub_dir.open_dir_readable("children")?;
 
         for child_name in children_dir.entries().await? {
-            let child_moniker = PartialChildMoniker::parse(&child_name)?;
+            let child_moniker = ChildMoniker::parse(&child_name)?;
             let child_moniker = moniker.child(child_moniker);
             let child_hub_dir = children_dir.open_dir_readable(&child_name)?;
             let child_future = find_components_internal(
@@ -129,7 +129,7 @@ async fn find_cmx_components_in_c_dir(
     let child_component_names = c_dir.entries().await?;
     let mut future_children = vec![];
     for child_component_name in child_component_names {
-        let child_moniker = PartialChildMoniker::parse(&child_component_name)?;
+        let child_moniker = ChildMoniker::parse(&child_component_name)?;
         let child_moniker = moniker.child(child_moniker);
         let job_ids_dir = c_dir.open_dir_readable(&child_component_name)?;
         let hub_dirs = open_all_job_ids(job_ids_dir).await?;
@@ -157,7 +157,7 @@ async fn find_cmx_realms_in_r_dir(
     // Get all CMX child realms
     let mut future_realms = vec![];
     for child_realm_name in r_dir.entries().await? {
-        let child_moniker = PartialChildMoniker::parse(&child_realm_name)?;
+        let child_moniker = ChildMoniker::parse(&child_realm_name)?;
         let child_moniker = moniker.child(child_moniker);
         let job_ids_dir = r_dir.open_dir_readable(&child_realm_name)?;
         let hub_dirs = open_all_job_ids(job_ids_dir).await?;

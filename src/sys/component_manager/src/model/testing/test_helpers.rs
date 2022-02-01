@@ -38,7 +38,7 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{channel::mpsc::Receiver, lock::Mutex, StreamExt, TryStreamExt},
-    moniker::{AbsoluteMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker},
     std::collections::HashSet,
     std::convert::TryFrom,
     std::default::Default,
@@ -149,7 +149,7 @@ pub async fn get_instance_id<'a>(component: &'a ComponentInstance, moniker: &'a 
 }
 
 /// Return all monikers of the live children of the given `component`.
-pub async fn get_live_children(component: &ComponentInstance) -> HashSet<PartialChildMoniker> {
+pub async fn get_live_children(component: &ComponentInstance) -> HashSet<ChildMoniker> {
     match *component.lock_state().await {
         InstanceState::Resolved(ref s) => s.live_children().map(|(m, _)| m.clone()).collect(),
         InstanceState::Purged => HashSet::new(),

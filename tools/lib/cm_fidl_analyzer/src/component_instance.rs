@@ -12,8 +12,8 @@ use {
         CapabilityDecl, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl, OfferDecl, UseDecl,
     },
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, InstancedAbsoluteMoniker,
-        InstancedChildMoniker, PartialChildMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase,
+        InstancedAbsoluteMoniker, InstancedChildMoniker,
     },
     routing::{
         capability_source::{BuiltinCapabilities, NamespaceCapabilities},
@@ -41,7 +41,7 @@ pub struct ComponentInstanceForAnalyzer {
     pub(crate) decl: ComponentDecl,
     url: String,
     parent: WeakExtendedInstanceInterface<Self>,
-    children: RwLock<HashMap<PartialChildMoniker, Arc<Self>>>,
+    children: RwLock<HashMap<ChildMoniker, Arc<Self>>>,
     pub(crate) environment: Arc<EnvironmentForAnalyzer>,
     policy_checker: GlobalPolicyChecker,
     component_id_index: Arc<ComponentIdIndex>,
@@ -128,7 +128,7 @@ impl ComponentInstanceForAnalyzer {
     }
 
     // Adds a new child to this component instance.
-    pub(crate) fn add_child(&self, child_moniker: PartialChildMoniker, child: Arc<Self>) {
+    pub(crate) fn add_child(&self, child_moniker: ChildMoniker, child: Arc<Self>) {
         self.children.write().expect("failed to acquire write lock").insert(child_moniker, child);
     }
 
@@ -227,15 +227,12 @@ impl ResolvedInstanceInterface for ComponentInstanceForAnalyzer {
         self.decl.collections.clone()
     }
 
-    fn get_live_child(&self, moniker: &PartialChildMoniker) -> Option<Arc<Self>> {
+    fn get_live_child(&self, moniker: &ChildMoniker) -> Option<Arc<Self>> {
         self.children.read().expect("failed to acquire read lock").get(moniker).map(Arc::clone)
     }
 
     // This is a static model with no notion of a collection.
-    fn live_children_in_collection(
-        &self,
-        _collection: &str,
-    ) -> Vec<(PartialChildMoniker, Arc<Self>)> {
+    fn live_children_in_collection(&self, _collection: &str) -> Vec<(ChildMoniker, Arc<Self>)> {
         vec![]
     }
 }

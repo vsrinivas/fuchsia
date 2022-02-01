@@ -5,9 +5,9 @@
 use {
     crate::{
         abs_moniker::AbsoluteMonikerBase,
+        child_moniker::{ChildMoniker, ChildMonikerBase},
         error::MonikerError,
         instanced_child_moniker::InstancedChildMoniker,
-        partial_child_moniker::{ChildMonikerBase, PartialChildMoniker},
     },
     core::cmp::{self, Ord, Ordering},
     std::{fmt, hash::Hash},
@@ -56,7 +56,7 @@ impl AbsoluteMonikerBase for InstancedAbsoluteMoniker {
         }
         let path = input[1..]
             .split('/')
-            .map(PartialChildMoniker::parse)
+            .map(ChildMoniker::parse)
             .map(|p| p.map(|ok_p| InstancedChildMoniker::from_partial(&ok_p, 0)))
             .collect::<Result<_, MonikerError>>()?;
         Ok(InstancedAbsoluteMoniker::new(path))

@@ -261,9 +261,9 @@ impl Hub {
             trace::duration!("component_manager", "hub:add_instance_to_parent");
             match instance_map.get_mut(&parent_moniker) {
                 Some(instance) => {
-                    let partial_moniker = leaf.to_partial();
+                    let child_moniker = leaf.to_partial();
                     instance.children_directory.add_node(
-                        partial_moniker.as_str(),
+                        child_moniker.as_str(),
                         controlled.clone(),
                         &instanced_moniker,
                     )?;
@@ -634,10 +634,10 @@ impl Hub {
         // TODO: It's possible for the Destroyed event to be dispatched twice if there
         // are two concurrent `DestroyChild` operations. In such cases we should probably cause
         // this update to no-op instead of returning an error.
-        let partial_moniker = leaf.to_partial();
+        let child_moniker = leaf.to_partial();
         instance
             .children_directory
-            .remove_node(partial_moniker.as_str())
+            .remove_node(child_moniker.as_str())
             .map_err(|_| ModelError::remove_entry_error(leaf.as_str()))?;
         Ok(())
     }

@@ -4,8 +4,8 @@
 
 use {
     crate::{
+        child_moniker::{validate_moniker_part, ChildMoniker, ChildMonikerBase},
         error::MonikerError,
-        partial_child_moniker::{validate_moniker_part, ChildMonikerBase, PartialChildMoniker},
     },
     core::cmp::{Ord, Ordering},
     std::fmt,
@@ -85,8 +85,8 @@ impl ChildMonikerBase for InstancedChildMoniker {
     }
 
     /// Converts this instanced moniker to a regular child moniker by stripping the instance id.
-    fn to_partial(&self) -> PartialChildMoniker {
-        PartialChildMoniker::new(self.name.clone(), self.collection.clone())
+    fn to_partial(&self) -> ChildMoniker {
+        ChildMoniker::new(self.name.clone(), self.collection.clone())
     }
 }
 
@@ -104,7 +104,7 @@ impl InstancedChildMoniker {
     }
 
     /// Converts this child moniker to an instanced moniker.
-    pub fn from_partial(m: &PartialChildMoniker, instance: InstanceId) -> Self {
+    pub fn from_partial(m: &ChildMoniker, instance: InstanceId) -> Self {
         Self::new(m.name.clone(), m.collection.clone(), instance)
     }
 

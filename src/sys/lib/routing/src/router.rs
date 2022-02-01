@@ -22,7 +22,7 @@ use {
     },
     derivative::Derivative,
     from_enum::FromEnum,
-    moniker::{AbsoluteMoniker, ChildMonikerBase, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker, ChildMonikerBase},
     std::{marker::PhantomData, sync::Arc},
 };
 
@@ -853,11 +853,11 @@ where
             UseSource::Child(name) => {
                 let moniker = target.abs_moniker();
                 let child_component = {
-                    let partial = PartialChildMoniker::new(name.clone(), None);
-                    target.lock_resolved_state().await?.get_live_child(&partial).ok_or_else(
+                    let child_moniker = ChildMoniker::new(name.clone(), None);
+                    target.lock_resolved_state().await?.get_live_child(&child_moniker).ok_or_else(
                         || {
                             RoutingError::use_from_child_instance_not_found(
-                                &partial,
+                                &child_moniker,
                                 moniker,
                                 name.clone(),
                             )
@@ -992,10 +992,10 @@ where
             },
             RegistrationSource::Child(child) => {
                 let child_component = {
-                    let partial = PartialChildMoniker::new(child.clone(), None);
-                    target.lock_resolved_state().await?.get_live_child(&partial).ok_or_else(
+                    let child_moniker = ChildMoniker::new(child.clone(), None);
+                    target.lock_resolved_state().await?.get_live_child(&child_moniker).ok_or_else(
                         || RoutingError::EnvironmentFromChildInstanceNotFound {
-                            child_moniker: partial,
+                            child_moniker,
                             moniker: target.abs_moniker().clone(),
                             capability_name: registration.source_name().clone(),
                             capability_type: R::TYPE.to_string(),
@@ -1183,11 +1183,10 @@ where
     match offer.source() {
         OfferSource::Child(child) => {
             let child_component = {
-                let partial =
-                    PartialChildMoniker::new(child.name.clone(), child.collection.clone());
-                component.lock_resolved_state().await?.get_live_child(&partial).ok_or_else(
+                let child_moniker = ChildMoniker::new(child.name.clone(), child.collection.clone());
+                component.lock_resolved_state().await?.get_live_child(&child_moniker).ok_or_else(
                     || RoutingError::OfferFromChildInstanceNotFound {
-                        child_moniker: partial,
+                        child_moniker,
                         moniker: component.abs_moniker().clone(),
                         capability_id: offer.source_name().clone().into(),
                     },
@@ -1280,7 +1279,7 @@ where
                 }
                 ExposeSource::Child(child) => {
                     let child_component = {
-                        let child_moniker = PartialChildMoniker::new(child.clone(), None);
+                        let child_moniker = ChildMoniker::new(child.clone(), None);
                         target
                             .lock_resolved_state()
                             .await?
@@ -1330,7 +1329,7 @@ where
     }
 }
 
-fn target_matches_moniker(target: &OfferTarget, child_moniker: &PartialChildMoniker) -> bool {
+fn target_matches_moniker(target: &OfferTarget, child_moniker: &ChildMoniker) -> bool {
     match target {
         OfferTarget::Child(target_ref) => {
             target_ref.name == child_moniker.name()
@@ -1378,7 +1377,7 @@ pub trait CapabilityVisitor {
 
 pub fn find_matching_offer<'a, O>(
     source_name: &CapabilityName,
-    child_moniker: &PartialChildMoniker,
+    child_moniker: &ChildMoniker,
     offers: &'a Vec<OfferDecl>,
 ) -> Option<&'a O>
 where
@@ -1414,7 +1413,7 @@ pub trait ErrorNotFoundFromParent {
 pub trait ErrorNotFoundInChild {
     fn error_not_found_in_child(
         decl_site_moniker: AbsoluteMoniker,
-        child_moniker: PartialChildMoniker,
+        child_moniker: ChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError;
 }

@@ -45,8 +45,8 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker,
-        RelativeMoniker, RelativeMonikerBase,
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, RelativeMoniker,
+        RelativeMonikerBase,
     },
     std::{
         collections::{HashMap, HashSet},
@@ -410,10 +410,9 @@ impl RoutingTest {
             .bind(&component.abs_moniker, &StartReason::Eager)
             .await
             .expect("bind instance failed");
-        let partial_moniker =
-            PartialChildMoniker::new(name.to_string(), Some(collection.to_string()));
+        let child_moniker = ChildMoniker::new(name.to_string(), Some(collection.to_string()));
         let nf =
-            component.remove_dynamic_child(&partial_moniker).await.expect("failed to remove child");
+            component.remove_dynamic_child(&child_moniker).await.expect("failed to remove child");
         // Wait for destruction to fully complete.
         nf.await.expect("failed to destroy child");
     }

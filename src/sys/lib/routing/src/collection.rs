@@ -19,7 +19,7 @@ use {
     cm_rust::{CapabilityName, ExposeDecl, ExposeDeclCommon, SourceName},
     derivative::Derivative,
     from_enum::FromEnum,
-    moniker::{ChildMonikerBase, PartialChildMoniker},
+    moniker::{ChildMoniker, ChildMonikerBase},
     std::sync::Arc,
 };
 
@@ -96,7 +96,7 @@ where
         instance: &str,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError> {
         let collection_component = self.collection_component.upgrade()?;
-        let (child_moniker, child_component): (PartialChildMoniker, Arc<C>) = {
+        let (child_moniker, child_component): (ChildMoniker, Arc<C>) = {
             collection_component
                 .lock_resolved_state()
                 .await?
@@ -104,7 +104,7 @@ where
                 .into_iter()
                 .find_map(move |(m, c)| if m.name() == instance { Some((m, c)) } else { None })
                 .ok_or_else(|| RoutingError::OfferFromChildInstanceNotFound {
-                    child_moniker: PartialChildMoniker::new(
+                    child_moniker: ChildMoniker::new(
                         instance.to_string(),
                         Some(self.collection_name.clone()),
                     ),
@@ -154,7 +154,7 @@ where
 {
     let mut instances = Vec::new();
     let component = component.upgrade()?;
-    let components: Vec<(PartialChildMoniker, Arc<C>)> =
+    let components: Vec<(ChildMoniker, Arc<C>)> =
         component.lock_resolved_state().await?.live_children_in_collection(collection_name);
     for (moniker, child_component) in components {
         let child_exposes = child_component.lock_resolved_state().await.map(|c| c.exposes());

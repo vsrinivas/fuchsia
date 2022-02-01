@@ -10,17 +10,17 @@ use {
         hooks::{Event, EventPayload},
     },
     async_trait::async_trait,
-    moniker::PartialChildMoniker,
+    moniker::ChildMoniker,
     std::sync::Arc,
 };
 
 /// Destroys a child after shutting it down.
 pub struct DestroyChildAction {
-    moniker: PartialChildMoniker,
+    moniker: ChildMoniker,
 }
 
 impl DestroyChildAction {
-    pub fn new(moniker: PartialChildMoniker) -> Self {
+    pub fn new(moniker: ChildMoniker) -> Self {
         Self { moniker }
     }
 }
@@ -38,7 +38,7 @@ impl Action for DestroyChildAction {
 
 async fn do_destroyed(
     component: &Arc<ComponentInstance>,
-    moniker: PartialChildMoniker,
+    moniker: ChildMoniker,
 ) -> Result<(), ModelError> {
     let child = {
         let state = component.lock_state().await;

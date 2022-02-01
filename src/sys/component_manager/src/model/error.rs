@@ -16,7 +16,7 @@ use {
     clonable_error::ClonableError,
     cm_runner::RunnerError,
     fuchsia_inspect, fuchsia_zircon as zx,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker},
     std::{ffi::OsString, path::PathBuf},
     thiserror::Error,
 };
@@ -25,9 +25,9 @@ use {
 #[derive(Debug, Error, Clone)]
 pub enum ModelError {
     #[error("component instance {} not found in realm {}", child, moniker)]
-    InstanceNotFoundInRealm { moniker: AbsoluteMoniker, child: PartialChildMoniker },
+    InstanceNotFoundInRealm { moniker: AbsoluteMoniker, child: ChildMoniker },
     #[error("component instance {} in realm {} already exists", child, moniker)]
-    InstanceAlreadyExists { moniker: AbsoluteMoniker, child: PartialChildMoniker },
+    InstanceAlreadyExists { moniker: AbsoluteMoniker, child: ChildMoniker },
     #[error("component instance with moniker {} has shut down", moniker)]
     InstanceShutDown { moniker: AbsoluteMoniker },
     #[error("component collection not found with name {}", name)]
@@ -166,15 +166,12 @@ pub enum ModelError {
 impl ModelError {
     pub fn instance_not_found_in_realm(
         moniker: AbsoluteMoniker,
-        child: PartialChildMoniker,
+        child: ChildMoniker,
     ) -> ModelError {
         ModelError::InstanceNotFoundInRealm { moniker, child }
     }
 
-    pub fn instance_already_exists(
-        moniker: AbsoluteMoniker,
-        child: PartialChildMoniker,
-    ) -> ModelError {
+    pub fn instance_already_exists(moniker: AbsoluteMoniker, child: ChildMoniker) -> ModelError {
         ModelError::InstanceAlreadyExists { moniker, child }
     }
 

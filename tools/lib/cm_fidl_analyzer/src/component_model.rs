@@ -16,7 +16,7 @@ use {
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     futures::FutureExt,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker, RelativeMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, RelativeMoniker},
     routing::{
         capability_source::{
             CapabilitySourceInterface, ComponentCapability, StorageCapabilitySource,
@@ -217,7 +217,7 @@ impl ModelBuilderForAnalyzer {
                                 Self::add_descendants(&child_instance, decls_by_url, model, result);
 
                                 instance.add_child(
-                                    PartialChildMoniker::new(child.name.clone(), None),
+                                    ChildMoniker::new(child.name.clone(), None),
                                     Arc::clone(&child_instance),
                                 );
 
@@ -919,9 +919,9 @@ mod tests {
             _ => panic!("child instance's parent should be root component"),
         }
 
-        let get_child = root_instance.resolve().map(|locked| {
-            locked.get_live_child(&PartialChildMoniker::new("child".to_string(), None))
-        })?;
+        let get_child = root_instance
+            .resolve()
+            .map(|locked| locked.get_live_child(&ChildMoniker::new("child".to_string(), None)))?;
         assert!(get_child.is_some());
         assert_eq!(get_child.as_ref().unwrap().abs_moniker(), child_instance.abs_moniker());
         assert_eq!(get_child.unwrap().instanced_moniker(), child_instance.instanced_moniker());

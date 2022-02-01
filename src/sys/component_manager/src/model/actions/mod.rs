@@ -77,7 +77,7 @@ use {
         task::{Context, Poll},
         Future,
     },
-    moniker::{InstancedChildMoniker, PartialChildMoniker},
+    moniker::{ChildMoniker, InstancedChildMoniker},
     std::any::Any,
     std::collections::HashMap,
     std::fmt::Debug,
@@ -105,7 +105,7 @@ pub enum ActionKey {
     Start,
     Stop,
     Shutdown,
-    DestroyChild(PartialChildMoniker),
+    DestroyChild(ChildMoniker),
     PurgeChild(InstancedChildMoniker),
     Purge,
 }
@@ -417,12 +417,12 @@ pub(crate) mod test_utils {
         component: &ComponentInstance,
         instanced_moniker: &InstancedChildMoniker,
     ) -> bool {
-        let partial = instanced_moniker.to_partial();
+        let moniker = instanced_moniker.to_partial();
         match *component.lock_state().await {
             InstanceState::Resolved(ref s) => match s.get_child(instanced_moniker) {
                 Some(child) => {
                     let child_execution = child.lock_execution().await;
-                    s.get_live_child(&partial).is_none() && child_execution.is_shut_down()
+                    s.get_live_child(&moniker).is_none() && child_execution.is_shut_down()
                 }
                 None => false,
             },

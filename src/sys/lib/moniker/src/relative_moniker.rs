@@ -30,9 +30,9 @@
 use {
     crate::{
         abs_moniker::AbsoluteMonikerBase,
+        child_moniker::{ChildMoniker, ChildMonikerBase},
         error::MonikerError,
         instanced_child_moniker::InstancedChildMoniker,
-        partial_child_moniker::{ChildMonikerBase, PartialChildMoniker},
     },
     std::{convert::TryFrom, fmt, iter},
 };
@@ -139,9 +139,8 @@ pub trait RelativeMonikerBase: Sized {
     }
 
     fn to_partial(&self) -> PartialRelativeMoniker {
-        let up_path: Vec<PartialChildMoniker> =
-            self.up_path().iter().map(|p| p.to_partial()).collect();
-        let down_path: Vec<PartialChildMoniker> =
+        let up_path: Vec<ChildMoniker> = self.up_path().iter().map(|p| p.to_partial()).collect();
+        let down_path: Vec<ChildMoniker> =
             self.down_path().iter().map(|p| p.to_partial()).collect();
         PartialRelativeMoniker::new(up_path, down_path)
     }
@@ -161,12 +160,12 @@ impl RelativeMoniker {
         let (up_path, down_path) = Self::parse_up_down_paths(rep)?;
         let up_path = up_path
             .iter()
-            .map(PartialChildMoniker::parse)
+            .map(ChildMoniker::parse)
             .map(|p| p.map(|ok_p| InstancedChildMoniker::from_partial(&ok_p, 0)))
             .collect::<Result<_, MonikerError>>()?;
         let down_path = down_path
             .iter()
-            .map(PartialChildMoniker::parse)
+            .map(ChildMoniker::parse)
             .map(|p| p.map(|ok_p| InstancedChildMoniker::from_partial(&ok_p, 0)))
             .collect::<Result<_, MonikerError>>()?;
 
@@ -213,12 +212,12 @@ impl fmt::Display for RelativeMoniker {
 
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]
 pub struct PartialRelativeMoniker {
-    up_path: Vec<PartialChildMoniker>,
-    down_path: Vec<PartialChildMoniker>,
+    up_path: Vec<ChildMoniker>,
+    down_path: Vec<ChildMoniker>,
 }
 
 impl RelativeMonikerBase for PartialRelativeMoniker {
-    type Part = PartialChildMoniker;
+    type Part = ChildMoniker;
 
     fn new(up_path: Vec<Self::Part>, down_path: Vec<Self::Part>) -> Self {
         Self { up_path, down_path }

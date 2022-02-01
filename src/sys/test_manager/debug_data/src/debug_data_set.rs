@@ -13,7 +13,7 @@ use fidl_fuchsia_test_manager as ftest_manager;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, lock::Mutex, SinkExt, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use log::{error, warn};
-use moniker::{PartialChildMoniker, PartialRelativeMoniker, RelativeMonikerBase};
+use moniker::{ChildMoniker, PartialRelativeMoniker, RelativeMonikerBase};
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Weak},
@@ -192,10 +192,10 @@ mod inner {
 
     /// A container that tracks the current known state of realms in a debug data set.
     pub(super) struct DebugDataSet {
-        realms: HashMap<PartialChildMoniker, String>,
+        realms: HashMap<ChildMoniker, String>,
         running_components: HashSet<PartialRelativeMoniker>,
         destroyed_before_start: HashSet<PartialRelativeMoniker>,
-        seen_realms: HashSet<PartialChildMoniker>,
+        seen_realms: HashSet<ChildMoniker>,
         done_adding_realms: bool,
         sender: mpsc::Sender<DebugDataRequestMessage>,
         on_capability_event: Option<Callback>,
@@ -304,7 +304,7 @@ mod inner {
         }
     }
 
-    fn realm_moniker_child(realm_moniker: String) -> Result<PartialChildMoniker, Error> {
+    fn realm_moniker_child(realm_moniker: String) -> Result<ChildMoniker, Error> {
         let moniker = PartialRelativeMoniker::parse(&realm_moniker)?;
         let moniker_is_valid = moniker.up_path().is_empty() && moniker.down_path().len() == 1;
         match moniker_is_valid {

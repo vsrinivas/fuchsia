@@ -14,9 +14,7 @@ use {
     async_trait::async_trait,
     cm_rust::{CapabilityDecl, CollectionDecl, ExposeDecl, OfferDecl, UseDecl},
     derivative::Derivative,
-    moniker::{
-        AbsoluteMoniker, InstancedAbsoluteMoniker, InstancedChildMoniker, PartialChildMoniker,
-    },
+    moniker::{AbsoluteMoniker, ChildMoniker, InstancedAbsoluteMoniker, InstancedChildMoniker},
     std::{
         clone::Clone,
         sync::{Arc, Weak},
@@ -96,13 +94,13 @@ pub trait ResolvedInstanceInterface: Send + Sync {
     fn collections(&self) -> Vec<CollectionDecl>;
 
     /// Returns a live child of this instance.
-    fn get_live_child(&self, moniker: &PartialChildMoniker) -> Option<Arc<Self::Component>>;
+    fn get_live_child(&self, moniker: &ChildMoniker) -> Option<Arc<Self::Component>>;
 
     /// Returns a vector of the live children in `collection`.
     fn live_children_in_collection(
         &self,
         collection: &str,
-    ) -> Vec<(PartialChildMoniker, Arc<Self::Component>)>;
+    ) -> Vec<(ChildMoniker, Arc<Self::Component>)>;
 }
 
 // Elsewhere we need to implement `ResolvedInstanceInterface` for `&T` and
@@ -136,14 +134,14 @@ where
         T::Target::collections(&*self)
     }
 
-    fn get_live_child(&self, moniker: &PartialChildMoniker) -> Option<Arc<Self::Component>> {
+    fn get_live_child(&self, moniker: &ChildMoniker) -> Option<Arc<Self::Component>> {
         T::Target::get_live_child(&*self, moniker)
     }
 
     fn live_children_in_collection(
         &self,
         collection: &str,
-    ) -> Vec<(PartialChildMoniker, Arc<Self::Component>)> {
+    ) -> Vec<(ChildMoniker, Arc<Self::Component>)> {
         T::Target::live_children_in_collection(&*self, collection)
     }
 }

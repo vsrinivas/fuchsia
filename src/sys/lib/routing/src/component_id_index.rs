@@ -130,7 +130,7 @@ impl ComponentIdIndex {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use moniker::{AbsoluteMonikerBase, PartialChildMoniker};
+    use moniker::{AbsoluteMonikerBase, ChildMoniker};
     use routing_test_helpers::component_id_index::make_index_file;
 
     #[fuchsia::test]
@@ -181,8 +181,8 @@ pub mod tests {
         assert_eq!(
             Some(&iid),
             index.look_up_moniker(&AbsoluteMoniker::new(vec![
-                PartialChildMoniker::new("a".to_string(), None),
-                PartialChildMoniker::new("name".to_string(), Some("coll".to_string())),
+                ChildMoniker::new("a".to_string(), None),
+                ChildMoniker::new("name".to_string(), Some("coll".to_string())),
             ]))
         );
     }
