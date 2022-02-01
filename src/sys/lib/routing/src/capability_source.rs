@@ -176,8 +176,8 @@ pub struct StorageCapabilitySource<C: ComponentInstanceInterface> {
 
 impl<C: ComponentInstanceInterface> PartialEq for StorageCapabilitySource<C> {
     fn eq(&self, other: &Self) -> bool {
-        let self_source_component = self.storage_provider.as_ref().map(|s| s.abs_moniker());
-        let other_source_component = other.storage_provider.as_ref().map(|s| s.abs_moniker());
+        let self_source_component = self.storage_provider.as_ref().map(|s| s.instanced_moniker());
+        let other_source_component = other.storage_provider.as_ref().map(|s| s.instanced_moniker());
         self_source_component == other_source_component
             && self.backing_directory_path == other.backing_directory_path
             && self.backing_directory_subdir == other.backing_directory_subdir

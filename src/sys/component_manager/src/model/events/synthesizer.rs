@@ -16,7 +16,7 @@ use {
     fuchsia_async as fasync,
     futures::{channel::mpsc, future::join_all, stream, SinkExt, StreamExt},
     log::error,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
+    moniker::{AbsoluteMonikerBase, ExtendedMoniker, InstancedAbsoluteMoniker},
     std::{
         collections::{HashMap, HashSet},
         sync::{Arc, Weak},
@@ -177,14 +177,14 @@ impl SynthesisTask {
                     {
                         return Ok(());
                     }
-                    AbsoluteMoniker::root()
+                    InstancedAbsoluteMoniker::root()
                 }
                 ExtendedMoniker::ComponentInstance(ref scope_moniker) => scope_moniker.clone(),
             };
             let root = model.look_up(&scope_moniker.to_partial()).await?;
             let mut component_stream = get_subcomponents(root, visited_components.clone());
             while let Some(component) = component_stream.next().await {
-                visited_components.insert(component.abs_moniker().clone());
+                visited_components.insert(component.instanced_moniker().clone());
                 if let Err(_) = Self::send_events(
                     &info.provider,
                     &scope,
@@ -220,7 +220,7 @@ impl SynthesisTask {
 /// branch.
 fn get_subcomponents(
     root: Arc<ComponentInstance>,
-    visited: HashSet<AbsoluteMoniker>,
+    visited: HashSet<InstancedAbsoluteMoniker>,
 ) -> stream::BoxStream<'static, Arc<ComponentInstance>> {
     let pending = vec![root];
     stream::unfold((pending, visited), move |(mut pending, mut visited)| async move {
@@ -228,7 +228,7 @@ fn get_subcomponents(
             match pending.pop() {
                 None => return None,
                 Some(curr_component) => {
-                    if visited.contains(&curr_component.abs_moniker()) {
+                    if visited.contains(&curr_component.instanced_moniker()) {
                         continue;
                     }
                     let state_guard = curr_component.lock_state().await;
@@ -241,7 +241,7 @@ fn get_subcomponents(
                         }
                     }
                     drop(state_guard);
-                    visited.insert(curr_component.abs_moniker().clone());
+                    visited.insert(curr_component.instanced_moniker().clone());
                     return Some((curr_component, (pending, visited)));
                 }
             }
@@ -274,7 +274,7 @@ mod tests {
 
     struct CreateStreamArgs<'a> {
         registry: &'a EventRegistry,
-        scope_monikers: Vec<AbsoluteMoniker>,
+        scope_monikers: Vec<InstancedAbsoluteMoniker>,
         events: Vec<EventType>,
         include_builtin: bool,
     }
@@ -292,7 +292,7 @@ mod tests {
         let registry = test.builtin_environment.event_registry.clone();
         let mut event_stream = create_stream(CreateStreamArgs {
             registry: &registry,
-            scope_monikers: vec![AbsoluteMoniker::root()],
+            scope_monikers: vec![InstancedAbsoluteMoniker::root()],
             events: vec![EventType::Started, EventType::Running],
             include_builtin: false,
         })

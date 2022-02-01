@@ -26,7 +26,7 @@ use {
     futures::stream::StreamExt,
     io_util,
     log::*,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker, PartialAbsoluteMoniker},
     std::{
         sync::{Arc, Mutex, Weak},
         time::Duration,
@@ -72,7 +72,7 @@ impl DirectoryReadyNotifier {
 
     async fn on_component_started(
         self: &Arc<Self>,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
         outgoing_dir: &DirectoryProxy,
         decl: ComponentDecl,
     ) -> Result<(), ModelError> {
@@ -116,7 +116,7 @@ impl DirectoryReadyNotifier {
     async fn wait_for_on_open(
         &self,
         node: &NodeProxy,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
         path: String,
     ) -> Result<(), ModelError> {
         let mut events = node.take_event_stream();
@@ -157,7 +157,8 @@ impl DirectoryReadyNotifier {
         // dispatch in order to propagate any potential errors as an event.
         let outgoing_dir_result = async move {
             let outgoing_node = outgoing_node_result?;
-            self.wait_for_on_open(&outgoing_node, &target.abs_moniker(), "/".to_string()).await?;
+            self.wait_for_on_open(&outgoing_node, &target.instanced_moniker(), "/".to_string())
+                .await?;
             io_util::node_to_directory(outgoing_node).map_err(|_| {
                 ModelError::open_directory_error(target.partial_abs_moniker.clone(), "/")
             })
@@ -362,7 +363,7 @@ fn filter_matching_exposes<'a>(
 
 async fn clone_outgoing_root(
     outgoing_dir: &DirectoryProxy,
-    target_moniker: &AbsoluteMoniker,
+    target_moniker: &InstancedAbsoluteMoniker,
 ) -> Result<NodeProxy, ModelError> {
     let outgoing_dir = io_util::clone_directory(
         &outgoing_dir,
@@ -411,7 +412,7 @@ impl EventSynthesisProvider for DirectoryReadyNotifier {
                     Ok(out_dir) => out_dir,
                     Err(e) => return Some(Err(e)),
                 };
-            Some(clone_outgoing_root(&out_dir, &component.abs_moniker()).await)
+            Some(clone_outgoing_root(&out_dir, &component.instanced_moniker()).await)
         }
         .await;
         let outgoing_node_result = match maybe_outgoing_node_result {
@@ -495,7 +496,7 @@ mod tests {
                 &CapabilityName::from("foo"),
             )
             .await;
-        assert_eq!(event.target_moniker, AbsoluteMoniker::root().into());
+        assert_eq!(event.target_moniker, InstancedAbsoluteMoniker::root().into());
         assert_eq!(event.component_url, "test:///root");
         let payload = event.result.expect("got ok result");
 

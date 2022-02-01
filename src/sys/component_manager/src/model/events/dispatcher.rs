@@ -235,7 +235,7 @@ mod tests {
         assert_matches::assert_matches,
         fuchsia_zircon as zx,
         futures::StreamExt,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+        moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker},
         std::{
             convert::TryInto,
             sync::{Arc, Weak},
@@ -266,20 +266,21 @@ mod tests {
             options: SubscriptionOptions,
             mode: EventMode,
         ) -> Arc<EventDispatcher> {
-            let scopes =
-                vec![EventDispatcherScope::new(AbsoluteMoniker::root().into()).for_debug()];
+            let scopes = vec![
+                EventDispatcherScope::new(InstancedAbsoluteMoniker::root().into()).for_debug()
+            ];
             Arc::new(EventDispatcher::new(options.clone(), mode, scopes, self.tx.clone()))
         }
     }
 
     async fn dispatch_capability_requested_event(
         dispatcher: &EventDispatcher,
-        source_moniker: &AbsoluteMoniker,
+        source_moniker: &InstancedAbsoluteMoniker,
     ) -> Option<oneshot::Receiver<()>> {
         let (_, capability_server_end) = zx::Channel::create().unwrap();
         let capability_server_end = Arc::new(Mutex::new(Some(capability_server_end)));
         let event = ComponentEvent::new_for_test(
-            AbsoluteMoniker::root(),
+            InstancedAbsoluteMoniker::root(),
             "fuchsia-pkg://root/a/b/c",
             Ok(EventPayload::CapabilityRequested {
                 source_moniker: source_moniker.clone(),
@@ -295,7 +296,7 @@ mod tests {
     ) -> Option<oneshot::Receiver<()>> {
         let empty_capability_provider = Arc::new(Mutex::new(None));
         let event = ComponentEvent::new_for_test(
-            AbsoluteMoniker::root(),
+            InstancedAbsoluteMoniker::root(),
             "fuchsia-pkg://root/a/b/c",
             Ok(EventPayload::CapabilityRouted {
                 source: CapabilitySource::Builtin {

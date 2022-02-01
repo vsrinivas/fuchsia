@@ -20,7 +20,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{channel::oneshot, future::BoxFuture, lock::Mutex},
     io_util,
-    moniker::{AbsoluteMoniker, ExtendedMoniker},
+    moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     rand::random,
     routing::component_instance::ComponentInstanceInterface,
     std::{
@@ -202,7 +202,7 @@ impl EventError {
 #[derive(Clone)]
 pub enum EventErrorPayload {
     // Keep the events listed below in alphabetical order!
-    CapabilityRequested { source_moniker: AbsoluteMoniker, name: String },
+    CapabilityRequested { source_moniker: InstancedAbsoluteMoniker, name: String },
     CapabilityRouted,
     Purged,
     DirectoryReady { name: String },
@@ -276,7 +276,7 @@ impl HooksRegistration {
 pub enum EventPayload {
     // Keep the events listed below in alphabetical order!
     CapabilityRequested {
-        source_moniker: AbsoluteMoniker,
+        source_moniker: InstancedAbsoluteMoniker,
         name: String,
         capability: Arc<Mutex<Option<zx::Channel>>>,
     },
@@ -407,7 +407,7 @@ impl Event {
     pub fn new(component: &Arc<ComponentInstance>, result: EventResult) -> Self {
         let timestamp = zx::Time::get_monotonic();
         Self::new_internal(
-            component.abs_moniker().clone().into(),
+            component.instanced_moniker().clone().into(),
             component.component_url.clone(),
             timestamp,
             result,
@@ -430,7 +430,7 @@ impl Event {
         timestamp: zx::Time,
     ) -> Self {
         Self::new_internal(
-            component.abs_moniker().clone().into(),
+            component.instanced_moniker().clone().into(),
             component.component_url.clone(),
             timestamp,
             result,
@@ -439,7 +439,7 @@ impl Event {
 
     #[cfg(test)]
     pub fn new_for_test(
-        target_moniker: AbsoluteMoniker,
+        target_moniker: InstancedAbsoluteMoniker,
         component_url: impl Into<String>,
         result: EventResult,
     ) -> Self {
@@ -780,7 +780,7 @@ mod tests {
             .await;
 
         let event = Event::new_for_test(
-            AbsoluteMoniker::root(),
+            InstancedAbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::Discovered),
         );
@@ -817,7 +817,7 @@ mod tests {
         assert_eq!(1, Arc::strong_count(&child_call_counter));
 
         let event = Event::new_for_test(
-            AbsoluteMoniker::root(),
+            InstancedAbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::Discovered),
         );
@@ -865,7 +865,7 @@ mod tests {
             )])
             .await;
 
-        let root = AbsoluteMoniker::root();
+        let root = InstancedAbsoluteMoniker::root();
         let event = Event::new_for_test(
             root.clone(),
             "fuchsia-pkg://root",
@@ -893,10 +893,10 @@ mod tests {
         let (_, capability_server_end) = zx::Channel::create().unwrap();
         let capability_server_end = Arc::new(Mutex::new(Some(capability_server_end)));
         let event = Event::new_for_test(
-            AbsoluteMoniker::root(),
+            InstancedAbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRequested {
-                source_moniker: AbsoluteMoniker::root(),
+                source_moniker: InstancedAbsoluteMoniker::root(),
                 name: "foo".to_string(),
                 capability: capability_server_end,
             }),

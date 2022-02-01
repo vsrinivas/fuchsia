@@ -141,7 +141,7 @@ pub mod tests {
         cm_rust_testing::ComponentDeclBuilder,
         fidl_fuchsia_component_decl as fdecl, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{join, FutureExt},
-        moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
+        moniker::{ChildMoniker, InstancedAbsoluteMoniker, PartialChildMoniker},
         std::sync::atomic::Ordering,
         std::sync::Weak,
     };
@@ -806,11 +806,11 @@ pub mod tests {
     #[fuchsia::test]
     async fn purge_error() {
         struct PurgeErrorHook {
-            moniker: AbsoluteMoniker,
+            moniker: InstancedAbsoluteMoniker,
         }
 
         impl PurgeErrorHook {
-            fn new(moniker: AbsoluteMoniker) -> Self {
+            fn new(moniker: InstancedAbsoluteMoniker) -> Self {
                 Self { moniker }
             }
 
@@ -824,7 +824,7 @@ pub mod tests {
 
             async fn on_purged_async(
                 &self,
-                target_moniker: &AbsoluteMoniker,
+                target_moniker: &InstancedAbsoluteMoniker,
             ) -> Result<(), ModelError> {
                 if *target_moniker == self.moniker {
                     return Err(ModelError::unsupported("ouch"));

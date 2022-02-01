@@ -36,7 +36,7 @@ impl ExposedDir {
     ) -> Result<Self, ModelError> {
         let mut dir = pfs::simple();
         let tree = DirTree::build_from_exposes(route_expose_fn, component.clone(), decl);
-        tree.install(&component.abs_moniker, &mut dir)?;
+        tree.install(&component.instanced_moniker, &mut dir)?;
         Ok(ExposedDir { root_dir: dir, execution_scope: scope })
     }
 

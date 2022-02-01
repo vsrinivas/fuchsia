@@ -576,7 +576,7 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
 mod tests {
     use {
         super::*, assert_matches::assert_matches, cm_types::ParseError, fidl_fuchsia_io2 as fio2,
-        moniker::AbsoluteMoniker, std::path::PathBuf, tempfile::TempDir,
+        moniker::InstancedAbsoluteMoniker, std::path::PathBuf, tempfile::TempDir,
     };
 
     const FOO_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx";
@@ -814,7 +814,7 @@ mod tests {
                         ].iter().cloned())
                         ),
                         (CapabilityAllowlistKey {
-                            source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
+                            source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
                             source_name: CapabilityName::from("running"),
                             source: CapabilityAllowlistSource::Framework,
                             capability: CapabilityTypeName::Event,
@@ -827,7 +827,7 @@ mod tests {
                     ].iter().cloned()),
                     debug_capability_policy: HashMap::from_iter(vec![
                         (CapabilityAllowlistKey {
-                            source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"])),
+                            source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"])),
                             source_name: CapabilityName::from("fuchsia.foo.bar"),
                             source: CapabilityAllowlistSource::Self_,
                             capability: CapabilityTypeName::Protocol,
@@ -839,7 +839,7 @@ mod tests {
                         ].iter().cloned())
                         ),
                         (CapabilityAllowlistKey {
-                            source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
+                            source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
                             source_name: CapabilityName::from("fuchsia.foo.baz"),
                             source: CapabilityAllowlistSource::Self_,
                             capability: CapabilityTypeName::Protocol,

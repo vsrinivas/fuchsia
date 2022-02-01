@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        abs_moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
-        error::MonikerError,
+        abs_moniker::AbsoluteMonikerBase, error::MonikerError,
+        instanced_abs_moniker::InstancedAbsoluteMoniker,
     },
     core::cmp::Ord,
     std::fmt,
@@ -15,12 +15,12 @@ use {
 use serde::{Deserialize, Serialize};
 
 /// One of:
-/// - An absolute moniker
+/// - An instanced absolute moniker
 /// - A marker representing component manager's realm
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Eq, Ord, PartialOrd, PartialEq, Debug, Clone, Hash)]
 pub enum ExtendedMoniker {
-    ComponentInstance(AbsoluteMoniker),
+    ComponentInstance(InstancedAbsoluteMoniker),
     ComponentManager,
 }
 
@@ -32,16 +32,16 @@ impl ExtendedMoniker {
         if rep == EXTENDED_MONIKER_COMPONENT_MANAGER_STR {
             Ok(ExtendedMoniker::ComponentManager)
         } else {
-            Ok(ExtendedMoniker::ComponentInstance(AbsoluteMoniker::parse_string_without_instances(
-                rep,
-            )?))
+            Ok(ExtendedMoniker::ComponentInstance(
+                InstancedAbsoluteMoniker::parse_string_without_instances(rep)?,
+            ))
         }
     }
 
     pub fn unwrap_instance_moniker_or<E: std::error::Error>(
         &self,
         error: E,
-    ) -> Result<&AbsoluteMoniker, E> {
+    ) -> Result<&InstancedAbsoluteMoniker, E> {
         match self {
             Self::ComponentManager => Err(error),
             Self::ComponentInstance(moniker) => Ok(moniker),
@@ -78,8 +78,8 @@ impl fmt::Display for ExtendedMoniker {
     }
 }
 
-impl From<AbsoluteMoniker> for ExtendedMoniker {
-    fn from(m: AbsoluteMoniker) -> Self {
+impl From<InstancedAbsoluteMoniker> for ExtendedMoniker {
+    fn from(m: InstancedAbsoluteMoniker) -> Self {
         Self::ComponentInstance(m)
     }
 }
@@ -98,7 +98,7 @@ mod tests {
         assert_eq!(
             ExtendedMoniker::parse_string_without_instances("/foo/bar").unwrap(),
             ExtendedMoniker::ComponentInstance(
-                AbsoluteMoniker::parse_string_without_instances("/foo/bar").unwrap()
+                InstancedAbsoluteMoniker::parse_string_without_instances("/foo/bar").unwrap()
             )
         );
         assert!(ExtendedMoniker::parse_string_without_instances("").is_err(), "cannot be empty");

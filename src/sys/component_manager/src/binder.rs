@@ -194,7 +194,7 @@ mod tests {
         fidl::{client::Client, handle::AsyncChannel},
         fuchsia_zircon as zx,
         futures::{lock::Mutex, StreamExt},
-        moniker::AbsoluteMoniker,
+        moniker::InstancedAbsoluteMoniker,
         std::path::PathBuf,
     };
 
@@ -220,8 +220,8 @@ mod tests {
 
         async fn provider(
             &self,
-            source: AbsoluteMoniker,
-            target: AbsoluteMoniker,
+            source: InstancedAbsoluteMoniker,
+            target: InstancedAbsoluteMoniker,
         ) -> Box<BinderCapabilityProvider> {
             let builtin_environment = self.builtin_environment.lock().await;
             let source = builtin_environment
@@ -264,7 +264,7 @@ mod tests {
             .await;
         let (_client_end, mut server_end) =
             zx::Channel::create().expect("failed to create channels");
-        let moniker: AbsoluteMoniker = vec!["source:0"].into();
+        let moniker: InstancedAbsoluteMoniker = vec!["source:0"].into();
 
         let task_scope = TaskScope::new();
         fixture
@@ -293,7 +293,7 @@ mod tests {
         .await;
         let (client_end, mut server_end) =
             zx::Channel::create().expect("failed to create channels");
-        let moniker: AbsoluteMoniker = AbsoluteMoniker::from(vec!["foo:0"]);
+        let moniker: InstancedAbsoluteMoniker = InstancedAbsoluteMoniker::from(vec!["foo:0"]);
 
         let task_scope = TaskScope::new();
         fixture

@@ -143,7 +143,7 @@ mod tests {
         cm_rust::{CapabilityDecl, RunnerDecl},
         cm_rust_testing::*,
         futures::{lock::Mutex, prelude::*},
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker},
+        moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker, PartialAbsoluteMoniker},
         std::sync::Weak,
     };
 
@@ -160,7 +160,7 @@ mod tests {
 
     async fn start_component_through_hooks(
         hooks: &Hooks,
-        moniker: AbsoluteMoniker,
+        moniker: InstancedAbsoluteMoniker,
         url: &str,
     ) -> Result<TaskScope, Error> {
         let provider_result = Arc::new(Mutex::new(None));
@@ -220,16 +220,19 @@ mod tests {
 
         // Case 1: The started component's moniker matches the allowlist entry above.
         let url = "xxx://test";
-        let _task_scope =
-            start_component_through_hooks(&hooks, AbsoluteMoniker::from(vec!["foo:0"]), url)
-                .await?;
+        let _task_scope = start_component_through_hooks(
+            &hooks,
+            InstancedAbsoluteMoniker::from(vec!["foo:0"]),
+            url,
+        )
+        .await?;
         runner.wait_for_url(&url).await;
         let checker = runner.last_checker().expect("No PolicyChecker held by MockRunner");
         assert_matches!(checker.ambient_mark_vmo_exec_allowed(), Ok(()));
 
         // Case 2: Moniker does not match allowlist entry.
         let _task_scope =
-            start_component_through_hooks(&hooks, AbsoluteMoniker::root(), url).await?;
+            start_component_through_hooks(&hooks, InstancedAbsoluteMoniker::root(), url).await?;
         runner.wait_for_url(&url).await;
         let checker = runner.last_checker().expect("No PolicyChecker held by MockRunner");
         assert_matches!(checker.ambient_mark_vmo_exec_allowed(), Err(_));

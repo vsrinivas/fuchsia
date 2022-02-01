@@ -27,7 +27,7 @@ use {
     fidl_fuchsia_sys2::LifecycleControllerMarker,
     fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
+    moniker::{AbsoluteMonikerBase, ChildMonikerBase, InstancedAbsoluteMoniker},
     std::{
         collections::HashMap,
         convert::TryFrom,
@@ -45,13 +45,13 @@ use {
 type Directory = Arc<pfs::Simple>;
 
 struct HubCapabilityProvider {
-    abs_moniker: AbsoluteMoniker,
+    instanced_moniker: InstancedAbsoluteMoniker,
     hub: Arc<Hub>,
 }
 
 impl HubCapabilityProvider {
-    pub fn new(abs_moniker: AbsoluteMoniker, hub: Arc<Hub>) -> Self {
-        HubCapabilityProvider { abs_moniker, hub }
+    pub fn new(instanced_moniker: InstancedAbsoluteMoniker, hub: Arc<Hub>) -> Self {
+        HubCapabilityProvider { instanced_moniker, hub }
     }
 }
 
@@ -72,9 +72,9 @@ impl CapabilityProvider for HubCapabilityProvider {
             .to_string();
         relative_path.push('/');
         let dir_path = pfsPath::validate_and_split(relative_path.clone()).map_err(|_| {
-            ModelError::open_directory_error(self.abs_moniker.to_partial(), relative_path)
+            ModelError::open_directory_error(self.instanced_moniker.to_partial(), relative_path)
         })?;
-        self.hub.open(&self.abs_moniker, flags, open_mode, dir_path, server_end).await?;
+        self.hub.open(&self.instanced_moniker, flags, open_mode, dir_path, server_end).await?;
         Ok(())
     }
 }
@@ -93,7 +93,7 @@ struct Instance {
 /// debugging and instrumentation tools can query information about component instances
 /// on the system, such as their component URLs, execution state and so on.
 pub struct Hub {
-    instances: Mutex<HashMap<AbsoluteMoniker, Instance>>,
+    instances: Mutex<HashMap<InstancedAbsoluteMoniker, Instance>>,
     scope: ExecutionScope,
     lifecycle_controller_factory: LifecycleControllerFactory,
 }
@@ -106,13 +106,14 @@ impl Hub {
         lifecycle_controller_factory: LifecycleControllerFactory,
     ) -> Result<Self, ModelError> {
         let mut instance_map = HashMap::new();
-        let abs_moniker = AbsoluteMoniker::root();
+        let instanced_moniker = InstancedAbsoluteMoniker::root();
 
-        let lifecycle_controller = lifecycle_controller_factory.create(&abs_moniker.to_partial());
+        let lifecycle_controller =
+            lifecycle_controller_factory.create(&instanced_moniker.to_partial());
 
         Hub::add_instance_if_necessary(
             lifecycle_controller,
-            &abs_moniker,
+            &instanced_moniker,
             component_url,
             &mut instance_map,
         )?
@@ -130,7 +131,7 @@ impl Hub {
         flags: u32,
         mut server_end: zx::Channel,
     ) -> Result<(), ModelError> {
-        let root_moniker = AbsoluteMoniker::root();
+        let root_moniker = InstancedAbsoluteMoniker::root();
         self.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, pfsPath::dot(), &mut server_end)
             .await?;
         Ok(())
@@ -154,17 +155,18 @@ impl Hub {
 
     pub async fn open(
         &self,
-        abs_moniker: &AbsoluteMoniker,
+        instanced_moniker: &InstancedAbsoluteMoniker,
         flags: u32,
         open_mode: u32,
         relative_path: pfsPath,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         let instance_map = self.instances.lock().await;
-        let instance = instance_map.get(&abs_moniker).ok_or(ModelError::open_directory_error(
-            abs_moniker.to_partial(),
-            relative_path.clone().into_string(),
-        ))?;
+        let instance =
+            instance_map.get(&instanced_moniker).ok_or(ModelError::open_directory_error(
+                instanced_moniker.to_partial(),
+                relative_path.clone().into_string(),
+            ))?;
         let server_end = channel::take_channel(server_end);
         instance.directory.clone().open(
             self.scope.clone(),
@@ -178,12 +180,12 @@ impl Hub {
 
     fn add_instance_if_necessary(
         lifecycle_controller: LifecycleController,
-        abs_moniker: &AbsoluteMoniker,
+        instanced_moniker: &InstancedAbsoluteMoniker,
         component_url: String,
-        instance_map: &mut HashMap<AbsoluteMoniker, Instance>,
+        instance_map: &mut HashMap<InstancedAbsoluteMoniker, Instance>,
     ) -> Result<Option<Directory>, ModelError> {
         trace::duration!("component_manager", "hub:add_instance_if_necessary");
-        if instance_map.contains_key(&abs_moniker) {
+        if instance_map.contains_key(&instanced_moniker) {
             return Ok(None);
         }
 
@@ -193,32 +195,39 @@ impl Hub {
         instance.add_node(
             "url",
             read_only_static(component_url.clone().into_bytes()),
-            &abs_moniker,
+            &instanced_moniker,
         )?;
 
         // Add an 'id' file.
         // For consistency sake, the Hub assumes that the root instance also
         // has ID 0, like any other static instance.
-        let id =
-            if let Some(child_moniker) = abs_moniker.leaf() { child_moniker.instance() } else { 0 };
+        let id = if let Some(child_moniker) = instanced_moniker.leaf() {
+            child_moniker.instance()
+        } else {
+            0
+        };
         let component_type = if id > 0 { "dynamic" } else { "static" };
-        instance.add_node("id", read_only_static(id.to_string().into_bytes()), &abs_moniker)?;
+        instance.add_node(
+            "id",
+            read_only_static(id.to_string().into_bytes()),
+            &instanced_moniker,
+        )?;
 
         // Add a 'component_type' file.
         instance.add_node(
             "component_type",
             read_only_static(component_type.to_string().into_bytes()),
-            &abs_moniker,
+            &instanced_moniker,
         )?;
 
         // Add a children directory.
         let children = pfs::simple();
-        instance.add_node("children", children.clone(), &abs_moniker)?;
+        instance.add_node("children", children.clone(), &instanced_moniker)?;
 
-        Self::add_debug_directory(lifecycle_controller, instance.clone(), abs_moniker)?;
+        Self::add_debug_directory(lifecycle_controller, instance.clone(), instanced_moniker)?;
 
         instance_map.insert(
-            abs_moniker.clone(),
+            instanced_moniker.clone(),
             Instance {
                 has_execution_directory: false,
                 has_resolved_directory: false,
@@ -232,13 +241,13 @@ impl Hub {
 
     async fn add_instance_to_parent_if_necessary<'a>(
         lifecycle_controller: LifecycleController,
-        abs_moniker: &'a AbsoluteMoniker,
+        instanced_moniker: &'a InstancedAbsoluteMoniker,
         component_url: String,
-        mut instance_map: &'a mut HashMap<AbsoluteMoniker, Instance>,
+        mut instance_map: &'a mut HashMap<InstancedAbsoluteMoniker, Instance>,
     ) -> Result<(), ModelError> {
         let controlled = match Hub::add_instance_if_necessary(
             lifecycle_controller,
-            &abs_moniker,
+            &instanced_moniker,
             component_url,
             &mut instance_map,
         )? {
@@ -246,7 +255,9 @@ impl Hub {
             None => return Ok(()),
         };
 
-        if let (Some(leaf), Some(parent_moniker)) = (abs_moniker.leaf(), abs_moniker.parent()) {
+        if let (Some(leaf), Some(parent_moniker)) =
+            (instanced_moniker.leaf(), instanced_moniker.parent())
+        {
             trace::duration!("component_manager", "hub:add_instance_to_parent");
             match instance_map.get_mut(&parent_moniker) {
                 Some(instance) => {
@@ -254,7 +265,7 @@ impl Hub {
                     instance.children_directory.add_node(
                         partial_moniker.as_str(),
                         controlled.clone(),
-                        &abs_moniker,
+                        &instanced_moniker,
                     )?;
                 }
                 None => {
@@ -264,7 +275,7 @@ impl Hub {
                     log::warn!(
                         "Parent {} not found: could not add {} to children directory.",
                         parent_moniker,
-                        abs_moniker
+                        instanced_moniker
                     );
                 }
             };
@@ -275,12 +286,12 @@ impl Hub {
     fn add_resolved_url_file(
         directory: Directory,
         resolved_url: String,
-        abs_moniker: &AbsoluteMoniker,
+        instanced_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         directory.add_node(
             "resolved_url",
             read_only_static(resolved_url.into_bytes()),
-            &abs_moniker,
+            &instanced_moniker,
         )?;
         Ok(())
     }
@@ -288,21 +299,25 @@ impl Hub {
     fn add_config(
         directory: Directory,
         config: &ConfigFields,
-        abs_moniker: &AbsoluteMoniker,
+        instanced_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let config_dir = pfs::simple();
         for field in &config.fields {
             let value = format!("{:?}", field.value);
-            config_dir.add_node(&field.key, read_only_static(value.into_bytes()), &abs_moniker)?;
+            config_dir.add_node(
+                &field.key,
+                read_only_static(value.into_bytes()),
+                &instanced_moniker,
+            )?;
         }
-        directory.add_node("config", config_dir, &abs_moniker)?;
+        directory.add_node("config", config_dir, &instanced_moniker)?;
         Ok(())
     }
 
     fn add_use_directory(
         directory: Directory,
         component_decl: ComponentDecl,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
         target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         let tree = DirTree::build_from_uses(route_use_fn, target, component_decl);
@@ -316,7 +331,7 @@ impl Hub {
         execution_directory: Directory,
         component_decl: ComponentDecl,
         package_dir: Option<DirectoryProxy>,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
         target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         let tree = DirTree::build_from_uses(route_use_fn, target, component_decl);
@@ -332,7 +347,7 @@ impl Hub {
     fn add_debug_directory(
         lifecycle_controller: LifecycleController,
         parent_directory: Directory,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_debug_directory");
 
@@ -370,7 +385,7 @@ impl Hub {
     fn add_expose_directory(
         directory: Directory,
         component_decl: ComponentDecl,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
         target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_expose_directory");
@@ -384,7 +399,7 @@ impl Hub {
     fn add_out_directory(
         execution_directory: Directory,
         outgoing_dir: Option<DirectoryProxy>,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_out_directory");
         if let Some(out_dir) = outgoing_dir {
@@ -396,11 +411,11 @@ impl Hub {
     fn add_runtime_directory(
         execution_directory: Directory,
         runtime_dir: Option<DirectoryProxy>,
-        abs_moniker: &AbsoluteMoniker,
+        instanced_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_runtime_directory");
         if let Some(runtime_dir) = runtime_dir {
-            execution_directory.add_node("runtime", remote_dir(runtime_dir), abs_moniker)?;
+            execution_directory.add_node("runtime", remote_dir(runtime_dir), instanced_moniker)?;
         }
         Ok(())
     }
@@ -408,20 +423,20 @@ impl Hub {
     fn add_start_reason_file(
         execution_directory: Directory,
         start_reason: &StartReason,
-        abs_moniker: &AbsoluteMoniker,
+        instanced_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let start_reason = format!("{}", start_reason);
         execution_directory.add_node(
             "start_reason",
             read_only_static(start_reason.into_bytes()),
-            abs_moniker,
+            instanced_moniker,
         )?;
         Ok(())
     }
 
     fn add_instance_id_file(
         directory: Directory,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
         target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_instance_id_file");
@@ -437,7 +452,7 @@ impl Hub {
 
     async fn on_resolved_async<'a>(
         &self,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
         target: &WeakComponentInstance,
         resolved_url: String,
         component_decl: &'a ComponentDecl,
@@ -487,7 +502,7 @@ impl Hub {
 
     async fn on_started_async<'a>(
         &'a self,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
         target: &WeakComponentInstance,
         runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
@@ -553,7 +568,7 @@ impl Hub {
 
     async fn on_discovered_async(
         &self,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
         component_url: String,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_discovered_async");
@@ -573,7 +588,10 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_purged_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
+    async fn on_purged_async(
+        &self,
+        target_moniker: &InstancedAbsoluteMoniker,
+    ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_purged_async");
         let mut instance_map = self.instances.lock().await;
         instance_map
@@ -582,7 +600,10 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_stopped_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
+    async fn on_stopped_async(
+        &self,
+        target_moniker: &InstancedAbsoluteMoniker,
+    ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_stopped_async");
         let mut instance_map = self.instances.lock().await;
         let mut instance = instance_map
@@ -594,7 +615,10 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_destroyed_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
+    async fn on_destroyed_async(
+        &self,
+        target_moniker: &InstancedAbsoluteMoniker,
+    ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_destroyed_async");
         let parent_moniker = target_moniker.parent().expect("A root component cannot be destroyed");
         let mut instance_map = self.instances.lock().await;
@@ -641,7 +665,7 @@ impl Hub {
             let mut capability_provider = capability_provider.lock().await;
             if capability_provider.is_none() {
                 *capability_provider = Some(Box::new(HubCapabilityProvider::new(
-                    component.abs_moniker.clone(),
+                    component.instanced_moniker.clone(),
                     self.clone(),
                 )))
             }

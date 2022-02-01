@@ -47,6 +47,7 @@ rustc_library("moniker") {
     "src/child_moniker.rs",
     "src/error.rs",
     "src/extended_moniker.rs",
+    "src/instanced_abs_moniker.rs",
     "src/lib.rs",
     "src/partial_child_moniker.rs",
     "src/relative_moniker.rs",

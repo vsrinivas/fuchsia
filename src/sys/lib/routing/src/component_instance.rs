@@ -14,7 +14,9 @@ use {
     async_trait::async_trait,
     cm_rust::{CapabilityDecl, CollectionDecl, ExposeDecl, OfferDecl, UseDecl},
     derivative::Derivative,
-    moniker::{AbsoluteMoniker, ChildMoniker, PartialAbsoluteMoniker, PartialChildMoniker},
+    moniker::{
+        ChildMoniker, InstancedAbsoluteMoniker, PartialAbsoluteMoniker, PartialChildMoniker,
+    },
     std::{
         clone::Clone,
         sync::{Arc, Weak},
@@ -35,8 +37,8 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
     /// Returns this `ComponentInstanceInterface`'s child moniker, if it is not the root instance.
     fn child_moniker(&self) -> Option<&ChildMoniker>;
 
-    /// Returns this `ComponentInstanceInterface`'s absolute moniker.
-    fn abs_moniker(&self) -> &AbsoluteMoniker;
+    /// Returns this `ComponentInstanceInterface`'s instanced absolute moniker.
+    fn instanced_moniker(&self) -> &InstancedAbsoluteMoniker;
 
     /// Returns this `ComponentInstanceInterface`'s partial absolute moniker.
     fn partial_abs_moniker(&self) -> &PartialAbsoluteMoniker;
@@ -154,7 +156,7 @@ where
 pub struct WeakComponentInstanceInterface<C: ComponentInstanceInterface> {
     #[derivative(Debug = "ignore")]
     inner: Weak<C>,
-    pub abs_moniker: AbsoluteMoniker,
+    pub instanced_moniker: InstancedAbsoluteMoniker,
     pub partial_abs_moniker: PartialAbsoluteMoniker,
 }
 
@@ -162,7 +164,7 @@ impl<C: ComponentInstanceInterface> WeakComponentInstanceInterface<C> {
     pub fn new(component: &Arc<C>) -> Self {
         Self {
             inner: Arc::downgrade(component),
-            abs_moniker: component.abs_moniker().clone(),
+            instanced_moniker: component.instanced_moniker().clone(),
             partial_abs_moniker: component.partial_abs_moniker().clone(),
         }
     }
@@ -180,7 +182,7 @@ impl<C: ComponentInstanceInterface> From<&Arc<C>> for WeakComponentInstanceInter
     fn from(component: &Arc<C>) -> Self {
         Self {
             inner: Arc::downgrade(component),
-            abs_moniker: component.abs_moniker().clone(),
+            instanced_moniker: component.instanced_moniker().clone(),
             partial_abs_moniker: component.partial_abs_moniker().clone(),
         }
     }

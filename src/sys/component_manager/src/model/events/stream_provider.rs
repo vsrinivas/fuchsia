@@ -20,7 +20,7 @@ use {
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::lock::Mutex,
-    moniker::{AbsoluteMoniker, ExtendedMoniker},
+    moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     std::{
         collections::HashMap,
         sync::{Arc, Weak},
@@ -43,7 +43,7 @@ pub struct EventStreamProvider {
     /// A shared reference to the event registry used to subscribe and dispatch events.
     registry: Weak<EventRegistry>,
 
-    /// A mapping from a component instance's AbsoluteMoniker, to the set of
+    /// A mapping from a component instance's InstancedAbsoluteMoniker, to the set of
     /// event streams and their corresponding paths in the component instance's out directory.
     streams: Arc<Mutex<HashMap<ExtendedMoniker, Vec<EventStreamAttachment>>>>,
 
@@ -116,7 +116,7 @@ impl EventStreamProvider {
 
     async fn on_component_purged(
         self: &Arc<Self>,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let mut streams = self.streams.lock().await;
         // Remove all event streams associated with the `target_moniker` component.
@@ -126,7 +126,7 @@ impl EventStreamProvider {
 
     async fn on_component_resolved(
         self: &Arc<Self>,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
         decl: &ComponentDecl,
     ) -> Result<(), ModelError> {
         for use_decl in &decl.uses {

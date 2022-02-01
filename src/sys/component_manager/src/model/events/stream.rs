@@ -14,7 +14,7 @@ use {
     cm_rust::EventMode,
     fuchsia_trace as trace,
     futures::{channel::mpsc, StreamExt},
-    moniker::{AbsoluteMoniker, ExtendedMoniker},
+    moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
     std::sync::{Arc, Weak},
 };
 
@@ -63,7 +63,7 @@ impl EventStream {
     pub async fn wait_until(
         &mut self,
         expected_event_type: EventType,
-        expected_moniker: AbsoluteMoniker,
+        expected_moniker: InstancedAbsoluteMoniker,
     ) -> Option<Event> {
         let expected_moniker = ExtendedMoniker::ComponentInstance(expected_moniker);
         while let Some(event) = self.next().await {

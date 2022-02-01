@@ -48,7 +48,9 @@ use {
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
     maplit::hashmap,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker},
+    moniker::{
+        AbsoluteMonikerBase, ChildMonikerBase, InstancedAbsoluteMoniker, PartialAbsoluteMoniker,
+    },
     routing_test_helpers::{
         default_service_capability, instantiate_common_routing_tests, RoutingTestModel,
     },
@@ -71,12 +73,12 @@ instantiate_common_routing_tests! { RoutingTestBuilder }
 #[fuchsia::test]
 async fn use_framework_service() {
     pub struct MockRealmCapabilityProvider {
-        scope_moniker: AbsoluteMoniker,
+        scope_moniker: InstancedAbsoluteMoniker,
         host: MockRealmCapabilityHost,
     }
 
     impl MockRealmCapabilityProvider {
-        pub fn new(scope_moniker: AbsoluteMoniker, host: MockRealmCapabilityHost) -> Self {
+        pub fn new(scope_moniker: InstancedAbsoluteMoniker, host: MockRealmCapabilityHost) -> Self {
             Self { scope_moniker, host }
         }
     }
@@ -120,7 +122,7 @@ async fn use_framework_service() {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_scoped_framework_capability_routed_async(
-                        component.abs_moniker.clone(),
+                        component.instanced_moniker.clone(),
                         &capability,
                         capability_provider.take(),
                     )
@@ -147,7 +149,7 @@ async fn use_framework_service() {
 
         async fn serve(
             &self,
-            scope_moniker: AbsoluteMoniker,
+            scope_moniker: InstancedAbsoluteMoniker,
             mut stream: fcomponent::RealmRequestStream,
         ) -> Result<(), Error> {
             while let Some(request) = stream.try_next().await? {
@@ -171,7 +173,7 @@ async fn use_framework_service() {
 
         pub async fn on_scoped_framework_capability_routed_async<'a>(
             &'a self,
-            scope_moniker: AbsoluteMoniker,
+            scope_moniker: InstancedAbsoluteMoniker,
             capability: &'a InternalCapability,
             capability_provider: Option<Box<dyn CapabilityProvider>>,
         ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {

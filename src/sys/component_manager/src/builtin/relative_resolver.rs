@@ -193,7 +193,7 @@ mod tests {
 
         let child = ComponentInstance::new(
             root.environment.clone(),
-            moniker::AbsoluteMoniker::parse_string_without_instances("/root/child")?,
+            moniker::InstancedAbsoluteMoniker::parse_string_without_instances("/root/child")?,
             "#meta/my-child.cml".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
@@ -239,7 +239,7 @@ mod tests {
 
         let child_one = ComponentInstance::new(
             root.environment.clone(),
-            moniker::AbsoluteMoniker::parse_string_without_instances("/root/child")?,
+            moniker::InstancedAbsoluteMoniker::parse_string_without_instances("/root/child")?,
             "#meta/my-child.cml".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
@@ -251,7 +251,7 @@ mod tests {
 
         let child_two = ComponentInstance::new(
             root.environment.clone(),
-            moniker::AbsoluteMoniker::parse_string_without_instances("/root/child")?,
+            moniker::InstancedAbsoluteMoniker::parse_string_without_instances("/root/child")?,
             "#meta/my-child2.cml".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
@@ -297,7 +297,7 @@ mod tests {
 
         let child = ComponentInstance::new(
             root.environment.clone(),
-            moniker::AbsoluteMoniker::parse_string_without_instances("/root/child")?,
+            moniker::InstancedAbsoluteMoniker::parse_string_without_instances("/root/child")?,
             "#meta/my-child.cml".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
@@ -334,7 +334,7 @@ mod tests {
 
         let child = ComponentInstance::new(
             root.environment.clone(),
-            moniker::AbsoluteMoniker::parse_string_without_instances("/root/child")?,
+            moniker::InstancedAbsoluteMoniker::parse_string_without_instances("/root/child")?,
             "#meta/my-child.cml".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,

@@ -108,7 +108,7 @@ mod tests {
         fuchsia_zircon::sys,
         fuchsia_zircon::AsHandleRef,
         futures::lock::Mutex,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+        moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker},
         std::path::PathBuf,
         std::sync::Weak,
     };
@@ -148,7 +148,7 @@ mod tests {
         };
 
         let event = Event::new_for_test(
-            AbsoluteMoniker::root(),
+            InstancedAbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRouted { source, capability_provider: provider.clone() }),
         );
@@ -213,7 +213,7 @@ mod tests {
         };
 
         let event = Event::new_for_test(
-            AbsoluteMoniker::root(),
+            InstancedAbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRouted { source, capability_provider: provider.clone() }),
         );

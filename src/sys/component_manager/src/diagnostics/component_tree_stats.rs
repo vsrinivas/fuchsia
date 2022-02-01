@@ -30,7 +30,7 @@ use {
     },
     injectable_time::MonotonicTime,
     log::warn,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
+    moniker::{AbsoluteMonikerBase, ExtendedMoniker, InstancedAbsoluteMoniker},
     std::{
         collections::BTreeMap,
         fmt::Debug,
@@ -183,7 +183,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
             let key = match moniker {
                 ExtendedMoniker::ComponentManager => moniker.to_string(),
                 ExtendedMoniker::ComponentInstance(m) => {
-                    if *m == AbsoluteMoniker::root() {
+                    if *m == InstancedAbsoluteMoniker::root() {
                         "<root>".to_string()
                     } else {
                         m.to_string_without_instances().replacen("/", "", 1)
@@ -428,14 +428,14 @@ mod tests {
         diagnostics_hierarchy::DiagnosticsHierarchy,
         fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
         fuchsia_zircon::{AsHandleRef, DurationNum},
-        moniker::AbsoluteMoniker,
+        moniker::InstancedAbsoluteMoniker,
     };
 
     #[fuchsia::test]
     async fn components_are_deleted_when_all_tasks_are_gone() {
         let inspector = inspect::Inspector::new();
         let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
-        let moniker: AbsoluteMoniker = vec!["a:0"].into();
+        let moniker: InstancedAbsoluteMoniker = vec!["a:0"].into();
         let moniker: ExtendedMoniker = moniker.into();
         stats.track_ready(moniker.clone(), FakeTask::default()).await;
         for _ in 0..=COMPONENT_CPU_MAX_SAMPLES {

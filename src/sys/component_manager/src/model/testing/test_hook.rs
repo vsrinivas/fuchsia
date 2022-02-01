@@ -18,7 +18,7 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_zircon as zx,
     futures::{executor::block_on, lock::Mutex, prelude::*},
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
+    moniker::{AbsoluteMonikerBase, ChildMonikerBase, InstancedAbsoluteMoniker},
     routing::capability_source::InternalCapability,
     std::{
         cmp::Eq,
@@ -36,7 +36,7 @@ use {
 };
 
 struct ComponentInstance {
-    pub abs_moniker: AbsoluteMoniker,
+    pub instanced_moniker: InstancedAbsoluteMoniker,
     pub children: Mutex<Vec<Arc<ComponentInstance>>>,
 }
 
@@ -47,7 +47,7 @@ impl Clone for ComponentInstance {
     fn clone(&self) -> Self {
         let children = block_on(self.children.lock());
         return ComponentInstance {
-            abs_moniker: self.abs_moniker.clone(),
+            instanced_moniker: self.instanced_moniker.clone(),
             children: Mutex::new(children.clone()),
         };
     }
@@ -55,7 +55,7 @@ impl Clone for ComponentInstance {
 
 impl PartialEq for ComponentInstance {
     fn eq(&self, other: &Self) -> bool {
-        self.abs_moniker == other.abs_moniker
+        self.instanced_moniker == other.instanced_moniker
     }
 }
 
@@ -64,7 +64,7 @@ impl Eq for ComponentInstance {}
 impl ComponentInstance {
     pub async fn print(&self) -> String {
         let mut s: String =
-            self.abs_moniker.leaf().map_or(String::new(), |m| format!("{}", m.to_partial()));
+            self.instanced_moniker.leaf().map_or(String::new(), |m| format!("{}", m.to_partial()));
         let mut children = self.children.lock().await;
         if children.is_empty() {
             return s;
@@ -73,7 +73,7 @@ impl ComponentInstance {
         // The position of a child in the children vector is a function of timing.
         // In order to produce stable topology strings across runs, we sort the set
         // of children here by moniker.
-        children.sort_by(|a, b| a.abs_moniker.cmp(&b.abs_moniker));
+        children.sort_by(|a, b| a.instanced_moniker.cmp(&b.instanced_moniker));
 
         s.push('(');
         let mut count = 0;
@@ -96,10 +96,10 @@ impl ComponentInstance {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Lifecycle {
-    Bind(AbsoluteMoniker),
-    Stop(AbsoluteMoniker),
-    PreDestroy(AbsoluteMoniker),
-    Destroy(AbsoluteMoniker),
+    Bind(InstancedAbsoluteMoniker),
+    Stop(InstancedAbsoluteMoniker),
+    PreDestroy(InstancedAbsoluteMoniker),
+    Destroy(InstancedAbsoluteMoniker),
 }
 
 impl fmt::Display for Lifecycle {
@@ -116,7 +116,7 @@ impl fmt::Display for Lifecycle {
 /// TestHook is a Hook that generates a strings representing the component
 /// topology.
 pub struct TestHook {
-    instances: Mutex<HashMap<AbsoluteMoniker, Arc<ComponentInstance>>>,
+    instances: Mutex<HashMap<InstancedAbsoluteMoniker, Arc<ComponentInstance>>>,
     lifecycle_events: Mutex<Vec<Lifecycle>>,
 }
 
@@ -151,9 +151,11 @@ impl TestHook {
     /// topology.
     pub fn print(&self) -> String {
         let instances = block_on(self.instances.lock());
-        let abs_moniker = AbsoluteMoniker::root();
-        let root_instance =
-            instances.get(&abs_moniker).map(|x| x.clone()).expect("Unable to find root instance.");
+        let instanced_moniker = InstancedAbsoluteMoniker::root();
+        let root_instance = instances
+            .get(&instanced_moniker)
+            .map(|x| x.clone())
+            .expect("Unable to find root instance.");
         block_on(root_instance.print())
     }
 
@@ -164,7 +166,7 @@ impl TestHook {
 
     pub async fn on_started_async<'a>(
         &'a self,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         self.create_instance_if_necessary(target_moniker).await?;
         let mut events = self.lifecycle_events.lock().await;
@@ -174,7 +176,7 @@ impl TestHook {
 
     pub async fn on_stopped_async<'a>(
         &'a self,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let mut events = self.lifecycle_events.lock().await;
         events.push(Lifecycle::Stop(target_moniker.clone()));
@@ -183,7 +185,7 @@ impl TestHook {
 
     pub async fn on_destroyed_async<'a>(
         &'a self,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         // TODO: Can this be changed not restrict to dynamic instances? Static instances can be
         // deleted too.
@@ -200,7 +202,7 @@ impl TestHook {
 
     pub async fn on_purged_async<'a>(
         &'a self,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let mut events = self.lifecycle_events.lock().await;
         events.push(Lifecycle::Destroy(target_moniker.clone()));
@@ -209,26 +211,27 @@ impl TestHook {
 
     pub async fn create_instance_if_necessary(
         &self,
-        abs_moniker: &AbsoluteMoniker,
+        instanced_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let mut instances = self.instances.lock().await;
-        let new_instance = match instances.get(abs_moniker) {
+        let new_instance = match instances.get(instanced_moniker) {
             Some(old_instance) => Arc::new((old_instance.deref()).clone()),
             None => Arc::new(ComponentInstance {
-                abs_moniker: abs_moniker.clone(),
+                instanced_moniker: instanced_moniker.clone(),
                 children: Mutex::new(vec![]),
             }),
         };
-        instances.insert(abs_moniker.clone(), new_instance.clone());
-        if let Some(parent_moniker) = abs_moniker.parent() {
+        instances.insert(instanced_moniker.clone(), new_instance.clone());
+        if let Some(parent_moniker) = instanced_moniker.parent() {
             // If the parent isn't available yet then opt_parent_instance will have a value
             // of None.
             let opt_parent_instance = instances.get(&parent_moniker).map(|x| x.clone());
             // If the parent is available then add this instance as a child to it.
             if let Some(parent_instance) = opt_parent_instance {
                 let mut children = parent_instance.children.lock().await;
-                let opt_index =
-                    children.iter().position(|c| c.abs_moniker == new_instance.abs_moniker);
+                let opt_index = children
+                    .iter()
+                    .position(|c| c.instanced_moniker == new_instance.instanced_moniker);
                 if let Some(index) = opt_index {
                     children.remove(index);
                 }
@@ -238,15 +241,18 @@ impl TestHook {
         Ok(())
     }
 
-    pub async fn remove_instance(&self, abs_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
+    pub async fn remove_instance(
+        &self,
+        instanced_moniker: &InstancedAbsoluteMoniker,
+    ) -> Result<(), ModelError> {
         let mut instances = self.instances.lock().await;
-        if let Some(parent_moniker) = abs_moniker.parent() {
-            instances.remove(&abs_moniker);
+        if let Some(parent_moniker) = instanced_moniker.parent() {
+            instances.remove(&instanced_moniker);
             let parent_instance = instances
                 .get(&parent_moniker)
                 .expect(&format!("parent instance {} not found", parent_moniker));
             let mut children = parent_instance.children.lock().await;
-            let opt_index = children.iter().position(|c| c.abs_moniker == *abs_moniker);
+            let opt_index = children.iter().position(|c| c.instanced_moniker == *instanced_moniker);
             if let Some(index) = opt_index {
                 children.remove(index);
             }
@@ -300,7 +306,7 @@ impl HubInjectionTestHook {
 
     pub async fn on_scoped_framework_capability_routed_async<'a>(
         &'a self,
-        scope_moniker: AbsoluteMoniker,
+        scope_moniker: InstancedAbsoluteMoniker,
         capability: &'a InternalCapability,
         mut capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
@@ -333,7 +339,7 @@ impl Hook for HubInjectionTestHook {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
                 .on_scoped_framework_capability_routed_async(
-                    component.abs_moniker.clone(),
+                    component.instanced_moniker.clone(),
                     capability,
                     capability_provider.take(),
                 )
@@ -344,16 +350,16 @@ impl Hook for HubInjectionTestHook {
 }
 
 struct HubInjectionCapabilityProvider {
-    abs_moniker: AbsoluteMoniker,
+    instanced_moniker: InstancedAbsoluteMoniker,
     intercepted_capability: Box<dyn CapabilityProvider>,
 }
 
 impl HubInjectionCapabilityProvider {
     pub fn new(
-        abs_moniker: AbsoluteMoniker,
+        instanced_moniker: InstancedAbsoluteMoniker,
         intercepted_capability: Box<dyn CapabilityProvider>,
     ) -> Self {
-        HubInjectionCapabilityProvider { abs_moniker, intercepted_capability }
+        HubInjectionCapabilityProvider { instanced_moniker, intercepted_capability }
     }
 }
 
@@ -377,7 +383,7 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
             .expect("failed to create directory proxy");
 
         let dir = pfs::simple();
-        dir.add_node("old_hub", remote_dir(hub_proxy), &self.abs_moniker)?;
+        dir.add_node("old_hub", remote_dir(hub_proxy), &self.instanced_moniker)?;
         let mut relative_path = relative_path.to_str().expect("path is not utf8").to_string();
         relative_path.push('/');
         let path =
@@ -394,13 +400,13 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_hook_test() {
-        let root = AbsoluteMoniker::root();
-        let a: AbsoluteMoniker = vec!["a:0"].into();
-        let ab: AbsoluteMoniker = vec!["a:0", "b:0"].into();
-        let ac: AbsoluteMoniker = vec!["a:0", "c:0"].into();
-        let abd: AbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
-        let abe: AbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
-        let acf: AbsoluteMoniker = vec!["a:0", "c:0", "f:0"].into();
+        let root = InstancedAbsoluteMoniker::root();
+        let a: InstancedAbsoluteMoniker = vec!["a:0"].into();
+        let ab: InstancedAbsoluteMoniker = vec!["a:0", "b:0"].into();
+        let ac: InstancedAbsoluteMoniker = vec!["a:0", "c:0"].into();
+        let abd: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
+        let abe: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
+        let acf: InstancedAbsoluteMoniker = vec!["a:0", "c:0", "f:0"].into();
 
         // Try adding parent followed by children then verify the topology string
         // is correct.

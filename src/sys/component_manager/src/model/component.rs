@@ -59,7 +59,7 @@ use {
     },
     log::{error, warn},
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, InstanceId,
+        AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, InstanceId, InstancedAbsoluteMoniker,
         PartialAbsoluteMoniker, PartialChildMoniker,
     },
     std::iter::Iterator,
@@ -328,8 +328,8 @@ pub struct ComponentInstance {
     pub on_terminate: fdecl::OnTerminate,
     /// The parent instance. Either a component instance or component manager's instance.
     pub parent: WeakExtendedInstance,
-    /// The absolute moniker of this instance.
-    abs_moniker: AbsoluteMoniker,
+    /// The instanced absolute moniker of this instance.
+    instanced_moniker: InstancedAbsoluteMoniker,
     /// The partial absolute moniker of this instance.
     pub partial_abs_moniker: PartialAbsoluteMoniker,
     /// The hooks scoped to this instance.
@@ -363,7 +363,7 @@ impl ComponentInstance {
     ) -> Arc<Self> {
         Self::new(
             Arc::new(environment),
-            AbsoluteMoniker::root(),
+            InstancedAbsoluteMoniker::root(),
             component_url,
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
@@ -377,7 +377,7 @@ impl ComponentInstance {
     /// Instantiates a new component instance with the given contents.
     pub fn new(
         environment: Arc<Environment>,
-        abs_moniker: AbsoluteMoniker,
+        instanced_moniker: InstancedAbsoluteMoniker,
         component_url: String,
         startup: fdecl::StartupMode,
         on_terminate: fdecl::OnTerminate,
@@ -386,10 +386,10 @@ impl ComponentInstance {
         hooks: Arc<Hooks>,
         numbered_handles: Option<Vec<fprocess::HandleInfo>>,
     ) -> Arc<Self> {
-        let partial_abs_moniker = abs_moniker.clone().to_partial();
+        let partial_abs_moniker = instanced_moniker.clone().to_partial();
         Arc::new(Self {
             environment,
-            abs_moniker,
+            instanced_moniker,
             partial_abs_moniker,
             component_url,
             startup,
@@ -931,7 +931,11 @@ impl ComponentInstance {
         let server_chan = channel::take_channel(server_chan);
         let server_end = ServerEnd::new(server_chan);
         out_dir.open(flags, open_mode, path, server_end).map_err(|e| {
-            ModelError::from(OpenResourceError::open_outgoing_failed(&self.abs_moniker, path, e))
+            ModelError::from(OpenResourceError::open_outgoing_failed(
+                &self.instanced_moniker,
+                path,
+                e,
+            ))
         })?;
         Ok(())
     }
@@ -1098,8 +1102,8 @@ impl ComponentInstanceInterface for ComponentInstance {
     type TopInstance = ComponentManagerInstance;
     type DebugRouteMapper = NoopRouteMapper;
 
-    fn abs_moniker(&self) -> &AbsoluteMoniker {
-        &self.abs_moniker
+    fn instanced_moniker(&self) -> &InstancedAbsoluteMoniker {
+        &self.instanced_moniker
     }
 
     fn partial_abs_moniker(&self) -> &PartialAbsoluteMoniker {
@@ -1107,7 +1111,7 @@ impl ComponentInstanceInterface for ComponentInstance {
     }
 
     fn child_moniker(&self) -> Option<&ChildMoniker> {
-        self.abs_moniker.leaf()
+        self.instanced_moniker.leaf()
     }
 
     fn url(&self) -> &str {
@@ -1156,7 +1160,7 @@ impl std::fmt::Debug for ComponentInstance {
         f.debug_struct("ComponentInstance")
             .field("component_url", &self.component_url)
             .field("startup", &self.startup)
-            .field("abs_moniker", &self.abs_moniker)
+            .field("abs_moniker", &self.instanced_moniker)
             .finish()
     }
 }
@@ -1377,13 +1381,13 @@ impl ResolvedInstanceState {
         &self.exposed_dir
     }
 
-    /// Extends an absolute moniker with the live child with partial moniker `p`. Returns `None`
+    /// Extends an instanced absolute moniker with the live child with partial moniker `p`. Returns `None`
     /// if no matching child was found.
     pub fn extend_moniker_with(
         &self,
-        moniker: &AbsoluteMoniker,
+        moniker: &InstancedAbsoluteMoniker,
         partial: &PartialChildMoniker,
-    ) -> Option<AbsoluteMoniker> {
+    ) -> Option<InstancedAbsoluteMoniker> {
         match self.get_live_child_instance_id(partial) {
             Some(instance_id) => {
                 Some(moniker.child(ChildMoniker::from_partial(partial, instance_id)))
@@ -1534,7 +1538,7 @@ impl ResolvedInstanceState {
         }
         let child = ComponentInstance::new(
             self.environment_for_child(component, child, collection.clone()),
-            component.abs_moniker.child(child_moniker.clone()),
+            component.instanced_moniker.child(child_moniker.clone()),
             child.url.clone(),
             child.startup,
             child.on_terminate.unwrap_or(fdecl::OnTerminate::None),
@@ -2417,8 +2421,8 @@ pub mod tests {
             .expect("couldn't susbscribe to event stream");
 
         event_source.start_component_tree().await;
-        let a_moniker: AbsoluteMoniker = vec!["a:0"].into();
-        let b_moniker: AbsoluteMoniker = vec!["a:0", "b:0"].into();
+        let a_moniker: InstancedAbsoluteMoniker = vec!["a:0"].into();
+        let b_moniker: InstancedAbsoluteMoniker = vec!["a:0", "b:0"].into();
 
         let component_b = test.look_up(b_moniker.to_partial()).await;
 

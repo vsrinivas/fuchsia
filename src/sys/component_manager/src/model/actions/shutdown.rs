@@ -827,7 +827,7 @@ mod tests {
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
         },
         fidl_fuchsia_component_decl as fdecl,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker},
+        moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker, PartialChildMoniker},
         std::collections::HashMap,
         std::{convert::TryFrom, sync::Weak},
         test_case::test_case,
@@ -2742,12 +2742,12 @@ mod tests {
                     .build(),
             ),
         ];
-        let moniker_a: AbsoluteMoniker = vec!["a:0"].into();
-        let moniker_b: AbsoluteMoniker = vec!["a:0", "b:0"].into();
-        let moniker_c: AbsoluteMoniker = vec!["a:0", "b:0", "c:0"].into();
-        let moniker_d: AbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
-        let moniker_e: AbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
-        let moniker_f: AbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
+        let moniker_a: InstancedAbsoluteMoniker = vec!["a:0"].into();
+        let moniker_b: InstancedAbsoluteMoniker = vec!["a:0", "b:0"].into();
+        let moniker_c: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "c:0"].into();
+        let moniker_d: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
+        let moniker_e: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
+        let moniker_f: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
         let test = ActionsTest::new("root", components, None).await;
         let component_a = test.look_up(moniker_a.to_partial()).await;
         let component_b = test.look_up(moniker_b.to_partial()).await;
@@ -2787,7 +2787,8 @@ mod tests {
         component_e_info.check_is_shut_down(&test.runner).await;
         component_f_info.check_is_shut_down(&test.runner).await;
 
-        let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
+        let mut comes_after: HashMap<InstancedAbsoluteMoniker, Vec<InstancedAbsoluteMoniker>> =
+            HashMap::new();
         comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
         // technically we could just depend on 'D' since it is the last of b's
         // children, but we add all the children for resilence against the
@@ -2956,12 +2957,12 @@ mod tests {
                     .build(),
             ),
         ];
-        let moniker_a: AbsoluteMoniker = vec!["a:0"].into();
-        let moniker_b: AbsoluteMoniker = vec!["a:0", "b:0"].into();
-        let moniker_c: AbsoluteMoniker = vec!["a:0", "b:0", "c:0"].into();
-        let moniker_d: AbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
-        let moniker_e: AbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
-        let moniker_f: AbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
+        let moniker_a: InstancedAbsoluteMoniker = vec!["a:0"].into();
+        let moniker_b: InstancedAbsoluteMoniker = vec!["a:0", "b:0"].into();
+        let moniker_c: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "c:0"].into();
+        let moniker_d: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
+        let moniker_e: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
+        let moniker_f: InstancedAbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
         let test = ActionsTest::new("root", components, None).await;
         let component_a = test.look_up(moniker_a.to_partial()).await;
         let component_b = test.look_up(moniker_b.to_partial()).await;
@@ -3001,7 +3002,8 @@ mod tests {
         component_e_info.check_is_shut_down(&test.runner).await;
         component_f_info.check_is_shut_down(&test.runner).await;
 
-        let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
+        let mut comes_after: HashMap<InstancedAbsoluteMoniker, Vec<InstancedAbsoluteMoniker>> =
+            HashMap::new();
         comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
         // technically we could just depend on 'D' since it is the last of b's
         // children, but we add all the children for resilence against the
@@ -3510,11 +3512,11 @@ mod tests {
     #[fuchsia::test]
     async fn shutdown_error() {
         struct StopErrorHook {
-            moniker: AbsoluteMoniker,
+            moniker: InstancedAbsoluteMoniker,
         }
 
         impl StopErrorHook {
-            fn new(moniker: AbsoluteMoniker) -> Self {
+            fn new(moniker: InstancedAbsoluteMoniker) -> Self {
                 Self { moniker }
             }
 
@@ -3528,7 +3530,7 @@ mod tests {
 
             async fn on_shutdown_instance_async(
                 &self,
-                target_moniker: &AbsoluteMoniker,
+                target_moniker: &InstancedAbsoluteMoniker,
             ) -> Result<(), ModelError> {
                 if *target_moniker == self.moniker {
                     return Err(ModelError::unsupported("ouch"));

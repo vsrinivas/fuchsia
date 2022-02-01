@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     clonable_error::ClonableError,
     fidl_fuchsia_component as fcomponent, fuchsia_zircon as zx,
-    moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},
+    moniker::{ExtendedMoniker, InstancedAbsoluteMoniker, RelativeMoniker},
     thiserror::Error,
 };
 
@@ -14,7 +14,7 @@ use {
 pub enum OpenResourceError {
     #[error("Failed to open path `{}` in outgoing directory of `{}`: {}", path, moniker, err)]
     OpenOutgoingFailed {
-        moniker: AbsoluteMoniker,
+        moniker: InstancedAbsoluteMoniker,
         path: String,
         #[source]
         err: ClonableError,
@@ -53,7 +53,7 @@ impl OpenResourceError {
     }
 
     pub fn open_outgoing_failed(
-        moniker: &AbsoluteMoniker,
+        moniker: &InstancedAbsoluteMoniker,
         path: impl Into<String>,
         err: impl Into<Error>,
     ) -> Self {

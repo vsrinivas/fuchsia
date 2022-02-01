@@ -4,7 +4,7 @@
 
 use {
     crate::model::error::ModelError,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker},
     std::sync::Arc,
     vfs::directory::{entry::DirectoryEntry, helper::DirectlyMutable, immutable::simple as pfs},
 };
@@ -20,7 +20,7 @@ pub trait AddableDirectory {
         &mut self,
         name: &str,
         entry: Arc<dyn DirectoryEntry>,
-        moniker: &AbsoluteMoniker,
+        moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError>;
 }
 
@@ -33,7 +33,7 @@ pub trait AddableDirectoryWithResult {
         &'a self,
         name: &'a str,
         entry: Arc<dyn DirectoryEntry>,
-        moniker: &'a AbsoluteMoniker,
+        moniker: &'a InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError>;
 
     fn remove_node<'a>(&'a self, name: &'a str) -> Result<Arc<dyn DirectoryEntry>, ModelError>;
@@ -44,7 +44,7 @@ impl AddableDirectory for Directory {
         &mut self,
         name: &str,
         entry: Arc<dyn DirectoryEntry>,
-        moniker: &AbsoluteMoniker,
+        moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         self.clone()
             .add_entry(name, entry)
@@ -57,7 +57,7 @@ impl AddableDirectoryWithResult for Directory {
         &'a self,
         name: &'a str,
         entry: Arc<dyn DirectoryEntry>,
-        moniker: &'a AbsoluteMoniker,
+        moniker: &'a InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
         self.clone()
             .add_entry(String::from(name), entry)

@@ -829,7 +829,7 @@ mod tests {
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
         fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
-        moniker::{AbsoluteMoniker, PartialAbsoluteMoniker},
+        moniker::{InstancedAbsoluteMoniker, PartialAbsoluteMoniker},
         routing::{
             component_instance::WeakExtendedInstanceInterface, environment::EnvironmentInterface,
         },
@@ -892,10 +892,10 @@ mod tests {
             .to_string()
         );
 
-        // Include tests for `.abs_moniker()` alongside `.partial_abs_moniker()`
-        // until`.abs_moniker()` is removed from the public API.
+        // Include tests for `.instanced_moniker()` alongside `.partial_abs_moniker()`
+        // until`.instanced_moniker()` is removed from the public API.
         assert_eq!(root_instance.partial_abs_moniker(), &PartialAbsoluteMoniker::root());
-        assert_eq!(root_instance.abs_moniker(), &AbsoluteMoniker::root());
+        assert_eq!(root_instance.instanced_moniker(), &InstancedAbsoluteMoniker::root());
 
         assert_eq!(
             child_instance.partial_abs_moniker(),
@@ -903,8 +903,8 @@ mod tests {
                 .expect("failed to parse moniker from id")
         );
         assert_eq!(
-            child_instance.abs_moniker(),
-            &AbsoluteMoniker::parse_string_without_instances("/child")
+            child_instance.instanced_moniker(),
+            &InstancedAbsoluteMoniker::parse_string_without_instances("/child")
                 .expect("failed to parse moniker from id")
         );
 
@@ -915,7 +915,7 @@ mod tests {
         match child_instance.try_get_parent()? {
             ExtendedInstanceInterface::Component(component) => {
                 assert_eq!(component.partial_abs_moniker(), root_instance.partial_abs_moniker());
-                assert_eq!(component.abs_moniker(), root_instance.abs_moniker())
+                assert_eq!(component.instanced_moniker(), root_instance.instanced_moniker())
             }
             _ => panic!("child instance's parent should be root component"),
         }
@@ -928,7 +928,7 @@ mod tests {
             get_child.as_ref().unwrap().partial_abs_moniker(),
             child_instance.partial_abs_moniker()
         );
-        assert_eq!(get_child.unwrap().abs_moniker(), child_instance.abs_moniker());
+        assert_eq!(get_child.unwrap().instanced_moniker(), child_instance.instanced_moniker());
 
         let root_environment = root_instance.environment();
         let child_environment = child_instance.environment();
@@ -946,7 +946,10 @@ mod tests {
                     component.upgrade()?.partial_abs_moniker(),
                     root_instance.partial_abs_moniker()
                 );
-                assert_eq!(component.upgrade()?.abs_moniker(), root_instance.abs_moniker())
+                assert_eq!(
+                    component.upgrade()?.instanced_moniker(),
+                    root_instance.instanced_moniker()
+                )
             }
             _ => panic!("child environment's parent should be root component"),
         }

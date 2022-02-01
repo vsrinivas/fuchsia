@@ -226,8 +226,8 @@ where
     };
 
     let relative_moniker = RelativeMoniker::from_absolute(
-        storage_component_instance.abs_moniker(),
-        target.abs_moniker(),
+        storage_component_instance.instanced_moniker(),
+        target.instanced_moniker(),
     );
 
     // Now route the backing directory capability.

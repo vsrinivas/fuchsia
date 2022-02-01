@@ -16,7 +16,7 @@ use {
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
-    moniker::{AbsoluteMoniker, ChildMonikerBase, RelativeMoniker, RelativeMonikerBase},
+    moniker::{ChildMonikerBase, InstancedAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase},
     routing::{
         component_id_index::ComponentInstanceId, component_instance::ComponentInstanceInterface,
     },
@@ -36,7 +36,7 @@ pub type StorageCapabilitySource =
 pub enum StorageError {
     #[error("failed to open {:?}'s directory {}: {} ", dir_source_moniker, dir_source_path, err)]
     OpenRoot {
-        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         #[source]
         err: ClonableError,
@@ -50,7 +50,7 @@ pub enum StorageError {
         err
     )]
     Open {
-        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         relative_moniker: RelativeMoniker,
         instance_id: Option<ComponentInstanceId>,
@@ -65,7 +65,7 @@ pub enum StorageError {
         err
     )]
     OpenById {
-        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         instance_id: ComponentInstanceId,
         #[source]
@@ -80,7 +80,7 @@ pub enum StorageError {
         err
     )]
     Remove {
-        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         relative_moniker: RelativeMoniker,
         instance_id: Option<ComponentInstanceId>,
@@ -100,7 +100,7 @@ pub enum StorageError {
 
 impl StorageError {
     pub fn open_root(
-        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         err: impl Into<Error>,
     ) -> Self {
@@ -108,7 +108,7 @@ impl StorageError {
     }
 
     pub fn open(
-        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         relative_moniker: RelativeMoniker,
         instance_id: Option<ComponentInstanceId>,
@@ -124,7 +124,7 @@ impl StorageError {
     }
 
     pub fn open_by_id(
-        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         instance_id: ComponentInstanceId,
         err: impl Into<Error>,
@@ -133,7 +133,7 @@ impl StorageError {
     }
 
     pub fn remove(
-        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         relative_moniker: RelativeMoniker,
         instance_id: Option<ComponentInstanceId>,
@@ -194,7 +194,10 @@ async fn open_storage_root(
     if let Some(subdir) = storage_source_info.storage_subdir.as_ref() {
         dir_proxy = io_util::create_sub_directories(&dir_proxy, subdir.as_path()).map_err(|e| {
             ModelError::from(StorageError::open_root(
-                storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker().clone()),
+                storage_source_info
+                    .storage_provider
+                    .as_ref()
+                    .map(|r| r.instanced_moniker().clone()),
                 storage_source_info.backing_directory_path.clone(),
                 e,
             ))
@@ -220,7 +223,7 @@ pub async fn open_isolated_storage(
 
     io_util::create_sub_directories(&root_dir, &storage_path).map_err(|e| {
         ModelError::from(StorageError::open(
-            storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker().clone()),
+            storage_source_info.storage_provider.as_ref().map(|r| r.instanced_moniker().clone()),
             storage_source_info.backing_directory_path.clone(),
             relative_moniker.clone(),
             instance_id.cloned(),
@@ -242,7 +245,7 @@ pub async fn open_isolated_storage_by_id(
 
     io_util::create_sub_directories(&root_dir, &storage_path).map_err(|e| {
         ModelError::from(StorageError::open_by_id(
-            storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker().clone()),
+            storage_source_info.storage_provider.as_ref().map(|r| r.instanced_moniker().clone()),
             storage_source_info.backing_directory_path.clone(),
             instance_id,
             e,
@@ -287,7 +290,10 @@ pub async fn delete_isolated_storage(
         } else {
             io_util::open_directory(&root_dir, parent_path, FLAGS).map_err(|e| {
                 StorageError::open(
-                    storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker().clone()),
+                    storage_source_info
+                        .storage_provider
+                        .as_ref()
+                        .map(|r| r.instanced_moniker().clone()),
                     storage_source_info.backing_directory_path.clone(),
                     relative_moniker.clone(),
                     None,
@@ -315,7 +321,10 @@ pub async fn delete_isolated_storage(
         } else {
             io_util::open_directory(&root_dir, &dir_path, FLAGS).map_err(|e| {
                 StorageError::open(
-                    storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker().clone()),
+                    storage_source_info
+                        .storage_provider
+                        .as_ref()
+                        .map(|r| r.instanced_moniker().clone()),
                     storage_source_info.backing_directory_path.clone(),
                     relative_moniker.clone(),
                     None,
@@ -333,7 +342,7 @@ pub async fn delete_isolated_storage(
     // prior run.
     files_async::remove_dir_recursive(&dir, &name).await.map_err(|e| {
         StorageError::remove(
-            storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker().clone()),
+            storage_source_info.storage_provider.as_ref().map(|r| r.instanced_moniker().clone()),
             storage_source_info.backing_directory_path.clone(),
             relative_moniker.clone(),
             instance_id.cloned(),
@@ -415,7 +424,7 @@ mod tests {
         cm_rust::*,
         cm_rust_testing::ComponentDeclBuilder,
         component_id_index, fidl_fuchsia_io2 as fio2,
-        moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
+        moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker, PartialAbsoluteMoniker},
         rand::{self, distributions::Alphanumeric, Rng},
         std::{
             convert::{TryFrom, TryInto},
@@ -860,22 +869,22 @@ mod tests {
         for (relative_moniker, expected_output) in vec![
             (
                 RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1"]),
+                    &InstancedAbsoluteMoniker::from(vec![]),
+                    &InstancedAbsoluteMoniker::from(vec!["a:1"]),
                 ),
                 "a:1/data",
             ),
             (
                 RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2"]),
+                    &InstancedAbsoluteMoniker::from(vec![]),
+                    &InstancedAbsoluteMoniker::from(vec!["a:1", "b:2"]),
                 ),
                 "a:1/children/b:2/data",
             ),
             (
                 RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
+                    &InstancedAbsoluteMoniker::from(vec![]),
+                    &InstancedAbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
                 ),
                 "a:1/children/b:2/children/c:3/data",
             ),

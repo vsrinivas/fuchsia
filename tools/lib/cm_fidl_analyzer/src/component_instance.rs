@@ -12,7 +12,7 @@ use {
         CapabilityDecl, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl, OfferDecl, UseDecl,
     },
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase,
+        AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, InstancedAbsoluteMoniker,
         PartialAbsoluteMoniker, PartialChildMoniker,
     },
     routing::{
@@ -36,7 +36,7 @@ use {
 /// A representation of a v2 component instance.
 #[derive(Debug)]
 pub struct ComponentInstanceForAnalyzer {
-    abs_moniker: AbsoluteMoniker,
+    instanced_moniker: InstancedAbsoluteMoniker,
     partial_abs_moniker: PartialAbsoluteMoniker,
     pub(crate) decl: ComponentDecl,
     url: String,
@@ -72,10 +72,10 @@ impl ComponentInstanceForAnalyzer {
     ) -> Arc<Self> {
         let environment =
             EnvironmentForAnalyzer::new_root(runner_registry, &runtime_config, &top_instance);
-        let abs_moniker = AbsoluteMoniker::root();
-        let partial_abs_moniker = abs_moniker.clone().to_partial();
+        let instanced_moniker = InstancedAbsoluteMoniker::root();
+        let partial_abs_moniker = instanced_moniker.clone().to_partial();
         Arc::new(Self {
-            abs_moniker,
+            instanced_moniker,
             partial_abs_moniker,
             decl,
             url,
@@ -99,10 +99,11 @@ impl ComponentInstanceForAnalyzer {
         component_id_index: Arc<ComponentIdIndex>,
     ) -> Result<Arc<Self>, BuildAnalyzerModelError> {
         let environment = EnvironmentForAnalyzer::new_for_child(&parent, child)?;
-        let abs_moniker = parent.abs_moniker.child(ChildMoniker::new(child.name.clone(), None, 0));
-        let partial_abs_moniker = abs_moniker.clone().to_partial();
+        let instanced_moniker =
+            parent.instanced_moniker.child(ChildMoniker::new(child.name.clone(), None, 0));
+        let partial_abs_moniker = instanced_moniker.clone().to_partial();
         Ok(Arc::new(Self {
-            abs_moniker,
+            instanced_moniker,
             partial_abs_moniker,
             decl,
             url: absolute_url,
@@ -150,8 +151,8 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
     type TopInstance = TopInstanceForAnalyzer;
     type DebugRouteMapper = RouteMapper;
 
-    fn abs_moniker(&self) -> &AbsoluteMoniker {
-        &self.abs_moniker
+    fn instanced_moniker(&self) -> &InstancedAbsoluteMoniker {
+        &self.instanced_moniker
     }
 
     fn partial_abs_moniker(&self) -> &PartialAbsoluteMoniker {
@@ -159,7 +160,7 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
     }
 
     fn child_moniker(&self) -> Option<&ChildMoniker> {
-        self.abs_moniker.leaf()
+        self.instanced_moniker.leaf()
     }
 
     fn url(&self) -> &str {

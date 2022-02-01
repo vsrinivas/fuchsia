@@ -31,7 +31,7 @@ use {
     cm_rust::{CapabilityName, EventMode, UseDecl, UseEventDecl},
     fuchsia_trace as trace,
     futures::lock::Mutex,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
+    moniker::{AbsoluteMonikerBase, ExtendedMoniker, InstancedAbsoluteMoniker},
     std::{
         collections::HashMap,
         sync::{Arc, Weak},
@@ -120,7 +120,7 @@ impl SubscriptionOptions {
 impl Default for SubscriptionOptions {
     fn default() -> SubscriptionOptions {
         SubscriptionOptions {
-            subscription_type: SubscriptionType::Component(AbsoluteMoniker::root()),
+            subscription_type: SubscriptionType::Component(InstancedAbsoluteMoniker::root()),
             execution_mode: ExecutionMode::Production,
         }
     }
@@ -132,8 +132,8 @@ pub enum SubscriptionType {
     /// Event routing will be bypassed and all events can be subscribed.
     AboveRoot,
     /// Indicates that a component is subscribing to events and the target is
-    /// the provided AbsoluteMoniker.
-    Component(AbsoluteMoniker),
+    /// the provided InstancedAbsoluteMoniker.
+    Component(InstancedAbsoluteMoniker),
 }
 
 #[derive(Clone)]
@@ -212,9 +212,10 @@ impl EventRegistry {
                 .map(|(source_name, mode)| RoutedEvent {
                     source_name: source_name.clone(),
                     mode: mode.clone(),
-                    scopes: vec![
-                        EventDispatcherScope::new(AbsoluteMoniker::root().into()).for_debug()
-                    ],
+                    scopes: vec![EventDispatcherScope::new(
+                        InstancedAbsoluteMoniker::root().into(),
+                    )
+                    .for_debug()],
                 })
                 .collect(),
             SubscriptionType::Component(target_moniker) => {
@@ -336,7 +337,7 @@ impl EventRegistry {
 
     pub async fn route_events(
         &self,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &InstancedAbsoluteMoniker,
         events: &HashMap<CapabilityName, EventMode>,
     ) -> Result<RouteEventsResult, ModelError> {
         let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
@@ -387,7 +388,7 @@ impl EventRegistry {
             RouteSource::Event(CapabilitySource::Framework {
                 capability: InternalCapability::Event(source_name),
                 component,
-            }) => Ok((source_name, component.abs_moniker.into())),
+            }) => Ok((source_name, component.instanced_moniker.into())),
             RouteSource::Event(CapabilitySource::Builtin {
                 capability: InternalCapability::Event(source_name),
                 ..
@@ -446,7 +447,7 @@ mod tests {
         assert_matches::assert_matches,
         cm_rust::ProtocolDecl,
         fuchsia_async as fasync, fuchsia_zircon as zx,
-        moniker::AbsoluteMoniker,
+        moniker::InstancedAbsoluteMoniker,
     };
 
     async fn dispatch_capability_requested_event(
@@ -455,10 +456,10 @@ mod tests {
         let (_, capability_server_end) = zx::Channel::create().unwrap();
         let capability_server_end = Arc::new(Mutex::new(Some(capability_server_end)));
         let event = ComponentEvent::new_for_test(
-            AbsoluteMoniker::root(),
+            InstancedAbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRequested {
-                source_moniker: AbsoluteMoniker::root(),
+                source_moniker: InstancedAbsoluteMoniker::root(),
                 name: "foo".to_string(),
                 capability: capability_server_end,
             }),
@@ -468,7 +469,7 @@ mod tests {
 
     async fn dispatch_fake_event(registry: &EventRegistry) -> Result<(), ModelError> {
         let event = ComponentEvent::new_for_test(
-            AbsoluteMoniker::root(),
+            InstancedAbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::Discovered),
         );
@@ -476,7 +477,7 @@ mod tests {
     }
 
     async fn dispatch_error_event(registry: &EventRegistry) -> Result<(), ModelError> {
-        let root = AbsoluteMoniker::root();
+        let root = InstancedAbsoluteMoniker::root();
         let event = ComponentEvent::new_for_test(
             root.clone(),
             "fuchsia-pkg://root",
@@ -517,7 +518,7 @@ mod tests {
         };
         let capability_provider = Arc::new(Mutex::new(None));
         let event = ComponentEvent::new_for_test(
-            AbsoluteMoniker::root(),
+            InstancedAbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRouted { source: source.clone(), capability_provider }),
         );
@@ -539,7 +540,7 @@ mod tests {
             },
             scope_moniker,
             ..
-        } if capability == capability && scope_moniker == AbsoluteMoniker::root().into());
+        } if capability == capability && scope_moniker == InstancedAbsoluteMoniker::root().into());
 
         Ok(())
     }

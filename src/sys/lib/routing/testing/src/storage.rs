@@ -12,7 +12,7 @@ use {
     component_id_index::gen_instance_id,
     fidl_fuchsia_component_decl as fdecl, fuchsia_zircon_status as zx_status,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, PartialAbsoluteMoniker,
+        AbsoluteMonikerBase, ExtendedMoniker, InstancedAbsoluteMoniker, PartialAbsoluteMoniker,
         RelativeMoniker, RelativeMonikerBase,
     },
     routing::{
@@ -1208,7 +1208,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         builder.set_namespace_capabilities(namespace_capabilities);
         builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::root()),
                 source_name: CapabilityName::from("cache"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Storage,

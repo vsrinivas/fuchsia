@@ -7,7 +7,7 @@ use {
         addable_directory::AddableDirectory, component::WeakComponentInstance, error::ModelError,
     },
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
-    moniker::AbsoluteMoniker,
+    moniker::InstancedAbsoluteMoniker,
     std::collections::HashMap,
     vfs::directory::immutable::simple as pfs,
     vfs::remote::{remote_boxed, RoutingFn},
@@ -79,17 +79,17 @@ impl DirTree {
     /// Installs the directory tree into `root_dir`.
     pub fn install<'entries>(
         self,
-        abs_moniker: &AbsoluteMoniker,
+        instanced_moniker: &InstancedAbsoluteMoniker,
         root_dir: &mut impl AddableDirectory,
     ) -> Result<(), ModelError> {
         for (name, subtree) in self.directory_nodes {
             let mut subdir = pfs::simple();
-            subtree.install(abs_moniker, &mut subdir)?;
-            root_dir.add_node(&name, subdir, abs_moniker)?;
+            subtree.install(instanced_moniker, &mut subdir)?;
+            root_dir.add_node(&name, subdir, instanced_moniker)?;
         }
         for (name, route_fn) in self.broker_nodes {
             let node = remote_boxed(route_fn);
-            root_dir.add_node(&name, node, abs_moniker)?;
+            root_dir.add_node(&name, node, instanced_moniker)?;
         }
         Ok(())
     }
@@ -227,7 +227,8 @@ mod tests {
 
         // Convert the tree to a directory.
         let mut in_dir = pfs::simple();
-        tree.install(&root.abs_moniker(), &mut in_dir).expect("Unable to build pseudodirectory");
+        tree.install(&root.instanced_moniker(), &mut in_dir)
+            .expect("Unable to build pseudodirectory");
         let (in_dir_client, in_dir_server) = zx::Channel::create().unwrap();
         in_dir.open(
             ExecutionScope::new(),
@@ -305,7 +306,7 @@ mod tests {
 
         // Convert the tree to a directory.
         let mut expose_dir = pfs::simple();
-        tree.install(&root.abs_moniker(), &mut expose_dir)
+        tree.install(&root.instanced_moniker(), &mut expose_dir)
             .expect("Unable to build pseudodirectory");
         let (expose_dir_client, expose_dir_server) = zx::Channel::create().unwrap();
         expose_dir.open(

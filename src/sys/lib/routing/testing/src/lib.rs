@@ -29,7 +29,7 @@ use {
     fidl_fuchsia_data as fdata, fuchsia_zircon_status as zx,
     maplit::hashmap,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker,
+        AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker, InstancedAbsoluteMoniker,
         PartialAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase,
     },
     routing::{
@@ -3341,7 +3341,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         let mut builder = T::new("a", components);
         builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::root()),
                 source_name: CapabilityName::from("hippo_svc"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
@@ -3402,7 +3402,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         let mut builder = T::new("a", components);
         builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::root()),
                 source_name: CapabilityName::from("foo_data"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Directory,
@@ -3481,7 +3481,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         let mut builder = T::new("a", components);
         builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::root()),
                 source_name: CapabilityName::from("hippo_svc"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
@@ -3588,7 +3588,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         let mut builder = T::new("a", components);
         builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::root()),
                 source_name: CapabilityName::from("hippo_svc"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
@@ -3739,9 +3739,9 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         })]);
         builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
-                    "b:0",
-                ])),
+                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(
+                    vec!["b:0"],
+                )),
                 source_name: CapabilityName::from("started"),
                 source: CapabilityAllowlistSource::Framework,
                 capability: CapabilityTypeName::Event,
@@ -3750,9 +3750,9 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         );
         builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
-                    "b:0",
-                ])),
+                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(
+                    vec!["b:0"],
+                )),
                 source_name: CapabilityName::from("capability_requested"),
                 source: CapabilityAllowlistSource::Framework,
                 capability: CapabilityTypeName::Event,
@@ -3865,7 +3865,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::root()),
                 source_name: CapabilityName::from("svc_allowed"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
@@ -3971,9 +3971,9 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
-                    "b:0",
-                ])),
+                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(
+                    vec!["b:0"],
+                )),
                 source_name: CapabilityName::from("svc_allowed"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
@@ -4095,9 +4095,9 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
-                    "b:0", "d:0",
-                ])),
+                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(
+                    vec!["b:0", "d:0"],
+                )),
                 source_name: CapabilityName::from("svc_allowed"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
@@ -4236,9 +4236,9 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
-                    "b:0", "d:0", "e:0",
-                ])),
+                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(
+                    vec!["b:0", "d:0", "e:0"],
+                )),
                 source_name: CapabilityName::from("svc_allowed"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,

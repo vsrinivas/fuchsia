@@ -31,7 +31,9 @@ use {
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fuchsia_async as fasync,
     fuchsia_zircon as zx,
     futures::{future::pending, join, lock::Mutex, prelude::*},
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
+    moniker::{
+        AbsoluteMonikerBase, InstancedAbsoluteMoniker, PartialAbsoluteMoniker, PartialChildMoniker,
+    },
     std::sync::Arc,
     std::{collections::HashSet, convert::TryFrom},
 };
@@ -407,7 +409,7 @@ async fn bind_action_sequence() {
     event_source.start_component_tree().await;
 
     // Child of root should start out discovered but not resolved yet.
-    let m = AbsoluteMoniker::new(vec!["system:0".into()]);
+    let m = InstancedAbsoluteMoniker::new(vec!["system:0".into()]);
     let start_model = model.start();
     let check_events = async {
         let event = event_stream.wait_until(EventType::Discovered, m.clone()).await.unwrap();
