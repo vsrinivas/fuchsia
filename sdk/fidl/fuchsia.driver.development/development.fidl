@@ -82,7 +82,8 @@ type DeviceInfo = table {
     /// The process KOID of the driver host the driver resides within.
     4: driver_host_koid zx.koid;
 
-    /// The topological path of the driver.
+    /// The topological path of the driver. Once drivers are components, this
+    /// will also be the collection relative moniker.
     5: topological_path string:fuchsia.device.manager.DEVICE_PATH_MAX;
 
     /// Path to the driver shared library.
@@ -93,9 +94,6 @@ type DeviceInfo = table {
     8: property_list fuchsia.device.manager.DevicePropertyList;
 
     9: flags DeviceFlags;
-
-    // The collection-relative moniker of the node.
-   10: moniker string:fuchsia.device.manager.DEVICE_PATH_MAX;
 };
 
 protocol DriverInfoIterator {
