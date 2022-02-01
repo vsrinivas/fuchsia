@@ -47,7 +47,6 @@ skip_updating = [
     "hex",
     "hyper",
     "hyper-rustls",
-    "indoc",
     "itertools",
     "itoa",
     "libc",

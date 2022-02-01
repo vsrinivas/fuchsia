@@ -350,7 +350,7 @@ if (current_os == "fuchsia") {
 
 if (!(current_os == "fuchsia")) {
   group("indoc") {
-    deps = [ ":indoc-v0_3_3" ]
+    deps = [ ":indoc-v1_0_3($host_toolchain)" ]
   }
 }
 
@@ -5153,54 +5153,25 @@ rust_library("indexmap-v1_0_2") {
   visibility = [ ":*" ]
 }
 
-rust_library("indoc-v0_3_3") {
+rust_proc_macro("indoc-v1_0_3") {
   crate_name = "indoc"
   crate_root = "//third_party/rust_crates/vendor/indoc/src/lib.rs"
-  output_name = "indoc-f092045a458190be"
+  output_name = "indoc-da3b32d05f72f95e"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":indoc-impl-v0_3_3($host_toolchain)" ]
-  deps += [ ":proc-macro-hack-v0_5_19($host_toolchain)" ]
+  deps += [ ":unindent-v0_1_7" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=f092045a458190be",
-    "-Cextra-filename=-f092045a458190be",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-rust_proc_macro("indoc-impl-v0_3_3") {
-  crate_name = "indoc_impl"
-  crate_root = "//third_party/rust_crates/vendor/indoc-impl/src/lib.rs"
-  output_name = "indoc_impl-32e49cf2e672c9bc"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":proc-macro-hack-v0_5_19($host_toolchain)" ]
-  deps += [ ":proc-macro2-v0_4_27" ]
-  deps += [ ":quote-v0_6_11" ]
-  deps += [ ":syn-v0_15_26" ]
-  deps += [ ":unindent-v0_1_3" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=32e49cf2e672c9bc",
-    "-Cextra-filename=-32e49cf2e672c9bc",
+    "-Cmetadata=da3b32d05f72f95e",
+    "-Cextra-filename=-da3b32d05f72f95e",
   ]
 
   visibility = [ ":*" ]
@@ -11771,10 +11742,10 @@ rust_library("unicode-xid-v0_2_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("unindent-v0_1_3") {
+rust_library("unindent-v0_1_7") {
   crate_name = "unindent"
   crate_root = "//third_party/rust_crates/vendor/unindent/src/lib.rs"
-  output_name = "unindent-80aa0ce7cd6efa63"
+  output_name = "unindent-d666df4068b09289"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -11786,9 +11757,9 @@ rust_library("unindent-v0_1_3") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=80aa0ce7cd6efa63",
-    "-Cextra-filename=-80aa0ce7cd6efa63",
+    "--edition=2018",
+    "-Cmetadata=d666df4068b09289",
+    "-Cextra-filename=-d666df4068b09289",
   ]
 
   visibility = [ ":*" ]
