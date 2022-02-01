@@ -63,7 +63,7 @@
             path: "/config/data",
         },
         {
-            storage: "data",
+            storage: "account",
             path: "/data",
         },
     ],

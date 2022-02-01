@@ -91,11 +91,12 @@
             from: "parent",
             to: "#login_shell",
         },
-        {
-            storage: "data",
-            from: "parent",
-            to: "#login_shell",
-        },
+        // Note: The "data" storage capability used to store
+        // device data is not passed to login_shell, components
+        // inside the session should use the "account" storage
+        // capability intended for storaging account data. The
+        // account storage capability is encrypted using the
+        // account's authentication factors.
 
         // Support Chrome as a static component.
         {

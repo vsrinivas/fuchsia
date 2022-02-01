@@ -6,6 +6,7 @@ import 'dart:convert' show json;
 import 'dart:io';
 
 import 'package:ermine_utils/ermine_utils.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:mobx/mobx.dart';
 
 /// Defines a service that allows reading and storing application data.
@@ -64,6 +65,9 @@ class PreferencesService with Disposable {
     file = File(kPreferencesJson);
     if (file.existsSync()) {
       result.addAll(parsePreferences(file.readAsStringSync()));
+      log.info('Read settings from previous session');
+    } else {
+      log.info('Failed to read settings from previous session');
     }
 
     return result;

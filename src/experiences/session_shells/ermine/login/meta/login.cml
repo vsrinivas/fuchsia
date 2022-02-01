@@ -112,9 +112,8 @@
             to: "#ermine_shell",
         },
         {
-            // TODO(http://fxb/89690): Replace with "account" when ready.
-            storage: "data",
-            from: "parent",
+            storage: "account",
+            from: "self",
             to: "#ermine_shell",
         },
     ],
