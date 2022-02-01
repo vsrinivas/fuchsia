@@ -101,6 +101,20 @@ zx_status_t BtHciMediatek::OpenAclDataChannel(void* ctx, zx_handle_t in_handle) 
   return reinterpret_cast<BtHciMediatek*>(ctx)->BtHciOpenAclDataChannel(in_handle);
 }
 
+zx_status_t BtHciMediatek::OpenScoChannel(void* ctx, zx_handle_t in_handle) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+void BtHciMediatek::ConfigureSco(void* ctx, sco_coding_format_t coding_format,
+                                 sco_encoding_t encoding, sco_sample_rate_t sample_rate,
+                                 bt_hci_configure_sco_callback callback, void* cookie) {
+  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+}
+
+void BtHciMediatek::ResetSco(void* ctx, bt_hci_reset_sco_callback callback, void* cookie) {
+  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+}
+
 zx_status_t BtHciMediatek::OpenSnoopChannel(void* ctx, zx_handle_t in_handle) {
   return reinterpret_cast<BtHciMediatek*>(ctx)->BtHciOpenSnoopChannel(in_handle);
 }

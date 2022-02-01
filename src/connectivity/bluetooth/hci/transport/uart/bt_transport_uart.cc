@@ -497,6 +497,20 @@ zx_status_t BtTransportUart::BtHciOpenSnoopChannel(zx::channel in) {
   return HciOpenChannel(&snoop_channel_, in.release());
 }
 
+zx_status_t BtTransportUart::BtHciOpenScoChannel(zx::channel channel) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+void BtTransportUart::BtHciConfigureSco(sco_coding_format_t coding_format, sco_encoding_t encoding,
+                                        sco_sample_rate_t sample_rate,
+                                        bt_hci_configure_sco_callback callback, void* cookie) {
+  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+}
+
+void BtTransportUart::BtHciResetSco(bt_hci_reset_sco_callback callback, void* cookie) {
+  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+}
+
 zx_status_t BtTransportUart::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
   if (proto_id != ZX_PROTOCOL_BT_HCI) {
     // Pass this on for drivers to load firmware / initialize

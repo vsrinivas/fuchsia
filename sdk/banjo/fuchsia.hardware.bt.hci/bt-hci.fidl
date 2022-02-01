@@ -5,6 +5,21 @@ library fuchsia.hardware.bt.hci;
 
 using zx;
 
+type ScoCodingFormat = strict enum : uint8 {
+    CVSD = 1;
+    MSBC = 2;
+};
+
+type ScoEncoding = strict enum : uint8 {
+    BITS_8 = 1;
+    BITS_16 = 2;
+};
+
+type ScoSampleRate = strict enum : uint8 {
+    KHZ_8 = 1;
+    KHZ_16 = 2;
+};
+
 @transport("Banjo")
 @banjo_layout("ddk-protocol")
 protocol BtHci {
@@ -16,6 +31,7 @@ protocol BtHci {
     }) -> (struct {
         s zx.status;
     });
+
     /// Open the two-way HCI ACL data channel.
     /// Returns ZX_ERR_ALREADY_BOUND if the channel is already open.
     OpenAclDataChannel(resource struct {
@@ -23,6 +39,41 @@ protocol BtHci {
     }) -> (struct {
         s zx.status;
     });
+
+    /// Opens a SCO channel on the provided handle. The zircon channel is
+    /// closed in the event of an error opening the hci channel or if the hci
+    /// channel is already associated with a handle to another zircon channel.
+    /// Returns ZX_ERR_NOT_SUPPORTED if SCO is not supported by the current vendor or transport
+    /// driver.
+    /// Returns ZX_ERR_ALREADY_BOUND if the channel is already open.
+    OpenScoChannel(resource struct {
+        channel zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
+
+    /// Configure the HCI for a SCO connection with the indicated parameters.
+    /// This must be called before sending/receiving data on the SCO channel.
+    /// Returns ZX_ERR_NOT_SUPPORTED if SCO is not supported by the current vendor or transport
+    /// driver.
+    @async
+    ConfigureSco(struct {
+        coding_format ScoCodingFormat;
+        encoding ScoEncoding;
+        sample_rate ScoSampleRate;
+    }) -> (struct {
+        s zx.status;
+    });
+
+    /// Releases resources held by an active SCO connection. Must be called
+    /// when a SCO connection is closed.
+    /// Returns ZX_ERR_NOT_SUPPORTED if SCO is not supported by the current vendor or transport
+    /// driver.
+    @async
+    ResetSco() -> (struct {
+        s zx.status;
+    });
+
     /// Open an output-only channel for monitoring HCI traffic.
     /// The format of each message is: [1-octet flags] [n-octet payload]
     /// The flags octet is a bitfield with the following values defined:

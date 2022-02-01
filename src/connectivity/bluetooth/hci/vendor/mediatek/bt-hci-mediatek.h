@@ -73,6 +73,11 @@ class BtHciMediatek : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_B
 
   static zx_status_t OpenCommandChannel(void* ctx, zx_handle_t in_handle);
   static zx_status_t OpenAclDataChannel(void* ctx, zx_handle_t in_handle);
+  static zx_status_t OpenScoChannel(void* ctx, zx_handle_t in_handle);
+  static void ConfigureSco(void* ctx, sco_coding_format_t coding_format, sco_encoding_t encoding,
+                           sco_sample_rate_t sample_rate, bt_hci_configure_sco_callback callback,
+                           void* cookie);
+  static void ResetSco(void* ctx, bt_hci_reset_sco_callback callback, void* cookie);
   static zx_status_t OpenSnoopChannel(void* ctx, zx_handle_t in_handle);
 
   zx_status_t Init(const zx::vmo& fw_vmo, size_t fw_size);
@@ -108,6 +113,9 @@ class BtHciMediatek : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_B
   bool thread_running_ TA_GUARDED(thread_mutex_) = false;
   bt_hci_protocol_ops_t protocol_ops_ = {.open_command_channel = OpenCommandChannel,
                                          .open_acl_data_channel = OpenAclDataChannel,
+                                         .open_sco_channel = OpenScoChannel,
+                                         .configure_sco = ConfigureSco,
+                                         .reset_sco = ResetSco,
                                          .open_snoop_channel = OpenSnoopChannel};
   const size_t fw_part_max_size_;
 };

@@ -56,6 +56,11 @@ class Device {
  private:
   static zx_status_t OpenCommandChannel(void* ctx, zx_handle_t channel);
   static zx_status_t OpenAclDataChannel(void* ctx, zx_handle_t channel);
+  static zx_status_t OpenScoChannel(void* ctx, zx_handle_t channel);
+  static void ConfigureSco(void* ctx, sco_coding_format_t coding_format, sco_encoding_t encoding,
+                           sco_sample_rate_t sample_rate, bt_hci_configure_sco_callback callback,
+                           void* cookie);
+  static void ResetSco(void* ctx, bt_hci_reset_sco_callback callback, void* cookie);
   static zx_status_t OpenSnoopChannel(void* ctx, zx_handle_t channel);
 
   static constexpr fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops_ = {

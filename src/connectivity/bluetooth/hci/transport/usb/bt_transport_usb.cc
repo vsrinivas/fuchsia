@@ -802,6 +802,18 @@ zx_status_t Device::BtHciOpenAclDataChannel(zx::channel channel) {
   return HciOpenChannel(&acl_channel_, std::move(channel), ReadThreadPortKey::kAclChannel);
 }
 
+zx_status_t Device::BtHciOpenScoChannel(zx::channel channel) { return ZX_ERR_NOT_SUPPORTED; }
+
+void Device::BtHciConfigureSco(sco_coding_format_t coding_format, sco_encoding_t encoding,
+                               sco_sample_rate_t sample_rate,
+                               bt_hci_configure_sco_callback callback, void* cookie) {
+  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+}
+
+void Device::BtHciResetSco(bt_hci_reset_sco_callback callback, void* cookie) {
+  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+}
+
 zx_status_t Device::BtHciOpenSnoopChannel(zx::channel channel) {
   zxlogf(TRACE, "%s", __FUNCTION__);
 

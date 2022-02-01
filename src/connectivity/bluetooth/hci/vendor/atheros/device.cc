@@ -326,6 +326,18 @@ zx_status_t Device::OpenAclDataChannel(void* ctx, zx_handle_t channel) {
   return bt_hci_open_acl_data_channel(&self.hci_, channel);
 }
 
+zx_status_t Device::OpenScoChannel(void* ctx, zx_handle_t channel) { return ZX_ERR_NOT_SUPPORTED; }
+
+void Device::ConfigureSco(void* ctx, sco_coding_format_t coding_format, sco_encoding_t encoding,
+                          sco_sample_rate_t sample_rate, bt_hci_configure_sco_callback callback,
+                          void* cookie) {
+  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+}
+
+void Device::ResetSco(void* ctx, bt_hci_reset_sco_callback callback, void* cookie) {
+  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+}
+
 zx_status_t Device::OpenSnoopChannel(void* ctx, zx_handle_t channel) {
   auto& self = *static_cast<btatheros::Device*>(ctx);
   return bt_hci_open_snoop_channel(&self.hci_, channel);

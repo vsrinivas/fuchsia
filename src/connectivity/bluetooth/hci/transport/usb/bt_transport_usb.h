@@ -47,6 +47,11 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   // ddk::BtHciProtocol mixins:
   zx_status_t BtHciOpenCommandChannel(zx::channel channel);
   zx_status_t BtHciOpenAclDataChannel(zx::channel channel);
+  zx_status_t BtHciOpenScoChannel(zx::channel channel);
+  void BtHciConfigureSco(sco_coding_format_t coding_format, sco_encoding_t encoding,
+                         sco_sample_rate_t sample_rate, bt_hci_configure_sco_callback callback,
+                         void* cookie);
+  void BtHciResetSco(bt_hci_reset_sco_callback callback, void* cookie);
   zx_status_t BtHciOpenSnoopChannel(zx::channel channel);
 
  private:

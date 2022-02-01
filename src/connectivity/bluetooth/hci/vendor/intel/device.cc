@@ -272,6 +272,18 @@ zx_status_t Device::BtHciOpenAclDataChannel(zx::channel in) {
   return hci_.OpenAclDataChannel(std::move(in));
 }
 
+zx_status_t Device::BtHciOpenScoChannel(zx::channel in) { return ZX_ERR_NOT_SUPPORTED; }
+
+void Device::BtHciConfigureSco(sco_coding_format_t coding_format, sco_encoding_t encoding,
+                               sco_sample_rate_t sample_rate,
+                               bt_hci_configure_sco_callback callback, void* cookie) {
+  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+}
+
+void Device::BtHciResetSco(bt_hci_reset_sco_callback callback, void* cookie) {
+  callback(cookie, ZX_ERR_NOT_SUPPORTED);
+}
+
 zx_status_t Device::BtHciOpenSnoopChannel(zx::channel in) {
   return hci_.OpenSnoopChannel(std::move(in));
 }
