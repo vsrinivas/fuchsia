@@ -7,7 +7,6 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment_fixture.h>
@@ -36,9 +35,8 @@ enum class GuestKernel {
 // GuestTest.
 class EnclosedGuest {
  public:
-  EnclosedGuest()
-      : loop_(&kAsyncLoopConfigAttachToCurrentThread),
-        real_services_(sys::ServiceDirectory::CreateFromNamespace()) {}
+  explicit EnclosedGuest(async::Loop& loop)
+      : loop_(loop), real_services_(sys::ServiceDirectory::CreateFromNamespace()) {}
   virtual ~EnclosedGuest() {}
 
   // Install the guest services.
@@ -127,7 +125,7 @@ class EnclosedGuest {
   async::Loop* GetLoop() { return &loop_; }
 
  private:
-  async::Loop loop_;
+  async::Loop& loop_;
 
   // Guest services.
   std::shared_ptr<sys::ServiceDirectory> real_services_;
@@ -147,6 +145,8 @@ class EnclosedGuest {
 
 class ZirconEnclosedGuest : public EnclosedGuest {
  public:
+  explicit ZirconEnclosedGuest(async::Loop& loop) : EnclosedGuest(loop) {}
+
   std::vector<std::string> GetTestUtilCommand(const std::string& util,
                                               const std::vector<std::string>& argv) override;
 
@@ -161,6 +161,8 @@ class ZirconEnclosedGuest : public EnclosedGuest {
 
 class DebianEnclosedGuest : public EnclosedGuest {
  public:
+  explicit DebianEnclosedGuest(async::Loop& loop) : EnclosedGuest(loop) {}
+
   std::vector<std::string> GetTestUtilCommand(const std::string& util,
                                               const std::vector<std::string>& argv) override;
 
@@ -175,6 +177,9 @@ class DebianEnclosedGuest : public EnclosedGuest {
 
 class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListener::Service {
  public:
+  explicit TerminaEnclosedGuest(async::Loop& loop)
+      : EnclosedGuest(loop), executor_(loop.dispatcher()) {}
+
   GuestKernel GetGuestKernel() override { return GuestKernel::LINUX; }
 
   std::vector<std::string> GetTestUtilCommand(const std::string& util,
@@ -197,7 +202,7 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
                        vm_tools::EmptyMessage* response) override;
 
   std::unique_ptr<vsh::BlockingCommandRunner> command_runner_;
-  async::Executor executor_{async_get_default_dispatcher()};
+  async::Executor executor_;
   std::unique_ptr<GrpcVsockServer> server_;
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
   fuchsia::virtualization::HostVsockEndpointPtr vsock_;

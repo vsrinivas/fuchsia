@@ -300,7 +300,6 @@ zx_status_t EnclosedGuest::Stop(zx::time deadline) {
   if (status != ZX_OK) {
     return status;
   }
-  loop_.Quit();
   return ZX_OK;
 }
 

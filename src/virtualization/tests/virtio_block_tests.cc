@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -217,6 +218,9 @@ class VirtioBlockTestGuest {
 
 class VirtioBlockZirconGuest : public ZirconEnclosedGuest, public VirtioBlockTestGuest {
  public:
+  explicit VirtioBlockZirconGuest(async::Loop& loop)
+      : ZirconEnclosedGuest(loop), VirtioBlockTestGuest() {}
+
   zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
     zx_status_t status = ZirconEnclosedGuest::LaunchInfo(url, cfg);
     if (status != ZX_OK) {
@@ -238,6 +242,9 @@ class VirtioBlockZirconGuest : public ZirconEnclosedGuest, public VirtioBlockTes
 
 class VirtioBlockDebianGuest : public DebianEnclosedGuest, public VirtioBlockTestGuest {
  public:
+  explicit VirtioBlockDebianGuest(async::Loop& loop)
+      : DebianEnclosedGuest(loop), VirtioBlockTestGuest() {}
+
   zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
     zx_status_t status = DebianEnclosedGuest::LaunchInfo(url, cfg);
     if (status != ZX_OK) {

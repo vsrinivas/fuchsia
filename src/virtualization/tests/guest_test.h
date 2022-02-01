@@ -5,7 +5,11 @@
 #ifndef SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_
 #define SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
+
+#include <optional>
 
 #include <fbl/type_info.h>
 #include <gtest/gtest.h>
@@ -20,13 +24,16 @@ class GuestTest : public ::testing::Test {
  public:
   static void SetUpTestSuite() {
     FX_LOGS(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
-    enclosed_guest_.emplace();
+    loop_.emplace(&kAsyncLoopConfigAttachToCurrentThread);
+    enclosed_guest_.emplace(*loop_);
     ASSERT_EQ(GetEnclosedGuest().Start(zx::time::infinite()), ZX_OK);
   }
 
   static void TearDownTestSuite() {
     EXPECT_EQ(GetEnclosedGuest().Stop(zx::time::infinite()), ZX_OK);
+    loop_->Quit();
     enclosed_guest_.reset();
+    loop_.reset();
   }
 
  protected:
@@ -70,6 +77,7 @@ class GuestTest : public ::testing::Test {
 
  private:
   static inline std::optional<T> enclosed_guest_;
+  static inline std::optional<async::Loop> loop_;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/socket.h>
@@ -18,7 +19,6 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
 
-using ::testing::Each;
 using ::testing::HasSubstr;
 
 static constexpr char kVirtioNetUtil[] = "virtio_net_test_util";
@@ -82,6 +82,8 @@ static void TestThread(fuchsia::hardware::ethernet::MacAddress mac_addr, FakeNet
 
 class VirtioNetMultipleInterfacesZirconGuest : public ZirconEnclosedGuest {
  public:
+  explicit VirtioNetMultipleInterfacesZirconGuest(async::Loop& loop) : ZirconEnclosedGuest(loop) {}
+
   zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
     zx_status_t status = ZirconEnclosedGuest::LaunchInfo(url, cfg);
     if (status != ZX_OK) {
@@ -132,6 +134,8 @@ TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
 #if __x86_64__
 class VirtioNetMultipleInterfacesDebianGuest : public DebianEnclosedGuest {
  public:
+  explicit VirtioNetMultipleInterfacesDebianGuest(async::Loop& loop) : DebianEnclosedGuest(loop) {}
+
   zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
     zx_status_t status = DebianEnclosedGuest::LaunchInfo(url, cfg);
     if (status != ZX_OK) {
