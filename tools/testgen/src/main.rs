@@ -516,27 +516,27 @@ mod test {
             true, /* cpp */
         )?;
         let create_realm_impl = code.realm_builder_snippets.join("\n");
-        let expect_realm_snippets = r#"      .AddComponent(
-        sys::testing::Moniker{"service_1"},
-        sys::testing::Component{.source = sys::testing::Mock {&mock_service_1}})
-      .AddRoute(sys::testing::CapabilityRoute {
-        .capability = sys::testing::Protocol {"fuchsia.diagnostics.ArchiveAccessor"},
-        .source = sys::testing::Moniker{"service_1"},
-        .targets = {sys::testing::AboveRoot(), sys::testing::Moniker{"foo_bar"}, }})
-      .AddComponent(
-        sys::testing::Moniker{"service_2"},
-        sys::testing::Component{.source = sys::testing::Mock {&mock_service_2}})
-      .AddRoute(sys::testing::CapabilityRoute {
-        .capability = sys::testing::Protocol {"fuchsia.metrics.MetricEventLoggerFactory"},
-        .source = sys::testing::Moniker{"service_2"},
-        .targets = {sys::testing::AboveRoot(), sys::testing::Moniker{"foo_bar"}, }})
-      .AddRoute(sys::testing::CapabilityRoute {
-        .capability = sys::testing::Directory {
+        let expect_realm_snippets = r#"      .AddLocalChild(
+        "service_1",
+        &mock_service_1)
+      .AddRoute(sys::testing::Route {
+        .capabilities = {sys::testing::Protocol {"fuchsia.diagnostics.ArchiveAccessor"}},
+        .source = sys::testing::ChildRef{"service_1"},
+        .targets = {sys::testing::ParentRef(), sys::testing::ChildRef{"foo_bar"}, }})
+      .AddLocalChild(
+        "service_2",
+        &mock_service_2)
+      .AddRoute(sys::testing::Route {
+        .capabilities = {sys::testing::Protocol {"fuchsia.metrics.MetricEventLoggerFactory"}},
+        .source = sys::testing::ChildRef{"service_2"},
+        .targets = {sys::testing::ParentRef(), sys::testing::ChildRef{"foo_bar"}, }})
+      .AddRoute(sys::testing::Route {
+        .capabilities = {sys::testing::Directory {
           .name = "config-data",
           .path = "/config/data",
-          .rights = fuchsia::io2::RW_STAR_DIR,},
-        .source = sys::testing::AboveRoot(),
-        .targets = {sys::testing::Moniker{"foo_bar"}, }})"#;
+          .rights = fuchsia::io2::RW_STAR_DIR,}},
+        .source = sys::testing::ParentRef(),
+        .targets = {sys::testing::ChildRef{"foo_bar"}, }})"#;
         assert_eq!(create_realm_impl, expect_realm_snippets);
 
         let mut all_imports = code.imports.clone();

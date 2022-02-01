@@ -35,7 +35,7 @@ class {}Test: public ::gtest::RealLoopFixture {{
         test_fixture.push_str(
             "
  protected:
-  std::unique_ptr<sys::testing::Realm> CreateRealm() {
+  std::unique_ptr<sys::testing::experimental::RealmRoot> CreateRealm() {
 ",
         );
 
@@ -51,7 +51,7 @@ class {}Test: public ::gtest::RealLoopFixture {{
         }
         test_fixture.push_str(
             r#"
-    auto realm_builder = sys::testing::Realm::Builder::Create();
+    auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
     realm_builder
 "#,
         );
@@ -59,7 +59,7 @@ class {}Test: public ::gtest::RealLoopFixture {{
         test_fixture.push_str(&self.code.realm_builder_snippets.join("\n"));
         test_fixture.push_str(";\n\n");
         test_fixture.push_str(
-            r#"    return std::make_unique<sys::testing::Realm>(realm_builder.Build(dispatcher()));
+            r#"    return std::make_unique<sys::testing::experimental::RealmRoot>(realm_builder.Build(dispatcher()));
   }
 };
 
@@ -165,16 +165,16 @@ impl TestCodeBuilder for CppTestCode {
         if mock {
             let mock_handle_name = format!("mock_{}", component_name);
             self.realm_builder_snippets.push(format!(
-                r#"      .AddComponent(
-        sys::testing::Moniker{{"{}"}},
-        sys::testing::Component{{.source = sys::testing::Mock {{&{}}}}})"#,
+                r#"      .AddLocalChild(
+        "{}",
+        &{})"#,
                 component_name, &mock_handle_name,
             ));
         } else {
             self.realm_builder_snippets.push(format!(
-                r#"      .AddComponent(
-        sys::testing::Moniker{{"{}"}},
-        sys::testing::Component{{.source = sys::testing::ComponentUrl {{{}}}}})"#,
+                r#"      .AddChild(
+        "{}",
+        {})"#,
                 component_name, const_var
             ));
             self.constants
@@ -207,28 +207,28 @@ impl TestCodeBuilder for CppTestCode {
         targets: Vec<String>,
     ) -> &'a dyn TestCodeBuilder {
         let source_code = match source {
-            "root" => "sys::testing::AboveRoot()".to_string(),
-            "self" => format!("sys::testing::Moniker{{\"{}\"}}", self.component_under_test),
-            _ => format!("sys::testing::Moniker{{\"{}\"}}", source),
+            "root" => "sys::testing::ParentRef()".to_string(),
+            "self" => format!("sys::testing::ChildRef{{\"{}\"}}", self.component_under_test),
+            _ => format!("sys::testing::ChildRef{{\"{}\"}}", source),
         };
 
         let mut targets_code: String = "".to_string();
         for i in 0..targets.len() {
             let t = &targets[i];
             match t.as_str() {
-                "root" => targets_code.push_str("sys::testing::AboveRoot(), "),
+                "root" => targets_code.push_str("sys::testing::ParentRef(), "),
                 "self" => targets_code.push_str(
-                    format!("sys::testing::Moniker{{\"{}\"}}, ", self.component_under_test)
+                    format!("sys::testing::ChildRef{{\"{}\"}}, ", self.component_under_test)
                         .as_str(),
                 ),
                 _ => {
-                    targets_code.push_str(format!("sys::testing::Moniker{{\"{}\"}}, ", t).as_str())
+                    targets_code.push_str(format!("sys::testing::ChildRef{{\"{}\"}}, ", t).as_str())
                 }
             }
         }
         self.realm_builder_snippets.push(format!(
-            r#"      .AddRoute(sys::testing::CapabilityRoute {{
-        .capability = sys::testing::Protocol {{"{}"}},
+            r#"      .AddRoute(sys::testing::Route {{
+        .capabilities = {{sys::testing::Protocol {{"{}"}}}},
         .source = {},
         .targets = {{{}}}}})"#,
             protocol, source_code, targets_code
@@ -246,23 +246,23 @@ impl TestCodeBuilder for CppTestCode {
         for i in 0..targets.len() {
             let t = &targets[i];
             match t.as_str() {
-                "root" => targets_code.push_str("sys::testing::AboveRoot(), "),
+                "root" => targets_code.push_str("sys::testing::ParentRef(), "),
                 "self" => targets_code.push_str(
-                    format!("sys::testing::Moniker{{\"{}\"}}, ", self.component_under_test)
+                    format!("sys::testing::ChildRef{{\"{}\"}}, ", self.component_under_test)
                         .as_str(),
                 ),
                 _ => {
-                    targets_code.push_str(format!("sys::testing::Moniker{{\"{}\"}}, ", t).as_str())
+                    targets_code.push_str(format!("sys::testing::ChildRef{{\"{}\"}}, ", t).as_str())
                 }
             }
         }
         self.realm_builder_snippets.push(format!(
-            r#"      .AddRoute(sys::testing::CapabilityRoute {{
-        .capability = sys::testing::Directory {{
+            r#"      .AddRoute(sys::testing::Route {{
+        .capabilities = {{sys::testing::Directory {{
           .name = "{}",
           .path = "{}",
-          .rights = fuchsia::io2::RW_STAR_DIR,}},
-        .source = sys::testing::AboveRoot(),
+          .rights = fuchsia::io2::RW_STAR_DIR,}}}},
+        .source = sys::testing::ParentRef(),
         .targets = {{{}}}}})"#,
             dir_name, dir_path, targets_code
         ));
@@ -279,22 +279,22 @@ impl TestCodeBuilder for CppTestCode {
         for i in 0..targets.len() {
             let t = &targets[i];
             match t.as_str() {
-                "root" => targets_code.push_str("sys::testing::AboveRoot(), "),
+                "root" => targets_code.push_str("sys::testing::ParentRef(), "),
                 "self" => targets_code.push_str(
-                    format!("sys::testing::Moniker{{\"{}\"}}, ", self.component_under_test)
+                    format!("sys::testing::ChildRef{{\"{}\"}}, ", self.component_under_test)
                         .as_str(),
                 ),
                 _ => {
-                    targets_code.push_str(format!("sys::testing::Moniker{{\"{}\"}}, ", t).as_str())
+                    targets_code.push_str(format!("sys::testing::ChildRef{{\"{}\"}}, ", t).as_str())
                 }
             }
         }
         self.realm_builder_snippets.push(format!(
-            r#"      .AddRoute(sys::testing::CapabilityRoute {{
-        .capability = sys::testing::Storage {{
+            r#"      .AddRoute(sys::testing::Route {{
+        .capabilities = {{sys::testing::Storage {{
           .name = "{}",
-          .path = "{}",}},
-        .source = sys::testing::AboveRoot(),
+          .path = "{}",}}}},
+        .source = sys::testing::ParentRef(),
         .targets = {{{}}}}})"#,
             storage_name, storage_path, targets_code
         ));
