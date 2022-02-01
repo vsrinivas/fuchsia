@@ -176,7 +176,7 @@ pub fn sys_statfs(
     user_path: UserCString,
     user_buf: UserRef<statfs>,
 ) -> Result<SyscallResult, Errno> {
-    let node = lookup_at(&current_task, FdNumber::AT_FDCWD, user_path, LookupOptions::default())?;
+    let node = lookup_at(&current_task, FdNumber::AT_FDCWD, user_path, LookupFlags::default())?;
     let file_system = node.entry.node.fs();
     let stat = file_system.statfs()?;
     current_task.mm.write_object(user_buf, &stat)?;
@@ -230,7 +230,7 @@ where
 }
 
 /// Options for lookup_at.
-struct LookupOptions {
+struct LookupFlags {
     /// Whether AT_EMPTY_PATH was supplied.
     allow_empty_path: bool,
 
@@ -238,9 +238,26 @@ struct LookupOptions {
     symlink_mode: SymlinkMode,
 }
 
-impl Default for LookupOptions {
+impl Default for LookupFlags {
     fn default() -> Self {
-        LookupOptions { allow_empty_path: false, symlink_mode: SymlinkMode::Follow }
+        LookupFlags { allow_empty_path: false, symlink_mode: SymlinkMode::Follow }
+    }
+}
+
+impl LookupFlags {
+    fn from_bits(flags: u32, allowed_flags: u32) -> Result<Self, Errno> {
+        if flags & !allowed_flags != 0 {
+            return error!(EINVAL);
+        }
+        let follow_symlinks = if allowed_flags & AT_SYMLINK_FOLLOW != 0 {
+            flags & AT_SYMLINK_FOLLOW != 0
+        } else {
+            flags & AT_SYMLINK_NOFOLLOW == 0
+        };
+        Ok(LookupFlags {
+            allow_empty_path: flags & AT_EMPTY_PATH != 0,
+            symlink_mode: if follow_symlinks { SymlinkMode::Follow } else { SymlinkMode::NoFollow },
+        })
     }
 }
 
@@ -248,7 +265,7 @@ fn lookup_at(
     current_task: &CurrentTask,
     dir_fd: FdNumber,
     user_path: UserCString,
-    options: LookupOptions,
+    options: LookupFlags,
 ) -> Result<NamespaceNode, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = current_task.mm.read_c_string(user_path, &mut buf)?;
@@ -306,7 +323,7 @@ pub fn sys_faccessat(
         current_task,
         dir_fd,
         user_path,
-        LookupOptions { allow_empty_path: false, symlink_mode: SymlinkMode::NoFollow },
+        LookupFlags { symlink_mode: SymlinkMode::NoFollow, ..Default::default() },
     )?;
     let node = &name.entry.node;
 
@@ -360,7 +377,7 @@ pub fn sys_chdir(
     current_task: &CurrentTask,
     user_path: UserCString,
 ) -> Result<SyscallResult, Errno> {
-    let name = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupOptions::default())?;
+    let name = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupFlags::default())?;
     if !name.entry.node.is_dir() {
         return error!(ENOTDIR);
     }
@@ -428,15 +445,8 @@ pub fn sys_newfstatat(
         not_implemented!("newfstatat: flags 0x{:x}", flags);
         return error!(ENOSYS);
     }
-    let options = LookupOptions {
-        allow_empty_path: flags & AT_EMPTY_PATH != 0,
-        symlink_mode: if flags & AT_SYMLINK_NOFOLLOW != 0 {
-            SymlinkMode::NoFollow
-        } else {
-            SymlinkMode::Follow
-        },
-    };
-    let name = lookup_at(current_task, dir_fd, user_path, options)?;
+    let flags = LookupFlags::from_bits(flags, AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW)?;
+    let name = lookup_at(current_task, dir_fd, user_path, flags)?;
     let result = name.entry.node.stat()?;
     current_task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
@@ -486,7 +496,7 @@ pub fn sys_truncate(
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| errno!(EINVAL))?;
-    let name = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupOptions::default())?;
+    let name = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupFlags::default())?;
     // TODO: Check for writability.
     name.entry.node.truncate(length)?;
     Ok(SUCCESS)
@@ -562,15 +572,8 @@ pub fn sys_linkat(
     }
 
     // TODO: AT_EMPTY_PATH requires CAP_DAC_READ_SEARCH.
-    let options = LookupOptions {
-        allow_empty_path: flags & AT_EMPTY_PATH != 0,
-        symlink_mode: if flags & AT_SYMLINK_FOLLOW != 0 {
-            SymlinkMode::Follow
-        } else {
-            SymlinkMode::NoFollow
-        },
-    };
-    let target = lookup_at(current_task, old_dir_fd, old_user_path, options)?;
+    let flags = LookupFlags::from_bits(flags, AT_EMPTY_PATH | AT_SYMLINK_FOLLOW)?;
+    let target = lookup_at(current_task, old_dir_fd, old_user_path, flags)?;
     if target.entry.node.is_dir() {
         return error!(EPERM);
     }
@@ -677,7 +680,7 @@ pub fn sys_fchmodat(
     if mode & FileMode::IFMT != FileMode::EMPTY {
         return error!(EINVAL);
     }
-    let name = lookup_at(current_task, dir_fd, user_path, LookupOptions::default())?;
+    let name = lookup_at(current_task, dir_fd, user_path, LookupFlags::default())?;
     name.entry.node.chmod(mode);
     Ok(SUCCESS)
 }
@@ -703,14 +706,16 @@ pub fn sys_fchown(
 }
 
 pub fn sys_fchownat(
-    _ctx: &CurrentTask,
-    _dir_fd: FdNumber,
-    _user_path: UserCString,
-    _owner: u32,
-    _group: u32,
-    _flags: u32,
+    current_task: &CurrentTask,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+    owner: u32,
+    group: u32,
+    flags: u32,
 ) -> Result<SyscallResult, Errno> {
-    not_implemented!("Stubbed fchownat has no effect.");
+    let flags = LookupFlags::from_bits(flags, AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW)?;
+    let name = lookup_at(current_task, dir_fd, user_path, flags)?;
+    name.entry.node.chown(maybe_uid(owner), maybe_uid(group));
     Ok(SUCCESS)
 }
 
@@ -890,7 +895,7 @@ fn lookup_for_mount(
     current_task: &CurrentTask,
     path_addr: UserCString,
 ) -> Result<NamespaceNode, Errno> {
-    let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupOptions::default())?;
+    let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupFlags::default())?;
     Ok(node.escape_mount())
 }
 
