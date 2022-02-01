@@ -822,6 +822,7 @@ mod test_utils {
         pub extern "C" fn clear_assoc(device: *mut c_void, addr: &MacAddr) -> i32 {
             unsafe {
                 (*(device as *mut Self)).assocs.remove(addr);
+                (*(device as *mut Self)).bss_cfg = None;
             }
             zx::sys::ZX_OK
         }
@@ -996,8 +997,9 @@ mod tests {
         crate::ddk_converter::{self, cssid_from_ssid_unchecked},
         banjo_ddk_hw_wlan_ieee80211::*,
         banjo_fuchsia_hardware_wlan_phyinfo::*,
-        banjo_fuchsia_wlan_internal as banjo_internal,
+        banjo_fuchsia_wlan_internal as banjo_internal, fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
+        ieee80211::Bssid,
         ieee80211::Ssid,
         std::convert::TryFrom,
         wlan_common::assert_variant,
@@ -1323,5 +1325,41 @@ mod tests {
         })
         .expect("error configuring assoc");
         assert!(fake_device.assocs.contains_key(&[1, 2, 3, 4, 5, 6]));
+    }
+    #[test]
+    fn clear_assoc() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let dev = fake_device.as_device();
+        dev.configure_bss(BssConfig {
+            bssid: [1, 2, 3, 4, 5, 6],
+            bss_type: banjo_internal::BssType::PERSONAL,
+            remote: true,
+        })
+        .expect("error configuring bss");
+        let assoc_ctx = ddk_converter::build_ddk_assoc_ctx(
+            Bssid([1, 2, 3, 4, 5, 6]),
+            1,
+            fidl_mlme::NegotiatedCapabilities {
+                channel: fidl_common::WlanChannel {
+                    primary: 149,
+                    cbw: fidl_common::ChannelBandwidth::Cbw40,
+                    secondary80: 42,
+                },
+                capability_info: 0,
+                rates: vec![],
+                wmm_param: None,
+                ht_cap: None,
+                vht_cap: None,
+            },
+            None,
+            None,
+        );
+        assert!(fake_device.bss_cfg.is_some());
+        dev.configure_assoc(assoc_ctx).expect("error configuring assoc");
+        assert_eq!(fake_device.assocs.len(), 1);
+        dev.clear_assoc(&[1, 2, 3, 4, 5, 6]).expect("error clearing assoc");
+        assert_eq!(fake_device.assocs.len(), 0);
+        assert!(fake_device.bss_cfg.is_none());
     }
 }

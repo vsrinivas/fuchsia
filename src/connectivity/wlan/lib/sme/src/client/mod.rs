@@ -1495,6 +1495,40 @@ mod tests {
     }
 
     #[test]
+    fn test_info_event_assoc_fail_after_auth() {
+        let exec = fuchsia_async::TestExecutor::new().unwrap();
+        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme(&exec);
+        assert_eq!(ClientSmeStatus::Idle, sme.status());
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let bss_description =
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bssname").unwrap());
+        let bssid = Bssid(bss_description.bssid);
+        let mut req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
+        req.multiple_bss_candidates = false;
+        let _connect_fut = sme.on_connect_command(req);
+
+        sme.on_mlme_event(create_join_conf(fidl_ieee80211::StatusCode::Success));
+        sme.on_mlme_event(create_auth_conf(bssid, fidl_ieee80211::StatusCode::Success));
+        let assoc_fail_code = fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc;
+        let assoc_failure =
+            AssociationFailure { bss_protection: BssProtection::Open, code: assoc_fail_code };
+        sme.on_mlme_event(create_assoc_conf(assoc_fail_code));
+
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
+            assert!(stats.auth_time().is_some());
+            assert!(stats.assoc_time().is_some());
+            assert!(stats.rsna_time().is_none());
+            assert!(stats.connect_time().into_nanos() > 0);
+            assert_variant!(stats.result, ConnectResult::Failed(failure) => {
+                assert_eq!(failure, ConnectFailure::AssociationFailure(assoc_failure));
+            });
+            assert!(stats.candidate_network.is_some());
+        });
+        expect_stream_empty(&mut info_stream, "unexpected event in info stream");
+    }
+
+    #[test]
     fn test_info_event_failed_connect() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
         let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme(&exec);

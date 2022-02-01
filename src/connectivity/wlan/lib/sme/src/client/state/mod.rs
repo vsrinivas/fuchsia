@@ -344,6 +344,7 @@ impl Associating {
                                  response is different from beacon"
                         );
                         error!("{}", msg);
+                        send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
                         report_connect_finished(
                             &mut self.cmd.connect_txn_sink,
                             context,
@@ -382,6 +383,7 @@ impl Associating {
             other => {
                 let msg = format!("Associate request failed: {:?}", other);
                 warn!("{}", msg);
+                send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
                 report_connect_finished(
                     &mut self.cmd.connect_txn_sink,
                     context,
@@ -454,6 +456,7 @@ impl Associating {
         let msg = format!("Association request failed due to spurious disassociation; reason code: {:?}, locally_initiated: {:?}",
                           ind.reason_code, ind.locally_initiated);
         warn!("{}", msg);
+        send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
         report_connect_finished(
             &mut self.cmd.connect_txn_sink,
             context,
@@ -501,6 +504,7 @@ impl Associating {
                 // failed handshake. Drop to idle.
                 let msg = format!("failed to handle SAE timeout: {:?}", e);
                 error!("{}", msg);
+                send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
                 report_connect_finished(
                     &mut self.cmd.connect_txn_sink,
                     context,
@@ -1957,6 +1961,7 @@ mod tests {
         let mut h = TestHelper::new();
         let (cmd_one, mut connect_txn_stream1) = connect_command_one();
         let bss_protection = cmd_one.bss.protection();
+        let bssid = cmd_one.bss.bssid.clone();
         let state = associating_state(cmd_one);
         let disassoc_ind = MlmeEvent::DisassociateInd {
             ind: fidl_mlme::DisassociateIndication {
@@ -1966,6 +1971,7 @@ mod tests {
             },
         };
         let state = state.on_mlme_event(disassoc_ind, &mut h.context);
+        expect_deauth_req(&mut h.mlme_stream, bssid, fidl_ieee80211::ReasonCode::StaLeaving);
         assert_variant!(connect_txn_stream1.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
             assert_eq!(result, AssociationFailure {
                 bss_protection,

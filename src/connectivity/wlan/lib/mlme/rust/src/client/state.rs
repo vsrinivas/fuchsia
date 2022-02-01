@@ -88,8 +88,18 @@ impl Joined {
         };
         result.map_err(|status_code| {
             sta.send_authenticate_conf(auth_type, status_code);
+            if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+                error!("Auth Alg Error: clear_connect_context failed: {}", e);
+            }
             error!("Failed to initiate authentication");
         })
+    }
+
+    fn on_sme_deauthenticate(&mut self, sta: &mut BoundClient<'_>) {
+        // Clear assoc context at the device
+        if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+            error!("Auth timeout: Error clearing association in vendor driver: {}", e);
+        }
     }
 }
 
@@ -122,6 +132,9 @@ impl Authenticating {
                     self.algorithm.auth_type(),
                     fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
                 );
+                if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+                    error!("Auth Failed: clear_connect_context failed: {}", e);
+                }
                 akm::AkmState::Failed
             }
             Err(e) => {
@@ -131,6 +144,9 @@ impl Authenticating {
                     self.algorithm.auth_type(),
                     fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
                 );
+                if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+                    error!("Auth Internal Err: clear_connect_context failed: {}", e);
+                }
                 akm::AkmState::Failed
             }
         }
@@ -189,6 +205,9 @@ impl Authenticating {
             self.algorithm.auth_type(),
             fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
         );
+        if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+            error!("Deauth Frame: clear_connect_context failed: {}", e);
+        }
     }
 
     /// Invoked when the pending timeout fired. The original authentication request is now
@@ -203,6 +222,9 @@ impl Authenticating {
                     self.algorithm.auth_type(),
                     fidl_ieee80211::StatusCode::RejectedSequenceTimeout,
                 );
+                if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+                    error!("Auth Timeout: clear_connect_context failed: {}", e);
+                }
             }
             _ => (),
         }
@@ -210,6 +232,10 @@ impl Authenticating {
 
     fn on_sme_deauthenticate(&mut self, sta: &mut BoundClient<'_>) {
         self.algorithm.cancel(sta);
+        // Clear assoc context at the device
+        if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+            error!("Auth timeout: Error clearing association in vendor driver: {}", e);
+        }
     }
 }
 
@@ -251,6 +277,9 @@ impl Authenticated {
         let reason_code = fidl_ieee80211::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
             .unwrap_or(fidl_ieee80211::ReasonCode::UnspecifiedReason);
         sta.send_deauthenticate_ind(reason_code, LocallyInitiated(false));
+        if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+            error!("Deauth Frame: Error clearing association in vendor driver: {}", e);
+        }
     }
 
     fn on_sme_deauthenticate(
@@ -262,6 +291,10 @@ impl Authenticated {
             error!("Error sending deauthentication frame to BSS: {}", e);
         }
 
+        // Clear assoc context at the device
+        if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+            error!("SME deauth: Error clearing association in vendor driver: {}", e);
+        }
         if let Err(e) = sta.ctx.device.mlme_control_handle().send_deauthenticate_conf(
             &mut fidl_mlme::DeauthenticateConfirm { peer_sta_address: sta.sta.bssid.0 },
         ) {
@@ -358,6 +391,9 @@ impl Associating {
             { deauth_hdr.reason_code }
         );
         sta.send_associate_conf_failure(fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc);
+        if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+            error!("Deauth Frame: clear_connect_context failed: {}", e);
+        }
     }
 
     /// Invoked when the pending timeout fired. The original association request is now
@@ -372,8 +408,12 @@ impl Associating {
         sta.send_associate_conf_failure(fidl_ieee80211::StatusCode::RefusedTemporarily);
     }
 
-    fn on_sme_deauthenticate(&mut self, _sta: &mut BoundClient<'_>) {
+    fn on_sme_deauthenticate(&mut self, sta: &mut BoundClient<'_>) {
         self.timeout.take();
+        // Clear assoc context at the device
+        if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+            error!("Assoc timeout: Error clearing association in vendor driver: {}", e);
+        }
     }
 }
 
@@ -503,6 +543,9 @@ impl Associated {
         let reason_code = fidl_ieee80211::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
             .unwrap_or(fidl_ieee80211::ReasonCode::UnspecifiedReason);
         sta.send_deauthenticate_ind(reason_code, LocallyInitiated(false));
+        if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+            error!("Deauth Frame: clear_connect_context failed: {}", e);
+        }
     }
 
     /// Process every inbound management frame before its being handed off to a more specific
@@ -749,6 +792,10 @@ impl Associated {
         }
 
         self.pre_leaving_associated_state(sta);
+        // Clear assoc context at the device
+        if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
+            error!("Error clearing association in vendor driver: {}", e);
+        }
 
         if let Err(e) = sta.ctx.device.mlme_control_handle().send_deauthenticate_conf(
             &mut fidl_mlme::DeauthenticateConfirm { peer_sta_address: sta.sta.bssid.0 },
@@ -762,9 +809,6 @@ impl Associated {
         self.0.controlled_port_open = false;
         if let Err(e) = sta.ctx.device.set_eth_link_down() {
             error!("Error disabling ethernet device offline: {}", e);
-        }
-        if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid.0) {
-            error!("Error clearing association in vendor drvier: {}", e);
         }
     }
 
@@ -1090,7 +1134,7 @@ impl States {
         use fidl_mlme::MlmeRequest as MlmeMsg;
 
         match self {
-            States::Joined(state) => match msg {
+            States::Joined(mut state) => match msg {
                 MlmeMsg::AuthenticateReq { req, .. } => {
                     match state.on_sme_authenticate(
                         sta,
@@ -1100,6 +1144,10 @@ impl States {
                         Ok(algorithm) => state.transition_to(Authenticating { algorithm }).into(),
                         Err(()) => state.into(),
                     }
+                }
+                MlmeMsg::DeauthenticateReq { .. } => {
+                    state.on_sme_deauthenticate(sta);
+                    state.into()
                 }
                 _ => state.into(),
             },
@@ -1250,8 +1298,8 @@ mod tests {
         },
         akm::AkmAlgorithm,
         banjo_fuchsia_hardware_wlan_associnfo as banjo_wlan_associnfo,
-        banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
-        fuchsia_async as fasync,
+        banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_internal as banjo_internal,
+        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
         fuchsia_zircon::{self as zx, DurationNum},
         ieee80211::{Bssid, Ssid},
         wlan_common::{
@@ -1294,6 +1342,20 @@ mod tests {
         fn make_ctx(&mut self) -> Context {
             let device = self.fake_device.as_device();
             device.set_channel(fake_wlan_channel()).expect("fake device is obedient");
+            self.channel_state.main_channel = Some(fake_wlan_channel());
+            self.make_ctx_with_device(device)
+        }
+
+        fn make_ctx_with_bss(&mut self) -> Context {
+            let device = self.fake_device.as_device();
+            device.set_channel(fake_wlan_channel()).expect("fake device is obedient");
+            device
+                .configure_bss(banjo_internal::BssConfig {
+                    bssid: [1, 2, 3, 4, 5, 6],
+                    bss_type: banjo_internal::BssType::PERSONAL,
+                    remote: true,
+                })
+                .expect("error configuring bss");
             self.channel_state.main_channel = Some(fake_wlan_channel());
             self.make_ctx_with_device(device)
         }
@@ -1516,11 +1578,12 @@ mod tests {
     fn authenticating_state_auth_success() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = open_authenticating(&mut sta);
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // Verify authentication was considered successful.
         assert_variant!(
             state.on_auth_frame(
@@ -1546,17 +1609,19 @@ mod tests {
                 result_code: fidl_ieee80211::StatusCode::Success,
             }
         );
+        assert!(m.fake_device.bss_cfg.is_some());
     }
 
     #[test]
     fn authenticating_state_auth_rejected() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = open_authenticating(&mut sta);
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // Verify authentication failed.
         assert_variant!(
             state.on_auth_frame(
@@ -1582,17 +1647,19 @@ mod tests {
                 result_code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
             }
         );
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn authenticating_state_timeout() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = open_authenticating(&mut sta);
 
+        assert!(m.fake_device.bss_cfg.is_some());
         let timeout = authenticating_timeouts(&mut m.time_stream)[0];
         state.on_timeout(&mut sta, timeout);
 
@@ -1607,17 +1674,19 @@ mod tests {
                 result_code: fidl_ieee80211::StatusCode::RejectedSequenceTimeout,
             }
         );
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn authenticating_state_deauth_frame() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = open_authenticating(&mut sta);
 
+        assert!(m.fake_device.bss_cfg.is_some());
         state.on_deauth_frame(
             &mut sta,
             &mac::DeauthHdr { reason_code: fidl_ieee80211::ReasonCode::NoMoreStas.into() },
@@ -1634,17 +1703,19 @@ mod tests {
                 result_code: fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
             }
         );
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn authenticated_state_deauth_frame() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Authenticated;
 
+        assert!(m.fake_device.bss_cfg.is_some());
         state.on_deauth_frame(
             &mut sta,
             &mac::DeauthHdr { reason_code: fidl_ieee80211::ReasonCode::NoMoreStas.into() },
@@ -1663,16 +1734,18 @@ mod tests {
                 locally_initiated: false,
             }
         );
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn associating_success_unprotected() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
+        assert!(m.fake_device.bss_cfg.is_some());
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
         let mut state = Associating { timeout: Some(timeout) };
 
@@ -1701,18 +1774,20 @@ mod tests {
                 ..empty_associate_conf()
             }
         );
+        assert!(m.fake_device.bss_cfg.is_some());
     }
 
     #[test]
     fn associating_success_protected() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
         let mut state = Associating { timeout: Some(timeout) };
 
+        assert!(m.fake_device.bss_cfg.is_some());
         let Association { aid, controlled_port_open, .. } = state
             .on_assoc_resp_frame(
                 &mut sta,
@@ -1738,19 +1813,21 @@ mod tests {
                 ..empty_associate_conf()
             }
         );
+        assert!(m.fake_device.bss_cfg.is_some());
     }
 
     #[test]
     fn associating_failure() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
         let mut state = Associating { timeout: Some(timeout) };
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // Verify authentication was considered successful.
         state
             .on_assoc_resp_frame(
@@ -1774,19 +1851,21 @@ mod tests {
                 ..empty_associate_conf()
             }
         );
+        assert!(m.fake_device.bss_cfg.is_some());
     }
 
     #[test]
     fn associating_timeout() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
         let mut state = Associating { timeout: Some(timeout) };
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // Trigger timeout.
         state.on_timeout(&mut sta, timeout);
 
@@ -1800,19 +1879,21 @@ mod tests {
                 ..empty_associate_conf()
             }
         );
+        assert!(m.fake_device.bss_cfg.is_some());
     }
 
     #[test]
     fn associating_deauth_frame() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
         let mut state = Associating { timeout: Some(timeout) };
 
+        assert!(m.fake_device.bss_cfg.is_some());
         state.on_deauth_frame(
             &mut sta,
             &mac::DeauthHdr { reason_code: fidl_ieee80211::ReasonCode::ApInitiated.into() },
@@ -1828,19 +1909,21 @@ mod tests {
                 ..empty_associate_conf()
             }
         );
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn associating_disassociation() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
         let mut state = Associating { timeout: Some(timeout) };
 
+        assert!(m.fake_device.bss_cfg.is_some());
         state.on_disassoc_frame(
             &mut sta,
             &mac::DisassocHdr { reason_code: fidl_ieee80211::ReasonCode::ApInitiated.into() },
@@ -1856,6 +1939,7 @@ mod tests {
                 ..empty_associate_conf()
             }
         );
+        assert!(m.fake_device.bss_cfg.is_some());
     }
 
     #[test]
@@ -1914,11 +1998,12 @@ mod tests {
     fn associated_deauth_frame() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = Associated(empty_association(&mut sta));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // ddk_assoc_ctx will be cleared when MLME receives deauth frame.
         sta.ctx
             .device
@@ -1947,20 +2032,22 @@ mod tests {
                 locally_initiated: false,
             }
         );
-        // Verify association context is cleared and ethernet port is shut down.
-        assert_eq!(0, m.fake_device.assocs.len());
+        // Verify ethernet port is shut down.
+        assert_eq!(false, state.0.controlled_port_open);
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn associated_disassociation() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = Associated(empty_association(&mut sta));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         state.0.controlled_port_open = true;
         // ddk_assoc_ctx must be cleared when MLME receives disassociation frame later.
         sta.ctx
@@ -1989,10 +2076,10 @@ mod tests {
             }
         );
 
-        // Verify association everything is properly cleared.
+        // Verify ethernet port is shut down.
         assert_eq!(false, state.0.controlled_port_open);
-        assert_eq!(0, m.fake_device.assocs.len());
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
+        assert!(m.fake_device.bss_cfg.is_some());
     }
 
     #[test]
@@ -2329,12 +2416,13 @@ mod tests {
     fn state_transitions_authing_failure() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // Failure: Joined > Authenticating > Joined
         #[rustfmt::skip]
         let auth_resp_failure = vec![
@@ -2353,18 +2441,20 @@ mod tests {
         state =
             state.on_mac_frame(&mut sta, &auth_resp_failure[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn state_transitions_authing_timeout() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::new_initial();
         assert_variant!(state, States::Joined(_), "not in joined state");
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // Timeout: Joined > Authenticating > Joined
         let (control_handle, _) = fake_control_handle(&exec);
         state = state.handle_mlme_msg(
@@ -2381,18 +2471,20 @@ mod tests {
         let event_id = authenticating_timeouts(&mut m.time_stream)[0];
         state = state.on_timed_event(&mut sta, TimedEvent::Authenticating, event_id);
         assert_variant!(state, States::Joined(_), "not in joined state");
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn state_transitions_authing_deauth() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // Deauthenticate: Authenticating > Joined
         #[rustfmt::skip]
         let deauth = vec![
@@ -2408,6 +2500,7 @@ mod tests {
         ];
         state = state.on_mac_frame(&mut sta, &deauth[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
@@ -2520,12 +2613,13 @@ mod tests {
     fn state_transitions_associng_failure() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(Associating { timeout: None }));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // Failure: Associating > Authenticated
         #[rustfmt::skip]
         let assoc_resp_success = vec![
@@ -2544,17 +2638,19 @@ mod tests {
         state =
             state.on_mac_frame(&mut sta, &assoc_resp_success[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Authenticated(_), "not in authenticated state");
+        assert!(m.fake_device.bss_cfg.is_some());
     }
 
     #[test]
     fn state_transitions_associng_timeout() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Authenticated));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         let (control_handle, _) = fake_control_handle(&exec);
         state = state.handle_mlme_msg(
             &mut sta,
@@ -2565,18 +2661,20 @@ mod tests {
             }, "not in assoc'ing state");
         state = state.on_timed_event(&mut sta, TimedEvent::Associating, timeout_id);
         assert_variant!(state, States::Authenticated(_), "not in authenticated state");
+        assert!(m.fake_device.bss_cfg.is_some());
     }
 
     #[test]
     fn state_transitions_associng_deauthing() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(Associating { timeout: None }));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // Deauthentication: Associating > Joined
         #[rustfmt::skip]
         let deauth = vec![
@@ -2592,18 +2690,20 @@ mod tests {
         ];
         state = state.on_mac_frame(&mut sta, &deauth[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn state_transitions_assoced_disassoc() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // Disassociation: Associated > Authenticated
         #[rustfmt::skip]
         let disassoc = vec![
@@ -2619,18 +2719,20 @@ mod tests {
         ];
         state = state.on_mac_frame(&mut sta, &disassoc[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Authenticated(_), "not in authenticated state");
+        assert!(m.fake_device.bss_cfg.is_some());
     }
 
     #[test]
     fn state_transitions_assoced_deauthing() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         // Deauthentication: Associated > Joined
         #[rustfmt::skip]
         let deauth = vec![
@@ -2646,6 +2748,7 @@ mod tests {
         ];
         state = state.on_mac_frame(&mut sta, &deauth[..], MockWlanRxInfo::default().into());
         assert_variant!(state, States::Joined(_), "not in joined state");
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     fn parse_data_frame(
@@ -2852,27 +2955,31 @@ mod tests {
     fn joined_sme_deauth() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Joined));
+
+        assert!(m.fake_device.bss_cfg.is_some());
         let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req(&exec));
         assert_variant!(state, States::Joined(_), "Joined should stay in Joined");
         // No MLME message was sent because MLME already deauthenticated.
         m.fake_device
             .next_mlme_msg::<fidl_mlme::DeauthenticateIndication>()
             .expect_err("should be no outgoing message");
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn authenticating_sme_deauth() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req(&exec));
 
         assert_variant!(state, States::Joined(_), "should transition to Joined");
@@ -2881,17 +2988,19 @@ mod tests {
         m.fake_device
             .next_mlme_msg::<fidl_mlme::DeauthenticateConfirm>()
             .expect_err("should not see more MLME messages");
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn authenticated_sme_deauth() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Authenticated));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req(&exec));
 
         assert_variant!(state, States::Joined(_), "should transition to Joined");
@@ -2905,19 +3014,21 @@ mod tests {
         m.fake_device
             .next_mlme_msg::<fidl_mlme::DeauthenticateConfirm>()
             .expect_err("should not see more MLME messages");
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn associating_sme_deauth() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
         let state =
             States::from(statemachine::testing::new_state(Associating { timeout: Some(timeout) }));
 
+        assert!(m.fake_device.bss_cfg.is_some());
         let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req(&exec));
 
         assert_variant!(state, States::Joined(_), "should transition to Joined");
@@ -2926,13 +3037,14 @@ mod tests {
         m.fake_device
             .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
             .expect_err("should not see more MLME messages");
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
     fn associated_sme_deauth() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
+        let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Associated(Association {
@@ -2945,6 +3057,7 @@ mod tests {
             .expect("valid assoc ctx should not fail");
         assert_eq!(1, m.fake_device.assocs.len());
 
+        assert!(m.fake_device.bss_cfg.is_some());
         sta.ctx.device.set_eth_link_up().expect("should succeed");
         assert_eq!(crate::device::LinkStatus::UP, m.fake_device.link_status);
 
@@ -2964,6 +3077,7 @@ mod tests {
         assert_eq!(0, m.fake_device.assocs.len());
         // Verify ethernet link status is down.
         assert_eq!(crate::device::LinkStatus::DOWN, m.fake_device.link_status);
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     fn fake_mlme_eapol_req(exec: &fasync::TestExecutor) -> fidl_mlme::MlmeRequest {
