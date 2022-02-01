@@ -131,7 +131,10 @@ template("assembly_input_bundle_archive") {
                              "visibility",
                            ])
     binary_label = "//build/assembly/scripts:assembly_input_bundle_tool"
-    inputs = [ invoker.manifest ]
+    inputs = [
+      invoker.manifest,
+      files.tarmaker,
+    ]
     outputs = [
       files.archive,
       files.archive_creation_manifest,
