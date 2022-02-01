@@ -655,8 +655,8 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
   return SendAndCheckSuccess("TestLogInteger", logger);
 }
 
-// OCCURRENCE metrics for features_active_new, file_system_cache_misses_new, and
-// connection_attempts_new.
+// OCCURRENCE metrics for features_active_new, file_system_cache_misses_new,
+// connection_attempts_new, and error_occurred_new
 bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                        fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                        const size_t backfill_days, uint32_t project_id) {
@@ -680,6 +680,9 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
       {{cobalt_registry::kConnectionAttemptsNewMetricId,
         cobalt_registry::kConnectionAttemptsNewConnectionAttemptsPerDeviceCountReportId},
        1},
+      {{cobalt_registry::kErrorOccurredNewMetricId,
+        cobalt_registry::kErrorOccurredNewErrorCountsExperimentReportId},
+       1},
   };
   std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs{
       {{cobalt_registry::kFeaturesActiveNewMetricId,
@@ -696,6 +699,9 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
        0},
       {{cobalt_registry::kConnectionAttemptsNewMetricId,
         cobalt_registry::kConnectionAttemptsNewConnectionAttemptsPerDeviceCountReportId},
+       0},
+      {{cobalt_registry::kErrorOccurredNewMetricId,
+        cobalt_registry::kErrorOccurredNewErrorCountsExperimentReportId},
        0},
   };
 
@@ -743,6 +749,24 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
     }
   }
 
+  for (uint32_t index : kErrorOccurredNewIndicesToUse) {
+    for (int64_t count : kErrorOccurredNewCounts) {
+      ExperimentArm arm = kExperiment;
+      if (index % 2 == 0) {
+        arm = kControl;
+      }
+      if (index == 0) {
+        arm = kNone;
+      }
+      if (!logger->LogOccurrence(cobalt_registry::kErrorOccurredNewMetricId, {index}, count, arm)) {
+        FX_LOGS(INFO) << "LogOccurrence(" << cobalt_registry::kErrorOccurredNewMetricId
+                      << ", { index: " << index << " }, " << count << ")";
+        FX_LOGS(INFO) << "TestLogOccurrence: FAIL";
+        return false;
+      }
+    }
+  }
+
   if (CurrentDayIndex(clock) != day_index) {
     // TODO(fxb/52750) The date has changed mid-test. We are currently unable to
     // deal with this so we fail this test and our caller may try again.
@@ -766,7 +790,8 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                   std::size(kFileSystemCacheMissesNewCounts) +
               std::size(kConnectionAttemptsNewStatusIndices) *
                   std::size(kConnectionAttemptsNewHostNameIndices) *
-                  std::size(kConnectionAttemptsNewCounts),
+                  std::size(kConnectionAttemptsNewCounts) +
+              std::size(kErrorOccurredNewIndicesToUse) * std::size(kErrorOccurredNewCounts),
           expected_num_obs)) {
     FX_LOGS(INFO) << "TestLogOccurrence : FAIL";
     return false;

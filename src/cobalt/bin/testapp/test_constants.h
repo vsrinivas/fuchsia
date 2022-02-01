@@ -101,6 +101,10 @@ const uint32_t kBandwidthUsageNewApplicationStateIndices[] = {0, 1};
 const uint32_t kBandwidthUsageNewApplicationNameIndices[] = {0, 1};
 const int64_t kBandwidthUsageNewBuckets = 22;
 
+// error_occurred_new metric constants.
+const uint32_t kErrorOccurredNewIndicesToUse[] = {0, 1, 2, 9};
+const uint32_t kErrorOccurredNewCounts[] = {0, 1, 100, 1000};
+
 // error_occurred_components metric constants.
 const uint32_t kErrorOccurredComponentsStatusIndices[] = {0, 1, 2};
 

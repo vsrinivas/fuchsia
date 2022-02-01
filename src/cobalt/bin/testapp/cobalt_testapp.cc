@@ -46,6 +46,9 @@ using ::cobalt::StatusToString;
 constexpr char kCobaltWithEventAggregatorWorker[] = "#meta/cobalt_with_event_aggregator_worker.cm";
 constexpr char kCobaltNoEventAggregatorWorker[] = "#meta/cobalt_no_event_aggregator_worker.cm";
 
+constexpr uint32_t kControlId = 48954961;
+constexpr uint32_t kExperimentId = 48954962;
+
 #define TRY_TEST(test) \
   if (!(test)) {       \
     return false;      \
@@ -154,6 +157,22 @@ sys::testing::ScopedChild CobaltTestApp::Connect(const std::string &variant) {
   FX_CHECK(fx_status == ZX_OK) << "FIDL: CreateMetricEventLogger() => " << fx_status;
   FX_CHECK(metrics_status == fuchsia::metrics::Status::OK)
       << "CreateMetricEventLogger() => " << StatusToString(metrics_status);
+
+  metrics_status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fx_status = metric_event_logger_factory->CreateMetricEventLoggerWithExperiments(
+      std::move(project), {kControlId}, logger_.control_metric_event_logger_.NewRequest(),
+      &metrics_status);
+  FX_CHECK(fx_status == ZX_OK) << "FIDL: CreateMetricEventLogger() => " << fx_status;
+  FX_CHECK(metrics_status == fuchsia::metrics::Status::OK)
+      << "CreateMetricEventLoggerWithExperiments() => " << StatusToString(metrics_status);
+
+  metrics_status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fx_status = metric_event_logger_factory->CreateMetricEventLoggerWithExperiments(
+      std::move(project), {kExperimentId}, logger_.experimental_metric_event_logger_.NewRequest(),
+      &metrics_status);
+  FX_CHECK(fx_status == ZX_OK) << "FIDL: CreateMetricEventLogger() => " << fx_status;
+  FX_CHECK(metrics_status == fuchsia::metrics::Status::OK)
+      << "CreateMetricEventLoggerWithExperiments() => " << StatusToString(metrics_status);
 
   child.Connect(system_data_updater_.NewRequest());
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;

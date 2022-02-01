@@ -31,6 +31,8 @@ inline std::string StatusToString(fuchsia::metrics::Status status) {
   }
 }
 
+enum ExperimentArm { kExperiment = 0, kControl = 1, kNone = 2 };
+
 class CobaltTestAppLogger {
  public:
   CobaltTestAppLogger(bool use_network, fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
@@ -70,7 +72,8 @@ class CobaltTestAppLogger {
   bool LogCobaltEvent(fuchsia::cobalt::CobaltEvent event);
 
   // Synchronously invokes LogOccurrence() using the given parameters.
-  bool LogOccurrence(uint32_t metric_id, std::vector<uint32_t> indices, uint64_t count);
+  bool LogOccurrence(uint32_t metric_id, std::vector<uint32_t> indices, uint64_t count,
+                     ExperimentArm arm = kNone);
 
   // Synchronously invokes LogInteger() using the given parameters.
   bool LogInteger(uint32_t metric_id, std::vector<uint32_t> indices, int64_t value);
@@ -113,6 +116,8 @@ class CobaltTestAppLogger {
   fuchsia::cobalt::LoggerSyncPtr logger_;
   fuchsia::cobalt::LoggerSimpleSyncPtr logger_simple_;
   fuchsia::metrics::MetricEventLoggerSyncPtr metric_event_logger_;
+  fuchsia::metrics::MetricEventLoggerSyncPtr control_metric_event_logger_;
+  fuchsia::metrics::MetricEventLoggerSyncPtr experimental_metric_event_logger_;
 
  private:
   fuchsia::diagnostics::ArchiveAccessorSyncPtr* inspect_archive_;

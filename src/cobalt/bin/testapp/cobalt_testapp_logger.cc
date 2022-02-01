@@ -132,9 +132,20 @@ bool CobaltTestAppLogger::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) {
 }
 
 bool CobaltTestAppLogger::LogOccurrence(uint32_t metric_id, std::vector<uint32_t> indices,
-                                        uint64_t count) {
+                                        uint64_t count, ExperimentArm arm) {
   fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
-  metric_event_logger_->LogOccurrence(metric_id, count, indices, &status);
+  fuchsia::metrics::MetricEventLoggerSyncPtr* metric_event_logger;
+  switch (arm) {
+    case kExperiment:
+      metric_event_logger = &experimental_metric_event_logger_;
+      break;
+    case kControl:
+      metric_event_logger = &control_metric_event_logger_;
+      break;
+    default:
+      metric_event_logger = &metric_event_logger_;
+  };
+  (*metric_event_logger)->LogOccurrence(metric_id, count, indices, &status);
   FX_VLOGS(1) << "LogOccurrence(" << count << ") => " << StatusToString(status);
   if (status != fuchsia::metrics::Status::OK) {
     FX_LOGS(ERROR) << "LogOccurrence() => " << StatusToString(status);
