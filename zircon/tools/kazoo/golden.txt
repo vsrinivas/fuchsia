@@ -16717,6 +16717,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Exits", "the", "currently", "running", "process", "."
       ],
       "requirements": [
+        "None", "."
       ],
       "arguments": [
         {

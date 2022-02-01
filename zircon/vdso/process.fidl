@@ -6,6 +6,7 @@ library zx;
 @transport("Syscall")
 protocol process {
     /// Exits the currently running process.
+    /// Rights: None.
     @noreturn
     process_exit(struct {
         retcode int64;

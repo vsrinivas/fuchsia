@@ -26,7 +26,7 @@ return code. The return code of a process can be queried via the
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
-TODO(fxbug.dev/32253)
+None.
 
 ## RETURN VALUE
 
