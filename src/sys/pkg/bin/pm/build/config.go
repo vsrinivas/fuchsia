@@ -14,7 +14,7 @@ import (
 	"strconv"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
-	versionHistory "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history"
+	versionHistory "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history/go"
 )
 
 // Config contains global build configuration for other build commands
@@ -171,7 +171,6 @@ func (c *Config) Package() (pkg.Package, error) {
 }
 
 func (c *Config) BlobInfo() ([]PackageBlobInfo, error) {
-
 	manifest, err := c.Manifest()
 	if err != nil {
 		return nil, err
@@ -236,7 +235,6 @@ func (c *Config) BlobInfo() ([]PackageBlobInfo, error) {
 }
 
 func (c *Config) OutputManifest() (*PackageManifest, error) {
-
 	p, err := c.Package()
 	if err != nil {
 		return nil, err

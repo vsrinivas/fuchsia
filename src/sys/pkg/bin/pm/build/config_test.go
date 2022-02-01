@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"testing"
 
-	versionHistory "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history"
+	versionHistory "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history/go"
 )
 
 func TestOrderedBlobInfo(t *testing.T) {
