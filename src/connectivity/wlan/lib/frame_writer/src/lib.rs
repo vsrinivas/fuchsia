@@ -2,14 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use proc_macro_hack::proc_macro_hack;
-
-#[proc_macro_hack]
-pub use wlan_frame_writer_macro::write_frame;
-#[proc_macro_hack]
-pub use wlan_frame_writer_macro::write_frame_with_dynamic_buf;
-#[proc_macro_hack]
-pub use wlan_frame_writer_macro::write_frame_with_fixed_buf;
+pub use wlan_frame_writer_macro::{
+    write_frame, write_frame_with_dynamic_buf, write_frame_with_fixed_buf,
+};
 
 #[cfg(test)]
 mod tests {

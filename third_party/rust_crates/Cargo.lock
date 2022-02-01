@@ -1279,7 +1279,6 @@ dependencies = [
  "pretty",
  "pretty_assertions",
  "prettytable-rs",
- "proc-macro-hack",
  "proc-macro-nested",
  "proc-macro2 1.0.28",
  "proptest",

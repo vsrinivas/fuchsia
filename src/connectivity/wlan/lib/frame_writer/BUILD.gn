@@ -18,7 +18,6 @@ rustc_library("wlan-frame-writer") {
     "//src/connectivity/wlan/lib/frame_writer/macro:wlan-frame-writer-macro",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/lib/zerocopy",
-    "//third_party/rust_crates:proc-macro-hack",
     "//third_party/rust_crates:thiserror",
   ]
 

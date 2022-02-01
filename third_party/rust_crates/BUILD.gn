@@ -562,10 +562,6 @@ group("prettytable-rs") {
   deps = [ ":prettytable-rs-v0_8_0" ]
 }
 
-group("proc-macro-hack") {
-  deps = [ ":proc-macro-hack-v0_5_19($host_toolchain)" ]
-}
-
 if (current_os == "fuchsia") {
   group("proc-macro-nested") {
     deps = [ ":proc-macro-nested-v0_1_7" ]

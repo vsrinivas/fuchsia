@@ -11,7 +11,6 @@ rustc_macro("macros") {
   edition = "2018"
 
   deps = [
-    "//third_party/rust_crates:proc-macro-hack",
     "//third_party/rust_crates:proc-macro2",
     "//third_party/rust_crates:quote",
     "//third_party/rust_crates:syn",
@@ -26,7 +25,6 @@ if (is_host) {
     edition = "2018"
     deps = [
       "//third_party/rust_crates:indoc",
-      "//third_party/rust_crates:proc-macro-hack",
       "//third_party/rust_crates:proc-macro2",
       "//third_party/rust_crates:quote",
       "//third_party/rust_crates:syn",

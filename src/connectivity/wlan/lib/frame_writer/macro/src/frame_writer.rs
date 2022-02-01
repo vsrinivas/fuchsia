@@ -222,35 +222,29 @@ fn process_write_definitions(
     }
 
     TokenStream::from(quote! {
-        // Blanket allow to catch unused variable/mut/imports lints.
-        // TODO(fxbug.dev/49853): Remove this.
-        #[allow(unused)]
-        {
-            || -> Result<(_, usize), Error> {
-                #[allow(unused_imports)]
-                use {
-                    wlan_common::{
-                        appendable::Appendable,
-                        buffer_writer::BufferWriter,
-                        error::FrameWriteError,
-                        ie::{self, IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN},
-                    },
-                    std::convert::AsRef,
-                    std::mem::size_of,
-                };
+        || -> Result<(_, usize), Error> {
+            use {
+                wlan_common::{
+                    appendable::Appendable,
+                    buffer_writer::BufferWriter,
+                    error::FrameWriteError,
+                    ie::{self, IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN},
+                },
+                std::convert::AsRef,
+                std::mem::size_of,
+            };
 
-                #declare_var_tokens
-                #frame_len_tokens
+            #declare_var_tokens
+            #frame_len_tokens
 
-                #make_buf_tokens
+            #make_buf_tokens
 
-                {
-                    #write_to_buf_tokens
-                }
+            {
+                #write_to_buf_tokens
+            }
 
-                #return_buf_tokens
-            }()
-        }
+            #return_buf_tokens
+        }()
     })
 }
 

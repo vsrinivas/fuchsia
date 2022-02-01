@@ -8,8 +8,6 @@
 
 #![doc(html_no_source)]
 
-use proc_macro_hack::proc_macro_hack;
-
 use quote::quote;
 use quote::ToTokens;
 use std::str::Chars;
@@ -436,7 +434,7 @@ impl Parse for PackInput {
 
 // In-line proc macro for writing spinel-formatted data fields to a type
 // implementing `std::io::Write`.
-#[proc_macro_hack]
+#[proc_macro]
 pub fn spinel_write(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as PackInput);
 
@@ -511,7 +509,7 @@ impl Parse for PackLenInput {
 
 // In-line proc macro for calculating the encoded length of specific
 // spinel-formatted data field values.
-#[proc_macro_hack]
+#[proc_macro]
 pub fn spinel_write_len(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as PackLenInput);
 
@@ -585,7 +583,7 @@ impl Parse for UnpackInput {
 
 // In-line proc macro for parsing spinel-formatted data fields from
 // a byte slice iterator.
-#[proc_macro_hack]
+#[proc_macro]
 pub fn spinel_read(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as UnpackInput);
 

@@ -8,8 +8,6 @@ mod frame_writer;
 mod header;
 mod ie;
 
-use proc_macro_hack::proc_macro_hack;
-
 /// This macro allows for writing frames into a buffer. The macro operates in three steps:
 /// (1) Compute the frame's resulting length by adding up all headers and IEs.
 /// (2) Request a buffer from a given provider with a minimum buffer length of the computed length.
@@ -161,17 +159,17 @@ use proc_macro_hack::proc_macro_hack;
 ///     payload: vec![42u8; 5],
 /// });
 /// ```
-#[proc_macro_hack]
+#[proc_macro]
 pub fn write_frame(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     frame_writer::process_with_buf_provider(input)
 }
 
-#[proc_macro_hack]
+#[proc_macro]
 pub fn write_frame_with_fixed_buf(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     frame_writer::process_with_fixed_buf(input)
 }
 
-#[proc_macro_hack]
+#[proc_macro]
 pub fn write_frame_with_dynamic_buf(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     frame_writer::process_with_dynamic_buf(input)
 }

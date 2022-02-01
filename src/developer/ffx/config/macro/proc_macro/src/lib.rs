@@ -5,7 +5,6 @@
 use {
     anyhow::{anyhow, bail, Context, Error, Result},
     proc_macro::TokenStream,
-    proc_macro_hack::proc_macro_hack,
     quote::quote,
     serde_json::Value,
     std::convert::{TryFrom, TryInto},
@@ -14,7 +13,7 @@ use {
 
 const FFX_CONFIG_DEFAULT: &'static str = "ffx_config_default";
 
-#[proc_macro_hack]
+#[proc_macro]
 pub fn include_default(_input: TokenStream) -> TokenStream {
     // Test deserializing the default configuration file at compile time.
     let default = include_str!(env!("FFX_DEFAULT_CONFIG_JSON"));

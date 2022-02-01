@@ -333,7 +333,6 @@
 mod eui;
 mod primitives;
 
-use proc_macro_hack::proc_macro_hack;
 use std::fmt::Debug;
 use std::io;
 
@@ -370,7 +369,6 @@ pub use spinel_pack_macros::spinel_packed;
 ///
 /// assert_eq!(target, vec![1u8,2u8,0u8,3u8]);
 /// ```
-#[proc_macro_hack]
 pub use spinel_pack_macros::spinel_write;
 
 /// In-line proc macro for determining the written length of spinel-formatted
@@ -385,7 +383,6 @@ pub use spinel_pack_macros::spinel_write;
 ///
 /// assert_eq!(len, 4);
 /// ```
-#[proc_macro_hack]
 pub use spinel_pack_macros::spinel_write_len;
 
 /// In-line proc macro for parsing spinel-formatted data fields from
@@ -426,7 +423,6 @@ pub use spinel_pack_macros::spinel_write_len;
 /// assert_eq!(name, "123");
 /// assert_eq!(addr, spinel_pack::EUI64([0x02, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7]));
 /// ```
-#[proc_macro_hack]
 pub use spinel_pack_macros::spinel_read;
 
 /// Error type for unpacking operations.
@@ -665,6 +661,9 @@ pub enum SpinelDataWlen {}
 /// use spinel_pack::prelude::*;
 /// ```
 pub mod prelude {
+    pub use super::spinel_read;
+    pub use super::spinel_write;
+    pub use super::spinel_write_len;
     pub use super::TryOwnedUnpack as _;
     pub use super::TryPack as _;
     pub use super::TryPackAs as _;
@@ -672,9 +671,6 @@ pub mod prelude {
     pub use super::TryUnpackAs as _;
     pub use impl_try_unpack_for_owned;
     pub use spinel_pack_macros::spinel_packed;
-    pub use spinel_read;
-    pub use spinel_write;
-    pub use spinel_write_len;
 }
 
 #[cfg(test)]

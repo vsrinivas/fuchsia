@@ -14,7 +14,6 @@ rustc_library("spinel_pack") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:proc-macro-hack",
     "//third_party/rust_crates:thiserror",
   ]
 

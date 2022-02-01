@@ -689,8 +689,12 @@ impl<'a> BoundClient<'a> {
                         .map_err(|e| format_err!("error parsing rsne {:?} : {:?}", rsne, e))?
                         .1
                 },
-                ht_cap?: if !ht_cap.is_empty() { *parse_ht_capabilities(ht_cap)? },
-                vht_cap?: if !vht_cap.is_empty() { *parse_vht_capabilities(vht_cap)? },
+                ht_cap?: if !ht_cap.is_empty() {
+                    *parse_ht_capabilities(ht_cap)?
+                },
+                vht_cap?: if !vht_cap.is_empty() {
+                    *parse_vht_capabilities(vht_cap)?
+                },
             },
         })?;
         let out_buf = OutBuf::from(buf, bytes_written);

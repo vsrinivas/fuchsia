@@ -137,7 +137,6 @@ pin-utils = "0.1.0"
 png = "0.14" # saved for future use
 pretty_assertions = "0.5.1"
 prettytable-rs = "0.8.0"
-proc-macro-hack = "0.5.19"
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 rand = { version = "0.8", features = ["small_rng"] }
