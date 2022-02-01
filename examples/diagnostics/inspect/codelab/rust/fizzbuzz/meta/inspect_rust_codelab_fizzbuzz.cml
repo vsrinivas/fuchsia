@@ -15,5 +15,9 @@
             protocol: "fuchsia.examples.inspect.FizzBuzz",
             from: "self",
         },
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
     ],
 }

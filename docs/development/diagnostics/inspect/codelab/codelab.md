@@ -117,7 +117,7 @@ command line arguments as strings to Reverse:
    * {C++}
 
       <!-- TODO(fxbug.dev/80423): this applies to all languages once migrated to v2 -->
-      To specify the single string "Hello" modify the `program.args` section of
+      To specify just the single string "Hello" modify the `program.args` section of
       the [common.shard.cml][cpp-common-cml], build and run the following:
 
       ```
@@ -135,7 +135,7 @@ command line arguments as strings to Reverse:
    * {Rust}
 
       <!-- TODO(fxbug.dev/80423): this applies to all languages once migrated to v2 -->
-      To specify the single string "Hello" modify the `program.args` section of
+      To specify just the single string "Hello" modify the `program.args` section of
       the [common.shard.cml][cpp-common-cml], build and run the following:
 
       ```
@@ -148,7 +148,8 @@ command line arguments as strings to Reverse:
       ffx log --tags inspect_rust_codelab
       ```
 
-      This command prints some output containing errors.
+      We see in the logs that the component got the "Hello" as input, but we
+      don't see the correct reversed output.
 
    * {Dart}
 
@@ -156,16 +157,15 @@ command line arguments as strings to Reverse:
       fx run fuchsia-pkg://fuchsia.com/inspect-dart-codelab-client#meta/inspect-dart-codelab-client.cmx 1 Hello
       ```
 
-   These commands hang.
+   As you can see in the log the reverser doesn't work properly.
 
-3. Press Ctrl+C to stop the client and try running with
-   more arguments:
+3. Try running the client with more arguments:
 
    * {C++}
 
       <!-- TODO(fxbug.dev/80423): this applies to all languages once migrated to v2 -->
       Add the string "World" to the `program.args` section of the
-      the [common.shard.cml][cpp-common-cml]:
+      [common.shard.cml][cpp-common-cml]:
 
       ```json5
       {
@@ -181,14 +181,14 @@ command line arguments as strings to Reverse:
       Build and run the following:
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
+      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
       ```
 
    * {Rust}
 
       <!-- TODO(fxbug.dev/80423): this applies to all languages once migrated to v2 -->
       Add the string "World" to the `program.args` section of the
-      the [common.shard.cml][rust-common-cml]:
+      [common.shard.cml][rust-common-cml]:
 
       ```json5
       {
@@ -204,7 +204,7 @@ command line arguments as strings to Reverse:
       Build and run the following:
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
+      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
       ```
 
    * {Dart}
@@ -215,7 +215,8 @@ command line arguments as strings to Reverse:
 
       This command also prints no outputs.
 
-   These commands also hang.
+   We can see that the component printed the first input, but we don't see the
+   expected output and also no second input.
 
 You are now ready to look through the code to troubleshoot the issue.
 
@@ -287,7 +288,7 @@ codelab. There is a lot of standard component setup:
      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_1/src/main.rs" region_tag="init_logger" adjust_indentation="auto" %}
      ```
 
-   - ServiceFs initialization and collection
+   - ServiceFs initialization
 
      ```rust
      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_1/src/main.rs" region_tag="servicefs_init" adjust_indentation="auto" %}
@@ -450,7 +451,8 @@ state without needing to dig through logs.
       2. Create a new property using `CreateString`.
 
          This adds a new `StringProperty` on the root. This `StringProperty`
-         is called "version", and its value is "part1".
+         is called "version", and its value is "part2". We're going to set our
+         property to "part1".
 
       3. Emplace the new property in the inspector.
 
@@ -476,7 +478,8 @@ state without needing to dig through logs.
      2. Create a new property using `record_string`.
 
         This adds a new `StringProperty` on the root. This `StringProperty`
-        is called "version", and its value is "part1".
+        is called "version", and its value is "part2". We're going to set our
+        property to "part1".
 
      3. It records it in the root node.
 
@@ -503,7 +506,8 @@ state without needing to dig through logs.
      2. Create a new property using `stringProperty(...).setValue(...)`.
 
         This adds a new `StringProperty` on the root. This `StringProperty`
-        is called "version", and its value is "part1".
+        is called "version", and its value is "part2". We're going to set our
+        property to "part1".
 
      3. It records it in the root node.
 
@@ -527,14 +531,14 @@ Now that you have added Inspect to your component, you can read what it says:
    * {C++}
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
+      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
       ffx log --tags inspect_cpp_codelab
       ```
 
    * {Rust}
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
+      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
       ffx log --tags inspect_rust_codelab
       ```
 
@@ -543,8 +547,6 @@ Now that you have added Inspect to your component, you can read what it says:
       ```
       fx run fuchsia-pkg://fuchsia.com/inspect-dart-codelab-client#meta/inspect-dart-codelab-client.cmx 1 Hello
       ```
-
-   Note that these should still hang.
 
 3. Use `ffx inspect` to view your output:
 
@@ -930,7 +932,7 @@ The output above shows that the connection is still open and it received one req
    * {C++}
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
+      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
       Creating component instance: client_part_1
 
       ffx log --tags inspect_cpp_codelab
@@ -944,7 +946,7 @@ The output above shows that the connection is still open and it received one req
    * {Rust}
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
+      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
       Creating component instance: client_part_1
 
       ffx log --tags inspect_rust_codelab
@@ -965,8 +967,9 @@ The output above shows that the connection is still open and it received one req
       ```
 
    <!-- TODO(fxbug.dev/80423): this should read `ffx component stop` but is blocked on fxbug.dev/79021 -->
-   The component continues running until Ctrl+C is pressed to give you
-   a chance to run `ffx inspect` and observe your output.
+   The component continues to run until you execute `ffx component stop` for the
+   Rust/C++ component or until Ctrl+C is pressed for the Dart component. As long as the component runs
+   you can run `ffx inspect` and observe your output.
 
 This concludes part 1. You may commit your changes so far:
 
@@ -1064,6 +1067,8 @@ You will need to diagnose and solve this problem.
    ```
 
    This output confirms that FizzBuzz is not receiving any connections.
+
+Note: You can also use `ffx inspect show "core/ffx-laboratory\:client_part_2/*"`.
 
 3. Add Inspect to identify the problem:
 
@@ -1196,8 +1201,9 @@ look at the logs:
    ```
    $ ffx log --filter FizzBuzz
    ...
-   ... Component fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/part_2.cm
-   is not allowed to connect to fuchsia.examples.inspect.FizzBuzz...
+   ...  No capability available at path /svc/fuchsia.examples.inspect.FizzBuzz
+   for component /core/ffx-laboratory:client_part_2/reverser, verify the
+   component has the proper `use` declaration. ...
    ```
 
 * {Rust}
@@ -1205,8 +1211,9 @@ look at the logs:
    ```
    $ ffx log --filter FizzBuzz
    ...
-   ... Component fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/part_2.cm
-   is not allowed to connect to fuchsia.examples.inspect.FizzBuzz...
+   ... No capability available at path /svc/fuchsia.examples.inspect.FizzBuzz
+   for component /core/ffx-laboratory:client_part_2/reverser, verify the
+   component has the proper `use` declaration. ...
    ```
 
 * {Dart}
@@ -1225,29 +1232,38 @@ the problem, the log output for the system can be extremely verbose. The
 particular log that you are looking for was a kernel log from the framework,
 which is additionally difficult to test for.
 
-Looking at the sandbox in part2 meta, you can see it is missing the service:
+Looking at part2 meta, you can see it is missing the service:
 
 * {C++}
 
-    Find the sandbox meta in [part_2/meta][cpp-part2-meta]
+    Add a `use` entry for `Fizzbuzz` to [part_2/meta][cpp-part2-meta]
+    ```
+    use: [
+        { protocol: "fuchsia.examples.inspect.FizzBuzz" },
+    ],
+    ```
 
 * {Rust}
 
-    Find the sandbox meta in [part_2/meta][rust-part2-meta]
+    Add a `use` entry for `Fizzbuzz` to [part_2/meta][rust-part2-meta]
+    ```
+    use: [
+        { protocol: "fuchsia.examples.inspect.FizzBuzz" },
+    ],
+    ```
 
 * {Dart}
 
     Find the sandbox meta in [part_2/meta][dart-part2-meta]
+    ```
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+    ```
 
-```
-"sandbox": {
-    "services": [
-        "fuchsia.logger.LogSink"
-    ]
-}
-```
-
-Add "fuchsia.examples.inspect.FizzBuzz" to the services array, rebuild,
+After you added "fuchsia.examples.inspect.FizzBuzz", rebuild,
 and run again. You should now see FizzBuzz in the logs and an OK status:
 
 * {C++}

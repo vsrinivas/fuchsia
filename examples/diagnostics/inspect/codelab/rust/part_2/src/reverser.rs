@@ -25,7 +25,7 @@ pub struct ReverserServerFactory {
 
 impl ReverserServerFactory {
     pub fn new(node: inspect::Node) -> Self {
-        // [START EXCLUDE]
+        // [START_EXCLUDE]
         let request_count = Arc::new(node.create_uint("total_requests", 0));
         let connection_count = node.create_uint("connection_count", 0);
         // [END_EXCLUDE]
@@ -33,7 +33,8 @@ impl ReverserServerFactory {
             node,
             // [START_EXCLUDE]
             request_count,
-            connection_count, // [END_EXCLUDE]}
+            connection_count,
+            // [END_EXCLUDE]
         }
     }
 

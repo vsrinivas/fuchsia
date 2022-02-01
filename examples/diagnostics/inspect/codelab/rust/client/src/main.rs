@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    fidl_fuchsia_component::BinderMarker,
     fidl_fuchsia_examples_inspect::ReverserMarker,
     fuchsia_component::client,
     fuchsia_zircon::DurationNum,
@@ -43,6 +44,10 @@ async fn main() -> Result<(), Error> {
 
     let reverser =
         client::connect_to_childs_protocol::<ReverserMarker>("reverser".to_string(), None).await?;
+
+    // Start FizzBuzz. For the purposes of the codelab.
+    let _proxy =
+        client::connect_to_childs_protocol::<BinderMarker>("fizzbuzz".to_string(), None).await?;
 
     // [START reverse_loop]
     for string in args.strings {

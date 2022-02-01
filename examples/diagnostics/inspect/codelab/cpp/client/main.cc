@@ -13,6 +13,7 @@
 #include <fuchsia/examples/inspect/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
@@ -47,12 +48,6 @@ int main(int argc, char** argv) {
   fuchsia::component::Realm_OpenExposedDir_Result result;
   status = zx::make_status(realm->OpenExposedDir(
       fuchsia::component::decl::ChildRef{.name = "reverser"}, exposed_dir.NewRequest(), &result));
-  zx::channel handle, request;
-  status = zx::make_status(zx::channel::create(0, &handle, &request));
-  if (status.is_error()) {
-    FX_LOGS(ERROR) << "Unable to create channel: " << status.status_string();
-    return status.status_value();
-  }
 
   fuchsia::examples::inspect::ReverserSyncPtr reverser;
   status = zx::make_status(exposed_dir->Open(
@@ -61,6 +56,22 @@ int main(int argc, char** argv) {
       fidl::InterfaceRequest<fuchsia::io::Node>(reverser.NewRequest().TakeChannel())));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Unable to connect to reverser: " << status.status_string();
+    return status.status_value();
+  }
+
+  // Start FizzBuzz. For the purposes of the codelab.
+  fuchsia::component::BinderSyncPtr binder;
+  fuchsia::io::DirectorySyncPtr fizzbuzz_exposed_dir;
+  fuchsia::component::Realm_OpenExposedDir_Result result_open_fizzbuzz;
+  status = zx::make_status(
+      realm->OpenExposedDir(fuchsia::component::decl::ChildRef{.name = "fizzbuzz"},
+                            fizzbuzz_exposed_dir.NewRequest(), &result_open_fizzbuzz));
+  status = zx::make_status(fizzbuzz_exposed_dir->Open(
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+      fuchsia::io::MODE_TYPE_SERVICE, fuchsia::component::Binder::Name_,
+      fidl::InterfaceRequest<fuchsia::io::Node>(binder.NewRequest().TakeChannel())));
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Unable to connect to Binder (for FizzBuzz): " << status.status_string();
     return status.status_value();
   }
 
