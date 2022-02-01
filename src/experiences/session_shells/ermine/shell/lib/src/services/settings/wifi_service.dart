@@ -168,8 +168,8 @@ class WiFiService implements TaskService {
     return networkInformationList;
   }
 
-  String nameFromScannedNetwork(policy.ScanResult network) {
-    return utf8.decode(network.id!.ssid.toList());
+  Uint8List ssidFromScannedNetwork(policy.ScanResult network) {
+    return network.id!.ssid;
   }
 
   Future<void> connectToNetwork(String password) async {
@@ -182,7 +182,7 @@ class WiFiService implements TaskService {
 
         policy.ScanResult? network = _scannedNetworks.firstWhereOrNull(
             (network) =>
-                nameFromScannedNetwork(network) == _targetNetwork.name);
+                ssidFromScannedNetwork(network) == _targetNetwork.ssid);
 
         if (network == null) {
           throw Exception(
@@ -319,7 +319,9 @@ class ClientStateUpdatesMonitor extends policy.ClientStateUpdates {
 
 /// Network information needed for UI
 class NetworkInformation {
-  // String representation of SSID
+  // SSID used for lookup
+  Uint8List? _ssid;
+  // String representation of SSID in UI
   String? _name;
   // If network is able to be connected to
   bool _compatible = false;
@@ -330,6 +332,7 @@ class NetworkInformation {
 
   // Constructor for network config
   NetworkInformation.fromNetworkConfig(policy.NetworkConfig networkConfig) {
+    _ssid = networkConfig.id?.ssid;
     _name = networkConfig.id?.ssid.toList() != null
         ? utf8.decode(networkConfig.id!.ssid.toList())
         : null;
@@ -339,12 +342,20 @@ class NetworkInformation {
 
   // Constructor for scan result
   NetworkInformation.fromScanResult(policy.ScanResult scanResult) {
+    _ssid = scanResult.id?.ssid;
     _name = scanResult.id?.ssid.toList() != null
         ? utf8.decode(scanResult.id!.ssid.toList())
         : null;
+    // Only allow valid characters in UI representation of SSID
+    // TODO(fxb/92668): Allow special characters, such as emojis, in network names
+    if (_name != null) {
+      _name = _name!.replaceAll(RegExp(r'[^A-Za-z0-9()\[\]\s+.,;?&_-]'), '');
+    }
     _compatible = scanResult.compatibility == policy.Compatibility.supported;
     _securityType = scanResult.id?.type;
   }
+
+  Uint8List? get ssid => _ssid;
 
   String get name => _name ?? '';
 
