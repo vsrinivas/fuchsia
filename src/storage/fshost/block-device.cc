@@ -285,14 +285,15 @@ BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd, const Co
     : mounter_(mounter),
       fd_(std::move(fd)),
       device_config_(device_config),
+      content_format_(fs_management::kDiskFormatUnknown),
       topological_path_(GetTopologicalPath(fd_.get())) {}
 
 fs_management::DiskFormat BlockDevice::content_format() const {
-  if (content_format_) {
-    return *content_format_;
+  if (content_format_ != fs_management::kDiskFormatUnknown) {
+    return content_format_;
   }
   content_format_ = fs_management::DetectDiskFormat(fd_.get());
-  return *content_format_;
+  return content_format_;
 }
 
 fs_management::DiskFormat BlockDevice::GetFormat() { return format_; }

@@ -73,7 +73,7 @@ class BlockDevice : public BlockDeviceInterface {
   fbl::unique_fd fd_;
   const Config* device_config_;
   mutable std::optional<fuchsia_hardware_block_BlockInfo> info_;
-  mutable std::optional<fs_management::DiskFormat> content_format_;
+  mutable fs_management::DiskFormat content_format_;
   fs_management::DiskFormat format_ = fs_management::kDiskFormatUnknown;
   std::string topological_path_;
   mutable std::string partition_name_;

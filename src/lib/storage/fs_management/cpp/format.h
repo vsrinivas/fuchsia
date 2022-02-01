@@ -76,7 +76,7 @@ inline constexpr uint8_t kF2fsMagic[4] = {
     0xf2,
 };
 
-inline constexpr uint8_t kFxfsMagic[8] = {0xf5, 0x20, 0x2d, 0x52, 0xc7, 0x41, 0x47, 0x51};
+inline constexpr uint8_t kFxfsMagic[8] = {'F', 'x', 'f', 's', 'S', 'u', 'p', 'r'};
 
 DiskFormat DetectDiskFormat(int fd);
 DiskFormat DetectDiskFormatLogUnknown(int fd);

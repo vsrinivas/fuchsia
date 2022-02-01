@@ -27,6 +27,12 @@ void CreateFxFile(const std::string& kFilename) {
   ASSERT_EQ(ftruncate(fd.get(), 1024 * 1024), 0);
 }
 
+TEST_P(DeviceTest, TestValidDiskFormat) {
+  ASSERT_TRUE(fs().Unmount().is_ok());
+  fbl::unique_fd device_fd(open(fs().DevicePath()->c_str(), O_RDWR));
+  ASSERT_EQ(fs_management::DetectDiskFormat(device_fd.get()), fs_management::kDiskFormatFxfs);
+}
+
 TEST_P(DeviceTest, TestWriteThenRead) {
   const std::string kFilename = GetPath("block_device");
   { CreateFxFile(kFilename); }
