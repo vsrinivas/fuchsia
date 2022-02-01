@@ -9,6 +9,7 @@ group("bin") {
 
   deps = [
     "guest",
+    "guest-rs",
     "guest_manager",
     "guest_runner",
     "linux_runner",
