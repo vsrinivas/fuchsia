@@ -152,41 +152,41 @@ pub trait PolicyEngine {
     fn time_source(&self) -> &Self::TimeSource;
 
     /// When should the next update happen?
-    fn compute_next_update_time(
-        &mut self,
-        apps: &[App],
-        scheduling: &UpdateCheckSchedule,
-        protocol_state: &ProtocolState,
-    ) -> BoxFuture<'_, CheckTiming>;
+    fn compute_next_update_time<'a>(
+        &'a mut self,
+        apps: &'a [App],
+        scheduling: &'a UpdateCheckSchedule,
+        protocol_state: &'a ProtocolState,
+    ) -> BoxFuture<'a, CheckTiming>;
 
     /// Given the context provided by State, does the Policy allow an update check to
     /// happen at this time?  This should be consistent with the compute_next_update_time
     /// so that during background updates, the result of compute_next_update_time will
     /// result in a CheckDecision::Ok() value from this function.
-    fn update_check_allowed(
-        &mut self,
-        apps: &[App],
-        scheduling: &UpdateCheckSchedule,
-        protocol_state: &ProtocolState,
-        check_options: &CheckOptions,
-    ) -> BoxFuture<'_, CheckDecision>;
+    fn update_check_allowed<'a>(
+        &'a mut self,
+        apps: &'a [App],
+        scheduling: &'a UpdateCheckSchedule,
+        protocol_state: &'a ProtocolState,
+        check_options: &'a CheckOptions,
+    ) -> BoxFuture<'a, CheckDecision>;
 
     /// Given the current State, the current PolicyData, can the proposed InstallPlan
     /// be executed at this time.
-    fn update_can_start<'p>(
-        &mut self,
-        proposed_install_plan: &'p Self::InstallPlan,
-    ) -> BoxFuture<'p, UpdateDecision>;
+    fn update_can_start<'a>(
+        &'a mut self,
+        proposed_install_plan: &'a Self::InstallPlan,
+    ) -> BoxFuture<'a, UpdateDecision>;
 
     /// Is reboot allowed right now.
-    fn reboot_allowed(
-        &mut self,
-        check_options: &CheckOptions,
-        install_result: &Self::InstallResult,
-    ) -> BoxFuture<'_, bool>;
+    fn reboot_allowed<'a>(
+        &'a mut self,
+        check_options: &'a CheckOptions,
+        install_result: &'a Self::InstallResult,
+    ) -> BoxFuture<'a, bool>;
 
     /// Given the InstallPlan, is reboot needed after update has been installed.
-    fn reboot_needed(&mut self, install_plan: &Self::InstallPlan) -> BoxFuture<'_, bool>;
+    fn reboot_needed<'a>(&'a mut self, install_plan: &'a Self::InstallPlan) -> BoxFuture<'a, bool>;
 }
 
 #[cfg(test)]

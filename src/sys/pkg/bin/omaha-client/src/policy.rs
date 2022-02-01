@@ -21,7 +21,7 @@ use omaha_client::{
     unless::Unless,
 };
 use serde::Deserialize;
-use std::{cell::Cell, path::Path, rc::Rc, sync::Arc, time::Duration};
+use std::{path::Path, sync::Arc, time::Duration};
 
 mod rate_limiter;
 use rate_limiter::UpdateCheckRateLimiter;
@@ -261,16 +261,10 @@ fn fuzz_interval(
 pub struct FuchsiaPolicyEngine<T> {
     time_source: T,
     // Whether the device is in active use.
-    ui_activity: Rc<Cell<UiActivityState>>,
+    ui_activity: Arc<Mutex<UiActivityState>>,
     config: PolicyConfig,
     waiting_for_reboot_time: Option<ComplexTime>,
     update_check_rate_limiter: UpdateCheckRateLimiter,
-    // Status quo in the omaha-client binary is to use Rc<Cell<T>> because the binary is single
-    // threaded. Here, we must use an Arc<Mutex<T>> because it needs to be Send to get captured by
-    // the BoxFuture in `update_can_start`. Alternatively, we could have made `update_can_start`
-    // use a LocalBoxFuture. Instead, we choose to use an Arc to avoid imposing LocalBoxFuture
-    // restrictions on the omaha-client library. We will reassess this once we align on the
-    // library's mixed use of single and multithreaded primitives.
     commit_status: Arc<Mutex<Option<CommitStatus>>>,
 }
 
@@ -301,7 +295,7 @@ impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
     pub fn build(self) -> FuchsiaPolicyEngine<T> {
         FuchsiaPolicyEngine {
             time_source: self.time_source,
-            ui_activity: Rc::new(Cell::new(UiActivityState::new())),
+            ui_activity: Arc::new(Mutex::new(UiActivityState::new())),
             config: self.config,
             waiting_for_reboot_time: None,
             update_check_rate_limiter: UpdateCheckRateLimiter::new(),
@@ -312,7 +306,7 @@ impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
 
 impl<T> PolicyEngine for FuchsiaPolicyEngine<T>
 where
-    T: TimeSource + Clone,
+    T: TimeSource + Clone + Send + Sync,
 {
     type TimeSource = T;
     type InstallResult = InstallResult;
@@ -322,74 +316,91 @@ where
         &self.time_source
     }
 
-    fn compute_next_update_time(
-        &mut self,
-        apps: &[App],
-        scheduling: &UpdateCheckSchedule,
-        protocol_state: &ProtocolState,
-    ) -> BoxFuture<'_, CheckTiming> {
-        let timing = FuchsiaPolicy::compute_next_update_time(
-            &FuchsiaUpdatePolicyData::from_policy_engine(&self),
-            apps,
-            scheduling,
-            protocol_state,
-        );
-        future::ready(timing).boxed()
-    }
+    fn compute_next_update_time<'a>(
+        &'a mut self,
+        apps: &'a [App],
+        scheduling: &'a UpdateCheckSchedule,
+        protocol_state: &'a ProtocolState,
+    ) -> BoxFuture<'a, CheckTiming> {
+        async move {
+            let policy_data = FuchsiaUpdatePolicyData::from_policy_engine(self).await;
 
-    fn update_check_allowed(
-        &mut self,
-        apps: &[App],
-        scheduling: &UpdateCheckSchedule,
-        protocol_state: &ProtocolState,
-        check_options: &CheckOptions,
-    ) -> BoxFuture<'_, CheckDecision> {
-        let policy_data = FuchsiaUpdatePolicyData::from_policy_engine(&self);
-        let decision = FuchsiaPolicy::update_check_allowed(
-            &policy_data,
-            apps,
-            scheduling,
-            protocol_state,
-            check_options,
-        );
-        if let CheckDecision::Ok(_) = &decision {
-            self.update_check_rate_limiter.add_time(policy_data.current_time.mono);
+            let timing = FuchsiaPolicy::compute_next_update_time(
+                &policy_data,
+                apps,
+                scheduling,
+                protocol_state,
+            );
+
+            timing
         }
-        future::ready(decision).boxed()
+        .boxed()
     }
 
-    fn update_can_start<'p>(
-        &mut self,
-        proposed_install_plan: &'p Self::InstallPlan,
-    ) -> BoxFuture<'p, UpdateDecision> {
-        let data = FuchsiaUpdateCanStartPolicyData::from_policy_engine(&self);
+    fn update_check_allowed<'a>(
+        &'a mut self,
+        apps: &'a [App],
+        scheduling: &'a UpdateCheckSchedule,
+        protocol_state: &'a ProtocolState,
+        check_options: &'a CheckOptions,
+    ) -> BoxFuture<'a, CheckDecision> {
+        async move {
+            let policy_data = FuchsiaUpdatePolicyData::from_policy_engine(self).await;
 
-        async move { FuchsiaPolicy::update_can_start(&data.await, proposed_install_plan) }.boxed()
-    }
-
-    fn reboot_allowed(
-        &mut self,
-        check_options: &CheckOptions,
-        install_result: &Self::InstallResult,
-    ) -> BoxFuture<'_, bool> {
-        if self.waiting_for_reboot_time.is_none() {
-            self.waiting_for_reboot_time = Some(self.time_source.now());
+            let decision = FuchsiaPolicy::update_check_allowed(
+                &policy_data,
+                apps,
+                scheduling,
+                protocol_state,
+                check_options,
+            );
+            if let CheckDecision::Ok(_) = &decision {
+                self.update_check_rate_limiter.add_time(policy_data.current_time.mono);
+            }
+            decision
         }
-
-        let decision = FuchsiaPolicy::reboot_allowed(
-            &FuchsiaRebootPolicyData::new(
-                self.ui_activity.get(),
-                self.time_source.now(),
-                self.waiting_for_reboot_time.unwrap(),
-                self.config.allow_reboot_when_idle,
-                install_result.urgent_update,
-            ),
-            check_options,
-        );
-        future::ready(decision).boxed()
+        .boxed()
     }
 
-    fn reboot_needed(&mut self, install_plan: &Self::InstallPlan) -> BoxFuture<'_, bool> {
+    fn update_can_start<'a>(
+        &'a mut self,
+        proposed_install_plan: &'a Self::InstallPlan,
+    ) -> BoxFuture<'a, UpdateDecision> {
+        async move {
+            let data = FuchsiaUpdateCanStartPolicyData::from_policy_engine(self).await;
+
+            FuchsiaPolicy::update_can_start(&data, proposed_install_plan)
+        }
+        .boxed()
+    }
+
+    fn reboot_allowed<'a>(
+        &'a mut self,
+        check_options: &'a CheckOptions,
+        install_result: &'a Self::InstallResult,
+    ) -> BoxFuture<'a, bool> {
+        async move {
+            if self.waiting_for_reboot_time.is_none() {
+                self.waiting_for_reboot_time = Some(self.time_source.now());
+            }
+
+            let decision = FuchsiaPolicy::reboot_allowed(
+                &FuchsiaRebootPolicyData::new(
+                    *self.ui_activity.lock().await,
+                    self.time_source.now(),
+                    self.waiting_for_reboot_time.unwrap(),
+                    self.config.allow_reboot_when_idle,
+                    install_result.urgent_update,
+                ),
+                check_options,
+            );
+
+            decision
+        }
+        .boxed()
+    }
+
+    fn reboot_needed<'a>(&'a mut self, install_plan: &'a Self::InstallPlan) -> BoxFuture<'a, bool> {
         let decision = FuchsiaPolicy::reboot_needed(install_plan);
         future::ready(decision).boxed()
     }
@@ -407,7 +418,7 @@ where
             return futures::future::ready(()).left_future();
         }
 
-        let ui_activity = Rc::clone(&self.ui_activity);
+        let ui_activity = Arc::clone(&self.ui_activity);
         async move {
             let mut backoff = Duration::from_secs(1);
             loop {
@@ -427,22 +438,23 @@ where
         &self.config
     }
 }
+
 /// Watches the UI activity state and updates the value in `ui_activity`.
-async fn watch_ui_activity(ui_activity: &Rc<Cell<UiActivityState>>) -> Result<(), Error> {
+async fn watch_ui_activity(ui_activity: &Arc<Mutex<UiActivityState>>) -> Result<(), Error> {
     let provider = connect_to_protocol::<ProviderMarker>()?;
     watch_ui_activity_impl(ui_activity, provider).await
 }
 
 /// Watches the UI activity state using `provider` proxy and updates the value in `ui_activity`.
 async fn watch_ui_activity_impl(
-    ui_activity: &Rc<Cell<UiActivityState>>,
+    ui_activity: &Arc<Mutex<UiActivityState>>,
     provider: ProviderProxy,
 ) -> Result<(), Error> {
     let (listener, mut stream) = fidl::endpoints::create_request_stream::<ListenerMarker>()?;
     provider.watch_state(listener).context("watch_state")?;
     while let Some(event) = stream.try_next().await? {
         let ListenerRequest::OnStateChanged { state, transition_time: _, responder } = event;
-        ui_activity.set(UiActivityState { state });
+        *ui_activity.lock().await = UiActivityState { state };
         responder.send()?;
     }
     Ok(())
@@ -468,7 +480,7 @@ struct FuchsiaUpdatePolicyData {
 }
 
 impl FuchsiaUpdatePolicyData {
-    fn from_policy_engine<T: TimeSource>(policy_engine: &FuchsiaPolicyEngine<T>) -> Self {
+    async fn from_policy_engine<T: TimeSource>(policy_engine: &FuchsiaPolicyEngine<T>) -> Self {
         Self {
             current_time: policy_engine.time_source.now(),
             config: policy_engine.config.clone(),
@@ -485,7 +497,7 @@ struct FuchsiaUpdateCanStartPolicyData {
 impl FuchsiaUpdateCanStartPolicyData {
     fn from_policy_engine<T: TimeSource>(
         policy_engine: &FuchsiaPolicyEngine<T>,
-    ) -> BoxFuture<'static, Self> {
+    ) -> impl Future<Output = Self> + 'static {
         let engine_commit_status = Arc::clone(&policy_engine.commit_status);
 
         async move {
@@ -503,7 +515,6 @@ impl FuchsiaUpdateCanStartPolicyData {
             };
             Self { commit_status }
         }
-        .boxed()
     }
 }
 
@@ -1414,15 +1425,15 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_ui_activity_state_default_unknown() {
         let policy_engine = FuchsiaPolicyEngineBuilder.time_source(StandardTimeSource).build();
-        let ui_activity = policy_engine.ui_activity.get();
+        let ui_activity = *policy_engine.ui_activity.lock().await;
         assert_eq!(ui_activity.state, State::Unknown);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_ui_activity_watch_state() {
         let policy_engine = FuchsiaPolicyEngineBuilder.time_source(StandardTimeSource).build();
-        let ui_activity = Rc::clone(&policy_engine.ui_activity);
-        assert_eq!(ui_activity.get().state, State::Unknown);
+        let ui_activity = Arc::clone(&policy_engine.ui_activity);
+        assert_eq!(ui_activity.lock().await.state, State::Unknown);
 
         let (proxy, mut stream) = create_proxy_and_stream::<ProviderMarker>().unwrap();
         fasync::Task::local(async move {
@@ -1434,9 +1445,9 @@ mod tests {
             stream.next().await.unwrap().unwrap();
         let listener = listener.into_proxy().unwrap();
         listener.on_state_changed(State::Active, 123).await.unwrap();
-        assert_eq!(ui_activity.get(), UiActivityState { state: State::Active });
+        assert_eq!(*ui_activity.lock().await, UiActivityState { state: State::Active });
         listener.on_state_changed(State::Idle, 456).await.unwrap();
-        assert_eq!(ui_activity.get(), UiActivityState { state: State::Idle });
+        assert_eq!(*ui_activity.lock().await, UiActivityState { state: State::Idle });
     }
 
     #[test]
