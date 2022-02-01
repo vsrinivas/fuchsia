@@ -18,11 +18,18 @@ const String elementManagerNamespace = 'element_manager';
 class LaunchService {
   late final ControllerClosedCallback onControllerClosed;
 
-  Future<ControllerProxy> launch(String title, String url) async {
+  Future<ControllerProxy> launch(String title, String url,
+      {String? alternateServiceName}) async {
     final elementController = ControllerProxy();
     final proxy = ManagerProxy();
 
-    final incoming = Incoming.fromSvcPath()..connectToService(proxy);
+    final incoming = Incoming.fromSvcPath();
+    if (alternateServiceName != null) {
+      incoming.connectToServiceByNameWithChannel(
+          alternateServiceName, proxy.ctrl.request().passChannel());
+    } else {
+      incoming.connectToService(proxy);
+    }
 
     final id = '${DateTime.now().millisecondsSinceEpoch}';
     final annotations = [

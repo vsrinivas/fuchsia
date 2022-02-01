@@ -23,6 +23,7 @@
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.element.Manager",
+                "fuchsia.element.Manager-chrome",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.fonts.Provider",
                 "fuchsia.hardware.power.statecontrol.Admin",

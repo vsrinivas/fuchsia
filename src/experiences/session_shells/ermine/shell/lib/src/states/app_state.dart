@@ -53,7 +53,7 @@ abstract class AppState {
   void switchView(ViewState view);
   void cancel();
   void closeView();
-  void launch(String title, String url);
+  void launch(String title, String url, {String? alternateServiceName});
   void setTheme({bool darkTheme});
   void restart();
   void shutdown();

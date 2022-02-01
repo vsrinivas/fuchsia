@@ -327,11 +327,14 @@ class AppStateImpl with Disposable implements AppState {
   }.asAction();
 
   @override
-  void launch(String title, String url) => _launch([title, url]);
-  late final _launch = (String title, String url) async {
+  void launch(String title, String url, {String? alternateServiceName}) =>
+      _launch([title, url, alternateServiceName]);
+  late final _launch =
+      (String title, String url, String? alternateServiceName) async {
     try {
       _clearError(url, 'ProposeElementError');
-      await launchService.launch(title, url);
+      await launchService.launch(title, url,
+          alternateServiceName: alternateServiceName);
       // Hide app launcher unless we had an error presenting the view.
       if (!_isLaunchError(url)) {
         runInAction(() {
