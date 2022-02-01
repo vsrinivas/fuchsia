@@ -16,7 +16,7 @@ use {
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     futures::FutureExt,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, RelativeMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, InstancedRelativeMoniker},
     routing::{
         capability_source::{
             CapabilitySourceInterface, ComponentCapability, StorageCapabilitySource,
@@ -803,7 +803,7 @@ impl ComponentModelForAnalyzer {
     ) -> Result<
             (
                 StorageCapabilitySource<ComponentInstanceForAnalyzer>,
-                RelativeMoniker,
+                InstancedRelativeMoniker,
                 <<ComponentInstanceForAnalyzer as ComponentInstanceInterface>::DebugRouteMapper as DebugRouteMapper>::RouteMap,
                 <<ComponentInstanceForAnalyzer as ComponentInstanceInterface>::DebugRouteMapper as DebugRouteMapper>::RouteMap,
             ),

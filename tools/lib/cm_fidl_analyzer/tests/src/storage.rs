@@ -12,7 +12,9 @@ mod tests {
         cm_rust_testing::{ComponentDeclBuilder, DirectoryDeclBuilder},
         component_id_index::gen_instance_id,
         fidl_fuchsia_component_decl as fdecl, fuchsia_zircon_status as zx_status,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
+        moniker::{
+            AbsoluteMoniker, AbsoluteMonikerBase, InstancedRelativeMoniker, RelativeMonikerBase,
+        },
         routing::rights::{READ_RIGHTS, WRITE_RIGHTS},
         routing_test_helpers::{
             component_id_index::make_index_file, storage::CommonStorageTest, CheckUse,
@@ -213,7 +215,10 @@ mod tests {
                 AbsoluteMoniker::parse_string_without_instances("/consumer").unwrap(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
-                    storage_relation: Some(RelativeMoniker::new(vec![], vec!["consumer:0".into()])),
+                    storage_relation: Some(InstancedRelativeMoniker::new(
+                        vec![],
+                        vec!["consumer:0".into()],
+                    )),
                     from_cm_namespace: false,
                     storage_subdir: None,
                     expected_res: ExpectedResult::Err(zx_status::Status::UNAVAILABLE),

@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     clonable_error::ClonableError,
     fidl_fuchsia_component as fcomponent, fuchsia_zircon as zx,
-    moniker::{ExtendedMoniker, InstancedAbsoluteMoniker, RelativeMoniker},
+    moniker::{ExtendedMoniker, InstancedAbsoluteMoniker, InstancedRelativeMoniker},
     thiserror::Error,
 };
 
@@ -34,7 +34,7 @@ pub enum OpenResourceError {
     )]
     OpenStorageFailed {
         moniker: ExtendedMoniker,
-        relative_moniker: RelativeMoniker,
+        relative_moniker: InstancedRelativeMoniker,
         path: String,
         #[source]
         err: ClonableError,
@@ -73,7 +73,7 @@ impl OpenResourceError {
 
     pub fn open_storage_failed(
         moniker: &ExtendedMoniker,
-        relative_moniker: &RelativeMoniker,
+        relative_moniker: &InstancedRelativeMoniker,
         path: impl Into<String>,
         err: impl Into<Error>,
     ) -> Self {

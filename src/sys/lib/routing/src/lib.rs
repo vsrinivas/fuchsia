@@ -47,7 +47,7 @@ use {
     },
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io2 as fio2,
     from_enum::FromEnum,
-    moniker::{AbsoluteMoniker, ChildMoniker, RelativeMoniker, RelativeMonikerBase},
+    moniker::{AbsoluteMoniker, ChildMoniker, InstancedRelativeMoniker, RelativeMonikerBase},
     std::{
         path::{Path, PathBuf},
         sync::Arc,
@@ -200,7 +200,7 @@ pub async fn route_storage_and_backing_directory<C>(
 ) -> Result<
     (
         StorageCapabilitySource<C>,
-        RelativeMoniker,
+        InstancedRelativeMoniker,
         <C::DebugRouteMapper as DebugRouteMapper>::RouteMap,
         <C::DebugRouteMapper as DebugRouteMapper>::RouteMap,
     ),
@@ -225,7 +225,7 @@ where
         _ => unreachable!("unexpected storage source"),
     };
 
-    let relative_moniker = RelativeMoniker::from_absolute(
+    let instanced_relative_moniker = InstancedRelativeMoniker::from_absolute(
         storage_component_instance.instanced_moniker(),
         target.instanced_moniker(),
     );
@@ -238,7 +238,7 @@ where
     .await?
     {
         (RouteSource::StorageBackingDirectory(storage_source_info), dir_route) => {
-            Ok((storage_source_info, relative_moniker, storage_route, dir_route))
+            Ok((storage_source_info, instanced_relative_moniker, storage_route, dir_route))
         }
         _ => unreachable!("expected RouteSource::StorageBackingDirectory"),
     }

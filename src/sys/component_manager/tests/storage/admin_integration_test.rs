@@ -15,7 +15,7 @@ use {
         channel::mpsc, future::BoxFuture, sink::SinkExt, Future, FutureExt, StreamExt, TryStreamExt,
     },
     maplit::hashset,
-    moniker::{RelativeMoniker, RelativeMonikerBase},
+    moniker::{InstancedRelativeMoniker, RelativeMonikerBase},
     std::collections::HashSet,
 };
 
@@ -107,7 +107,7 @@ async fn single_storage_user() {
     assert_eq!(
         storage_users
             .iter()
-            .map(|moniker_with_instances| RelativeMoniker::parse(&moniker_with_instances)
+            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(&moniker_with_instances)
                 .unwrap()
                 .to_string_without_instances())
             .collect::<HashSet<_>>(),
@@ -177,7 +177,7 @@ async fn multiple_storage_users() {
     assert_eq!(
         storage_users
             .iter()
-            .map(|moniker_with_instances| RelativeMoniker::parse(&moniker_with_instances)
+            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(&moniker_with_instances)
                 .unwrap()
                 .to_string_without_instances())
             .collect::<HashSet<_>>(),
@@ -212,7 +212,7 @@ async fn purged_storage_user() {
     assert_eq!(
         storage_users
             .iter()
-            .map(|moniker_with_instances| RelativeMoniker::parse(&moniker_with_instances)
+            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(&moniker_with_instances)
                 .unwrap()
                 .to_string_without_instances())
             .collect::<HashSet<_>>(),
@@ -236,7 +236,9 @@ async fn purged_storage_user() {
         .await
         .iter()
         .map(|moniker_with_instances| {
-            RelativeMoniker::parse(&moniker_with_instances).unwrap().to_string_without_instances()
+            InstancedRelativeMoniker::parse(&moniker_with_instances)
+                .unwrap()
+                .to_string_without_instances()
         })
         .collect::<HashSet<_>>();
     assert!(!storage_users.contains(&instance_moniker));

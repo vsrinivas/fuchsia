@@ -16,7 +16,9 @@ use {
     cm_rust_testing::*,
     component_id_index::gen_instance_id,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, InstancedRelativeMoniker, RelativeMonikerBase,
+    },
     routing::{error::RoutingError, RouteRequest},
     std::{convert::TryInto, path::PathBuf},
 };
@@ -189,7 +191,7 @@ async fn use_in_collection_from_parent() {
         vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("data".to_string()),
             expected_res: ExpectedResult::Ok,
@@ -200,7 +202,7 @@ async fn use_in_collection_from_parent() {
         vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/cache".try_into().unwrap(),
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
+            storage_relation: Some(InstancedRelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
             from_cm_namespace: false,
             storage_subdir: Some("cache".to_string()),
             expected_res: ExpectedResult::Ok,
@@ -211,7 +213,7 @@ async fn use_in_collection_from_parent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("data"),
-            RelativeMoniker::new(vec![], vec![]),
+            InstancedRelativeMoniker::new(vec![], vec![]),
             None,
             ""
         )
@@ -221,7 +223,7 @@ async fn use_in_collection_from_parent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("cache"),
-            RelativeMoniker::new(vec![], vec![]),
+            InstancedRelativeMoniker::new(vec![], vec![]),
             None,
             ""
         )
@@ -234,7 +236,7 @@ async fn use_in_collection_from_parent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("data"),
-            RelativeMoniker::new(vec![], vec![]),
+            InstancedRelativeMoniker::new(vec![], vec![]),
             None,
             ""
         )
@@ -244,7 +246,7 @@ async fn use_in_collection_from_parent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("cache"),
-            RelativeMoniker::new(vec![], vec![]),
+            InstancedRelativeMoniker::new(vec![], vec![]),
             None,
             ""
         )
@@ -362,7 +364,7 @@ async fn use_in_collection_from_grandparent() {
         vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
-            storage_relation: Some(RelativeMoniker::new(
+            storage_relation: Some(InstancedRelativeMoniker::new(
                 vec![],
                 vec!["b:0".into(), "coll:c:1".into()],
             )),
@@ -376,7 +378,7 @@ async fn use_in_collection_from_grandparent() {
         vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/cache".try_into().unwrap(),
-            storage_relation: Some(RelativeMoniker::new(
+            storage_relation: Some(InstancedRelativeMoniker::new(
                 vec![],
                 vec!["b:0".into(), "coll:c:1".into()],
             )),
@@ -389,7 +391,7 @@ async fn use_in_collection_from_grandparent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("data"),
-            RelativeMoniker::new(vec![], vec!["b:0".into()]),
+            InstancedRelativeMoniker::new(vec![], vec!["b:0".into()]),
             None,
             "children",
         )
@@ -399,7 +401,7 @@ async fn use_in_collection_from_grandparent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("cache"),
-            RelativeMoniker::new(vec![], vec!["b:0".into()]),
+            InstancedRelativeMoniker::new(vec![], vec!["b:0".into()]),
             None,
             "children",
         )
@@ -412,7 +414,7 @@ async fn use_in_collection_from_grandparent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("data"),
-            RelativeMoniker::new(vec![], vec!["b:0".into()]),
+            InstancedRelativeMoniker::new(vec![], vec!["b:0".into()]),
             None,
             "children"
         )
@@ -422,7 +424,7 @@ async fn use_in_collection_from_grandparent() {
     assert_eq!(
         test.list_directory_in_storage(
             Some("cache"),
-            RelativeMoniker::new(vec![], vec!["b:0".into()]),
+            InstancedRelativeMoniker::new(vec![], vec!["b:0".into()]),
             None,
             "children"
         )

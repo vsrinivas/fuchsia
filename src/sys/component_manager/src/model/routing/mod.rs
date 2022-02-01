@@ -31,7 +31,7 @@ use {
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::*,
-    moniker::{ExtendedMoniker, RelativeMoniker},
+    moniker::{ExtendedMoniker, InstancedRelativeMoniker},
     std::{path::PathBuf, sync::Arc},
 };
 
@@ -395,7 +395,7 @@ pub async fn report_routing_failure(
 /// and `server_chan` parameters are used in the open call.
 async fn open_storage_capability(
     source: storage::StorageCapabilitySource,
-    relative_moniker: RelativeMoniker,
+    relative_moniker: InstancedRelativeMoniker,
     target: &Arc<ComponentInstance>,
     options: OpenOptions<'_>,
 ) -> Result<(), ModelError> {

@@ -45,8 +45,8 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, RelativeMoniker,
-        RelativeMonikerBase,
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase,
+        InstancedRelativeMoniker, RelativeMonikerBase,
     },
     std::{
         collections::{HashMap, HashSet},
@@ -432,7 +432,7 @@ impl RoutingTest {
     pub async fn list_directory_in_storage(
         &self,
         subdir: Option<&str>,
-        relation: RelativeMoniker,
+        relation: InstancedRelativeMoniker,
         instance_id: Option<&ComponentInstanceId>,
         relative_path: &str,
     ) -> Vec<String> {
@@ -1084,7 +1084,7 @@ pub mod capability_util {
 
     pub async fn check_file_in_storage(
         storage_subdir: Option<String>,
-        relation: RelativeMoniker,
+        relation: InstancedRelativeMoniker,
         instance_id: Option<&ComponentInstanceId>,
         test_dir_proxy: &DirectoryProxy,
     ) -> Result<(), anyhow::Error> {
@@ -1104,7 +1104,7 @@ pub mod capability_util {
 
     pub async fn confirm_storage_is_deleted_for_component(
         storage_subdir: Option<String>,
-        relation: RelativeMoniker,
+        relation: InstancedRelativeMoniker,
         instance_id: Option<&ComponentInstanceId>,
         test_dir_proxy: &DirectoryProxy,
     ) {

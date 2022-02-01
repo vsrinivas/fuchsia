@@ -30,7 +30,7 @@ use {
     maplit::hashmap,
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker,
-        InstancedAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase,
+        InstancedAbsoluteMoniker, InstancedRelativeMoniker, RelativeMonikerBase,
     },
     routing::{
         capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
@@ -122,7 +122,7 @@ pub enum CheckUse {
         path: CapabilityPath,
         // The relative moniker from the storage declaration to the use declaration. Only
         // used if `expected_res` is Ok.
-        storage_relation: Option<RelativeMoniker>,
+        storage_relation: Option<InstancedRelativeMoniker>,
         // The backing directory for this storage is in component manager's namespace, not the
         // test's isolated test directory.
         from_cm_namespace: bool,
@@ -131,7 +131,7 @@ pub enum CheckUse {
     },
     StorageAdmin {
         // The relative moniker from the storage declaration to the use declaration.
-        storage_relation: RelativeMoniker,
+        storage_relation: InstancedRelativeMoniker,
         // The backing directory for this storage is in component manager's namespace, not the
         // test's isolated test directory.
         from_cm_namespace: bool,
@@ -159,7 +159,7 @@ impl CheckUse {
 // This function should reproduce the logic of `crate::storage::generate_storage_path`.
 pub fn generate_storage_path(
     subdir: Option<String>,
-    relative_moniker: &RelativeMoniker,
+    relative_moniker: &InstancedRelativeMoniker,
     instance_id: Option<&ComponentInstanceId>,
 ) -> PathBuf {
     if let Some(id) = instance_id {

@@ -39,7 +39,7 @@ use {
     lazy_static::lazy_static,
     log::*,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, PartialRelativeMoniker, RelativeMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, InstancedRelativeMoniker, PartialRelativeMoniker,
         RelativeMonikerBase,
     },
     routing::component_instance::ComponentInstanceInterface,
@@ -207,7 +207,8 @@ impl StorageAdmin {
                     object,
                     control_handle: _,
                 } => {
-                    let relative_moniker = RelativeMoniker::try_from(relative_moniker.as_str())?;
+                    let relative_moniker =
+                        InstancedRelativeMoniker::try_from(relative_moniker.as_str())?;
                     let abs_moniker = AbsoluteMoniker::from_relative(
                         component.abs_moniker(),
                         &relative_moniker.to_partial(),
@@ -292,7 +293,9 @@ impl StorageAdmin {
                     relative_moniker,
                     responder,
                 } => {
-                    let mut response = match RelativeMoniker::try_from(relative_moniker.as_str()) {
+                    let mut response = match InstancedRelativeMoniker::try_from(
+                        relative_moniker.as_str(),
+                    ) {
                         Err(e) => {
                             warn!("couldn't parse string as relative moniker for storage admin protocol: {:?}", e);
                             Err(fcomponent::Error::InvalidArguments)

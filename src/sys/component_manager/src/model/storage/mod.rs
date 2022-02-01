@@ -16,7 +16,9 @@ use {
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
-    moniker::{ChildMonikerBase, InstancedAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase},
+    moniker::{
+        ChildMonikerBase, InstancedAbsoluteMoniker, InstancedRelativeMoniker, RelativeMonikerBase,
+    },
     routing::{
         component_id_index::ComponentInstanceId, component_instance::ComponentInstanceInterface,
     },
@@ -52,7 +54,7 @@ pub enum StorageError {
     Open {
         dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
-        relative_moniker: RelativeMoniker,
+        relative_moniker: InstancedRelativeMoniker,
         instance_id: Option<ComponentInstanceId>,
         #[source]
         err: ClonableError,
@@ -82,7 +84,7 @@ pub enum StorageError {
     Remove {
         dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
-        relative_moniker: RelativeMoniker,
+        relative_moniker: InstancedRelativeMoniker,
         instance_id: Option<ComponentInstanceId>,
         #[source]
         err: ClonableError,
@@ -93,7 +95,7 @@ pub enum StorageError {
         instance_id
     )]
     InvalidStoragePath {
-        relative_moniker: RelativeMoniker,
+        relative_moniker: InstancedRelativeMoniker,
         instance_id: Option<ComponentInstanceId>,
     },
 }
@@ -110,7 +112,7 @@ impl StorageError {
     pub fn open(
         dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
-        relative_moniker: RelativeMoniker,
+        relative_moniker: InstancedRelativeMoniker,
         instance_id: Option<ComponentInstanceId>,
         err: impl Into<Error>,
     ) -> Self {
@@ -135,7 +137,7 @@ impl StorageError {
     pub fn remove(
         dir_source_moniker: Option<InstancedAbsoluteMoniker>,
         dir_source_path: CapabilityPath,
-        relative_moniker: RelativeMoniker,
+        relative_moniker: InstancedRelativeMoniker,
         instance_id: Option<ComponentInstanceId>,
         err: impl Into<Error>,
     ) -> Self {
@@ -149,7 +151,7 @@ impl StorageError {
     }
 
     pub fn invalid_storage_path(
-        relative_moniker: RelativeMoniker,
+        relative_moniker: InstancedRelativeMoniker,
         instance_id: Option<ComponentInstanceId>,
     ) -> Self {
         Self::InvalidStoragePath { relative_moniker, instance_id }
@@ -211,7 +213,7 @@ async fn open_storage_root(
 /// it is based on the provided relative moniker.
 pub async fn open_isolated_storage(
     storage_source_info: StorageCapabilitySource,
-    relative_moniker: RelativeMoniker,
+    relative_moniker: InstancedRelativeMoniker,
     instance_id: Option<&ComponentInstanceId>,
     open_mode: u32,
     start_reason: &StartReason,
@@ -257,7 +259,7 @@ pub async fn open_isolated_storage_by_id(
 /// `dir_source_path` are the component hosting the directory and its capability path.
 pub async fn delete_isolated_storage(
     storage_source_info: StorageCapabilitySource,
-    relative_moniker: RelativeMoniker,
+    relative_moniker: InstancedRelativeMoniker,
     instance_id: Option<&ComponentInstanceId>,
 ) -> Result<(), ModelError> {
     let root_dir =
@@ -378,7 +380,7 @@ pub async fn delete_isolated_storage(
 /// When `d` attempts to access `/my_cache` the framework creates the sub-directory
 /// `b:0/children/c:0/children/d:0/data` in the directory used by `a` to declare storage
 /// capabilities.  Then, the framework gives 'd' access to this new directory.
-fn generate_moniker_based_storage_path(relative_moniker: &RelativeMoniker) -> PathBuf {
+fn generate_moniker_based_storage_path(relative_moniker: &InstancedRelativeMoniker) -> PathBuf {
     assert!(
         !relative_moniker.down_path().is_empty(),
         "storage capability appears to have been exposed or used by its source"
@@ -459,7 +461,8 @@ mod tests {
         let b_component =
             test.model.look_up(&vec!["b"].into()).await.expect("failed to find component for b:0");
         let dir_source_path = CapabilityPath::try_from("/data").unwrap();
-        let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
+        let relative_moniker =
+            InstancedRelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
 
         // Open.
         let dir = open_isolated_storage(
@@ -498,8 +501,10 @@ mod tests {
         assert_eq!(test_helpers::list_directory(&dir).await, vec!["file".to_string()]);
 
         // Open another component's storage.
-        let relative_moniker =
-            RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into(), "e:0".into()]);
+        let relative_moniker = InstancedRelativeMoniker::new(
+            vec![],
+            vec!["c:0".into(), "coll:d:1".into(), "e:0".into()],
+        );
         let dir = open_isolated_storage(
             StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&b_component)),
@@ -546,7 +551,8 @@ mod tests {
         let b_component =
             test.model.look_up(&vec!["b"].into()).await.expect("failed to find component for b:0");
         let dir_source_path = CapabilityPath::try_from("/data").unwrap();
-        let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
+        let relative_moniker =
+            InstancedRelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
 
         // open the storage directory using instance ID.
         let instance_id = Some(component_id_index::gen_instance_id(&mut rand::thread_rng()));
@@ -619,7 +625,8 @@ mod tests {
         test.bind_instance_and_wait_start(&AbsoluteMoniker::root()).await.unwrap();
 
         // Try to open the storage. We expect an error.
-        let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
+        let relative_moniker =
+            InstancedRelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
         let res = open_isolated_storage(
             StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&test.model.root())),
@@ -668,8 +675,9 @@ mod tests {
         let b_component =
             test.model.look_up(&vec!["b"].into()).await.expect("failed to find component for b:0");
         let dir_source_path = CapabilityPath::try_from("/data").unwrap();
-        let parent_moniker = RelativeMoniker::new(vec![], vec!["c:0".into()]);
-        let child_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
+        let parent_moniker = InstancedRelativeMoniker::new(vec![], vec!["c:0".into()]);
+        let child_moniker =
+            InstancedRelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
 
         // Open and write to the storage for child.
         let dir = open_isolated_storage(
@@ -794,7 +802,8 @@ mod tests {
         let b_component =
             test.model.look_up(&vec!["b"].into()).await.expect("failed to find component for b:0");
         let dir_source_path = CapabilityPath::try_from("/data").unwrap();
-        let child_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
+        let child_moniker =
+            InstancedRelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
         let instance_id = Some(component_id_index::gen_instance_id(&mut rand::thread_rng()));
         // Open and write to the storage for child.
         let dir = open_isolated_storage(
@@ -868,21 +877,21 @@ mod tests {
     fn generate_moniker_based_storage_path_test() {
         for (relative_moniker, expected_output) in vec![
             (
-                RelativeMoniker::from_absolute(
+                InstancedRelativeMoniker::from_absolute(
                     &InstancedAbsoluteMoniker::from(vec![]),
                     &InstancedAbsoluteMoniker::from(vec!["a:1"]),
                 ),
                 "a:1/data",
             ),
             (
-                RelativeMoniker::from_absolute(
+                InstancedRelativeMoniker::from_absolute(
                     &InstancedAbsoluteMoniker::from(vec![]),
                     &InstancedAbsoluteMoniker::from(vec!["a:1", "b:2"]),
                 ),
                 "a:1/children/b:2/data",
             ),
             (
-                RelativeMoniker::from_absolute(
+                InstancedRelativeMoniker::from_absolute(
                     &InstancedAbsoluteMoniker::from(vec![]),
                     &InstancedAbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
                 ),
