@@ -79,7 +79,7 @@ def generate_archive(args: argparse.Namespace) -> None:
             # Split out the lines so that a depfile for the action can be made
             # from the contents_manifest's source paths.
             (dst, src) = line.split('=', 1)
-            deps.add(src)
+            deps.add(src.strip())
             creation_manifest.write(line)
 
     # Build the archive itself.
