@@ -7,6 +7,7 @@ package cpp
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
@@ -25,41 +26,72 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 
 {{ range .EncodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Encode) {
-	const std::vector<zx_handle_t> handle_defs;
+	{{- if .HandleDefs }}
+	const auto handle_defs = {{ .HandleDefs }};
+	{{- end }}
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
 	const auto expected_bytes = {{ .Bytes }};
+	const auto expected_handles = {{ .Handles }};
 	conformance_utils::EncodeSuccess(
-		{{ .WireFormatVersion }}, obj, expected_bytes);
+		{{ .WireFormatVersion }}, obj, expected_bytes, expected_handles);
 }
 {{ end }}
 
 {{ range .DecodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Decode) {
-	const std::vector<zx_handle_t> handle_defs;
-	{{ .ValueBuild }}
-	auto expected_obj = {{ .ValueVar }};
+	{{- if .HandleDefs }}
+	const auto handle_defs = {{ .HandleDefs }};
+	std::vector<zx_koid_t> {{ .HandleKoidVectorName }};
+	for (zx_handle_info_t def : handle_defs) {
+		zx_info_handle_basic_t info;
+		ASSERT_OK(zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+		{{ .HandleKoidVectorName }}.push_back(info.koid);
+	}
+	{{- end }}
 	auto bytes = {{ .Bytes }};
-	conformance_utils::DecodeSuccess(
-		{{ .WireFormatVersion }}, bytes, expected_obj);
+	auto handles = {{ .Handles }};
+	conformance_utils::DecodeSuccess<{{ .Type }}>(
+		{{ .WireFormatVersion }}, bytes, handles, [&]({{ .Type }}& value) {
+		{{ .EqualityCheck }}
+	});
 }
 {{ end }}
 
 {{ range .EncodeFailureCases }}
 TEST(Conformance, {{ .Name }}_EncodeFailure) {
+	{{- if .HandleDefs }}
+	const auto handle_defs = {{ .HandleDefs }};
+	{{- end }}
 	const std::vector<zx_handle_t> handle_defs;
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
 	conformance_utils::EncodeFailure(
-		{{ .WireFormatVersion }}, obj);
+	{{ .WireFormatVersion }}, obj);
+	{{- if .HandleDefs }}
+	for (const auto handle_def : handle_defs) {
+		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(
+			handle_def, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+	}
+	{{- end }}
 }
 {{ end }}
 
 {{ range .DecodeFailureCases }}
 TEST(Conformance, {{ .Name }}_DecodeFailure) {
+	{{- if .HandleDefs }}
+	const auto handle_defs = {{ .HandleDefs }};
+	{{- end }}
 	auto bytes = {{ .Bytes }};
+	auto handles = {{ .Handles }};
 	conformance_utils::DecodeFailure<{{ .Type }}>(
-		{{ .WireFormatVersion }}, bytes);
+		{{ .WireFormatVersion }}, bytes, handles);
+	{{- if .HandleDefs }}
+	for (const auto handle_def : handle_defs) {
+		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(
+			handle_def.handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+	}
+	{{- end }}
 }
 {{ end }}
 `))
@@ -72,19 +104,19 @@ type conformanceTmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	WireFormatVersion, Name, ValueBuild, ValueVar, Bytes string
+	WireFormatVersion, Name, ValueBuild, ValueVar, Bytes, HandleDefs, Handles string
 }
 
 type decodeSuccessCase struct {
-	WireFormatVersion, Name, ValueBuild, ValueVar, Bytes string
+	WireFormatVersion, Name, Type, Bytes, HandleDefs, Handles, EqualityCheck, HandleKoidVectorName string
 }
 
 type encodeFailureCase struct {
-	WireFormatVersion, Name, ValueBuild, ValueVar string
+	WireFormatVersion, Name, ValueBuild, ValueVar, HandleDefs string
 }
 
 type decodeFailureCase struct {
-	WireFormatVersion, Name, Type, Bytes string
+	WireFormatVersion, Name, Type, Bytes, HandleDefs, Handles string
 }
 
 func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
@@ -125,11 +157,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
 			continue
 		}
-		if decl.IsResourceType() {
-			// Handles not yet supported.
-			continue
-		}
-		valueBuild, valueVar := buildValue(encodeSuccess.Value, decl)
+		valueBuild, valueVar := buildValue(encodeSuccess.Value, decl, handleReprRaw)
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -140,6 +168,8 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				ValueBuild:        valueBuild,
 				ValueVar:          valueVar,
 				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
+				HandleDefs:        buildHandleDefs(encodeSuccess.HandleDefs),
+				Handles:           libhlcpp.BuildRawHandleDispositions(encoding.HandleDispositions),
 			})
 		}
 	}
@@ -156,21 +186,22 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
 		}
-		if decl.IsResourceType() {
-			// Handles not yet supported.
-			continue
-		}
-		valueBuild, valueVar := buildValue(decodeSuccess.Value, decl)
+		actualValueVar := "value"
+		handleKoidVectorName := "handle_koids"
+		equalityCheck := buildEqualityCheck(actualValueVar, decodeSuccess.Value, decl, handleKoidVectorName)
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:              testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				WireFormatVersion: wireFormatVersionName(encoding.WireFormat),
-				ValueBuild:        valueBuild,
-				ValueVar:          valueVar,
-				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
+				Name:                 testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				WireFormatVersion:    wireFormatVersionName(encoding.WireFormat),
+				Type:                 conformanceType(gidlir.TypeFromValue(decodeSuccess.Value)),
+				Bytes:                libhlcpp.BuildBytes(encoding.Bytes),
+				HandleDefs:           buildHandleInfoDefs(decodeSuccess.HandleDefs),
+				Handles:              libhlcpp.BuildRawHandleInfos(encoding.Handles),
+				EqualityCheck:        equalityCheck,
+				HandleKoidVectorName: handleKoidVectorName,
 			})
 		}
 	}
@@ -187,17 +218,14 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		if gidlir.ContainsUnknownField(encodeFailure.Value) {
 			continue
 		}
-		if decl.IsResourceType() {
-			// Handles not yet supported.
-			continue
-		}
-		valueBuild, valueVar := buildValue(encodeFailure.Value, decl)
+		valueBuild, valueVar := buildValue(encodeFailure.Value, decl, handleReprDisposition)
 		for _, wireFormat := range supportedWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				Name:              testCaseName(encodeFailure.Name, wireFormat),
 				WireFormatVersion: wireFormatVersionName(wireFormat),
 				ValueBuild:        valueBuild,
 				ValueVar:          valueVar,
+				HandleDefs:        buildHandleDefs(encodeFailure.HandleDefs),
 			})
 		}
 	}
@@ -207,14 +235,6 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmixer.Schema) ([]decodeFailureCase, error) {
 	var decodeFailureCases []decodeFailureCase
 	for _, decodeFailure := range gidlDecodeFailures {
-		decl, err := schema.ExtractDeclarationByName(decodeFailure.Type)
-		if err != nil {
-			return nil, fmt.Errorf("encode success %s: %s", decodeFailure.Name, err)
-		}
-		if decl.IsResourceType() {
-			// Handles not yet supported.
-			continue
-		}
 		for _, encoding := range decodeFailure.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -224,6 +244,8 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				WireFormatVersion: wireFormatVersionName(encoding.WireFormat),
 				Type:              conformanceType(decodeFailure.Type),
 				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
+				HandleDefs:        buildHandleInfoDefs(decodeFailure.HandleDefs),
+				Handles:           libhlcpp.BuildRawHandleInfos(encoding.Handles),
 			})
 		}
 	}
@@ -255,4 +277,62 @@ func conformanceType(gidlTypeString string) string {
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
 	return fmt.Sprintf("%s_%s", baseName,
 		fidlgen.ToUpperCamelCase(wireFormat.String()))
+}
+
+func buildHandleDef(def gidlir.HandleDef) string {
+	switch def.Subtype {
+	case fidlgen.Channel:
+		return fmt.Sprintf("conformance_utils::CreateChannel(%d)", def.Rights)
+	case fidlgen.Event:
+		return fmt.Sprintf("conformance_utils::CreateEvent(%d)", def.Rights)
+	default:
+		panic(fmt.Sprintf("unsupported handle subtype: %s", def.Subtype))
+	}
+}
+
+func handleType(subtype fidlgen.HandleSubtype) string {
+	switch subtype {
+	case fidlgen.Channel:
+		return "ZX_OBJ_TYPE_CHANNEL"
+	case fidlgen.Event:
+		return "ZX_OBJ_TYPE_EVENT"
+	default:
+		panic(fmt.Sprintf("unsupported handle subtype: %s", subtype))
+	}
+}
+
+func buildHandleDefs(defs []gidlir.HandleDef) string {
+	if len(defs) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString("std::vector<zx_handle_t>{\n")
+	for i, d := range defs {
+		builder.WriteString(buildHandleDef(d))
+		// Write indices corresponding to the .gidl file handle_defs block.
+		builder.WriteString(fmt.Sprintf(", // #%d\n", i))
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
+func buildHandleInfoDefs(defs []gidlir.HandleDef) string {
+	if len(defs) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString("std::vector<zx_handle_info_t>{\n")
+	for i, d := range defs {
+		builder.WriteString(fmt.Sprintf(`
+// #%d
+zx_handle_info_t{
+	.handle = %s,
+	.type = %s,
+	.rights = %d,
+	.unused = 0u,
+},
+`, i, buildHandleDef(d), handleType(d.Subtype), d.Rights))
+	}
+	builder.WriteString("}")
+	return builder.String()
 }

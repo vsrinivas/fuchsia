@@ -26,6 +26,7 @@ if (is_host) {
       "config/defaults.go",
       "cpp/builder.go",
       "cpp/conformance.go",
+      "cpp/equality_builder.go",
       "dart/benchmarks.go",
       "dart/common.go",
       "dart/conformance.go",

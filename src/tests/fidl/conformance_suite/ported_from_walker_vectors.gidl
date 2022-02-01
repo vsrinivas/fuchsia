@@ -173,7 +173,8 @@ success("PresentNonnullableBoundedVectorOfHandles") {
 
 success("PresentNullableBoundedVectorOfHandles") {
     // TODO(fxbug.dev/88979): generated Rust test does not compile.
-    bindings_denylist = [rust],
+    // Cpp: not yet supported.
+    bindings_denylist = [rust, cpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),

@@ -15,8 +15,19 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-func buildValue(value gidlir.Value, decl gidlmixer.Declaration) (string, string) {
-	var builder builder
+type handleRepr int
+
+const (
+	_ = iota
+	handleReprDisposition
+	handleReprInfo
+	handleReprRaw
+)
+
+func buildValue(value gidlir.Value, decl gidlmixer.Declaration, handleRepr handleRepr) (string, string) {
+	builder := builder{
+		handleRepr: handleRepr,
+	}
 	valueVar := builder.visit(value, decl)
 	valueBuild := builder.String()
 	return valueBuild, valueVar
@@ -24,7 +35,8 @@ func buildValue(value gidlir.Value, decl gidlmixer.Declaration) (string, string)
 
 type builder struct {
 	strings.Builder
-	varidx int
+	varidx     int
+	handleRepr handleRepr
 }
 
 func (b *builder) write(format string, vals ...interface{}) {
@@ -96,6 +108,9 @@ func (a *builder) visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 		}
 		return a.construct(typeNameIgnoreNullable(decl), isPointer, "%q", value)
 	case gidlir.HandleWithRights:
+		if a.handleRepr == handleReprDisposition || a.handleRepr == handleReprInfo {
+			return fmt.Sprintf("%s(handle_defs[%d].handle)", typeName(decl), value.Handle)
+		}
 		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
 	case gidlir.Record:
 		switch decl := decl.(type) {

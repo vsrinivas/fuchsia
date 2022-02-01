@@ -1307,6 +1307,8 @@ success("LargeArrays") {
 // This tests the default input used in fidlviz:
 // https://fuchsia.googlesource.com/fidl-misc/+/HEAD/fidlviz/
 success("FidlvizDemo") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     handle_defs = {
         #0 = event(),
     },

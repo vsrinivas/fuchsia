@@ -32,6 +32,8 @@ success("TableFieldInlined") {
 // Tests a table whose handle field is inlined into the envelope in the wire
 // format.
 success("TableFieldInlinedHandle") {
+    // Not yet supported.
+    bindings_denylist = [cpp],
     handle_defs = {
         #0 = channel(),
     },
