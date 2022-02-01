@@ -73,7 +73,7 @@ impl Ping for Pinger {
         match r {
             Ok(()) => true,
             Err(e) => {
-                warn!("error while pinging {}: {}", addr, e);
+                log::warn!("error while pinging {}: {}", addr, e);
                 false
             }
         }

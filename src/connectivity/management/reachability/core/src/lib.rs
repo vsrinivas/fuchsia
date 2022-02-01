@@ -5,8 +5,6 @@
 mod inspect;
 mod ping;
 
-#[macro_use]
-extern crate log;
 use {
     crate::ping::Ping,
     anyhow::Context as _,
@@ -275,16 +273,16 @@ impl StateInfo {
     /// Report the duration of the current state for each interface and each protocol.
     fn report(&self) {
         let time = fasync::Time::now();
-        debug!("system reachability state IPv4 {:?}", self.get_system_ipv4());
-        debug!("system reachability state IPv6 {:?}", self.get_system_ipv6());
+        log::debug!("system reachability state IPv4 {:?}", self.get_system_ipv4());
+        log::debug!("system reachability state IPv6 {:?}", self.get_system_ipv6());
         for (id, IpVersions { ipv4, ipv6 }) in self.per_interface.iter() {
-            debug!(
+            log::debug!(
                 "reachability state {:?} IPv4 {:?} with duration {:?}",
                 id,
                 ipv4,
                 time - ipv4.time
             );
-            debug!(
+            log::debug!(
                 "reachability state {:?} IPv6 {:?} with duration {:?}",
                 id,
                 ipv6,
@@ -381,7 +379,7 @@ impl Monitor {
     /// Reports all information.
     pub fn report_state(&self) {
         self.state.report();
-        debug!("reachability stats {:?}", self.stats);
+        log::debug!("reachability stats {:?}", self.stats);
     }
 
     /// Returns an interface watcher client proxy.
@@ -423,12 +421,15 @@ impl Monitor {
             if delta.change_observed() {
                 let &Delta { previous, current } = delta;
                 if let Some(previous) = previous {
-                    info!(
+                    log::info!(
                         "interface updated {:?} {:?} current: {:?} previous: {:?}",
-                        id, proto, current, previous
+                        id,
+                        proto,
+                        current,
+                        previous
                     );
                 } else {
-                    info!("new interface {:?} {:?}: {:?}", id, proto, current);
+                    log::info!("new interface {:?} {:?}: {:?}", id, proto, current);
                 }
                 let () = log_state(self.interface_node(id, name), proto, current.state);
                 *self.stats.state_updates.entry(id).or_insert(0) += 1;
@@ -439,12 +440,14 @@ impl Monitor {
             if delta.change_observed() {
                 let &Delta { previous, current } = delta;
                 if let Some(previous) = previous {
-                    info!(
+                    log::info!(
                         "system updated {:?} current: {:?}, previous: {:?}",
-                        proto, current, previous,
+                        proto,
+                        current,
+                        previous,
                     );
                 } else {
-                    info!("initial system state {:?}: {:?}", proto, current);
+                    log::info!("initial system state {:?}: {:?}", proto, current);
                 }
                 let () = log_state(self.system_node.as_mut(), proto, current.state.state);
             }
@@ -457,7 +460,7 @@ impl Monitor {
     /// have changed.
     pub async fn compute_state(&mut self, properties: &fnet_interfaces_ext::Properties) {
         let routes = self.netstack.get_route_table().await.unwrap_or_else(|e| {
-            error!("failed to get route table: {}", e);
+            log::error!("failed to get route table: {}", e);
             Vec::new()
         });
         if let Some(info) = compute_state(properties, &routes, &ping::Pinger).await {
@@ -620,7 +623,7 @@ async fn network_layer_state(
                             if net_types::ip::Ipv6Addr::from_bytes(v6.octets()).scope()
                                 != net_types::ip::Ipv6Scope::Global
                             {
-                                warn!(
+                                log::warn!(
                                     "cannot ping IPv6 non-global gateway address as the route \
                                     does not have an interface ID: {:?}",
                                     r
