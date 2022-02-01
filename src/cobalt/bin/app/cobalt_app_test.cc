@@ -194,16 +194,25 @@ class CobaltAppTest : public gtest::TestLoopFixture {
   }
 
   // Call the MetricEventLoggerFactory to create a Logger connection.
+  //
+  // If experiments are provided, uses CreateMetricEventLoggerWithExperiments
+  // instead.
   fuchsia::metrics::MetricEventLoggerPtr GetMetricEventLogger(
-      int project_id = testapp_registry::kProjectId) {
+      int project_id = testapp_registry::kProjectId, std::vector<uint32_t> experiment_ids = {}) {
     fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
     fuchsia::metrics::ProjectSpec project;
     project.set_customer_id(1);
     project.set_project_id(project_id);
     fuchsia::metrics::MetricEventLoggerPtr logger;
-    metric_event_logger_factory_->CreateMetricEventLogger(
-        std::move(project), logger.NewRequest(),
-        [&](fuchsia::metrics::Status status_) { status = status_; });
+    if (experiment_ids.size() == 0) {
+      metric_event_logger_factory_->CreateMetricEventLogger(
+          std::move(project), logger.NewRequest(),
+          [&](fuchsia::metrics::Status status_) { status = status_; });
+    } else {
+      metric_event_logger_factory_->CreateMetricEventLoggerWithExperiments(
+          std::move(project), std::move(experiment_ids), logger.NewRequest(),
+          [&](fuchsia::metrics::Status status_) { status = status_; });
+    }
     RunLoopUntilIdle();
     EXPECT_EQ(status, fuchsia::metrics::Status::OK);
     EXPECT_NE(logger.get(), nullptr);
@@ -314,6 +323,17 @@ TEST_F(CobaltAppTest, CreateMetricEventLogger) {
   logger::testing::FakeLogger* fake_logger = fake_service_->last_logger_created();
   EXPECT_EQ(fake_logger, nullptr);
   fuchsia::metrics::MetricEventLoggerPtr logger = GetMetricEventLogger();
+  fake_logger = fake_service_->last_logger_created();
+  EXPECT_NE(fake_logger, nullptr);
+  EXPECT_EQ(fake_logger->call_count(), 0);
+}
+
+TEST_F(CobaltAppTest, CreateMetricEventLoggerWithExperiments) {
+  logger::testing::FakeLogger* fake_logger = fake_service_->last_logger_created();
+  EXPECT_EQ(fake_logger, nullptr);
+  std::vector<uint32_t> test_experiments = {123456789, 987654321};
+  fuchsia::metrics::MetricEventLoggerPtr logger =
+      GetMetricEventLogger(testapp_registry::kProjectId, test_experiments);
   fake_logger = fake_service_->last_logger_created();
   EXPECT_NE(fake_logger, nullptr);
   EXPECT_EQ(fake_logger->call_count(), 0);

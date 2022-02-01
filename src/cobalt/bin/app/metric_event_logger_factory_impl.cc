@@ -38,7 +38,7 @@ void MetricEventLoggerFactoryImpl::CreateMetricEventLoggerWithExperiments(
   }
   uint32_t customer_id =
       project_spec.has_customer_id() ? project_spec.customer_id() : kFuchsiaCustomerId;
-  auto logger = cobalt_service_->NewLogger(customer_id, project_spec.project_id());
+  auto logger = cobalt_service_->NewLogger(customer_id, project_spec.project_id(), experiment_ids);
   if (!logger) {
     FX_LOGS(ERROR) << "The CobaltRegistry bundled with this release does not "
                       "include a project with customer ID "
