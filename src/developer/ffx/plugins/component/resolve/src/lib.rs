@@ -9,7 +9,7 @@ use {
     ffx_component_resolve_args::ComponentResolveCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
 };
 
 #[ffx_plugin]
@@ -26,7 +26,7 @@ async fn resolve_impl<W: std::io::Write>(
     moniker: String,
     writer: &mut W,
 ) -> Result<()> {
-    let moniker = PartialAbsoluteMoniker::parse_string_without_instances(&moniker)
+    let moniker = AbsoluteMoniker::parse_string_without_instances(&moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     writeln!(writer, "Moniker: {}", moniker)?;
     writeln!(writer, "Resolving component instance...")?;

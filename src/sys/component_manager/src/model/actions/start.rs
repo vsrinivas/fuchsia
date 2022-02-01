@@ -25,7 +25,7 @@ use {
     fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon as zx,
     log::*,
-    moniker::PartialAbsoluteMoniker,
+    moniker::AbsoluteMoniker,
     std::sync::Arc,
 };
 
@@ -70,7 +70,7 @@ async fn do_start(
     {
         let state = component.lock_state().await;
         let execution = component.lock_execution().await;
-        if let Some(res) = should_return_early(&state, &execution, &component.partial_abs_moniker) {
+        if let Some(res) = should_return_early(&state, &execution, &component.abs_moniker) {
             return res;
         }
     }
@@ -81,7 +81,7 @@ async fn do_start(
 
         // Find the runner to use.
         let runner = component.resolve_runner().await.map_err(|e| {
-            warn!("Failed to resolve runner for `{}`: {}", component.partial_abs_moniker, e);
+            warn!("Failed to resolve runner for `{}`: {}", component.abs_moniker, e);
             e
         })?;
 
@@ -176,7 +176,7 @@ async fn configure_component_runtime(
     let state = component.lock_state().await;
     let mut execution = component.lock_execution().await;
 
-    if let Some(r) = should_return_early(&state, &execution, &component.partial_abs_moniker) {
+    if let Some(r) = should_return_early(&state, &execution, &component.abs_moniker) {
         return r;
     }
 
@@ -192,7 +192,7 @@ async fn configure_component_runtime(
 pub fn should_return_early(
     component: &InstanceState,
     execution: &ExecutionState,
-    abs_moniker: &PartialAbsoluteMoniker,
+    abs_moniker: &AbsoluteMoniker,
 ) -> Option<Result<fsys::StartResult, ModelError>> {
     match component {
         InstanceState::New | InstanceState::Discovered | InstanceState::Resolved(_) => {}
@@ -224,7 +224,7 @@ async fn make_execution_runtime(
 > {
     match component.on_terminate {
         fdecl::OnTerminate::Reboot => {
-            checker.reboot_on_terminate_allowed(&component.partial_abs_moniker)?;
+            checker.reboot_on_terminate_allowed(&component.abs_moniker)?;
         }
         fdecl::OnTerminate::None => {}
     }
@@ -305,7 +305,7 @@ mod tests {
         cm_rust::ComponentDecl,
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder},
         fidl_fuchsia_sys2 as fsys, fuchsia, fuchsia_zircon as zx,
-        moniker::PartialAbsoluteMoniker,
+        moniker::AbsoluteMoniker,
         routing::error::ComponentInstanceError,
         std::sync::{Arc, Weak},
     };
@@ -344,7 +344,7 @@ mod tests {
 
         match ActionSet::register(child.clone(), StartAction::new(StartReason::Debug)).await {
             Err(ModelError::InstanceShutDown { moniker: m }) => {
-                assert_eq!(PartialAbsoluteMoniker::from(vec![TEST_CHILD_NAME]), m);
+                assert_eq!(AbsoluteMoniker::from(vec![TEST_CHILD_NAME]), m);
             }
             e => panic!("Unexpected result from component start: {:?}", e),
         }
@@ -465,7 +465,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn check_should_return_early() {
-        let m = PartialAbsoluteMoniker::from(vec!["foo"]);
+        let m = AbsoluteMoniker::from(vec!["foo"]);
         let es = ExecutionState::new();
 
         // Checks based on InstanceState:

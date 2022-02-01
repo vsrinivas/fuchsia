@@ -100,22 +100,21 @@ impl ComponentResolversVisitor {
                 Err(err) => {
                     eprintln!(
                         "Ignoring invalid resolver configuration for {}: {:#}",
-                        instance.partial_abs_moniker(),
+                        instance.abs_moniker(),
                         anyhow!(err).context("failed to route to a resolver")
                     );
                     return Ok(());
                 }
             };
 
-            let moniker = moniker::PartialAbsoluteMoniker::parse_string_without_instances(
-                &self.request.moniker,
-            )?;
+            let moniker =
+                moniker::AbsoluteMoniker::parse_string_without_instances(&self.request.moniker)?;
 
-            if *resolver_source.partial_abs_moniker() == moniker {
+            if *resolver_source.abs_moniker() == moniker {
                 for use_decl in &resolver_source.decl_for_testing().uses {
                     if let UseDecl::Protocol(name) = use_decl {
                         if name.source_name == CapabilityName(self.request.protocol.clone()) {
-                            self.monikers.push(instance.partial_abs_moniker().to_string());
+                            self.monikers.push(instance.abs_moniker().to_string());
                         }
                     }
                 }
@@ -129,7 +128,7 @@ impl ComponentResolversVisitor {
 impl ComponentInstanceVisitor for ComponentResolversVisitor {
     fn visit_instance(&mut self, instance: &Arc<ComponentInstanceForAnalyzer>) -> Result<()> {
         self.check_instance(instance)
-            .with_context(|| format!("while visiting {}", instance.partial_abs_moniker()))
+            .with_context(|| format!("while visiting {}", instance.abs_moniker()))
     }
 }
 

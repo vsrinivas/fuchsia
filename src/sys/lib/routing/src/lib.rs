@@ -47,7 +47,7 @@ use {
     },
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io2 as fio2,
     from_enum::FromEnum,
-    moniker::{PartialAbsoluteMoniker, PartialChildMoniker, RelativeMoniker, RelativeMonikerBase},
+    moniker::{AbsoluteMoniker, PartialChildMoniker, RelativeMoniker, RelativeMonikerBase},
     std::{
         path::{Path, PathBuf},
         sync::Arc,
@@ -97,18 +97,18 @@ pub trait DebugRouteMapper: Send + Sync + Clone {
     type RouteMap: std::fmt::Debug;
 
     #[allow(unused_variables)]
-    fn add_use(&mut self, abs_moniker: PartialAbsoluteMoniker, use_decl: UseDecl) {}
+    fn add_use(&mut self, abs_moniker: AbsoluteMoniker, use_decl: UseDecl) {}
 
     #[allow(unused_variables)]
-    fn add_offer(&mut self, abs_moniker: PartialAbsoluteMoniker, offer_decl: OfferDecl) {}
+    fn add_offer(&mut self, abs_moniker: AbsoluteMoniker, offer_decl: OfferDecl) {}
 
     #[allow(unused_variables)]
-    fn add_expose(&mut self, abs_moniker: PartialAbsoluteMoniker, expose_decl: ExposeDecl) {}
+    fn add_expose(&mut self, abs_moniker: AbsoluteMoniker, expose_decl: ExposeDecl) {}
 
     #[allow(unused_variables)]
     fn add_registration(
         &mut self,
-        abs_moniker: PartialAbsoluteMoniker,
+        abs_moniker: AbsoluteMoniker,
         registration_decl: RegistrationDecl,
     ) {
     }
@@ -116,7 +116,7 @@ pub trait DebugRouteMapper: Send + Sync + Clone {
     #[allow(unused_variables)]
     fn add_component_capability(
         &mut self,
-        abs_moniker: PartialAbsoluteMoniker,
+        abs_moniker: AbsoluteMoniker,
         capability_decl: CapabilityDecl,
     ) {
     }
@@ -278,7 +278,7 @@ where
                     Some((ExtendedInstanceInterface::AboveRoot(_), _, _)) => {
                         // Root environment.
                         return Err(RoutingError::UseFromRootEnvironmentNotAllowed {
-                            moniker: target.partial_abs_moniker().clone(),
+                            moniker: target.abs_moniker().clone(),
                             capability_name: use_decl.source_name.clone(),
                             capability_type: DebugRegistration::TYPE.to_string(),
                         }
@@ -286,7 +286,7 @@ where
                     }
                     None => {
                         return Err(RoutingError::UseFromEnvironmentNotFound {
-                            moniker: target.partial_abs_moniker().clone(),
+                            moniker: target.abs_moniker().clone(),
                             capability_name: use_decl.source_name.clone(),
                             capability_type: DebugRegistration::TYPE.to_string(),
                         }
@@ -295,11 +295,11 @@ where
                 };
             let env_name = env_name.expect(&format!(
                 "Environment name in component `{}` not found when routing `{}`.",
-                target.partial_abs_moniker(),
+                target.abs_moniker(),
                 use_decl.source_name
             ));
 
-            let env_moniker = env_component_instance.partial_abs_moniker();
+            let env_moniker = env_component_instance.abs_moniker();
 
             let source = RoutingStrategy::new()
                 .registration::<DebugRegistration>()
@@ -318,7 +318,7 @@ where
                 &source,
                 &env_moniker,
                 &env_name,
-                target.partial_abs_moniker(),
+                target.abs_moniker(),
             )?;
             return Ok(RouteSource::Protocol(source));
         }
@@ -338,9 +338,7 @@ where
                 .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor, mapper)
                 .await?;
 
-            target
-                .try_get_policy_checker()?
-                .can_route_capability(&source, target.partial_abs_moniker())?;
+            target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
             Ok(RouteSource::Protocol(source))
         }
     }
@@ -374,7 +372,7 @@ where
         )
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Protocol(source))
 }
 
@@ -410,9 +408,7 @@ where
                 .route(use_decl, target.clone(), allowed_sources, &mut ServiceVisitor, mapper)
                 .await?;
 
-            target
-                .try_get_policy_checker()?
-                .can_route_capability(&source, target.partial_abs_moniker())?;
+            target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
             Ok(RouteSource::Service(source))
         }
     }
@@ -440,7 +436,7 @@ where
         )
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Service(source))
 }
 
@@ -554,9 +550,7 @@ where
                 .route(use_decl, target.clone(), allowed_sources, &mut state, mapper)
                 .await?;
 
-            target
-                .try_get_policy_checker()?
-                .can_route_capability(&source, target.partial_abs_moniker())?;
+            target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
             Ok(RouteSource::Directory(source, state))
         }
     }
@@ -585,7 +579,7 @@ where
         .route_from_expose(expose_decl, target.clone(), allowed_sources, &mut state, mapper)
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Directory(source, state))
 }
 
@@ -613,11 +607,10 @@ where
     };
 
     if storage_decl.storage_id == fdecl::StorageId::StaticInstanceId
-        && instance.try_get_component_id_index()?.look_up_moniker(instance.partial_abs_moniker())
-            == None
+        && instance.try_get_component_id_index()?.look_up_moniker(instance.abs_moniker()) == None
     {
         return Err(RoutingError::ComponentNotInIdIndex {
-            moniker: instance.partial_abs_moniker().clone(),
+            moniker: instance.abs_moniker().clone(),
         });
     }
     Ok(())
@@ -654,7 +647,7 @@ where
 {
     let source = route_to_storage_decl(use_decl, &target, mapper).await?;
     verify_instance_in_component_id_index(&source, target)?;
-    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Storage(source))
 }
 
@@ -678,7 +671,7 @@ where
         .route(storage_decl.clone().into(), target.clone(), allowed_sources, &mut state, mapper)
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
 
     let (dir_source_path, dir_source_instance) = match source {
         CapabilitySourceInterface::Component { capability, component } => (
@@ -750,13 +743,13 @@ where
             })
         }
         None => Err(RoutingError::UseFromEnvironmentNotFound {
-            moniker: target.partial_abs_moniker().clone(),
+            moniker: target.abs_moniker().clone(),
             capability_name: runner.clone(),
             capability_type: "runner".to_string(),
         }),
     }?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Runner(source))
 }
 
@@ -783,7 +776,7 @@ where
         .route(registration, target.clone(), allowed_sources, &mut ResolverVisitor, mapper)
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Resolver(source))
 }
 
@@ -840,7 +833,7 @@ where
         .route(use_decl, target.clone(), allowed_sources, &mut state, mapper)
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Event(source))
 }
 
@@ -895,7 +888,7 @@ pub enum RegistrationDecl {
 
 impl ErrorNotFoundFromParent for UseProtocolDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::UseFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -904,7 +897,7 @@ impl ErrorNotFoundFromParent for UseProtocolDecl {
 
 impl ErrorNotFoundFromParent for DebugRegistration {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::EnvironmentFromParentNotFound {
@@ -917,7 +910,7 @@ impl ErrorNotFoundFromParent for DebugRegistration {
 
 impl ErrorNotFoundInChild for DebugRegistration {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -932,7 +925,7 @@ impl ErrorNotFoundInChild for DebugRegistration {
 
 impl ErrorNotFoundFromParent for OfferProtocolDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::OfferFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -941,7 +934,7 @@ impl ErrorNotFoundFromParent for OfferProtocolDecl {
 
 impl ErrorNotFoundInChild for UseProtocolDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -955,7 +948,7 @@ impl ErrorNotFoundInChild for UseProtocolDecl {
 
 impl ErrorNotFoundInChild for OfferProtocolDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -969,7 +962,7 @@ impl ErrorNotFoundInChild for OfferProtocolDecl {
 
 impl ErrorNotFoundInChild for ExposeProtocolDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -983,7 +976,7 @@ impl ErrorNotFoundInChild for ExposeProtocolDecl {
 
 impl ErrorNotFoundFromParent for UseServiceDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::UseFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -992,7 +985,7 @@ impl ErrorNotFoundFromParent for UseServiceDecl {
 
 impl ErrorNotFoundFromParent for OfferServiceDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::OfferFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -1001,7 +994,7 @@ impl ErrorNotFoundFromParent for OfferServiceDecl {
 
 impl ErrorNotFoundInChild for UseServiceDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1015,7 +1008,7 @@ impl ErrorNotFoundInChild for UseServiceDecl {
 
 impl ErrorNotFoundInChild for OfferServiceDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1029,7 +1022,7 @@ impl ErrorNotFoundInChild for OfferServiceDecl {
 
 impl ErrorNotFoundInChild for ExposeServiceDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1043,7 +1036,7 @@ impl ErrorNotFoundInChild for ExposeServiceDecl {
 
 impl ErrorNotFoundFromParent for UseDirectoryDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::UseFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -1052,7 +1045,7 @@ impl ErrorNotFoundFromParent for UseDirectoryDecl {
 
 impl ErrorNotFoundFromParent for OfferDirectoryDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::OfferFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -1061,7 +1054,7 @@ impl ErrorNotFoundFromParent for OfferDirectoryDecl {
 
 impl ErrorNotFoundInChild for UseDirectoryDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1075,7 +1068,7 @@ impl ErrorNotFoundInChild for UseDirectoryDecl {
 
 impl ErrorNotFoundInChild for OfferDirectoryDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1089,7 +1082,7 @@ impl ErrorNotFoundInChild for OfferDirectoryDecl {
 
 impl ErrorNotFoundInChild for ExposeDirectoryDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1103,7 +1096,7 @@ impl ErrorNotFoundInChild for ExposeDirectoryDecl {
 
 impl ErrorNotFoundFromParent for UseStorageDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::UseFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -1112,7 +1105,7 @@ impl ErrorNotFoundFromParent for UseStorageDecl {
 
 impl ErrorNotFoundFromParent for OfferStorageDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::OfferFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -1121,7 +1114,7 @@ impl ErrorNotFoundFromParent for OfferStorageDecl {
 
 impl ErrorNotFoundInChild for StorageDeclAsRegistration {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1135,7 +1128,7 @@ impl ErrorNotFoundInChild for StorageDeclAsRegistration {
 
 impl ErrorNotFoundFromParent for StorageDeclAsRegistration {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::StorageFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -1144,7 +1137,7 @@ impl ErrorNotFoundFromParent for StorageDeclAsRegistration {
 
 impl ErrorNotFoundFromParent for RunnerRegistration {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::UseFromEnvironmentNotFound {
@@ -1157,7 +1150,7 @@ impl ErrorNotFoundFromParent for RunnerRegistration {
 
 impl ErrorNotFoundInChild for RunnerRegistration {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1172,7 +1165,7 @@ impl ErrorNotFoundInChild for RunnerRegistration {
 
 impl ErrorNotFoundFromParent for OfferRunnerDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::OfferFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -1181,7 +1174,7 @@ impl ErrorNotFoundFromParent for OfferRunnerDecl {
 
 impl ErrorNotFoundInChild for OfferRunnerDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1195,7 +1188,7 @@ impl ErrorNotFoundInChild for OfferRunnerDecl {
 
 impl ErrorNotFoundInChild for ExposeRunnerDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1209,7 +1202,7 @@ impl ErrorNotFoundInChild for ExposeRunnerDecl {
 
 impl ErrorNotFoundFromParent for ResolverRegistration {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::EnvironmentFromParentNotFound {
@@ -1222,7 +1215,7 @@ impl ErrorNotFoundFromParent for ResolverRegistration {
 
 impl ErrorNotFoundInChild for ResolverRegistration {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1237,7 +1230,7 @@ impl ErrorNotFoundInChild for ResolverRegistration {
 
 impl ErrorNotFoundFromParent for OfferResolverDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::OfferFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -1246,7 +1239,7 @@ impl ErrorNotFoundFromParent for OfferResolverDecl {
 
 impl ErrorNotFoundInChild for OfferResolverDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1260,7 +1253,7 @@ impl ErrorNotFoundInChild for OfferResolverDecl {
 
 impl ErrorNotFoundInChild for ExposeResolverDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1274,7 +1267,7 @@ impl ErrorNotFoundInChild for ExposeResolverDecl {
 
 impl ErrorNotFoundInChild for UseEventDecl {
     fn error_not_found_in_child(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
@@ -1288,7 +1281,7 @@ impl ErrorNotFoundInChild for UseEventDecl {
 
 impl ErrorNotFoundFromParent for UseEventDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::UseFromParentNotFound { moniker, capability_id: capability_name.into() }
@@ -1297,7 +1290,7 @@ impl ErrorNotFoundFromParent for UseEventDecl {
 
 impl ErrorNotFoundFromParent for OfferEventDecl {
     fn error_not_found_from_parent(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError {
         RoutingError::OfferFromParentNotFound { moniker, capability_id: capability_name.into() }

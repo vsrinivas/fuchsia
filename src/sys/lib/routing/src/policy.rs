@@ -13,7 +13,7 @@ use {
     fuchsia_zircon_status as zx,
     log::{error, warn},
     moniker::{
-        ChildMonikerBase, ExtendedMoniker, PartialAbsoluteMoniker, PartialRelativeMoniker,
+        AbsoluteMoniker, ChildMonikerBase, ExtendedMoniker, PartialRelativeMoniker,
         RelativeMonikerBase,
     },
     std::sync::{Arc, Weak},
@@ -31,13 +31,13 @@ pub enum PolicyError {
     PolicyUnavailable,
 
     #[error("feature \"{policy}\" used by \"{moniker}\" is not supported by this instance of component manager")]
-    Unsupported { policy: String, moniker: PartialAbsoluteMoniker },
+    Unsupported { policy: String, moniker: AbsoluteMoniker },
 
     #[error("security policy disallows \"{policy}\" job policy for \"{moniker}\"")]
-    JobPolicyDisallowed { policy: String, moniker: PartialAbsoluteMoniker },
+    JobPolicyDisallowed { policy: String, moniker: AbsoluteMoniker },
 
     #[error("security policy disallows \"{policy}\" child policy for \"{moniker}\"")]
-    ChildPolicyDisallowed { policy: String, moniker: PartialAbsoluteMoniker },
+    ChildPolicyDisallowed { policy: String, moniker: AbsoluteMoniker },
 
     #[error("security policy was unable to extract the source from the routed capability")]
     InvalidCapabilitySource,
@@ -46,39 +46,36 @@ pub enum PolicyError {
     CapabilityUseDisallowed {
         cap: String,
         source_moniker: ExtendedMoniker,
-        target_moniker: PartialAbsoluteMoniker,
+        target_moniker: AbsoluteMoniker,
     },
 
     #[error("debug security policy disallows \"{cap}\" from \"{source_moniker}\" being routed from environment \"{env_moniker}:{env_name}\" to \"{target_moniker}\"")]
     DebugCapabilityUseDisallowed {
         cap: String,
         source_moniker: ExtendedMoniker,
-        env_moniker: PartialAbsoluteMoniker,
+        env_moniker: AbsoluteMoniker,
         env_name: String,
-        target_moniker: PartialAbsoluteMoniker,
+        target_moniker: AbsoluteMoniker,
     },
 }
 
 impl PolicyError {
-    fn unsupported(policy: impl Into<String>, moniker: &PartialAbsoluteMoniker) -> Self {
+    fn unsupported(policy: impl Into<String>, moniker: &AbsoluteMoniker) -> Self {
         PolicyError::Unsupported { policy: policy.into(), moniker: moniker.clone() }
     }
 
-    fn job_policy_disallowed(policy: impl Into<String>, moniker: &PartialAbsoluteMoniker) -> Self {
+    fn job_policy_disallowed(policy: impl Into<String>, moniker: &AbsoluteMoniker) -> Self {
         PolicyError::JobPolicyDisallowed { policy: policy.into(), moniker: moniker.clone() }
     }
 
-    fn child_policy_disallowed(
-        policy: impl Into<String>,
-        moniker: &PartialAbsoluteMoniker,
-    ) -> Self {
+    fn child_policy_disallowed(policy: impl Into<String>, moniker: &AbsoluteMoniker) -> Self {
         PolicyError::ChildPolicyDisallowed { policy: policy.into(), moniker: moniker.clone() }
     }
 
     fn capability_use_disallowed(
         cap: impl Into<String>,
         source_moniker: &ExtendedMoniker,
-        target_moniker: &PartialAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
     ) -> Self {
         PolicyError::CapabilityUseDisallowed {
             cap: cap.into(),
@@ -90,9 +87,9 @@ impl PolicyError {
     fn debug_capability_use_disallowed(
         cap: impl Into<String>,
         source_moniker: &ExtendedMoniker,
-        env_moniker: &PartialAbsoluteMoniker,
+        env_moniker: &AbsoluteMoniker,
         env_name: impl Into<String>,
-        target_moniker: &PartialAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
     ) -> Self {
         PolicyError::DebugCapabilityUseDisallowed {
             cap: cap.into(),
@@ -203,7 +200,7 @@ impl GlobalPolicyChecker {
     pub fn can_route_capability<'a, C>(
         &self,
         capability_source: &'a CapabilitySourceInterface<C>,
-        target_moniker: &'a PartialAbsoluteMoniker,
+        target_moniker: &'a AbsoluteMoniker,
     ) -> Result<(), PolicyError>
     where
         C: ComponentInstanceInterface,
@@ -244,9 +241,9 @@ impl GlobalPolicyChecker {
     pub fn can_route_debug_capability<'a, C>(
         &self,
         capability_source: &'a CapabilitySourceInterface<C>,
-        env_moniker: &'a PartialAbsoluteMoniker,
+        env_moniker: &'a AbsoluteMoniker,
         env_name: &'a str,
-        target_moniker: &'a PartialAbsoluteMoniker,
+        target_moniker: &'a AbsoluteMoniker,
     ) -> Result<(), PolicyError>
     where
         C: ComponentInstanceInterface,
@@ -278,7 +275,7 @@ impl GlobalPolicyChecker {
     /// Returns Ok(()) if `target_moniker` is allowed to have `on_terminate=REBOOT` set.
     pub fn reboot_on_terminate_allowed(
         &self,
-        target_moniker: &PartialAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
     ) -> Result<(), PolicyError> {
         if !self.config.reboot_on_terminate_enabled {
             return Err(PolicyError::unsupported("reboot_on_terminate", &target_moniker));
@@ -300,7 +297,7 @@ impl GlobalPolicyChecker {
 
 fn allowlist_entry_matches(
     allowlist_entry: &AllowlistEntry,
-    target_moniker: &PartialAbsoluteMoniker,
+    target_moniker: &AbsoluteMoniker,
 ) -> bool {
     match allowlist_entry {
         AllowlistEntry::Exact(moniker) => {
@@ -330,21 +327,21 @@ fn allowlist_entry_matches(
 }
 
 /// Evaluates security policy relative to a specific Component (based on that Component's
-/// PartialAbsoluteMoniker).
+/// AbsoluteMoniker).
 pub struct ScopedPolicyChecker {
     /// The runtime configuration containing the security policy to apply.
     config: Weak<RuntimeConfig>,
 
     /// The absolute moniker of the component that policy will be evaluated for.
-    moniker: PartialAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
 }
 
 impl ScopedPolicyChecker {
-    pub fn new(config: Weak<RuntimeConfig>, moniker: PartialAbsoluteMoniker) -> Self {
+    pub fn new(config: Weak<RuntimeConfig>, moniker: AbsoluteMoniker) -> Self {
         ScopedPolicyChecker { config, moniker }
     }
 
-    pub fn get_scope(&self) -> &PartialAbsoluteMoniker {
+    pub fn get_scope(&self) -> &AbsoluteMoniker {
         &self.moniker
     }
 
@@ -405,16 +402,16 @@ mod tests {
             ChildPolicyAllowlists, JobPolicyAllowlists, RuntimeConfig, SecurityPolicy,
         },
         assert_matches::assert_matches,
-        moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker},
         std::collections::HashMap,
     };
 
     #[test]
     fn allowlist_entry_checker() {
-        let root = PartialAbsoluteMoniker::root();
-        let allowed = PartialAbsoluteMoniker::from(vec!["foo", "bar"]);
-        let disallowed_child_of_allowed = PartialAbsoluteMoniker::from(vec!["foo", "bar", "baz"]);
-        let disallowed = PartialAbsoluteMoniker::from(vec!["baz", "fiz"]);
+        let root = AbsoluteMoniker::root();
+        let allowed = AbsoluteMoniker::from(vec!["foo", "bar"]);
+        let disallowed_child_of_allowed = AbsoluteMoniker::from(vec!["foo", "bar", "baz"]);
+        let disallowed = AbsoluteMoniker::from(vec!["baz", "fiz"]);
         let allowlist_exact = AllowlistEntry::Exact(allowed.clone());
         assert!(allowlist_entry_matches(&allowlist_exact, &allowed.to_partial()));
         assert!(!allowlist_entry_matches(&allowlist_exact, &root.to_partial()));
@@ -424,10 +421,9 @@ mod tests {
             &disallowed_child_of_allowed.to_partial()
         ));
 
-        let allowed_realm_root = PartialAbsoluteMoniker::from(vec!["qux"]);
-        let allowed_child_of_realm = PartialAbsoluteMoniker::from(vec!["qux", "quux"]);
-        let allowed_nested_child_of_realm =
-            PartialAbsoluteMoniker::from(vec!["qux", "quux", "foo"]);
+        let allowed_realm_root = AbsoluteMoniker::from(vec!["qux"]);
+        let allowed_child_of_realm = AbsoluteMoniker::from(vec!["qux", "quux"]);
+        let allowed_nested_child_of_realm = AbsoluteMoniker::from(vec!["qux", "quux", "foo"]);
         let allowlist_realm = AllowlistEntry::Realm(allowed_realm_root.clone());
         assert!(!allowlist_entry_matches(&allowlist_realm, &allowed_realm_root));
         assert!(allowlist_entry_matches(&allowlist_realm, &allowed_child_of_realm));
@@ -435,11 +431,11 @@ mod tests {
         assert!(!allowlist_entry_matches(&allowlist_realm, &disallowed));
         assert!(!allowlist_entry_matches(&allowlist_realm, &root));
 
-        let collection_holder = PartialAbsoluteMoniker::from(vec!["corge"]);
-        let collection_child = PartialAbsoluteMoniker::from(vec!["corge", "collection:child"]);
+        let collection_holder = AbsoluteMoniker::from(vec!["corge"]);
+        let collection_child = AbsoluteMoniker::from(vec!["corge", "collection:child"]);
         let collection_nested_child =
-            PartialAbsoluteMoniker::from(vec!["corge", "collection:child", "inner-child"]);
-        let non_collection_child = PartialAbsoluteMoniker::from(vec!["corge", "grault"]);
+            AbsoluteMoniker::from(vec!["corge", "collection:child", "inner-child"]);
+        let non_collection_child = AbsoluteMoniker::from(vec!["corge", "grault"]);
         let allowlist_collection =
             AllowlistEntry::Collection(collection_holder.clone(), "collection".into());
         assert!(!allowlist_entry_matches(&allowlist_collection, &collection_holder));
@@ -470,11 +466,11 @@ mod tests {
         }
         let strong_config = Arc::new(RuntimeConfig::default());
         let config = Arc::downgrade(&strong_config);
-        assert_vmex_disallowed!(config, PartialAbsoluteMoniker::root());
-        assert_vmex_disallowed!(config, PartialAbsoluteMoniker::from(vec!["foo"]));
+        assert_vmex_disallowed!(config, AbsoluteMoniker::root());
+        assert_vmex_disallowed!(config, AbsoluteMoniker::from(vec!["foo"]));
 
-        let allowed1 = PartialAbsoluteMoniker::from(vec!["foo", "bar"]);
-        let allowed2 = PartialAbsoluteMoniker::from(vec!["baz", "fiz"]);
+        let allowed1 = AbsoluteMoniker::from(vec!["foo", "bar"]);
+        let allowed2 = AbsoluteMoniker::from(vec!["baz", "fiz"]);
         let strong_config = Arc::new(RuntimeConfig {
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
@@ -505,7 +501,7 @@ mod tests {
         let config = Arc::downgrade(&strong_config);
         assert_vmex_allowed_matches!(config, allowed1, Ok(()));
         assert_vmex_allowed_matches!(config, allowed2, Ok(()));
-        assert_vmex_disallowed!(config, PartialAbsoluteMoniker::root());
+        assert_vmex_disallowed!(config, AbsoluteMoniker::root());
         assert_vmex_disallowed!(config, allowed1.parent().unwrap());
         assert_vmex_disallowed!(config, allowed1.child(PartialChildMoniker::from("baz")));
 
@@ -534,11 +530,11 @@ mod tests {
         }
         let strong_config = Arc::new(RuntimeConfig::default());
         let config = Arc::downgrade(&strong_config);
-        assert_create_raw_processes_disallowed!(config, PartialAbsoluteMoniker::root());
-        assert_create_raw_processes_disallowed!(config, PartialAbsoluteMoniker::from(vec!["foo"]));
+        assert_create_raw_processes_disallowed!(config, AbsoluteMoniker::root());
+        assert_create_raw_processes_disallowed!(config, AbsoluteMoniker::from(vec!["foo"]));
 
-        let allowed1 = PartialAbsoluteMoniker::from(vec!["foo", "bar"]);
-        let allowed2 = PartialAbsoluteMoniker::from(vec!["baz", "fiz"]);
+        let allowed1 = AbsoluteMoniker::from(vec!["foo", "bar"]);
+        let allowed2 = AbsoluteMoniker::from(vec!["baz", "fiz"]);
         let strong_config = Arc::new(RuntimeConfig {
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
@@ -558,7 +554,7 @@ mod tests {
         let config = Arc::downgrade(&strong_config);
         assert_create_raw_processes_allowed_matches!(config, allowed1, Ok(()));
         assert_create_raw_processes_allowed_matches!(config, allowed2, Ok(()));
-        assert_create_raw_processes_disallowed!(config, PartialAbsoluteMoniker::root());
+        assert_create_raw_processes_disallowed!(config, AbsoluteMoniker::root());
         assert_create_raw_processes_disallowed!(config, allowed1.parent().unwrap());
         assert_create_raw_processes_disallowed!(
             config,
@@ -598,11 +594,11 @@ mod tests {
         }
         let strong_config = Arc::new(RuntimeConfig::default());
         let config = Arc::downgrade(&strong_config);
-        assert_critical_disallowed!(config, PartialAbsoluteMoniker::root());
-        assert_critical_disallowed!(config, PartialAbsoluteMoniker::from(vec!["foo"]));
+        assert_critical_disallowed!(config, AbsoluteMoniker::root());
+        assert_critical_disallowed!(config, AbsoluteMoniker::from(vec!["foo"]));
 
-        let allowed1 = PartialAbsoluteMoniker::from(vec!["foo", "bar"]);
-        let allowed2 = PartialAbsoluteMoniker::from(vec!["baz", "fiz"]);
+        let allowed1 = AbsoluteMoniker::from(vec!["foo", "bar"]);
+        let allowed2 = AbsoluteMoniker::from(vec!["baz", "fiz"]);
         let strong_config = Arc::new(RuntimeConfig {
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
@@ -628,7 +624,7 @@ mod tests {
         let config = Arc::downgrade(&strong_config);
         assert_critical_allowed_matches!(config, allowed1, Ok(()));
         assert_critical_allowed_matches!(config, allowed2, Ok(()));
-        assert_critical_disallowed!(config, PartialAbsoluteMoniker::root());
+        assert_critical_disallowed!(config, AbsoluteMoniker::root());
         assert_critical_disallowed!(config, allowed1.parent().unwrap());
         assert_critical_disallowed!(config, allowed1.child(PartialChildMoniker::from("baz")));
 
@@ -659,12 +655,12 @@ mod tests {
         // Empty config and enabled.
         let config =
             Arc::new(RuntimeConfig { reboot_on_terminate_enabled: true, ..Default::default() });
-        assert_reboot_disallowed!(config, PartialAbsoluteMoniker::root());
-        assert_reboot_disallowed!(config, PartialAbsoluteMoniker::from(vec!["foo"]));
+        assert_reboot_disallowed!(config, AbsoluteMoniker::root());
+        assert_reboot_disallowed!(config, AbsoluteMoniker::from(vec!["foo"]));
 
         // Nonempty config and enabled.
-        let allowed1 = PartialAbsoluteMoniker::from(vec!["foo", "bar"]);
-        let allowed2 = PartialAbsoluteMoniker::from(vec!["baz", "fiz"]);
+        let allowed1 = AbsoluteMoniker::from(vec!["foo", "bar"]);
+        let allowed2 = AbsoluteMoniker::from(vec!["baz", "fiz"]);
         let config = Arc::new(RuntimeConfig {
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
@@ -686,7 +682,7 @@ mod tests {
         });
         assert_reboot_allowed_matches!(config, allowed1, Ok(()));
         assert_reboot_allowed_matches!(config, allowed2, Ok(()));
-        assert_reboot_disallowed!(config, PartialAbsoluteMoniker::root());
+        assert_reboot_disallowed!(config, AbsoluteMoniker::root());
         assert_reboot_disallowed!(config, allowed1.parent().unwrap());
         assert_reboot_disallowed!(config, allowed1.child(PartialChildMoniker::from("baz")));
 
@@ -709,7 +705,7 @@ mod tests {
         assert_reboot_allowed_matches!(config, allowed1, Err(PolicyError::Unsupported { .. }));
         assert_reboot_allowed_matches!(
             config,
-            PartialAbsoluteMoniker::root(),
+            AbsoluteMoniker::root(),
             Err(PolicyError::Unsupported { .. })
         );
     }

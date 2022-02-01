@@ -165,7 +165,7 @@ mod tests {
         },
         fidl_fuchsia_data as fdata,
         lazy_static::lazy_static,
-        moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         std::{collections::HashMap, default::Default, sync::Arc},
         test_case::test_case,
     };
@@ -173,7 +173,7 @@ mod tests {
     const TEST_URL: &str = "test_url";
 
     lazy_static! {
-        static ref TEST_MONIKER: PartialAbsoluteMoniker = PartialAbsoluteMoniker::root();
+        static ref TEST_MONIKER: AbsoluteMoniker = AbsoluteMoniker::root();
         static ref PERMISSIVE_RUNTIME_CONFIG: Arc<RuntimeConfig> = {
             Arc::new(RuntimeConfig {
                 security_policy: SecurityPolicy {

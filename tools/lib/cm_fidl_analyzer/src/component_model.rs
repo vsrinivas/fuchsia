@@ -16,7 +16,7 @@ use {
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     futures::FutureExt,
-    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker, RelativeMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker, RelativeMoniker},
     routing::{
         capability_source::{
             CapabilitySourceInterface, ComponentCapability, StorageCapabilitySource,
@@ -167,10 +167,9 @@ impl ModelBuilderForAnalyzer {
 
                 Self::add_descendants(&root_instance, &decls_by_url, &mut model, &mut result);
 
-                model.instances.insert(
-                    NodePath::from(root_instance.partial_abs_moniker().clone()),
-                    root_instance,
-                );
+                model
+                    .instances
+                    .insert(NodePath::from(root_instance.abs_moniker().clone()), root_instance);
 
                 result.model = Some(Arc::new(model));
             }
@@ -200,7 +199,7 @@ impl ModelBuilderForAnalyzer {
                     if child.name.is_empty() {
                         result.errors.push(anyhow!(BuildAnalyzerModelError::InvalidChildDecl(
                             absolute_url.to_string(),
-                            NodePath::from(instance.partial_abs_moniker().clone()).to_string(),
+                            NodePath::from(instance.abs_moniker().clone()).to_string(),
                         )));
                         continue;
                     }
@@ -223,7 +222,7 @@ impl ModelBuilderForAnalyzer {
                                 );
 
                                 model.instances.insert(
-                                    NodePath::from(child_instance.partial_abs_moniker().clone()),
+                                    NodePath::from(child_instance.abs_moniker().clone()),
                                     child_instance,
                                 );
                             }
@@ -234,7 +233,7 @@ impl ModelBuilderForAnalyzer {
                         None => result.errors.push(anyhow!(
                             BuildAnalyzerModelError::ComponentDeclNotFound(
                                 absolute_url.to_string(),
-                                NodePath::from(instance.partial_abs_moniker().clone()).to_string(),
+                                NodePath::from(instance.abs_moniker().clone()).to_string(),
                             )
                         )),
                     };
@@ -301,7 +300,7 @@ impl ComponentModelForAnalyzer {
         self: &Arc<Self>,
         id: &NodePath,
     ) -> Result<Arc<ComponentInstanceForAnalyzer>, ComponentInstanceError> {
-        let abs_moniker = PartialAbsoluteMoniker::parse_string_without_instances(&id.to_string())
+        let abs_moniker = AbsoluteMoniker::parse_string_without_instances(&id.to_string())
             .expect("failed to parse moniker from id");
         match self.instances.get(id) {
             Some(instance) => Ok(Arc::clone(instance)),
@@ -757,7 +756,7 @@ impl ComponentModelForAnalyzer {
         match component.decl.program {
             Some(_) => Ok(()),
             None => Err(AnalyzerModelError::SourceInstanceNotExecutable(
-                component.partial_abs_moniker().to_string(),
+                component.abs_moniker().to_string(),
             )),
         }
     }
@@ -829,7 +828,7 @@ mod tests {
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
         fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
-        moniker::{InstancedAbsoluteMoniker, PartialAbsoluteMoniker},
+        moniker::{AbsoluteMoniker, InstancedAbsoluteMoniker},
         routing::{
             component_instance::WeakExtendedInstanceInterface, environment::EnvironmentInterface,
         },
@@ -886,20 +885,20 @@ mod tests {
         assert_eq!(
             get_other_result.err().unwrap().to_string(),
             ComponentInstanceError::instance_not_found(
-                PartialAbsoluteMoniker::parse_string_without_instances(&other_id.to_string())
+                AbsoluteMoniker::parse_string_without_instances(&other_id.to_string())
                     .expect("failed to parse moniker from id")
             )
             .to_string()
         );
 
-        // Include tests for `.instanced_moniker()` alongside `.partial_abs_moniker()`
+        // Include tests for `.instanced_moniker()` alongside `.abs_moniker()`
         // until`.instanced_moniker()` is removed from the public API.
-        assert_eq!(root_instance.partial_abs_moniker(), &PartialAbsoluteMoniker::root());
+        assert_eq!(root_instance.abs_moniker(), &AbsoluteMoniker::root());
         assert_eq!(root_instance.instanced_moniker(), &InstancedAbsoluteMoniker::root());
 
         assert_eq!(
-            child_instance.partial_abs_moniker(),
-            &PartialAbsoluteMoniker::parse_string_without_instances("/child")
+            child_instance.abs_moniker(),
+            &AbsoluteMoniker::parse_string_without_instances("/child")
                 .expect("failed to parse moniker from id")
         );
         assert_eq!(
@@ -914,7 +913,7 @@ mod tests {
         }
         match child_instance.try_get_parent()? {
             ExtendedInstanceInterface::Component(component) => {
-                assert_eq!(component.partial_abs_moniker(), root_instance.partial_abs_moniker());
+                assert_eq!(component.abs_moniker(), root_instance.abs_moniker());
                 assert_eq!(component.instanced_moniker(), root_instance.instanced_moniker())
             }
             _ => panic!("child instance's parent should be root component"),
@@ -924,10 +923,7 @@ mod tests {
             locked.get_live_child(&PartialChildMoniker::new("child".to_string(), None))
         })?;
         assert!(get_child.is_some());
-        assert_eq!(
-            get_child.as_ref().unwrap().partial_abs_moniker(),
-            child_instance.partial_abs_moniker()
-        );
+        assert_eq!(get_child.as_ref().unwrap().abs_moniker(), child_instance.abs_moniker());
         assert_eq!(get_child.unwrap().instanced_moniker(), child_instance.instanced_moniker());
 
         let root_environment = root_instance.environment();
@@ -942,10 +938,7 @@ mod tests {
         assert_eq!(child_environment.name(), None);
         match child_environment.parent() {
             WeakExtendedInstanceInterface::Component(component) => {
-                assert_eq!(
-                    component.upgrade()?.partial_abs_moniker(),
-                    root_instance.partial_abs_moniker()
-                );
+                assert_eq!(component.upgrade()?.abs_moniker(), root_instance.abs_moniker());
                 assert_eq!(
                     component.upgrade()?.instanced_moniker(),
                     root_instance.instanced_moniker()
@@ -1153,7 +1146,7 @@ mod tests {
         let (child_runner_registrar, child_runner) = get_child_runner_result.unwrap();
         match child_runner_registrar {
             ExtendedInstanceInterface::Component(instance) => {
-                assert_eq!(instance.partial_abs_moniker(), &PartialAbsoluteMoniker::from(vec![]));
+                assert_eq!(instance.abs_moniker(), &AbsoluteMoniker::from(vec![]));
             }
             ExtendedInstanceInterface::AboveRoot(_) => {
                 panic!("expected child_env_runner to be registered by the root instance")
@@ -1168,7 +1161,7 @@ mod tests {
         let (child_resolver_registrar, child_resolver) = get_child_resolver_result.unwrap();
         match child_resolver_registrar {
             ExtendedInstanceInterface::Component(instance) => {
-                assert_eq!(instance.partial_abs_moniker(), &PartialAbsoluteMoniker::from(vec![]));
+                assert_eq!(instance.abs_moniker(), &AbsoluteMoniker::from(vec![]));
             }
             ExtendedInstanceInterface::AboveRoot(_) => {
                 panic!("expected child_env_resolver to be registered by the root instance")

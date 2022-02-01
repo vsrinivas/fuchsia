@@ -10,7 +10,7 @@ use {
     ffx_core::ffx_plugin,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
 };
 
 const COLLECTION_NAME: &'static str = "ffx-laboratory";
@@ -39,7 +39,7 @@ async fn run_impl<W: std::io::Write>(
     };
 
     let moniker = format!("/core/{}:{}", COLLECTION_NAME, name);
-    let moniker = PartialAbsoluteMoniker::parse_string_without_instances(&moniker)
+    let moniker = AbsoluteMoniker::parse_string_without_instances(&moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
 
     writeln!(writer, "URL: {}", url)?;

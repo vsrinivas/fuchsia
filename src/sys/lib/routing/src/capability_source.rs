@@ -128,7 +128,7 @@ impl<C: ComponentInstanceInterface> fmt::Display for CapabilitySourceInterface<C
             "{}",
             match self {
                 CapabilitySourceInterface::Component { capability, component } => {
-                    format!("{} '{}'", capability, component.partial_abs_moniker)
+                    format!("{} '{}'", capability, component.abs_moniker)
                 }
                 CapabilitySourceInterface::Framework { capability, .. } => capability.to_string(),
                 CapabilitySourceInterface::Builtin { capability, .. } => capability.to_string(),
@@ -143,7 +143,7 @@ impl<C: ComponentInstanceInterface> fmt::Display for CapabilitySourceInterface<C
                 } => {
                     format!(
                         "{} from collection '#{}' of component '{}'",
-                        capability, collection_name, &component.partial_abs_moniker
+                        capability, collection_name, &component.abs_moniker
                     )
                 }
             }

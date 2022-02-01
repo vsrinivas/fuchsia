@@ -16,7 +16,7 @@ use {
     clonable_error::ClonableError,
     cm_runner::RunnerError,
     fuchsia_inspect, fuchsia_zircon as zx,
-    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker},
     std::{ffi::OsString, path::PathBuf},
     thiserror::Error,
 };
@@ -25,11 +25,11 @@ use {
 #[derive(Debug, Error, Clone)]
 pub enum ModelError {
     #[error("component instance {} not found in realm {}", child, moniker)]
-    InstanceNotFoundInRealm { moniker: PartialAbsoluteMoniker, child: PartialChildMoniker },
+    InstanceNotFoundInRealm { moniker: AbsoluteMoniker, child: PartialChildMoniker },
     #[error("component instance {} in realm {} already exists", child, moniker)]
-    InstanceAlreadyExists { moniker: PartialAbsoluteMoniker, child: PartialChildMoniker },
+    InstanceAlreadyExists { moniker: AbsoluteMoniker, child: PartialChildMoniker },
     #[error("component instance with moniker {} has shut down", moniker)]
-    InstanceShutDown { moniker: PartialAbsoluteMoniker },
+    InstanceShutDown { moniker: AbsoluteMoniker },
     #[error("component collection not found with name {}", name)]
     CollectionNotFound { name: String },
     #[error("collection {} does not allow dynamic offers", collection_name)]
@@ -108,15 +108,15 @@ pub enum ModelError {
         "Component {} is trying to use a storage capability which is restricted to the component ID index.",
         moniker
     )]
-    ComponentNotInIdIndex { moniker: PartialAbsoluteMoniker },
+    ComponentNotInIdIndex { moniker: AbsoluteMoniker },
     #[error("failed to add entry {} to {}", entry_name, moniker)]
-    AddEntryError { moniker: PartialAbsoluteMoniker, entry_name: String },
+    AddEntryError { moniker: AbsoluteMoniker, entry_name: String },
     #[error("failed to remove entry {}", entry_name)]
     RemoveEntryError { entry_name: String },
     #[error("failed to open directory '{}' for component '{}'", relative_path, moniker)]
-    OpenDirectoryError { moniker: PartialAbsoluteMoniker, relative_path: String },
+    OpenDirectoryError { moniker: AbsoluteMoniker, relative_path: String },
     #[error("failed to clone node '{}' for '{}'", relative_path, moniker)]
-    CloneNodeError { moniker: PartialAbsoluteMoniker, relative_path: String },
+    CloneNodeError { moniker: AbsoluteMoniker, relative_path: String },
     #[error("failed to create stream from channel")]
     StreamCreationError {
         #[source]
@@ -126,7 +126,7 @@ pub enum ModelError {
     InsufficientResources,
     #[error("failed to send {} to runner for component {}", operation, moniker)]
     RunnerCommunicationError {
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         operation: String,
         #[source]
         err: ClonableError,
@@ -165,24 +165,24 @@ pub enum ModelError {
 
 impl ModelError {
     pub fn instance_not_found_in_realm(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child: PartialChildMoniker,
     ) -> ModelError {
         ModelError::InstanceNotFoundInRealm { moniker, child }
     }
 
     pub fn instance_already_exists(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         child: PartialChildMoniker,
     ) -> ModelError {
         ModelError::InstanceAlreadyExists { moniker, child }
     }
 
-    pub fn instance_shut_down(moniker: PartialAbsoluteMoniker) -> ModelError {
+    pub fn instance_shut_down(moniker: AbsoluteMoniker) -> ModelError {
         ModelError::InstanceShutDown { moniker }
     }
 
-    pub fn instance_not_found(moniker: PartialAbsoluteMoniker) -> ModelError {
+    pub fn instance_not_found(moniker: AbsoluteMoniker) -> ModelError {
         ModelError::from(ComponentInstanceError::instance_not_found(moniker.to_partial()))
     }
 
@@ -234,10 +234,7 @@ impl ModelError {
         ModelError::ModelNotAvailable
     }
 
-    pub fn add_entry_error(
-        moniker: PartialAbsoluteMoniker,
-        entry_name: impl Into<String>,
-    ) -> ModelError {
+    pub fn add_entry_error(moniker: AbsoluteMoniker, entry_name: impl Into<String>) -> ModelError {
         ModelError::AddEntryError { moniker, entry_name: entry_name.into() }
     }
 
@@ -246,14 +243,14 @@ impl ModelError {
     }
 
     pub fn open_directory_error(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         relative_path: impl Into<String>,
     ) -> ModelError {
         ModelError::OpenDirectoryError { moniker, relative_path: relative_path.into() }
     }
 
     pub fn clone_node_error(
-        moniker: PartialAbsoluteMoniker,
+        moniker: AbsoluteMoniker,
         relative_path: impl Into<String>,
     ) -> ModelError {
         ModelError::CloneNodeError { moniker, relative_path: relative_path.into() }

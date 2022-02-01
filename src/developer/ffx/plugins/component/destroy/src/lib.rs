@@ -10,7 +10,7 @@ use {
     ffx_core::ffx_plugin,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
 };
 
 static MONIKER_ERROR_HELP: &'static str = "Provide a moniker to a component instance in a \
@@ -31,7 +31,7 @@ async fn destroy_impl<W: std::io::Write>(
     moniker: String,
     writer: &mut W,
 ) -> Result<()> {
-    let moniker = PartialAbsoluteMoniker::parse_string_without_instances(&moniker)
+    let moniker = AbsoluteMoniker::parse_string_without_instances(&moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     let parent = moniker
         .parent()

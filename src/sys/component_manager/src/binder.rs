@@ -19,7 +19,7 @@ use {
     cm_util::channel,
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
-    moniker::{AbsoluteMonikerBase, ExtendedMoniker, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     routing::capability_source::{ComponentCapability, InternalCapability},
     std::{
         path::PathBuf,
@@ -76,7 +76,7 @@ impl CapabilityProvider for BinderCapabilityProvider {
                 };
 
                 let start_reason = StartReason::AccessCapability {
-                    target: target.partial_abs_moniker.clone(),
+                    target: target.abs_moniker.clone(),
                     name: BINDER_SERVICE.clone(),
                 };
                 match source.bind(&start_reason).await {
@@ -115,7 +115,7 @@ impl BinderCapabilityHost {
     async fn on_scoped_framework_capability_routed_async<'a>(
         self: Arc<Self>,
         source: WeakComponentInstance,
-        target_moniker: PartialAbsoluteMoniker,
+        target_moniker: AbsoluteMoniker,
         capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
@@ -170,7 +170,7 @@ async fn report_routing_failure_to_target(
             report_routing_failure(&target, &*BINDER_CAPABILITY, &err, server_end).await;
         }
         Err(err) => {
-            log::warn!("failed to upgrade reference to {}: {}", target.partial_abs_moniker, err);
+            log::warn!("failed to upgrade reference to {}: {}", target.abs_moniker, err);
         }
     }
 }

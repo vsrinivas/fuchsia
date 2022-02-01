@@ -11,7 +11,7 @@ mod partial_child_moniker;
 mod relative_moniker;
 
 pub use self::{
-    abs_moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
+    abs_moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     child_moniker::{ChildMoniker, ChildMonikerBase, InstanceId},
     error::MonikerError,
     extended_moniker::ExtendedMoniker,

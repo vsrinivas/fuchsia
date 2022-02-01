@@ -12,9 +12,7 @@ mod tests {
         cm_rust_testing::{ComponentDeclBuilder, DirectoryDeclBuilder},
         component_id_index::gen_instance_id,
         fidl_fuchsia_component_decl as fdecl, fuchsia_zircon_status as zx_status,
-        moniker::{
-            AbsoluteMonikerBase, PartialAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase,
-        },
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
         routing::rights::{READ_RIGHTS, WRITE_RIGHTS},
         routing_test_helpers::{
             component_id_index::make_index_file, storage::CommonStorageTest, CheckUse,
@@ -162,8 +160,7 @@ mod tests {
                 instance_id: parent_consumer_instance_id.clone(),
                 appmgr_moniker: None,
                 moniker: Some(
-                    PartialAbsoluteMoniker::parse_string_without_instances("/parent_consumer")
-                        .unwrap(),
+                    AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
                 ),
             }],
             ..component_id_index::Index::default()
@@ -213,7 +210,7 @@ mod tests {
 
         model
             .check_use(
-                PartialAbsoluteMoniker::parse_string_without_instances("/consumer").unwrap(),
+                AbsoluteMoniker::parse_string_without_instances("/consumer").unwrap(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["consumer:0".into()])),

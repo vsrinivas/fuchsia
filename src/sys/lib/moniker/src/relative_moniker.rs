@@ -274,9 +274,7 @@ impl TryFrom<&str> for PartialRelativeMoniker {
 mod tests {
     use {
         super::*,
-        crate::{
-            abs_moniker::PartialAbsoluteMoniker, instanced_abs_moniker::InstancedAbsoluteMoniker,
-        },
+        crate::{abs_moniker::AbsoluteMoniker, instanced_abs_moniker::InstancedAbsoluteMoniker},
         anyhow::Error,
         std::convert::TryInto,
     };
@@ -403,14 +401,14 @@ mod tests {
 
     #[test]
     fn partial_relative_monikers_from_absolute() {
-        let me = PartialRelativeMoniker::from_absolute::<PartialAbsoluteMoniker>(
+        let me = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec![].into(),
             &vec![].into(),
         );
         assert_eq!(true, me.is_self());
         assert_eq!(".", format!("{}", me));
 
-        let me = PartialRelativeMoniker::from_absolute::<PartialAbsoluteMoniker>(
+        let me = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a:1", "b:2", "c:3"].into(),
             &vec!["a:1", "b:2", "c:3"].into(),
         );
@@ -418,56 +416,56 @@ mod tests {
         assert_eq!(true, me.is_self());
         assert_eq!(".", format!("{}", me));
 
-        let ancestor = PartialRelativeMoniker::from_absolute::<PartialAbsoluteMoniker>(
+        let ancestor = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a:1", "b:2"].into(),
             &vec![].into(),
         );
         assert_eq!(false, ancestor.is_self());
         assert_eq!(".\\b:2\\a:1", format!("{}", ancestor));
 
-        let ancestor = PartialRelativeMoniker::from_absolute::<PartialAbsoluteMoniker>(
+        let ancestor = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a:1", "b:2", "c:3", "d:4"].into(),
             &vec!["a:1", "b:2"].into(),
         );
         assert_eq!(false, ancestor.is_self());
         assert_eq!(".\\d:4\\c:3", format!("{}", ancestor));
 
-        let descendant = PartialRelativeMoniker::from_absolute::<PartialAbsoluteMoniker>(
+        let descendant = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec![].into(),
             &vec!["a:1", "b:2"].into(),
         );
         assert_eq!(false, descendant.is_self());
         assert_eq!("./a:1/b:2", format!("{}", descendant));
 
-        let descendant = PartialRelativeMoniker::from_absolute::<PartialAbsoluteMoniker>(
+        let descendant = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a:1", "b:2"].into(),
             &vec!["a:1", "b:2", "c:3", "d:4"].into(),
         );
         assert_eq!(false, descendant.is_self());
         assert_eq!("./c:3/d:4", format!("{}", descendant));
 
-        let sibling = PartialRelativeMoniker::from_absolute::<PartialAbsoluteMoniker>(
+        let sibling = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a:1"].into(),
             &vec!["b:2"].into(),
         );
         assert_eq!(false, sibling.is_self());
         assert_eq!(".\\a:1/b:2", format!("{}", sibling));
 
-        let sibling = PartialRelativeMoniker::from_absolute::<PartialAbsoluteMoniker>(
+        let sibling = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["c:3", "a:1"].into(),
             &vec!["c:3", "b:2"].into(),
         );
         assert_eq!(false, sibling.is_self());
         assert_eq!(".\\a:1/b:2", format!("{}", sibling));
 
-        let cousin = PartialRelativeMoniker::from_absolute::<PartialAbsoluteMoniker>(
+        let cousin = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["a0:1", "a:1"].into(),
             &vec!["b0:2", "b:2"].into(),
         );
         assert_eq!(false, cousin.is_self());
         assert_eq!(".\\a:1\\a0:1/b0:2/b:2", format!("{}", cousin));
 
-        let cousin = PartialRelativeMoniker::from_absolute::<PartialAbsoluteMoniker>(
+        let cousin = PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
             &vec!["c:3", "d:4", "a0:1", "a:1"].into(),
             &vec!["c:3", "d:4", "b0:2", "b:2"].into(),
         );

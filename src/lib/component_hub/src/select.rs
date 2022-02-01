@@ -8,7 +8,7 @@ use {
     fuchsia_async::TimeoutExt,
     futures::future::{join, join_all, BoxFuture},
     futures::FutureExt,
-    moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker},
 };
 
 static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
@@ -18,17 +18,16 @@ static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(
 pub async fn find_components(
     capability: String,
     hub_dir: Directory,
-) -> Result<Vec<PartialAbsoluteMoniker>> {
-    find_components_internal(capability, String::new(), PartialAbsoluteMoniker::root(), hub_dir)
-        .await
+) -> Result<Vec<AbsoluteMoniker>> {
+    find_components_internal(capability, String::new(), AbsoluteMoniker::root(), hub_dir).await
 }
 
 fn find_components_internal(
     capability: String,
     name: String,
-    moniker: PartialAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
     hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<PartialAbsoluteMoniker>>> {
+) -> BoxFuture<'static, Result<Vec<AbsoluteMoniker>>> {
     async move {
         let mut futures = vec![];
         let children_dir = hub_dir.open_dir_readable("children")?;
@@ -72,9 +71,9 @@ fn find_components_internal(
 // |moniker| corresponds to the moniker of the current realm.
 fn find_cmx_realms(
     capability: String,
-    moniker: PartialAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
     hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<PartialAbsoluteMoniker>>> {
+) -> BoxFuture<'static, Result<Vec<AbsoluteMoniker>>> {
     async move {
         let c_dir = hub_dir.open_dir_readable("c")?;
         let c_future = find_cmx_components_in_c_dir(capability.clone(), moniker.clone(), c_dir);
@@ -98,9 +97,9 @@ fn find_cmx_realms(
 // |moniker| corresponds to the moniker of the current component.
 fn find_cmx_components(
     capability: String,
-    moniker: PartialAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
     hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<PartialAbsoluteMoniker>>> {
+) -> BoxFuture<'static, Result<Vec<AbsoluteMoniker>>> {
     async move {
         let mut matching_components = vec![];
 
@@ -123,9 +122,9 @@ fn find_cmx_components(
 
 async fn find_cmx_components_in_c_dir(
     capability: String,
-    moniker: PartialAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
     c_dir: Directory,
-) -> Result<Vec<PartialAbsoluteMoniker>> {
+) -> Result<Vec<AbsoluteMoniker>> {
     // Get all CMX child components
     let child_component_names = c_dir.entries().await?;
     let mut future_children = vec![];
@@ -152,9 +151,9 @@ async fn find_cmx_components_in_c_dir(
 
 async fn find_cmx_realms_in_r_dir(
     capability: String,
-    moniker: PartialAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
     r_dir: Directory,
-) -> Result<Vec<PartialAbsoluteMoniker>> {
+) -> Result<Vec<AbsoluteMoniker>> {
     // Get all CMX child realms
     let mut future_realms = vec![];
     for child_realm_name in r_dir.entries().await? {

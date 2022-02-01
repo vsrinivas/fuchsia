@@ -39,7 +39,7 @@ use {
     lazy_static::lazy_static,
     log::*,
     moniker::{
-        AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialRelativeMoniker, RelativeMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, PartialRelativeMoniker, RelativeMoniker,
         RelativeMonikerBase,
     },
     routing::component_instance::ComponentInstanceInterface,
@@ -208,8 +208,8 @@ impl StorageAdmin {
                     control_handle: _,
                 } => {
                     let relative_moniker = RelativeMoniker::try_from(relative_moniker.as_str())?;
-                    let abs_moniker = PartialAbsoluteMoniker::from_relative(
-                        component.partial_abs_moniker(),
+                    let abs_moniker = AbsoluteMoniker::from_relative(
+                        component.abs_moniker(),
                         &relative_moniker.to_partial(),
                     )?;
                     let instance_id = component
@@ -236,8 +236,8 @@ impl StorageAdmin {
                         let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
                         let relative_moniker = PartialRelativeMoniker::parse(&relative_moniker)
                             .map_err(|_| fcomponent::Error::InvalidArguments)?;
-                        let absolute_moniker = PartialAbsoluteMoniker::from_relative(
-                            &component.partial_abs_moniker,
+                        let absolute_moniker = AbsoluteMoniker::from_relative(
+                            &component.abs_moniker,
                             &relative_moniker,
                         )
                         .map_err(|_| fcomponent::Error::InvalidArguments)?;
@@ -298,8 +298,8 @@ impl StorageAdmin {
                             Err(fcomponent::Error::InvalidArguments)
                         }
                         Ok(relative_moniker) => {
-                            let abs_moniker = PartialAbsoluteMoniker::from_relative(
-                                component.partial_abs_moniker(),
+                            let abs_moniker = AbsoluteMoniker::from_relative(
+                                component.abs_moniker(),
                                 &relative_moniker.to_partial(),
                             )?;
                             let instance_id = component

@@ -12,8 +12,8 @@ use {
         CapabilityDecl, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl, OfferDecl, UseDecl,
     },
     moniker::{
-        AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, InstancedAbsoluteMoniker,
-        PartialAbsoluteMoniker, PartialChildMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase,
+        InstancedAbsoluteMoniker, PartialChildMoniker,
     },
     routing::{
         capability_source::{BuiltinCapabilities, NamespaceCapabilities},
@@ -37,7 +37,7 @@ use {
 #[derive(Debug)]
 pub struct ComponentInstanceForAnalyzer {
     instanced_moniker: InstancedAbsoluteMoniker,
-    partial_abs_moniker: PartialAbsoluteMoniker,
+    abs_moniker: AbsoluteMoniker,
     pub(crate) decl: ComponentDecl,
     url: String,
     parent: WeakExtendedInstanceInterface<Self>,
@@ -56,7 +56,7 @@ impl ComponentInstanceForAnalyzer {
     /// Returns a representation of the instance's position in the component instance tree.
     pub fn node_path(&self) -> NodePath {
         NodePath::absolute_from_vec(
-            self.partial_abs_moniker.path().into_iter().map(|m| m.as_str()).collect(),
+            self.abs_moniker.path().into_iter().map(|m| m.as_str()).collect(),
         )
     }
 
@@ -73,10 +73,10 @@ impl ComponentInstanceForAnalyzer {
         let environment =
             EnvironmentForAnalyzer::new_root(runner_registry, &runtime_config, &top_instance);
         let instanced_moniker = InstancedAbsoluteMoniker::root();
-        let partial_abs_moniker = instanced_moniker.clone().to_partial();
+        let abs_moniker = instanced_moniker.clone().to_partial();
         Arc::new(Self {
             instanced_moniker,
-            partial_abs_moniker,
+            abs_moniker,
             decl,
             url,
             parent: WeakExtendedInstanceInterface::from(&ExtendedInstanceInterface::AboveRoot(
@@ -101,10 +101,10 @@ impl ComponentInstanceForAnalyzer {
         let environment = EnvironmentForAnalyzer::new_for_child(&parent, child)?;
         let instanced_moniker =
             parent.instanced_moniker.child(ChildMoniker::new(child.name.clone(), None, 0));
-        let partial_abs_moniker = instanced_moniker.clone().to_partial();
+        let abs_moniker = instanced_moniker.clone().to_partial();
         Ok(Arc::new(Self {
             instanced_moniker,
-            partial_abs_moniker,
+            abs_moniker,
             decl,
             url: absolute_url,
             parent: WeakExtendedInstanceInterface::from(&ExtendedInstanceInterface::Component(
@@ -155,8 +155,8 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
         &self.instanced_moniker
     }
 
-    fn partial_abs_moniker(&self) -> &PartialAbsoluteMoniker {
-        &self.partial_abs_moniker
+    fn abs_moniker(&self) -> &AbsoluteMoniker {
+        &self.abs_moniker
     }
 
     fn child_moniker(&self) -> Option<&ChildMoniker> {

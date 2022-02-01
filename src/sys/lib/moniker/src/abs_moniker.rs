@@ -16,7 +16,7 @@ use {
 use serde::{Deserialize, Serialize};
 
 /// AbsoluteMonikerBase is the common trait for both InstancedAbsoluteMoniker
-/// and PartialAbsoluteMoniker concrete types.
+/// and AbsoluteMoniker concrete types.
 ///
 /// AbsoluteMonikerBase describes the identity of a component instance in terms of its path
 /// relative to the root of the component instance tree.
@@ -169,23 +169,23 @@ pub trait AbsoluteMonikerBase:
         Ok(())
     }
 
-    fn to_partial(&self) -> PartialAbsoluteMoniker {
+    fn to_partial(&self) -> AbsoluteMoniker {
         let path: Vec<PartialChildMoniker> = self.path().iter().map(|p| p.to_partial()).collect();
-        PartialAbsoluteMoniker::new(path)
+        AbsoluteMoniker::new(path)
     }
 }
 
-/// PartialAbsoluteMoniker describes the identity of a component instance
+/// AbsoluteMoniker describes the identity of a component instance
 /// in terms of its path relative to the root of the component instance
-/// tree. Unlike InstancedAbsoluteMoniker, the constituent parts of a PartialAbsoluteMoniker
+/// tree. Unlike InstancedAbsoluteMoniker, the constituent parts of a AbsoluteMoniker
 /// do not need to include the instance ID of the child.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]
-pub struct PartialAbsoluteMoniker {
+pub struct AbsoluteMoniker {
     path: Vec<PartialChildMoniker>,
 }
 
-impl AbsoluteMonikerBase for PartialAbsoluteMoniker {
+impl AbsoluteMonikerBase for AbsoluteMoniker {
     type Part = PartialChildMoniker;
 
     fn new(path: Vec<Self::Part>) -> Self {
@@ -196,40 +196,40 @@ impl AbsoluteMonikerBase for PartialAbsoluteMoniker {
         &self.path
     }
 
-    fn parse_string_without_instances(input: &str) -> Result<PartialAbsoluteMoniker, MonikerError> {
+    fn parse_string_without_instances(input: &str) -> Result<AbsoluteMoniker, MonikerError> {
         if input.chars().nth(0) != Some('/') {
             return Err(MonikerError::invalid_moniker(input));
         }
         if input == "/" {
-            return Ok(PartialAbsoluteMoniker::root());
+            return Ok(AbsoluteMoniker::root());
         }
         let path = input[1..]
             .split('/')
             .map(PartialChildMoniker::parse)
             .collect::<Result<_, MonikerError>>()?;
-        Ok(PartialAbsoluteMoniker::new(path))
+        Ok(AbsoluteMoniker::new(path))
     }
 }
 
-impl From<Vec<&str>> for PartialAbsoluteMoniker {
+impl From<Vec<&str>> for AbsoluteMoniker {
     fn from(rep: Vec<&str>) -> Self {
         Self::parse(&rep).expect(&format!("absolute moniker failed to parse: {:?}", &rep))
     }
 }
 
-impl cmp::Ord for PartialAbsoluteMoniker {
+impl cmp::Ord for AbsoluteMoniker {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         self.compare(other)
     }
 }
 
-impl PartialOrd for PartialAbsoluteMoniker {
+impl PartialOrd for AbsoluteMoniker {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl fmt::Display for PartialAbsoluteMoniker {
+impl fmt::Display for AbsoluteMoniker {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.format(f)
     }
@@ -239,31 +239,31 @@ impl fmt::Display for PartialAbsoluteMoniker {
 mod tests {
     use super::*;
     #[test]
-    fn partial_absolute_monikers() {
-        let root = PartialAbsoluteMoniker::root();
+    fn absolute_monikers() {
+        let root = AbsoluteMoniker::root();
         assert_eq!(true, root.is_root());
         assert_eq!("/", format!("{}", root));
-        assert_eq!(root, PartialAbsoluteMoniker::from(vec![]));
+        assert_eq!(root, AbsoluteMoniker::from(vec![]));
 
-        let m = PartialAbsoluteMoniker::new(vec![
+        let m = AbsoluteMoniker::new(vec![
             PartialChildMoniker::new("a".to_string(), None),
             PartialChildMoniker::new("b".to_string(), Some("coll".to_string())),
         ]);
         assert_eq!(false, m.is_root());
         assert_eq!("/a/coll:b", format!("{}", m));
-        assert_eq!(m, PartialAbsoluteMoniker::from(vec!["a", "coll:b"]));
+        assert_eq!(m, AbsoluteMoniker::from(vec!["a", "coll:b"]));
         assert_eq!(m.leaf().map(|m| m.collection()).flatten(), Some("coll"));
         assert_eq!(m.leaf().map(|m| m.name()), Some("b"));
         assert_eq!(m.leaf(), Some(&PartialChildMoniker::from("coll:b")));
     }
 
     #[test]
-    fn partial_absolute_moniker_parent() {
-        let root = PartialAbsoluteMoniker::root();
+    fn absolute_moniker_parent() {
+        let root = AbsoluteMoniker::root();
         assert_eq!(true, root.is_root());
         assert_eq!(None, root.parent());
 
-        let m = PartialAbsoluteMoniker::new(vec![
+        let m = AbsoluteMoniker::new(vec![
             PartialChildMoniker::new("a".to_string(), None),
             PartialChildMoniker::new("b".to_string(), None),
         ]);

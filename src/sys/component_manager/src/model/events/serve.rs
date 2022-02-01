@@ -25,7 +25,7 @@ use {
     },
     log::{debug, error, info, warn},
     moniker::{
-        AbsoluteMonikerBase, ExtendedMoniker, PartialAbsoluteMoniker, PartialRelativeMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, PartialRelativeMoniker,
         RelativeMonikerBase,
     },
     std::sync::Arc,
@@ -310,14 +310,11 @@ async fn create_event_fidl_object(
     let moniker_string = match (&event.event.target_moniker, &event.scope_moniker) {
         (moniker @ ExtendedMoniker::ComponentManager, _) => moniker.to_string(),
         (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentManager) => {
-            PartialRelativeMoniker::from_absolute(
-                &PartialAbsoluteMoniker::root(),
-                &target.to_partial(),
-            )
-            .to_string()
+            PartialRelativeMoniker::from_absolute(&AbsoluteMoniker::root(), &target.to_partial())
+                .to_string()
         }
         (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentInstance(scope)) => {
-            PartialRelativeMoniker::from_absolute::<PartialAbsoluteMoniker>(
+            PartialRelativeMoniker::from_absolute::<AbsoluteMoniker>(
                 &scope.to_partial(),
                 &target.to_partial(),
             )

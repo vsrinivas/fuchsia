@@ -764,7 +764,7 @@ mod tests {
             DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
             OPEN_RIGHT_WRITABLE,
         },
-        moniker::PartialAbsoluteMoniker,
+        moniker::AbsoluteMoniker,
         routing_test_helpers::component_id_index::make_index_file,
         std::{convert::TryFrom, path::Path},
         vfs::{
@@ -864,7 +864,7 @@ mod tests {
 
         model.root().hooks.install(additional_hooks).await;
 
-        let root_moniker = PartialAbsoluteMoniker::root();
+        let root_moniker = AbsoluteMoniker::root();
         model.bind(&root_moniker, &StartReason::Root).await.unwrap();
 
         (model, builtin_environment, hub_proxy)
@@ -1187,9 +1187,7 @@ mod tests {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: Some(iid.clone()),
                 appmgr_moniker: None,
-                moniker: Some(
-                    PartialAbsoluteMoniker::parse_string_without_instances("/a").unwrap(),
-                ),
+                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/a").unwrap()),
             }],
             ..component_id_index::Index::default()
         })
@@ -1232,7 +1230,7 @@ mod tests {
         // Binding will resolve the component and cause the instance id to be written.
         model
             .bind(
-                &PartialAbsoluteMoniker::parse_string_without_instances("/a").unwrap(),
+                &AbsoluteMoniker::parse_string_without_instances("/a").unwrap(),
                 &StartReason::Debug,
             )
             .await

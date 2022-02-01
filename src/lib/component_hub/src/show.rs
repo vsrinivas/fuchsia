@@ -9,7 +9,7 @@ use {
     fuchsia_async::TimeoutExt,
     futures::future::{join, join_all, BoxFuture},
     futures::FutureExt,
-    moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker},
     routing::component_id_index::ComponentInstanceId,
 };
 
@@ -43,13 +43,13 @@ async fn does_url_match_query(query: &str, hub_dir: &Directory) -> bool {
 // Given a v2 hub directory, collect components whose component name or URL contains |query| as a
 // substring. This function is recursive and will find matching CMX and CML components.
 pub async fn find_components(query: String, hub_dir: Directory) -> Result<Vec<Component>> {
-    find_components_internal(query, String::new(), PartialAbsoluteMoniker::root(), hub_dir).await
+    find_components_internal(query, String::new(), AbsoluteMoniker::root(), hub_dir).await
 }
 
 fn find_components_internal(
     query: String,
     name: String,
-    moniker: PartialAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
     hub_dir: Directory,
 ) -> BoxFuture<'static, Result<Vec<Component>>> {
     async move {
@@ -94,7 +94,7 @@ fn find_components_internal(
 // |moniker| corresponds to the moniker of the current realm.
 fn find_cmx_realms(
     query: String,
-    moniker: PartialAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
     hub_dir: Directory,
 ) -> BoxFuture<'static, Result<Vec<Component>>> {
     async move {
@@ -120,7 +120,7 @@ fn find_cmx_realms(
 // |moniker| corresponds to the moniker of the current component.
 fn find_cmx_components(
     query: String,
-    moniker: PartialAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
     hub_dir: Directory,
 ) -> BoxFuture<'static, Result<Vec<Component>>> {
     async move {
@@ -148,7 +148,7 @@ fn find_cmx_components(
 
 async fn find_cmx_components_in_c_dir(
     query: String,
-    moniker: PartialAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
     c_dir: Directory,
 ) -> Result<Vec<Component>> {
     // Get all CMX child components
@@ -176,7 +176,7 @@ async fn find_cmx_components_in_c_dir(
 
 async fn find_cmx_realms_in_r_dir(
     query: String,
-    moniker: PartialAbsoluteMoniker,
+    moniker: AbsoluteMoniker,
     r_dir: Directory,
 ) -> Result<Vec<Component>> {
     // Get all CMX child realms
@@ -521,7 +521,7 @@ impl std::fmt::Display for Resolved {
 /// Basic information about a component for the `show` command.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Component {
-    pub moniker: PartialAbsoluteMoniker,
+    pub moniker: AbsoluteMoniker,
     pub url: String,
     pub component_type: String,
     pub execution: Option<Execution>,
@@ -529,7 +529,7 @@ pub struct Component {
 }
 
 impl Component {
-    async fn parse(moniker: PartialAbsoluteMoniker, hub_dir: &Directory) -> Result<Component> {
+    async fn parse(moniker: AbsoluteMoniker, hub_dir: &Directory) -> Result<Component> {
         let resolved = if hub_dir.exists("resolved").await? {
             let resolved_dir = hub_dir.open_dir_readable("resolved")?;
             Some(Resolved::parse(resolved_dir).await?)
@@ -553,7 +553,7 @@ impl Component {
         Ok(Component { moniker, url, component_type, execution, resolved })
     }
 
-    async fn parse_cmx(moniker: PartialAbsoluteMoniker, hub_dir: Directory) -> Result<Component> {
+    async fn parse_cmx(moniker: AbsoluteMoniker, hub_dir: Directory) -> Result<Component> {
         let resolved = Some(Resolved::parse_cmx(&hub_dir).await?);
         let execution = Some(Execution::parse_cmx(&hub_dir).await?);
 

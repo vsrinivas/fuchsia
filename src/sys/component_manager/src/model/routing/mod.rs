@@ -176,7 +176,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
             let source = self.source.upgrade()?;
             source
                 .bind(&StartReason::AccessCapability {
-                    target: self.target.partial_abs_moniker.clone(),
+                    target: self.target.abs_moniker.clone(),
                     name: self.name.clone(),
                 })
                 .await?;
@@ -298,14 +298,14 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
             }
             CapabilitySource::Framework { capability, component } => {
                 return Err(RoutingError::capability_from_framework_not_found(
-                    &component.partial_abs_moniker,
+                    &component.abs_moniker,
                     capability.source_name().to_string(),
                 )
                 .into());
             }
             CapabilitySource::Capability { source_capability, component } => {
                 return Err(RoutingError::capability_from_capability_not_found(
-                    &component.partial_abs_moniker,
+                    &component.abs_moniker,
                     source_capability.to_string(),
                 )
                 .into());
@@ -381,7 +381,7 @@ pub async fn report_routing_failure(
                 "Failed to route {} `{}` with target component `{}`: {}",
                 cap.type_name(),
                 cap.source_id(),
-                &target.partial_abs_moniker,
+                &target.abs_moniker,
                 &err_str
             ),
         )

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker},
     std::{fmt, fmt::Display},
 };
 
@@ -23,7 +23,7 @@ impl NodePath {
     /// Construct NodePath from string references that correspond to parsable
     /// `PartialChildMoniker` instances.
     pub fn absolute_from_vec(vec: Vec<&str>) -> Self {
-        let abs_moniker: PartialAbsoluteMoniker = vec.into();
+        let abs_moniker: AbsoluteMoniker = vec.into();
         Self::new(abs_moniker.path().clone())
     }
 
@@ -56,8 +56,8 @@ impl Display for NodePath {
     }
 }
 
-impl From<PartialAbsoluteMoniker> for NodePath {
-    fn from(moniker: PartialAbsoluteMoniker) -> Self {
+impl From<AbsoluteMoniker> for NodePath {
+    fn from(moniker: AbsoluteMoniker) -> Self {
         Self::new(moniker.path().clone())
     }
 }

@@ -30,7 +30,7 @@ use {
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     matches::assert_matches,
-    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     routing::{
         component_id_index::ComponentIdIndex,
         component_instance::ComponentInstanceInterface,
@@ -68,8 +68,7 @@ pub struct RoutingTestBuilderForAnalyzer {
     builtin_capabilities: Vec<CapabilityDecl>,
     builtin_runner_registrations: Vec<RunnerRegistration>,
     capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
-    debug_capability_policy:
-        HashMap<CapabilityAllowlistKey, HashSet<(PartialAbsoluteMoniker, String)>>,
+    debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
     component_id_index_path: Option<String>,
     builtin_boot_resolver: component_internal::BuiltinBootResolver,
 }
@@ -155,7 +154,7 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
     fn add_debug_capability_policy(
         &mut self,
         key: CapabilityAllowlistKey,
-        allowlist: HashSet<(PartialAbsoluteMoniker, String)>,
+        allowlist: HashSet<(AbsoluteMoniker, String)>,
     ) {
         self.debug_capability_policy.insert(key, allowlist);
     }
@@ -317,7 +316,7 @@ impl RoutingTestForAnalyzer {
 impl RoutingTestModel for RoutingTestForAnalyzer {
     type C = ComponentInstanceForAnalyzer;
 
-    async fn check_use(&self, moniker: PartialAbsoluteMoniker, check: CheckUse) {
+    async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         let target_id = NodePath::new(moniker.path().clone());
         let target = self.model.get_instance(&target_id).expect("target instance not found");
 
@@ -358,7 +357,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
         }
     }
 
-    async fn check_use_exposed_dir(&self, moniker: PartialAbsoluteMoniker, check: CheckUse) {
+    async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         let target =
             self.model.get_instance(&NodePath::from(moniker)).expect("target instance not found");
 
@@ -403,7 +402,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
 
     async fn look_up_instance(
         &self,
-        moniker: &PartialAbsoluteMoniker,
+        moniker: &AbsoluteMoniker,
     ) -> Result<Arc<ComponentInstanceForAnalyzer>, anyhow::Error> {
         self.model.get_instance(&NodePath::from(moniker.clone())).map_err(|err| anyhow!(err))
     }
@@ -412,7 +411,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
     //
     // All file and directory operations are no-ops for the static model.
     #[allow(unused_variables)]
-    async fn check_open_file(&self, moniker: PartialAbsoluteMoniker, path: CapabilityPath) {}
+    async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {}
 
     #[allow(unused_variables)]
     async fn create_static_file(&self, path: &Path, contents: &str) -> Result<(), anyhow::Error> {
@@ -775,7 +774,7 @@ mod tests {
                     capability_type,
                     capability_name,
             })))
-                if moniker == *b_component.partial_abs_moniker() &&
+                if moniker == *b_component.abs_moniker() &&
                 capability_type == "runner" &&
                 capability_name == CapabilityName("hobbit".to_string())
         );
@@ -2038,7 +2037,7 @@ mod tests {
                         RoutingError::ExposeFromChildInstanceNotFound {
                             capability_id: "bad_protocol".to_string(),
                             child_moniker: "c".into(),
-                            moniker: b_component.partial_abs_moniker().clone(),
+                            moniker: b_component.abs_moniker().clone(),
                         },
                     )
                 )),

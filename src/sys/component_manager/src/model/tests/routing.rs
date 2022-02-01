@@ -48,9 +48,7 @@ use {
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
     maplit::hashmap,
-    moniker::{
-        AbsoluteMonikerBase, ChildMonikerBase, InstancedAbsoluteMoniker, PartialAbsoluteMoniker,
-    },
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, InstancedAbsoluteMoniker},
     routing_test_helpers::{
         default_service_capability, instantiate_common_routing_tests, RoutingTestModel,
     },
@@ -295,7 +293,7 @@ async fn capability_requested_event_at_parent() {
         .build()
         .await;
 
-    let namespace_root = test.bind_and_get_namespace(PartialAbsoluteMoniker::root()).await;
+    let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
     let mut event_stream = capability_util::subscribe_to_event(
         &namespace_root,
         EventSubscription::new("capability_requested".into(), EventMode::Async),
@@ -1351,7 +1349,7 @@ async fn use_runner_from_environment_in_collection() {
         .await;
     universe
         .create_dynamic_child(
-            PartialAbsoluteMoniker::root(),
+            AbsoluteMoniker::root(),
             "coll",
             ChildDecl {
                 name: "b".to_string(),
@@ -1708,7 +1706,7 @@ async fn use_runner_from_environment_failed() {
             Arc::downgrade(&runner_host) as Weak<dyn Hook>,
         )])
         .await;
-    let namespace_root = test.bind_and_get_namespace(PartialAbsoluteMoniker::root()).await;
+    let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
     let mut event_stream = capability_util::subscribe_to_event(
         &namespace_root,
         EventSubscription::new("stopped".into(), EventMode::Async),
@@ -1802,7 +1800,7 @@ async fn use_runner_from_environment_not_found() {
                 capability_name,
             }
         })
-        if moniker == PartialAbsoluteMoniker::from(vec!["b"]) &&
+        if moniker == AbsoluteMoniker::from(vec!["b"]) &&
         capability_type == "runner" &&
         capability_name == CapabilityName("hobbit".to_string()));
 }
@@ -2345,8 +2343,7 @@ async fn route_service_from_parent_collection() {
     ];
     let test = RoutingTestBuilder::new("a", components).build().await;
     let b_component = test.model.look_up(&vec!["b"].into()).await.expect("b instance");
-    let a_component =
-        test.model.look_up(&PartialAbsoluteMoniker::root()).await.expect("root instance");
+    let a_component = test.model.look_up(&AbsoluteMoniker::root()).await.expect("root instance");
     let (source, _route) = route_capability(RouteRequest::UseService(use_decl), &b_component)
         .await
         .expect("failed to route service");
@@ -2431,19 +2428,19 @@ async fn list_service_instances_from_collection() {
 
     // Start a few dynamic children in the collection "coll".
     test.create_dynamic_child(
-        PartialAbsoluteMoniker::root(),
+        AbsoluteMoniker::root(),
         "coll",
         ChildDeclBuilder::new_lazy_child("service_child_a"),
     )
     .await;
     test.create_dynamic_child(
-        PartialAbsoluteMoniker::root(),
+        AbsoluteMoniker::root(),
         "coll",
         ChildDeclBuilder::new_lazy_child("non_service_child"),
     )
     .await;
     test.create_dynamic_child(
-        PartialAbsoluteMoniker::root(),
+        AbsoluteMoniker::root(),
         "coll",
         ChildDeclBuilder::new_lazy_child("service_child_b"),
     )
@@ -2483,7 +2480,7 @@ async fn list_service_instances_from_collection() {
                 source_path.expect("source path"),
                 "/svc/foo".parse::<CapabilityPath>().unwrap()
             );
-            assert_eq!(component.partial_abs_moniker, vec!["coll:service_child_a"].into());
+            assert_eq!(component.abs_moniker, vec!["coll:service_child_a"].into());
         }
         _ => panic!("bad child capability source"),
     }

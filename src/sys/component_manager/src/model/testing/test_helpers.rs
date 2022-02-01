@@ -38,7 +38,7 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{channel::mpsc::Receiver, lock::Mutex, StreamExt, TryStreamExt},
-    moniker::{PartialAbsoluteMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, PartialChildMoniker},
     std::collections::HashSet,
     std::convert::TryFrom,
     std::default::Default,
@@ -402,7 +402,7 @@ impl ActionsTest {
     pub async fn new(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
-        moniker: Option<PartialAbsoluteMoniker>,
+        moniker: Option<AbsoluteMoniker>,
     ) -> Self {
         Self::new_with_hooks(root_component, components, moniker, vec![]).await
     }
@@ -410,7 +410,7 @@ impl ActionsTest {
     pub async fn new_with_hooks(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
-        moniker: Option<PartialAbsoluteMoniker>,
+        moniker: Option<AbsoluteMoniker>,
         extra_hooks: Vec<HooksRegistration>,
     ) -> Self {
         let TestModelResult { model, builtin_environment, mock_runner, mock_resolver } =
@@ -461,11 +461,11 @@ impl ActionsTest {
         }
     }
 
-    pub async fn look_up(&self, moniker: PartialAbsoluteMoniker) -> Arc<ComponentInstance> {
+    pub async fn look_up(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
         self.model.look_up(&moniker).await.expect(&format!("could not look up {}", moniker))
     }
 
-    pub async fn bind(&self, moniker: PartialAbsoluteMoniker) -> Arc<ComponentInstance> {
+    pub async fn bind(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
         self.model
             .bind(&moniker, &StartReason::Eager)
             .await

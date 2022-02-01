@@ -16,7 +16,7 @@ use {
     cm_rust_testing::*,
     component_id_index::gen_instance_id,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
-    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
     routing::{error::RoutingError, RouteRequest},
     std::{convert::TryInto, path::PathBuf},
 };
@@ -486,7 +486,7 @@ async fn use_restricted_storage_start_failure() {
             instance_id: parent_consumer_instance_id.clone(),
             appmgr_moniker: None,
             moniker: Some(
-                PartialAbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
+                AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
             ),
         }],
         ..component_id_index::Index::default()
@@ -550,17 +550,15 @@ async fn use_restricted_storage_start_failure() {
         .await;
 
     test.bind_instance(
-        &PartialAbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
+        &AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
     )
     .await
     .expect("bind to /parent_consumer failed");
 
     let child_bind_result = test
         .bind_instance(
-            &PartialAbsoluteMoniker::parse_string_without_instances(
-                "/parent_consumer/child_consumer",
-            )
-            .unwrap(),
+            &AbsoluteMoniker::parse_string_without_instances("/parent_consumer/child_consumer")
+                .unwrap(),
         )
         .await;
     assert!(matches!(
@@ -587,10 +585,8 @@ async fn use_restricted_storage_open_failure() {
             instance_id: parent_consumer_instance_id.clone(),
             appmgr_moniker: None,
             moniker: Some(
-                PartialAbsoluteMoniker::parse_string_without_instances(
-                    "/parent_consumer/child_consumer",
-                )
-                .unwrap(),
+                AbsoluteMoniker::parse_string_without_instances("/parent_consumer/child_consumer")
+                    .unwrap(),
             ),
         }],
         ..component_id_index::Index::default()
@@ -638,7 +634,7 @@ async fn use_restricted_storage_open_failure() {
         .await;
 
     let parent_consumer_moniker =
-        PartialAbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap();
+        AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap();
     let parent_consumer_instance = test
         .bind_and_get_instance(&parent_consumer_moniker, StartReason::Eager, false)
         .await
@@ -664,7 +660,7 @@ async fn use_restricted_storage_open_failure() {
 
     // now modify StorageDecl so that it restricts storage
     let provider_instance = test
-        .bind_and_get_instance(&PartialAbsoluteMoniker::root(), StartReason::Eager, false)
+        .bind_and_get_instance(&AbsoluteMoniker::root(), StartReason::Eager, false)
         .await
         .expect("could not resolve state");
     {

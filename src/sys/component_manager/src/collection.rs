@@ -15,7 +15,7 @@ use {
     },
     async_trait::async_trait,
     cm_rust::CapabilityTypeName,
-    moniker::{AbsoluteMonikerBase, ExtendedMoniker, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     routing::capability_source::{AggregateCapability, AggregateCapabilityProvider},
     std::sync::{Arc, Weak},
 };
@@ -42,7 +42,7 @@ impl CollectionCapabilityHost {
     async fn on_collection_capability_routed_async(
         self: Arc<Self>,
         source: WeakComponentInstance,
-        target_moniker: PartialAbsoluteMoniker,
+        target_moniker: AbsoluteMoniker,
         aggregate_capability_provider: Box<dyn AggregateCapabilityProvider<ComponentInstance>>,
         capability: &AggregateCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,

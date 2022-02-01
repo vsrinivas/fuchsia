@@ -26,7 +26,7 @@ use {
     futures::stream::StreamExt,
     io_util,
     log::*,
-    moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, InstancedAbsoluteMoniker},
     std::{
         sync::{Arc, Mutex, Weak},
         time::Duration,
@@ -141,7 +141,7 @@ impl DirectoryReadyNotifier {
             self.create_events(outgoing_node_result, decl, matching_exposes, target).await;
         for directory_ready_event in directory_ready_events {
             target.hooks.dispatch(&directory_ready_event).await.unwrap_or_else(|e| {
-                warn!("Error notifying directory ready for {}: {:?}", target.partial_abs_moniker, e)
+                warn!("Error notifying directory ready for {}: {:?}", target.abs_moniker, e)
             });
         }
     }
@@ -159,9 +159,8 @@ impl DirectoryReadyNotifier {
             let outgoing_node = outgoing_node_result?;
             self.wait_for_on_open(&outgoing_node, &target.instanced_moniker(), "/".to_string())
                 .await?;
-            io_util::node_to_directory(outgoing_node).map_err(|_| {
-                ModelError::open_directory_error(target.partial_abs_moniker.clone(), "/")
-            })
+            io_util::node_to_directory(outgoing_node)
+                .map_err(|_| ModelError::open_directory_error(target.abs_moniker.clone(), "/"))
         }
         .await;
 
@@ -226,7 +225,7 @@ impl DirectoryReadyNotifier {
                     Ok(node) => return Ok(node),
                     Err(TryOpenError::Fidl(_)) => {
                         break Err(ModelError::open_directory_error(
-                            target.partial_abs_moniker.clone(),
+                            target.abs_moniker.clone(),
                             source_path.clone(),
                         ));
                     }
@@ -244,7 +243,7 @@ impl DirectoryReadyNotifier {
                             }
                         }
                         break Err(ModelError::open_directory_error(
-                            target.partial_abs_moniker.clone(),
+                            target.abs_moniker.clone(),
                             source_path.clone(),
                         ));
                     }
@@ -314,10 +313,8 @@ impl DirectoryReadyNotifier {
                             }))
                         })
                         .unwrap_or_else(|_| {
-                            let err = ModelError::clone_node_error(
-                                PartialAbsoluteMoniker::root(),
-                                name.clone(),
-                            );
+                            let err =
+                                ModelError::clone_node_error(AbsoluteMoniker::root(), name.clone());
                             Event::new_builtin(Err(EventError::new(
                                 &err,
                                 EventErrorPayload::DirectoryReady { name: name.clone() },
@@ -404,14 +401,12 @@ impl EventSynthesisProvider for DirectoryReadyNotifier {
                 return None;
             }
             let runtime = execution.runtime.as_ref().unwrap();
-            let out_dir =
-                match runtime.outgoing_dir.as_ref().ok_or(ModelError::open_directory_error(
-                    component.partial_abs_moniker.clone(),
-                    "/".to_string(),
-                )) {
-                    Ok(out_dir) => out_dir,
-                    Err(e) => return Some(Err(e)),
-                };
+            let out_dir = match runtime.outgoing_dir.as_ref().ok_or(
+                ModelError::open_directory_error(component.abs_moniker.clone(), "/".to_string()),
+            ) {
+                Ok(out_dir) => out_dir,
+                Err(e) => return Some(Err(e)),
+            };
             Some(clone_outgoing_root(&out_dir, &component.instanced_moniker()).await)
         }
         .await;

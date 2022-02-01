@@ -164,7 +164,7 @@ impl EnvironmentForAnalyzer {
                     .ok_or(BuildAnalyzerModelError::EnvironmentNotFound(
                         child_env_name.clone(),
                         child_decl.name.clone(),
-                        NodePath::from(parent.partial_abs_moniker().clone()).to_string(),
+                        NodePath::from(parent.abs_moniker().clone()).to_string(),
                     ))?;
                 Self::new_from_decl(parent, env_decl)
             }

@@ -32,7 +32,7 @@ use {
     fuchsia_zircon as zx,
     futures::{future::pending, join, lock::Mutex, prelude::*},
     moniker::{
-        AbsoluteMonikerBase, InstancedAbsoluteMoniker, PartialAbsoluteMoniker, PartialChildMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, InstancedAbsoluteMoniker, PartialChildMoniker,
     },
     std::sync::Arc,
     std::{collections::HashSet, convert::TryFrom},
@@ -58,7 +58,7 @@ async fn new_model_with(
 async fn bind_root() {
     let (model, _builtin_environment, mock_runner) =
         new_model(vec![("root", component_decl_with_test_runner())]).await;
-    let m: PartialAbsoluteMoniker = PartialAbsoluteMoniker::root();
+    let m: AbsoluteMoniker = AbsoluteMoniker::root();
     let res = model.bind(&m, &StartReason::Root).await;
     assert!(res.is_ok());
     mock_runner.wait_for_url("test:///root_resolved").await;
@@ -70,7 +70,7 @@ async fn bind_root() {
 async fn bind_non_existent_root_child() {
     let (model, _builtin_environment, _mock_runner) =
         new_model(vec![("root", component_decl_with_test_runner())]).await;
-    let m: PartialAbsoluteMoniker = vec!["no-such-instance"].into();
+    let m: AbsoluteMoniker = vec!["no-such-instance"].into();
     let res = model.bind(&m, &StartReason::Root).await;
     let expected_res: Result<Arc<ComponentInstance>, ModelError> =
         Err(ModelError::instance_not_found(vec!["no-such-instance"].into()));
@@ -103,7 +103,7 @@ async fn bind_concurrent() {
     // Bind to "system", pausing before it starts.
     let model_copy = model.clone();
     let (f, bind_handle) = async move {
-        let m: PartialAbsoluteMoniker = vec!["system"].into();
+        let m: AbsoluteMoniker = vec!["system"].into();
         model_copy.bind(&m, &StartReason::Root).await.expect("failed to bind 1");
     }
     .remote_handle();
@@ -117,7 +117,7 @@ async fn bind_concurrent() {
 
     // While the bind() is paused, simulate a second bind by explicitly scheduling a Start
     // action. Allow the original bind to proceed, then check the result of both bindings.
-    let m: PartialAbsoluteMoniker = vec!["system"].into();
+    let m: AbsoluteMoniker = vec!["system"].into();
     let component = model.look_up(&m).await.expect("failed component lookup");
     let f = ActionSet::register(component, StartAction::new(StartReason::Eager));
     let (f, action_handle) = f.remote_handle();
@@ -146,7 +146,7 @@ async fn bind_parent_then_child() {
     )
     .await;
     // bind to system
-    let m: PartialAbsoluteMoniker = vec!["system"].into();
+    let m: AbsoluteMoniker = vec!["system"].into();
     assert!(model.bind(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///system_resolved"]).await;
 
@@ -166,7 +166,7 @@ async fn bind_parent_then_child() {
         InstanceState::New | InstanceState::Discovered
     );
     // bind to echo
-    let m: PartialAbsoluteMoniker = vec!["echo"].into();
+    let m: AbsoluteMoniker = vec!["echo"].into();
     assert!(model.bind(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///system_resolved", "test:///echo_resolved"]).await;
 
@@ -200,17 +200,17 @@ async fn bind_child_doesnt_bind_parent() {
     .await;
 
     // Bind to logger (before ever binding to system).
-    let m: PartialAbsoluteMoniker = vec!["system", "logger"].into();
+    let m: AbsoluteMoniker = vec!["system", "logger"].into();
     assert!(model.bind(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///logger_resolved"]).await;
 
     // Bind to netstack.
-    let m: PartialAbsoluteMoniker = vec!["system", "netstack"].into();
+    let m: AbsoluteMoniker = vec!["system", "netstack"].into();
     assert!(model.bind(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///logger_resolved", "test:///netstack_resolved"]).await;
 
     // finally, bind to system.
-    let m: PartialAbsoluteMoniker = vec!["system"].into();
+    let m: AbsoluteMoniker = vec!["system"].into();
     assert!(model.bind(&m, &StartReason::Root).await.is_ok());
     mock_runner
         .wait_for_urls(&[
@@ -232,12 +232,12 @@ async fn bind_child_non_existent() {
     ])
     .await;
     // bind to system
-    let m: PartialAbsoluteMoniker = vec!["system"].into();
+    let m: AbsoluteMoniker = vec!["system"].into();
     assert!(model.bind(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///system_resolved"]).await;
 
     // can't bind to logger: it does not exist
-    let m: PartialAbsoluteMoniker = vec!["system", "logger"].into();
+    let m: AbsoluteMoniker = vec!["system", "logger"].into();
     let res = model.bind(&m, &StartReason::Root).await;
     let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(m.to_partial()));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
@@ -273,7 +273,7 @@ async fn bind_eager_children() {
 
     // Bind to the top component, and check that it and the eager components were started.
     {
-        let m = PartialAbsoluteMoniker::new(vec!["a".into()]);
+        let m = AbsoluteMoniker::new(vec!["a".into()]);
         let res = model.bind(&m, &StartReason::Root).await;
         assert!(res.is_ok());
         mock_runner
@@ -342,7 +342,7 @@ async fn bind_eager_children_reentrant() {
     // Bind to the top component, and check that it and the eager components were started.
     {
         let (f, bind_handle) = async move {
-            let m = PartialAbsoluteMoniker::new(vec!["a".into()]);
+            let m = AbsoluteMoniker::new(vec!["a".into()]);
             model.bind(&m, &StartReason::Root).await
         }
         .remote_handle();
@@ -372,7 +372,7 @@ async fn bind_no_execute() {
 
     // Bind to the parent component. The child should be started. However, the parent component
     // is non-executable so it is not run.
-    let m: PartialAbsoluteMoniker = vec!["a"].into();
+    let m: AbsoluteMoniker = vec!["a"].into();
     assert!(model.bind(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///b_resolved"]).await;
 }
@@ -485,7 +485,7 @@ async fn reboot_on_terminate_disabled() {
         err: PolicyError::Unsupported {
             policy, moniker
         }
-    }) if &policy == "reboot_on_terminate" && moniker == PartialAbsoluteMoniker::from(vec!["system"]));
+    }) if &policy == "reboot_on_terminate" && moniker == AbsoluteMoniker::from(vec!["system"]));
 }
 
 #[fuchsia::test]
@@ -514,7 +514,7 @@ async fn reboot_on_terminate_disallowed() {
         err: PolicyError::ChildPolicyDisallowed {
             policy, moniker
         }
-    }) if &policy == "reboot_on_terminate" && moniker == PartialAbsoluteMoniker::from(vec!["system"]));
+    }) if &policy == "reboot_on_terminate" && moniker == AbsoluteMoniker::from(vec!["system"]));
 }
 
 const REBOOT_PROTOCOL: &str = fstatecontrol::AdminMarker::DEBUG_NAME;

@@ -108,7 +108,7 @@ where
                         instance.to_string(),
                         Some(self.collection_name.clone()),
                     ),
-                    moniker: collection_component.partial_abs_moniker().clone(),
+                    moniker: collection_component.abs_moniker().clone(),
                     capability_id: self.target_decl.source_name().clone().into(),
                 })?
         };
@@ -119,7 +119,7 @@ where
                 .cloned()
                 .ok_or_else(|| {
                     E::error_not_found_in_child(
-                        collection_component.partial_abs_moniker().clone(),
+                        collection_component.abs_moniker().clone(),
                         child_moniker,
                         self.target_decl.source_name().clone(),
                     )
@@ -156,12 +156,12 @@ where
     let component = component.upgrade()?;
     let components: Vec<(PartialChildMoniker, Arc<C>)> =
         component.lock_resolved_state().await?.live_children_in_collection(collection_name);
-    for (partial_moniker, child_component) in components {
+    for (moniker, child_component) in components {
         let child_exposes = child_component.lock_resolved_state().await.map(|c| c.exposes());
         match child_exposes {
             Ok(child_exposes) => {
                 if find_matching_expose::<E>(capability_name, &child_exposes).is_some() {
-                    instances.push(partial_moniker.name().to_string())
+                    instances.push(moniker.name().to_string())
                 }
             }
             // Ignore errors. One misbehaving component should not affect the entire collection.

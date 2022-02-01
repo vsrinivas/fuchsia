@@ -15,7 +15,7 @@ use {
     futures::prelude::*,
     log::*,
     moniker::{
-        AbsoluteMonikerBase, MonikerError, PartialAbsoluteMoniker, PartialRelativeMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, MonikerError, PartialRelativeMoniker,
         RelativeMonikerBase,
     },
     std::convert::TryFrom,
@@ -25,15 +25,15 @@ use {
 #[derive(Clone)]
 pub struct LifecycleController {
     model: Weak<Model>,
-    prefix: PartialAbsoluteMoniker,
+    prefix: AbsoluteMoniker,
 }
 
 impl LifecycleController {
-    pub fn new(model: Weak<Model>, prefix: PartialAbsoluteMoniker) -> Self {
+    pub fn new(model: Weak<Model>, prefix: AbsoluteMoniker) -> Self {
         Self { model, prefix }
     }
 
-    fn construct_moniker(&self, input: &str) -> Result<PartialAbsoluteMoniker, fcomponent::Error> {
+    fn construct_moniker(&self, input: &str) -> Result<AbsoluteMoniker, fcomponent::Error> {
         let relative_moniker =
             PartialRelativeMoniker::try_from(input).map_err(|e: MonikerError| {
                 debug!("lifecycle controller received invalid component moniker: {}", e);
@@ -45,11 +45,12 @@ impl LifecycleController {
             );
             return Err(fcomponent::Error::InvalidArguments);
         }
-        let abs_moniker = PartialAbsoluteMoniker::from_relative(&self.prefix, &relative_moniker)
-            .map_err(|e: MonikerError| {
+        let abs_moniker = AbsoluteMoniker::from_relative(&self.prefix, &relative_moniker).map_err(
+            |e: MonikerError| {
                 debug!("lifecycle controller received invalid component moniker: {}", e);
                 fcomponent::Error::InvalidArguments
-            })?;
+            },
+        )?;
 
         Ok(abs_moniker)
     }

@@ -14,9 +14,7 @@ use {
     async_trait::async_trait,
     cm_rust::{CapabilityDecl, CollectionDecl, ExposeDecl, OfferDecl, UseDecl},
     derivative::Derivative,
-    moniker::{
-        ChildMoniker, InstancedAbsoluteMoniker, PartialAbsoluteMoniker, PartialChildMoniker,
-    },
+    moniker::{AbsoluteMoniker, ChildMoniker, InstancedAbsoluteMoniker, PartialChildMoniker},
     std::{
         clone::Clone,
         sync::{Arc, Weak},
@@ -40,8 +38,8 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
     /// Returns this `ComponentInstanceInterface`'s instanced absolute moniker.
     fn instanced_moniker(&self) -> &InstancedAbsoluteMoniker;
 
-    /// Returns this `ComponentInstanceInterface`'s partial absolute moniker.
-    fn partial_abs_moniker(&self) -> &PartialAbsoluteMoniker;
+    /// Returns this `ComponentInstanceInterface`'s absolute moniker.
+    fn abs_moniker(&self) -> &AbsoluteMoniker;
 
     /// Returns this `ComponentInstanceInterface`'s component URL.
     fn url(&self) -> &str;
@@ -157,7 +155,7 @@ pub struct WeakComponentInstanceInterface<C: ComponentInstanceInterface> {
     #[derivative(Debug = "ignore")]
     inner: Weak<C>,
     pub instanced_moniker: InstancedAbsoluteMoniker,
-    pub partial_abs_moniker: PartialAbsoluteMoniker,
+    pub abs_moniker: AbsoluteMoniker,
 }
 
 impl<C: ComponentInstanceInterface> WeakComponentInstanceInterface<C> {
@@ -165,16 +163,16 @@ impl<C: ComponentInstanceInterface> WeakComponentInstanceInterface<C> {
         Self {
             inner: Arc::downgrade(component),
             instanced_moniker: component.instanced_moniker().clone(),
-            partial_abs_moniker: component.partial_abs_moniker().clone(),
+            abs_moniker: component.abs_moniker().clone(),
         }
     }
 
     /// Attempts to upgrade this `WeakComponentInterface<C>` into an `Arc<C>`, if the
     /// original component instance interface `C` has not been destroyed.
     pub fn upgrade(&self) -> Result<Arc<C>, ComponentInstanceError> {
-        self.inner.upgrade().ok_or_else(|| {
-            ComponentInstanceError::instance_not_found(self.partial_abs_moniker.clone())
-        })
+        self.inner
+            .upgrade()
+            .ok_or_else(|| ComponentInstanceError::instance_not_found(self.abs_moniker.clone()))
     }
 }
 
@@ -183,7 +181,7 @@ impl<C: ComponentInstanceInterface> From<&Arc<C>> for WeakComponentInstanceInter
         Self {
             inner: Arc::downgrade(component),
             instanced_moniker: component.instanced_moniker().clone(),
-            partial_abs_moniker: component.partial_abs_moniker().clone(),
+            abs_moniker: component.abs_moniker().clone(),
         }
     }
 }

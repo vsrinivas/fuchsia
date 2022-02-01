@@ -29,8 +29,8 @@ use {
     fidl_fuchsia_data as fdata, fuchsia_zircon_status as zx,
     maplit::hashmap,
     moniker::{
-        AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker, InstancedAbsoluteMoniker,
-        PartialAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase,
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker,
+        InstancedAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase,
     },
     routing::{
         capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
@@ -196,20 +196,20 @@ pub trait RoutingTestModel {
     type C: ComponentInstanceInterface + std::fmt::Debug + 'static;
 
     /// Checks a `use` declaration at `moniker` by trying to use `capability`.
-    async fn check_use(&self, moniker: PartialAbsoluteMoniker, check: CheckUse);
+    async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse);
 
     /// Checks using a capability from a component's exposed directory.
-    async fn check_use_exposed_dir(&self, moniker: PartialAbsoluteMoniker, check: CheckUse);
+    async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse);
 
     /// Looks up a component instance by its absolute moniker.
     async fn look_up_instance(
         &self,
-        moniker: &PartialAbsoluteMoniker,
+        moniker: &AbsoluteMoniker,
     ) -> Result<Arc<Self::C>, anyhow::Error>;
 
     /// Checks that a use declaration of `path` at `moniker` can be opened with
     /// Fuchsia file operations.
-    async fn check_open_file(&self, moniker: PartialAbsoluteMoniker, path: CapabilityPath);
+    async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath);
 
     /// Create a file with the given contents in the test dir, along with any subdirectories
     /// required.
@@ -264,7 +264,7 @@ pub trait RoutingTestModelBuilder {
     fn add_debug_capability_policy(
         &mut self,
         key: CapabilityAllowlistKey,
-        allowlist: HashSet<(PartialAbsoluteMoniker, String)>,
+        allowlist: HashSet<(AbsoluteMoniker, String)>,
     );
 
     /// Sets the path to the component ID index for the test model.
@@ -1719,7 +1719,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         let model = T::new("a", components).build().await;
         let root_instance = model.look_up_instance(&vec![].into()).await.expect("root instance");
         let expected_source_moniker =
-            PartialAbsoluteMoniker::parse_string_without_instances("/b").unwrap();
+            AbsoluteMoniker::parse_string_without_instances("/b").unwrap();
 
         assert_matches!(
         route_capability(RouteRequest::ExposeProtocol(expose_decl), &root_instance).await,
@@ -1730,7 +1730,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         capability: ComponentCapability::Protocol(protocol_decl),
                         component,
                     }), _route)
-            ) if protocol_decl == expected_protocol_decl && component.partial_abs_moniker == expected_source_moniker
+            ) if protocol_decl == expected_protocol_decl && component.abs_moniker == expected_source_moniker
         );
     }
 
@@ -3476,7 +3476,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert(AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["b"])));
+        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b"])));
 
         let mut builder = T::new("a", components);
         builder.add_capability_policy(
@@ -3582,8 +3582,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert(AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["b"])));
-        allowlist.insert(AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["b", "c"])));
+        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b"])));
+        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b", "c"])));
 
         let mut builder = T::new("a", components);
         builder.add_capability_policy(
@@ -3730,7 +3730,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert(AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["b"])));
+        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b"])));
 
         let mut builder = T::new("a", components);
         builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
@@ -3860,7 +3860,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((PartialAbsoluteMoniker::root(), "env_a".to_owned()));
+        allowlist.insert((AbsoluteMoniker::root(), "env_a".to_owned()));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
@@ -3966,7 +3966,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((PartialAbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
+        allowlist.insert((AbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
@@ -4090,7 +4090,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((PartialAbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
+        allowlist.insert((AbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
@@ -4231,7 +4231,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((PartialAbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
+        allowlist.insert((AbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
@@ -4304,7 +4304,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         let model = T::new("a", components).build().await;
         let b_component = model.look_up_instance(&vec!["b"].into()).await.expect("b instance");
         let a_component =
-            model.look_up_instance(&PartialAbsoluteMoniker::root()).await.expect("root instance");
+            model.look_up_instance(&AbsoluteMoniker::root()).await.expect("root instance");
         let (source, _route) = route_capability(RouteRequest::UseService(use_decl), &b_component)
             .await
             .expect("failed to route service");
@@ -4365,7 +4365,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
         let model = T::new("a", components).build().await;
         let a_component =
-            model.look_up_instance(&PartialAbsoluteMoniker::root()).await.expect("root instance");
+            model.look_up_instance(&AbsoluteMoniker::root()).await.expect("root instance");
         let b_component = model.look_up_instance(&vec!["b"].into()).await.expect("b instance");
         let (source, _route) = route_capability(RouteRequest::UseService(use_decl), &a_component)
             .await
@@ -4787,7 +4787,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     capability_name,
                 }
             )
-                if moniker == *b_component.partial_abs_moniker() &&
+                if moniker == *b_component.abs_moniker() &&
                 capability_type == "runner" &&
                 capability_name == CapabilityName("hobbit".to_string())
         );
@@ -4956,7 +4956,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     capability_name,
                 }
             )
-                if moniker == *a_component.partial_abs_moniker()
+                if moniker == *a_component.abs_moniker()
                 && capability_type == "runner".to_string()
                 && capability_name == CapabilityName("hobbit".into())
         );

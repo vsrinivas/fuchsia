@@ -12,7 +12,7 @@ use {
         error::ModelError,
     },
     ::routing::config::RuntimeConfig,
-    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::sync::Arc,
 };
 
@@ -78,7 +78,7 @@ impl Model {
     /// resolved if that has not already happened.
     pub async fn look_up(
         &self,
-        look_up_abs_moniker: &PartialAbsoluteMoniker,
+        look_up_abs_moniker: &AbsoluteMoniker,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         let mut cur = self.root.clone();
         for moniker in look_up_abs_moniker.path().iter() {
@@ -104,7 +104,7 @@ impl Model {
             // This returns a Future that does not need to be polled.
             let _ = actions.register_no_wait(&self.root, DiscoverAction::new());
         }
-        if let Err(e) = self.bind(&PartialAbsoluteMoniker::root(), &StartReason::Root).await {
+        if let Err(e) = self.bind(&AbsoluteMoniker::root(), &StartReason::Root).await {
             // If we fail binding to the root, but the root is being shutdown, that's ok. The
             // system is tearing down, so it doesn't matter any more if we never got everything
             // started that we wanted to.

@@ -8,7 +8,7 @@ use {
     component_id_index, fidl,
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_internal as fcomponent_internal,
-    moniker::{MonikerError, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMoniker, MonikerError},
     std::collections::{HashMap, HashSet},
     thiserror::Error,
 };
@@ -68,7 +68,7 @@ pub struct ComponentIdIndex {
     ///
     /// The moniker does not contain instances, i.e. all of the ChildMonikers in the
     /// path have the (moniker, not index) instance ID set to zero.
-    moniker_to_instance_id: HashMap<PartialAbsoluteMoniker, ComponentInstanceId>,
+    moniker_to_instance_id: HashMap<AbsoluteMoniker, ComponentInstanceId>,
 
     /// Stores all instance IDs from the index.
     /// This is used by StorageAdmin for methods that operate directly on instance IDs.
@@ -93,8 +93,7 @@ impl ComponentIdIndex {
     }
 
     pub fn new_from_index(index: component_id_index::Index) -> Result<Self, ComponentIdIndexError> {
-        let mut moniker_to_instance_id =
-            HashMap::<PartialAbsoluteMoniker, ComponentInstanceId>::new();
+        let mut moniker_to_instance_id = HashMap::<AbsoluteMoniker, ComponentInstanceId>::new();
         let mut all_instance_ids = HashSet::new();
         for entry in index.instances {
             let instance_id = entry
@@ -119,10 +118,7 @@ impl ComponentIdIndex {
         Ok(Self { moniker_to_instance_id, all_instance_ids })
     }
 
-    pub fn look_up_moniker(
-        &self,
-        moniker: &PartialAbsoluteMoniker,
-    ) -> Option<&ComponentInstanceId> {
+    pub fn look_up_moniker(&self, moniker: &AbsoluteMoniker) -> Option<&ComponentInstanceId> {
         self.moniker_to_instance_id.get(&moniker)
     }
 
@@ -142,9 +138,7 @@ pub mod tests {
         let index_file = make_index_file(component_id_index::Index::default()).unwrap();
         let index = ComponentIdIndex::new(index_file.path().to_str().unwrap()).await.unwrap();
         assert!(index
-            .look_up_moniker(
-                &PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
-            )
+            .look_up_moniker(&AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap())
             .is_none());
     }
 
@@ -155,9 +149,7 @@ pub mod tests {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: Some(iid.clone()),
                 appmgr_moniker: None,
-                moniker: Some(
-                    PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
-                ),
+                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()),
             }],
             ..component_id_index::Index::default()
         })
@@ -166,7 +158,7 @@ pub mod tests {
         assert_eq!(
             Some(&iid),
             index.look_up_moniker(
-                &PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
+                &AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
             )
         );
     }
@@ -179,7 +171,7 @@ pub mod tests {
                 instance_id: Some(iid.clone()),
                 appmgr_moniker: None,
                 moniker: Some(
-                    PartialAbsoluteMoniker::parse_string_without_instances("/a/coll:name").unwrap(),
+                    AbsoluteMoniker::parse_string_without_instances("/a/coll:name").unwrap(),
                 ),
             }],
             ..component_id_index::Index::default()
@@ -188,7 +180,7 @@ pub mod tests {
         let index = ComponentIdIndex::new(index_file.path().to_str().unwrap()).await.unwrap();
         assert_eq!(
             Some(&iid),
-            index.look_up_moniker(&PartialAbsoluteMoniker::new(vec![
+            index.look_up_moniker(&AbsoluteMoniker::new(vec![
                 PartialChildMoniker::new("a".to_string(), None),
                 PartialChildMoniker::new("name".to_string(), Some("coll".to_string())),
             ]))
@@ -202,9 +194,7 @@ pub mod tests {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: Some(iid.clone()),
                 appmgr_moniker: None,
-                moniker: Some(
-                    PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
-                ),
+                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()),
             }],
             ..component_id_index::Index::default()
         };
@@ -213,7 +203,7 @@ pub mod tests {
         assert_eq!(
             Some(&iid),
             index.look_up_moniker(
-                &PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
+                &AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
             )
         );
     }

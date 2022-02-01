@@ -574,7 +574,7 @@ fn make_dir_with_not_found_logging(
                         format_args!(
                             "No capability available at path {} for component {}, \
                                 verify the component has the proper `use` declaration.",
-                            requested_path, target.partial_abs_moniker
+                            requested_path, target.abs_moniker
                         ),
                     );
                 }

@@ -143,7 +143,7 @@ mod tests {
         cm_rust::{CapabilityDecl, RunnerDecl},
         cm_rust_testing::*,
         futures::{lock::Mutex, prelude::*},
-        moniker::{AbsoluteMonikerBase, InstancedAbsoluteMoniker, PartialAbsoluteMoniker},
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, InstancedAbsoluteMoniker},
         std::sync::Weak,
     };
 
@@ -199,9 +199,9 @@ mod tests {
         let config = Arc::new(RuntimeConfig {
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
-                    ambient_mark_vmo_exec: vec![AllowlistEntry::Exact(
-                        PartialAbsoluteMoniker::from(vec!["foo"]),
-                    )],
+                    ambient_mark_vmo_exec: vec![AllowlistEntry::Exact(AbsoluteMoniker::from(
+                        vec!["foo"],
+                    ))],
                     ..Default::default()
                 },
                 ..Default::default()

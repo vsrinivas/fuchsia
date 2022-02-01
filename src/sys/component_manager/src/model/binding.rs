@@ -9,7 +9,7 @@ use {
         model::Model,
     },
     async_trait::async_trait,
-    moniker::PartialAbsoluteMoniker,
+    moniker::AbsoluteMoniker,
     std::sync::{Arc, Weak},
 };
 
@@ -20,7 +20,7 @@ use {
 pub trait Binder: Send + Sync {
     async fn bind<'a>(
         &'a self,
-        abs_moniker: &'a PartialAbsoluteMoniker,
+        abs_moniker: &'a AbsoluteMoniker,
         reason: &'a StartReason,
     ) -> Result<Arc<ComponentInstance>, ModelError>;
 }
@@ -36,7 +36,7 @@ impl Binder for Arc<Model> {
     // stop the parent. To solve this, we need to track the bindings.
     async fn bind<'a>(
         &'a self,
-        abs_moniker: &'a PartialAbsoluteMoniker,
+        abs_moniker: &'a AbsoluteMoniker,
         reason: &'a StartReason,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         bind_at_moniker(self, abs_moniker, reason).await
@@ -47,7 +47,7 @@ impl Binder for Arc<Model> {
 impl Binder for Weak<Model> {
     async fn bind<'a>(
         &'a self,
-        abs_moniker: &'a PartialAbsoluteMoniker,
+        abs_moniker: &'a AbsoluteMoniker,
         reason: &'a StartReason,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         if let Some(model) = self.upgrade() {
@@ -62,7 +62,7 @@ impl Binder for Weak<Model> {
 /// Returns the component that was bound to.
 pub async fn bind_at_moniker<'a>(
     model: &'a Arc<Model>,
-    abs_moniker: &'a PartialAbsoluteMoniker,
+    abs_moniker: &'a AbsoluteMoniker,
     reason: &StartReason,
 ) -> Result<Arc<ComponentInstance>, ModelError> {
     let component = model.look_up(abs_moniker).await?;

@@ -21,7 +21,7 @@ use {
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     log::*,
-    moniker::PartialAbsoluteMoniker,
+    moniker::AbsoluteMoniker,
     std::{path::PathBuf, sync::Arc},
     vfs::{
         directory::{
@@ -59,7 +59,7 @@ impl CollectionServiceDirectoryProvider {
             collection_component.lock_resolved_state().await?.execution_scope().clone();
         let dir = lazy::lazy(CollectionServiceDirectory {
             target,
-            collection_component: collection_component.partial_abs_moniker().clone(),
+            collection_component: collection_component.abs_moniker().clone(),
             provider,
         });
         Ok(CollectionServiceDirectoryProvider { execution_scope, dir })
@@ -106,7 +106,7 @@ struct ServiceInstanceDirectoryEntry {
     /// The original target of the capability route (the component that opened this directory).
     target: WeakComponentInstance,
     /// The moniker of the component at which the instance was aggregated.
-    intermediate_component: PartialAbsoluteMoniker,
+    intermediate_component: AbsoluteMoniker,
     /// The provider that lists collection instances and performs routing to an instance.
     provider: Box<dyn AggregateCapabilityProvider<ComponentInstance>>,
 }
@@ -125,7 +125,7 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
             let target = match self.target.upgrade() {
                 Ok(target) => target,
                 Err(_) => {
-                    warn!("target of service routing is gone: {}", &self.target.partial_abs_moniker);
+                    warn!("target of service routing is gone: {}", &self.target.abs_moniker);
                     return;
                 }
             };
@@ -202,7 +202,7 @@ struct CollectionServiceDirectory {
     /// The original target of the capability route (the component that opened this directory).
     target: WeakComponentInstance,
     /// The moniker of the component hosting the collection.
-    collection_component: PartialAbsoluteMoniker,
+    collection_component: AbsoluteMoniker,
     /// The provider that lists collection instances and performs routing to an instance.
     provider: Box<dyn AggregateCapabilityProvider<ComponentInstance>>,
 }
@@ -328,7 +328,7 @@ mod tests {
         },
         cm_rust::*,
         cm_rust_testing::{ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder},
-        moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker},
         std::{
             collections::{HashMap, HashSet},
             convert::TryInto,
@@ -355,7 +355,7 @@ mod tests {
                     .ok_or_else(|| RoutingError::OfferFromChildInstanceNotFound {
                         capability_id: "my.service.Service".to_string(),
                         child_moniker: PartialChildMoniker::new(instance.to_string(), None),
-                        moniker: PartialAbsoluteMoniker::root(),
+                        moniker: AbsoluteMoniker::root(),
                     })?
                     .clone(),
             })
@@ -447,13 +447,13 @@ mod tests {
             .await;
 
         test.create_dynamic_child(
-            PartialAbsoluteMoniker::root(),
+            AbsoluteMoniker::root(),
             "coll",
             ChildDeclBuilder::new_lazy_child("foo"),
         )
         .await;
         test.create_dynamic_child(
-            PartialAbsoluteMoniker::root(),
+            AbsoluteMoniker::root(),
             "coll",
             ChildDeclBuilder::new_lazy_child("bar"),
         )
@@ -552,13 +552,13 @@ mod tests {
             .await;
 
         test.create_dynamic_child(
-            PartialAbsoluteMoniker::root(),
+            AbsoluteMoniker::root(),
             "coll",
             ChildDeclBuilder::new_lazy_child("foo"),
         )
         .await;
         test.create_dynamic_child(
-            PartialAbsoluteMoniker::root(),
+            AbsoluteMoniker::root(),
             "coll",
             ChildDeclBuilder::new_lazy_child("bar"),
         )

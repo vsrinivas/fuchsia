@@ -126,7 +126,7 @@ mod tests {
         fidl_fuchsia_component_internal as component_internal,
         fidl_fuchsia_io2::Operations,
         maplit::hashset,
-        moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         routing::{
             component_id_index::ComponentIdIndex, component_instance::ComponentInstanceInterface,
             config::RuntimeConfig, environment::RunnerRegistry,
@@ -494,7 +494,7 @@ mod tests {
                     instance_id: Some(iid.clone()),
                     appmgr_moniker: None,
                     moniker: Some(
-                        PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
+                        AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
                     ),
                 }],
                 ..component_id_index::Index::default()
@@ -511,7 +511,7 @@ mod tests {
         assert_eq!(
             Some(&iid),
             root_instance.try_get_component_id_index()?.look_up_moniker(
-                &PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
+                &AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
             )
         );
         Ok(())

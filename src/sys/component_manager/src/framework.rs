@@ -30,7 +30,7 @@ use {
     futures::prelude::*,
     lazy_static::lazy_static,
     log::*,
-    moniker::{ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
+    moniker::{AbsoluteMoniker, ChildMonikerBase, PartialChildMoniker},
     std::{
         cmp,
         path::PathBuf,
@@ -48,12 +48,12 @@ lazy_static! {
 // namespace, the following CapabilityProvider will support both paths.
 // Tracking bug: https://fxbug.dev/85183.
 pub struct RealmCapabilityProvider {
-    scope_moniker: PartialAbsoluteMoniker,
+    scope_moniker: AbsoluteMoniker,
     host: Arc<RealmCapabilityHost>,
 }
 
 impl RealmCapabilityProvider {
-    pub fn new(scope_moniker: PartialAbsoluteMoniker, host: Arc<RealmCapabilityHost>) -> Self {
+    pub fn new(scope_moniker: AbsoluteMoniker, host: Arc<RealmCapabilityHost>) -> Self {
         Self { scope_moniker, host }
     }
 }
@@ -320,7 +320,7 @@ impl RealmCapabilityHost {
 
     async fn on_scoped_framework_capability_routed_async<'a>(
         self: Arc<Self>,
-        scope_moniker: PartialAbsoluteMoniker,
+        scope_moniker: AbsoluteMoniker,
         capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
@@ -433,7 +433,7 @@ impl Hook for RealmCapabilityHost {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
                 .on_scoped_framework_capability_routed_async(
-                    component.partial_abs_moniker.clone(),
+                    component.abs_moniker.clone(),
                     &capability,
                     capability_provider.take(),
                 )
@@ -470,7 +470,7 @@ mod tests {
         fuchsia_component::client,
         futures::{lock::Mutex, poll, task::Poll},
         io_util::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        moniker::PartialAbsoluteMoniker,
+        moniker::AbsoluteMoniker,
         routing_test_helpers::component_decl_with_exposed_binder,
         std::collections::HashSet,
         std::convert::TryFrom,
@@ -488,7 +488,7 @@ mod tests {
     impl RealmCapabilityTest {
         async fn new(
             components: Vec<(&'static str, ComponentDecl)>,
-            component_moniker: PartialAbsoluteMoniker,
+            component_moniker: AbsoluteMoniker,
         ) -> Self {
             // Init model.
             let config = RuntimeConfig { list_children_batch_size: 2, ..Default::default() };
