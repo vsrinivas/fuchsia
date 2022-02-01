@@ -704,6 +704,19 @@ go_library("go.uber.org/atomic") {
     "value.go",
   ]
 }
+go_library("go.uber.org/goleak") {
+  name = "go.uber.org/goleak/..."
+  source_dir = "vendor/go.uber.org/goleak"
+  sources = [
+    "doc.go",
+    "internal/stack/stacks.go",
+    "leaks.go",
+    "options.go",
+    "testmain.go",
+    "tracestack_new.go",
+    "tracestack_old.go",
+  ]
+}
 go_library("go.uber.org/multierr") {
   name = "go.uber.org/multierr/..."
   source_dir = "vendor/go.uber.org/multierr"

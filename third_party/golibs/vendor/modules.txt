@@ -122,6 +122,10 @@ go.opencensus.io/trace/tracestate
 # go.uber.org/atomic v1.9.0
 ## explicit
 go.uber.org/atomic
+# go.uber.org/goleak v1.1.12
+## explicit
+go.uber.org/goleak
+go.uber.org/goleak/internal/stack
 # go.uber.org/multierr v1.7.0
 ## explicit
 go.uber.org/multierr
