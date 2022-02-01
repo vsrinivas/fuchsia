@@ -519,8 +519,15 @@ impl Peer {
         let get_router_node_id = || {
             Weak::upgrade(&router).map(|r| format!("{:?}", r.node_id())).unwrap_or_else(String::new)
         };
-        if let Err(e) = &result {
+        if let Err(RunnerError::NoRouteToPeer) = &result {
             log::info!(
+                "[{} conn:{:?}] {:?} runner lost route to peer",
+                get_router_node_id(),
+                conn_id,
+                endpoint,
+            );
+        } else if let Err(e) = &result {
+            log::error!(
                 "[{} conn:{:?}] {:?} runner error: {:?}",
                 get_router_node_id(),
                 conn_id,
