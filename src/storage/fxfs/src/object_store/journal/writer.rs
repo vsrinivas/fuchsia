@@ -5,8 +5,8 @@
 use {
     crate::{
         object_handle::ObjectHandle,
-        object_store::journal::{fletcher64, Checksum, JournalCheckpoint, JournalRecord},
-        serialized_types::Versioned,
+        object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
+        serialized_types::{Versioned, LATEST_VERSION},
     },
     byteorder::{LittleEndian, WriteBytesExt},
     std::{cmp::min, io::Write},
@@ -35,7 +35,7 @@ impl JournalWriter {
         // We must set the correct version here because the journal is written to when
         // formatting as part of creating the allocator and must be ready to go.
         let checkpoint =
-            JournalCheckpoint { version: JournalRecord::version(), ..JournalCheckpoint::default() };
+            JournalCheckpoint { version: LATEST_VERSION, ..JournalCheckpoint::default() };
         JournalWriter { block_size, checkpoint, last_checksum, buf: Vec::new() }
     }
 
@@ -141,7 +141,7 @@ mod tests {
         super::JournalWriter,
         crate::{
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
-            object_store::journal::{fletcher64, Checksum, JournalCheckpoint, JournalRecord},
+            object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
             serialized_types::*,
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
@@ -178,7 +178,7 @@ mod tests {
             JournalCheckpoint {
                 file_offset: TEST_BLOCK_SIZE as u64,
                 checksum,
-                version: JournalRecord::version()
+                version: LATEST_VERSION,
             }
         );
     }

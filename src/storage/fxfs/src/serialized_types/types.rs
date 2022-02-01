@@ -2,71 +2,75 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    lsm_tree::LayerInfo,
-    object_store::{
-        transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
-        ExtentKey, ExtentValue, JournalRecord, ObjectKey, ObjectValue, StoreInfo, SuperBlock,
-        SuperBlockRecord,
+use {
+    crate::{
+        lsm_tree::LayerInfo,
+        object_store::{
+            transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
+            ExtentKey, ExtentValue, JournalRecord, ObjectKey, ObjectValue, StoreInfo, SuperBlock,
+            SuperBlockRecord,
+        },
+        serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
     },
-    serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
+    serde::{Deserialize, Serialize},
 };
 
 // If all layer files are compacted the the journal flushed, and super-block both rewritten, all
 // versions should match this value.
-//const LATEST_VERSION: u32 = 2;
+pub const LATEST_VERSION: Version = Version { major: 2, minor: 0 };
+
+// Note that AllocatorInfoV1 exists only to validate format migrations work.
+#[derive(Deserialize, Serialize)]
+struct AllocatorInfoV1 {
+    allocated_bytes: u32,
+    layers: Vec<u64>,
+}
+impl From<AllocatorInfoV1> for AllocatorInfo {
+    fn from(f: AllocatorInfoV1) -> Self {
+        Self { layers: f.layers, allocated_bytes: f.allocated_bytes as u64 }
+    }
+}
 
 versioned_type! {
-    1 => AllocatorInfo,
-    2 => AllocatorInfo,
+    2.. => AllocatorInfo,
+    1.. => AllocatorInfoV1,
 }
 versioned_type! {
-    1 => AllocatorKey,
-    2 => AllocatorKey,
+    1.. => AllocatorKey,
 }
 versioned_type! {
-    1 => AllocatorValue,
-    2 => AllocatorValue,
+    1.. => AllocatorValue,
 }
 versioned_type! {
-    1 => ExtentKey,
-    2 => ExtentKey,
+    2.. => EncryptedMutations,
 }
 versioned_type! {
-    1 => ExtentValue,
-    2 => ExtentValue,
+    1.. => ExtentKey,
 }
 versioned_type! {
-    1 => JournalRecord,
-    2 => JournalRecord,
+    1.. => ExtentValue,
 }
 versioned_type! {
-    1 => LayerInfo,
-    2 => LayerInfo,
+    1.. => JournalRecord,
 }
 versioned_type! {
-    1 => ObjectKey,
-    2 => ObjectKey,
+    1.. => LayerInfo,
 }
 versioned_type! {
-    1 => ObjectValue,
-    2 => ObjectValue,
+    2.. => Mutation,
 }
 versioned_type! {
-    1 => StoreInfo,
-    2 => StoreInfo,
+    1.. => ObjectKey,
 }
 versioned_type! {
-    1 => SuperBlock,
-    2 => SuperBlock,
+    1.. => ObjectValue,
 }
 versioned_type! {
-    1 => SuperBlockRecord,
-    2 => SuperBlockRecord,
+    1.. => StoreInfo,
 }
 versioned_type! {
-    2 => EncryptedMutations,
+    1.. => SuperBlock,
 }
 versioned_type! {
-    2 => Mutation,
+    1.. => SuperBlockRecord,
 }

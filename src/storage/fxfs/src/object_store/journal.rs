@@ -46,7 +46,7 @@ use {
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
         round::round_down,
-        serialized_types::{Version, Versioned},
+        serialized_types::{Version, Versioned, LATEST_VERSION},
         trace_duration,
     },
     anyhow::{anyhow, bail, Context, Error},
@@ -564,7 +564,7 @@ impl Journal {
             let mut reader_checkpoint = reader.journal_file_checkpoint();
             // Reset the stream to indicate that we've remounted the journal.
             reader_checkpoint.checksum ^= RESET_XOR;
-            reader_checkpoint.version = JournalRecord::version();
+            reader_checkpoint.version = LATEST_VERSION;
             inner.flushed_offset = reader_checkpoint.file_offset;
             inner.device_flushed_offset = device_flushed_offset;
             inner.writer.seek(reader_checkpoint);
@@ -603,7 +603,7 @@ impl Journal {
         log::info!("Formatting fxfs device-size: {})", filesystem.device().size());
 
         let checkpoint = JournalCheckpoint {
-            version: JournalRecord::version(),
+            version: LATEST_VERSION,
             ..self.inner.lock().unwrap().writer.journal_file_checkpoint()
         };
 
@@ -731,7 +731,7 @@ impl Journal {
 
             // If this is the first write after a RESET, we need to output version first.
             if std::mem::take(&mut inner.output_reset_version) {
-                JournalRecord::version().serialize_into(&mut inner.writer)?;
+                LATEST_VERSION.serialize_into(&mut inner.writer)?;
             }
 
             if let Some(discard_offset) = inner.discard_offset {
@@ -837,7 +837,7 @@ impl Journal {
         new_super_block.generation = new_super_block.generation.checked_add(1).unwrap();
         new_super_block.super_block_journal_file_offset = checkpoint.file_offset;
         new_super_block.journal_checkpoint = min_checkpoint.unwrap_or(checkpoint);
-        new_super_block.journal_checkpoint.version = JournalRecord::version();
+        new_super_block.journal_checkpoint.version = LATEST_VERSION;
         new_super_block.journal_file_offsets = journal_file_offsets;
         new_super_block.borrowed_metadata_space = borrowed;
 

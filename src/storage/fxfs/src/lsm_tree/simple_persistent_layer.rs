@@ -9,7 +9,7 @@ use {
         },
         object_handle::{ReadObjectHandle, WriteBytes},
         round::{round_down, round_up},
-        serialized_types::{Version, Versioned, VersionedLatest},
+        serialized_types::{Version, VersionedLatest, LATEST_VERSION},
     },
     anyhow::{bail, Context, Error},
     async_trait::async_trait,
@@ -287,8 +287,7 @@ impl<W: WriteBytes, K: Key, V: Value> SimplePersistentLayerWriter<W, K, V> {
     /// Creates a new writer that will serialize items to the object accessible via |object_handle|
     /// (which provdes a write interface to the object).
     pub async fn new(mut writer: W, block_size: u64) -> Result<Self, Error> {
-        assert_eq!(K::version(), V::version());
-        let layer_info = LayerInfo { block_size, key_value_version: K::version() };
+        let layer_info = LayerInfo { block_size, key_value_version: LATEST_VERSION };
         let mut buf: Vec<u8> = Vec::new();
         let len;
         {

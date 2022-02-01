@@ -647,7 +647,9 @@ mod tests {
                     LayerIterator, LayerIteratorMut, MutableLayer,
                 },
             },
-            serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
+            serialized_types::{
+                versioned_type, Version, Versioned, VersionedLatest, LATEST_VERSION,
+            },
         },
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, future::join_all, join},
@@ -663,7 +665,7 @@ mod tests {
     )]
     struct TestKey(i32);
 
-    versioned_type! { 1 => TestKey }
+    versioned_type! { 1.. => TestKey }
 
     impl DefaultOrdLowerBound for TestKey {}
     impl DefaultOrdUpperBound for TestKey {}

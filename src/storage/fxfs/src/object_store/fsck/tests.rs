@@ -30,7 +30,7 @@ use {
             HandleOptions, Mutation, ObjectStore,
         },
         round::round_down,
-        serialized_types::Versioned,
+        serialized_types::VersionedLatest,
     },
     anyhow::{Context, Error},
     assert_matches::assert_matches,

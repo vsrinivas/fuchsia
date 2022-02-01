@@ -27,16 +27,15 @@
 //!
 //! ```ignore
 //! versioned_type! {
-//!   1 => SuperBlockV1,
-//!   2 => SuperBlockV2,
-//!   3 => SuperBlockV3,
+//!   3.. => SuperBlockV3,
+//!   2.. => SuperBlockV2,
+//!   1.. => SuperBlockV1,
 //! };
 //!
 //! // Note the reuse of SuperBlockRecordV1 for two versions.
 //! versioned_type! {
-//!   1 => SuperBlockRecordV1,
-//!   2 => SuperBlockRecordV1,
-//!   3 => SuperBlockRecordV2,
+//!   3.. => SuperBlockRecordV2,
+//!   1.. => SuperBlockRecordV1,
 //! };
 //! ```
 //!

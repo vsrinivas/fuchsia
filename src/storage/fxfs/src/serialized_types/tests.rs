@@ -9,6 +9,9 @@ use {
     std::io::Cursor,
 };
 
+// Note we don't use the standard serialized_types::LATEST_VERSION for tests.
+const LATEST_VERSION: Version = Version { major: 4, minor: 2 };
+
 #[derive(Debug, Serialize, Deserialize)]
 struct FooV1 {
     a: u32,
@@ -35,10 +38,9 @@ impl From<FooV2> for FooV3 {
 }
 
 versioned_type! {
-    1 => FooV1,
-    2 => FooV1,
-    3 => FooV2,
-    4 => FooV3,
+    4.. => FooV3,
+    3.. => FooV2,
+    1.. => FooV1,
 }
 
 #[test]
@@ -47,14 +49,10 @@ fn test_deserialize_from_version() {
     let f2 = FooV2 { a: 1, b: 1 };
     let f3 = FooV3 { a: 1, c: 256 };
 
-    assert_eq!(FooV1::version().major, 2);
-    assert_eq!(FooV2::version().major, 3);
-    assert_eq!(FooV3::version().major, 4);
-
     let mut v: Vec<u8> = Vec::new();
     f1.serialize_into(&mut v).expect("FooV1");
     assert_eq!(
-        FooV3::deserialize_from_version(&mut Cursor::new(&v), FooV1::version())
+        FooV3::deserialize_from_version(&mut Cursor::new(&v), Version { major: 1, minor: 0 })
             .expect("Deserialize FooV1"),
         f3
     );
@@ -62,7 +60,7 @@ fn test_deserialize_from_version() {
     let mut v: Vec<u8> = Vec::new();
     f2.serialize_into(&mut v).expect("FooV2");
     assert_eq!(
-        FooV3::deserialize_from_version(&mut Cursor::new(&v), FooV2::version())
+        FooV3::deserialize_from_version(&mut Cursor::new(&v), Version { major: 2, minor: 0 })
             .expect("Deserialize FooV2"),
         f3
     );
@@ -70,7 +68,7 @@ fn test_deserialize_from_version() {
     let mut v: Vec<u8> = Vec::new();
     f3.serialize_into(&mut v).expect("FooV3");
     assert_eq!(
-        FooV3::deserialize_from_version(&mut Cursor::new(&v), FooV3::version())
+        FooV3::deserialize_from_version(&mut Cursor::new(&v), LATEST_VERSION)
             .expect("Deserialize FooV3"),
         f3
     );

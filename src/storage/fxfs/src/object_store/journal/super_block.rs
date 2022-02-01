@@ -357,9 +357,7 @@ impl ItemReader {
 #[cfg(test)]
 mod tests {
     use {
-        super::{
-            SuperBlock, SuperBlockCopy, SuperBlockItem, SuperBlockRecord, MIN_SUPER_BLOCK_SIZE,
-        },
+        super::{SuperBlock, SuperBlockCopy, SuperBlockItem, MIN_SUPER_BLOCK_SIZE},
         crate::{
             lsm_tree::types::LayerIterator,
             object_store::{
@@ -370,7 +368,7 @@ mod tests {
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectHandle, ObjectStore, StoreObjectHandle,
             },
-            serialized_types::Versioned,
+            serialized_types::LATEST_VERSION,
         },
         fuchsia_async as fasync,
         std::{ops::Bound, sync::Arc},
@@ -469,11 +467,7 @@ mod tests {
             fs.root_store().store_object_id(),
             fs.allocator().object_id(),
             JOURNAL_OBJECT_ID,
-            JournalCheckpoint {
-                file_offset: 1234,
-                checksum: 5678,
-                version: SuperBlockRecord::version(),
-            },
+            JournalCheckpoint { file_offset: 1234, checksum: 5678, version: LATEST_VERSION },
         );
         super_block_a.super_block_journal_file_offset = journal_offset + 1;
         let mut super_block_b = super_block_a.clone();

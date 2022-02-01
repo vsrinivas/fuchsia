@@ -4,14 +4,12 @@
 
 // This file saves some repetition in tests where integers are used in place of keys and values
 // by just implementing the traits for some basic types here.
-use crate::serialized_types::{versioned_type, Version, Versioned, VersionedLatest};
+use crate::serialized_types::{
+    versioned_type, Version, Versioned, VersionedLatest, LATEST_VERSION,
+};
 
 // The traits for u64 are implemented by hand to illustrate what the proc_macro is doing.
-impl Versioned for u64 {
-    fn version() -> Version {
-        Version { major: 1, minor: 0 }
-    }
-}
+impl Versioned for u64 {}
 impl VersionedLatest for u64 {
     fn deserialize_from_version<R: ?Sized>(reader: &mut R, version: Version) -> anyhow::Result<Self>
     where
@@ -19,14 +17,14 @@ impl VersionedLatest for u64 {
         Self: Sized,
     {
         match version.major {
-            1 => Ok(u64::deserialize_from(reader)?.into()),
+            1.. => Ok(u64::deserialize_from(reader)?.into()),
             _ => anyhow::bail!(format!("Invalid version {} for u64.", version)),
         }
     }
 }
 
-versioned_type! { 1 => i64 }
-versioned_type! { 1 => u32 }
-versioned_type! { 1 => i32 }
-versioned_type! { 1 => u8 }
-versioned_type! { 1 => i8 }
+versioned_type! { 1.. => i64 }
+versioned_type! { 1.. => u32 }
+versioned_type! { 1.. => i32 }
+versioned_type! { 1.. => u8 }
+versioned_type! { 1.. => i8 }

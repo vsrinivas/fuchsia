@@ -689,7 +689,9 @@ mod tests {
                     OrdLowerBound, OrdUpperBound,
                 },
             },
-            serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
+            serialized_types::{
+                versioned_type, Version, Versioned, VersionedLatest, LATEST_VERSION,
+            },
         },
         fuchsia_async as fasync,
         rand::Rng,
@@ -699,7 +701,7 @@ mod tests {
     #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
     struct TestKey(Range<u64>);
 
-    versioned_type! { 1=> TestKey }
+    versioned_type! { 1.. => TestKey, }
 
     impl NextKey for TestKey {
         fn next_key(&self) -> Option<Self> {
@@ -1234,7 +1236,7 @@ mod tests {
     #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
     struct TestKeyWithDefaultNextKey(Range<u64>);
 
-    versioned_type! { 1 => TestKeyWithDefaultNextKey }
+    versioned_type! { 1.. => TestKeyWithDefaultNextKey }
 
     impl NextKey for TestKeyWithDefaultNextKey {}
 

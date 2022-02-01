@@ -304,7 +304,9 @@ mod tests {
                 merge::{MergeLayerIterator, MergeResult},
                 types::{Item, ItemRef, LayerIterator, NextKey, OrdLowerBound, OrdUpperBound},
             },
-            serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
+            serialized_types::{
+                versioned_type, Version, Versioned, VersionedLatest, LATEST_VERSION,
+            },
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
@@ -314,7 +316,7 @@ mod tests {
     #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
     struct TestKey(std::ops::Range<u64>);
 
-    versioned_type! { 1=> TestKey }
+    versioned_type! { 1.. => TestKey }
 
     impl NextKey for TestKey {}
 
