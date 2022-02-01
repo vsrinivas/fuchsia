@@ -563,26 +563,22 @@ impl ComponentInstance {
                 }
             }
 
-            if let Some(dynamic_offers) = &child_args.dynamic_offers {
+            let dynamic_offers = child_args.dynamic_offers.map(|dynamic_offers| {
                 if !dynamic_offers.is_empty()
                     && collection_decl.allowed_offers != cm_types::AllowedOffers::StaticAndDynamic
                 {
                     return Err(ModelError::dynamic_offers_not_allowed(&collection_name));
                 }
-                if let Err(err) = cm_fidl_validator::validate_dynamic_offers(dynamic_offers) {
-                    return Err(ModelError::dynamic_offer_invalid(err));
-                }
-                // TODO(fxbug.dev/84678): We need to check to make sure the
-                // source of the offer exists. Otherwise we could create
-                // dependency cycles by offering from A -> B, with A not
-                // existing yet, then offering from B -> A when creating A.
-                // Avoiding circular dependencies isn't totally critical until
-                // the shutdown order takes dynamic offers into account.
-            }
-            let dynamic_offers = child_args.dynamic_offers.map(|dynamic_offers| {
+
+                cm_fidl_validator::validate_dynamic_offers(&dynamic_offers)
+                    .map_err(ModelError::dynamic_offer_invalid)?;
+
                 dynamic_offers
                     .into_iter()
                     .map(|mut offer| {
+                        use ::routing::component_instance::ResolvedInstanceInterfaceExt;
+                        use cm_rust::OfferDeclCommon;
+
                         // Set the `target` field to point to the component
                         // we're creating. `fidl_into_native()` requires
                         // `target` to be set.
@@ -594,10 +590,20 @@ impl ComponentInstance {
                             }));
                         // This is safe because of the call to
                         // `validate_dynamic_offers` above.
-                        cm_rust::FidlIntoNative::fidl_into_native(offer)
+                        let offer = cm_rust::FidlIntoNative::fidl_into_native(offer);
+
+                        // The sources and targets of offers in CFv2 must always exist. For static
+                        // offers, this is ensured by `cm_fidl_validator`. For dynamic offers, we
+                        // check that the source exists here. The target _will_ exist by virtue of
+                        // the fact that we're creating it now.
+                        if !state.offer_source_exists(offer.source()) {
+                            return Err(ModelError::dynamic_offer_source_not_found(offer.clone()));
+                        }
+                        Ok(offer)
                     })
                     .collect()
             });
+            let dynamic_offers = dynamic_offers.transpose()?;
 
             match collection_decl.durability {
                 fdecl::Durability::Transient => {}
@@ -1249,9 +1255,7 @@ pub struct ResolvedInstanceState {
     ///
     /// Invariant: the `target` field of all offers must refer to a live dynamic
     /// child (i.e., a member of `live_children`), and if the `source` field
-    /// refers to a child, it must also be live.
-    ///
-    /// TODO(fxbug.dev/84678): This invariant is not yet enforced.
+    /// refers to a dynamic child, it must also be live.
     dynamic_offers: Vec<cm_rust::OfferDecl>,
 }
 

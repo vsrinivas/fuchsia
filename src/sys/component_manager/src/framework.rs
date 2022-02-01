@@ -203,7 +203,8 @@ impl RealmCapabilityHost {
                 }
                 ModelError::CollectionNotFound { .. } => Err(fcomponent::Error::CollectionNotFound),
                 ModelError::DynamicOffersNotAllowed { .. }
-                | ModelError::DynamicOfferInvalid { .. } => {
+                | ModelError::DynamicOfferInvalid { .. }
+                | ModelError::DynamicOfferSourceNotFound { .. } => {
                     Err(fcomponent::Error::InvalidArguments)
                 }
                 ModelError::Unsupported { .. } => Err(fcomponent::Error::Unsupported),
@@ -753,6 +754,16 @@ mod tests {
             assert_eq!(err, fcomponent::Error::Unsupported);
         }
 
+        fn sample_offer_from(source: fdecl::Ref) -> fdecl::Offer {
+            fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                source: Some(source),
+                source_name: Some("foo".to_string()),
+                target_name: Some("foo".to_string()),
+                dependency_type: Some(fdecl::DependencyType::Strong),
+                ..fdecl::OfferProtocol::EMPTY
+            })
+        }
+
         // Disallowed dynamic offers specified.
         {
             let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
@@ -769,13 +780,9 @@ mod tests {
                     &mut collection_ref,
                     child_decl,
                     fcomponent::CreateChildArgs {
-                        dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
-                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                            source_name: Some("foo".to_string()),
-                            target_name: Some("foo".to_string()),
-                            dependency_type: Some(fdecl::DependencyType::Strong),
-                            ..fdecl::OfferProtocol::EMPTY
-                        })]),
+                        dynamic_offers: Some(vec![sample_offer_from(fdecl::Ref::Parent(
+                            fdecl::ParentRef {},
+                        ))]),
                         ..fcomponent::CreateChildArgs::EMPTY
                     },
                 )
@@ -808,6 +815,132 @@ mod tests {
                             // Note: has no `dependency_type`.
                             ..fdecl::OfferProtocol::EMPTY
                         })]),
+                        ..fcomponent::CreateChildArgs::EMPTY
+                    },
+                )
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InvalidArguments);
+        }
+
+        // Dynamic offer source is a static component that doesn't exist.
+        {
+            let mut collection_ref = fdecl::CollectionRef { name: "dynoff".to_string() };
+            let child_decl = fdecl::Child {
+                name: Some("b".to_string()),
+                url: Some("test:///b".to_string()),
+                startup: Some(fdecl::StartupMode::Lazy),
+                environment: None,
+                ..fdecl::Child::EMPTY
+            };
+            let err = test
+                .realm_proxy
+                .create_child(
+                    &mut collection_ref,
+                    child_decl,
+                    fcomponent::CreateChildArgs {
+                        dynamic_offers: Some(vec![sample_offer_from(fdecl::Ref::Child(
+                            fdecl::ChildRef {
+                                name: "does_not_exist".to_string(),
+                                collection: None,
+                            },
+                        ))]),
+                        ..fcomponent::CreateChildArgs::EMPTY
+                    },
+                )
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InvalidArguments);
+        }
+
+        // Source is a collection that doesn't exist (and using a Service).
+        {
+            let mut collection_ref = fdecl::CollectionRef { name: "dynoff".to_string() };
+            let child_decl = fdecl::Child {
+                name: Some("b".to_string()),
+                url: Some("test:///b".to_string()),
+                startup: Some(fdecl::StartupMode::Lazy),
+                environment: None,
+                ..fdecl::Child::EMPTY
+            };
+            let err = test
+                .realm_proxy
+                .create_child(
+                    &mut collection_ref,
+                    child_decl,
+                    fcomponent::CreateChildArgs {
+                        dynamic_offers: Some(vec![fdecl::Offer::Service(fdecl::OfferService {
+                            source: Some(fdecl::Ref::Collection(fdecl::CollectionRef {
+                                name: "does_not_exist".to_string(),
+                            })),
+                            source_name: Some("foo".to_string()),
+                            target_name: Some("foo".to_string()),
+                            ..fdecl::OfferService::EMPTY
+                        })]),
+                        ..fcomponent::CreateChildArgs::EMPTY
+                    },
+                )
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InvalidArguments);
+        }
+
+        // Source is a component in the same collection that doesn't exist.
+        {
+            let mut collection_ref = fdecl::CollectionRef { name: "dynoff".to_string() };
+            let child_decl = fdecl::Child {
+                name: Some("b".to_string()),
+                url: Some("test:///b".to_string()),
+                startup: Some(fdecl::StartupMode::Lazy),
+                environment: None,
+                ..fdecl::Child::EMPTY
+            };
+            let err = test
+                .realm_proxy
+                .create_child(
+                    &mut collection_ref,
+                    child_decl,
+                    fcomponent::CreateChildArgs {
+                        dynamic_offers: Some(vec![sample_offer_from(fdecl::Ref::Child(
+                            fdecl::ChildRef {
+                                name: "does_not_exist".to_string(),
+                                collection: Some("dynoff".to_string()),
+                            },
+                        ))]),
+                        ..fcomponent::CreateChildArgs::EMPTY
+                    },
+                )
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InvalidArguments);
+        }
+
+        // Source is the component itself... which doesn't exist... yet.
+        {
+            let mut collection_ref = fdecl::CollectionRef { name: "dynoff".to_string() };
+            let child_decl = fdecl::Child {
+                name: Some("b".to_string()),
+                url: Some("test:///b".to_string()),
+                startup: Some(fdecl::StartupMode::Lazy),
+                environment: None,
+                ..fdecl::Child::EMPTY
+            };
+            let err = test
+                .realm_proxy
+                .create_child(
+                    &mut collection_ref,
+                    child_decl,
+                    fcomponent::CreateChildArgs {
+                        dynamic_offers: Some(vec![sample_offer_from(fdecl::Ref::Child(
+                            fdecl::ChildRef {
+                                name: "b".to_string(),
+                                collection: Some("dynoff".to_string()),
+                            },
+                        ))]),
                         ..fcomponent::CreateChildArgs::EMPTY
                     },
                 )

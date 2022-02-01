@@ -13,7 +13,7 @@ use {
     },
     async_trait::async_trait,
     cm_moniker::{InstancedAbsoluteMoniker, InstancedChildMoniker},
-    cm_rust::{CapabilityDecl, CollectionDecl, ExposeDecl, OfferDecl, UseDecl},
+    cm_rust::{CapabilityDecl, CollectionDecl, ExposeDecl, OfferDecl, OfferSource, UseDecl},
     derivative::Derivative,
     moniker::{AbsoluteMoniker, ChildMoniker},
     std::{
@@ -103,6 +103,30 @@ pub trait ResolvedInstanceInterface: Send + Sync {
         collection: &str,
     ) -> Vec<(ChildMoniker, Arc<Self::Component>)>;
 }
+
+/// An extension trait providing functionality for any model of a resolved
+/// component.
+pub trait ResolvedInstanceInterfaceExt: ResolvedInstanceInterface {
+    /// Returns true if the given offer source refers to a valid entity, e.g., a
+    /// child that exists, a declared collection, etc.
+    fn offer_source_exists(&self, source: &OfferSource) -> bool {
+        match source {
+            OfferSource::Framework | OfferSource::Self_ | OfferSource::Parent => true,
+            OfferSource::Child(cm_rust::ChildRef { name, collection }) => {
+                self.get_live_child(&ChildMoniker::new(name.clone(), collection.clone())).is_some()
+            }
+            OfferSource::Collection(collection_name) => {
+                self.collections().into_iter().any(|collection| collection.name == *collection_name)
+            }
+            OfferSource::Capability(capability_name) => self
+                .capabilities()
+                .into_iter()
+                .any(|capability| capability.name() == capability_name),
+        }
+    }
+}
+
+impl<T: ResolvedInstanceInterface> ResolvedInstanceInterfaceExt for T {}
 
 // Elsewhere we need to implement `ResolvedInstanceInterface` for `&T` and
 // `MappedMutexGuard<_, _, T>`, where `T : ResolvedComponentInstance`. We can't

@@ -39,6 +39,8 @@ pub enum ModelError {
         #[source]
         err: cm_fidl_validator::error::ErrorList,
     },
+    #[error("source for dynamic offer not found: {:?}", offer)]
+    DynamicOfferSourceNotFound { offer: cm_rust::OfferDecl },
     #[error("context not found")]
     ContextNotFound,
     #[error("{} is not supported", feature)]
@@ -193,6 +195,10 @@ impl ModelError {
 
     pub fn dynamic_offer_invalid(err: cm_fidl_validator::error::ErrorList) -> ModelError {
         ModelError::DynamicOfferInvalid { err }
+    }
+
+    pub fn dynamic_offer_source_not_found(offer: cm_rust::OfferDecl) -> ModelError {
+        ModelError::DynamicOfferSourceNotFound { offer }
     }
 
     pub fn context_not_found() -> ModelError {
