@@ -41,23 +41,23 @@ using namespace sys::testing::internal;
 // NOLINTNEXTLINE
 using namespace sys::testing;
 
-class TestComponent : public MockComponent {
+class TestComponent : public LocalComponent {
  public:
   explicit TestComponent(fit::closure quit_loop) : quit_loop_(std::move(quit_loop)) {}
 
-  void Start(std::unique_ptr<MockHandles> mock_handles) override {
+  void Start(std::unique_ptr<LocalComponentHandles> mock_handles) override {
     mock_handles_ = std::move(mock_handles);
     called_ = true;
     quit_loop_();
   }
 
-  MockHandles* GetMockHandles() { return mock_handles_.get(); }
+  LocalComponentHandles* GetMockHandles() { return mock_handles_.get(); }
 
   bool WasCalled() const { return called_; }
 
  private:
   fit::closure quit_loop_;
-  std::unique_ptr<MockHandles> mock_handles_ = nullptr;
+  std::unique_ptr<LocalComponentHandles> mock_handles_ = nullptr;
   bool called_ = false;
 };
 

@@ -21,8 +21,6 @@ void PanicWithMessage(const char* stacktrace, const char* context, zx_status_t s
 void PanicWithMessage(const char* stacktrace, const char* context,
                       fuchsia::component::test::RealmBuilderError2& error);
 void PanicWithMessage(const char* stacktrace, const char* context,
-                      fuchsia::component::test::RealmBuilderError& error);
-void PanicWithMessage(const char* stacktrace, const char* context,
                       fuchsia::component::Error& error);
 
 }  // namespace internal

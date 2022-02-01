@@ -40,7 +40,7 @@ class ComponentController final : public fuchsia::component::runner::ComponentCo
 class RegisteredComponent final {
  public:
   RegisteredComponent() = default;
-  explicit RegisteredComponent(MockComponent* component);
+  explicit RegisteredComponent(LocalComponent* component);
 
   RegisteredComponent(RegisteredComponent&& other) = default;
   RegisteredComponent& operator=(RegisteredComponent&& other) = default;
@@ -48,12 +48,12 @@ class RegisteredComponent final {
   RegisteredComponent(const RegisteredComponent& other) = delete;
   RegisteredComponent& operator=(const RegisteredComponent& other) = delete;
 
-  void Start(std::unique_ptr<MockHandles> handles,
+  void Start(std::unique_ptr<LocalComponentHandles> handles,
              fidl::InterfaceRequest<fuchsia::component::runner::ComponentController> controller,
              async_dispatcher_t* dispatcher);
 
  private:
-  MockComponent* component_ = nullptr;
+  LocalComponent* component_ = nullptr;
   // Controller needs to live in the heap because it can't be moved nor copied.
   std::unique_ptr<ComponentController> controller_ = nullptr;
 };
@@ -92,7 +92,7 @@ class LocalComponentRunner::Builder final {
 
   std::unique_ptr<LocalComponentRunner> Build(async_dispatcher_t* dispatcher);
 
-  void Register(std::string name, MockComponent* mock);
+  void Register(std::string name, LocalComponent* mock);
 
  private:
   bool Contains(std::string name) const;

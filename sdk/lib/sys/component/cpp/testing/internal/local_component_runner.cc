@@ -37,7 +37,7 @@ std::string ExtractLocalComponentName(const fuchsia::data::Dictionary& program) 
   ZX_PANIC("Received program without local component key");
 }
 
-std::unique_ptr<MockHandles> CreateFromStartInfo(
+std::unique_ptr<LocalComponentHandles> CreateFromStartInfo(
     fuchsia::component::runner::ComponentStartInfo start_info, async_dispatcher_t* dispatcher) {
   fdio_ns_t* ns;
   ZX_SYS_ASSERT_STATUS_OK("CreateFromStartInfo", fdio_ns_create(&ns));
@@ -49,7 +49,7 @@ std::unique_ptr<MockHandles> CreateFromStartInfo(
 
   sys::OutgoingDirectory outgoing_dir;
   outgoing_dir.Serve(start_info.mutable_outgoing_dir()->TakeChannel(), dispatcher);
-  return std::make_unique<MockHandles>(ns, std::move(outgoing_dir));
+  return std::make_unique<LocalComponentHandles>(ns, std::move(outgoing_dir));
 }
 
 }  // namespace
@@ -59,12 +59,12 @@ ComponentController::ComponentController() : binding_(this) {}
 void ComponentController::Stop() {}
 void ComponentController::Kill() {}
 
-RegisteredComponent::RegisteredComponent(MockComponent* component)
+RegisteredComponent::RegisteredComponent(LocalComponent* component)
     : component_(component), controller_(std::make_unique<ComponentController>()) {}
 
 // TODO(fxbug.dev/89831): Implement fuchsia.component.runner/ComponentController.
 void RegisteredComponent::Start(
-    std::unique_ptr<MockHandles> handles,
+    std::unique_ptr<LocalComponentHandles> handles,
     fidl::InterfaceRequest<fuchsia::component::runner::ComponentController> controller,
     async_dispatcher_t* dispatcher) {
   controller_->Bind(std::move(controller), dispatcher);
@@ -101,7 +101,7 @@ std::unique_ptr<LocalComponentRunner> LocalComponentRunner::Builder::Build(
   return std::make_unique<LocalComponentRunner>(components_, dispatcher);
 }
 
-void LocalComponentRunner::Builder::Register(std::string name, MockComponent* mock) {
+void LocalComponentRunner::Builder::Register(std::string name, LocalComponent* mock) {
   ZX_ASSERT_MSG(!Contains(name), "Local component with same name being added: %s", name.c_str());
   components_[name] = std::make_shared<RegisteredComponent>(mock);
 }

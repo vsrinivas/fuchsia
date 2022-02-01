@@ -28,8 +28,6 @@ sdk_source_set("cpp_library") {
     "internal/errors.h",
     "internal/local_component_runner.cc",
     "internal/local_component_runner.h",
-    "internal/mock_runner.cc",
-    "internal/mock_runner.h",
     "internal/realm.cc",
     "internal/realm.h",
     "realm_builder.cc",

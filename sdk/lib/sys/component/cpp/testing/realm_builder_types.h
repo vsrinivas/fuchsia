@@ -21,31 +21,6 @@
 
 namespace sys {
 namespace testing {
-// A moniker identifies a specific component instance in the component tree
-// using a topological path. For example, given the following component tree:
-//   <root>
-//    / \
-//   a   b
-//  /
-// c
-// Where components "a" and "b" are direct children of the root, and "c" is the
-// only grandchild of the root, the following monikers are valid:
-//
-// '' (empty string) to refer to the root component.
-// 'a' and 'b' to refer to the children of the root
-// 'a/c' to refer to component "c".
-//
-// There is no leading slash.
-struct Moniker final {
-  std::string_view path;
-};
-
-// Endpoint to root above the created Realm. This endpoint is used to route
-// capabilities from/to client of RealmBuilder.
-struct AboveRoot final {};
-
-// An endpoint refers to either a source or target when routing a capability.
-using Endpoint = cpp17::variant<AboveRoot, Moniker>;
 
 // A protocol capability. The name refers to the name of the FIDL protocol,
 // e.g. `fuchsia.logger.LogSink`.
@@ -65,25 +40,6 @@ struct Directory final {
 // A capability to be routed from one component to another.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities
 using Capability = cpp17::variant<Protocol, Directory>;
-
-// A routing of a capability from source to multiple targets.
-struct CapabilityRoute final {
-  Capability capability;
-  Endpoint source;
-  std::vector<Endpoint> targets;
-};
-
-// A reference to a component via its component URL.
-// For example, `fuchsia-pkg://fuchsia.com/foo#meta/bar.cm`.
-struct ComponentUrl final {
-  std::string_view url;
-};
-
-// A reference to a component via its legacy component URL.
-// For example, `fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx`.
-struct LegacyComponentUrl final {
-  std::string_view url;
-};
 
 // [START mock_handles_cpp]
 // Handles provided to mock component.
@@ -121,10 +77,6 @@ class LocalComponentHandles final {
 };
 // [END mock_handles_cpp]
 
-// TODO(fxbug.dev/88421): Remove this alias once clients are migrated off old
-// API.
-using MockHandles = LocalComponentHandles;
-
 // [START mock_interface_cpp]
 // The interface for backing implementations of components with a Source of Mock.
 class LocalComponent {
@@ -137,27 +89,6 @@ class LocalComponent {
   virtual void Start(std::unique_ptr<LocalComponentHandles> mock_handles);
 };
 // [END mock_interface_cpp]
-
-// TODO(fxbug.dev/88421): Remove this alias once clients are migrated off old
-// API.
-using MockComponent = LocalComponent;
-
-// TODO(fxbug.dev/88421): Remove this class once clients are migrated off old
-// API.
-// A reference to a mock component.
-struct Mock final {
-  MockComponent* impl;
-};
-
-// The source of a component. If it's `ComponentUrl`, then it will be located
-// via its component URL.
-using Source = cpp17::variant<ComponentUrl, LegacyComponentUrl, Mock>;
-
-// A component as referred to by its source.
-struct Component final {
-  Source source;
-  bool eager = false;
-};
 
 using StartupMode = fuchsia::component::decl::StartupMode;
 
