@@ -700,6 +700,10 @@ def main_arg_parser() -> argparse.ArgumentParser:
         help=
         "On failing tracing checks, exit with this code.  Use 0 to report findings without failing.",
     )
+    parser.add_argument(
+        "--ignore-prefix",
+        nargs="*",
+        help="Extra file-path prefix that should be ignored.")
 
     # Want --foo (default:True) and --no-foo (False).
     # This is ugly, trying to emulate argparse.BooleanOptionalAction,
@@ -883,6 +887,11 @@ def main():
         # Implicit engine deps
         os.path.join(src_root, "prebuilt", "third_party", "sky_engine", "lib/"),
     }
+    # Ignored prefixes are to be given relative to the root_build_dir (since
+    # that is the only rebase_path() option from GN that can be used.
+    if args.ignore_prefix:
+        for prefix in args.ignore_prefix:
+            ignored_prefixes.add(os.path.join(os.getcwd(), prefix))
     ignored_suffixes = {
         # TODO(jayzhuang): Figure out whether `.dart_tool/package_config.json`
         # should be included in inputs.

@@ -843,6 +843,7 @@ foreach(_target_type,
                              "*",
                              [
                                "args",
+                               "hermetic_action_ignored_prefixes",
                                "hermetic_deps",
                                "hermetic_inputs_args",
                                "hermetic_inputs_file",
@@ -857,6 +858,7 @@ foreach(_target_type,
 
       forward_variables_from(invoker,
                              [
+                               "hermetic_action_ignored_prefixes",
                                "testonly",
                                "visibility",
                              ])
@@ -951,10 +953,14 @@ foreach(_target_type,
       if (!defined(deps)) {
         deps = []
       }
-      if (!hermetic_deps) {
-        # Regression stop
-        deps += [ "//build:non_hermetic_deps" ]
 
+      # If the action is either setting that it doesn't have hermetic_deps, or
+      # if it's using the hermetic_action_ignored_prefixes, make sure that it's
+      # in the non-hermetic targets allow-list.
+      if (!hermetic_deps || defined(hermetic_action_ignored_prefixes)) {
+        deps += [ "//build:non_hermetic_deps" ]
+      }
+      if (!hermetic_deps) {
         # Touching this file will force all non-hermetic actions to rerun.
         # This is useful for ensuring incremental build correctness, even in
         # the presence of non-hermetic actions.
@@ -962,7 +968,10 @@ foreach(_target_type,
       }
 
       if (!should_trace) {
-        not_needed([ "hermetic_deps" ])
+        not_needed([
+                     "hermetic_deps",
+                     "hermetic_action_ignored_prefixes",
+                   ])
         if (defined(_hermetic_inputs_file)) {
           # Use a Python wrapper script to read the hermetic_inputs_file and
           # convert it into a depfile after launching the command itself.
@@ -1034,6 +1043,10 @@ foreach(_target_type,
 
         if (!hermetic_deps) {
           args += [ "--no-check-access-permissions" ]
+        }
+        if (defined(hermetic_action_ignored_prefixes)) {
+          args += [ "--ignore-prefix" ] +
+                  rebase_path(hermetic_action_ignored_prefixes, root_build_dir)
         }
 
         if (defined(_hermetic_inputs_file)) {
