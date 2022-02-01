@@ -90,6 +90,9 @@ async fn main() -> Result<(), Error> {
         None => {
             // TODO(csuter): We should find a way to ensure that InsecureCrypt isn't compiled in
             // production builds, and make this case throw an error.
+            log::info!(
+                "fxfs: Remote `Crypt` is `InsecureCrypt`! In a production build, this is a bug."
+            );
             Arc::new(InsecureCrypt::new())
         }
     };

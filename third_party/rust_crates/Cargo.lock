@@ -1155,6 +1155,7 @@ version = "0.1.1"
 name = "fuchsia-third-party"
 version = "0.1.0"
 dependencies = [
+ "aes",
  "aes-gcm",
  "ansi_term",
  "anyhow",
@@ -1370,6 +1371,7 @@ dependencies = [
  "wasm-bindgen",
  "webpki",
  "xml-rs",
+ "xts-mode",
  "zip",
  "zstd",
  "zstd-safe",
@@ -4386,6 +4388,16 @@ name = "xml-rs"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "541b12c998c5b56aa2b4e6f18f03664eef9a4fd0a246a55594efae6cc2d964b5"
+
+[[package]]
+name = "xts-mode"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75a099a2f21d48275314733f85bc43b6c6213b66394233aaea573fc7a520dcd9"
+dependencies = [
+ "byteorder",
+ "cipher",
+]
 
 [[package]]
 name = "zip"

@@ -34,7 +34,10 @@ impl Crypt for RemoteCrypt {
                 wrapping_key_id,
                 keys: vec![(0, key.try_into().map_err(|_| anyhow!("Unexpected key length"))?)],
             },
-            UnwrappedKeys::new([(0, &unwrapped_key[..])])?,
+            UnwrappedKeys::new([(
+                0,
+                unwrapped_key.try_into().map_err(|_| anyhow!("Unexpected key length"))?,
+            )]),
         ))
     }
 
@@ -52,7 +55,10 @@ impl Crypt for RemoteCrypt {
             }
         }
         Ok(UnwrappedKeys::new(
-            keys.keys.iter().zip(unwrapped_keys.iter()).map(|((id, _), key)| (*id, &key[..])),
-        )?)
+            keys.keys
+                .iter()
+                .zip(unwrapped_keys.into_iter())
+                .map(|((id, _), key)| (*id, key.try_into().unwrap())),
+        ))
     }
 }

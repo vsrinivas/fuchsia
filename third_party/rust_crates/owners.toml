@@ -55,6 +55,7 @@ siphasher = ["src/security/OWNERS"]
 tokio-rustls = ["src/security/OWNERS"]
 uuid = ["src/security/OWNERS"]
 webpki = ["src/security/OWNERS"]
+xts-mode = ["src/security/OWNERS"]
 
 # storage team
 fatfs = ["src/storage/OWNERS"]

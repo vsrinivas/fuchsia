@@ -21,6 +21,7 @@ fxfs_deps = [
   "//src/lib/fuchsia-async",
   "//src/lib/storage/storage_device",
   "//src/storage/lib/interval_tree",
+  "//third_party/rust_crates:aes",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:async-lock",
   "//third_party/rust_crates:async-trait",
@@ -36,6 +37,7 @@ fxfs_deps = [
   "//third_party/rust_crates:serde",
   "//third_party/rust_crates:slab",
   "//third_party/rust_crates:thiserror",
+  "//third_party/rust_crates:xts-mode",
 ]
 
 fxfs_test_deps = [ "//third_party/rust_crates:assert_matches" ]

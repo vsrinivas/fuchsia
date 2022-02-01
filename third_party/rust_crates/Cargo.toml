@@ -23,6 +23,7 @@ version = "0.1.0"
 
 [dependencies]
 # Keep this sorted alphabetically, please.
+aes = "0.7.5"
 aes-gcm = "0.9"
 ansi_term = "0.11.0"
 anyhow = "1.0.38"
@@ -190,6 +191,7 @@ vte = "0.3"
 wasm-bindgen = "0.2.63"
 webpki = "0.21"
 xml-rs = "0.8"
+xts-mode = "0.4.1"
 unic-char-range = "0.9"
 unic-ucd-block = "0.9"
 unicode-segmentation = "1.0"

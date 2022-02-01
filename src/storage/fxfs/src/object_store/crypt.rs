@@ -2,85 +2,100 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(csuter): Make this secure.  For now these are just some stubs that need to be filled out
-// with real implementations.
-
 use {
     crate::trace_duration,
-    anyhow::{anyhow, ensure, Error},
+    aes::{cipher::generic_array::GenericArray, Aes256, NewBlockCipher},
+    anyhow::{anyhow, Error},
     async_trait::async_trait,
-    byteorder::{ByteOrder, LittleEndian},
     rand::RngCore,
+    xts_mode::{get_tweak_default, Xts128},
 };
 
 pub use crate::object_store::object_record::AES256XTSKeys;
 
+const KEY_SIZE: usize = 256 / 8;
+
+// The xts-mode crate expects a sector size. Fxfs will always use a block size >= 512 bytes, so we
+// just assume a sector size of 512 bytes, which will work fine even if a different block size is
+// used by Fxfs or the underlying device.
+const SECTOR_SIZE: u64 = 512;
+
+type KeyBytes = [u8; KEY_SIZE];
+
+pub struct UnwrappedKey {
+    id: u64,
+    xts: Xts128<Aes256>,
+}
+
 /// The `Crypt` trait is used to wrap and unwrap `AES256XTSKeys` into `UnwrappedKeys`.
 ///
 /// Unwrapped keys contain the actual keydata used to encrypt and decrypt content.
-///
-/// For now, the format used just makes it convenient for the simple XOR scheme we are
-/// using, but going forward, this can take whatever form is suitable.
 pub struct UnwrappedKeys {
-    keys: Vec<(u64, [u64; 4])>,
+    keys: Vec<UnwrappedKey>,
 }
 
 impl UnwrappedKeys {
-    pub fn new<'a, T: IntoIterator<Item = (u64, &'a [u8])>>(in_keys: T) -> Result<Self, Error> {
-        // Convert key into 4 u64's to make encrypt/decrypt easy whilst we have the simple
-        // implementation that we do.
-        let mut keys = Vec::new();
-        for (id, key) in in_keys.into_iter() {
-            ensure!(key.len() == 32, "Unexpected key length!");
-            let mut k = [0; 4];
-            for (chunk, k) in key.chunks_exact(8).zip(k.iter_mut()) {
-                *k = LittleEndian::read_u64(chunk);
-            }
-            keys.push((id, k));
+    pub fn new(keys: impl IntoIterator<Item = (u64, KeyBytes)>) -> Self {
+        Self {
+            keys: keys
+                .into_iter()
+                .map(|(id, key)| UnwrappedKey { id, xts: Self::get_xts(&key) })
+                .collect(),
         }
-        Ok(Self { keys })
     }
 
-    // Stub routine that just xors the data.
-    fn xor(&self, mut offset: u64, buffer: &mut [u8], key: &[u64; 4]) {
-        assert_eq!(buffer.len() % 16, 0);
-        assert_eq!(offset % 8, 0);
-        let mut i = (offset / 8 % 4) as usize;
-        for chunk in buffer.chunks_exact_mut(8) {
-            LittleEndian::write_u64(chunk, LittleEndian::read_u64(chunk) ^ key[i] ^ offset);
-            i = (i + 1) & 3;
-            offset += 8;
-        }
+    // Note: The "128" in `Xts128` refers to the cipher block size, not the key
+    // size (and not the device sector size). AES-256, like all forms of AES,
+    // have a 128-bit block size, and so will work with `Xts128`.
+    fn get_xts(key: &[u8; 32]) -> Xts128<Aes256> {
+        // The same key is used for for encrypting the data and computing the tweak.
+        Xts128::<Aes256>::new(
+            Aes256::new(GenericArray::from_slice(key)),
+            Aes256::new(GenericArray::from_slice(key)),
+        )
     }
 
     /// Decrypt the data in `buffer` using `UnwrappedKeys`.
     ///
-    /// * `offset` is the tweak.
+    /// * `offset` is the byte offset within the file.
     /// * `key_id` specifies which of the unwrapped keys to use.
-    /// * `buffer` is mutated in-place.
+    /// * `buffer` is mutated in place.
     pub fn decrypt(&self, offset: u64, key_id: u64, buffer: &mut [u8]) -> Result<(), Error> {
         trace_duration!("decrypt");
-        self.xor(
-            offset,
-            buffer,
-            &self.keys.iter().find(|(id, _)| *id == key_id).ok_or(anyhow!("Key not found"))?.1,
-        );
+        assert_eq!(offset % SECTOR_SIZE, 0);
+        self.keys
+            .iter()
+            .find(|unwrapped| unwrapped.id == key_id)
+            .ok_or(anyhow!("Key not found"))?
+            .xts
+            .decrypt_area(
+                buffer,
+                SECTOR_SIZE as usize,
+                (offset / SECTOR_SIZE).into(),
+                get_tweak_default,
+            );
         Ok(())
     }
 
     /// Encrypts data in the `buffer` using `UnwrappedKeys`.
     ///
-    /// * `offset` is the tweak.
+    /// * `offset` is the byte offset within the file.
     /// * `key_id` specifies which of the unwrapped keys to use.
-    /// * `buffer` is mutated in-place.
+    /// * `buffer` is mutated in place.
     pub fn encrypt(&self, offset: u64, key_id: u64, buffer: &mut [u8]) -> Result<(), Error> {
         trace_duration!("encrypt");
-        // For now, always use the first key.
-        self.xor(
-            offset,
-            buffer,
-            &self.keys.iter().find(|(id, _)| *id == key_id).ok_or(anyhow!("Key not found"))?.1,
-        );
+        assert_eq!(offset % SECTOR_SIZE, 0);
+        self.keys
+            .iter()
+            .find(|unwrapped| unwrapped.id == key_id)
+            .ok_or(anyhow!("Key not found"))?
+            .xts
+            .encrypt_area(
+                buffer,
+                SECTOR_SIZE as usize,
+                (offset / SECTOR_SIZE).into(),
+                get_tweak_default,
+            );
         Ok(())
     }
 }
@@ -141,7 +156,7 @@ pub trait Crypt: Send + Sync {
 pub struct InsecureCrypt {}
 
 /// Used by `InsecureCrypt` as an extremely weak form of 'encryption'.
-const WRAP_XOR: u64 = 0x012345678abcdef;
+const WRAP_XOR: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef];
 
 impl InsecureCrypt {
     pub fn new() -> Self {
@@ -158,35 +173,30 @@ impl Crypt for InsecureCrypt {
     ) -> Result<(AES256XTSKeys, UnwrappedKeys), Error> {
         assert_eq!(wrapping_key_id, 0);
         let mut rng = rand::thread_rng();
-        let mut key = [0; 32];
+        let mut key: KeyBytes = [0; KEY_SIZE];
         rng.fill_bytes(&mut key);
-        let mut unwrapped = [0; 4];
-        let mut wrapped = [0; 32];
-        for (i, chunk) in key.chunks_exact(8).enumerate() {
-            let u = LittleEndian::read_u64(chunk);
-            unwrapped[i] = u;
-            LittleEndian::write_u64(&mut wrapped[i * 8..i * 8 + 8], u ^ WRAP_XOR ^ owner);
+        let mut wrapped: KeyBytes = [0; KEY_SIZE];
+        let owner_bytes = owner.to_le_bytes();
+        for i in 0..wrapped.len() {
+            let j = i % WRAP_XOR.len();
+            wrapped[i] = key[i] ^ WRAP_XOR[j] ^ owner_bytes[j];
         }
         Ok((
             AES256XTSKeys { wrapping_key_id, keys: vec![(0, wrapped)] },
-            UnwrappedKeys { keys: vec![(0, unwrapped)] },
+            UnwrappedKeys::new([(0, key)]),
         ))
     }
 
     /// Unwraps the keys and stores the result in UnwrappedKeys.
     async fn unwrap_keys(&self, keys: &AES256XTSKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
-        Ok(UnwrappedKeys {
-            keys: keys
-                .keys
-                .iter()
-                .map(|(id, key)| {
-                    let mut unwrapped = [0; 4];
-                    for (i, chunk) in key.chunks_exact(8).enumerate() {
-                        unwrapped[i] = LittleEndian::read_u64(chunk) ^ WRAP_XOR ^ owner;
-                    }
-                    (*id, unwrapped)
-                })
-                .collect(),
-        })
+        Ok(UnwrappedKeys::new(keys.keys.iter().map(|(id, key)| {
+            let mut unwrapped: KeyBytes = [0; KEY_SIZE];
+            let owner_bytes = owner.to_le_bytes();
+            for i in 0..unwrapped.len() {
+                let j = i % WRAP_XOR.len();
+                unwrapped[i] = key[i] ^ WRAP_XOR[j] ^ owner_bytes[j];
+            }
+            (*id, unwrapped)
+        })))
     }
 }
