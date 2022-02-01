@@ -9,6 +9,7 @@
 #include <lib/sync/completion.h>
 #include <threads.h>
 
+#include <mutex>
 #include <thread>
 
 #include <ddktl/device.h>
@@ -58,6 +59,7 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   enum class ReadThreadPortKey : uint64_t {
     kCommandChannel,
     kAclChannel,
+    kScoChannel,
     kUnbind,
   };
 
@@ -72,6 +74,12 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   static const int kEventBufSize = 255 + 2;  // 2 byte header + payload
 
   using usb_callback_t = void (*)(void*, usb_request_t*);
+
+  // Reads the configuration descriptor |config_desc_iter| and sets |isoc_out_addr| to the isoc out
+  // endpoint address. |config_desc_iter| must be iterated to the end of interface 0.
+  // Returns true on success.
+  static bool ReadIsocEndpointsFromConfig(usb_desc_iter_t* config_desc_iter,
+                                          uint8_t* isoc_out_addr);
 
   zx_status_t InstrumentedRequestAlloc(usb_request_t** out, uint64_t data_size, uint8_t ep_address,
                                        size_t req_size);
@@ -98,11 +106,16 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
 
   void HciAclWriteComplete(usb_request_t* req);
 
+  void HciScoWriteComplete(usb_request_t* req);
+
   // Handle a readable or closed signal from the command channel.
   void HciHandleCmdReadEvents(const zx_port_packet_t& packet);
 
   // Handle a readable or closed signal from the ACL channel.
   void HciHandleAclReadEvents(const zx_port_packet_t& packet);
+
+  // Handle a readable or closed signal from the SCO channel.
+  void HciHandleScoReadEvents(const zx_port_packet_t& packet);
 
   // The read thread reads outbound command and ACL packets from the command and ACL channels and
   // forwards them to the USB device.
@@ -122,7 +135,16 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
 
   zx::channel cmd_channel_ __TA_GUARDED(mutex_);
   zx::channel acl_channel_ __TA_GUARDED(mutex_);
+  zx::channel sco_channel_ __TA_GUARDED(mutex_);
   zx::channel snoop_channel_ __TA_GUARDED(mutex_);
+
+  // Set during bind, never modified afterwards
+  bool sco_supported_ = false;
+
+  // The alternate setting of the ISOC (SCO) interface.
+  uint8_t isoc_alt_setting_ __TA_GUARDED(isoc_alt_setting_mutex_) = 0;
+  // Locked while the isoc alt setting is being changed or must not be changed.
+  std::mutex isoc_alt_setting_mutex_;
 
   // Port to queue PEER_CLOSED signals on
   zx_handle_t snoop_watch_ = ZX_HANDLE_INVALID;
@@ -142,6 +164,7 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   list_node_t free_event_reqs_ __TA_GUARDED(mutex_);
   list_node_t free_acl_read_reqs_ __TA_GUARDED(mutex_);
   list_node_t free_acl_write_reqs_ __TA_GUARDED(mutex_);
+  list_node_t free_sco_write_reqs_ __TA_GUARDED(mutex_);
 
   mtx_t mutex_;
   size_t parent_req_size_ = 0u;
