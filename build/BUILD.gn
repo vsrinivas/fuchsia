@@ -58,7 +58,12 @@ group("non_hermetic_deps") {
   # See: fxrev.dev/528291
   visibility += [ "//build/rust:*" ]
 
-  # TODO(http://fxbug.dev/77290): Remove entry when
+  # TODO(http://fxbug.dev/92612): Remove entries when
+  # assembly input bundle creation no longer triggers false-positives in the
+  # action_tracer.py due to how it cleans it's dynamic outputs.
+  visibility += [ "//build/assembly/*" ]
+
+  # TODO(http://fxbug.dev/77290): Remove entries when
   # //build/images/assemble_system.gni no longer needs `hermetic_deps = false`.
   visibility += [
     "//build/images/*",
