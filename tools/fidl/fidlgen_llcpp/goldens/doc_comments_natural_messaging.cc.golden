@@ -12,7 +12,8 @@ namespace test_doccomments {
 }  // namespace test_doccomments
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_doccomments::Interface>::Method() const {
-  ::fidl::Encoder _encoder{::test_doccomments::kInterface_Method_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_doccomments::kInterface_Method_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_doccomments::test_doccomments_InterfaceMethodRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
@@ -53,10 +54,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 ::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
     ::test_doccomments::Interface>::OnEvent() {
-  ::fidl::Encoder _encoder{::test_doccomments::kInterface_OnEvent_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_doccomments::kInterface_OnEvent_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_doccomments::test_doccomments_InterfaceOnEventEventMessageTable,
-      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       [this](fidl::OutgoingMessage outgoing) {
         return _inner().SendEvent(outgoing);
@@ -66,10 +67,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalEventSender<::test_doccomments::Interface>::OnEvent() {
-  ::fidl::Encoder _encoder{::test_doccomments::kInterface_OnEvent_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_doccomments::kInterface_OnEvent_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_doccomments::test_doccomments_InterfaceOnEventEventMessageTable,
-      true,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       [this](fidl::OutgoingMessage outgoing) {
         outgoing.Write(_transport());

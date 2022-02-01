@@ -31,7 +31,7 @@ TEST(ProxyController, Send) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  Encoder encoder(5u);
+  MessageEncoder encoder(5u);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -59,7 +59,7 @@ TEST(ProxyController, Callback) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  Encoder encoder(3u);
+  MessageEncoder encoder(3u);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -108,7 +108,7 @@ TEST(ProxyController, BadSend) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  Encoder encoder(3u);
+  MessageEncoder encoder(3u);
   // Bad message format.
 
   int error_count = 0;
@@ -235,7 +235,7 @@ TEST(ProxyController, Move) {
   ProxyController controller1;
   EXPECT_EQ(ZX_OK, controller1.reader().Bind(std::move(h1)));
 
-  Encoder encoder(3u);
+  MessageEncoder encoder(3u);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -288,7 +288,7 @@ TEST(ProxyController, Reset) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  Encoder encoder(3u);
+  MessageEncoder encoder(3u);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -340,7 +340,7 @@ TEST(ProxyController, ReentrantDestructor) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  Encoder encoder(3u);
+  MessageEncoder encoder(3u);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -349,7 +349,7 @@ TEST(ProxyController, ReentrantDestructor) {
     ++destructor_count;
     EXPECT_EQ(destructor_count, 1);
 
-    Encoder encoder(3u);
+    MessageEncoder encoder(3u);
     StringPtr string("world!");
     fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
     auto callback_handler = std::make_unique<SingleUseMessageHandler>(

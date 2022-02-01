@@ -16,7 +16,7 @@ namespace internal {
 void NaturalServerMessenger::SendReply(const fidl_type_t* type,
                                        HLCPPOutgoingMessage&& message) const {
   fidl::Result result = ConvertFromHLCPPOutgoingMessageThen(
-      type, true, std::move(message), [&](fidl::OutgoingMessage outgoing) {
+      type, std::move(message), [&](fidl::OutgoingMessage outgoing) {
         return completer_base_->SendReply(&outgoing, OutgoingTransportContext{});
       });
 

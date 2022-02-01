@@ -158,12 +158,12 @@ zx_status_t HLCPPIncomingMessage::Read(zx_handle_t channel, uint32_t flags) {
 
 void HLCPPIncomingMessage::ClearHandlesUnsafe() { body_view_.ClearHandlesUnsafe(); }
 
-HLCPPOutgoingMessage::HLCPPOutgoingMessage() = default;
+HLCPPOutgoingBody::HLCPPOutgoingBody() = default;
 
-HLCPPOutgoingMessage::HLCPPOutgoingMessage(BytePart bytes, HandleDispositionPart handles)
+HLCPPOutgoingBody::HLCPPOutgoingBody(BytePart bytes, HandleDispositionPart handles)
     : bytes_(std::move(bytes)), handles_(std::move(handles)) {}
 
-HLCPPOutgoingMessage::~HLCPPOutgoingMessage() {
+HLCPPOutgoingBody::~HLCPPOutgoingBody() {
 #ifdef __Fuchsia__
   if (handles_.actual() > 0) {
     FidlHandleDispositionCloseMany(handles_.data(), handles_.actual());
@@ -172,67 +172,38 @@ HLCPPOutgoingMessage::~HLCPPOutgoingMessage() {
   ClearHandlesUnsafe();
 }
 
-HLCPPOutgoingMessage::HLCPPOutgoingMessage(HLCPPOutgoingMessage&& other)
+HLCPPOutgoingBody::HLCPPOutgoingBody(HLCPPOutgoingBody&& other)
     : bytes_(std::move(other.bytes_)), handles_(std::move(other.handles_)) {}
 
-HLCPPOutgoingMessage& HLCPPOutgoingMessage::operator=(HLCPPOutgoingMessage&& other) {
+HLCPPOutgoingBody& HLCPPOutgoingBody::operator=(HLCPPOutgoingBody&& other) {
   bytes_ = std::move(other.bytes_);
   handles_ = std::move(other.handles_);
   return *this;
 }
 
-zx_status_t HLCPPOutgoingMessage::Encode(const fidl_type_t* type, const char** error_msg_out) {
+zx_status_t HLCPPOutgoingBody::Encode(const fidl_type_t* type, const char** error_msg_out) {
   uint32_t actual_handles = 0u;
-  uint8_t* trimmed_bytes = bytes_.data();
-  uint32_t trimmed_num_bytes = bytes_.actual();
-  zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
-      bytes_.data(), bytes_.actual(), &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
-  if (unlikely(trim_status) != ZX_OK) {
-    return trim_status;
-  }
-
-  zx_status_t status = fidl_encode_etc(type, trimmed_bytes, trimmed_num_bytes, handles_.data(),
-                                       handles_.capacity(), &actual_handles, error_msg_out);
-  if (status == ZX_OK) {
-    handles_.set_actual(actual_handles);
-  }
+  zx_status_t status = fidl_encode_etc(type, bytes_.data(), bytes_.actual(), handles().data(),
+                                       handles().capacity(), &actual_handles, error_msg_out);
+  if (status == ZX_OK)
+    handles().set_actual(actual_handles);
 
   return status;
 }
 
-zx_status_t HLCPPOutgoingMessage::Validate(const fidl_type_t* type,
-                                           const char** error_msg_out) const {
-  internal::WireFormatVersion wire_format_version = internal::WireFormatVersion::kV1;
-  if ((header().flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
-    wire_format_version = internal::WireFormatVersion::kV2;
-  }
-
-  return ValidateWithVersion_InternalMayBreak(wire_format_version, type, true, error_msg_out);
-}
-
-zx_status_t HLCPPOutgoingMessage::ValidateWithVersion_InternalMayBreak(
-    internal::WireFormatVersion wire_format_version, const fidl_type_t* type, bool is_transactional,
-    const char** error_msg_out) const {
-  fidl_trace(WillHLCPPValidate, type, bytes_.data(), bytes_.actual(), handles_.actual());
-  uint8_t* trimmed_bytes = bytes_.data();
-  uint32_t trimmed_num_bytes = bytes_.actual();
-  if (is_transactional) {
-    zx_status_t status = ::fidl::internal::fidl_exclude_header_bytes(
-        bytes_.data(), bytes_.actual(), &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
+zx_status_t HLCPPOutgoingBody::Validate(const internal::WireFormatVersion& wire_format_version,
+                                        const fidl_type_t* type, const char** error_msg_out) const {
   zx_status_t status;
+
+  fidl_trace(WillHLCPPValidate, type, bytes_.data(), bytes_.actual(), handles().actual());
   switch (wire_format_version) {
     case internal::WireFormatVersion::kV1:
-      status = internal__fidl_validate__v1__may_break(type, trimmed_bytes, trimmed_num_bytes,
-                                                      handles_.actual(), error_msg_out);
+      status = internal__fidl_validate__v1__may_break(type, bytes_.data(), bytes_.actual(),
+                                                      handles().actual(), error_msg_out);
       break;
     case internal::WireFormatVersion::kV2:
-      status = internal__fidl_validate__v2__may_break(type, trimmed_bytes, trimmed_num_bytes,
-                                                      handles_.actual(), error_msg_out);
+      status = internal__fidl_validate__v2__may_break(type, bytes_.data(), bytes_.actual(),
+                                                      handles().actual(), error_msg_out);
       break;
     default:
       __builtin_unreachable();
@@ -242,12 +213,52 @@ zx_status_t HLCPPOutgoingMessage::ValidateWithVersion_InternalMayBreak(
   return status;
 }
 
+void HLCPPOutgoingBody::ClearHandlesUnsafe() { handles_.set_actual(0u); }
+
+HLCPPOutgoingMessage::HLCPPOutgoingMessage() = default;
+
+HLCPPOutgoingMessage::HLCPPOutgoingMessage(BytePart bytes, HandleDispositionPart handles)
+    : bytes_(std::move(bytes)),
+      body_view_(
+          HLCPPOutgoingBody(BytePart(bytes_, sizeof(fidl_message_header_t)), std::move(handles))) {}
+
+HLCPPOutgoingMessage::HLCPPOutgoingMessage(HLCPPOutgoingMessage&& other)
+    : bytes_(std::move(other.bytes_)), body_view_(std::move(other.body_view_)) {}
+
+HLCPPOutgoingMessage& HLCPPOutgoingMessage::operator=(HLCPPOutgoingMessage&& other) {
+  bytes_ = std::move(other.bytes_);
+  body_view_ = std::move(other.body_view_);
+  return *this;
+}
+
+zx_status_t HLCPPOutgoingMessage::Encode(const fidl_type_t* type, const char** error_msg_out) {
+  uint8_t* trimmed_bytes = bytes_.data();
+  uint32_t trimmed_num_bytes = bytes_.actual();
+  zx_status_t status = ::fidl::internal::fidl_exclude_header_bytes(
+      bytes_.data(), bytes_.actual(), &trimmed_bytes, &trimmed_num_bytes, error_msg_out);
+  if (unlikely(status) != ZX_OK) {
+    return status;
+  }
+
+  return body_view_.Encode(type, error_msg_out);
+}
+
+zx_status_t HLCPPOutgoingMessage::Validate(const fidl_type_t* type,
+                                           const char** error_msg_out) const {
+  internal::WireFormatVersion wire_format_version = internal::WireFormatVersion::kV1;
+  if ((header().flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
+    wire_format_version = internal::WireFormatVersion::kV2;
+  }
+
+  return body_view_.Validate(wire_format_version, type, error_msg_out);
+}
+
 #ifdef __Fuchsia__
 zx_status_t HLCPPOutgoingMessage::Write(zx_handle_t channel, uint32_t flags) {
   fidl_trace(WillHLCPPChannelWrite, nullptr /* type */, bytes_.data(), bytes_.actual(),
-             handles_.actual());
+             handles().actual());
   zx_status_t status = zx_channel_write_etc(channel, flags, bytes_.data(), bytes_.actual(),
-                                            handles_.data(), handles_.actual());
+                                            handles().data(), handles().actual());
   fidl_trace(DidHLCPPChannelWrite);
 
   // Handles are cleared by the kernel on either success or failure.
@@ -260,11 +271,11 @@ zx_status_t HLCPPOutgoingMessage::Call(zx_handle_t channel, uint32_t flags, zx_t
                                        HLCPPIncomingMessage* response) {
   zx_channel_call_etc_args_t args;
   args.wr_bytes = bytes_.data();
-  args.wr_handles = handles_.data();
+  args.wr_handles = handles().data();
   args.rd_bytes = response->bytes().data();
   args.rd_handles = response->handles().data();
   args.wr_num_bytes = bytes_.actual();
-  args.wr_num_handles = handles_.actual();
+  args.wr_num_handles = handles().actual();
   args.rd_num_bytes = response->bytes().capacity();
   args.rd_num_handles = response->handles().capacity();
   uint32_t actual_bytes = 0u;
@@ -280,6 +291,6 @@ zx_status_t HLCPPOutgoingMessage::Call(zx_handle_t channel, uint32_t flags, zx_t
 }
 #endif
 
-void HLCPPOutgoingMessage::ClearHandlesUnsafe() { handles_.set_actual(0u); }
+void HLCPPOutgoingMessage::ClearHandlesUnsafe() { body_view_.ClearHandlesUnsafe(); }
 
 }  // namespace fidl

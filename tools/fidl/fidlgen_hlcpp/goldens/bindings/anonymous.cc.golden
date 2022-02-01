@@ -1706,7 +1706,7 @@ SomeProtocol_SomeMethod_ResponseHandler(
 void SomeProtocol_Proxy::SomeMethod(::test::anonymous::UnionMember union_member,
                                     ::test::anonymous::TableMember table_member,
                                     SomeMethodCallback callback) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal);
   controller_->Send(
       &::test::anonymous::_internal::
@@ -1732,7 +1732,7 @@ class SomeProtocol_SomeMethod_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(::test::anonymous::SomeProtocol_SomeMethod_Result result) {
-    ::fidl::Encoder _encoder(
+    ::fidl::MessageEncoder _encoder(
         ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal);
     response_.Send(
         &::test::anonymous::_internal::
@@ -1801,7 +1801,7 @@ zx_status_t SomeProtocol_SyncProxy::SomeMethod(
     ::test::anonymous::UnionMember union_member,
     ::test::anonymous::TableMember table_member,
     ::test::anonymous::SomeProtocol_SomeMethod_Result* out_result) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();

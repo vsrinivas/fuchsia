@@ -171,7 +171,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 {{- EnsureNamespace "" }}
 void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const {
-  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::MessageEncoder _encoder{ {{ .OrdinalName }} };
   return messenger().TwoWay(
       &{{ .Request.WireCodingTable }},
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -185,7 +185,7 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
 {{- EnsureNamespace "" }}
 void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientAsyncRequestArgumentsWithResponse:Helper" . }}) const {
-  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::MessageEncoder _encoder{ {{ .OrdinalName }} };
   return messenger().TwoWay(
       &{{ .Request.WireCodingTable }},
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -203,7 +203,7 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
 ::fitx::result<::fidl::Error>
 {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const {
-  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::MessageEncoder _encoder{ {{ .OrdinalName }} };
   ::fidl::Result result = messenger().OneWay(
       &{{ .Request.WireCodingTable }},
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

@@ -152,7 +152,7 @@ struct {{ .NaturalMethodTypes }} {
 {{ EnsureNamespace "" }}
 void {{ .NaturalCompleterBase.NoLeading }}::Reply(
     {{- template "Method:NaturalReplySignature:Helper" . }}) {
-  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::MessageEncoder _encoder{ {{ .OrdinalName }} };
   messenger_.SendReply(
       &{{ .Response.WireCodingTable }},
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

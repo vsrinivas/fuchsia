@@ -13,7 +13,7 @@ void fidl::internal::NaturalClientImpl<
     GetFoo(::fidl::ClientCallback<
            ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&&
                _callback) const {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
   return messenger().TwoWay(
       &::test_foreigntypeinresponseusedthroughcompose::
@@ -32,7 +32,7 @@ void fidl::internal::NaturalClientImpl<
     GetFoo(::fidl::ClientResponseCallback<
            ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&&
                _callback) const {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
   return messenger().TwoWay(
       &::test_foreigntypeinresponseusedthroughcompose::
@@ -68,7 +68,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 void fidl::internal::NaturalCompleterBase<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
     Reply(::test_middle::MiddleGetFooTopResponse&& payload) {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
   messenger_.SendReply(
       &::test_foreigntypeinresponseusedthroughcompose::

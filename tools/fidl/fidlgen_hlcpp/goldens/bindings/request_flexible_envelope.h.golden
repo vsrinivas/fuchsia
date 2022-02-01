@@ -240,7 +240,7 @@ __LOCAL extern "C" const fidl_type_t
 class Protocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage RequestStrictResponseFlexible(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::requestflexibleenvelope::StrictFoo* s) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -269,7 +269,7 @@ class Protocol_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage RequestFlexibleResponseStrict(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::requestflexibleenvelope::FlexibleFoo* s) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -309,7 +309,7 @@ __LOCAL extern "C" const fidl_type_t
 class Protocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage RequestStrictResponseFlexible(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::requestflexibleenvelope::FlexibleFoo* f) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -337,7 +337,7 @@ class Protocol_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage RequestFlexibleResponseStrict(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::requestflexibleenvelope::StrictFoo* f) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {

@@ -34,18 +34,15 @@ static WireFormatVersion DefaultHLCPPEncoderWireFormat() {
 
 }  // namespace internal
 
-class Encoder final {
+class Encoder {
  public:
-  enum NoHeader { NO_HEADER };
-
-  explicit Encoder(uint64_t ordinal);
-  explicit Encoder(NoHeader marker, internal::WireFormatVersion wire_format)
-      : wire_format_(wire_format) {}
+  Encoder() = default;
+  explicit Encoder(internal::WireFormatVersion wire_format);
 
   Encoder(Encoder&&) noexcept = default;
   Encoder& operator=(Encoder&&) noexcept = default;
 
-  ~Encoder();
+  ~Encoder() = default;
 
   size_t Alloc(size_t size);
 
@@ -69,10 +66,6 @@ class Encoder final {
   void EncodeUnknownHandle(zx::object_base* value);
 #endif
 
-  HLCPPOutgoingMessage GetMessage();
-
-  void Reset(uint64_t ordinal);
-
   size_t CurrentLength() const { return bytes_.size(); }
 
   size_t CurrentHandleCount() const { return handles_.size(); }
@@ -81,13 +74,42 @@ class Encoder final {
 
   internal::WireFormatVersion wire_format() { return wire_format_; }
 
- private:
-  void EncodeMessageHeader(uint64_t ordinal);
-
+ protected:
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_disposition_t> handles_;
-
   internal::WireFormatVersion wire_format_ = internal::DefaultHLCPPEncoderWireFormat();
+};
+
+// The MessageEncoder produces an |HLCPPOutgoingMessage|, representing a transactional message.
+class MessageEncoder final : public Encoder {
+ public:
+  explicit MessageEncoder(uint64_t ordinal);
+  MessageEncoder(uint64_t ordinal, internal::WireFormatVersion wire_format);
+
+  MessageEncoder(MessageEncoder&&) noexcept = default;
+  MessageEncoder& operator=(MessageEncoder&&) noexcept = default;
+
+  ~MessageEncoder() = default;
+
+  HLCPPOutgoingMessage GetMessage();
+  void Reset(uint64_t ordinal);
+
+ private:
+  void EncodeMessageHeader(uint64_t ordinal);
+};
+
+// The BodyEncoder produces an |HLCPPOutgoingBody|, representing a transactional message body.
+class BodyEncoder final : public Encoder {
+ public:
+  explicit BodyEncoder(internal::WireFormatVersion wire_format) : Encoder(wire_format) {}
+
+  BodyEncoder(BodyEncoder&&) noexcept = default;
+  BodyEncoder& operator=(BodyEncoder&&) noexcept = default;
+
+  ~BodyEncoder() = default;
+
+  HLCPPOutgoingBody GetBody();
+  void Reset();
 };
 
 }  // namespace fidl

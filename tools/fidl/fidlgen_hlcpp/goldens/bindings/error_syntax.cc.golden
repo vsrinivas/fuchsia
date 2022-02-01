@@ -477,7 +477,7 @@ ExampleUseOfErrorSyntax_ComposedCallWhichMayFail_ResponseHandler(
 }  // namespace
 void ExampleUseOfErrorSyntax_Proxy::ComposedCallWhichMayFail(
     ::std::string s, ComposedCallWhichMayFailCallback callback) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::errorsyntax::internal::
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal);
   controller_->Send(
@@ -513,7 +513,7 @@ ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseHandler(
 }  // namespace
 void ExampleUseOfErrorSyntax_Proxy::CallWhichMayFail(
     ::std::string s, CallWhichMayFailCallback callback) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::errorsyntax::internal::
           kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal);
   controller_->Send(
@@ -545,7 +545,7 @@ class ExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Responder final {
   void operator()(
       ::test::errorsyntax::parent::
           ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result result) {
-    ::fidl::Encoder _encoder(
+    ::fidl::MessageEncoder _encoder(
         ::test::errorsyntax::internal::
             kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal);
     response_.Send(
@@ -568,7 +568,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Responder final {
   void operator()(
       ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
           result) {
-    ::fidl::Encoder _encoder(
+    ::fidl::MessageEncoder _encoder(
         ::test::errorsyntax::internal::
             kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal);
     response_.Send(
@@ -651,7 +651,7 @@ zx_status_t ExampleUseOfErrorSyntax_SyncProxy::ComposedCallWhichMayFail(
     ::std::string s,
     ::test::errorsyntax::parent::
         ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result* out_result) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::errorsyntax::internal::
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
@@ -677,7 +677,7 @@ zx_status_t ExampleUseOfErrorSyntax_SyncProxy::CallWhichMayFail(
     ::std::string s,
     ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result*
         out_result) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::errorsyntax::internal::
           kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;

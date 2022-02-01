@@ -27,7 +27,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class Top_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -59,7 +59,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class Top_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::MessageEncoder* _encoder,
                                              ::test::bottom::Foo* foo) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {

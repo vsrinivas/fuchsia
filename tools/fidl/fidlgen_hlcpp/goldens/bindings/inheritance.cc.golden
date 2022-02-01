@@ -89,7 +89,8 @@ super_foo_ResponseHandler(super::fooCallback&& callback) {
 
 }  // namespace
 void super_Proxy::foo(::std::string s, fooCallback callback) {
-  ::fidl::Encoder _encoder(::test::inheritance::internal::ksuper_foo_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::inheritance::internal::ksuper_foo_Ordinal);
   controller_->Send(
       &::test::inheritance::_internal::
           test_inheritance_superfooRequestMessageTable,
@@ -112,7 +113,8 @@ class super_foo_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(int64_t y) {
-    ::fidl::Encoder _encoder(::test::inheritance::internal::ksuper_foo_Ordinal);
+    ::fidl::MessageEncoder _encoder(
+        ::test::inheritance::internal::ksuper_foo_Ordinal);
     response_.Send(
         &::test::inheritance::_internal::
             test_inheritance_superfooResponseMessageTable,
@@ -173,7 +175,8 @@ super_SyncProxy::super_SyncProxy(::zx::channel channel)
 super_SyncProxy::~super_SyncProxy() = default;
 
 zx_status_t super_SyncProxy::foo(::std::string s, int64_t* out_y) {
-  ::fidl::Encoder _encoder(::test::inheritance::internal::ksuper_foo_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::inheritance::internal::ksuper_foo_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ =
@@ -270,7 +273,8 @@ sub_foo_ResponseHandler(sub::fooCallback&& callback) {
 
 }  // namespace
 void sub_Proxy::foo(::std::string s, fooCallback callback) {
-  ::fidl::Encoder _encoder(::test::inheritance::internal::ksub_foo_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::inheritance::internal::ksub_foo_Ordinal);
   controller_->Send(&::test::inheritance::_internal::
                         test_inheritance_subfooRequestMessageTable,
                     ::test::inheritance::sub_RequestEncoder::foo(&_encoder, &s),
@@ -292,7 +296,8 @@ class sub_foo_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(int64_t y) {
-    ::fidl::Encoder _encoder(::test::inheritance::internal::ksub_foo_Ordinal);
+    ::fidl::MessageEncoder _encoder(
+        ::test::inheritance::internal::ksub_foo_Ordinal);
     response_.Send(
         &::test::inheritance::_internal::
             test_inheritance_subfooResponseMessageTable,
@@ -353,7 +358,8 @@ sub_SyncProxy::sub_SyncProxy(::zx::channel channel)
 sub_SyncProxy::~sub_SyncProxy() = default;
 
 zx_status_t sub_SyncProxy::foo(::std::string s, int64_t* out_y) {
-  ::fidl::Encoder _encoder(::test::inheritance::internal::ksub_foo_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::inheritance::internal::ksub_foo_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(

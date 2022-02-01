@@ -1332,7 +1332,8 @@ __LOCAL extern "C" const fidl_type_t
 class TestProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage
-  StrictXUnionHenceResponseMayBeStackAllocated(::fidl::Encoder* _encoder) {
+  StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1357,7 +1358,8 @@ class TestProtocol_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage
-  FlexibleXUnionHenceResponseMustBeHeapAllocated(::fidl::Encoder* _encoder) {
+  FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1394,7 +1396,8 @@ class TestProtocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage
   StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fidl::Encoder* _encoder, ::test::union_::StrictBoundedXUnion* xu) {
+      ::fidl::MessageEncoder* _encoder,
+      ::test::union_::StrictBoundedXUnion* xu) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1422,7 +1425,7 @@ class TestProtocol_ResponseEncoder {
   }
   static ::fidl::HLCPPOutgoingMessage
   FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fidl::Encoder* _encoder, ::test::union_::OlderSimpleUnion* xu) {
+      ::fidl::MessageEncoder* _encoder, ::test::union_::OlderSimpleUnion* xu) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:

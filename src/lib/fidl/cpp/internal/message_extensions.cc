@@ -4,6 +4,7 @@
 
 #include <lib/fidl/cpp/encoder.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
@@ -25,6 +26,7 @@ namespace internal {
 ::fidl::HLCPPIncomingMessage ConvertToHLCPPIncomingMessage(
     fidl::IncomingMessage message,
     cpp20::span<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES> handle_storage) {
+  ZX_ASSERT(message.is_transactional());
   fidl_incoming_msg_t c_msg = std::move(message).ReleaseToEncodedCMessage();
   auto* handle_metadata = reinterpret_cast<fidl_channel_handle_metadata_t*>(c_msg.handle_metadata);
   for (size_t i = 0; i < c_msg.num_handles && i < ZX_CHANNEL_MAX_MSG_HANDLES; i++) {
@@ -35,6 +37,7 @@ namespace internal {
         .unused = 0,
     };
   }
+
   return ::fidl::HLCPPIncomingMessage{
       ::fidl::BytePart{static_cast<uint8_t*>(c_msg.bytes), c_msg.num_bytes, c_msg.num_bytes},
       ::fidl::HandleInfoPart{handle_storage.data(), c_msg.num_handles, c_msg.num_handles},
@@ -62,11 +65,10 @@ namespace internal {
 }
 
 ::fidl::OutgoingMessage ConvertFromHLCPPOutgoingMessage(
-    const fidl_type_t* type, bool is_transactional, HLCPPOutgoingMessage&& message,
-    zx_handle_t* handles, fidl_channel_handle_metadata_t* handle_metadata) {
+    const fidl_type_t* type, HLCPPOutgoingMessage&& message, zx_handle_t* handles,
+    fidl_channel_handle_metadata_t* handle_metadata) {
   const char* error_msg = nullptr;
-  zx_status_t status = message.ValidateWithVersion_InternalMayBreak(
-      DefaultHLCPPEncoderWireFormat(), type, is_transactional, &error_msg);
+  zx_status_t status = message.Validate(type, &error_msg);
   if (status != ZX_OK) {
     return fidl::OutgoingMessage(fidl::Result::EncodeError(status, error_msg));
   }
@@ -93,6 +95,41 @@ namespace internal {
   };
   // Ownership will be transferred to |fidl::OutgoingMessage|.
   message.ClearHandlesUnsafe();
+  return fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
+}
+
+::fidl::OutgoingMessage ConvertFromHLCPPOutgoingBody(
+    const internal::WireFormatVersion& wire_format_version, const fidl_type_t* type,
+    HLCPPOutgoingBody&& body, zx_handle_t* handles,
+    fidl_channel_handle_metadata_t* handle_metadata) {
+  const char* error_msg = nullptr;
+  zx_status_t status = body.Validate(wire_format_version, type, &error_msg);
+  if (status != ZX_OK) {
+    return fidl::OutgoingMessage(fidl::Result::EncodeError(status, error_msg));
+  }
+
+  for (size_t i = 0; i < body.handles().actual(); i++) {
+    zx_handle_disposition_t handle_disposition = body.handles().data()[i];
+    handles[i] = handle_disposition.handle;
+    handle_metadata[i] = {
+        .obj_type = handle_disposition.type,
+        .rights = handle_disposition.rights,
+    };
+  }
+
+  fidl_outgoing_msg_t c_msg = {
+      .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
+      .byte =
+          {
+              .bytes = body.bytes().data(),
+              .handles = handles,
+              .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata),
+              .num_bytes = body.bytes().actual(),
+              .num_handles = body.handles().actual(),
+          },
+  };
+  // Ownership will be transferred to |fidl::OutgoingMessage|.
+  body.ClearHandlesUnsafe();
   return fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
 }
 

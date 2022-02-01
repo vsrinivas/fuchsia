@@ -19,7 +19,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                    ComposedCallWhichMayFail>&& _callback)
         const {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_errorsyntax::
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   return messenger().TwoWay(
@@ -44,7 +44,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::
                 ComposedCallWhichMayFail>&& _callback) const {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_errorsyntax::
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   return messenger().TwoWay(
@@ -71,7 +71,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
             _callback) const {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   return messenger().TwoWay(
       &::test_errorsyntax::
@@ -94,7 +94,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
             _callback) const {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   return messenger().TwoWay(
       &::test_errorsyntax::
@@ -133,7 +133,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_errorsyntax_parent::
               ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse&&
                   payload) {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_errorsyntax::
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   messenger_.SendReply(
@@ -148,7 +148,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(
         ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&&
             payload) {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   messenger_.SendReply(
       &::test_errorsyntax::

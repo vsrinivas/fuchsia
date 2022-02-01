@@ -360,7 +360,7 @@ __LOCAL extern "C" const fidl_type_t
 class HandleRightsProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage NoResponseMethod(
-      ::fidl::Encoder* _encoder, ::zx::socket* h) {
+      ::fidl::MessageEncoder* _encoder, ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -395,8 +395,8 @@ class HandleRightsProtocol_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage ResponseMethod(::fidl::Encoder* _encoder,
-                                                     ::zx::socket* h) {
+  static ::fidl::HLCPPOutgoingMessage ResponseMethod(
+      ::fidl::MessageEncoder* _encoder, ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -442,8 +442,8 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class HandleRightsProtocol_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage ResponseMethod(::fidl::Encoder* _encoder,
-                                                     ::zx::socket* h) {
+  static ::fidl::HLCPPOutgoingMessage ResponseMethod(
+      ::fidl::MessageEncoder* _encoder, ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -477,7 +477,7 @@ class HandleRightsProtocol_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage AnEvent(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage AnEvent(::fidl::MessageEncoder* _encoder,
                                               ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -919,7 +919,7 @@ __LOCAL extern "C" const fidl_type_t
 class WithAndWithoutRequestResponse_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage NoRequestNoResponse(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -944,7 +944,7 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage NoRequestEmptyResponse(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -969,7 +969,7 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage NoRequestWithResponse(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -994,7 +994,7 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage WithRequestNoResponse(
-      ::fidl::Encoder* _encoder, ::std::string* arg) {
+      ::fidl::MessageEncoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1022,7 +1022,7 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage WithRequestEmptyResponse(
-      ::fidl::Encoder* _encoder, ::std::string* arg) {
+      ::fidl::MessageEncoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1050,7 +1050,7 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage WithRequestWithResponse(
-      ::fidl::Encoder* _encoder, ::std::string* arg) {
+      ::fidl::MessageEncoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1101,7 +1101,7 @@ __LOCAL extern "C" const fidl_type_t
 class WithAndWithoutRequestResponse_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage NoRequestEmptyResponse(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1125,7 +1125,7 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage NoRequestWithResponse(
-      ::fidl::Encoder* _encoder, ::std::string* ret) {
+      ::fidl::MessageEncoder* _encoder, ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1152,7 +1152,7 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage WithRequestEmptyResponse(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1176,7 +1176,7 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage WithRequestWithResponse(
-      ::fidl::Encoder* _encoder, ::std::string* ret) {
+      ::fidl::MessageEncoder* _encoder, ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1203,7 +1203,7 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnEmptyResponse(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1226,8 +1226,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage OnWithResponse(::fidl::Encoder* _encoder,
-                                                     ::std::string* ret) {
+  static ::fidl::HLCPPOutgoingMessage OnWithResponse(
+      ::fidl::MessageEncoder* _encoder, ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1268,7 +1268,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class Transitional_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Request(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage Request(::fidl::MessageEncoder* _encoder,
                                               int64_t* x) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1295,7 +1295,7 @@ class Transitional_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage OneWay(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage OneWay(::fidl::MessageEncoder* _encoder,
                                              int64_t* x) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1333,7 +1333,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class Transitional_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Request(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage Request(::fidl::MessageEncoder* _encoder,
                                               int64_t* y) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1359,7 +1359,7 @@ class Transitional_ResponseEncoder {
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage Event(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage Event(::fidl::MessageEncoder* _encoder,
                                             int64_t* x) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1485,7 +1485,7 @@ __LOCAL extern "C" const fidl_type_t
 class MethodWithUnion_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage UnionMethod(
-      ::fidl::Encoder* _encoder, ::test::protocols::TheUnion* u) {
+      ::fidl::MessageEncoder* _encoder, ::test::protocols::TheUnion* u) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1569,7 +1569,7 @@ __LOCAL extern "C" const fidl_type_t
 class WithProtocolEnds_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ClientEnds(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>* in) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1605,7 +1605,7 @@ class WithProtocolEnds_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ServerEnds(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>* in) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1641,7 +1641,7 @@ class WithProtocolEnds_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage StructContainingEnds(
-      ::fidl::Encoder* _encoder, ::test::protocols::ProtocolEnds* in) {
+      ::fidl::MessageEncoder* _encoder, ::test::protocols::ProtocolEnds* in) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1683,7 +1683,7 @@ __LOCAL extern "C" const fidl_type_t
 class WithProtocolEnds_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ClientEnds(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>* out) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1719,7 +1719,7 @@ class WithProtocolEnds_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ServerEnds(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>* out) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1755,7 +1755,7 @@ class WithProtocolEnds_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage StructContainingEnds(
-      ::fidl::Encoder* _encoder, ::test::protocols::ProtocolEnds* out) {
+      ::fidl::MessageEncoder* _encoder, ::test::protocols::ProtocolEnds* out) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1793,7 +1793,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class ManyParameters_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Fifteen(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage Fifteen(::fidl::MessageEncoder* _encoder,
                                               bool* p1, bool* p2, bool* p3,
                                               bool* p4, bool* p5, bool* p6,
                                               bool* p7, bool* p8, bool* p9,
@@ -2035,7 +2035,7 @@ __LOCAL extern "C" const fidl_type_t
 class WithErrorSyntax_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ResponseAsStruct(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2060,7 +2060,7 @@ class WithErrorSyntax_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ErrorAsPrimitive(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2084,7 +2084,8 @@ class WithErrorSyntax_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage ErrorAsEnum(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage ErrorAsEnum(
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2108,7 +2109,7 @@ class WithErrorSyntax_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage HandleInResult(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2150,7 +2151,7 @@ __LOCAL extern "C" const fidl_type_t
 class WithErrorSyntax_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ResponseAsStruct(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -2178,7 +2179,7 @@ class WithErrorSyntax_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ErrorAsPrimitive(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -2206,7 +2207,7 @@ class WithErrorSyntax_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ErrorAsEnum(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -2234,7 +2235,7 @@ class WithErrorSyntax_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage HandleInResult(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::protocols::WithErrorSyntax_HandleInResult_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -2273,7 +2274,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class DiscoverableProtocol_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage Method(::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2321,7 +2322,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class ChannelProtocol_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage MethodA(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage MethodA(::fidl::MessageEncoder* _encoder,
                                               int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -2352,7 +2353,7 @@ class ChannelProtocol_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::MessageEncoder* _encoder,
                                               int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -2383,8 +2384,8 @@ class ChannelProtocol_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage TakeHandle(::fidl::Encoder* _encoder,
-                                                 ::zx::handle* h) {
+  static ::fidl::HLCPPOutgoingMessage TakeHandle(
+      ::fidl::MessageEncoder* _encoder, ::zx::handle* h) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2418,8 +2419,8 @@ class ChannelProtocol_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
-                                                   ::zx::socket* a) {
+  static ::fidl::HLCPPOutgoingMessage MutateSocket(
+      ::fidl::MessageEncoder* _encoder, ::zx::socket* a) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2471,7 +2472,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class ChannelProtocol_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage EventA(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage EventA(::fidl::MessageEncoder* _encoder,
                                              int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -2501,7 +2502,7 @@ class ChannelProtocol_ResponseEncoder {
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::MessageEncoder* _encoder,
                                               int64_t* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -2527,7 +2528,8 @@ class ChannelProtocol_ResponseEncoder {
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage TakeHandle(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage TakeHandle(
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2549,8 +2551,8 @@ class ChannelProtocol_ResponseEncoder {
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
-                                                   ::zx::socket* b) {
+  static ::fidl::HLCPPOutgoingMessage MutateSocket(
+      ::fidl::MessageEncoder* _encoder, ::zx::socket* b) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:

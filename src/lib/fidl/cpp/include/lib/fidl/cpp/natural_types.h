@@ -134,17 +134,17 @@ class UnionMemberView final {
 // Success/failure information is stored in |message|.
 class EncodeResult {
  public:
-  EncodeResult(const fidl_type_t* type, ::fidl::Encoder&& storage)
+  EncodeResult(const fidl_type_t* type, ::fidl::BodyEncoder&& storage)
       : storage_(std::move(storage)),
-        message_(ConvertFromHLCPPOutgoingMessage(type, false, storage_.GetMessage(), handles_,
-                                                 handle_metadata_)) {}
+        message_(ConvertFromHLCPPOutgoingBody(storage.wire_format(), type, storage_.GetBody(),
+                                              handles_, handle_metadata_)) {}
 
   ::fidl::OutgoingMessage& message() { return message_; }
 
  private:
   zx_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata_[ZX_CHANNEL_MAX_MSG_HANDLES];
-  ::fidl::Encoder storage_;
+  ::fidl::BodyEncoder storage_;
   ::fidl::OutgoingMessage message_;
 };
 
@@ -190,7 +190,7 @@ template <typename FidlType>
   // Since a majority of the domain objects are HLCPP objects, for now
   // the wire format version of the encoded message is the same as the one
   // used in HLCPP.
-  ::fidl::Encoder encoder(::fidl::Encoder::NO_HEADER, DefaultHLCPPEncoderWireFormat());
+  ::fidl::BodyEncoder encoder(DefaultHLCPPEncoderWireFormat());
   encoder.Alloc(::fidl::EncodingInlineSize<FidlType, ::fidl::Encoder>(&encoder));
   ::fidl::CodingTraits<FidlType>::Encode(&encoder, &value, 0);
   return EncodeResult(coding_table, std::move(encoder));

@@ -140,7 +140,7 @@ zx_status_t EmptyProtocol_Proxy::Dispatch_(
 }
 
 void EmptyProtocol_Proxy::Send(::test::emptystruct::Empty e) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::emptystruct::internal::kEmptyProtocol_Send_Ordinal);
   controller_->Send(
       &::test::emptystruct::_internal::
@@ -171,7 +171,7 @@ EmptyProtocol_SendAndReceive_ResponseHandler(
 }  // namespace
 void EmptyProtocol_Proxy::SendAndReceive(::test::emptystruct::Empty e,
                                          SendAndReceiveCallback callback) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal);
   controller_->Send(
       &::test::emptystruct::_internal::
@@ -198,7 +198,7 @@ class EmptyProtocol_SendAndReceive_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(::test::emptystruct::Empty e) {
-    ::fidl::Encoder _encoder(
+    ::fidl::MessageEncoder _encoder(
         ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal);
     response_.Send(
         &::test::emptystruct::_internal::
@@ -263,7 +263,7 @@ zx_status_t EmptyProtocol_Stub::Dispatch_(
   return status;
 }
 void EmptyProtocol_Stub::Receive(::test::emptystruct::Empty e) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::emptystruct::internal::kEmptyProtocol_Receive_Ordinal);
   sender_()->Send(&::test::emptystruct::_internal::
                       test_emptystruct_EmptyProtocolReceiveEventMessageTable,
@@ -277,7 +277,7 @@ EmptyProtocol_SyncProxy::EmptyProtocol_SyncProxy(::zx::channel channel)
 EmptyProtocol_SyncProxy::~EmptyProtocol_SyncProxy() = default;
 
 zx_status_t EmptyProtocol_SyncProxy::Send(::test::emptystruct::Empty e) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::emptystruct::internal::kEmptyProtocol_Send_Ordinal);
   return proxy_.Send(
       &::test::emptystruct::_internal::
@@ -287,7 +287,7 @@ zx_status_t EmptyProtocol_SyncProxy::Send(::test::emptystruct::Empty e) {
 
 zx_status_t EmptyProtocol_SyncProxy::SendAndReceive(
     ::test::emptystruct::Empty e, ::test::emptystruct::Empty* out_e) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();

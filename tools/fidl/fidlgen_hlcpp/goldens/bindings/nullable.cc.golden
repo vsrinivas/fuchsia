@@ -681,7 +681,7 @@ SimpleProtocol_Add_ResponseHandler(SimpleProtocol::AddCallback&& callback) {
 
 }  // namespace
 void SimpleProtocol_Proxy::Add(int32_t a, int32_t b, AddCallback callback) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
   controller_->Send(
       &::test::nullable::_internal::
@@ -706,7 +706,7 @@ class SimpleProtocol_Add_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(int32_t sum) {
-    ::fidl::Encoder _encoder(
+    ::fidl::MessageEncoder _encoder(
         ::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
     response_.Send(
         &::test::nullable::_internal::
@@ -772,7 +772,7 @@ SimpleProtocol_SyncProxy::~SimpleProtocol_SyncProxy() = default;
 
 zx_status_t SimpleProtocol_SyncProxy::Add(int32_t a, int32_t b,
                                           int32_t* out_sum) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();

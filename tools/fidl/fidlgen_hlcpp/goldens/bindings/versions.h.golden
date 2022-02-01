@@ -402,7 +402,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class Protocol_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Foo(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage Foo(::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:

@@ -708,7 +708,7 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 }
 
 void Interface_Proxy::Method() {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::doccomments::internal::kInterface_Method_Ordinal);
   controller_->Send(
       &::test::doccomments::_internal::
@@ -767,7 +767,7 @@ zx_status_t Interface_Stub::Dispatch_(
   return status;
 }
 void Interface_Stub::OnEvent() {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::doccomments::internal::kInterface_OnEvent_Ordinal);
   sender_()->Send(
       &::test::doccomments::_internal::
@@ -781,7 +781,7 @@ Interface_SyncProxy::Interface_SyncProxy(::zx::channel channel)
 Interface_SyncProxy::~Interface_SyncProxy() = default;
 
 zx_status_t Interface_SyncProxy::Method() {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::doccomments::internal::kInterface_Method_Ordinal);
   return proxy_.Send(
       &::test::doccomments::_internal::

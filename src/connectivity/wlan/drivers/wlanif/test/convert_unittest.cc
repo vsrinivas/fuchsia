@@ -20,6 +20,8 @@
 #include <src/connectivity/wlan/drivers/wlanif/convert.h>
 #include <wlan/common/element.h>
 
+#include "lib/fidl/cpp/encoder.h"
+
 namespace wlanif {
 namespace {
 namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
@@ -37,16 +39,17 @@ using ::testing::UnorderedElementsAreArray;
 
 template <typename T>
 zx_status_t ValidateMessage(T* msg) {
-  fidl::Encoder enc(0);
+  fidl::MessageEncoder enc(0);
   enc.Alloc(fidl::EncodingInlineSize<T>(&enc));
   msg->Encode(&enc, sizeof(fidl_message_header_t));
 
   auto encoded = enc.GetMessage();
-  auto msg_data = encoded.payload();
+  const auto& msg_data = encoded.body_view();
   const char* err_msg = nullptr;
 
   // |fidl_decode_etc| performs validation as part of decode.
-  return fidl_decode_etc(T::FidlType, msg_data.data(), msg_data.size(), nullptr, 0, &err_msg);
+  return fidl_decode_etc(T::FidlType, msg_data.bytes().data(), msg_data.bytes().size(), nullptr, 0,
+                         &err_msg);
 }
 
 TEST(ConvertTest, ToFidlBssDescription) {

@@ -39,7 +39,8 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class Parent_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage GetChild(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage GetChild(
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -63,7 +64,7 @@ class Parent_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage GetChildRequest(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -88,7 +89,7 @@ class Parent_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TakeChild(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceHandle<::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -124,7 +125,7 @@ class Parent_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TakeChildRequest(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceRequest<::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -172,7 +173,7 @@ __LOCAL extern "C" const fidl_type_t
 class Parent_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetChild(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceHandle<::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -207,7 +208,7 @@ class Parent_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage GetChildRequest(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceRequest<::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {

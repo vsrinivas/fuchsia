@@ -17,7 +17,8 @@ namespace test_protocolrequest {
 void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
     GetChild(::fidl::ClientCallback<::test_protocolrequest::Parent::GetChild>&&
                  _callback) const {
-  ::fidl::Encoder _encoder{::test_protocolrequest::kParent_GetChild_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_protocolrequest::kParent_GetChild_Ordinal};
   return messenger().TwoWay(
       &::test_protocolrequest::
           test_protocolrequest_ParentGetChildRequestMessageTable,
@@ -31,7 +32,8 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
 void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
     GetChild(::fidl::ClientResponseCallback<
              ::test_protocolrequest::Parent::GetChild>&& _callback) const {
-  ::fidl::Encoder _encoder{::test_protocolrequest::kParent_GetChild_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_protocolrequest::kParent_GetChild_Ordinal};
   return messenger().TwoWay(
       &::test_protocolrequest::
           test_protocolrequest_ParentGetChildRequestMessageTable,
@@ -48,7 +50,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
     GetChildRequest(::fidl::ClientCallback<
                     ::test_protocolrequest::Parent::GetChildRequest>&&
                         _callback) const {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolrequest::kParent_GetChildRequest_Ordinal};
   return messenger().TwoWay(
       &::test_protocolrequest::
@@ -65,7 +67,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
     GetChildRequest(::fidl::ClientResponseCallback<
                     ::test_protocolrequest::Parent::GetChildRequest>&&
                         _callback) const {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolrequest::kParent_GetChildRequest_Ordinal};
   return messenger().TwoWay(
       &::test_protocolrequest::
@@ -82,7 +84,8 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
     ::test_protocolrequest::ParentTakeChildRequest&& payload) const {
-  ::fidl::Encoder _encoder{::test_protocolrequest::kParent_TakeChild_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_protocolrequest::kParent_TakeChild_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocolrequest::
           test_protocolrequest_ParentTakeChildRequestMessageTable,
@@ -94,7 +97,7 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(
         ::test_protocolrequest::ParentTakeChildRequestRequest&& payload) const {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolrequest::kParent_TakeChildRequest_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocolrequest::
@@ -124,7 +127,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 void fidl::internal::
     NaturalCompleterBase<::test_protocolrequest::Parent::GetChild>::Reply(
         ::test_protocolrequest::ParentGetChildTopResponse&& payload) {
-  ::fidl::Encoder _encoder{::test_protocolrequest::kParent_GetChild_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_protocolrequest::kParent_GetChild_Ordinal};
   messenger_.SendReply(
       &::test_protocolrequest::
           test_protocolrequest_ParentGetChildResponseMessageTable,
@@ -135,7 +139,7 @@ void fidl::internal::
 void fidl::internal::NaturalCompleterBase<
     ::test_protocolrequest::Parent::GetChildRequest>::
     Reply(::test_protocolrequest::ParentGetChildRequestTopResponse&& payload) {
-  ::fidl::Encoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolrequest::kParent_GetChildRequest_Ordinal};
   messenger_.SendReply(
       &::test_protocolrequest::

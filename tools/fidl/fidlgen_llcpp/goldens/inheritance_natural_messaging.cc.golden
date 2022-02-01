@@ -11,7 +11,7 @@ namespace test_inheritance {
 void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(
     ::test_inheritance::SuperFooRequest&& payload,
     ::fidl::ClientCallback<::test_inheritance::Super::Foo>&& _callback) const {
-  ::fidl::Encoder _encoder{::test_inheritance::ksuper_foo_Ordinal};
+  ::fidl::MessageEncoder _encoder{::test_inheritance::ksuper_foo_Ordinal};
   return messenger().TwoWay(
       &::test_inheritance::test_inheritance_superfooRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -25,7 +25,7 @@ void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(
     ::test_inheritance::SuperFooRequest&& payload,
     ::fidl::ClientResponseCallback<::test_inheritance::Super::Foo>&& _callback)
     const {
-  ::fidl::Encoder _encoder{::test_inheritance::ksuper_foo_Ordinal};
+  ::fidl::MessageEncoder _encoder{::test_inheritance::ksuper_foo_Ordinal};
   return messenger().TwoWay(
       &::test_inheritance::test_inheritance_superfooRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -55,7 +55,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 void fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>::
     Reply(::test_inheritance::SuperFooTopResponse&& payload) {
-  ::fidl::Encoder _encoder{::test_inheritance::ksuper_foo_Ordinal};
+  ::fidl::MessageEncoder _encoder{::test_inheritance::ksuper_foo_Ordinal};
   messenger_.SendReply(
       &::test_inheritance::test_inheritance_superfooResponseMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -116,7 +116,7 @@ namespace test_inheritance {
 void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(
     ::test_inheritance::SuperFooRequest&& payload,
     ::fidl::ClientCallback<::test_inheritance::Sub::Foo>&& _callback) const {
-  ::fidl::Encoder _encoder{::test_inheritance::ksub_foo_Ordinal};
+  ::fidl::MessageEncoder _encoder{::test_inheritance::ksub_foo_Ordinal};
   return messenger().TwoWay(
       &::test_inheritance::test_inheritance_subfooRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -130,7 +130,7 @@ void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(
     ::test_inheritance::SuperFooRequest&& payload,
     ::fidl::ClientResponseCallback<::test_inheritance::Sub::Foo>&& _callback)
     const {
-  ::fidl::Encoder _encoder{::test_inheritance::ksub_foo_Ordinal};
+  ::fidl::MessageEncoder _encoder{::test_inheritance::ksub_foo_Ordinal};
   return messenger().TwoWay(
       &::test_inheritance::test_inheritance_subfooRequestMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -160,7 +160,7 @@ fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub>::DispatchEvent(
 
 void fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo>::Reply(
     ::test_inheritance::SuperFooTopResponse&& payload) {
-  ::fidl::Encoder _encoder{::test_inheritance::ksub_foo_Ordinal};
+  ::fidl::MessageEncoder _encoder{::test_inheritance::ksub_foo_Ordinal};
   messenger_.SendReply(
       &::test_inheritance::test_inheritance_subfooResponseMessageTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

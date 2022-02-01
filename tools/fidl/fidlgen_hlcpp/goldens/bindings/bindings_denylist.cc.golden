@@ -2055,7 +2055,7 @@ OnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_ResponseHandler(
 }  // namespace
 void OnlyLibfuzzerAndDeps_Proxy::LibfuzzerNeedsNonemptyProtocol(
     LibfuzzerNeedsNonemptyProtocolCallback callback) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::bindingsdenylist::internal::
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal);
   controller_->Send(
@@ -2085,7 +2085,7 @@ class OnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Responder final {
       : response_(std::move(response)) {}
 
   void operator()() {
-    ::fidl::Encoder _encoder(
+    ::fidl::MessageEncoder _encoder(
         ::test::bindingsdenylist::internal::
             kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal);
     response_.Send(
@@ -2151,7 +2151,7 @@ OnlyLibfuzzerAndDeps_SyncProxy::OnlyLibfuzzerAndDeps_SyncProxy(
 OnlyLibfuzzerAndDeps_SyncProxy::~OnlyLibfuzzerAndDeps_SyncProxy() = default;
 
 zx_status_t OnlyLibfuzzerAndDeps_SyncProxy::LibfuzzerNeedsNonemptyProtocol() {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::bindingsdenylist::internal::
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
@@ -2331,8 +2331,9 @@ zx_status_t ImportsSameNameContext_Proxy::Dispatch_(
 }
 
 void ImportsSameNameContext_Proxy::Unattributed() {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kImportsSameNameContext_Unattributed_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::bindingsdenylist::internal::
+          kImportsSameNameContext_Unattributed_Ordinal);
   controller_->Send(
       &::test::bindingsdenylist::_internal::
           test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
@@ -2341,7 +2342,7 @@ void ImportsSameNameContext_Proxy::Unattributed() {
       nullptr);
 }
 void ImportsSameNameContext_Proxy::AlwaysAppearsInImportingLibrary() {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::bindingsdenylist::internal::
           kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal);
   controller_->Send(
@@ -2416,8 +2417,9 @@ ImportsSameNameContext_SyncProxy::ImportsSameNameContext_SyncProxy(
 ImportsSameNameContext_SyncProxy::~ImportsSameNameContext_SyncProxy() = default;
 
 zx_status_t ImportsSameNameContext_SyncProxy::Unattributed() {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kImportsSameNameContext_Unattributed_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::bindingsdenylist::internal::
+          kImportsSameNameContext_Unattributed_Ordinal);
   return proxy_.Send(
       &::test::bindingsdenylist::_internal::
           test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
@@ -2427,7 +2429,7 @@ zx_status_t ImportsSameNameContext_SyncProxy::Unattributed() {
 
 zx_status_t
 ImportsSameNameContext_SyncProxy::AlwaysAppearsInImportingLibrary() {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::bindingsdenylist::internal::
           kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal);
   return proxy_.Send(
@@ -2584,8 +2586,8 @@ DenyEachBinding_OnlyDenyDart_ResponseHandler(
 }  // namespace
 void DenyEachBinding_Proxy::OnlyDenyDart(bool a,
                                          OnlyDenyDartCallback callback) {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kDenyEachBinding_OnlyDenyDart_Ordinal);
+  ::fidl::MessageEncoder _encoder(::test::bindingsdenylist::internal::
+                                      kDenyEachBinding_OnlyDenyDart_Ordinal);
   controller_->Send(
       &::test::bindingsdenylist::_internal::
           test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable,
@@ -2615,7 +2617,7 @@ DenyEachBinding_OnlyDenyGo_ResponseHandler(
 
 }  // namespace
 void DenyEachBinding_Proxy::OnlyDenyGo(bool a, OnlyDenyGoCallback callback) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::bindingsdenylist::internal::kDenyEachBinding_OnlyDenyGo_Ordinal);
   controller_->Send(
       &::test::bindingsdenylist::_internal::
@@ -2649,8 +2651,9 @@ DenyEachBinding_OnlyDenyLibfuzzer_ResponseHandler(
 }  // namespace
 void DenyEachBinding_Proxy::OnlyDenyLibfuzzer(
     bool a, OnlyDenyLibfuzzerCallback callback) {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::bindingsdenylist::internal::
+          kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
   controller_->Send(
       &::test::bindingsdenylist::_internal::
           test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable,
@@ -2683,8 +2686,8 @@ DenyEachBinding_OnlyDenyRust_ResponseHandler(
 }  // namespace
 void DenyEachBinding_Proxy::OnlyDenyRust(bool a,
                                          OnlyDenyRustCallback callback) {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kDenyEachBinding_OnlyDenyRust_Ordinal);
+  ::fidl::MessageEncoder _encoder(::test::bindingsdenylist::internal::
+                                      kDenyEachBinding_OnlyDenyRust_Ordinal);
   controller_->Send(
       &::test::bindingsdenylist::_internal::
           test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable,
@@ -2717,8 +2720,9 @@ DenyEachBinding_OnlyDenySyzkaller_ResponseHandler(
 }  // namespace
 void DenyEachBinding_Proxy::OnlyDenySyzkaller(
     bool a, OnlyDenySyzkallerCallback callback) {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::bindingsdenylist::internal::
+          kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
   controller_->Send(
       &::test::bindingsdenylist::_internal::
           test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable,
@@ -2745,8 +2749,8 @@ class DenyEachBinding_OnlyDenyDart_Responder final {
 
   void operator()(
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result result) {
-    ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                                 kDenyEachBinding_OnlyDenyDart_Ordinal);
+    ::fidl::MessageEncoder _encoder(::test::bindingsdenylist::internal::
+                                        kDenyEachBinding_OnlyDenyDart_Ordinal);
     response_.Send(
         &::test::bindingsdenylist::_internal::
             test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable,
@@ -2766,8 +2770,8 @@ class DenyEachBinding_OnlyDenyGo_Responder final {
 
   void operator()(
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result result) {
-    ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                                 kDenyEachBinding_OnlyDenyGo_Ordinal);
+    ::fidl::MessageEncoder _encoder(::test::bindingsdenylist::internal::
+                                        kDenyEachBinding_OnlyDenyGo_Ordinal);
     response_.Send(
         &::test::bindingsdenylist::_internal::
             test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable,
@@ -2788,8 +2792,9 @@ class DenyEachBinding_OnlyDenyLibfuzzer_Responder final {
   void operator()(
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result
           result) {
-    ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                                 kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
+    ::fidl::MessageEncoder _encoder(
+        ::test::bindingsdenylist::internal::
+            kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
     response_.Send(
         &::test::bindingsdenylist::_internal::
             test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable,
@@ -2809,8 +2814,8 @@ class DenyEachBinding_OnlyDenyRust_Responder final {
 
   void operator()(
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result result) {
-    ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                                 kDenyEachBinding_OnlyDenyRust_Ordinal);
+    ::fidl::MessageEncoder _encoder(::test::bindingsdenylist::internal::
+                                        kDenyEachBinding_OnlyDenyRust_Ordinal);
     response_.Send(
         &::test::bindingsdenylist::_internal::
             test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable,
@@ -2831,8 +2836,9 @@ class DenyEachBinding_OnlyDenySyzkaller_Responder final {
   void operator()(
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result
           result) {
-    ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                                 kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
+    ::fidl::MessageEncoder _encoder(
+        ::test::bindingsdenylist::internal::
+            kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
     response_.Send(
         &::test::bindingsdenylist::_internal::
             test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable,
@@ -2930,8 +2936,8 @@ DenyEachBinding_SyncProxy::~DenyEachBinding_SyncProxy() = default;
 zx_status_t DenyEachBinding_SyncProxy::OnlyDenyDart(
     bool a,
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result* out_result) {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kDenyEachBinding_OnlyDenyDart_Ordinal);
+  ::fidl::MessageEncoder _encoder(::test::bindingsdenylist::internal::
+                                      kDenyEachBinding_OnlyDenyDart_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
@@ -2953,7 +2959,7 @@ zx_status_t DenyEachBinding_SyncProxy::OnlyDenyDart(
 zx_status_t DenyEachBinding_SyncProxy::OnlyDenyGo(
     bool a,
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result* out_result) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::bindingsdenylist::internal::kDenyEachBinding_OnlyDenyGo_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
@@ -2976,8 +2982,9 @@ zx_status_t DenyEachBinding_SyncProxy::OnlyDenyGo(
 zx_status_t DenyEachBinding_SyncProxy::OnlyDenyLibfuzzer(
     bool a, ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result*
                 out_result) {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::bindingsdenylist::internal::
+          kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
@@ -2999,8 +3006,8 @@ zx_status_t DenyEachBinding_SyncProxy::OnlyDenyLibfuzzer(
 zx_status_t DenyEachBinding_SyncProxy::OnlyDenyRust(
     bool a,
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result* out_result) {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kDenyEachBinding_OnlyDenyRust_Ordinal);
+  ::fidl::MessageEncoder _encoder(::test::bindingsdenylist::internal::
+                                      kDenyEachBinding_OnlyDenyRust_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
@@ -3022,8 +3029,9 @@ zx_status_t DenyEachBinding_SyncProxy::OnlyDenyRust(
 zx_status_t DenyEachBinding_SyncProxy::OnlyDenySyzkaller(
     bool a, ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result*
                 out_result) {
-  ::fidl::Encoder _encoder(::test::bindingsdenylist::internal::
-                               kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::bindingsdenylist::internal::
+          kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(

@@ -34,17 +34,17 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     // decode time.
     FidlType obj = builder();
 
-    fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, ::fidl::internal::WireFormatVersion::kV1);
+    fidl::BodyEncoder enc(::fidl::internal::WireFormatVersion::kV1);
     auto offset = enc.Alloc(EncodedSize<FidlType>);
     obj.Encode(&enc, offset);
-    fidl::HLCPPOutgoingMessage encode_msg = enc.GetMessage();
+    fidl::HLCPPOutgoingBody encode_body = enc.GetBody();
 
-    buffer.resize(encode_msg.bytes().actual());
-    memcpy(buffer.data(), encode_msg.bytes().data(), encode_msg.bytes().actual());
-    handle_infos.resize(encode_msg.handles().actual());
-    ZX_ASSERT(ZX_OK == FidlHandleDispositionsToHandleInfos(encode_msg.handles().data(),
+    buffer.resize(encode_body.bytes().actual());
+    memcpy(buffer.data(), encode_body.bytes().data(), encode_body.bytes().actual());
+    handle_infos.resize(encode_body.handles().actual());
+    ZX_ASSERT(ZX_OK == FidlHandleDispositionsToHandleInfos(encode_body.handles().data(),
                                                            handle_infos.data(),
-                                                           encode_msg.handles().actual()));
+                                                           encode_body.handles().actual()));
 
     state->NextStep();  // End: Setup. Begin: Decode.
 

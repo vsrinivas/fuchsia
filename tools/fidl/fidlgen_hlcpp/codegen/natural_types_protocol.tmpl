@@ -36,7 +36,7 @@ class {{ .RequestEncoder.Name }} {
   {{- with $protocol := . }}
   {{- range .Methods }}
   {{- if .HasRequest }}
-  static ::fidl::HLCPPOutgoingMessage {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .RequestArgs }}) {
+  static ::fidl::HLCPPOutgoingMessage {{ .Name }}(::fidl::MessageEncoder* _encoder{{ template "PointerParams" .RequestArgs }}) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -93,7 +93,7 @@ class {{ .ResponseEncoder.Name }} {
   {{- with $protocol := . }}
   {{- range .Methods }}
   {{- if .HasResponse }}
-  static ::fidl::HLCPPOutgoingMessage {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .ResponseArgs }}) {
+  static ::fidl::HLCPPOutgoingMessage {{ .Name }}(::fidl::MessageEncoder* _encoder{{ template "PointerParams" .ResponseArgs }}) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:

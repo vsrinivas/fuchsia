@@ -589,7 +589,8 @@ zx_status_t Protocol_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 }
 
 void Protocol_Proxy::Foo() {
-  ::fidl::Encoder _encoder(::test::versions::internal::kProtocol_Foo_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::versions::internal::kProtocol_Foo_Ordinal);
   controller_->Send(&::test::versions::_internal::
                         test_versions_ProtocolFooRequestMessageTable,
                     ::test::versions::Protocol_RequestEncoder::Foo(&_encoder),
@@ -652,7 +653,8 @@ Protocol_SyncProxy::Protocol_SyncProxy(::zx::channel channel)
 Protocol_SyncProxy::~Protocol_SyncProxy() = default;
 
 zx_status_t Protocol_SyncProxy::Foo() {
-  ::fidl::Encoder _encoder(::test::versions::internal::kProtocol_Foo_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::versions::internal::kProtocol_Foo_Ordinal);
   return proxy_.Send(&::test::versions::_internal::
                          test_versions_ProtocolFooRequestMessageTable,
                      ::test::versions::Protocol_RequestEncoder::Foo(&_encoder));

@@ -70,25 +70,24 @@ bool cmp_payload(const T* actual, size_t actual_size, const T* expected, size_t 
 
 template <class Output, class Input>
 Output RoundTrip(const Input& input) {
-  fidl::Encoder encoder(fidl::Encoder::NoHeader::NO_HEADER,
-                        ::fidl::internal::WireFormatVersion::kV1);
-  auto offset = encoder.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&encoder));
+  fidl::BodyEncoder encoder(::fidl::internal::WireFormatVersion::kV1);
+  auto offset = encoder.Alloc(EncodingInlineSize<Input, fidl::BodyEncoder>(&encoder));
   fidl::Clone(input).Encode(&encoder, offset);
-  auto outgoing_msg = encoder.GetMessage();
+  auto oubgoing_body = encoder.GetBody();
   const char* err_msg = nullptr;
-  EXPECT_EQ(ZX_OK,
-            outgoing_msg.ValidateWithVersion_InternalMayBreak(
-                ::fidl::internal::WireFormatVersion::kV1, Output::FidlType, false, &err_msg),
-            "%s", err_msg);
+  EXPECT_EQ(
+      ZX_OK,
+      oubgoing_body.Validate(::fidl::internal::WireFormatVersion::kV1, Output::FidlType, &err_msg),
+      "%s", err_msg);
 
-  std::vector<zx_handle_info_t> handle_infos(outgoing_msg.handles().actual());
+  std::vector<zx_handle_info_t> handle_infos(oubgoing_body.handles().actual());
   EXPECT_EQ(ZX_OK,
-            FidlHandleDispositionsToHandleInfos(outgoing_msg.handles().data(), handle_infos.data(),
-                                                outgoing_msg.handles().actual()));
+            FidlHandleDispositionsToHandleInfos(oubgoing_body.handles().data(), handle_infos.data(),
+                                                oubgoing_body.handles().actual()));
   fidl::HLCPPIncomingBody incoming_body(
-      std::move(outgoing_msg.bytes()),
+      BytePart(oubgoing_body.bytes(), 0),
       HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size())));
-  outgoing_msg.ClearHandlesUnsafe();
+  oubgoing_body.ClearHandlesUnsafe();
   EXPECT_EQ(
       ZX_OK,
       incoming_body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV1Header),
@@ -146,18 +145,18 @@ Output DecodedBytes(const fidl_message_header_t& header, std::vector<uint8_t> by
 template <class Input>
 void ForgetHandles(internal::WireFormatVersion wire_format, Input input) {
   // Encode purely for the side effect of linearizing the handles.
-  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, wire_format);
-  auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
+  fidl::BodyEncoder enc(wire_format);
+  auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::BodyEncoder>(&enc));
   input.Encode(&enc, offset);
-  enc.GetMessage().ClearHandlesUnsafe();
+  enc.GetBody().ClearHandlesUnsafe();
 }
 
 template <class Input>
 bool ValueToBytes(const Input& input, const std::vector<uint8_t>& expected) {
-  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, ::fidl::internal::WireFormatVersion::kV1);
-  auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
+  fidl::BodyEncoder enc(::fidl::internal::WireFormatVersion::kV1);
+  auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::BodyEncoder>(&enc));
   fidl::Clone(input).Encode(&enc, offset);
-  auto msg = enc.GetMessage();
+  auto msg = enc.GetBody();
   return cmp_payload(msg.bytes().data(), msg.bytes().actual(), expected.data(), expected.size());
 }
 
@@ -165,31 +164,30 @@ template <class Input>
 bool ValueToBytes(internal::WireFormatVersion wire_format, Input input,
                   const std::vector<uint8_t>& bytes,
                   const std::vector<zx_handle_disposition_t>& handles, bool check_rights = true) {
-  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, wire_format);
-  auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
+  fidl::BodyEncoder enc(wire_format);
+  auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::BodyEncoder>(&enc));
   input.Encode(&enc, offset);
-  HLCPPOutgoingMessage msg = enc.GetMessage();
+  HLCPPOutgoingBody body = enc.GetBody();
   auto bytes_match =
-      cmp_payload(msg.bytes().data(), msg.bytes().actual(), bytes.data(), bytes.size());
+      cmp_payload(body.bytes().data(), body.bytes().actual(), bytes.data(), bytes.size());
   bool handles_match = false;
   if (check_rights) {
     handles_match =
-        cmp_payload(msg.handles().data(), msg.handles().actual(), handles.data(), handles.size());
+        cmp_payload(body.handles().data(), body.handles().actual(), handles.data(), handles.size());
   } else {
-    zx_handle_t msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-    for (uint32_t i = 0; i < msg.handles().actual(); i++) {
-      msg_handles[i] = msg.handles().data()[i].handle;
+    zx_handle_t body_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    for (uint32_t i = 0; i < body.handles().actual(); i++) {
+      body_handles[i] = body.handles().data()[i].handle;
     }
     zx_handle_t expected_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint32_t i = 0; i < handles.size(); i++) {
       expected_handles[i] = handles.data()[i].handle;
     }
     handles_match =
-        cmp_payload(msg_handles, msg.handles().actual(), expected_handles, handles.size());
+        cmp_payload(body_handles, body.handles().actual(), expected_handles, handles.size());
   }
   const char* validation_error = nullptr;
-  zx_status_t validation_status = msg.ValidateWithVersion_InternalMayBreak(
-      wire_format, Input::FidlType, false, &validation_error);
+  zx_status_t validation_status = body.Validate(wire_format, Input::FidlType, &validation_error);
   if (validation_status != ZX_OK) {
     std::cout << "Validator exited with status " << validation_status << std::endl;
   }
@@ -220,14 +218,12 @@ void CheckDecodeFailure(const fidl_message_header_t& header, std::vector<uint8_t
 template <class Input>
 void CheckEncodeFailure(internal::WireFormatVersion wire_format, const Input& input,
                         const zx_status_t expected_failure_code) {
-  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, wire_format);
-  auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
+  fidl::BodyEncoder enc(wire_format);
+  auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::BodyEncoder>(&enc));
   fidl::Clone(input).Encode(&enc, offset);
-  auto msg = enc.GetMessage();
+  auto msg = enc.GetBody();
   const char* error = nullptr;
-  EXPECT_EQ(expected_failure_code,
-            msg.ValidateWithVersion_InternalMayBreak(wire_format, Input::FidlType, false, &error),
-            "%s", error);
+  EXPECT_EQ(expected_failure_code, msg.Validate(wire_format, Input::FidlType, &error), "%s", error);
 }
 
 }  // namespace util

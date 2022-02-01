@@ -92,7 +92,7 @@ __LOCAL extern "C" const fidl_type_t
 class OnlyLibfuzzerAndDeps_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -125,7 +125,7 @@ __LOCAL extern "C" const fidl_type_t
 class OnlyLibfuzzerAndDeps_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -230,7 +230,8 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class ImportsSameNameContext_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Unattributed(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage Unattributed(
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -255,7 +256,7 @@ class ImportsSameNameContext_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage AlwaysAppearsInImportingLibrary(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1176,8 +1177,8 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class DenyEachBinding_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage OnlyDenyDart(::fidl::Encoder* _encoder,
-                                                   bool* a) {
+  static ::fidl::HLCPPOutgoingMessage OnlyDenyDart(
+      ::fidl::MessageEncoder* _encoder, bool* a) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1204,8 +1205,8 @@ class DenyEachBinding_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage OnlyDenyGo(::fidl::Encoder* _encoder,
-                                                 bool* a) {
+  static ::fidl::HLCPPOutgoingMessage OnlyDenyGo(
+      ::fidl::MessageEncoder* _encoder, bool* a) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1233,7 +1234,7 @@ class DenyEachBinding_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnlyDenyLibfuzzer(
-      ::fidl::Encoder* _encoder, bool* a) {
+      ::fidl::MessageEncoder* _encoder, bool* a) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1260,8 +1261,8 @@ class DenyEachBinding_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::HLCPPOutgoingMessage OnlyDenyRust(::fidl::Encoder* _encoder,
-                                                   bool* a) {
+  static ::fidl::HLCPPOutgoingMessage OnlyDenyRust(
+      ::fidl::MessageEncoder* _encoder, bool* a) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1289,7 +1290,7 @@ class DenyEachBinding_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnlyDenySyzkaller(
-      ::fidl::Encoder* _encoder, bool* a) {
+      ::fidl::MessageEncoder* _encoder, bool* a) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1337,7 +1338,7 @@ __LOCAL extern "C" const fidl_type_t
 class DenyEachBinding_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage OnlyDenyDart(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1365,7 +1366,7 @@ class DenyEachBinding_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnlyDenyGo(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1393,7 +1394,7 @@ class DenyEachBinding_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnlyDenyLibfuzzer(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result*
           result) {
     fidl_trace(WillHLCPPEncode);
@@ -1422,7 +1423,7 @@ class DenyEachBinding_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnlyDenyRust(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1450,7 +1451,7 @@ class DenyEachBinding_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnlyDenySyzkaller(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result*
           result) {
     fidl_trace(WillHLCPPEncode);

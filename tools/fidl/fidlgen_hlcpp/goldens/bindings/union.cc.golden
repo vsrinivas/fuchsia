@@ -6256,7 +6256,7 @@ TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler(
 }  // namespace
 void TestProtocol_Proxy::StrictXUnionHenceResponseMayBeStackAllocated(
     StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::union_::internal::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
   controller_->Send(
@@ -6292,7 +6292,7 @@ TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler(
 }  // namespace
 void TestProtocol_Proxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::union_::internal::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
   controller_->Send(
@@ -6322,7 +6322,7 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Responder
       : response_(std::move(response)) {}
 
   void operator()(::test::union_::StrictBoundedXUnion xu) {
-    ::fidl::Encoder _encoder(
+    ::fidl::MessageEncoder _encoder(
         ::test::union_::internal::
             kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
     response_.Send(
@@ -6344,7 +6344,7 @@ class TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Responder
       : response_(std::move(response)) {}
 
   void operator()(::test::union_::OlderSimpleUnion xu) {
-    ::fidl::Encoder _encoder(
+    ::fidl::MessageEncoder _encoder(
         ::test::union_::internal::
             kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
     response_.Send(
@@ -6418,7 +6418,7 @@ TestProtocol_SyncProxy::~TestProtocol_SyncProxy() = default;
 zx_status_t
 TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated(
     ::test::union_::StrictBoundedXUnion* out_xu) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::union_::internal::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
@@ -6441,7 +6441,7 @@ TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated(
 zx_status_t
 TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
     ::test::union_::OlderSimpleUnion* out_xu) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::union_::internal::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;

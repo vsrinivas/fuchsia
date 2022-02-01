@@ -37,8 +37,13 @@ namespace internal {
 // |handles| is a caller-allocated array for storing handles.
 // |handle_metadata| is a caller-allocated array for storing handle metadata.
 ::fidl::OutgoingMessage ConvertFromHLCPPOutgoingMessage(
-    const fidl_type_t* type, bool is_transactional, HLCPPOutgoingMessage&& message,
-    zx_handle_t* handles, fidl_channel_handle_metadata_t* handle_metadata);
+    const fidl_type_t* type, HLCPPOutgoingMessage&& message, zx_handle_t* handles,
+    fidl_channel_handle_metadata_t* handle_metadata);
+
+::fidl::OutgoingMessage ConvertFromHLCPPOutgoingBody(
+    const internal::WireFormatVersion& wire_format_version, const fidl_type_t* type,
+    HLCPPOutgoingBody&& body, zx_handle_t* handles,
+    fidl_channel_handle_metadata_t* handle_metadata);
 
 // Converts an |HLCPPOutgoingMessage| into |OutgoingMessage|, then invoke
 // |callback| with it. Returns the return value of the callback.
@@ -46,13 +51,13 @@ namespace internal {
 //
 // |type| is used to validate the message.
 template <typename Callable>
-auto ConvertFromHLCPPOutgoingMessageThen(const fidl_type_t* type, bool is_transactional,
-                                         HLCPPOutgoingMessage&& message, Callable&& callback) {
+auto ConvertFromHLCPPOutgoingMessageThen(const fidl_type_t* type, HLCPPOutgoingMessage&& message,
+                                         Callable&& callback) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT fidl_channel_handle_metadata_t
       handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-  return callback(ConvertFromHLCPPOutgoingMessage(type, is_transactional, std::move(message),
-                                                  handles, handle_metadata));
+  return callback(
+      ConvertFromHLCPPOutgoingMessage(type, std::move(message), handles, handle_metadata));
 }
 
 }  // namespace internal

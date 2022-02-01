@@ -18,8 +18,9 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>&& _callback)
         const {
-  ::fidl::Encoder _encoder{::test_requestflexibleenvelope::
-                               kProtocol_RequestStrictResponseFlexible_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestStrictResponseFlexible_Ordinal};
   return messenger().TwoWay(
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable,
@@ -42,8 +43,9 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_requestflexibleenvelope::Protocol::
                 RequestStrictResponseFlexible>&& _callback) const {
-  ::fidl::Encoder _encoder{::test_requestflexibleenvelope::
-                               kProtocol_RequestStrictResponseFlexible_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestStrictResponseFlexible_Ordinal};
   return messenger().TwoWay(
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable,
@@ -68,8 +70,9 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>&& _callback)
         const {
-  ::fidl::Encoder _encoder{::test_requestflexibleenvelope::
-                               kProtocol_RequestFlexibleResponseStrict_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestFlexibleResponseStrict_Ordinal};
   return messenger().TwoWay(
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable,
@@ -92,8 +95,9 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_requestflexibleenvelope::Protocol::
                 RequestFlexibleResponseStrict>&& _callback) const {
-  ::fidl::Encoder _encoder{::test_requestflexibleenvelope::
-                               kProtocol_RequestFlexibleResponseStrict_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestFlexibleResponseStrict_Ordinal};
   return messenger().TwoWay(
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable,
@@ -132,8 +136,9 @@ void fidl::internal::NaturalCompleterBase<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::
     Reply(::test_requestflexibleenvelope::
               ProtocolRequestStrictResponseFlexibleTopResponse&& payload) {
-  ::fidl::Encoder _encoder{::test_requestflexibleenvelope::
-                               kProtocol_RequestStrictResponseFlexible_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestStrictResponseFlexible_Ordinal};
   messenger_.SendReply(
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable,
@@ -145,8 +150,9 @@ void fidl::internal::NaturalCompleterBase<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::
     Reply(::test_requestflexibleenvelope::
               ProtocolRequestFlexibleResponseStrictTopResponse&& payload) {
-  ::fidl::Encoder _encoder{::test_requestflexibleenvelope::
-                               kProtocol_RequestFlexibleResponseStrict_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_requestflexibleenvelope::
+          kProtocol_RequestFlexibleResponseStrict_Ordinal};
   messenger_.SendReply(
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable,

@@ -131,7 +131,7 @@ class {{ .Name }} final {
   }
 
   {{- if .IsResourceType }}
-  const std::vector<zx::handle>* UnknownHandles() const { 
+  const std::vector<zx::handle>* UnknownHandles() const {
     if (Which() != {{ .TagUnknown }}) {
       return nullptr;
     }

@@ -679,7 +679,7 @@ zx_status_t ExampleProtocol_Proxy::Dispatch_(
 }
 
 void ExampleProtocol_Proxy::Method(::test::exampleusing::Empty arg) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal);
   controller_->Send(
       &::test::placementofattributes::_internal::
@@ -749,7 +749,7 @@ ExampleProtocol_SyncProxy::ExampleProtocol_SyncProxy(::zx::channel channel)
 ExampleProtocol_SyncProxy::~ExampleProtocol_SyncProxy() = default;
 
 zx_status_t ExampleProtocol_SyncProxy::Method(::test::exampleusing::Empty arg) {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal);
   return proxy_.Send(
       &::test::placementofattributes::_internal::

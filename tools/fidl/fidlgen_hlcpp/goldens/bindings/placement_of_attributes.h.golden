@@ -408,7 +408,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class ExampleProtocol_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage Method(::fidl::MessageEncoder* _encoder,
                                              ::test::exampleusing::Empty* arg) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {

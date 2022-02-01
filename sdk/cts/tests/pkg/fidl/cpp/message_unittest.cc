@@ -41,7 +41,7 @@ TEST(Message, BasicTests) {
   EXPECT_EQ(outgoing_message.txid(), 5u);
   EXPECT_EQ(outgoing_message.ordinal(), 42u);
 
-  fidl::BytePart payload = outgoing_message.payload();
+  fidl::BytePart payload = fidl::BytePart(outgoing_message.body_view().bytes(), 0);
   EXPECT_EQ(reinterpret_cast<fidl_string_t*>(payload.data()), view);
 
   zx::channel h1, h2;

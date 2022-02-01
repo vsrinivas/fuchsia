@@ -91,8 +91,9 @@ Top_GetFoo_ResponseHandler(Top::GetFooCallback&& callback) {
 
 }  // namespace
 void Top_Proxy::GetFoo(GetFooCallback callback) {
-  ::fidl::Encoder _encoder(::test::foreigntypeinresponseusedthroughcompose::
-                               internal::kTop_GetFoo_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::foreigntypeinresponseusedthroughcompose::internal::
+          kTop_GetFoo_Ordinal);
   controller_->Send(
       &::test::foreigntypeinresponseusedthroughcompose::_internal::
           test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable,
@@ -117,8 +118,9 @@ class Top_GetFoo_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(::test::bottom::Foo foo) {
-    ::fidl::Encoder _encoder(::test::foreigntypeinresponseusedthroughcompose::
-                                 internal::kTop_GetFoo_Ordinal);
+    ::fidl::MessageEncoder _encoder(
+        ::test::foreigntypeinresponseusedthroughcompose::internal::
+            kTop_GetFoo_Ordinal);
     response_.Send(
         &::test::foreigntypeinresponseusedthroughcompose::_internal::
             test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable,
@@ -178,8 +180,9 @@ Top_SyncProxy::Top_SyncProxy(::zx::channel channel)
 Top_SyncProxy::~Top_SyncProxy() = default;
 
 zx_status_t Top_SyncProxy::GetFoo(::test::bottom::Foo* out_foo) {
-  ::fidl::Encoder _encoder(::test::foreigntypeinresponseusedthroughcompose::
-                               internal::kTop_GetFoo_Ordinal);
+  ::fidl::MessageEncoder _encoder(
+      ::test::foreigntypeinresponseusedthroughcompose::internal::
+          kTop_GetFoo_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(

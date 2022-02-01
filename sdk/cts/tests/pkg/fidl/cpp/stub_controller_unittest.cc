@@ -60,7 +60,7 @@ TEST(StubController, NoResponse) {
 
   stub_ctrl.set_stub(&stub);
 
-  Encoder encoder(5u);
+  MessageEncoder encoder(5u);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -92,7 +92,7 @@ TEST(StubController, Response) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
-    Encoder encoder(42u);
+    MessageEncoder encoder(42u);
     StringPtr string("welcome!");
     fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
     EXPECT_EQ(ZX_OK,
@@ -102,7 +102,7 @@ TEST(StubController, Response) {
 
   stub_ctrl.set_stub(&stub);
 
-  Encoder encoder(5u);
+  MessageEncoder encoder(5u);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -150,7 +150,7 @@ TEST(StubController, ResponseAfterUnbind) {
 
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
-    Encoder encoder(42u);
+    MessageEncoder encoder(42u);
     StringPtr string("welcome!");
     fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
     EXPECT_EQ(ZX_ERR_BAD_STATE,
@@ -160,7 +160,7 @@ TEST(StubController, ResponseAfterUnbind) {
 
   stub_ctrl.set_stub(&stub);
 
-  Encoder encoder(5u);
+  MessageEncoder encoder(5u);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -207,7 +207,7 @@ TEST(StubController, ResponseAfterDestroy) {
 
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
-    Encoder encoder(42u);
+    MessageEncoder encoder(42u);
     StringPtr string("welcome!");
     fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
     EXPECT_EQ(ZX_ERR_BAD_STATE,
@@ -217,7 +217,7 @@ TEST(StubController, ResponseAfterDestroy) {
 
   stub_ctrl->set_stub(&stub);
 
-  Encoder encoder(5u);
+  MessageEncoder encoder(5u);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 
@@ -266,7 +266,7 @@ TEST(StubController, BadResponse) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
-    Encoder encoder(42u);
+    MessageEncoder encoder(42u);
     // Bad message format.
     EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
               response.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage()));
@@ -275,7 +275,7 @@ TEST(StubController, BadResponse) {
 
   stub_ctrl.set_stub(&stub);
 
-  Encoder encoder(5u);
+  MessageEncoder encoder(5u);
   StringPtr string("hello!");
   fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
 

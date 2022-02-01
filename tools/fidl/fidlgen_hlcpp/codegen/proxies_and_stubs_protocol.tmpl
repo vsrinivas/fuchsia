@@ -339,7 +339,7 @@ namespace {
 }  // namespace
 {{- end }}
 void {{ $.Proxy.Name }}::{{ template "RequestMethodSignature" . }} {
-  ::fidl::Encoder _encoder({{ .OrdinalName }});
+  ::fidl::MessageEncoder _encoder({{ .OrdinalName }});
   controller_->Send(&{{ .Request.HlCodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .RequestArgs -}}
     , &{{ $param.Name }}
@@ -372,7 +372,7 @@ class {{ .ResponderType }} final {
       : response_(std::move(response)) {}
 
   void operator()({{ template "Params" .ResponseArgs }}) {
-    ::fidl::Encoder _encoder({{ .OrdinalName }});
+    ::fidl::MessageEncoder _encoder({{ .OrdinalName }});
     response_.Send(&{{ .Response.HlCodingTable }}, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .ResponseArgs -}}
     , &{{ $param.Name }}
@@ -444,7 +444,7 @@ zx_status_t {{ .Stub.Name }}::Dispatch_(
   {{- if not .HasRequest }}
     {{- if .HasResponse }}
 void {{ $.Stub.Name }}::{{ template "EventMethodSignature" . }} {
-  ::fidl::Encoder _encoder({{ .OrdinalName }});
+  ::fidl::MessageEncoder _encoder({{ .OrdinalName }});
   sender_()->Send(&{{ .Response.HlCodingTable }}, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .ResponseArgs -}}
     , &{{ $param.Name }}
@@ -464,7 +464,7 @@ void {{ $.Stub.Name }}::{{ template "EventMethodSignature" . }} {
   {{- if .HasRequest }}
 
 zx_status_t {{ $.SyncProxy.Name }}::{{ template "SyncRequestMethodSignature" . }} {
-  ::fidl::Encoder _encoder({{ .OrdinalName }});
+  ::fidl::MessageEncoder _encoder({{ .OrdinalName }});
     {{- if .HasResponse }}
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();

@@ -323,8 +323,8 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class SimpleProtocol_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Add(::fidl::Encoder* _encoder, int32_t* a,
-                                          int32_t* b) {
+  static ::fidl::HLCPPOutgoingMessage Add(::fidl::MessageEncoder* _encoder,
+                                          int32_t* a, int32_t* b) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -362,7 +362,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class SimpleProtocol_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Add(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage Add(::fidl::MessageEncoder* _encoder,
                                           int32_t* sum) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {

@@ -47,7 +47,7 @@ __LOCAL extern "C" const fidl_type_t
 class SecondProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage MethodOnSecond(
-      ::fidl::Encoder* _encoder) {
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -86,7 +86,8 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class FirstProtocol_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage MethodOnFirst(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage MethodOnFirst(
+      ::fidl::MessageEncoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:

@@ -67,7 +67,7 @@ zx_status_t SecondProtocol_Proxy::Dispatch_(
 }
 
 void SecondProtocol_Proxy::MethodOnSecond() {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::service::internal::kSecondProtocol_MethodOnSecond_Ordinal);
   controller_->Send(
       &::test::service::_internal::
@@ -132,7 +132,7 @@ SecondProtocol_SyncProxy::SecondProtocol_SyncProxy(::zx::channel channel)
 SecondProtocol_SyncProxy::~SecondProtocol_SyncProxy() = default;
 
 zx_status_t SecondProtocol_SyncProxy::MethodOnSecond() {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::service::internal::kSecondProtocol_MethodOnSecond_Ordinal);
   return proxy_.Send(
       &::test::service::_internal::
@@ -200,7 +200,7 @@ zx_status_t FirstProtocol_Proxy::Dispatch_(
 }
 
 void FirstProtocol_Proxy::MethodOnFirst() {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::service::internal::kFirstProtocol_MethodOnFirst_Ordinal);
   controller_->Send(
       &::test::service::_internal::
@@ -265,7 +265,7 @@ FirstProtocol_SyncProxy::FirstProtocol_SyncProxy(::zx::channel channel)
 FirstProtocol_SyncProxy::~FirstProtocol_SyncProxy() = default;
 
 zx_status_t FirstProtocol_SyncProxy::MethodOnFirst() {
-  ::fidl::Encoder _encoder(
+  ::fidl::MessageEncoder _encoder(
       ::test::service::internal::kFirstProtocol_MethodOnFirst_Ordinal);
   return proxy_.Send(
       &::test::service::_internal::

@@ -11,9 +11,12 @@
 namespace fidl {
 namespace internal {
 std::atomic_int hlcpp_enable_v1_encode(0);
-}
+}  // namespace internal
 
 namespace {
+
+const size_t kSmallAllocSize = 512;
+const size_t kLargeAllocSize = 65536;
 
 size_t Align(size_t size) {
   constexpr size_t alignment_mask = FIDL_ALIGNMENT - 1;
@@ -22,12 +25,7 @@ size_t Align(size_t size) {
 
 }  // namespace
 
-Encoder::Encoder(uint64_t ordinal) { EncodeMessageHeader(ordinal); }
-
-Encoder::~Encoder() = default;
-
-const size_t kSmallAllocSize = 512;
-const size_t kLargeAllocSize = 65536;
+Encoder::Encoder(internal::WireFormatVersion wire_format) : wire_format_(wire_format) {}
 
 size_t Encoder::Alloc(size_t size) {
   size_t offset = bytes_.size();
@@ -75,7 +73,14 @@ void Encoder::EncodeUnknownHandle(zx::object_base* value) {
 }
 #endif
 
-HLCPPOutgoingMessage Encoder::GetMessage() {
+MessageEncoder::MessageEncoder(uint64_t ordinal) { EncodeMessageHeader(ordinal); }
+
+MessageEncoder::MessageEncoder(uint64_t ordinal, internal::WireFormatVersion wire_format)
+    : Encoder(wire_format) {
+  EncodeMessageHeader(ordinal);
+}
+
+HLCPPOutgoingMessage MessageEncoder::GetMessage() {
   return HLCPPOutgoingMessage(
       BytePart(bytes_.data(), static_cast<uint32_t>(bytes_.size()),
                static_cast<uint32_t>(bytes_.size())),
@@ -83,19 +88,32 @@ HLCPPOutgoingMessage Encoder::GetMessage() {
                             static_cast<uint32_t>(handles_.size())));
 }
 
-void Encoder::Reset(uint64_t ordinal) {
+void MessageEncoder::Reset(uint64_t ordinal) {
   bytes_.clear();
   handles_.clear();
   EncodeMessageHeader(ordinal);
 }
 
-void Encoder::EncodeMessageHeader(uint64_t ordinal) {
+void MessageEncoder::EncodeMessageHeader(uint64_t ordinal) {
   size_t offset = Alloc(sizeof(fidl_message_header_t));
   fidl_message_header_t* header = GetPtr<fidl_message_header_t>(offset);
   fidl_init_txn_header(header, 0, ordinal);
   if (wire_format() == internal::WireFormatVersion::kV2) {
     header->flags[0] |= FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2;
   }
+}
+
+HLCPPOutgoingBody BodyEncoder::GetBody() {
+  return HLCPPOutgoingBody(
+      BytePart(bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+               static_cast<uint32_t>(bytes_.size())),
+      HandleDispositionPart(handles_.data(), static_cast<uint32_t>(handles_.size()),
+                            static_cast<uint32_t>(handles_.size())));
+}
+
+void BodyEncoder::Reset() {
+  bytes_.clear();
+  handles_.clear();
 }
 
 }  // namespace fidl

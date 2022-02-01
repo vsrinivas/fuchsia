@@ -187,9 +187,9 @@ class {{ .NaturalEventSender }}
 
 ::fitx::result<::fidl::Error> {{ $.NaturalWeakEventSender.NoLeading }}::{{ .Name }}(
     {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
-  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::MessageEncoder _encoder{ {{ .OrdinalName }} };
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      &{{ .Response.WireCodingTable }}, true,
+      &{{ .Response.WireCodingTable }},
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}),
       [this] (fidl::OutgoingMessage outgoing) {
@@ -200,9 +200,9 @@ class {{ .NaturalEventSender }}
 
 ::fitx::result<::fidl::Error> {{ $.NaturalEventSender.NoLeading }}::{{ .Name }}(
     {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
-  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::MessageEncoder _encoder{ {{ .OrdinalName }} };
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      &{{ .Response.WireCodingTable }}, true,
+      &{{ .Response.WireCodingTable }},
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}),
       [this] (fidl::OutgoingMessage outgoing) {

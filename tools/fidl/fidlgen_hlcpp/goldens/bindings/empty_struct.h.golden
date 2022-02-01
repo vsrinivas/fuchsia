@@ -53,7 +53,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class EmptyProtocol_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Send(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage Send(::fidl::MessageEncoder* _encoder,
                                            ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -81,7 +81,7 @@ class EmptyProtocol_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage SendAndReceive(
-      ::fidl::Encoder* _encoder, ::test::emptystruct::Empty* e) {
+      ::fidl::MessageEncoder* _encoder, ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -119,7 +119,7 @@ __LOCAL extern "C" const fidl_type_t
 }  // namespace _internal
 class EmptyProtocol_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Receive(::fidl::Encoder* _encoder,
+  static ::fidl::HLCPPOutgoingMessage Receive(::fidl::MessageEncoder* _encoder,
                                               ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -146,7 +146,7 @@ class EmptyProtocol_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage SendAndReceive(
-      ::fidl::Encoder* _encoder, ::test::emptystruct::Empty* e) {
+      ::fidl::MessageEncoder* _encoder, ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:

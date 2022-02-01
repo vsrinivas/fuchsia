@@ -1089,7 +1089,8 @@ __LOCAL extern "C" const fidl_type_t
 class SomeProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage SomeMethod(
-      ::fidl::Encoder* _encoder, ::test::anonymous::UnionMember* union_member,
+      ::fidl::MessageEncoder* _encoder,
+      ::test::anonymous::UnionMember* union_member,
       ::test::anonymous::TableMember* table_member) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -1131,7 +1132,7 @@ __LOCAL extern "C" const fidl_type_t
 class SomeProtocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage SomeMethod(
-      ::fidl::Encoder* _encoder,
+      ::fidl::MessageEncoder* _encoder,
       ::test::anonymous::SomeProtocol_SomeMethod_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {

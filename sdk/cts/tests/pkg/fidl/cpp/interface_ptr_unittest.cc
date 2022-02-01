@@ -211,7 +211,7 @@ TEST(InterfacePtr, MoveConstructWithOutstandingTransaction) {
   EXPECT_EQ(ZX_OK, incoming_message.Read(h2.get(), 0));
   OutgoingMessageBuffer outgoing_buffer;
   HLCPPOutgoingMessage outgoing_message = outgoing_buffer.CreateEmptyOutgoingMessage();
-  outgoing_message.bytes().set_actual(incoming_message.bytes().actual());
+  outgoing_message.resize_bytes(incoming_message.bytes().actual());
   memcpy(outgoing_message.bytes().data(), incoming_message.bytes().data(),
          incoming_message.bytes().actual());
   EXPECT_EQ(ZX_OK, outgoing_message.Write(h2.get(), 0));
@@ -266,7 +266,7 @@ TEST(InterfacePtr, MoveAssignWithOutstandingTransaction) {
   EXPECT_EQ(ZX_OK, incoming_message.Read(h2.get(), 0));
   OutgoingMessageBuffer outgoing_buffer;
   HLCPPOutgoingMessage outgoing_message = outgoing_buffer.CreateEmptyOutgoingMessage();
-  outgoing_message.bytes().set_actual(incoming_message.bytes().actual());
+  outgoing_message.resize_bytes(incoming_message.bytes().actual());
   memcpy(outgoing_message.bytes().data(), incoming_message.bytes().data(),
          incoming_message.bytes().actual());
   EXPECT_EQ(ZX_OK, outgoing_message.Write(h2.get(), 0));

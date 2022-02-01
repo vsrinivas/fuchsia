@@ -13,7 +13,8 @@ void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
         ::test_anonymous::SomeProtocolSomeMethodRequest&& payload,
         ::fidl::ClientCallback<::test_anonymous::SomeProtocol::SomeMethod>&&
             _callback) const {
-  ::fidl::Encoder _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   return messenger().TwoWay(
       &::test_anonymous::
           test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
@@ -30,7 +31,8 @@ void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
         ::test_anonymous::SomeProtocolSomeMethodRequest&& payload,
         ::fidl::ClientResponseCallback<
             ::test_anonymous::SomeProtocol::SomeMethod>&& _callback) const {
-  ::fidl::Encoder _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   return messenger().TwoWay(
       &::test_anonymous::
           test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
@@ -64,7 +66,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 void fidl::internal::
     NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>::Reply(
         ::test_anonymous::SomeProtocolSomeMethodTopResponse&& payload) {
-  ::fidl::Encoder _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
+  ::fidl::MessageEncoder _encoder{
+      ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   messenger_.SendReply(
       &::test_anonymous::
           test_anonymous_SomeProtocolSomeMethodResponseMessageTable,
