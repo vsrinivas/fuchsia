@@ -144,7 +144,7 @@ PrimaryWrapper::PrimaryWrapper(zx::channel channel, uint64_t max_inflight_messag
 }
 
 static_assert(static_cast<uint32_t>(magma::PlatformObject::SEMAPHORE) ==
-              static_cast<uint32_t>(fuchsia_gpu_magma::wire::ObjectType::kSemaphore));
+              static_cast<uint32_t>(fuchsia_gpu_magma::wire::ObjectType::kEvent));
 static_assert(static_cast<uint32_t>(magma::PlatformObject::BUFFER) ==
               static_cast<uint32_t>(fuchsia_gpu_magma::wire::ObjectType::kBuffer));
 

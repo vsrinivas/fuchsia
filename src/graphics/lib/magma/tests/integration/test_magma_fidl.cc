@@ -208,22 +208,21 @@ TEST_F(TestMagmaFidl, ImportReleaseSemaphore) {
     ASSERT_EQ(ZX_OK, zx::event::create(0 /*options*/, &event));
     event_id = fsl::GetKoid(event.get());
     auto wire_result =
-        primary_->ImportObject(std::move(event), fuchsia_gpu_magma::wire::ObjectType::kSemaphore);
+        primary_->ImportObject(std::move(event), fuchsia_gpu_magma::wire::ObjectType::kEvent);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
 
   {
     auto wire_result =
-        primary_->ReleaseObject(event_id, fuchsia_gpu_magma::wire::ObjectType::kSemaphore);
+        primary_->ReleaseObject(event_id, fuchsia_gpu_magma::wire::ObjectType::kEvent);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
 
   {
     uint64_t kBadId = event_id + 1;
-    auto wire_result =
-        primary_->ReleaseObject(kBadId, fuchsia_gpu_magma::wire::ObjectType::kSemaphore);
+    auto wire_result = primary_->ReleaseObject(kBadId, fuchsia_gpu_magma::wire::ObjectType::kEvent);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_TRUE(CheckForUnbind());
   }

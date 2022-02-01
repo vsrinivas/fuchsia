@@ -100,7 +100,9 @@ protocol Device {
 };
 
 type ObjectType = strict enum {
-    SEMAPHORE = 10;
+    /// A sync object backed by a Zircon event.
+    EVENT = 10;
+    /// A memory object backeed by a Zircon VMO.
     BUFFER = 11;
 };
 
@@ -189,8 +191,10 @@ protocol Primary {
     });
 
     /// Submits a command buffer for execution on the GPU, with associated `resources`.
-    /// `wait_semaphores` must all be signaled before execution begins, and `signal_semaphores`
-    /// will be signaled after the command buffer is completed.
+    /// `resources` must refer to buffers that have been imported.
+    /// `wait_semaphores` and `signal_semaphores` must refer to events that have been imported.
+    /// `wait_semaphores` must all be signaled before execution begins, then are reset.
+    /// `signal_semaphores` will be signaled after the command buffer is completed.  
     ExecuteCommandBufferWithResources2(struct {
         context_id uint32;
         command_buffer CommandBuffer2;
@@ -200,7 +204,8 @@ protocol Primary {
     });
 
     /// Submits a series of commands for execution on the GPU without using a command buffer.
-    /// `semaphores` will be signaled after the commands are completed.
+    /// `semaphores` must refer to events that have been imported, and will be signaled after
+    /// the commands are completed.
     ExecuteImmediateCommands(struct {
         context_id uint32;
         command_data bytes:MAX_IMMEDIATE_COMMANDS_DATA_SIZE;
