@@ -91,7 +91,7 @@ group("base64") {
 }
 
 group("bincode") {
-  deps = [ ":bincode-v1_1_1" ]
+  deps = [ ":bincode-v1_3_3" ]
 }
 
 group("bitfield") {
@@ -1789,17 +1789,16 @@ rust_library("base64ct-v1_0_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("bincode-v1_1_1") {
+rust_library("bincode-v1_3_3") {
   crate_name = "bincode"
   crate_root = "//third_party/rust_crates/vendor/bincode/src/lib.rs"
-  output_name = "bincode-ca4f5e63cc529fc0"
+  output_name = "bincode-2294ada8ceec0c61"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":byteorder-v1_3_1" ]
   deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
@@ -1807,8 +1806,8 @@ rust_library("bincode-v1_1_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=ca4f5e63cc529fc0",
-    "-Cextra-filename=-ca4f5e63cc529fc0",
+    "-Cmetadata=2294ada8ceec0c61",
+    "-Cextra-filename=-2294ada8ceec0c61",
   ]
 
   visibility = [ ":*" ]
