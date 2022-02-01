@@ -29,7 +29,7 @@ lazy_static! {
     pub static ref EMPTY_IDENTITY: ComponentIdentity = ComponentIdentity::unknown();
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ComponentIdentity {
     /// Relative moniker of the component that this artifacts container
     /// is representing.

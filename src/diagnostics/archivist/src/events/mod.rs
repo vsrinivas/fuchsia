@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub(crate) mod error;
+pub mod router;
 pub(crate) mod source_registry;
 pub mod sources;
 pub mod types;
