@@ -349,6 +349,12 @@ rustc_library("lib") {
     "src/wpan/mod.rs",
     "src/wpan/types.rs",
   ]
+
+  # TODO(http://fxbug.dev/92534): accommodate large memory requirements
+  if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] !=
+      toolchain_variant.tags) {
+    disable_rbe = true
+  }
 }
 
 rustc_binary("bin") {
@@ -369,6 +375,12 @@ rustc_binary("bin") {
   ]
 
   sources = [ "src/main.rs" ]
+
+  # TODO(http://fxbug.dev/92534): accommodate large memory requirements
+  if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] !=
+      toolchain_variant.tags) {
+    disable_rbe = true
+  }
 }
 
 fuchsia_component("sl4f_comp") {
