@@ -111,6 +111,14 @@ zx_status_t VolumeImpl::GetStats(Stats* stats) {
   stats->garbage_level = buffer.garbage_level;
   memcpy(stats->wear_histogram, buffer.wear_histogram, sizeof(stats->wear_histogram));
   stats->num_blocks = buffer.num_blocks;
+
+  static_assert(sizeof(stats->map_block_end_page_failure_reasons) ==
+                    sizeof(buffer.map_block_end_page_failure_reasons) &&
+                sizeof(*stats->map_block_end_page_failure_reasons) ==
+                    sizeof(*buffer.map_block_end_page_failure_reasons));
+  memcpy(stats->map_block_end_page_failure_reasons, buffer.map_block_end_page_failure_reasons,
+         sizeof(stats->map_block_end_page_failure_reasons));
+
   return ZX_OK;
 }
 

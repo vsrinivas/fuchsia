@@ -79,6 +79,10 @@ std::string GetRatePropertyName(BlockOperationType operation_type,
   return name + ".issued_" + nested_name + ".average_rate";
 }
 
+std::string GetMapBlockEndPageFailureReasonPropertyName(int reason) {
+  return "nand.map_block_end_page_failure_reason." + std::to_string(reason);
+}
+
 BlockOperationProperties MakePropertyForBlockOperation(inspect::Node& root,
                                                        BlockOperationType block_operation) {
   auto count = root.CreateUint(GetCounterPropertyName(block_operation), 0);
@@ -116,6 +120,8 @@ std::vector<std::string> Metrics::GetPropertyNames<inspect::UintProperty>() {
   property_names.push_back("nand.erase_block.max_wear");
   property_names.push_back("nand.initial_bad_blocks");
   property_names.push_back("nand.running_bad_blocks");
+  for (int i = 0; i < kReasonCount; ++i)
+    property_names.push_back(GetMapBlockEndPageFailureReasonPropertyName(i));
   return property_names;
 }
 
@@ -140,6 +146,10 @@ Metrics::Metrics()
   max_wear_ = root_.CreateUint("nand.erase_block.max_wear", 0);
   initial_bad_blocks_ = root_.CreateUint("nand.initial_bad_blocks", 0);
   running_bad_blocks_ = root_.CreateUint("nand.running_bad_blocks", 0);
+  for (int i = 0; i < kReasonCount; ++i) {
+    map_block_end_page_failure_reasons_[i] =
+        root_.CreateUint(GetMapBlockEndPageFailureReasonPropertyName(i), 0);
+  }
 }
 
 }  // namespace ftl

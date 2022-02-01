@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_FTL_FTL_PRIVATE_H_
+#define ZIRCON_SYSTEM_ULIB_FTL_FTL_PRIVATE_H_
 
-#include <stddef.h>         // For size_t definition.
+#include <stddef.h>  // For size_t definition.
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
 #include "ftl.h"
-#include "utils/kernel.h"   // For SEM definition.
+#include "utils/kernel.h"  // For SEM definition.
 
 //
 // Configuration.
 //
-#define FS_ASSERT TRUE        // TRUE enables filesys PfAssert()
+#define FS_ASSERT TRUE  // TRUE enables filesys PfAssert()
 
 //
 // Symbol Definitions.
@@ -31,8 +32,8 @@
 #endif
 
 // CRC32 Related Definitions
-#define CRC32_START 0xFFFFFFFF // starting CRC bit string
-#define CRC32_FINAL 0xDEBB20E3 // summed over data and CRC
+#define CRC32_START 0xFFFFFFFF  // starting CRC bit string
+#define CRC32_FINAL 0xDEBB20E3  // summed over data and CRC
 #define CRC32_UPDATE(crc, c) ((crc >> 8) ^ Crc32Tbl[(ui8)(crc ^ c)])
 
 //
@@ -68,18 +69,15 @@
   } /*lint -e(717) */                               \
   while (0)
 
+#define RD16_LE(addr) (ui16)(((ui16)((ui8*)(addr))[0] << 0) | ((ui16)((ui8*)(addr))[1] << 8))
 
-#define RD16_LE(addr)  (ui16)(((ui16)((ui8*)(addr))[0] <<  0) | \
-                              ((ui16)((ui8*)(addr))[1] <<  8))
+#define RD24_LE(addr)                                                      \
+  (ui32)(((ui32)((ui8*)(addr))[0] << 0) | ((ui32)((ui8*)(addr))[1] << 8) | \
+         ((ui32)((ui8*)(addr))[2] << 16))
 
-#define RD24_LE(addr)  (ui32)(((ui32)((ui8*)(addr))[0] <<  0) | \
-                              ((ui32)((ui8*)(addr))[1] <<  8) | \
-                              ((ui32)((ui8*)(addr))[2] << 16))
-
-#define RD32_LE(addr)  (ui32)(((ui32)((ui8*)(addr))[0] <<  0) | \
-                              ((ui32)((ui8*)(addr))[1] <<  8) | \
-                              ((ui32)((ui8*)(addr))[2] << 16) | \
-                              ((ui32)((ui8*)(addr))[3] << 24))
+#define RD32_LE(addr)                                                      \
+  (ui32)(((ui32)((ui8*)(addr))[0] << 0) | ((ui32)((ui8*)(addr))[1] << 8) | \
+         ((ui32)((ui8*)(addr))[2] << 16) | ((ui32)((ui8*)(addr))[3] << 24))
 
 // Circular Linked List Management Macros
 #define CIRC_LIST_INIT(lst) ((lst)->next_fwd = (lst)->next_bck = (lst))
@@ -87,33 +85,35 @@
 #define CIRC_LIST_HEAD(list) ((list)->next_bck)
 #define CIRC_LIST_AT_END(link, list) ((link) == (list))
 
-#define CIRC_LIST_INSERT(free_node, list_node)         \
-    do {                                               \
-        (free_node)->next_bck = (list_node)->next_bck; \
-        (free_node)->next_fwd = (list_node);           \
-        (list_node)->next_bck->next_fwd = (free_node); \
-        (list_node)->next_bck = (free_node);           \
-    } while (0)
+#define CIRC_LIST_INSERT(free_node, list_node)     \
+  do {                                             \
+    (free_node)->next_bck = (list_node)->next_bck; \
+    (free_node)->next_fwd = (list_node);           \
+    (list_node)->next_bck->next_fwd = (free_node); \
+    (list_node)->next_bck = (free_node);           \
+  } while (0)
 
-#define CIRC_LIST_APPEND(free_node, list_node)         \
-    do {                                               \
-        (free_node)->next_fwd = (list_node)->next_fwd; \
-        (free_node)->next_bck = (list_node);           \
-        (list_node)->next_fwd->next_bck = (free_node); \
-        (list_node)->next_fwd = (free_node);           \
-    } while (0)
+#define CIRC_LIST_APPEND(free_node, list_node)     \
+  do {                                             \
+    (free_node)->next_fwd = (list_node)->next_fwd; \
+    (free_node)->next_bck = (list_node);           \
+    (list_node)->next_fwd->next_bck = (free_node); \
+    (list_node)->next_fwd = (free_node);           \
+  } while (0)
 
-#define CIRC_NODE_REMOVE(link)                         \
-    do {                                               \
-        (link)->next_bck->next_fwd = (link)->next_fwd; \
-        (link)->next_fwd->next_bck = (link)->next_bck; \
-    } while (0)
+#define CIRC_NODE_REMOVE(link)                     \
+  do {                                             \
+    (link)->next_bck->next_fwd = (link)->next_fwd; \
+    (link)->next_fwd->next_bck = (link)->next_bck; \
+  } while (0)
 
 #if FS_ASSERT
 #define PF_DEBUG
-#define PfAssert(c)  ZX_DEBUG_ASSERT(c)
+#define PfAssert(c) ZX_DEBUG_ASSERT(c)
 #else
-#define PfAssert(c)  do { } while (0)
+#define PfAssert(c) \
+  do {              \
+  } while (0)
 #endif
 
 //
@@ -122,8 +122,8 @@
 
 // Circular Linked List Structure
 typedef struct circ_list {
-    struct circ_list* next_fwd;
-    struct circ_list* next_bck;
+  struct circ_list* next_fwd;
+  struct circ_list* next_bck;
 } CircLink;
 
 __BEGIN_CDECLS
@@ -168,3 +168,4 @@ void FsFree(void* ptr);
 
 __END_CDECLS
 
+#endif  // ZIRCON_SYSTEM_ULIB_FTL_FTL_PRIVATE_H_

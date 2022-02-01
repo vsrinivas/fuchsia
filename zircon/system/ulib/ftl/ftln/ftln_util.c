@@ -396,6 +396,9 @@ int FtlnReport(void* vol, ui32 msg, ...) {
       buf->ndm = ftl->stats;
       memset(&ftl->stats, 0, sizeof(ftl_ndm_stats));
 
+      memcpy(buf->map_block_end_page_failure_reasons, ftl->map_block_end_page_failure_reasons,
+             sizeof(buf->map_block_end_page_failure_reasons));
+
       // Return success.
       return 0;
     }

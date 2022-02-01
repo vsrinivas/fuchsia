@@ -47,6 +47,8 @@ class __EXPORT Volume {
     uint32_t wear_histogram[20];
     uint32_t num_blocks;
     int garbage_level;  // Percentage of free space that can be garbage-collected.
+
+    int map_block_end_page_failure_reasons[5];
   };
 
   struct Counters {

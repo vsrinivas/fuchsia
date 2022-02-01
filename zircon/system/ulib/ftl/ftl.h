@@ -94,6 +94,8 @@
 #define NDM_ECC 1
 #define NDM_ECC_VAL 2
 
+#define MAP_BLOCK_END_PAGE_FAILURE_REASON_COUNT 5
+
 // FsErrCode Error Code Assignments.
 enum FsErrorCode {
   NDM_OK = 0,  // No errors.
@@ -278,6 +280,8 @@ typedef struct {
   // samples.
   uint32_t wear_histogram[20];
   ftl_ndm_stats ndm;
+
+  int map_block_end_page_failure_reasons[MAP_BLOCK_END_PAGE_FAILURE_REASON_COUNT];
 } vstat;
 
 // FTL Interface Structure.

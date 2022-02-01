@@ -280,6 +280,12 @@ bool BlockDevice::InitFtl() {
     metrics_.max_wear().Set(stats.wear_count);
     metrics_.initial_bad_blocks().Set(stats.initial_bad_blocks);
     metrics_.running_bad_blocks().Set(stats.running_bad_blocks);
+
+    static_assert(std::size(stats.map_block_end_page_failure_reasons) == Metrics::kReasonCount);
+    for (int i = 0; i < Metrics::kReasonCount; ++i) {
+      metrics_.map_block_end_page_failure_reason(i).Set(
+          stats.map_block_end_page_failure_reasons[i]);
+    }
   }
 
   zxlogf(INFO, "FTL: InitFtl ok");

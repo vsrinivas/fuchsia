@@ -77,6 +77,8 @@ struct BlockOperationProperties {
 // Encapsulates all existing metrics, and the property list names for each.
 class Metrics {
  public:
+  static constexpr int kReasonCount = 5;
+
   // Each of this functions returns the name of the property for a count or rate for the given pair.
   // Unknown combinations will return an empty string.
   static std::string GetMaxWearPropertyName() { return "max_wear"; }
@@ -99,6 +101,11 @@ class Metrics {
 
   zx::vmo DuplicateInspectVmo() const { return inspector_.DuplicateVmo(); }
 
+  inspect::UintProperty& map_block_end_page_failure_reason(int reason) {
+    ZX_ASSERT(reason < kReasonCount);
+    return map_block_end_page_failure_reasons_[reason];
+  }
+
  private:
   auto& GetRoot() { return root_; }
 
@@ -119,6 +126,8 @@ class Metrics {
   BlockOperationProperties write_;
   BlockOperationProperties flush_;
   BlockOperationProperties trim_;
+
+  inspect::UintProperty map_block_end_page_failure_reasons_[kReasonCount];
 };
 
 }  // namespace ftl

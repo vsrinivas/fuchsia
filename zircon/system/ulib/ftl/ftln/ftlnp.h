@@ -221,6 +221,8 @@ struct ftln {
   char vol_name[FTL_NAME_MAX];  // Volume name.
 
   FtlLogger logger;
+
+  int map_block_end_page_failure_reasons[MAP_BLOCK_END_PAGE_FAILURE_REASON_COUNT];
 };
 
 __BEGIN_CDECLS

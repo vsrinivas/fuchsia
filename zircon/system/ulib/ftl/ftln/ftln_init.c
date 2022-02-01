@@ -290,8 +290,39 @@ static int build_map(FTLN ftl) {
     // Compute first page on block.
     pn = ftl->start_pn + b * ftl->pgs_per_blk;
 
+    // On some devices there is evidence that suggests we have prematurely
+    // stopped processing the last map block due to an intermittent
+    // failure. To hopefully catch this and the reason for failing, we will
+    // retry reading the last page and see if we succeed on the second
+    // attempt. If we do, then we will report that we succeeded (via Cobalt).
+    ui32 last_po = -1;
+    int attempts = 0;
+    int reason = -1;
+    int last_reason = -1;
+
     // For each page in map block, check if MPN array needs updating.
-    for (po = 0, bc = (ui32)-1; po < ftl->pgs_per_blk; ++po, ++pn) {
+    for (po = 0, bc = (ui32)-1;; ++po, ++pn) {
+    retry:
+      // If we're on the same page as the last one, this is a retry.
+      if (po == last_po) {
+        // Only try twice...
+        if (attempts == 2)
+          break;
+        ++attempts;
+        last_reason = reason;
+      } else {
+        if (last_reason != -1) {
+          // After retrying, we made progress, so we should log the reason for
+          // failing.
+          ++ftl->map_block_end_page_failure_reasons[last_reason];
+          last_reason = -1;
+        }
+        if (po >= ftl->pgs_per_blk)
+          break;
+        last_po = po;
+        attempts = 1;
+      }
+
 #if INC_FTL_NDM_MLC
       // For MLC devices, skip pages not written by the FTL, those
       // whose pair offset is lower than their offset.
@@ -311,12 +342,16 @@ static int build_map(FTLN ftl) {
         }
 
         // If invalid last page, break to advance to next map block.
-        if (status == NDM_PAGE_INVALID)
-          break;
+        if (status == NDM_PAGE_INVALID) {
+          reason = 0;
+          goto retry;
+        }
 
         // Else erased last page, break to advance to next map block.
-        else if (status == NDM_PAGE_ERASED)
-          break;
+        else if (status == NDM_PAGE_ERASED) {
+          reason = 1;
+          goto retry;
+        }
 
         // Remember highest valid map page on most recent map block.
         ftl->high_bc_mblk_po = po;
@@ -335,8 +370,10 @@ static int build_map(FTLN ftl) {
         }
 
         // Break to skip block if uncorrectable ECC error occurred.
-        if (status < 0)
-          break;
+        if (status < 0) {
+          reason = 2;
+          goto retry;
+        }
       }
 
       // If first page, retrieve block count. Otherwise compare with
@@ -351,7 +388,8 @@ static int build_map(FTLN ftl) {
         }
 
         // Should not be, but page is invalid. Break to skip block.
-        break;
+        reason = 3;
+        goto retry;
       }
 
       // Block count is retrieved by now.
@@ -370,7 +408,8 @@ static int build_map(FTLN ftl) {
         }
 
         // Should not be, but page is invalid. Break to skip block.
-        break;
+        reason = 4;
+        goto retry;
       }
 
       // If no entry for this MPN in array OR entry in same block as
