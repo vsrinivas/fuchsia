@@ -274,6 +274,16 @@ pub fn sys_prctl(
             }
             .into())
         }
+        PR_SET_PDEATHSIG => {
+            not_implemented!("PR_SET_PDEATHSIG");
+            Ok(SUCCESS)
+        }
+        PR_GET_NAME => {
+            let name = current_task.command.read();
+            let addr = UserAddress::from(arg2);
+            current_task.mm.write_memory(addr, name.to_bytes_with_nul())?;
+            Ok(SUCCESS)
+        }
         _ => {
             not_implemented!("prctl: Unknown option: 0x{:x}", option);
             error!(ENOSYS)

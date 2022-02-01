@@ -840,7 +840,7 @@ impl CurrentTask {
         self.mm
             .exec(resolved_elf.file.name.clone())
             .map_err(|status| from_status_like_fdio!(status))?;
-        let start_info = load_executable(self, resolved_elf)?;
+        let start_info = load_executable(self, resolved_elf, &path)?;
         self.registers = start_info.to_registers();
         self.dt_debug_address = start_info.dt_debug_address;
 
@@ -867,8 +867,28 @@ impl CurrentTask {
         // TODO: The termination signal is reset to SIGCHLD.
 
         self.thread_group.set_name(&path)?;
-        *self.command.write() = path;
+
+        // Get the basename of the path, which will be used as the name displayed with
+        // `prtcl(PR_GET_NAME)` and `/proc/self/stat`
+        let basename = if let Some(idx) = memchr::memrchr(b'/', path.to_bytes()) {
+            // SAFETY: Substring of a CString will contain no null bytes.
+            CString::new(&path.to_bytes()[idx + 1..]).unwrap()
+        } else {
+            path
+        };
+        self.set_command_name(basename);
         Ok(())
+    }
+
+    pub fn set_command_name(&mut self, name: CString) {
+        // Truncate to 16 bytes, including null byte.
+        let bytes = name.to_bytes();
+        *self.command.write() = if bytes.len() > 15 {
+            // SAFETY: Substring of a CString will contain no null bytes.
+            CString::new(&bytes[..15]).unwrap()
+        } else {
+            name
+        };
     }
 }
 

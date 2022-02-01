@@ -1,0 +1,15 @@
+{
+    include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
+    program: {
+        binary: "/data/tests/exec_test",
+        args: [
+            "--runfile_workspace_root=exec_test.runfiles",
+
+            // Disable NoExecPerm because execute rights are not yet checked.
+            // Disable InterpreterScript because the script has the path /bin/bash which is not
+            // where bash is located on the Android system image.
+            // Disable WithSiblingThread and FromSiblingThread as we don't handle multithreading.
+            "--gunit_filter=ExecTest.*:-ExecTest.NoExecPerm:ExecTest.InterpreterScript:ExecTest.WithSiblingThread:ExecTest.FromSiblingThread",
+        ],
+    },
+}

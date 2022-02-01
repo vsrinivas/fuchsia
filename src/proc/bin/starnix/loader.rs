@@ -18,6 +18,7 @@ use crate::{errno, error};
 
 fn populate_initial_stack(
     stack_vmo: &zx::Vmo,
+    path: &CStr,
     argv: &Vec<CString>,
     environ: &Vec<CString>,
     mut auxv: Vec<(u32, u64)>,
@@ -42,12 +43,18 @@ fn populate_initial_stack(
     let strings_addr = stack_pointer;
     write_stack(string_data.as_slice(), strings_addr)?;
 
+    // Write the path used with execve.
+    stack_pointer -= path.to_bytes_with_nul().len();
+    let execfn_addr = stack_pointer;
+    write_stack(path.to_bytes_with_nul(), execfn_addr)?;
+
     let mut random_seed = [0; 16];
     zx::cprng_draw(&mut random_seed);
     stack_pointer -= random_seed.len();
     let random_seed_addr = stack_pointer;
     write_stack(&random_seed, random_seed_addr)?;
 
+    auxv.push((AT_EXECFN, execfn_addr.ptr() as u64));
     auxv.push((AT_RANDOM, random_seed_addr.ptr() as u64));
     auxv.push((AT_NULL, 0));
 
@@ -346,6 +353,7 @@ fn resolve_elf(
 pub fn load_executable(
     current_task: &CurrentTask,
     resolved_elf: ResolvedElf,
+    original_path: &CStr,
 ) -> Result<ThreadStartInfo, Errno> {
     let main_elf = load_elf(resolved_elf.file, resolved_elf.vmo, &current_task.mm)?;
     let interp_elf = resolved_elf
@@ -394,6 +402,7 @@ pub fn load_executable(
     ];
     let stack = populate_initial_stack(
         &stack_vmo,
+        original_path,
         &resolved_elf.argv,
         &resolved_elf.environ,
         auxv,
@@ -453,11 +462,13 @@ mod tests {
         let stack_base = UserAddress::from_ptr(0x3000_0000);
         let original_stack_start_addr = UserAddress::from_ptr(0x3000_1000);
 
+        let path = CString::new(&b""[..]).unwrap();
         let argv = &vec![];
         let environ = &vec![];
 
         let stack_start_addr = populate_initial_stack(
             &stack_vmo,
+            &path,
             &argv,
             &environ,
             vec![],
@@ -469,6 +480,8 @@ mod tests {
         let argc_size: usize = 8;
         let argv_terminator_size: usize = 8;
         let environ_terminator_size: usize = 8;
+        let aux_execfn_terminator_size: usize = 8;
+        let aux_execfn: usize = 16;
         let aux_random: usize = 16;
         let aux_null: usize = 16;
         let random_seed: usize = 16;
@@ -476,6 +489,8 @@ mod tests {
         let mut payload_size = argc_size
             + argv_terminator_size
             + environ_terminator_size
+            + aux_execfn_terminator_size
+            + aux_execfn
             + aux_random
             + aux_null
             + random_seed;

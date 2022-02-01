@@ -42,7 +42,7 @@ gvisor_tests = [
   "eventfd_test",
 
   # "exec_binary_test",
-  # "exec_test",
+  "exec_test",
   "exit_test",
   "fchdir_test",
 
