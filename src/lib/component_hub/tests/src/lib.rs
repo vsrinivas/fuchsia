@@ -61,9 +61,9 @@ async fn show() {
     let field1 = &resolved.config[0];
     let field2 = &resolved.config[1];
     assert_eq!(field1.key, "my_string");
-    assert_eq!(field1.value, "Single(Text(\"hello, world!\"))");
+    assert_eq!(field1.value, "\"hello, world!\"");
     assert_eq!(field2.key, "my_uint8");
-    assert_eq!(field2.value, "Single(Unsigned8(255))");
+    assert_eq!(field2.value, "255");
 
     // We do not verify the contents of the execution, because they are largely dependent on
     // the Rust Test Runner

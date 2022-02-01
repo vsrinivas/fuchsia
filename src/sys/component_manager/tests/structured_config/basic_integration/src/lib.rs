@@ -57,30 +57,27 @@ async fn resolve_structured_config_in_child() {
         files.map(|d| d.unwrap().file_name().into_string().unwrap()).collect();
     files.sort();
 
-    let my_flag_hub_value =
-        if expected_my_flag() { "Single(Flag(true))" } else { "Single(Flag(false))" };
-
     let expected_fields = vec![
-        ("my_flag", my_flag_hub_value),
-        ("my_int16", "Single(Signed16(-32766))"),
-        ("my_int32", "Single(Signed32(-2000000000))"),
-        ("my_int64", "Single(Signed64(-4000000000))"),
-        ("my_int8", "Single(Signed8(-127))"),
-        ("my_string", "Single(Text(\"hello, world!\"))"),
-        ("my_uint16", "Single(Unsigned16(65535))"),
-        ("my_uint32", "Single(Unsigned32(4000000000))"),
-        ("my_uint64", "Single(Unsigned64(8000000000))"),
-        ("my_uint8", "Single(Unsigned8(255))"),
-        ("my_vector_of_flag", "List(FlagList([true, false]))"),
-        ("my_vector_of_int16", "List(Signed16List([-2, -3, 4]))"),
-        ("my_vector_of_int32", "List(Signed32List([-3, -4, 5]))"),
-        ("my_vector_of_int64", "List(Signed64List([-4, -5, 6]))"),
-        ("my_vector_of_int8", "List(Signed8List([-1, -2, 3]))"),
-        ("my_vector_of_string", "List(TextList([\"hello, world!\", \"hello, again!\"]))"),
-        ("my_vector_of_uint16", "List(Unsigned16List([2, 3, 4]))"),
-        ("my_vector_of_uint32", "List(Unsigned32List([3, 4, 5]))"),
-        ("my_vector_of_uint64", "List(Unsigned64List([4, 5, 6]))"),
-        ("my_vector_of_uint8", "List(Unsigned8List([1, 2, 3]))"),
+        ("my_flag", if expected_my_flag() { "true" } else { "false" }),
+        ("my_int16", "-32766"),
+        ("my_int32", "-2000000000"),
+        ("my_int64", "-4000000000"),
+        ("my_int8", "-127"),
+        ("my_string", "\"hello, world!\""),
+        ("my_uint16", "65535"),
+        ("my_uint32", "4000000000"),
+        ("my_uint64", "8000000000"),
+        ("my_uint8", "255"),
+        ("my_vector_of_flag", "[true, false]"),
+        ("my_vector_of_int16", "[-2, -3, 4]"),
+        ("my_vector_of_int32", "[-3, -4, 5]"),
+        ("my_vector_of_int64", "[-4, -5, 6]"),
+        ("my_vector_of_int8", "[-1, -2, 3]"),
+        ("my_vector_of_string", "[\"hello, world!\", \"hello, again!\"]"),
+        ("my_vector_of_uint16", "[2, 3, 4]"),
+        ("my_vector_of_uint32", "[3, 4, 5]"),
+        ("my_vector_of_uint64", "[4, 5, 6]"),
+        ("my_vector_of_uint8", "[1, 2, 3]"),
     ];
 
     let expected_files: Vec<&str> = expected_fields.iter().map(|field| field.0).collect();

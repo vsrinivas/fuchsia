@@ -304,7 +304,7 @@ impl Hub {
     ) -> Result<(), ModelError> {
         let config_dir = pfs::simple();
         for field in &config.fields {
-            let value = format!("{:?}", field.value);
+            let value = format!("{}", field.value);
             config_dir.add_node(
                 &field.key,
                 read_only_static(value.into_bytes()),
@@ -1080,9 +1080,9 @@ mod tests {
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["logging", "tags", "verbosity"], list_directory(&config_dir).await);
-        assert_eq!("Single(Flag(true))", read_file(&config_dir, "logging").await);
-        assert_eq!("Single(Text(\"DEBUG\"))", read_file(&config_dir, "verbosity").await);
-        assert_eq!("List(TextList([\"foo\", \"bar\"]))", read_file(&config_dir, "tags").await);
+        assert_eq!("true", read_file(&config_dir, "logging").await);
+        assert_eq!("\"DEBUG\"", read_file(&config_dir, "verbosity").await);
+        assert_eq!("[\"foo\", \"bar\"]", read_file(&config_dir, "tags").await);
     }
 
     #[fuchsia::test]

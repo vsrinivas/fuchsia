@@ -980,6 +980,15 @@ pub enum Value {
     List(ListValue),
 }
 
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Single(sv) => sv.fmt(f),
+            Value::List(lv) => lv.fmt(f),
+        }
+    }
+}
+
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_union = "fconfig::SingleValue")]
 pub enum SingleValue {
@@ -995,6 +1004,24 @@ pub enum SingleValue {
     Text(String),
 }
 
+impl fmt::Display for SingleValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use SingleValue::*;
+        match self {
+            Flag(v) => write!(f, "{}", v),
+            Unsigned8(v) => write!(f, "{}", v),
+            Unsigned16(v) => write!(f, "{}", v),
+            Unsigned32(v) => write!(f, "{}", v),
+            Unsigned64(v) => write!(f, "{}", v),
+            Signed8(v) => write!(f, "{}", v),
+            Signed16(v) => write!(f, "{}", v),
+            Signed32(v) => write!(f, "{}", v),
+            Signed64(v) => write!(f, "{}", v),
+            Text(v) => write!(f, "\"{}\"", v),
+        }
+    }
+}
+
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_union = "fconfig::ListValue")]
 pub enum ListValue {
@@ -1008,6 +1035,47 @@ pub enum ListValue {
     Signed32List(Vec<i32>),
     Signed64List(Vec<i64>),
     TextList(Vec<String>),
+}
+
+impl fmt::Display for ListValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use ListValue::*;
+        macro_rules! print_list {
+            ($f:ident, $list:ident) => {{
+                $f.write_str("[")?;
+
+                for (i, item) in $list.iter().enumerate() {
+                    if i > 0 {
+                        $f.write_str(", ")?;
+                    }
+                    write!($f, "{}", item)?;
+                }
+
+                $f.write_str("]")
+            }};
+        }
+        match self {
+            FlagList(l) => print_list!(f, l),
+            Unsigned8List(l) => print_list!(f, l),
+            Unsigned16List(l) => print_list!(f, l),
+            Unsigned32List(l) => print_list!(f, l),
+            Unsigned64List(l) => print_list!(f, l),
+            Signed8List(l) => print_list!(f, l),
+            Signed16List(l) => print_list!(f, l),
+            Signed32List(l) => print_list!(f, l),
+            Signed64List(l) => print_list!(f, l),
+            TextList(l) => {
+                f.write_str("[")?;
+                for (i, item) in l.iter().enumerate() {
+                    if i > 0 {
+                        f.write_str(", ")?;
+                    }
+                    write!(f, "\"{}\"", item)?;
+                }
+                f.write_str("]")
+            }
+        }
+    }
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
