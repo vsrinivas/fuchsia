@@ -216,6 +216,13 @@ pub struct Encoder<'a, 'b> {
 /// During migrations, this controls the default write path.
 #[inline]
 fn default_encode_context() -> Context {
+    Context { wire_format_version: WireFormatVersion::V2 }
+}
+
+/// The default context for persistent encoding.
+/// During migrations, this controls the default write path.
+#[inline]
+fn default_persistent_encode_context() -> Context {
     Context { wire_format_version: WireFormatVersion::V1 }
 }
 
@@ -3886,7 +3893,7 @@ impl PersistentHeader {
     /// Creates a new `PersistentHeader` with the default encode context and magic number.
     #[inline]
     pub fn new() -> Self {
-        PersistentHeader::new_full(&default_encode_context(), MAGIC_NUMBER_INITIAL)
+        PersistentHeader::new_full(&default_persistent_encode_context(), MAGIC_NUMBER_INITIAL)
     }
     /// Creates a new `PersistentHeader` with a specific context and magic number.
     #[inline]
@@ -3976,7 +3983,12 @@ pub fn encode_persistent<T: Persistable>(body: &mut T) -> Result<Vec<u8>> {
     let msg = &mut PersistentMessage { header: PersistentHeader::new(), body };
     let mut combined_bytes = Vec::<u8>::new();
     let mut handles = Vec::<HandleDisposition<'static>>::new();
-    Encoder::encode(&mut combined_bytes, &mut handles, msg)?;
+    Encoder::encode_with_context(
+        &default_persistent_encode_context(),
+        &mut combined_bytes,
+        &mut handles,
+        msg,
+    )?;
     debug_assert!(handles.is_empty(), "Persistent message contains handles");
     Ok(combined_bytes)
 }
@@ -3989,7 +4001,12 @@ pub fn create_persistent_header() -> PersistentHeader {
 /// Encode PersistentHeader to persistent binary form.
 pub fn encode_persistent_header(header: &mut PersistentHeader) -> Result<Vec<u8>> {
     let mut header_bytes = Vec::<u8>::new();
-    Encoder::encode(&mut header_bytes, &mut Vec::new(), header)?;
+    Encoder::encode_with_context(
+        &default_persistent_encode_context(),
+        &mut header_bytes,
+        &mut Vec::new(),
+        header,
+    )?;
     Ok(header_bytes)
 }
 
