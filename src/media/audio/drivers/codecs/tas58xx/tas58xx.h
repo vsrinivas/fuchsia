@@ -45,8 +45,11 @@ class Tas58xx : public SimpleCodecServer {
   GainFormat GetGainFormat() override;
   GainState GetGainState() override;
   void SetGainState(GainState state) override;
-  bool SupportsAgl() override { return true; }
-  void SetAgl(bool enable_agl) override;
+  void GetProcessingElements(
+      fuchsia::hardware::audio::Codec::GetProcessingElementsCallback callback) override;
+  void SetProcessingElement(
+      uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementControl control,
+      fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback) override;
 
   std::atomic<bool> initialized_ = false;  // Protected for unit tests.
 
@@ -54,6 +57,7 @@ class Tas58xx : public SimpleCodecServer {
   static constexpr float kMaxGain = 24.0;
   static constexpr float kMinGain = -103.0;
   static constexpr float kGainStep = 0.5;
+  static constexpr uint64_t kAglPeId = 1;
 
   zx_status_t WriteReg(uint8_t reg, uint8_t value) TA_REQ(lock_);
   zx_status_t WriteRegs(uint8_t* regs, size_t count) TA_REQ(lock_);

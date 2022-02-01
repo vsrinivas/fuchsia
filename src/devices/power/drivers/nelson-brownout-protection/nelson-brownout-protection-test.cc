@@ -17,6 +17,8 @@
 
 namespace brownout_protection {
 
+namespace audio_fidl = ::fuchsia::hardware::audio;
+
 class FakeCodec : public audio::SimpleCodecServer {
  public:
   FakeCodec(zx_device_t* parent) : SimpleCodecServer(parent) {}
@@ -43,8 +45,33 @@ class FakeCodec : public audio::SimpleCodecServer {
   zx_status_t Start() override { return ZX_OK; }
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
-  bool SupportsAgl() override { return true; }
-  void SetAgl(bool enable_agl) override { agl_enabled_ = enable_agl; }
+  void GetProcessingElements(audio_fidl::Codec::GetProcessingElementsCallback callback) override {
+    audio_fidl::ProcessingElement pe;
+    pe.set_id(kAglPeId);
+    pe.set_type(audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
+
+    std::vector<audio_fidl::ProcessingElement> pes;
+    pes.emplace_back(std::move(pe));
+    audio_fidl::SignalProcessing_GetProcessingElements_Response response(std::move(pes));
+    audio_fidl::SignalProcessing_GetProcessingElements_Result result;
+    result.set_response(std::move(response));
+    callback(std::move(result));
+  }
+  void SetProcessingElement(
+      uint64_t processing_element_id, audio_fidl::ProcessingElementControl control,
+      audio_fidl::SignalProcessing::SetProcessingElementCallback callback) override {
+    ASSERT_EQ(processing_element_id, kAglPeId);
+    agl_enabled_ = control.has_enabled() && control.enabled();
+    callback(audio_fidl::SignalProcessing_SetProcessingElement_Result::WithResponse(
+        audio_fidl::SignalProcessing_SetProcessingElement_Response()));
+  }
+  void GetTopologies(audio_fidl::SignalProcessing::GetTopologiesCallback callback) override {
+    callback(audio_fidl::SignalProcessing_GetTopologies_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
+  void SetTopology(uint64_t topology_id,
+                   audio_fidl::SignalProcessing::SetTopologyCallback callback) override {
+    callback(audio_fidl::SignalProcessing_SetTopology_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
   audio::DaiSupportedFormats GetDaiFormats() override { return {}; }
   zx::status<audio::CodecFormatInfo> SetDaiFormat(const audio::DaiFormat& format) override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -53,6 +80,9 @@ class FakeCodec : public audio::SimpleCodecServer {
   audio::GainState GetGainState() override { return gain_state; }
   void SetGainState(audio::GainState state) override { gain_state = state; }
   inspect::Inspector& inspect() { return SimpleCodecServer::inspect(); }
+
+ private:
+  static constexpr uint64_t kAglPeId = 1;
 
   audio::GainState gain_state = {};
   // agl_enabled_ is accessed from different threads in SetAgl() and agl_enabled().

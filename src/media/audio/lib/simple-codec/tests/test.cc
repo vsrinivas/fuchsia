@@ -41,8 +41,26 @@ class TestCodec : public SimpleCodecServer {
   zx_status_t Start() override { return ZX_OK; }
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
-  bool SupportsAgl() override { return true; }
-  void SetAgl(bool enable_agl) override { agl_mode_ = enable_agl; }
+  void GetProcessingElements(audio_fidl::Codec::GetProcessingElementsCallback callback) override {
+    audio_fidl::ProcessingElement pe;
+    pe.set_id(kAglPeId);
+    pe.set_type(audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
+
+    std::vector<audio_fidl::ProcessingElement> pes;
+    pes.emplace_back(std::move(pe));
+    audio_fidl::SignalProcessing_GetProcessingElements_Response response(std::move(pes));
+    audio_fidl::SignalProcessing_GetProcessingElements_Result result;
+    result.set_response(std::move(response));
+    callback(std::move(result));
+  }
+  void SetProcessingElement(
+      uint64_t processing_element_id, audio_fidl::ProcessingElementControl control,
+      audio_fidl::SignalProcessing::SetProcessingElementCallback callback) override {
+    ASSERT_EQ(processing_element_id, kAglPeId);
+    agl_mode_ = control.has_enabled() && control.enabled();
+    callback(audio_fidl::SignalProcessing_SetProcessingElement_Result::WithResponse(
+        audio_fidl::SignalProcessing_SetProcessingElement_Response()));
+  }
   DaiSupportedFormats GetDaiFormats() override { return {}; }
   zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -55,6 +73,7 @@ class TestCodec : public SimpleCodecServer {
   inspect::Inspector& inspect() { return SimpleCodecServer::inspect(); }
 
  private:
+  static constexpr uint64_t kAglPeId = 1;
   GainState gain_state_ = {};
   bool agl_mode_ = false;
 };
@@ -221,7 +240,10 @@ TEST_F(SimpleCodecTest, AglStateServerViaSimpleCodecClientNoSupport) {
   auto fake_parent = MockDevice::FakeRootParent();
   struct TestCodecNoAgl : public TestCodec {
     explicit TestCodecNoAgl(zx_device_t* parent) : TestCodec(parent) {}
-    bool SupportsAgl() override { return false; }
+    void GetProcessingElements(audio_fidl::Codec::GetProcessingElementsCallback callback) override {
+      callback(
+          audio_fidl::SignalProcessing_GetProcessingElements_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+    }
   };
 
   ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodecNoAgl>(fake_parent.get()));

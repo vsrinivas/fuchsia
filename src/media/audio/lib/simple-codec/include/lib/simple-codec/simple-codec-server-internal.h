@@ -31,8 +31,6 @@ class SimpleCodecServerInternal {
  private:
   using Codec = ::fuchsia::hardware::audio::Codec;
 
-  static constexpr uint64_t agl_pe_id_ = 1;
-
   friend class SimpleCodecServer;
   friend class SimpleCodecServerInstance<T>;
 
@@ -44,28 +42,31 @@ class SimpleCodecServerInternal {
   void Start(Codec::StartCallback callback, SimpleCodecServerInstance<T>* instance);
   void GetInfo(Codec::GetInfoCallback callback);
   void GetHealthState(Codec::GetHealthStateCallback callback) { callback({}); }
-  void GetProcessingElements(Codec::GetProcessingElementsCallback callback);
+  void GetProcessingElements(Codec::GetProcessingElementsCallback callback) {
+    static_cast<T*>(this)->GetProcessingElements(std::move(callback));
+  }
   void SetProcessingElement(
-      uint64_t processing_element_id, ::fuchsia::hardware::audio::ProcessingElementControl control,
-      ::fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback);
-  void GetTopologies(::fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) {
-    callback(fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result::WithErr(
-        ZX_ERR_NOT_SUPPORTED));
+      uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementControl control,
+      fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback) {
+    static_cast<T*>(this)->SetProcessingElement(processing_element_id, std::move(control),
+                                                std::move(callback));
+  }
+  void GetTopologies(fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) {
+    static_cast<T*>(this)->GetTopologies(std::move(callback));
   }
   void SetTopology(uint64_t topology_id,
-                   ::fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) {
-    callback(fuchsia::hardware::audio::SignalProcessing_SetTopology_Result::WithErr(
-        ZX_ERR_NOT_SUPPORTED));
+                   fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) {
+    static_cast<T*>(this)->SetTopology(topology_id, std::move(callback));
   }
   void IsBridgeable(Codec::IsBridgeableCallback callback);
   void SetBridgedMode(bool enable_bridged_mode);
   void GetDaiFormats(Codec::GetDaiFormatsCallback callback);
-  void SetDaiFormat(::fuchsia::hardware::audio::DaiFormat format,
+  void SetDaiFormat(fuchsia::hardware::audio::DaiFormat format,
                     Codec::SetDaiFormatCallback callback);
   void GetGainFormat(Codec::GetGainFormatCallback callback);
   void WatchGainState(Codec::WatchGainStateCallback callback,
                       SimpleCodecServerInstance<T>* instance);
-  void SetGainState(::fuchsia::hardware::audio::GainState state);
+  void SetGainState(fuchsia::hardware::audio::GainState state);
   void GetPlugDetectCapabilities(Codec::GetPlugDetectCapabilitiesCallback callback);
   void WatchPlugState(Codec::WatchPlugStateCallback callback);
 
@@ -80,7 +81,7 @@ class SimpleCodecServerInternal {
 
 template <class T>
 class SimpleCodecServerInstance
-    : public ::fuchsia::hardware::audio::Codec,
+    : public fuchsia::hardware::audio::Codec,
       public fbl::DoublyLinkedListable<std::unique_ptr<SimpleCodecServerInstance<T>>> {
  public:
   SimpleCodecServerInstance(zx::channel channel, async_dispatcher_t* dispatcher,
@@ -93,7 +94,7 @@ class SimpleCodecServerInstance
   friend class SimpleCodecServerInternal<T>;
 
   void OnUnbound() { parent_->OnUnbound(this); }
-  void GainStateUpdated(::fuchsia::hardware::audio::GainState gain_state);
+  void GainStateUpdated(fuchsia::hardware::audio::GainState gain_state);
 
   void Reset(ResetCallback callback) override { parent_->Reset(std::move(callback), this); }
   void Stop(StopCallback callback) override { parent_->Stop(std::move(callback), this); }
@@ -106,18 +107,17 @@ class SimpleCodecServerInstance
     parent_->GetProcessingElements(std::move(callback));
   }
   void SetProcessingElement(
-      uint64_t processing_element_id, ::fuchsia::hardware::audio::ProcessingElementControl control,
-      ::fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback)
-      override {
+      uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementControl control,
+      fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback) override {
     parent_->SetProcessingElement(processing_element_id, std::move(control), std::move(callback));
   }
   void GetTopologies(
-      ::fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) override {
+      fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) override {
     parent_->GetTopologies(std::move(callback));
   }
   void SetTopology(
       uint64_t topology_id,
-      ::fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) override {
+      fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) override {
     parent_->SetTopology(topology_id, std::move(callback));
   }
   void IsBridgeable(IsBridgeableCallback callback) override {
@@ -129,7 +129,7 @@ class SimpleCodecServerInstance
   void GetDaiFormats(GetDaiFormatsCallback callback) override {
     parent_->GetDaiFormats(std::move(callback));
   }
-  void SetDaiFormat(::fuchsia::hardware::audio::DaiFormat format,
+  void SetDaiFormat(fuchsia::hardware::audio::DaiFormat format,
                     SetDaiFormatCallback callback) override {
     parent_->SetDaiFormat(std::move(format), std::move(callback));
   }
@@ -139,7 +139,7 @@ class SimpleCodecServerInstance
   void WatchGainState(WatchGainStateCallback callback) override {
     parent_->WatchGainState(std::move(callback), this);
   }
-  void SetGainState(::fuchsia::hardware::audio::GainState state) override {
+  void SetGainState(fuchsia::hardware::audio::GainState state) override {
     parent_->SetGainState(std::move(state));
   }
   void GetPlugDetectCapabilities(GetPlugDetectCapabilitiesCallback callback) override {
@@ -148,7 +148,7 @@ class SimpleCodecServerInstance
   void WatchPlugState(WatchPlugStateCallback callback) override;
 
   SimpleCodecServerInternal<T>* parent_;
-  fidl::Binding<::fuchsia::hardware::audio::Codec> binding_;
+  fidl::Binding<fuchsia::hardware::audio::Codec> binding_;
   bool watch_plug_state_first_time_ = true;
   bool gain_state_updated_ = true;  // Return the current gain state on the first call.
   std::optional<WatchGainStateCallback> gain_state_callback_;

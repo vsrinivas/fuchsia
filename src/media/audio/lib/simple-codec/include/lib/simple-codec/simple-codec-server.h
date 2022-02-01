@@ -26,7 +26,7 @@ namespace audio {
 
 class SimpleCodecServer;
 using SimpleCodecServerDeviceType =
-    ddk::Device<SimpleCodecServer, ddk::Messageable<::fuchsia_hardware_audio::CodecConnect>::Mixin>;
+    ddk::Device<SimpleCodecServer, ddk::Messageable<fuchsia_hardware_audio::CodecConnect>::Mixin>;
 
 // This class provides an implementation of the audio codec protocol to be subclassed by codec
 // drivers. The subclass must implement all the virtual methods and use Create() for construction.
@@ -104,12 +104,28 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
       zxlogf(ERROR, "bridged mode not supported");
     }
   }
-  // Default to no support for AGL.
-  virtual bool SupportsAgl() { return false; }
-  virtual void SetAgl(bool enable_agl) {
-    if (enable_agl) {
-      zxlogf(ERROR, "AGL not supported");
-    }
+  // Default to no support for custom signal processing API usage.
+  virtual void GetProcessingElements(
+      fuchsia::hardware::audio::Codec::GetProcessingElementsCallback callback) {
+    callback(fuchsia::hardware::audio::SignalProcessing_GetProcessingElements_Result::WithErr(
+        ZX_ERR_NOT_SUPPORTED));
+  }
+  virtual void SetProcessingElement(
+      uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementControl control,
+      fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback) {
+    callback(fuchsia::hardware::audio::SignalProcessing_SetProcessingElement_Result::WithErr(
+        ZX_ERR_NOT_SUPPORTED));
+  }
+  virtual void GetTopologies(
+      fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) {
+    callback(fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result::WithErr(
+        ZX_ERR_NOT_SUPPORTED));
+  }
+  virtual void SetTopology(
+      uint64_t topology_id,
+      fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) {
+    callback(fuchsia::hardware::audio::SignalProcessing_SetTopology_Result::WithErr(
+        ZX_ERR_NOT_SUPPORTED));
   }
 
   zx_status_t CodecConnect(zx::channel(channel));
