@@ -6,9 +6,11 @@
 
 //! Library for resolving and encoding the runtime configuration values of a component.
 
-use cm_rust::{ConfigDecl, ConfigField as ConfigFieldDecl, ConfigNestedValueType, ConfigValueType};
+use cm_rust::{
+    ConfigDecl, ConfigField as ConfigFieldDecl, ConfigNestedValueType, ConfigValueType, ListValue,
+    SingleValue, Value, ValueSpec, ValuesData,
+};
 use dynfidl::{BasicField, Field, Structure, VectorField};
-use fidl_fuchsia_component_config::{ListValue, SingleValue, Value, ValueSpec, ValuesData};
 use thiserror::Error;
 
 /// The resolved configuration for a component.
@@ -24,26 +26,24 @@ impl ConfigFields {
     /// Resolve a component's configuration values according to its declared schema. Should not fail if
     /// `decl` and `specs` are well-formed.
     pub fn resolve(decl: &ConfigDecl, specs: ValuesData) -> Result<Self, ResolutionError> {
-        if Some(&decl.declaration_checksum) != specs.declaration_checksum.as_ref() {
+        if decl.declaration_checksum != specs.declaration_checksum {
             return Err(ResolutionError::ChecksumFailure {
                 expected: decl.declaration_checksum.clone(),
-                received: specs.declaration_checksum,
+                received: specs.declaration_checksum.clone(),
             });
         }
 
-        let specs_fields = specs.values.ok_or(ResolutionError::MissingValues)?;
-
-        if decl.fields.len() != specs_fields.len() {
+        if decl.fields.len() != specs.values.len() {
             return Err(ResolutionError::WrongNumberOfValues {
                 expected: decl.fields.len(),
-                received: specs_fields.len(),
+                received: specs.values.len(),
             });
         }
 
         let fields = decl
             .fields
             .iter()
-            .zip(specs_fields.into_iter())
+            .zip(specs.values.into_iter())
             .map(|(decl_field, spec_field)| {
                 ConfigField::resolve(spec_field, &decl_field).map_err(|source| {
                     ResolutionError::InvalidValue { key: decl_field.key.clone(), source }
@@ -126,10 +126,6 @@ impl ConfigFields {
                     // TODO(https://fxbug.dev/88174) improve string representation too
                     VectorField::UInt8VectorVector(s.into_iter().map(|s| s.into_bytes()).collect()),
                 )),
-                other => unreachable!(
-                    "resolution somehow succeeded on an unrecognized value variant: {:?}",
-                    other
-                ),
             };
         }
 
@@ -153,10 +149,9 @@ pub struct ConfigField {
 
 impl ConfigField {
     fn resolve(spec_field: ValueSpec, decl_field: &ConfigFieldDecl) -> Result<Self, ValueError> {
-        let resolved_value = spec_field.value.ok_or(ValueError::MissingValue)?;
         let key = decl_field.key.clone();
 
-        match (&resolved_value, &decl_field.type_) {
+        match (&spec_field.value, &decl_field.type_) {
             (Value::Single(SingleValue::Flag(_)), ConfigValueType::Bool)
             | (Value::Single(SingleValue::Unsigned8(_)), ConfigValueType::Uint8)
             | (Value::Single(SingleValue::Unsigned16(_)), ConfigValueType::Uint16)
@@ -219,7 +214,7 @@ impl ConfigField {
             }
         }
 
-        Ok(ConfigField { key, value: resolved_value })
+        Ok(ConfigField { key, value: spec_field.value })
     }
 }
 
@@ -227,10 +222,7 @@ impl ConfigField {
 #[allow(missing_docs)]
 pub enum ResolutionError {
     #[error("Checksums in declaration and value file do not match. Expected {expected:04x?}, received {received:04x?}")]
-    ChecksumFailure { expected: Vec<u8>, received: Option<Vec<u8>> },
-
-    #[error("Value file is missing a list of values.")]
-    MissingValues,
+    ChecksumFailure { expected: Vec<u8>, received: Vec<u8> },
 
     #[error("Value file has a different number of values ({received}) than declaration has fields ({expected}).")]
     WrongNumberOfValues { expected: usize, received: usize },
@@ -246,9 +238,6 @@ pub enum ResolutionError {
 #[derive(Clone, Debug, Error, PartialEq)]
 #[allow(missing_docs)]
 pub enum ValueError {
-    #[error("Value definition is missing an actual value.")]
-    MissingValue,
-
     #[error("Value of type `{received}` does not match declaration of type {expected}.")]
     TypeMismatch { expected: String, received: String },
 
@@ -269,7 +258,6 @@ pub enum ValueError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_component_config::{ListValue, SingleValue, Value};
     use fidl_fuchsia_component_config_ext::{config_decl, values_data};
 
     use ListValue::*;
@@ -394,38 +382,18 @@ mod tests {
     #[test]
     fn checksums_must_match() {
         let expected = vec![0x50, 0x12, 0x82];
-        let actual = Some(vec![0x50, 0x12]);
-        let decl = config_decl! { ck@ expected.clone(), };
-        let specs = ValuesData { declaration_checksum: actual.clone(), ..ValuesData::EMPTY };
-        assert_eq!(
-            ConfigFields::resolve(&decl, specs).unwrap_err(),
-            ResolutionError::ChecksumFailure { expected, received: actual }
-        );
-    }
-
-    #[test]
-    fn missing_checksum_fails() {
-        let expected = vec![0x50, 0x12, 0x82];
-        let decl = config_decl! { ck@ expected.clone(), };
-        assert_eq!(
-            ConfigFields::resolve(&decl, ValuesData::EMPTY).unwrap_err(),
-            ResolutionError::ChecksumFailure { expected, received: None }
-        );
-    }
-
-    #[test]
-    fn must_provide_values() {
+        let received = vec![0x50, 0x12];
         let decl = config_decl! {
-            ck@ vec![0x50, 0x12, 0x82],
+            ck@ expected.clone(),
             foo: { bool },
         };
-        let specs = ValuesData {
-            declaration_checksum: Some(decl.declaration_checksum.clone()),
-            ..ValuesData::EMPTY
-        };
+        let specs = values_data! [
+            ck@ received.clone(),
+            Value::Single(SingleValue::Flag(true)),
+        ];
         assert_eq!(
             ConfigFields::resolve(&decl, specs).unwrap_err(),
-            ResolutionError::MissingValues
+            ResolutionError::ChecksumFailure { expected, received }
         );
     }
 
@@ -452,34 +420,12 @@ mod tests {
             ck@ vec![0x50, 0x12, 0x82],
             foo: { bool },
         };
-        let specs = ValuesData {
-            declaration_checksum: Some(decl.declaration_checksum.clone()),
-            values: Some(vec![]),
-            ..ValuesData::EMPTY
+        let specs = values_data! {
+            ck@ vec![0x50, 0x12, 0x82],
         };
         assert_eq!(
             ConfigFields::resolve(&decl, specs).unwrap_err(),
             ResolutionError::WrongNumberOfValues { expected: 1, received: 0 }
-        );
-    }
-
-    #[test]
-    fn missing_value_fails() {
-        let decl = config_decl! {
-            ck@ vec![0x50, 0x12, 0x82],
-            foo: { bool },
-        };
-        let specs = ValuesData {
-            declaration_checksum: Some(decl.declaration_checksum.clone()),
-            values: Some(vec![ValueSpec { ..ValueSpec::EMPTY }]),
-            ..ValuesData::EMPTY
-        };
-        assert_eq!(
-            ConfigFields::resolve(&decl, specs).unwrap_err(),
-            ResolutionError::InvalidValue {
-                key: "foo".to_string(),
-                source: ValueError::MissingValue
-            }
         );
     }
 
@@ -576,7 +522,7 @@ mod tests {
                     List(TextList(vec![])),
                 ] {
                     let should_succeed = matches!(value, $valid_spec);
-                    let spec = ValueSpec { value: Some(value), ..ValueSpec::EMPTY };
+                    let spec = ValueSpec { value };
                     match ConfigField::resolve(spec, &decl) {
                         Ok(..) if should_succeed => (),
                         Err(ValueError::TypeMismatch { .. }) if !should_succeed => (),

@@ -43,7 +43,7 @@ pub struct ResolvedComponent {
     pub resolved_url: String,
     pub decl: cm_rust::ComponentDecl,
     pub package: Option<fsys::Package>,
-    pub config_values: Option<fconfig::ValuesData>,
+    pub config_values: Option<cm_rust::ValuesData>,
 }
 
 /// Resolves a component URL using a resolver selected based on the URL's scheme.
@@ -154,7 +154,7 @@ impl Resolver for RemoteResolver {
         let decl_buffer: fmem::Data = component.decl.ok_or(ResolverError::RemoteInvalidData)?;
         let decl = read_and_validate_manifest(decl_buffer).await?;
         let config_values = if decl.config.is_some() {
-            Some(read_config_values(
+            Some(read_and_validate_config_values(
                 component.config_values.ok_or(ResolverError::RemoteInvalidData)?,
             )?)
         } else {
@@ -203,7 +203,7 @@ pub async fn read_and_validate_manifest(
     Ok(component_decl.fidl_into_native())
 }
 
-fn read_config_values(data: fmem::Data) -> Result<fconfig::ValuesData, ResolverError> {
+fn read_and_validate_config_values(data: fmem::Data) -> Result<cm_rust::ValuesData, ResolverError> {
     let bytes = match data {
         fmem::Data::Bytes(bytes) => bytes,
         fmem::Data::Buffer(buffer) => {
@@ -217,7 +217,9 @@ fn read_config_values(data: fmem::Data) -> Result<fconfig::ValuesData, ResolverE
     let values: fconfig::ValuesData = fidl::encoding::decode_persistent(&bytes)
         .map_err(|err| ResolverError::config_values_invalid(err))?;
 
-    Ok(values)
+    cm_fidl_validator::validate_values_data(&values)
+        .map_err(|e| ResolverError::config_values_invalid(e))?;
+    Ok(values.fidl_into_native())
 }
 
 /// Errors produced by `Resolver`.
@@ -509,5 +511,71 @@ mod tests {
         );
         let actual = read_and_validate_manifest(manifest).await.expect("failed to decode manifest");
         assert_eq!(actual, COMPONENT_DECL.clone());
+    }
+
+    #[fuchsia::test]
+    async fn test_read_and_validate_config_values() {
+        let mut fidl_config_values = fconfig::ValuesData {
+            values: Some(vec![
+                fconfig::ValueSpec {
+                    value: Some(fconfig::Value::Single(fconfig::SingleValue::Flag(false))),
+                    ..fconfig::ValueSpec::EMPTY
+                },
+                fconfig::ValueSpec {
+                    value: Some(fconfig::Value::Single(fconfig::SingleValue::Unsigned8(5))),
+                    ..fconfig::ValueSpec::EMPTY
+                },
+                fconfig::ValueSpec {
+                    value: Some(fconfig::Value::Single(fconfig::SingleValue::Text(
+                        "hello!".to_string(),
+                    ))),
+                    ..fconfig::ValueSpec::EMPTY
+                },
+                fconfig::ValueSpec {
+                    value: Some(fconfig::Value::List(fconfig::ListValue::FlagList(vec![
+                        true, false,
+                    ]))),
+                    ..fconfig::ValueSpec::EMPTY
+                },
+                fconfig::ValueSpec {
+                    value: Some(fconfig::Value::List(fconfig::ListValue::TextList(vec![
+                        "hello!".to_string(),
+                        "world!".to_string(),
+                    ]))),
+                    ..fconfig::ValueSpec::EMPTY
+                },
+            ]),
+            declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+            ..fconfig::ValuesData::EMPTY
+        };
+        let config_values = cm_rust::ValuesData {
+            values: vec![
+                cm_rust::ValueSpec {
+                    value: cm_rust::Value::Single(cm_rust::SingleValue::Flag(false)),
+                },
+                cm_rust::ValueSpec {
+                    value: cm_rust::Value::Single(cm_rust::SingleValue::Unsigned8(5)),
+                },
+                cm_rust::ValueSpec {
+                    value: cm_rust::Value::Single(cm_rust::SingleValue::Text("hello!".to_string())),
+                },
+                cm_rust::ValueSpec {
+                    value: cm_rust::Value::List(cm_rust::ListValue::FlagList(vec![true, false])),
+                },
+                cm_rust::ValueSpec {
+                    value: cm_rust::Value::List(cm_rust::ListValue::TextList(vec![
+                        "hello!".to_string(),
+                        "world!".to_string(),
+                    ])),
+                },
+            ],
+            declaration_checksum: vec![0x0, 0x0, 0x0, 0x0],
+        };
+        let data = fmem::Data::Bytes(
+            fidl::encoding::encode_persistent(&mut fidl_config_values)
+                .expect("failed to encode config values"),
+        );
+        let actual = read_and_validate_config_values(data).expect("failed to decode config values");
+        assert_eq!(actual, config_values);
     }
 }

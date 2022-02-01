@@ -754,13 +754,12 @@ mod tests {
             self, CapabilityName, CapabilityPath, ComponentDecl, ConfigDecl, ConfigField,
             ConfigNestedValueType, ConfigValueSource, ConfigValueType, DependencyType,
             DirectoryDecl, EventMode, EventSubscription, ExposeDecl, ExposeDirectoryDecl,
-            ExposeProtocolDecl, ExposeSource, ExposeTarget, ProtocolDecl, UseDecl,
-            UseDirectoryDecl, UseEventDecl, UseEventStreamDeprecatedDecl, UseProtocolDecl,
-            UseSource,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget, ListValue, ProtocolDecl, SingleValue,
+            UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDeprecatedDecl, UseProtocolDecl,
+            UseSource, Value, ValueSpec, ValuesData,
         },
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::ServerEnd,
-        fidl_fuchsia_component_config as fconfig,
         fidl_fuchsia_io::{
             DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
             OPEN_RIGHT_WRITABLE,
@@ -816,7 +815,7 @@ mod tests {
     struct ComponentDescriptor {
         pub name: &'static str,
         pub decl: ComponentDecl,
-        pub config: Option<(&'static str, fconfig::ValuesData)>,
+        pub config: Option<(&'static str, ValuesData)>,
         pub host_fn: Option<DirectoryCallback>,
         pub runtime_host_fn: Option<DirectoryCallback>,
     }
@@ -1052,29 +1051,20 @@ mod tests {
                     .build(),
                 config: Some((
                     "meta/root.cvf",
-                    fconfig::ValuesData {
-                        values: Some(vec![
-                            fconfig::ValueSpec {
-                                value: Some(fconfig::Value::Single(fconfig::SingleValue::Flag(
-                                    true,
-                                ))),
-                                ..fconfig::ValueSpec::EMPTY
+                    ValuesData {
+                        values: vec![
+                            ValueSpec { value: Value::Single(SingleValue::Flag(true)) },
+                            ValueSpec {
+                                value: Value::Single(SingleValue::Text("DEBUG".to_string())),
                             },
-                            fconfig::ValueSpec {
-                                value: Some(fconfig::Value::Single(fconfig::SingleValue::Text(
-                                    "DEBUG".to_string(),
-                                ))),
-                                ..fconfig::ValueSpec::EMPTY
+                            ValueSpec {
+                                value: Value::List(ListValue::TextList(vec![
+                                    "foo".into(),
+                                    "bar".into(),
+                                ])),
                             },
-                            fconfig::ValueSpec {
-                                value: Some(fconfig::Value::List(fconfig::ListValue::TextList(
-                                    vec!["foo".into(), "bar".into()],
-                                ))),
-                                ..fconfig::ValueSpec::EMPTY
-                            },
-                        ]),
-                        declaration_checksum: Some(checksum),
-                        ..fconfig::ValuesData::EMPTY
+                        ],
+                        declaration_checksum: checksum,
                     },
                 )),
                 host_fn: None,

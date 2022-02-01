@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use cm_rust::FidlIntoNative;
+use cm_rust::{FidlIntoNative, ListValue, SingleValue, Value};
 use fidl::encoding::decode_persistent;
-use fidl_fuchsia_component_config::{ListValue, SingleValue, Value, ValuesData};
 use fidl_test_structuredconfig_receiver::{ConfigReceiverPuppetMarker, ReceiverConfig};
 use std::fs::{read_dir, read_to_string};
 use std::path::Path;
@@ -106,14 +105,16 @@ fn manually_resolve_structured_config() {
 
     // read the value file
     let value_file_raw = std::fs::read("/pkg/meta/basic_config_receiver.cvf").unwrap();
-    let value_file: ValuesData = decode_persistent(&value_file_raw[..]).unwrap();
+    let value_file: fidl_fuchsia_component_config::ValuesData =
+        decode_persistent(&value_file_raw[..]).unwrap();
+    let value_file = value_file.fidl_into_native();
 
     // resolve
     let resolved_fields =
         config_encoder::ConfigFields::resolve(config, value_file.clone()).unwrap();
 
     // check the checksums
-    let value_checksum = value_file.declaration_checksum.as_ref().unwrap();
+    let value_checksum = &value_file.declaration_checksum;
     let resolved_checksum = &resolved_fields.declaration_checksum;
     assert_eq!(
         &config.declaration_checksum, value_checksum,

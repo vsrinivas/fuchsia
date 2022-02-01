@@ -119,18 +119,16 @@ macro_rules! config_decl {
 /// wraps a list of values in the verbose optional table elements
 #[macro_export]
 macro_rules! values_data {
-    [ck@ $checksum:expr, $($value:expr,)+] => {{
+    [ck@ $checksum:expr, $($value:expr,)*] => {{
         let mut values = vec![];
         $(
-            values.push(ValueSpec {
-                value: Some($value),
-                ..ValueSpec::EMPTY
+            values.push(cm_rust::ValueSpec {
+                value: $value,
             });
-        )+
-        ValuesData {
-            values: Some(values),
-            declaration_checksum: Some($checksum),
-            ..ValuesData::EMPTY
+        )*
+        cm_rust::ValuesData {
+            values,
+            declaration_checksum: $checksum
         }
     }};
 }

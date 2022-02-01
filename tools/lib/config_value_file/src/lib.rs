@@ -11,8 +11,7 @@
 mod field;
 
 use crate::field::{config_value_from_json_value, FieldError};
-use cm_rust::ConfigDecl;
-use fidl_fuchsia_component_config::{ValueSpec, ValuesData};
+use cm_rust::{ConfigDecl, ValueSpec, ValuesData};
 use serde_json::Value as JsonValue;
 use std::collections::BTreeMap;
 
@@ -21,32 +20,28 @@ use std::collections::BTreeMap;
 // TODO(https://fxbug.dev/86797) decide on a better interface than json values?
 pub fn populate_value_file(
     config_decl: &ConfigDecl,
-    mut values: BTreeMap<String, JsonValue>,
+    mut json_values: BTreeMap<String, JsonValue>,
 ) -> Result<ValuesData, FileError> {
-    let typed_values = config_decl
+    let values = config_decl
         .fields
         .iter()
         .map(|field| {
-            let json_value = values
+            let json_value = json_values
                 .remove(&field.key)
                 .ok_or_else(|| FileError::MissingValue { key: field.key.clone() })?;
             let value = config_value_from_json_value(&json_value, &field.type_)
                 .map_err(|reason| FileError::InvalidField { key: field.key.clone(), reason })?;
-            Ok(ValueSpec { value: Some(value), ..ValueSpec::EMPTY })
+            Ok(ValueSpec { value })
         })
         .collect::<Result<Vec<ValueSpec>, _>>()?;
 
     // we remove the definitions from the values map above, so any remaining keys are undefined
     // in the manifest
-    if !values.is_empty() {
-        return Err(FileError::ExtraValues { keys: values.into_keys().collect() });
+    if !json_values.is_empty() {
+        return Err(FileError::ExtraValues { keys: json_values.into_keys().collect() });
     }
 
-    Ok(ValuesData {
-        values: Some(typed_values),
-        declaration_checksum: Some(config_decl.declaration_checksum.clone()),
-        ..ValuesData::EMPTY
-    })
+    Ok(ValuesData { values, declaration_checksum: config_decl.declaration_checksum.clone() })
 }
 
 /// Error from working with a configuration value file.
@@ -70,7 +65,7 @@ pub enum FileError {
 #[cfg(test)]
 mod tests {
     use super::{field::JsonTy, *};
-    use fidl_fuchsia_component_config::{ListValue::*, SingleValue::*, Value::*};
+    use cm_rust::{ListValue::*, SingleValue::*, Value::*};
     use fidl_fuchsia_component_config_ext::{config_decl, values_data};
     use serde_json::json;
 

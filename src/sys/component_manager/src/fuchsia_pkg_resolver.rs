@@ -96,7 +96,11 @@ impl FuchsiaPkgResolver {
             };
             let file = io_util::open_file(&dir, config_path, fio::OPEN_RIGHT_READABLE)
                 .map_err(|e| ResolverError::Io(e.into()))?;
-            Some(io_util::read_file_fidl(&file).await.map_err(|e| ResolverError::Io(e.into()))?)
+            let values_data =
+                io_util::read_file_fidl(&file).await.map_err(|e| ResolverError::Io(e.into()))?;
+            cm_fidl_validator::validate_values_data(&values_data)
+                .map_err(|e| ResolverError::config_values_invalid(e))?;
+            Some(values_data.fidl_into_native())
         } else {
             None
         };
@@ -136,7 +140,8 @@ mod tests {
         cm_rust::FidlIntoNative,
         fidl::encoding::encode_persistent,
         fidl::endpoints::{self, ServerEnd},
-        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata,
+        fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
+        fidl_fuchsia_data as fdata,
         fidl_fuchsia_sys::{LoaderMarker, LoaderRequest, Package},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::TryStreamExt,
@@ -228,6 +233,58 @@ mod tests {
                         resolved_url: package_url.to_string(),
                     });
                 }
+                "structured-config" => {
+                    // Provide a cm that will fail due to a missing runner.
+                    let sub_dir = pseudo_directory! {
+                        "meta" => pseudo_directory! {
+                            "foo.cm" => read_only_static(
+                                encode_persistent(&mut fdecl::Component {
+                                    config: Some(fdecl::ConfigSchema {
+                                        fields: Some(vec![fdecl::ConfigField {
+                                            key: Some("test".to_string()),
+                                            type_: Some(fdecl::ConfigType {
+                                                layout: fdecl::ConfigTypeLayout::Bool,
+                                                parameters: Some(vec![]),
+                                                constraints: vec![]
+                                            }),
+                                            ..fdecl::ConfigField::EMPTY
+                                        }]),
+                                        declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                                        value_source: Some(fdecl::ConfigValueSource::PackagePath("config/foo.cvf".to_string())),
+                                        ..fdecl::ConfigSchema::EMPTY
+                                    }),
+                                    ..fdecl::Component::EMPTY
+                                }).unwrap()
+                            ),
+                        },
+                        "config" => pseudo_directory! {
+                            "foo.cvf" => read_only_static(
+                                encode_persistent(&mut fconfig::ValuesData {
+                                    values: Some(vec![
+                                        fconfig::ValueSpec {
+                                            value: Some(fconfig::Value::Single(fconfig::SingleValue::Flag(false))),
+                                            ..fconfig::ValueSpec::EMPTY
+                                        }
+                                    ]),
+                                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                                    ..fconfig::ValuesData::EMPTY
+                                }).unwrap()
+                            ),
+                        }
+                    };
+                    sub_dir.open(
+                        ExecutionScope::new(),
+                        fio::OPEN_RIGHT_READABLE,
+                        fio::MODE_TYPE_DIRECTORY,
+                        vfs::path::Path::dot(),
+                        ServerEnd::new(dir_s),
+                    );
+                    return Some(Package {
+                        data: None,
+                        directory: Some(dir_c),
+                        resolved_url: package_url.to_string(),
+                    });
+                }
                 _ => return None,
             }
         }
@@ -293,6 +350,36 @@ mod tests {
         library_loader::load_vmo(&dir_proxy, "bin/hello_world_rust")
             .await
             .expect("failed to open executable file");
+    }
+
+    #[fuchsia::test]
+    async fn structured_config() {
+        let loader = MockLoader::start();
+        let resolver = FuchsiaPkgResolver::new(loader);
+        let url = "fuchsia-pkg://fuchsia.com/structured-config#meta/foo.cm";
+        let component = resolver.resolve_async(url).await.expect("resolve failed");
+
+        let ResolvedComponent { decl, config_values, .. } = component;
+
+        let expected_config = Some(cm_rust::ConfigDecl {
+            fields: vec![cm_rust::ConfigField {
+                key: "test".to_string(),
+                type_: cm_rust::ConfigValueType::Bool,
+            }],
+            declaration_checksum: vec![0x0, 0x0, 0x0, 0x0],
+            value_source: cm_rust::ConfigValueSource::PackagePath("config/foo.cvf".to_string()),
+        });
+
+        assert_eq!(decl.config, expected_config);
+
+        let expected_values = Some(cm_rust::ValuesData {
+            values: vec![cm_rust::ValueSpec {
+                value: cm_rust::Value::Single(cm_rust::SingleValue::Flag(false)),
+            }],
+            declaration_checksum: vec![0x0, 0x0, 0x0, 0x0],
+        });
+
+        assert_eq!(config_values, expected_values);
     }
 
     macro_rules! test_resolve_error {

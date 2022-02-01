@@ -9,7 +9,7 @@ pub mod error;
 use {
     crate::{error::*, util::*},
     directed_graph::DirectedGraph,
-    fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
     itertools::Itertools,
     std::{
         collections::{HashMap, HashSet},
@@ -17,6 +17,72 @@ use {
         path::Path,
     },
 };
+
+/// Validates Configuration Values Data.
+///
+/// The Value Data may ultimately originate from a CVF file, or be directly constructed by the
+/// caller. Either way, Value Data should always be validated before it's used. For now, this
+/// simply verifies that all semantically required fields are present.
+///
+/// This method does not validate value data against a configuration schema.
+pub fn validate_values_data(data: &fconfig::ValuesData) -> Result<(), ErrorList> {
+    let mut errors = vec![];
+    if let Some(values) = &data.values {
+        for spec in values {
+            if let Some(value) = &spec.value {
+                match value {
+                    fconfig::Value::Single(s) => match s {
+                        fconfig::SingleValue::Flag(_)
+                        | fconfig::SingleValue::Unsigned8(_)
+                        | fconfig::SingleValue::Unsigned16(_)
+                        | fconfig::SingleValue::Unsigned32(_)
+                        | fconfig::SingleValue::Unsigned64(_)
+                        | fconfig::SingleValue::Signed8(_)
+                        | fconfig::SingleValue::Signed16(_)
+                        | fconfig::SingleValue::Signed32(_)
+                        | fconfig::SingleValue::Signed64(_)
+                        | fconfig::SingleValue::Text(_) => {}
+                        fconfig::SingleValueUnknown!() => {
+                            errors.push(Error::invalid_field("ValueSpec", "value"));
+                        }
+                    },
+                    fconfig::Value::List(l) => match l {
+                        fconfig::ListValue::FlagList(_)
+                        | fconfig::ListValue::Unsigned8List(_)
+                        | fconfig::ListValue::Unsigned16List(_)
+                        | fconfig::ListValue::Unsigned32List(_)
+                        | fconfig::ListValue::Unsigned64List(_)
+                        | fconfig::ListValue::Signed8List(_)
+                        | fconfig::ListValue::Signed16List(_)
+                        | fconfig::ListValue::Signed32List(_)
+                        | fconfig::ListValue::Signed64List(_)
+                        | fconfig::ListValue::TextList(_) => {}
+                        fconfig::ListValueUnknown!() => {
+                            errors.push(Error::invalid_field("ValueSpec", "value"));
+                        }
+                    },
+                    fconfig::ValueUnknown!() => {
+                        errors.push(Error::invalid_field("ValueSpec", "value"));
+                    }
+                }
+            } else {
+                errors.push(Error::missing_field("ValueSpec", "value"));
+            }
+        }
+    } else {
+        errors.push(Error::missing_field("ValuesData", "values"));
+    }
+
+    if data.declaration_checksum.is_none() {
+        errors.push(Error::missing_field("ValuesData", "declaration_checksum"));
+    }
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(ErrorList::new(errors))
+    }
+}
 
 /// Validates a Component.
 ///
@@ -2025,6 +2091,24 @@ mod tests {
         }
     }
 
+    macro_rules! test_validate_values_data {
+        (
+            $(
+                $test_name:ident => {
+                    input = $input:expr,
+                    result = $result:expr,
+                },
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    validate_values_data_test($input, $result);
+                }
+            )+
+        }
+    }
+
     macro_rules! test_validate_capabilities {
         (
             $(
@@ -2168,6 +2252,11 @@ mod tests {
             expected_res_debug,
             res
         );
+    }
+
+    fn validate_values_data_test(input: fconfig::ValuesData, expected_res: Result<(), ErrorList>) {
+        let res = validate_values_data(&input);
+        assert_eq!(res, expected_res);
     }
 
     fn validate_capabilities_test(
@@ -2358,6 +2447,99 @@ mod tests {
                         "UseDirectory", "/foo/bar", "UseService", "/foo/bar/baz/fuchsia.logger.Log"),
                 ])),
             ],
+        },
+    }
+
+    test_validate_values_data! {
+        test_values_data_ok => {
+            input = fconfig::ValuesData {
+                values: Some(vec![
+                    fconfig::ValueSpec {
+                        value: Some(fconfig::Value::Single(fconfig::SingleValue::Flag(true))),
+                        ..fconfig::ValueSpec::EMPTY
+                    }
+                ]),
+                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                ..fconfig::ValuesData::EMPTY
+            },
+            result = Ok(()),
+        },
+        test_values_data_no_checksum => {
+            input = fconfig::ValuesData {
+                values: Some(vec![]),
+                declaration_checksum: None,
+                ..fconfig::ValuesData::EMPTY
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ValuesData", "declaration_checksum")
+            ])),
+        },
+        test_values_data_no_values => {
+            input = fconfig::ValuesData {
+                values: None,
+                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                ..fconfig::ValuesData::EMPTY
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ValuesData", "values")
+            ])),
+        },
+        test_values_data_no_inner_value => {
+            input = fconfig::ValuesData {
+                values: Some(vec![
+                    fconfig::ValueSpec::EMPTY
+                ]),
+                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                ..fconfig::ValuesData::EMPTY
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ValueSpec", "value")
+            ])),
+        },
+        test_values_data_unknown_inner_value => {
+            input = fconfig::ValuesData {
+                values: Some(vec![
+                    fconfig::ValueSpec {
+                        value: Some(fconfig::Value::unknown(0, vec![])),
+                        ..fconfig::ValueSpec::EMPTY
+                    }
+                ]),
+                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                ..fconfig::ValuesData::EMPTY
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("ValueSpec", "value")
+            ])),
+        },
+        test_values_data_unknown_single_value => {
+            input = fconfig::ValuesData {
+                values: Some(vec![
+                    fconfig::ValueSpec {
+                        value: Some(fconfig::Value::Single(fconfig::SingleValue::unknown(0, vec![]))),
+                        ..fconfig::ValueSpec::EMPTY
+                    }
+                ]),
+                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                ..fconfig::ValuesData::EMPTY
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("ValueSpec", "value")
+            ])),
+        },
+        test_values_data_unknown_list_value => {
+            input = fconfig::ValuesData {
+                values: Some(vec![
+                    fconfig::ValueSpec {
+                        value: Some(fconfig::Value::List(fconfig::ListValue::unknown(0, vec![]))),
+                        ..fconfig::ValueSpec::EMPTY
+                    }
+                ]),
+                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                ..fconfig::ValuesData::EMPTY
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("ValueSpec", "value")
+            ])),
         },
     }
 

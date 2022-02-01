@@ -4,8 +4,7 @@
 
 //! Validating and encoding individual configuration fields.
 
-use cm_rust::{ConfigNestedValueType, ConfigValueType};
-use fidl_fuchsia_component_config::{ListValue, SingleValue, Value};
+use cm_rust::{ConfigNestedValueType, ConfigValueType, ListValue, SingleValue, Value};
 use serde_json::Value as JsonValue;
 use std::{
     convert::TryFrom,

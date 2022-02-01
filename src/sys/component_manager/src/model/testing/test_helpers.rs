@@ -21,13 +21,12 @@ use {
     anyhow::{Context, Error},
     cm_rust::{
         CapabilityDecl, CapabilityName, ChildDecl, ComponentDecl, EventMode, NativeIntoFidl,
-        RunnerDecl,
+        RunnerDecl, ValuesData,
     },
     cm_types::Url,
     diagnostics_message::{LoggerMessage, MonikerWithUrl},
     fidl::endpoints::{self, ProtocolMarker, Proxy},
     fidl_fidl_examples_routing_echo as echo, fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_component_config::ValuesData,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE,

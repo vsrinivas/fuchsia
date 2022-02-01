@@ -7,8 +7,8 @@ use {
     cm_rust_derive::{
         CapabilityDeclCommon, ExposeDeclCommon, FidlDecl, OfferDeclCommon, UseDeclCommon,
     },
-    cm_types, fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata,
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_process as fprocess,
+    cm_types, fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2, fidl_fuchsia_process as fprocess,
     from_enum::FromEnum,
     lazy_static::lazy_static,
     std::collections::HashMap,
@@ -960,6 +960,56 @@ impl NativeIntoFidl<fdecl::ConfigType> for ConfigValueType {
     }
 }
 
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fconfig::ValuesData")]
+pub struct ValuesData {
+    pub values: Vec<ValueSpec>,
+    pub declaration_checksum: Vec<u8>,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fconfig::ValueSpec")]
+pub struct ValueSpec {
+    pub value: Value,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fconfig::Value")]
+pub enum Value {
+    Single(SingleValue),
+    List(ListValue),
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fconfig::SingleValue")]
+pub enum SingleValue {
+    Flag(bool),
+    Unsigned8(u8),
+    Unsigned16(u16),
+    Unsigned32(u32),
+    Unsigned64(u64),
+    Signed8(i8),
+    Signed16(i16),
+    Signed32(i32),
+    Signed64(i64),
+    Text(String),
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fconfig::ListValue")]
+pub enum ListValue {
+    FlagList(Vec<bool>),
+    Unsigned8List(Vec<u8>),
+    Unsigned16List(Vec<u16>),
+    Unsigned32List(Vec<u32>),
+    Unsigned64List(Vec<u64>),
+    Signed8List(Vec<i8>),
+    Signed16List(Vec<i16>),
+    Signed32List(Vec<i32>),
+    Signed64List(Vec<i64>),
+    TextList(Vec<String>),
+}
+
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fdecl::RunnerRegistration")]
@@ -1052,9 +1102,25 @@ impl Default for ProgramDecl {
 }
 
 fidl_translations_identical!(u8);
+fidl_translations_identical!(u16);
 fidl_translations_identical!(u32);
+fidl_translations_identical!(u64);
+fidl_translations_identical!(i8);
+fidl_translations_identical!(i16);
+fidl_translations_identical!(i32);
+fidl_translations_identical!(i64);
+fidl_translations_identical!(Vec<u8>);
+fidl_translations_identical!(Vec<u16>);
+fidl_translations_identical!(Vec<u32>);
+fidl_translations_identical!(Vec<u64>);
+fidl_translations_identical!(Vec<i8>);
+fidl_translations_identical!(Vec<i16>);
+fidl_translations_identical!(Vec<i32>);
+fidl_translations_identical!(Vec<i64>);
 fidl_translations_identical!(bool);
+fidl_translations_identical!(Vec<bool>);
 fidl_translations_identical!(String);
+fidl_translations_identical!(Vec<String>);
 fidl_translations_identical!(fdecl::StartupMode);
 fidl_translations_identical!(fdecl::OnTerminate);
 fidl_translations_identical!(fdecl::Durability);
@@ -1334,17 +1400,6 @@ impl NativeIntoFidl<String> for PathBuf {
     fn native_into_fidl(self) -> String {
         self.into_os_string().into_string().expect("invalid utf8")
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Value {
-    Bit(bool),
-    Inum(i64),
-    Fnum(f64),
-    Str(String),
-    Vec(Vec<Value>),
-    Obj(HashMap<String, Value>),
-    Null,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -12,7 +12,6 @@ if (is_host) {
       "src/lib.rs",
     ]
     deps = [
-      "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
       "//src/sys/lib/cm_rust",
       "//src/sys/lib/fidl_fuchsia_component_config_ext",
       "//third_party/rust_crates:serde_json",

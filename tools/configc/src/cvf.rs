@@ -4,7 +4,7 @@
 
 use anyhow::{Context as _, Error};
 use argh::FromArgs;
-use cm_rust::FidlIntoNative;
+use cm_rust::{FidlIntoNative, NativeIntoFidl};
 use fidl::encoding::{decode_persistent, encode_persistent};
 use fidl_fuchsia_component_decl as fdecl;
 use std::{collections::BTreeMap, fs, io::Write, path::PathBuf};
@@ -45,8 +45,9 @@ impl GenerateValueFile {
             serde_json5::from_str(&values_raw).context("parsing values JSON")?;
 
         // combine the manifest and provided values
-        let mut values_data = config_value_file::populate_value_file(config_decl, values)
+        let values_data = config_value_file::populate_value_file(config_decl, values)
             .context("populating config values")?;
+        let mut values_data = values_data.native_into_fidl();
         let encoded_output = encode_persistent(&mut values_data).context("encoding value file")?;
 
         // write result to value file output

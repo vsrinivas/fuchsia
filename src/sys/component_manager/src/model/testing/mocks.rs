@@ -22,11 +22,10 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     cm_runner::{Runner, RunnerError},
-    cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
+    cm_rust::{ComponentDecl, ExposeDecl, UseDecl, ValuesData},
     fidl::prelude::*,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fidl_examples_routing_echo::{EchoMarker, EchoRequest, EchoRequestStream},
-    fidl_fuchsia_component_config::ValuesData,
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_diagnostics_types::{
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
