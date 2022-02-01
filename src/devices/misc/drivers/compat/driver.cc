@@ -153,22 +153,23 @@ promise<zx::resource, zx_status_t> Driver::GetRootResource(
 
 promise<zx::vmo, zx_status_t> Driver::GetBuffer(const fidl::WireSharedClient<fio::File>& file) {
   bridge<zx::vmo, zx_status_t> bridge;
-  auto callback = [this, completer = std::move(bridge.completer)](
+  auto callback = [completer = std::move(bridge.completer)](
                       fidl::WireUnownedResult<fio::File::GetBuffer>& result) mutable {
     if (!result.ok()) {
-      FDF_LOG(ERROR, "Failed to get buffer: %s", result.FormatDescription().data());
       completer.complete_error(result.status());
       return;
     }
     if (result->s != ZX_OK) {
-      FDF_LOG(ERROR, "Failed to get buffer: %s", zx_status_get_string(result->s));
       completer.complete_error(result->s);
       return;
     }
     completer.complete_ok(std::move(result->buffer->vmo));
   };
   file->GetBuffer(kVmoFlags, std::move(callback));
-  return bridge.consumer.promise_or(error(ZX_ERR_UNAVAILABLE));
+  return bridge.consumer.promise_or(error(ZX_ERR_UNAVAILABLE)).or_else([this](zx_status_t& status) {
+    FDF_LOG(ERROR, "Failed to get buffer: %s", zx_status_get_string(status));
+    return error(status);
+  });
 }
 
 result<std::tuple<zx::vmo, zx::vmo>, zx_status_t> Driver::Join(
