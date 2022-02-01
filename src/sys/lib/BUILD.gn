@@ -22,6 +22,7 @@ group("tests") {
     "fuchsia_backoff:fuchsia_backoff_tests",
     "legacy_component:tests",
     "library_loader:tests",
+    "mem_util:tests",
     "moniker:moniker-tests",
     "payload_streamer:tests",
     "routing:fuchsia-routing-tests",

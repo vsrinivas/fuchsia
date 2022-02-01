@@ -13,8 +13,8 @@ use {
     async_trait::async_trait,
     clonable_error::ClonableError,
     cm_rust::{FidlIntoNative, ResolverRegistration},
-    fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon::Status,
     std::{collections::HashMap, sync::Arc},
     thiserror::Error,
@@ -152,10 +152,10 @@ impl Resolver for RemoteResolver {
         .map_err(ResolverError::routing_error)?;
         let component = proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)??;
         let decl_buffer: fmem::Data = component.decl.ok_or(ResolverError::RemoteInvalidData)?;
-        let decl = read_and_validate_manifest(decl_buffer).await?;
+        let decl = read_and_validate_manifest(&decl_buffer).await?;
         let config_values = if decl.config.is_some() {
             Some(read_and_validate_config_values(
-                component.config_values.ok_or(ResolverError::RemoteInvalidData)?,
+                &component.config_values.ok_or(ResolverError::RemoteInvalidData)?,
             )?)
         } else {
             None
@@ -183,40 +183,20 @@ impl Resolver for BuiltinResolver {
 }
 
 pub async fn read_and_validate_manifest(
-    data: fmem::Data,
+    data: &fmem::Data,
 ) -> Result<cm_rust::ComponentDecl, ResolverError> {
-    let bytes = match data {
-        fmem::Data::Bytes(bytes) => bytes,
-        fmem::Data::Buffer(buffer) => {
-            let mut contents = Vec::<u8>::new();
-            contents.resize(buffer.size as usize, 0);
-            buffer.vmo.read(&mut contents, 0).map_err(ResolverError::ManifestIo)?;
-            contents
-        }
-        _ => return Err(ResolverError::RemoteInvalidData),
-    };
-
+    let bytes = mem_util::bytes_from_data(data).map_err(ResolverError::manifest_invalid)?;
     let component_decl: fdecl::Component =
-        fidl::encoding::decode_persistent::<fdecl::Component>(&bytes)
-            .map_err(|err| ResolverError::manifest_invalid(err))?;
-    cm_fidl_validator::validate(&component_decl).map_err(|e| ResolverError::manifest_invalid(e))?;
+        fidl::encoding::decode_persistent(&bytes).map_err(ResolverError::manifest_invalid)?;
+    cm_fidl_validator::validate(&component_decl).map_err(ResolverError::manifest_invalid)?;
     Ok(component_decl.fidl_into_native())
 }
 
-fn read_and_validate_config_values(data: fmem::Data) -> Result<cm_rust::ValuesData, ResolverError> {
-    let bytes = match data {
-        fmem::Data::Bytes(bytes) => bytes,
-        fmem::Data::Buffer(buffer) => {
-            let mut contents = Vec::<u8>::new();
-            contents.resize(buffer.size as usize, 0);
-            buffer.vmo.read(&mut contents, 0).map_err(ResolverError::ConfigValuesIo)?;
-            contents
-        }
-        _ => return Err(ResolverError::RemoteInvalidData),
-    };
-    let values: fconfig::ValuesData = fidl::encoding::decode_persistent(&bytes)
-        .map_err(|err| ResolverError::config_values_invalid(err))?;
-
+fn read_and_validate_config_values(
+    data: &fmem::Data,
+) -> Result<cm_rust::ValuesData, ResolverError> {
+    let bytes = mem_util::bytes_from_data(&data).map_err(ResolverError::config_values_invalid)?;
+    let values = fidl::encoding::decode_persistent(&bytes).map_err(ResolverError::fidl_error)?;
     cm_fidl_validator::validate_values_data(&values)
         .map_err(|e| ResolverError::config_values_invalid(e))?;
     Ok(values.fidl_into_native())
@@ -332,7 +312,7 @@ mod tests {
         anyhow::format_err,
         cm_rust::NativeIntoFidl,
         cm_rust_testing::new_decl_from_json,
-        fidl_fuchsia_component_decl as fdecl,
+        fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         lazy_static::lazy_static,
         serde_json::json,
         std::sync::Weak,
@@ -509,7 +489,8 @@ mod tests {
             )
             .expect("failed to encode manifest"),
         );
-        let actual = read_and_validate_manifest(manifest).await.expect("failed to decode manifest");
+        let actual =
+            read_and_validate_manifest(&manifest).await.expect("failed to decode manifest");
         assert_eq!(actual, COMPONENT_DECL.clone());
     }
 
@@ -575,7 +556,8 @@ mod tests {
             fidl::encoding::encode_persistent(&mut fidl_config_values)
                 .expect("failed to encode config values"),
         );
-        let actual = read_and_validate_config_values(data).expect("failed to decode config values");
+        let actual =
+            read_and_validate_config_values(&data).expect("failed to decode config values");
         assert_eq!(actual, config_values);
     }
 }

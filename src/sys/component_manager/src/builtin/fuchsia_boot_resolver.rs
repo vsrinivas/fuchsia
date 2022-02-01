@@ -129,7 +129,12 @@ impl Resolver for FuchsiaBootResolver {
         let fsys::Component { resolved_url, decl, package, .. } =
             self.resolve_async(component_url).await?;
         let resolved_url = resolved_url.unwrap();
-        let decl = resolver::read_and_validate_manifest(decl.unwrap()).await?;
+        let decl = decl.ok_or_else(|| {
+            ResolverError::ManifestInvalid(
+                anyhow::format_err!("missing manifest from resolved component").into(),
+            )
+        })?;
+        let decl = resolver::read_and_validate_manifest(&decl).await?;
         Ok(ResolvedComponent {
             resolved_url,
             decl,

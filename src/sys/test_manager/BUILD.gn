@@ -79,6 +79,7 @@ rustc_library("lib") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/cm_moniker",
     "//src/sys/lib/cm_rust",
+    "//src/sys/lib/mem_util",
     "//src/sys/lib/moniker",
     "//src/sys/lib/routing",
     "//third_party/rust_crates:anyhow",

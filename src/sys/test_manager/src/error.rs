@@ -5,8 +5,7 @@
 use {
     anyhow, fidl_fuchsia_developer_remotecontrol::StreamError,
     fidl_fuchsia_test_manager::LaunchError,
-    fuchsia_component_test::error::Error as RealmBuilderError, fuchsia_zircon::Status,
-    thiserror::Error,
+    fuchsia_component_test::error::Error as RealmBuilderError, thiserror::Error,
 };
 
 /// Error encountered running test manager
@@ -46,7 +45,7 @@ pub enum LaunchTestError {
     ResolveTest(#[source] anyhow::Error),
 
     #[error("Failed to read manifest: {0}")]
-    ManifestIo(Status),
+    ManifestIo(mem_util::DataError),
 
     #[error("Resolver returned invalid manifest data")]
     InvalidResolverData,

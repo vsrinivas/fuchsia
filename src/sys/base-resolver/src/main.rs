@@ -7,14 +7,12 @@ use {
     fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
-    fidl_fuchsia_mem as fmem,
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     fuchsia_component::server::ServiceFs,
     fuchsia_url::{
         errors::{ParseError as PkgUrlParseError, ResourcePathError},
         pkg_url::PkgUrl,
     },
-    fuchsia_zircon::Status,
     futures::prelude::*,
     log::*,
     thiserror::Error,
@@ -97,9 +95,10 @@ async fn resolve_component(
     })?;
     let package_dir = resolve_package(&package_url, packages_dir).await?;
 
-    let data =
-        get_data_from_package_path(&package_dir, cm_path, ResolverError::ComponentNotFound).await?;
-    let raw_bytes = raw_bytes_from_data(&data)?;
+    let data = mem_util::open_file_data(&package_dir, cm_path)
+        .await
+        .map_err(ResolverError::ComponentNotFound)?;
+    let raw_bytes = mem_util::bytes_from_data(&data).map_err(ResolverError::ReadManifest)?;
     let decl: fdecl::Component = fidl::encoding::decode_persistent(&raw_bytes[..])
         .map_err(ResolverError::ParsingManifest)?;
 
@@ -112,12 +111,9 @@ async fn resolve_component(
             other => return Err(ResolverError::UnsupportedConfigSource(other.to_owned())),
         };
         Some(
-            get_data_from_package_path(
-                &package_dir,
-                &config_path,
-                ResolverError::ConfigValuesNotFound,
-            )
-            .await?,
+            mem_util::open_file_data(&package_dir, &config_path)
+                .await
+                .map_err(ResolverError::ConfigValuesNotFound)?,
         )
     } else {
         None
@@ -162,39 +158,6 @@ async fn resolve_package(
     Ok(dir)
 }
 
-async fn get_data_from_package_path(
-    package: &fio::DirectoryProxy,
-    cm_path: &str,
-    map_not_found_err: impl FnOnce(io_util::node::OpenError) -> ResolverError,
-) -> Result<fmem::Data, ResolverError> {
-    let cm_file = io_util::directory::open_file(&package, cm_path, fio::OPEN_RIGHT_READABLE)
-        .await
-        .map_err(map_not_found_err)?;
-    let (status, buffer) =
-        cm_file.get_buffer(fio::VMO_FLAG_READ).await.map_err(ResolverError::IOError)?;
-    let () = Status::ok(status).map_err(ResolverError::VmoFailure)?;
-    Ok(match buffer {
-        Some(buffer) => fmem::Data::Buffer(*buffer),
-        None => fmem::Data::Bytes(
-            io_util::file::read(&cm_file).await.map_err(ResolverError::ReadManifest)?,
-        ),
-    })
-}
-
-fn raw_bytes_from_data(data: &fmem::Data) -> Result<Vec<u8>, ResolverError> {
-    Ok(match data {
-        fmem::Data::Buffer(buf) => {
-            let size = buf.size as usize;
-            let mut raw_bytes = Vec::with_capacity(size);
-            raw_bytes.resize(size, 0);
-            buf.vmo.read(&mut raw_bytes, 0).map_err(ResolverError::VmoFailure)?;
-            raw_bytes
-        }
-        fmem::Data::Bytes(b) => b.clone(),
-        _ => return Err(ResolverError::UnrecognizedDataVariant),
-    })
-}
-
 #[derive(Error, Debug)]
 enum ResolverError {
     #[error("invalid component URL")]
@@ -204,25 +167,19 @@ enum ResolverError {
     #[error("the hostname refers to an unsupported repo")]
     UnsupportedRepo,
     #[error("component not found")]
-    ComponentNotFound(#[source] io_util::node::OpenError),
+    ComponentNotFound(#[source] mem_util::FileError),
     #[error("package not found")]
     PackageNotFound(#[source] io_util::node::OpenError),
     #[error("couldn't parse component manifest")]
     ParsingManifest(#[source] fidl::Error),
     #[error("couldn't find config values")]
-    ConfigValuesNotFound(#[source] io_util::node::OpenError),
+    ConfigValuesNotFound(#[source] mem_util::FileError),
     #[error("config source missing or invalid")]
     InvalidConfigSource,
     #[error("unsupported config source: {:?}", _0)]
     UnsupportedConfigSource(fdecl::ConfigValueSource),
-    #[error("unrecognized fuchsia.mem.Data variant")]
-    UnrecognizedDataVariant,
-    #[error("read manifest error")]
-    ReadManifest(#[source] io_util::file::ReadError),
-    #[error("IO error")]
-    IOError(#[source] fidl::Error),
-    #[error("failed to get manifest VMO")]
-    VmoFailure(#[source] Status),
+    #[error("failed to read the manifest")]
+    ReadManifest(#[source] mem_util::DataError),
     #[error("failed to create FIDL endpoints")]
     CreateEndpoints(#[source] fidl::Error),
     #[error("serve package directory")]
@@ -238,15 +195,12 @@ impl From<&ResolverError> for fsys::ResolverError {
             ComponentNotFound(_) => fsys::ResolverError::ManifestNotFound,
             PackageNotFound(_) => fsys::ResolverError::PackageNotFound,
             ConfigValuesNotFound(_) => fsys::ResolverError::ConfigValuesNotFound,
-            ParsingManifest(_)
-            | UnsupportedConfigSource(_)
-            | UnrecognizedDataVariant
-            | InvalidConfigSource => fsys::ResolverError::InvalidManifest,
-            ReadManifest(_)
-            | IOError(_)
-            | VmoFailure(_)
-            | CreateEndpoints(_)
-            | ServePackageDirectory(_) => fsys::ResolverError::Io,
+            ParsingManifest(_) | UnsupportedConfigSource(_) | InvalidConfigSource => {
+                fsys::ResolverError::InvalidManifest
+            }
+            ReadManifest(_) | CreateEndpoints(_) | ServePackageDirectory(_) => {
+                fsys::ResolverError::Io
+            }
         }
     }
 }
@@ -262,6 +216,8 @@ mod tests {
         fidl::prelude::*,
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_io::{DirectoryMarker, DirectoryObject, NodeInfo, NodeMarker},
+        fidl_fuchsia_mem as fmem,
+        fuchsia_zircon::Status,
         std::sync::Arc,
     };
 

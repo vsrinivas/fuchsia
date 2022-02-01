@@ -1,0 +1,34 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("mem_util") {
+  with_unit_tests = true
+  sources = [ "src/lib.rs" ]
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/storage/vfs/rust:vfs",
+  ]
+}
+
+fuchsia_unittest_package("mem_util_tests") {
+  deps = [ ":mem_util_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":mem_util_tests" ]
+}

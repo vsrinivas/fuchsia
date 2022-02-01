@@ -12,7 +12,6 @@ use {
         lock::{Mutex, MutexGuard},
         TryStreamExt,
     },
-    io_util::{open_file, read_file_bytes, OPEN_RIGHT_READABLE},
     std::{collections::HashMap, path::Path, sync::Arc},
     tracing::*,
     url::Url,
@@ -123,13 +122,7 @@ impl Registry {
                             if let Some(fcdecl::ConfigValueSource::PackagePath(path)) = value_source
                             {
                                 if let Some(p) = package_dir {
-                                    let path = Path::new(path);
-                                    let file = open_file(&p, path, OPEN_RIGHT_READABLE)
-                                        .context("Could not open config value file from pkg dir")?;
-                                    let config_values_bytes = read_file_bytes(&file)
-                                        .await
-                                        .context("Could not read config value file")?;
-                                    Some(fmem::Data::Bytes(config_values_bytes))
+                                    Some(mem_util::open_file_data(&p, path).await?)
                                 } else {
                                     return Err(anyhow!(
                                         "Expected package directory for opening config values at {:?}, but none was provided",

@@ -8,8 +8,7 @@ use {
         HERMETIC_TESTS_COLLECTION, TEST_TYPE_REALM_MAP,
     },
     anyhow::format_err,
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_mem as fmem,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
 };
 
 const TEST_TYPE_FACET_KEY: &'static str = "fuchsia.test.type";
@@ -28,16 +27,8 @@ pub(crate) async fn get_suite_facets(
         .await
         .map_err(|e| LaunchTestError::ResolveTest(e.into()))?
         .map_err(|e| LaunchTestError::ResolveTest(format_err!("{:?}", e)))?;
-    let bytes = match component.decl.unwrap() {
-        fmem::Data::Bytes(bytes) => bytes,
-        fmem::Data::Buffer(buffer) => {
-            let mut contents = Vec::<u8>::new();
-            contents.resize(buffer.size as usize, 0);
-            buffer.vmo.read(&mut contents, 0).map_err(LaunchTestError::ManifestIo)?;
-            contents
-        }
-        _ => return Err(LaunchTestError::InvalidResolverData),
-    };
+    let decl = component.decl.unwrap();
+    let bytes = mem_util::bytes_from_data(&decl).map_err(LaunchTestError::ManifestIo)?;
     let component_decl: fdecl::Component = fidl::encoding::decode_persistent(&bytes)
         .map_err(|e| LaunchTestError::InvalidManifest(e.into()))?;
 
