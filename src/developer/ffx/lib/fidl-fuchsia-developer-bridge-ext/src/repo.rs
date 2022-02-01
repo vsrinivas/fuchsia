@@ -18,6 +18,8 @@ pub enum RepositorySpec {
     FileSystem { metadata_repo_path: PathBuf, blob_repo_path: PathBuf },
 
     Pm { path: PathBuf },
+
+    Http { metadata_repo_url: String, blob_repo_url: String },
 }
 
 impl TryFrom<fidl::RepositorySpec> for RepositorySpec {
@@ -40,6 +42,14 @@ impl TryFrom<fidl::RepositorySpec> for RepositorySpec {
             fidl::RepositorySpec::Pm(pm_spec) => {
                 let path = pm_spec.path.ok_or(RepositoryError::MissingRepositorySpecField)?;
                 Ok(RepositorySpec::Pm { path: path.into() })
+            }
+            fidl::RepositorySpec::Http(http_spec) => {
+                let metadata_repo_url = http_spec
+                    .metadata_repo_url
+                    .ok_or(RepositoryError::MissingRepositorySpecField)?;
+                let blob_repo_url =
+                    http_spec.blob_repo_url.ok_or(RepositoryError::MissingRepositorySpecField)?;
+                Ok(RepositorySpec::Http { metadata_repo_url, blob_repo_url })
             }
             fidl::RepositorySpecUnknown!() => Err(RepositoryError::UnknownRepositorySpec),
         }
@@ -64,6 +74,13 @@ impl From<RepositorySpec> for fidl::RepositorySpec {
                 fidl::RepositorySpec::Pm(fidl::PmRepositorySpec {
                     path: Some(path.into()),
                     ..fidl::PmRepositorySpec::EMPTY
+                })
+            }
+            RepositorySpec::Http { metadata_repo_url, blob_repo_url } => {
+                fidl::RepositorySpec::Http(fidl::HttpRepositorySpec {
+                    metadata_repo_url: Some(metadata_repo_url),
+                    blob_repo_url: Some(blob_repo_url),
+                    ..fidl::HttpRepositorySpec::EMPTY
                 })
             }
         }
@@ -188,6 +205,9 @@ pub enum RepositoryError {
 
     #[error("repository server is not running")]
     ServerNotRunning,
+
+    #[error("invalid url")]
+    InvalidUrl,
 }
 
 impl From<fidl::RepositoryError> for RepositoryError {
@@ -215,6 +235,7 @@ impl From<fidl::RepositoryError> for RepositoryError {
                 RepositoryError::NoMatchingRegistration
             }
             fidl::RepositoryError::ServerNotRunning => RepositoryError::ServerNotRunning,
+            fidl::RepositoryError::InvalidUrl => RepositoryError::InvalidUrl,
         }
     }
 }
@@ -244,6 +265,7 @@ impl From<RepositoryError> for fidl::RepositoryError {
                 fidl::RepositoryError::NoMatchingRegistration
             }
             RepositoryError::ServerNotRunning => fidl::RepositoryError::ServerNotRunning,
+            RepositoryError::InvalidUrl => fidl::RepositoryError::InvalidUrl,
         }
     }
 }

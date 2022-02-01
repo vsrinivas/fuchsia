@@ -17,12 +17,16 @@ use {
     fidl_fuchsia_pkg_rewrite::EngineMarker,
     fidl_fuchsia_pkg_rewrite_ext::{do_transaction, Rule},
     fuchsia_async as fasync,
+    fuchsia_hyper::{new_https_client, HttpsClient},
     fuchsia_zircon_status::Status,
     futures::{FutureExt as _, StreamExt as _},
     itertools::Itertools as _,
     pkg::{
         config as pkg_config,
-        repository::{self, Repository, RepositoryManager, RepositoryServer},
+        repository::{
+            self, FileSystemRepository, HttpRepository, PmRepository, Repository,
+            RepositoryBackend, RepositoryManager, RepositoryServer,
+        },
     },
     protocols::prelude::*,
     std::{
@@ -33,6 +37,7 @@ use {
         sync::Arc,
         time::Duration,
     },
+    url::Url,
 };
 
 mod tunnel;
@@ -126,6 +131,17 @@ impl ServerState {
 pub struct RepoInner {
     manager: Arc<RepositoryManager>,
     server: ServerState,
+    https_client: HttpsClient,
+}
+
+impl RepoInner {
+    fn new() -> Arc<RwLock<Self>> {
+        Arc::new(RwLock::new(RepoInner {
+            manager: RepositoryManager::new(),
+            server: ServerState::Unconfigured,
+            https_client: new_https_client(),
+        }))
+    }
 }
 
 #[ffx_protocol]
@@ -164,6 +180,33 @@ async fn start_tunnel(
     inner.read().await.server.start_tunnel(&cx, &target_nodename).await
 }
 
+async fn repo_spec_to_backend(
+    repo_spec: &RepositorySpec,
+    inner: &Arc<RwLock<RepoInner>>,
+) -> Result<Box<dyn RepositoryBackend + Send + Sync>, bridge::RepositoryError> {
+    match repo_spec {
+        RepositorySpec::FileSystem { metadata_repo_path, blob_repo_path } => Ok(Box::new(
+            FileSystemRepository::new(metadata_repo_path.into(), blob_repo_path.into()),
+        )),
+        RepositorySpec::Pm { path } => Ok(Box::new(PmRepository::new(path.into()))),
+        RepositorySpec::Http { metadata_repo_url, blob_repo_url } => {
+            let metadata_repo_url = Url::parse(metadata_repo_url.as_str()).map_err(|err| {
+                log::error!("Unable to parse metadata repo url {}: {:#}", metadata_repo_url, err);
+                bridge::RepositoryError::InvalidUrl
+            })?;
+
+            let blob_repo_url = Url::parse(blob_repo_url.as_str()).map_err(|err| {
+                log::error!("Unable to parse blob repo url {}: {:#}", blob_repo_url, err);
+                bridge::RepositoryError::InvalidUrl
+            })?;
+
+            let https_client = inner.read().await.https_client.clone();
+
+            Ok(Box::new(HttpRepository::new(https_client, metadata_repo_url, blob_repo_url)))
+        }
+    }
+}
+
 async fn add_repository(
     repo_name: &str,
     repo_spec: RepositorySpec,
@@ -173,17 +216,17 @@ async fn add_repository(
     log::info!("Adding repository {} {:?}", repo_name, repo_spec);
 
     // Create the repository.
-    let repo =
-        Repository::from_repository_spec(repo_name, repo_spec.clone()).await.map_err(|err| {
-            log::error!("Unable to create repository: {:#?}", err);
+    let backend = repo_spec_to_backend(&repo_spec, &inner).await?;
+    let repo = Repository::new(repo_name, backend).await.map_err(|err| {
+        log::error!("Unable to create repository: {:#?}", err);
 
-            match err {
-                repository::Error::Tuf(tuf::Error::ExpiredMetadata(_)) => {
-                    bridge::RepositoryError::ExpiredRepositoryMetadata
-                }
-                _ => bridge::RepositoryError::IoError,
+        match err {
+            repository::Error::Tuf(tuf::Error::ExpiredMetadata(_)) => {
+                bridge::RepositoryError::ExpiredRepositoryMetadata
             }
-        })?;
+            _ => bridge::RepositoryError::IoError,
+        }
+    })?;
 
     if save_config == SaveConfig::Save {
         // Save the filesystem configuration.
@@ -785,13 +828,7 @@ impl<T: EventHandlerProvider> Repo<T> {
 
 impl<T: EventHandlerProvider + Default> Default for Repo<T> {
     fn default() -> Self {
-        Repo {
-            inner: Arc::new(RwLock::new(RepoInner {
-                manager: RepositoryManager::new(),
-                server: ServerState::Unconfigured,
-            })),
-            event_handler_provider: T::default(),
-        }
+        Repo { inner: RepoInner::new(), event_handler_provider: T::default() }
     }
 }
 
@@ -1419,10 +1456,20 @@ mod tests {
         }
     }
 
-    async fn add_repo(proxy: &bridge::RepositoryRegistryProxy, repo_name: &str) {
+    fn pm_repo_spec() -> RepositorySpec {
         let path = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
+        RepositorySpec::Pm { path }
+    }
 
-        let spec = RepositorySpec::Pm { path };
+    fn filesystem_repo_spec() -> RepositorySpec {
+        let repo = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
+        let metadata_repo_path = repo.join("repository");
+        let blob_repo_path = metadata_repo_path.join("blobs");
+        RepositorySpec::FileSystem { metadata_repo_path, blob_repo_path }
+    }
+
+    async fn add_repo(proxy: &bridge::RepositoryRegistryProxy, repo_name: &str) {
+        let spec = pm_repo_spec();
         proxy
             .add_repository(repo_name, &mut spec.into())
             .await
@@ -1468,13 +1515,21 @@ mod tests {
         registrations
     }
 
-    // FIXME(http://fxbug.dev/80740): Unfortunately ffx_config is global, and so each of these tests
-    // could step on each others ffx_config entries if run in parallel. To avoid this, we will:
+    lazy_static::lazy_static! {
+        static ref TEST_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
+    }
+
+    // FIXME(http://fxbug.dev/80740): Rust tests on host use panic=unwind, which causes all the
+    // tests to run in the same process. Unfortunately ffx_config is global, and so each of these
+    // tests could step on each others ffx_config entries if run in parallel. To avoid this, we
+    // will:
     //
-    // * use the `serial_test` crate to make sure each test runs sequentially
+    // * use a global lock to make sure each test runs sequentially
     // * clear out the config keys before we run each test to make sure state isn't leaked across
     //   tests.
     fn run_test<F: Future>(fut: F) -> F::Output {
+        let _guard = TEST_LOCK.lock().unwrap();
+
         let _ = simplelog::SimpleLogger::init(
             simplelog::LevelFilter::Debug,
             simplelog::Config::default(),
@@ -1502,7 +1557,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_load_from_config_empty() {
         run_test(async {
@@ -1521,7 +1575,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_load_from_config_with_data() {
         run_test(async {
@@ -1627,7 +1680,6 @@ mod tests {
         });
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_add_remove() {
         run_test(async {
@@ -1680,7 +1732,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_removing_repo_also_deregisters_from_target() {
         run_test(async {
@@ -1800,7 +1851,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_add_register_deregister() {
         run_test(async {
@@ -1996,7 +2046,6 @@ mod tests {
         );
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_add_register_server_loopback_ipv4() {
         run_test(async {
@@ -2009,7 +2058,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_add_register_server_loopback_ipv6() {
         run_test(async {
@@ -2022,7 +2070,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_add_register_server_non_loopback_ipv4() {
         run_test(async {
@@ -2035,7 +2082,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_add_register_server_non_loopback_ipv6() {
         run_test(async {
@@ -2048,7 +2094,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_add_register_server_non_loopback_ipv6_with_scope() {
         run_test(async {
@@ -2061,7 +2106,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_register_deduplicates_rules() {
         run_test(async {
@@ -2134,7 +2178,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_remove_default_repository() {
         run_test(async {
@@ -2175,7 +2218,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_add_register_default_target() {
         run_test(async {
@@ -2224,7 +2266,6 @@ mod tests {
         });
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_add_register_empty_aliases() {
         run_test(async {
@@ -2292,7 +2333,6 @@ mod tests {
         });
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_add_register_none_aliases() {
         run_test(async {
@@ -2354,7 +2394,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_add_register_repo_manager_error() {
         run_test(async {
@@ -2416,7 +2455,6 @@ mod tests {
         });
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_register_non_existent_repo() {
         run_test(async {
@@ -2462,7 +2500,6 @@ mod tests {
         })
     }
 
-    #[serial_test::serial]
     #[test]
     fn test_deregister_non_existent_repo() {
         run_test(async {
@@ -2585,5 +2622,78 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_pm_repo_spec_to_backend() {
+        run_test(async {
+            let repo = RepoInner::new();
+            let spec = pm_repo_spec();
+            let backend = repo_spec_to_backend(&spec, &repo).await.unwrap();
+            assert_eq!(spec, backend.spec());
+        })
+    }
+
+    #[test]
+    fn test_filesystem_repo_spec_to_backend() {
+        run_test(async {
+            let repo = RepoInner::new();
+            let spec = filesystem_repo_spec();
+            let backend = repo_spec_to_backend(&spec, &repo).await.unwrap();
+            assert_eq!(spec, backend.spec());
+        })
+    }
+
+    #[test]
+    fn test_http_repo_spec_to_backend() {
+        run_test(async {
+            // Serve the empty repository
+            let repo_path = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
+            let pm_backend = PmRepository::new(repo_path);
+            let pm_repo = Repository::new("tuf", Box::new(pm_backend)).await.unwrap();
+            let manager = RepositoryManager::new();
+            manager.add(Arc::new(pm_repo));
+
+            let addr = (Ipv4Addr::LOCALHOST, 0).into();
+            let (server_fut, _, server) =
+                RepositoryServer::builder(addr, Arc::clone(&manager)).start().await.unwrap();
+
+            // Run the server in the background.
+            let _task = fasync::Task::local(server_fut);
+
+            let http_spec = RepositorySpec::Http {
+                metadata_repo_url: server.local_url() + "/tuf/",
+                blob_repo_url: server.local_url() + "/tuf/blobs/",
+            };
+
+            let repo = RepoInner::new();
+            let http_backend = repo_spec_to_backend(&http_spec, &repo).await.unwrap();
+            assert_eq!(http_spec, http_backend.spec());
+
+            // It rejects invalid urls.
+            assert_matches!(
+                repo_spec_to_backend(
+                    &RepositorySpec::Http {
+                        metadata_repo_url: "hello there".to_string(),
+                        blob_repo_url: server.local_url() + "/tuf/blobs",
+                    },
+                    &repo
+                )
+                .await,
+                Err(bridge::RepositoryError::InvalidUrl)
+            );
+
+            assert_matches!(
+                repo_spec_to_backend(
+                    &RepositorySpec::Http {
+                        metadata_repo_url: server.local_url() + "/tuf",
+                        blob_repo_url: "hello there".to_string(),
+                    },
+                    &repo
+                )
+                .await,
+                Err(bridge::RepositoryError::InvalidUrl)
+            );
+        })
     }
 }

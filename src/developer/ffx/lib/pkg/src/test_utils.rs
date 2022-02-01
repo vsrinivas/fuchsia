@@ -9,6 +9,7 @@ use {
         fs::{copy, create_dir},
         path::PathBuf,
     },
+    tuf::crypto::Ed25519PrivateKey,
     walkdir::WalkDir,
 };
 
@@ -22,6 +23,16 @@ pub fn repo_key() -> RepositoryKeyConfig {
         ]
         .to_vec(),
     )
+}
+
+pub fn repo_private_key() -> Ed25519PrivateKey {
+    Ed25519PrivateKey::from_ed25519(&[
+        80, 121, 161, 145, 5, 165, 178, 98, 248, 146, 132, 195, 60, 32, 72, 122, 150, 223, 124,
+        216, 217, 43, 74, 9, 221, 38, 156, 113, 181, 63, 234, 98, 190, 11, 152, 63, 115, 150, 218,
+        103, 92, 64, 198, 185, 62, 71, 252, 237, 124, 30, 158, 168, 163, 42, 31, 233, 82, 186, 143,
+        81, 151, 96, 179, 7,
+    ])
+    .unwrap()
 }
 
 fn copy_dir(from: PathBuf, to: PathBuf) -> Result<()> {

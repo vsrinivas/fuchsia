@@ -56,7 +56,6 @@ impl FileSystemRepository {
         range: ResourceRange,
     ) -> Result<Resource, Error> {
         let file_path = sanitize_path(repo_path, resource_path)?;
-
         let mut file = async_fs::File::open(&file_path).await?;
         let total_len = file.metadata().await?.len();
 
@@ -445,7 +444,6 @@ mod tests {
 
         let chunks = [1, CHUNK_SIZE - 1, CHUNK_SIZE, CHUNK_SIZE + 1, CHUNK_SIZE * 2 + 1];
         for size in &chunks {
-            println!("size is: {}", &size);
             let path = format!("{}", size);
             let body = vec![0; *size];
             env.write_metadata(&path, &body);
