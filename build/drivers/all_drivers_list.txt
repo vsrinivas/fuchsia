@@ -51,6 +51,7 @@
 //src/devices/acpi/drivers/intel-thermal:driver
 //src/devices/bin/driver-index:fake-driver
 //src/devices/bin/driver-index:fake-driver2
+//src/devices/bin/driver-index:fake-fallback-driver
 //src/devices/bin/driver_host2:test_driver_driver
 //src/devices/bin/driver_host2:test_not_driver_driver
 //src/devices/bin/driver_host:driver-host-restart-driver-driver

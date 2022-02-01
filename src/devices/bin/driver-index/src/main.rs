@@ -137,6 +137,11 @@ async fn load_driver(
         .with_context(|| format!("{}: Failed to parse bind", component_url.as_str()))?;
 
     let v1_driver_path = get_rules_string_value(&component, "compat");
+    let fallback = get_rules_string_value(&component, "fallback");
+    let fallback = match fallback {
+        Some(s) => s == "true",
+        None => false,
+    };
     let colocate = get_rules_string_value(&component, "colocate");
     let colocate = match colocate {
         Some(s) => s == "true",
@@ -148,6 +153,7 @@ async fn load_driver(
         v1_driver_path: v1_driver_path,
         bind_rules: bind,
         colocate: colocate,
+        fallback,
     }))
 }
 
@@ -184,6 +190,9 @@ struct ResolvedDriver {
     v1_driver_path: Option<String>,
     bind_rules: DecodedRules,
     colocate: bool,
+    // TODO(fxbug.dev/92329): Use `fallback` and remove dead code attribute.
+    #[allow(dead_code)]
+    fallback: bool,
 }
 
 impl std::fmt::Display for ResolvedDriver {
@@ -810,6 +819,7 @@ mod tests {
             v1_driver_path: None,
             bind_rules: always_match.clone(),
             colocate: false,
+            fallback: false,
         },]);
 
         let (proxy, stream) =
@@ -868,6 +878,7 @@ mod tests {
                 v1_driver_path: Some("meta/my-driver.so".to_string()),
                 bind_rules: always_match.clone(),
                 colocate: false,
+                fallback: false,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(
@@ -877,6 +888,7 @@ mod tests {
                 v1_driver_path: Some("meta/my-driver2.so".to_string()),
                 bind_rules: always_match.clone(),
                 colocate: false,
+                fallback: false,
             }
         ]);
 
@@ -915,6 +927,18 @@ mod tests {
             },
             () = test_task => {},
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_load_fallback_driver() {
+        const DRIVER_URL: &str = "fuchsia-boot:///#meta/test-fallback-component.cm";
+        let driver_url = url::Url::parse(&DRIVER_URL).unwrap();
+        let pkg = io_util::open_directory_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE)
+            .context("Failed to open /pkg")
+            .unwrap();
+        let fallback_driver =
+            load_driver(&pkg, driver_url).await.unwrap().expect("Fallback driver was not loaded");
+        assert!(fallback_driver.fallback);
     }
 
     // This test relies on two drivers existing in the /pkg/ directory of the
@@ -1041,6 +1065,7 @@ mod tests {
             v1_driver_path: None,
             bind_rules: rules,
             colocate: false,
+            fallback: false,
         },]);
 
         let (proxy, stream) =

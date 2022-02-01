@@ -32,6 +32,10 @@ import("//tools/cmc/build/cmc.gni")
 #     compatibility shim when running in a DFv2 environment.
 #     Type: bool
 #     Default: true
+#   fallback (optional)
+#     If this is true then the driver is a fallback driver.
+#     Type: bool
+#     Default: false
 #   colocate (optional)
 #     If this is true, the driver will be put in the same DriverHost as its parent.
 #     This currently only affects composite drivers.
@@ -70,6 +74,10 @@ template("fuchsia_driver_component") {
 
       manifest_target = "${target_name}_manifest"
       manifest_path = "${target_gen_dir}/meta/${target_name}.cml"
+      fallback = false
+      if (defined(invoker.fallback)) {
+        fallback = invoker.fallback
+      }
       action(manifest_target) {
         visibility = [ ":*" ]
         forward_variables_from(invoker, [ "testonly" ])
@@ -85,6 +93,9 @@ template("fuchsia_driver_component") {
         ]
         if (is_v1_driver) {
           args += [ "--is_v1" ]
+        }
+        if (fallback) {
+          args += [ "--fallback" ]
         }
         if (defined(invoker.colocate) && invoker.colocate) {
           args += [ "--colocate" ]

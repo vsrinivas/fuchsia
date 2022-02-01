@@ -104,6 +104,23 @@ fuchsia_driver_component("test-bind2-component") {
   info = "test-bind2-component-info.json"
 }
 
+fuchsia_driver("fake-fallback-driver") {
+}
+
+driver_bind_rules("test-fallback-bind") {
+  rules = "test-fallback.bind"
+}
+
+fuchsia_driver_component("test-fallback-component") {
+  deps = [
+    ":fake-fallback-driver",
+    ":test-fallback-bind",
+  ]
+  info = "test-fallback-component-info.json"
+  is_v1_driver = false
+  fallback = true
+}
+
 driver_manifest("driver-manifest") {
   manifest_name = "base-driver-manifest.json"
   install_as_config_resource = true
@@ -111,6 +128,7 @@ driver_manifest("driver-manifest") {
   deps = [
     ":test-bind-component",
     ":test-bind2-component",
+    ":test-fallback-component",
   ]
 }
 
@@ -122,5 +140,6 @@ fuchsia_unittest_package("driver-index-unittests") {
     ":driver-manifest",
     ":test-bind-component",
     ":test-bind2-component",
+    ":test-fallback-component",
   ]
 }

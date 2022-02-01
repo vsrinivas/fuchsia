@@ -11,6 +11,7 @@ group("drivers") {
     "//src/devices/acpi:drivers",
     "//src/devices/bin/driver-index:test-bind-component",
     "//src/devices/bin/driver-index:test-bind2-component",
+    "//src/devices/bin/driver-index:test-fallback-component",
     "//src/devices/bin/driver_host:driver-host-restart-driver",
     "//src/devices/bin/driver_host:driver-host-test-child-driver",
     "//src/devices/bin/driver_host:driver-host-test-driver",

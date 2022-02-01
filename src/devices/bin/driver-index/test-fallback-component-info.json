@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework driver-index test fallback driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

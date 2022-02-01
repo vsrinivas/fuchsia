@@ -33,6 +33,10 @@ def main():
         action='store_true',
         help='If this exists then the driver should be colocated with its parent'
     )
+    parser.add_argument(
+        '--fallback',
+        action='store_true',
+        help='Whether or not the driver is a fallback driver')
     args = parser.parse_args()
 
     distribution_manifest = json.load(args.distribution_manifest_file)
@@ -63,11 +67,13 @@ def main():
         raise Exception("fuchsia_driver_component must contain a bind file")
 
     manifest = {
-        'program': {
-            'runner': 'driver',
-            'binary': program,
-            'bind': bind
-        },
+        'program':
+            {
+                'runner': 'driver',
+                'binary': program,
+                'bind': bind,
+                'fallback': 'true' if args.fallback else 'false'
+            },
     }
     if args.is_v1:
         manifest["program"]["binary"] = "driver/compat.so"
