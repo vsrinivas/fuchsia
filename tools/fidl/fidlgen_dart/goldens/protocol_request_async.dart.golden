@@ -119,8 +119,8 @@ const $fidl.MethodType _kParent_GetChild_Type = $fidl.MethodType(
   name: r"Parent.GetChild",
   requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
 );
 // getChildRequest: () -> ($fidl.InterfaceRequest<Child> r)
 const int _kParent_GetChildRequest_Ordinal = 0xf38d08d64f71c79;
@@ -133,8 +133,8 @@ const $fidl.MethodType _kParent_GetChildRequest_Type = $fidl.MethodType(
   name: r"Parent.GetChildRequest",
   requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
 );
 // takeChild: ($fidl.InterfaceHandle<Child> c)
 const int _kParent_TakeChild_Ordinal = 0x3e08fd7ca04b2290;
@@ -145,8 +145,8 @@ const $fidl.MethodType _kParent_TakeChild_Type = $fidl.MethodType(
   ],
   response: [],
   name: r"Parent.TakeChild",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
   responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
@@ -159,8 +159,8 @@ const $fidl.MethodType _kParent_TakeChildRequest_Type = $fidl.MethodType(
   ],
   response: [],
   name: r"Parent.TakeChildRequest",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
   responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );

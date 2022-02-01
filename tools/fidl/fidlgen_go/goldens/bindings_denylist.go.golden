@@ -99,7 +99,7 @@ func (msg *OnlyAppearsInImportingLibrary) Marshaler() _bindings.Marshaler {
 }
 
 type denyEachBindingWithCtxOnlyDenyCppRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
@@ -121,7 +121,7 @@ func (msg *denyEachBindingWithCtxOnlyDenyCppResponse) Marshaler() _bindings.Mars
 }
 
 type denyEachBindingWithCtxOnlyDenyDartRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
@@ -143,7 +143,7 @@ func (msg *denyEachBindingWithCtxOnlyDenyDartResponse) Marshaler() _bindings.Mar
 }
 
 type denyEachBindingWithCtxOnlyDenyLibfuzzerRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
@@ -165,7 +165,7 @@ func (msg *denyEachBindingWithCtxOnlyDenyLibfuzzerResponse) Marshaler() _binding
 }
 
 type denyEachBindingWithCtxOnlyDenyRustRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
@@ -187,7 +187,7 @@ func (msg *denyEachBindingWithCtxOnlyDenyRustResponse) Marshaler() _bindings.Mar
 }
 
 type denyEachBindingWithCtxOnlyDenySyzkallerRequest struct {
-	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v2:"1" fidl_alignment_v2:"1"`
 	A bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 

@@ -59,7 +59,7 @@ class ParentFirstRequest final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_inheritancewithrecursivedecl::ParentFirstRequest, 8, 8>;
+      ::test_inheritancewithrecursivedecl::ParentFirstRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_inheritancewithrecursivedecl::ParentFirstRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -112,7 +112,7 @@ class ChildSecondRequest final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_inheritancewithrecursivedecl::ChildSecondRequest, 8, 8>;
+      ::test_inheritancewithrecursivedecl::ChildSecondRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_inheritancewithrecursivedecl::ChildSecondRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -153,7 +153,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_inheritancewithrecursivedecl::ParentFirstRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_inheritancewithrecursivedecl::ParentFirstRequest, 8, 8> {
+                ::test_inheritancewithrecursivedecl::ParentFirstRequest, 4, 4> {
 };
 #endif  // __Fuchsia__
 
@@ -180,7 +180,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_inheritancewithrecursivedecl::ChildSecondRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_inheritancewithrecursivedecl::ChildSecondRequest, 8, 8> {
+                ::test_inheritancewithrecursivedecl::ChildSecondRequest, 4, 4> {
 };
 #endif  // __Fuchsia__
 

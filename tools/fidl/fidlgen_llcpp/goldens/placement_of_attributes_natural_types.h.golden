@@ -313,13 +313,13 @@ class ExampleProtocolMethodRequest final {
 
   bool operator==(const ExampleProtocolMethodRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_placementofattributes::ExampleProtocolMethodRequest, 8,
-        8>::Equal(this, &other);
+        ::test_placementofattributes::ExampleProtocolMethodRequest, 1,
+        1>::Equal(this, &other);
   }
   bool operator!=(const ExampleProtocolMethodRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_placementofattributes::ExampleProtocolMethodRequest, 8,
-        8>::Equal(this, &other);
+        ::test_placementofattributes::ExampleProtocolMethodRequest, 1,
+        1>::Equal(this, &other);
   }
 
   const ::test_exampleusing::Empty& arg() const { return storage_.arg; }
@@ -335,7 +335,7 @@ class ExampleProtocolMethodRequest final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_placementofattributes::ExampleProtocolMethodRequest, 8, 8>;
+      ::test_placementofattributes::ExampleProtocolMethodRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_placementofattributes::ExampleProtocolMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -391,7 +391,7 @@ template <>
 struct CodingTraits<::test_placementofattributes::ExampleProtocolMethodRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_placementofattributes::ExampleProtocolMethodRequest, 8, 8> {};
+          ::test_placementofattributes::ExampleProtocolMethodRequest, 1, 1> {};
 #endif  // __Fuchsia__
 
 template <>

@@ -2305,20 +2305,20 @@ type Empty = struct {};
       nullptr, empty->name, std::vector<fidl::flat::StructMember>(), std::nullopt, true);
   ASSERT_NO_FAILURES(CheckTypeShape(&fake_payload,
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 1,
+                                        .alignment = 1,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 1,
+                                        .alignment = 1,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 1,
+                                        .alignment = 1,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 1,
+                                        .alignment = 1,
                                     }));
 }
 
@@ -2345,35 +2345,35 @@ protocol Test {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 2,
                                         .max_handles = 0,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 2,
                                         .max_handles = 0,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 2,
                                         .max_handles = 0,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 2,
                                         .max_handles = 0,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     }));
 
   ASSERT_EQ(as_struct->members.size(), 2);
   ASSERT_NO_FAILURES(
       CheckFieldShape(as_struct->members[0], ExpectedField{.offset = 0, .padding = 0}));
   ASSERT_NO_FAILURES(
-      CheckFieldShape(as_struct->members[1], ExpectedField{.offset = 2, .padding = 4}));
+      CheckFieldShape(as_struct->members[1], ExpectedField{.offset = 2, .padding = 0}));
 }
 
 TEST(TypeshapeTests, GoodSimpleResponse) {
@@ -2399,35 +2399,35 @@ protocol Test {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 2,
                                         .max_handles = 0,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 2,
                                         .max_handles = 0,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 2,
                                         .max_handles = 0,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 2,
                                         .max_handles = 0,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     }));
 
   ASSERT_EQ(as_struct->members.size(), 2);
   ASSERT_NO_FAILURES(
       CheckFieldShape(as_struct->members[0], ExpectedField{.offset = 0, .padding = 0}));
   ASSERT_NO_FAILURES(
-      CheckFieldShape(as_struct->members[1], ExpectedField{.offset = 2, .padding = 4}));
+      CheckFieldShape(as_struct->members[1], ExpectedField{.offset = 2, .padding = 0}));
 }
 
 TEST(TypeshapeTests, GoodRecursiveRequest) {
@@ -2471,32 +2471,32 @@ protocol MessagePort {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     }));
   ASSERT_EQ(as_struct->members.size(), 1);
   ASSERT_NO_FAILURES(
-      CheckFieldShape(as_struct->members[0], ExpectedField{.offset = 0, .padding = 4}));
+      CheckFieldShape(as_struct->members[0], ExpectedField{.offset = 0, .padding = 0}));
 }
 
 TEST(TypeshapeTests, GoodRecursiveOptRequest) {
@@ -2537,29 +2537,32 @@ protocol MessagePort {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     }));
+  ASSERT_EQ(as_struct->members.size(), 1);
+  ASSERT_NO_FAILURES(
+      CheckFieldShape(as_struct->members[0], ExpectedField{.offset = 0, .padding = 0}));
 }
 
 TEST(TypeshapeTests, GoodRecursiveProtocol) {
@@ -2600,29 +2603,32 @@ protocol MessagePort {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     }));
+  ASSERT_EQ(as_struct->members.size(), 1);
+  ASSERT_NO_FAILURES(
+      CheckFieldShape(as_struct->members[0], ExpectedField{.offset = 0, .padding = 0}));
 }
 
 TEST(TypeshapeTests, GoodRecursiveOptProtocol) {
@@ -2663,29 +2669,32 @@ protocol MessagePort {
 
   ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     },
                                     Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
+                                        .inline_size = 4,
+                                        .alignment = 4,
                                         .max_handles = 1,
-                                        .has_padding = true,
+                                        .has_padding = false,
                                     }));
+  ASSERT_EQ(as_struct->members.size(), 1);
+  ASSERT_NO_FAILURES(
+      CheckFieldShape(as_struct->members[0], ExpectedField{.offset = 0, .padding = 0}));
 }
 
 TEST(TypeshapeTests, GoodRecursiveStruct) {

@@ -11,9 +11,6 @@ __LOCAL extern const struct FidlCodedStruct test_transitivedependenciescompose_T
 const struct FidlCodedStruct test_transitivedependenciescompose_TopGetFooRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=0u, .size_v2=0u, .name="test.transitivedependenciescompose/TopGetFooRequestMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_transitivedependenciescompose_TopGetFooResponseMessageTable;
-static const struct FidlStructElement Fields59test_transitivedependenciescompose_TopGetFooResponseMessage[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=4u, .offset_v2=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
-};
-const struct FidlCodedStruct test_transitivedependenciescompose_TopGetFooResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields59test_transitivedependenciescompose_TopGetFooResponseMessage, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="test.transitivedependenciescompose/TopGetFooResponseMessage"};
+const struct FidlCodedStruct test_transitivedependenciescompose_TopGetFooResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.transitivedependenciescompose/TopGetFooResponseMessage"};
 
 

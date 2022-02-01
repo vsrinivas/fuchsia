@@ -7,7 +7,7 @@ import (
 )
 
 type parentWithCtxFirstRequest struct {
-	_       struct{}                      `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_       struct{}                      `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	Request ParentWithCtxInterfaceRequest `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"4" fidl_bounds:"0"`
 }
 
@@ -18,7 +18,7 @@ func (msg *parentWithCtxFirstRequest) Marshaler() _bindings.Marshaler {
 }
 
 type childWithCtxFirstRequest struct {
-	_       struct{}                      `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_       struct{}                      `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	Request ParentWithCtxInterfaceRequest `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"4" fidl_bounds:"0"`
 }
 
@@ -29,7 +29,7 @@ func (msg *childWithCtxFirstRequest) Marshaler() _bindings.Marshaler {
 }
 
 type childWithCtxSecondRequest struct {
-	_       struct{}                      `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_       struct{}                      `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	Request ParentWithCtxInterfaceRequest `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"4" fidl_bounds:"0"`
 }
 

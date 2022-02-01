@@ -721,8 +721,8 @@ const $fidl.MethodType _kSimpleProtocol_Add_Type = $fidl.MethodType(
   name: r"SimpleProtocol.Add",
   requestInlineSizeV1: 8,
   requestInlineSizeV2: 8,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
 );
 
 abstract class SimpleProtocol {

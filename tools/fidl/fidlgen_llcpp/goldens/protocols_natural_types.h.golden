@@ -335,7 +335,7 @@ class HandleRightsProtocolResponseMethodTopResponse final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::HandleRightsProtocolResponseMethodTopResponse, 8, 8>;
+      ::test_protocols::HandleRightsProtocolResponseMethodTopResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
@@ -381,7 +381,7 @@ class HandleRightsProtocolResponseMethodRequest final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::HandleRightsProtocolResponseMethodRequest, 8, 8>;
+      ::test_protocols::HandleRightsProtocolResponseMethodRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::HandleRightsProtocolResponseMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -427,7 +427,7 @@ class HandleRightsProtocolNoResponseMethodRequest final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 8, 8>;
+      ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -473,7 +473,7 @@ class HandleRightsProtocolAnEventRequest final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::HandleRightsProtocolAnEventRequest, 8, 8>;
+      ::test_protocols::HandleRightsProtocolAnEventRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::HandleRightsProtocolAnEventRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -519,7 +519,7 @@ class ChannelProtocolTakeHandleRequest final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::ChannelProtocolTakeHandleRequest, 8, 8>;
+      ::test_protocols::ChannelProtocolTakeHandleRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolTakeHandleRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -565,7 +565,7 @@ class ChannelProtocolMutateSocketTopResponse final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::ChannelProtocolMutateSocketTopResponse, 8, 8>;
+      ::test_protocols::ChannelProtocolMutateSocketTopResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolMutateSocketTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
@@ -611,7 +611,7 @@ class ChannelProtocolMutateSocketRequest final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::ChannelProtocolMutateSocketRequest, 8, 8>;
+      ::test_protocols::ChannelProtocolMutateSocketRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolMutateSocketRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -662,7 +662,7 @@ class WithProtocolEndsServerEndsTopResponse final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::WithProtocolEndsServerEndsTopResponse, 8, 8>;
+      ::test_protocols::WithProtocolEndsServerEndsTopResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithProtocolEndsServerEndsTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
@@ -715,7 +715,7 @@ class WithProtocolEndsServerEndsRequest final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::WithProtocolEndsServerEndsRequest, 8, 8>;
+      ::test_protocols::WithProtocolEndsServerEndsRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithProtocolEndsServerEndsRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -768,7 +768,7 @@ class WithProtocolEndsClientEndsTopResponse final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::WithProtocolEndsClientEndsTopResponse, 8, 8>;
+      ::test_protocols::WithProtocolEndsClientEndsTopResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithProtocolEndsClientEndsTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
@@ -821,7 +821,7 @@ class WithProtocolEndsClientEndsRequest final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::WithProtocolEndsClientEndsRequest, 8, 8>;
+      ::test_protocols::WithProtocolEndsClientEndsRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithProtocolEndsClientEndsRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -2515,12 +2515,12 @@ class ManyParametersFifteenRequest final {
 
   bool operator==(const ManyParametersFifteenRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocols::ManyParametersFifteenRequest, 16, 16>::Equal(this,
+        ::test_protocols::ManyParametersFifteenRequest, 15, 15>::Equal(this,
                                                                        &other);
   }
   bool operator!=(const ManyParametersFifteenRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_protocols::ManyParametersFifteenRequest, 16, 16>::Equal(this,
+        ::test_protocols::ManyParametersFifteenRequest, 15, 15>::Equal(this,
                                                                        &other);
   }
 
@@ -2607,7 +2607,7 @@ class ManyParametersFifteenRequest final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocols::ManyParametersFifteenRequest, 16, 16>;
+      ::test_protocols::ManyParametersFifteenRequest, 15, 15>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ManyParametersFifteenRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -3162,7 +3162,7 @@ struct CodingTraits<
     ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::HandleRightsProtocolResponseMethodTopResponse,
-                8, 8> {};
+                4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3189,7 +3189,7 @@ template <>
 struct CodingTraits<::test_protocols::HandleRightsProtocolResponseMethodRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::HandleRightsProtocolResponseMethodRequest, 8, 8> {};
+          ::test_protocols::HandleRightsProtocolResponseMethodRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3217,7 +3217,7 @@ struct CodingTraits<
     ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 8, 8> {
+          ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 4, 4> {
 };
 #endif  // __Fuchsia__
 
@@ -3244,7 +3244,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_protocols::HandleRightsProtocolAnEventRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::HandleRightsProtocolAnEventRequest, 8, 8> {};
+          ::test_protocols::HandleRightsProtocolAnEventRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3270,7 +3270,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_protocols::ChannelProtocolTakeHandleRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::ChannelProtocolTakeHandleRequest, 8, 8> {};
+          ::test_protocols::ChannelProtocolTakeHandleRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3297,7 +3297,7 @@ template <>
 struct CodingTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::ChannelProtocolMutateSocketTopResponse, 8, 8> {};
+          ::test_protocols::ChannelProtocolMutateSocketTopResponse, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3323,7 +3323,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_protocols::ChannelProtocolMutateSocketRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::ChannelProtocolMutateSocketRequest, 8, 8> {};
+          ::test_protocols::ChannelProtocolMutateSocketRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3349,7 +3349,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_protocols::WithProtocolEndsServerEndsTopResponse, 8, 8> {
+                ::test_protocols::WithProtocolEndsServerEndsTopResponse, 4, 4> {
 };
 #endif  // __Fuchsia__
 
@@ -3376,7 +3376,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_protocols::WithProtocolEndsServerEndsRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::WithProtocolEndsServerEndsRequest, 8, 8> {};
+          ::test_protocols::WithProtocolEndsServerEndsRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3402,7 +3402,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_protocols::WithProtocolEndsClientEndsTopResponse, 8, 8> {
+                ::test_protocols::WithProtocolEndsClientEndsTopResponse, 4, 4> {
 };
 #endif  // __Fuchsia__
 
@@ -3429,7 +3429,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_protocols::WithProtocolEndsClientEndsRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::WithProtocolEndsClientEndsRequest, 8, 8> {};
+          ::test_protocols::WithProtocolEndsClientEndsRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3962,7 +3962,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_protocols::ManyParametersFifteenRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::ManyParametersFifteenRequest, 16, 16> {};
+          ::test_protocols::ManyParametersFifteenRequest, 15, 15> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

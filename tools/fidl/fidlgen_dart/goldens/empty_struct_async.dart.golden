@@ -109,8 +109,8 @@ const $fidl.MethodType _kEmptyProtocol_Send_Type = $fidl.MethodType(
   ],
   response: [],
   name: r"EmptyProtocol.Send",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
+  requestInlineSizeV1: 1,
+  requestInlineSizeV2: 1,
   responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
@@ -124,8 +124,8 @@ const $fidl.MethodType _kEmptyProtocol_Receive_Type = $fidl.MethodType(
   name: r"EmptyProtocol.Receive",
   requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
+  responseInlineSizeV1: 1,
+  responseInlineSizeV2: 1,
 );
 // sendAndReceive: (Empty e) -> (Empty e)
 const int _kEmptyProtocol_SendAndReceive_Ordinal = 0x76a931254962cea;
@@ -137,10 +137,10 @@ const $fidl.MethodType _kEmptyProtocol_SendAndReceive_Type = $fidl.MethodType(
     $fidl.MemberType<Empty>(type: kEmpty_Type, offsetV1: 0, offsetV2: 0),
   ],
   name: r"EmptyProtocol.SendAndReceive",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
+  requestInlineSizeV1: 1,
+  requestInlineSizeV2: 1,
+  responseInlineSizeV1: 1,
+  responseInlineSizeV2: 1,
 );
 
 abstract class EmptyProtocol {

@@ -102,12 +102,12 @@ class EmptyProtocolSendRequest final {
 
   bool operator==(const EmptyProtocolSendRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendRequest, 8, 8>::Equal(this,
+        ::test_emptystruct::EmptyProtocolSendRequest, 1, 1>::Equal(this,
                                                                    &other);
   }
   bool operator!=(const EmptyProtocolSendRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendRequest, 8, 8>::Equal(this,
+        ::test_emptystruct::EmptyProtocolSendRequest, 1, 1>::Equal(this,
                                                                    &other);
   }
 
@@ -124,7 +124,7 @@ class EmptyProtocolSendRequest final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolSendRequest, 8, 8>;
+      ::test_emptystruct::EmptyProtocolSendRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolSendRequest>;
   static constexpr auto kMembers =
@@ -163,14 +163,14 @@ class EmptyProtocolSendAndReceiveTopResponse final {
   bool operator==(
       const EmptyProtocolSendAndReceiveTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 8,
-        8>::Equal(this, &other);
+        ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1,
+        1>::Equal(this, &other);
   }
   bool operator!=(
       const EmptyProtocolSendAndReceiveTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 8,
-        8>::Equal(this, &other);
+        ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1,
+        1>::Equal(this, &other);
   }
 
   const ::test_emptystruct::Empty& e() const { return storage_.e; }
@@ -186,7 +186,7 @@ class EmptyProtocolSendAndReceiveTopResponse final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 8, 8>;
+      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>;
   static constexpr auto kMembers =
@@ -225,14 +225,14 @@ class EmptyProtocolSendAndReceiveRequest final {
   bool operator==(
       const EmptyProtocolSendAndReceiveRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 8,
-        8>::Equal(this, &other);
+        ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1,
+        1>::Equal(this, &other);
   }
   bool operator!=(
       const EmptyProtocolSendAndReceiveRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 8,
-        8>::Equal(this, &other);
+        ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1,
+        1>::Equal(this, &other);
   }
 
   const ::test_emptystruct::Empty& e() const { return storage_.e; }
@@ -248,7 +248,7 @@ class EmptyProtocolSendAndReceiveRequest final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 8, 8>;
+      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>;
   static constexpr auto kMembers =
@@ -282,12 +282,12 @@ class EmptyProtocolReceiveRequest final {
 
   bool operator==(const EmptyProtocolReceiveRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolReceiveRequest, 8, 8>::Equal(this,
+        ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1>::Equal(this,
                                                                       &other);
   }
   bool operator!=(const EmptyProtocolReceiveRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_emptystruct::EmptyProtocolReceiveRequest, 8, 8>::Equal(this,
+        ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1>::Equal(this,
                                                                       &other);
   }
 
@@ -304,7 +304,7 @@ class EmptyProtocolReceiveRequest final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_emptystruct::EmptyProtocolReceiveRequest, 8, 8>;
+      ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolReceiveRequest>;
   static constexpr auto kMembers =
@@ -353,7 +353,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_emptystruct::EmptyProtocolSendRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_emptystruct::EmptyProtocolSendRequest, 8, 8> {};
+          ::test_emptystruct::EmptyProtocolSendRequest, 1, 1> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -377,7 +377,7 @@ template <>
 struct CodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 8, 8> {};
+          ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1, 1> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -400,7 +400,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
-                ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 8, 8> {
+                ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1, 1> {
 };
 #endif  // __Fuchsia__
 
@@ -423,7 +423,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_emptystruct::EmptyProtocolReceiveRequest, 8, 8> {};
+          ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

@@ -17,10 +17,9 @@ __LOCAL extern const struct FidlCodedBits test_placementofattributes_ExampleBits
 
 __LOCAL extern const struct FidlCodedStruct test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
 static const struct FidlStructElement Fields62test_placementofattributes_ExampleProtocolMethodRequestMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_exampleusing_EmptyTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=0u, .offset_v2=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_exampleusing_EmptyTable)}}
 };
-const struct FidlCodedStruct test_placementofattributes_ExampleProtocolMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields62test_placementofattributes_ExampleProtocolMethodRequestMessage, .element_count=2u, .size_v1=8u, .size_v2=8u, .name="test.placementofattributes/ExampleProtocolMethodRequestMessage"};
+const struct FidlCodedStruct test_placementofattributes_ExampleProtocolMethodRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields62test_placementofattributes_ExampleProtocolMethodRequestMessage, .element_count=1u, .size_v1=1u, .size_v2=1u, .name="test.placementofattributes/ExampleProtocolMethodRequestMessage"};
 
 
 static const struct FidlXUnionField Fields40test_placementofattributes_ExampleXUnion[] = {
@@ -47,10 +46,9 @@ const struct FidlCodedTable test_placementofattributes_ExampleTableTable = {.tag
 const struct FidlCodedStruct test_placementofattributes_ExampleStructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.placementofattributes/ExampleStruct"};
 
 static const struct FidlStructElement Fields55test_placementofattributes_ExampleProtocolMethodRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_exampleusing_EmptyTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=0u, .offset_v2=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_exampleusing_EmptyTable)}}
 };
-const struct FidlCodedStruct test_placementofattributes_ExampleProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields55test_placementofattributes_ExampleProtocolMethodRequest, .element_count=2u, .size_v1=8u, .size_v2=8u, .name="test.placementofattributes/ExampleProtocolMethodRequest"};
+const struct FidlCodedStruct test_placementofattributes_ExampleProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields55test_placementofattributes_ExampleProtocolMethodRequest, .element_count=1u, .size_v1=1u, .size_v2=1u, .name="test.placementofattributes/ExampleProtocolMethodRequest"};
 
 static bool EnumValidatorFor_test_placementofattributes_ExampleEnum(uint64_t v) {
   switch (v) {

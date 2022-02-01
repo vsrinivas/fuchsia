@@ -8,6 +8,8 @@
 #include <lib/async/wait.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
+#include <zircon/errors.h>
+#include <zircon/fidl.h>
 
 #include <thread>
 
@@ -58,9 +60,14 @@ TEST(SyncClientErrorTest, DecodeError) {
     endpoints->server.channel().read(0, &request, nullptr, sizeof(request), 0, &actual, nullptr);
     ASSERT_EQ(sizeof(request), actual);
     fidl::WireResponse<test::EnumMethods::GetEnum> message;
+
+    // Zero the message body, to prevent hitting the "non-zero padding bytes" error, which is
+    // checked before the "not valid enum member" error we're interested in
+    memset(&message, 0, sizeof(message));
+
+    // Send the number 42 as |MyError|, which will fail validation at the sync client when it
+    // receives the message.
     fidl_init_txn_header(&message._hdr, request._hdr.txid, request._hdr.ordinal);
-    // Send the number 42 as |MyError|, will fail validation at the sync client
-    // when it receives the message.
     message.e = static_cast<test::wire::MyError>(42);
     ASSERT_OK(endpoints->server.channel().write(0, reinterpret_cast<void*>(&message),
                                                 sizeof(message), nullptr, 0));

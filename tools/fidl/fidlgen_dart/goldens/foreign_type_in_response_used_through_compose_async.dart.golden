@@ -52,8 +52,8 @@ const $fidl.MethodType _kTop_GetFoo_Type = $fidl.MethodType(
   name: r"Top.GetFoo",
   requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
 );
 
 abstract class Top {

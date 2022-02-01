@@ -295,14 +295,6 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
       return DataSize(8);
     }
 
-    if (object.is_request_or_response) {
-      // Request/response structs have an alignment of 8. (Note that this was a bug before FTP-029,
-      // which changed method ordinals from 32 to 64 bits. Before FTP-029, the assumed alignment was
-      // 4, but in practice, all FIDL bindings and typeshape calculation code were assuming a
-      // minimum alignment of 8.)
-      return DataSize(fidl::kAlignmentOfTransactionHeader);
-    }
-
     if (object.members.empty()) {
       // Empty struct.
 

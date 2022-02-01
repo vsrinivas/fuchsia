@@ -196,8 +196,10 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -233,8 +235,10 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 24 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -270,8 +274,10 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -306,8 +312,10 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 24 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;

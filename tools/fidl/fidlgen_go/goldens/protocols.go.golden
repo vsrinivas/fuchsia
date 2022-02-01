@@ -364,7 +364,7 @@ func (msg *channelProtocolWithCtxMethodBResponse) Marshaler() _bindings.Marshale
 }
 
 type channelProtocolWithCtxTakeHandleRequest struct {
-	_ struct{}   `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{}   `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	H _zx.Handle `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 }
 
@@ -375,7 +375,7 @@ func (msg *channelProtocolWithCtxTakeHandleRequest) Marshaler() _bindings.Marsha
 }
 
 type channelProtocolWithCtxMutateSocketRequest struct {
-	_ struct{}   `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{}   `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	A _zx.Socket `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 }
 
@@ -386,7 +386,7 @@ func (msg *channelProtocolWithCtxMutateSocketRequest) Marshaler() _bindings.Mars
 }
 
 type channelProtocolWithCtxMutateSocketResponse struct {
-	_ struct{}   `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{}   `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	B _zx.Socket `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 }
 
@@ -453,7 +453,7 @@ func (msg *transitionalWithCtxEventResponse) Marshaler() _bindings.Marshaler {
 }
 
 type handleRightsProtocolWithCtxNoResponseMethodRequest struct {
-	_ struct{}   `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{}   `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	H _zx.Socket `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"14" fidl_handle_rights:"3" fidl_bounds:"0"`
 }
 
@@ -464,7 +464,7 @@ func (msg *handleRightsProtocolWithCtxNoResponseMethodRequest) Marshaler() _bind
 }
 
 type handleRightsProtocolWithCtxResponseMethodRequest struct {
-	_ struct{}   `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{}   `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	H _zx.Socket `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"14" fidl_handle_rights:"3" fidl_bounds:"0"`
 }
 
@@ -475,7 +475,7 @@ func (msg *handleRightsProtocolWithCtxResponseMethodRequest) Marshaler() _bindin
 }
 
 type handleRightsProtocolWithCtxResponseMethodResponse struct {
-	_ struct{}   `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{}   `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	H _zx.Socket `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"14" fidl_handle_rights:"1" fidl_bounds:"0"`
 }
 
@@ -486,7 +486,7 @@ func (msg *handleRightsProtocolWithCtxResponseMethodResponse) Marshaler() _bindi
 }
 
 type handleRightsProtocolWithCtxAnEventResponse struct {
-	_ struct{}   `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_ struct{}   `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	H _zx.Socket `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"14" fidl_handle_rights:"3" fidl_bounds:"0"`
 }
 
@@ -497,7 +497,7 @@ func (msg *handleRightsProtocolWithCtxAnEventResponse) Marshaler() _bindings.Mar
 }
 
 type withProtocolEndsWithCtxClientEndsRequest struct {
-	_  struct{}                             `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_  struct{}                             `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	In DiscoverableProtocolWithCtxInterface `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"4"`
 }
 
@@ -508,7 +508,7 @@ func (msg *withProtocolEndsWithCtxClientEndsRequest) Marshaler() _bindings.Marsh
 }
 
 type withProtocolEndsWithCtxClientEndsResponse struct {
-	_   struct{}                             `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_   struct{}                             `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	Out DiscoverableProtocolWithCtxInterface `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"4"`
 }
 
@@ -519,7 +519,7 @@ func (msg *withProtocolEndsWithCtxClientEndsResponse) Marshaler() _bindings.Mars
 }
 
 type withProtocolEndsWithCtxServerEndsRequest struct {
-	_  struct{}                                    `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_  struct{}                                    `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	In DiscoverableProtocolWithCtxInterfaceRequest `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"4" fidl_bounds:"1"`
 }
 
@@ -530,7 +530,7 @@ func (msg *withProtocolEndsWithCtxServerEndsRequest) Marshaler() _bindings.Marsh
 }
 
 type withProtocolEndsWithCtxServerEndsResponse struct {
-	_   struct{}                                    `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	_   struct{}                                    `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v2:"4" fidl_alignment_v2:"4"`
 	Out DiscoverableProtocolWithCtxInterfaceRequest `fidl_offset_v1:"0" fidl_offset_v2:"0" fidl_handle_subtype:"4" fidl_bounds:"0"`
 }
 
@@ -541,7 +541,7 @@ func (msg *withProtocolEndsWithCtxServerEndsResponse) Marshaler() _bindings.Mars
 }
 
 type withProtocolEndsWithCtxStructContainingEndsRequest struct {
-	_  struct{}     `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	_  struct{}     `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"4" fidl_size_v2:"16" fidl_alignment_v2:"4"`
 	In ProtocolEnds `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
@@ -552,7 +552,7 @@ func (msg *withProtocolEndsWithCtxStructContainingEndsRequest) Marshaler() _bind
 }
 
 type withProtocolEndsWithCtxStructContainingEndsResponse struct {
-	_   struct{}     `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	_   struct{}     `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"4" fidl_size_v2:"16" fidl_alignment_v2:"4"`
 	Out ProtocolEnds `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
@@ -563,7 +563,7 @@ func (msg *withProtocolEndsWithCtxStructContainingEndsResponse) Marshaler() _bin
 }
 
 type manyParametersWithCtxFifteenRequest struct {
-	_   struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	_   struct{} `fidl:"s" fidl_size_v1:"15" fidl_alignment_v1:"1" fidl_size_v2:"15" fidl_alignment_v2:"1"`
 	P1  bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 	P2  bool     `fidl_offset_v1:"1" fidl_offset_v2:"1"`
 	P3  bool     `fidl_offset_v1:"2" fidl_offset_v2:"2"`

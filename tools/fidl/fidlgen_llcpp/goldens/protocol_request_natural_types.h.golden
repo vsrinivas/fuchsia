@@ -61,7 +61,7 @@ class ParentTakeChildRequestRequest final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocolrequest::ParentTakeChildRequestRequest, 8, 8>;
+      ::test_protocolrequest::ParentTakeChildRequestRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocolrequest::ParentTakeChildRequestRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -109,7 +109,7 @@ class ParentTakeChildRequest final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocolrequest::ParentTakeChildRequest, 8, 8>;
+      ::test_protocolrequest::ParentTakeChildRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocolrequest::ParentTakeChildRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -158,7 +158,7 @@ class ParentGetChildTopResponse final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocolrequest::ParentGetChildTopResponse, 8, 8>;
+      ::test_protocolrequest::ParentGetChildTopResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocolrequest::ParentGetChildTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
@@ -209,7 +209,7 @@ class ParentGetChildRequestTopResponse final {
   Storage_ storage_;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_protocolrequest::ParentGetChildRequestTopResponse, 8, 8>;
+      ::test_protocolrequest::ParentGetChildRequestTopResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocolrequest::ParentGetChildRequestTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
@@ -249,7 +249,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_protocolrequest::ParentTakeChildRequestRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocolrequest::ParentTakeChildRequestRequest, 8, 8> {};
+          ::test_protocolrequest::ParentTakeChildRequestRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -274,7 +274,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_protocolrequest::ParentTakeChildRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocolrequest::ParentTakeChildRequest, 8, 8> {};
+          ::test_protocolrequest::ParentTakeChildRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -300,7 +300,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_protocolrequest::ParentGetChildTopResponse> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocolrequest::ParentGetChildTopResponse, 8, 8> {};
+          ::test_protocolrequest::ParentGetChildTopResponse, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -327,7 +327,7 @@ template <>
 struct CodingTraits<::test_protocolrequest::ParentGetChildRequestTopResponse>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocolrequest::ParentGetChildRequestTopResponse, 8, 8> {};
+          ::test_protocolrequest::ParentGetChildRequestTopResponse, 4, 4> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

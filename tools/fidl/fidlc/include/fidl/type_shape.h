@@ -10,10 +10,6 @@
 // TODO(fxbug.dev/8032): We should revisit this namespace choice as part of improving code
 // organization.
 namespace fidl {
-
-constexpr uint32_t kSizeOfTransactionHeader = 16;
-constexpr uint32_t kAlignmentOfTransactionHeader = 8;
-
 namespace flat {
 
 struct Object;

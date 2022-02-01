@@ -2339,8 +2339,8 @@ const $fidl.MethodType _kChannelProtocol_TakeHandle_Type = $fidl.MethodType(
   ],
   response: [],
   name: r"ChannelProtocol.TakeHandle",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
   responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
@@ -2360,10 +2360,10 @@ const $fidl.MethodType _kChannelProtocol_MutateSocket_Type = $fidl.MethodType(
         offsetV2: 0),
   ],
   name: r"ChannelProtocol.MutateSocket",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
 );
 
 class ChannelProtocol$EventA$Response {
@@ -3179,8 +3179,8 @@ const $fidl.MethodType _kHandleRightsProtocol_NoResponseMethod_Type =
   ],
   response: [],
   name: r"HandleRightsProtocol.NoResponseMethod",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
   responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
@@ -3201,10 +3201,10 @@ const $fidl.MethodType _kHandleRightsProtocol_ResponseMethod_Type =
         offsetV2: 0),
   ],
   name: r"HandleRightsProtocol.ResponseMethod",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
 );
 // anEvent:  -> ($zircon.Socket h)
 const int _kHandleRightsProtocol_AnEvent_Ordinal = 0x69dad41418eb133;
@@ -3219,8 +3219,8 @@ const $fidl.MethodType _kHandleRightsProtocol_AnEvent_Type = $fidl.MethodType(
   name: r"HandleRightsProtocol.AnEvent",
   requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
 );
 
 abstract class HandleRightsProtocol {
@@ -3487,10 +3487,10 @@ const $fidl.MethodType _kWithProtocolEnds_ClientEnds_Type = $fidl.MethodType(
         offsetV2: 0),
   ],
   name: r"WithProtocolEnds.ClientEnds",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
 );
 // serverEnds: ($fidl.InterfaceRequest<DiscoverableProtocol>? in$) -> ($fidl.InterfaceRequest<DiscoverableProtocol> out)
 const int _kWithProtocolEnds_ServerEnds_Ordinal = 0x70a02c2ba2228a33;
@@ -3508,10 +3508,10 @@ const $fidl.MethodType _kWithProtocolEnds_ServerEnds_Type = $fidl.MethodType(
         offsetV2: 0),
   ],
   name: r"WithProtocolEnds.ServerEnds",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
-  responseInlineSizeV1: 8,
-  responseInlineSizeV2: 8,
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
+  responseInlineSizeV1: 4,
+  responseInlineSizeV2: 4,
 );
 // structContainingEnds: (ProtocolEnds in$) -> (ProtocolEnds out)
 const int _kWithProtocolEnds_StructContainingEnds_Ordinal = 0x3893f0baad26f5d5;
@@ -3860,8 +3860,8 @@ const $fidl.MethodType _kManyParameters_Fifteen_Type = $fidl.MethodType(
   ],
   response: [],
   name: r"ManyParameters.Fifteen",
-  requestInlineSizeV1: 16,
-  requestInlineSizeV2: 16,
+  requestInlineSizeV1: 15,
+  requestInlineSizeV2: 15,
   responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );

@@ -437,8 +437,8 @@ const $fidl.MethodType _kExampleProtocol_Method_Type = $fidl.MethodType(
   ],
   response: [],
   name: r"ExampleProtocol.Method",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
+  requestInlineSizeV1: 1,
+  requestInlineSizeV2: 1,
   responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );

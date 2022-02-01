@@ -64,10 +64,10 @@ class Top_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 

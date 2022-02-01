@@ -270,7 +270,7 @@ TEST(MyBits, CodingTable) {
       fidl_test_example_codingtables_CodingMyBitsRequestMessageTable;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
   const FidlCodedStruct& request_struct = type.coded_struct();
-  ASSERT_EQ(2, request_struct.element_count);
+  ASSERT_EQ(1, request_struct.element_count);
   ASSERT_STREQ("fidl.test.example.codingtables/CodingMyBitsRequestMessage", request_struct.name);
   ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, request_struct.elements[0].header.is_resource);
@@ -282,11 +282,6 @@ TEST(MyBits, CodingTable) {
   const FidlCodedBits& my_bits_table = my_bits_type.coded_bits();
   ASSERT_EQ(kFidlCodedPrimitiveSubtype_Uint8, my_bits_table.underlying_type);
   ASSERT_EQ(0x1u | 0x10u, my_bits_table.mask);
-
-  ASSERT_EQ(kFidlStructElementType_Padding64, request_struct.elements[1].header.element_type);
-  EXPECT_EQ(0, request_struct.elements[1].padding.offset_v1);
-  EXPECT_EQ(0, request_struct.elements[1].padding.offset_v2);
-  ASSERT_EQ(0xffffffffffffff00, request_struct.elements[1].padding.mask_64);
 }
 
 TEST(MyEnum, CodingTable) {
@@ -294,7 +289,7 @@ TEST(MyEnum, CodingTable) {
       fidl_test_example_codingtables_CodingMyEnumRequestMessageTable;
   ASSERT_EQ(kFidlTypeStruct, type.type_tag());
   const FidlCodedStruct& request_struct = type.coded_struct();
-  ASSERT_EQ(2, request_struct.element_count);
+  ASSERT_EQ(1, request_struct.element_count);
   ASSERT_STREQ("fidl.test.example.codingtables/CodingMyEnumRequestMessage", request_struct.name);
   ASSERT_EQ(kFidlStructElementType_Field, request_struct.elements[0].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, request_struct.elements[0].header.is_resource);
@@ -305,11 +300,6 @@ TEST(MyEnum, CodingTable) {
   ASSERT_EQ(kFidlTypeEnum, my_enum_type.type_tag());
   const FidlCodedEnum& my_enum_table = my_enum_type.coded_enum();
   ASSERT_EQ(kFidlCodedPrimitiveSubtype_Uint32, my_enum_table.underlying_type);
-
-  ASSERT_EQ(kFidlStructElementType_Padding32, request_struct.elements[1].header.element_type);
-  EXPECT_EQ(4, request_struct.elements[1].padding.offset_v1);
-  EXPECT_EQ(4, request_struct.elements[1].padding.offset_v2);
-  ASSERT_EQ(0xffffffff, request_struct.elements[1].padding.mask_32);
 }
 
 // This ensures that the number collision tests compile. (See fxbug.dev/7772).

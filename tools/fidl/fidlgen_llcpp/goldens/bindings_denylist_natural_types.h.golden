@@ -1541,14 +1541,14 @@ class DenyEachBindingOnlyDenySyzkallerRequest final {
   bool operator==(
       const DenyEachBindingOnlyDenySyzkallerRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 8,
-        8>::Equal(this, &other);
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1,
+        1>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenySyzkallerRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 8,
-        8>::Equal(this, &other);
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1,
+        1>::Equal(this, &other);
   }
 
   bool a() const { return storage_.a; }
@@ -1564,7 +1564,7 @@ class DenyEachBindingOnlyDenySyzkallerRequest final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 8, 8>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>;
   static constexpr auto kMembers =
@@ -1603,14 +1603,14 @@ class DenyEachBindingOnlyDenyRustRequest final {
   bool operator==(
       const DenyEachBindingOnlyDenyRustRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 8,
-        8>::Equal(this, &other);
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1,
+        1>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyRustRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 8,
-        8>::Equal(this, &other);
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1,
+        1>::Equal(this, &other);
   }
 
   bool a() const { return storage_.a; }
@@ -1626,7 +1626,7 @@ class DenyEachBindingOnlyDenyRustRequest final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 8, 8>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>;
   static constexpr auto kMembers =
@@ -1665,14 +1665,14 @@ class DenyEachBindingOnlyDenyLibfuzzerRequest final {
   bool operator==(
       const DenyEachBindingOnlyDenyLibfuzzerRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 8,
-        8>::Equal(this, &other);
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1,
+        1>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyLibfuzzerRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 8,
-        8>::Equal(this, &other);
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1,
+        1>::Equal(this, &other);
   }
 
   bool a() const { return storage_.a; }
@@ -1688,7 +1688,7 @@ class DenyEachBindingOnlyDenyLibfuzzerRequest final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 8, 8>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>;
   static constexpr auto kMembers =
@@ -1727,14 +1727,14 @@ class DenyEachBindingOnlyDenyGoRequest final {
   bool operator==(
       const DenyEachBindingOnlyDenyGoRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 8,
-        8>::Equal(this, &other);
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1,
+        1>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyGoRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 8,
-        8>::Equal(this, &other);
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1,
+        1>::Equal(this, &other);
   }
 
   bool a() const { return storage_.a; }
@@ -1750,7 +1750,7 @@ class DenyEachBindingOnlyDenyGoRequest final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 8, 8>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>;
   static constexpr auto kMembers =
@@ -1789,14 +1789,14 @@ class DenyEachBindingOnlyDenyDartRequest final {
   bool operator==(
       const DenyEachBindingOnlyDenyDartRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 8,
-        8>::Equal(this, &other);
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1,
+        1>::Equal(this, &other);
   }
   bool operator!=(
       const DenyEachBindingOnlyDenyDartRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 8,
-        8>::Equal(this, &other);
+        ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1,
+        1>::Equal(this, &other);
   }
 
   bool a() const { return storage_.a; }
@@ -1812,7 +1812,7 @@ class DenyEachBindingOnlyDenyDartRequest final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 8, 8>;
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>;
   static constexpr auto kMembers =
@@ -2161,8 +2161,8 @@ struct CodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 8,
-          8> {};
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1,
+          1> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2186,7 +2186,7 @@ template <>
 struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 8, 8> {};
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1, 1> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2212,8 +2212,8 @@ struct CodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 8,
-          8> {};
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1,
+          1> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2237,7 +2237,7 @@ template <>
 struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 8, 8> {};
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1, 1> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2261,7 +2261,7 @@ template <>
 struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 8, 8> {};
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1, 1> {};
 #endif  // __Fuchsia__
 
 template <>

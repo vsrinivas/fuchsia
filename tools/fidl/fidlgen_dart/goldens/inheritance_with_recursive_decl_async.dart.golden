@@ -48,8 +48,8 @@ const $fidl.MethodType _kParent_First_Type = $fidl.MethodType(
   ],
   response: [],
   name: r"Parent.First",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
   responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
@@ -170,8 +170,8 @@ const $fidl.MethodType _kChild_First_Type = $fidl.MethodType(
   ],
   response: [],
   name: r"Child.First",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
   responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
@@ -184,8 +184,8 @@ const $fidl.MethodType _kChild_Second_Type = $fidl.MethodType(
   ],
   response: [],
   name: r"Child.Second",
-  requestInlineSizeV1: 8,
-  requestInlineSizeV2: 8,
+  requestInlineSizeV1: 4,
+  requestInlineSizeV2: 4,
   responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );

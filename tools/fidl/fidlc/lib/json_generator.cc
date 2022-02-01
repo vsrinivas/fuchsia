@@ -797,8 +797,6 @@ void JSONGenerator::GenerateTypeShapes(const flat::Object& object) {
 }
 
 void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_member) {
-  // NOTE: while the transition for fxbug.dev/7024 is ongoing, we need to treat request/responses
-  // specially as before, but this will be removed once the transition is complete
   auto v1 = FieldShape(struct_member, WireFormat::kV1NoEe);
   GenerateObjectMember("field_shape_v1", v1);
   auto v2 = FieldShape(struct_member, WireFormat::kV2);

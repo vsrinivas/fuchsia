@@ -115,8 +115,10 @@ struct TypeTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =
       &::test_drivertwoway::test_drivertwoway_TwoWayAddRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -146,8 +148,10 @@ struct TypeTraits<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =
       &::test_drivertwoway::test_drivertwoway_TwoWayAddResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(2 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(2 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

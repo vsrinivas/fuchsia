@@ -364,10 +364,10 @@ class HandleRightsProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 
@@ -400,10 +400,10 @@ class HandleRightsProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 
@@ -447,10 +447,10 @@ class HandleRightsProtocol_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 
@@ -482,10 +482,10 @@ class HandleRightsProtocol_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 
@@ -1574,10 +1574,10 @@ class WithProtocolEnds_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 
@@ -1610,10 +1610,10 @@ class WithProtocolEnds_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 
@@ -1688,10 +1688,10 @@ class WithProtocolEnds_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 
@@ -1724,10 +1724,10 @@ class WithProtocolEnds_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 
@@ -1802,10 +1802,10 @@ class ManyParameters_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
+        _encoder->Alloc(15);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
+        _encoder->Alloc(15);
         break;
     }
 
@@ -2389,10 +2389,10 @@ class ChannelProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 
@@ -2424,10 +2424,10 @@ class ChannelProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 
@@ -2556,10 +2556,10 @@ class ChannelProtocol_ResponseEncoder {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
       case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
+        _encoder->Alloc(4);
         break;
     }
 

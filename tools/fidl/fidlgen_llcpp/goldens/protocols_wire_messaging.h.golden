@@ -228,8 +228,10 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocols::
           test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -270,8 +272,10 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocols::
           test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -312,8 +316,10 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocols::
           test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -354,8 +360,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_HandleRightsProtocolAnEventEventMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1159,8 +1167,10 @@ struct TypeTraits<::fidl::WireRequest<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1191,8 +1201,10 @@ struct TypeTraits<::fidl::WireRequest<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1223,8 +1235,10 @@ struct TypeTraits<::fidl::WireResponse<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1256,8 +1270,10 @@ struct TypeTraits<::fidl::WireRequest<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1289,8 +1305,10 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1328,8 +1346,10 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1367,8 +1387,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1405,8 +1427,10 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1439,8 +1463,10 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1477,8 +1503,10 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1515,8 +1543,10 @@ struct TypeTraits<::fidl::WireEvent<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1548,8 +1578,10 @@ struct TypeTraits<::fidl::WireEvent<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2914,8 +2946,10 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_TransitionalRequestRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2946,8 +2980,10 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_TransitionalRequestResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2977,8 +3013,10 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::Transitional::OneWay>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_TransitionalOneWayRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -3007,8 +3045,10 @@ struct TypeTraits<::fidl::WireEvent<::test_protocols::Transitional::Event>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_TransitionalEventEventMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -3459,8 +3499,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 24 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = true;
@@ -3916,8 +3958,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -3958,8 +4002,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -4000,8 +4046,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -4042,8 +4090,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -4084,8 +4134,10 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocols::
           test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 4;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -4126,8 +4178,10 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocols::
           test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 4;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5019,8 +5073,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_ManyParametersFifteenRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(15 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(15 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5527,8 +5583,10 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5559,8 +5617,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 24 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5593,8 +5653,10 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5625,8 +5687,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 24 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5659,8 +5723,10 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5691,8 +5757,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 24 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5726,8 +5794,10 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5763,8 +5833,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 24 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(24 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -6823,8 +6895,10 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7289,8 +7363,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_ChannelProtocolMethodARequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7324,8 +7400,10 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_ChannelProtocolEventAEventMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7361,8 +7439,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_ChannelProtocolMethodBRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 16 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 16 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7398,8 +7478,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_ChannelProtocolMethodBResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7437,8 +7519,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7472,8 +7556,10 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = 0 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 0 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7509,8 +7595,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7551,8 +7639,10 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = 8 + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = 8 + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

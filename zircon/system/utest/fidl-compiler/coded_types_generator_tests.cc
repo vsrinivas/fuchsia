@@ -231,21 +231,17 @@ protocol UseOfProtocol {
   auto type1 = gen.coded_types().at(1).get();
   EXPECT_STREQ("example_UseOfProtocolCallRequestMessage", type1->coded_name.c_str());
   EXPECT_TRUE(type1->is_coding_needed);
-  EXPECT_EQ(8, type1->size_v1);
-  EXPECT_EQ(8, type1->size_v2);
+  EXPECT_EQ(4, type1->size_v1);
+  EXPECT_EQ(4, type1->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
   auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
   EXPECT_FALSE(type1_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolCallRequestMessage", type1_message->qname.c_str());
-  EXPECT_EQ(2, type1_message->elements.size());
+  EXPECT_EQ(1, type1_message->elements.size());
 
   EXPECT_EQ(0, field(type1_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type1_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type0, field(type1_message->elements.at(0)).type);
-
-  EXPECT_EQ(4, padding(type1_message->elements.at(1)).offset_v1);
-  EXPECT_EQ(4, padding(type1_message->elements.at(1)).offset_v2);
-  EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type1_message->elements.at(1)).mask));
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfProtocolErrorSyntax) {
@@ -325,19 +321,16 @@ protocol UseOfProtocolEnds {
   auto type1 = gen.coded_types().at(4).get();
   EXPECT_STREQ("example_UseOfProtocolEndsClientEndsRequestMessage", type1->coded_name.c_str());
   EXPECT_TRUE(type1->is_coding_needed);
-  EXPECT_EQ(8, type1->size_v1);
-  EXPECT_EQ(8, type1->size_v2);
+  EXPECT_EQ(4, type1->size_v1);
+  EXPECT_EQ(4, type1->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
   auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
   EXPECT_FALSE(type1_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsClientEndsRequestMessage", type1_message->qname.c_str());
-  EXPECT_EQ(2, type1_message->elements.size());
+  EXPECT_EQ(1, type1_message->elements.size());
   EXPECT_EQ(0, field(type1_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type1_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type0, field(type1_message->elements.at(0)).type);
-  EXPECT_EQ(4, padding(type1_message->elements.at(1)).offset_v1);
-  EXPECT_EQ(4, padding(type1_message->elements.at(1)).offset_v2);
-  EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type1_message->elements.at(1)).mask));
 
   // ClientEnd response payload
   auto type2 = gen.coded_types().at(2).get();
@@ -353,19 +346,16 @@ protocol UseOfProtocolEnds {
   auto type3 = gen.coded_types().at(5).get();
   EXPECT_STREQ("example_UseOfProtocolEndsClientEndsResponseMessage", type3->coded_name.c_str());
   EXPECT_TRUE(type3->is_coding_needed);
-  EXPECT_EQ(8, type3->size_v1);
-  EXPECT_EQ(8, type3->size_v2);
+  EXPECT_EQ(4, type3->size_v1);
+  EXPECT_EQ(4, type3->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type3->kind);
   auto type3_message = static_cast<const fidl::coded::MessageType*>(type3);
   EXPECT_FALSE(type3_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsClientEndsResponseMessage", type3_message->qname.c_str());
-  EXPECT_EQ(2, type3_message->elements.size());
+  EXPECT_EQ(1, type3_message->elements.size());
   EXPECT_EQ(0, field(type3_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type3_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type2, field(type3_message->elements.at(0)).type);
-  EXPECT_EQ(4, padding(type3_message->elements.at(1)).offset_v1);
-  EXPECT_EQ(4, padding(type3_message->elements.at(1)).offset_v2);
-  EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type3_message->elements.at(1)).mask));
 
   // ServerEnd request payload
   auto type4 = gen.coded_types().at(1).get();
@@ -381,19 +371,16 @@ protocol UseOfProtocolEnds {
   auto type5 = gen.coded_types().at(6).get();
   EXPECT_STREQ("example_UseOfProtocolEndsServerEndsRequestMessage", type5->coded_name.c_str());
   EXPECT_TRUE(type5->is_coding_needed);
-  EXPECT_EQ(8, type5->size_v1);
-  EXPECT_EQ(8, type5->size_v2);
+  EXPECT_EQ(4, type5->size_v1);
+  EXPECT_EQ(4, type5->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type5->kind);
   auto type5_message = static_cast<const fidl::coded::MessageType*>(type5);
   EXPECT_FALSE(type5_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsServerEndsRequestMessage", type5_message->qname.c_str());
-  EXPECT_EQ(2, type5_message->elements.size());
+  EXPECT_EQ(1, type5_message->elements.size());
   EXPECT_EQ(0, field(type5_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type5_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type4, field(type5_message->elements.at(0)).type);
-  EXPECT_EQ(4, padding(type5_message->elements.at(1)).offset_v1);
-  EXPECT_EQ(4, padding(type5_message->elements.at(1)).offset_v2);
-  EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type5_message->elements.at(1)).mask));
 
   // ServerEnd response payload
   auto type6 = gen.coded_types().at(0).get();
@@ -409,19 +396,16 @@ protocol UseOfProtocolEnds {
   auto type7 = gen.coded_types().at(7).get();
   EXPECT_STREQ("example_UseOfProtocolEndsServerEndsResponseMessage", type7->coded_name.c_str());
   EXPECT_TRUE(type7->is_coding_needed);
-  EXPECT_EQ(8, type7->size_v1);
-  EXPECT_EQ(8, type7->size_v2);
+  EXPECT_EQ(4, type7->size_v1);
+  EXPECT_EQ(4, type7->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type7->kind);
   auto type7_message = static_cast<const fidl::coded::MessageType*>(type7);
   EXPECT_FALSE(type7_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsServerEndsResponseMessage", type7_message->qname.c_str());
-  EXPECT_EQ(2, type7_message->elements.size());
+  EXPECT_EQ(1, type7_message->elements.size());
   EXPECT_EQ(0, field(type7_message->elements.at(0)).offset_v1);
   EXPECT_EQ(0, field(type7_message->elements.at(0)).offset_v2);
   EXPECT_EQ(type6, field(type7_message->elements.at(0)).type);
-  EXPECT_EQ(4, padding(type7_message->elements.at(1)).offset_v1);
-  EXPECT_EQ(4, padding(type7_message->elements.at(1)).offset_v2);
-  EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type7_message->elements.at(1)).mask));
 }
 
 // The code between |CodedTypesOfUnions| and |CodedTypesOfNullableUnions| is now very similar

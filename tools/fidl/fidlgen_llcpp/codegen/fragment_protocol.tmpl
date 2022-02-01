@@ -129,8 +129,8 @@ struct TypeTraits<{{ .WireRequest }}> {
     &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Request.TypeShapeV2.MaxHandles }};
-  static constexpr uint32_t kPrimarySize = {{ .Request.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = {{ .Request.TypeShapeV1.InlineSize }} + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN({{ .Request.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN({{ .Request.TypeShapeV1.InlineSize }} + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = {{ .Request.TypeShapeV2.MaxOutOfLine }};
   static constexpr uint32_t kMaxOutOfLineV1 = {{ .Request.TypeShapeV1.MaxOutOfLine }};
   static constexpr bool kHasFlexibleEnvelope = {{ .Request.TypeShapeV2.HasFlexibleEnvelope }};
@@ -172,8 +172,8 @@ struct TypeTraits<{{ .WireEvent }}> {
   &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
-  static constexpr uint32_t kPrimarySize = {{ .Response.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = {{ .Response.TypeShapeV1.InlineSize }} + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN({{ .Response.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN({{ .Response.TypeShapeV1.InlineSize }} + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};
   static constexpr uint32_t kMaxOutOfLineV1 = {{ .Response.TypeShapeV1.MaxOutOfLine }};
   static constexpr bool kHasFlexibleEnvelope = {{ .Response.TypeShapeV2.HasFlexibleEnvelope }};
@@ -212,8 +212,8 @@ struct TypeTraits<{{ .WireResponse }}> {
   &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
-  static constexpr uint32_t kPrimarySize = {{ .Response.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t);
-  static constexpr uint32_t kPrimarySizeV1 = {{ .Response.TypeShapeV1.InlineSize }} + sizeof(fidl_message_header_t);
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN({{ .Response.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN({{ .Response.TypeShapeV1.InlineSize }} + sizeof(fidl_message_header_t));
   static constexpr uint32_t kMaxOutOfLine = {{ .Response.TypeShapeV2.MaxOutOfLine }};
   static constexpr uint32_t kMaxOutOfLineV1 = {{ .Response.TypeShapeV1.MaxOutOfLine }};
   static constexpr bool kHasFlexibleEnvelope = {{ .Response.TypeShapeV2.HasFlexibleEnvelope }};

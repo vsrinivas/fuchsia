@@ -535,12 +535,12 @@ class SimpleProtocolAddTopResponse final {
 
   bool operator==(const SimpleProtocolAddTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_nullable::SimpleProtocolAddTopResponse, 8, 8>::Equal(this,
+        ::test_nullable::SimpleProtocolAddTopResponse, 4, 4>::Equal(this,
                                                                     &other);
   }
   bool operator!=(const SimpleProtocolAddTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_nullable::SimpleProtocolAddTopResponse, 8, 8>::Equal(this,
+        ::test_nullable::SimpleProtocolAddTopResponse, 4, 4>::Equal(this,
                                                                     &other);
   }
 
@@ -557,7 +557,7 @@ class SimpleProtocolAddTopResponse final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_nullable::SimpleProtocolAddTopResponse, 8, 8>;
+      ::test_nullable::SimpleProtocolAddTopResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_nullable::SimpleProtocolAddTopResponse>;
   static constexpr auto kMembers =
@@ -853,7 +853,7 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct CodingTraits<::test_nullable::SimpleProtocolAddTopResponse> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_nullable::SimpleProtocolAddTopResponse, 8, 8> {};
+          ::test_nullable::SimpleProtocolAddTopResponse, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

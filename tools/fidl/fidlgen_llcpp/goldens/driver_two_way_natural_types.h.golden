@@ -45,11 +45,11 @@ class TwoWayAddTopResponse final {
 
   bool operator==(const TwoWayAddTopResponse& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_drivertwoway::TwoWayAddTopResponse, 8, 8>::Equal(this, &other);
+        ::test_drivertwoway::TwoWayAddTopResponse, 2, 2>::Equal(this, &other);
   }
   bool operator!=(const TwoWayAddTopResponse& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_drivertwoway::TwoWayAddTopResponse, 8, 8>::Equal(this, &other);
+        ::test_drivertwoway::TwoWayAddTopResponse, 2, 2>::Equal(this, &other);
   }
 
   uint16_t sum() const { return storage_.sum; }
@@ -65,7 +65,7 @@ class TwoWayAddTopResponse final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_drivertwoway::TwoWayAddTopResponse, 8, 8>;
+      ::test_drivertwoway::TwoWayAddTopResponse, 2, 2>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_drivertwoway::TwoWayAddTopResponse>;
   static constexpr auto kMembers =
@@ -97,11 +97,11 @@ class TwoWayAddRequest final {
 
   bool operator==(const TwoWayAddRequest& other) const noexcept {
     return ::fidl::internal::NaturalStructCodingTraits<
-        ::test_drivertwoway::TwoWayAddRequest, 8, 8>::Equal(this, &other);
+        ::test_drivertwoway::TwoWayAddRequest, 4, 4>::Equal(this, &other);
   }
   bool operator!=(const TwoWayAddRequest& other) const noexcept {
     return !::fidl::internal::NaturalStructCodingTraits<
-        ::test_drivertwoway::TwoWayAddRequest, 8, 8>::Equal(this, &other);
+        ::test_drivertwoway::TwoWayAddRequest, 4, 4>::Equal(this, &other);
   }
 
   uint16_t addend1() const { return storage_.addend1; }
@@ -122,7 +122,7 @@ class TwoWayAddRequest final {
   Storage_ CloneStorage_() const;
 
   friend struct ::fidl::internal::NaturalStructCodingTraits<
-      ::test_drivertwoway::TwoWayAddRequest, 8, 8>;
+      ::test_drivertwoway::TwoWayAddRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_drivertwoway::TwoWayAddRequest>;
   static constexpr auto kMembers = std::make_tuple(
@@ -153,7 +153,7 @@ struct ::fidl::internal::TypeTraits<::test_drivertwoway::TwoWayAddTopResponse>
 template <>
 struct CodingTraits<::test_drivertwoway::TwoWayAddTopResponse> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_drivertwoway::TwoWayAddTopResponse, 8, 8> {};
+          ::test_drivertwoway::TwoWayAddTopResponse, 2, 2> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -174,7 +174,7 @@ struct ::fidl::internal::TypeTraits<::test_drivertwoway::TwoWayAddRequest>
 template <>
 struct CodingTraits<::test_drivertwoway::TwoWayAddRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_drivertwoway::TwoWayAddRequest, 8, 8> {};
+          ::test_drivertwoway::TwoWayAddRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl
