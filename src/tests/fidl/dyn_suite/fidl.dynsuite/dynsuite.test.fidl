@@ -1,0 +1,163 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// The dynamic suite is a mechanism to test dynamic properties of FIDL bindings
+/// in a uniform way. This makes it possible to express various behaviors that
+/// bindings should adhere to, and then ensure that all bindings conform to that
+/// behavior.
+///
+/// The anatomy of the dynamic suite is a generic harness, written once for all
+/// bindings. Individual tests are written in the harness. This harness then
+/// interacts with one specific binding under test. By assembling the harness
+/// and a different binding to interact with in a component, we can ensure that
+/// all bindings are exercised in the same way.
+///
+/// Bindings under test implement the `ServerTest` protocol when server
+/// implementation is exercised, and the `ClientTest` prtocool when client
+/// implementation is exercised. Bindings under test must record observations
+/// of their internal state by invoking the `Observer.Observe` method.
+/// Furthemore, when bindings receive an `OnProgramPoint` event, they must
+/// indicate that they observed that program point by echoing back the
+/// received value as an observation.
+///
+/// As a result, the harness can interact freely with a binding, and check
+/// various boundary conditions knowing the binding under test will send
+/// specific observations, against which the harness will then be able to make
+/// assertions.
+///
+/// For instance, the harness may send an invalid message to the bindings under
+/// test only to expect those bindings to error, and close the channel. Should
+/// the bindings under test fail to behave as expected, the harness is able to
+/// fail the test (due to missed expecations).
+library fidl.dynsuite;
+
+using zx;
+
+@discoverable
+protocol Entry {
+    StartServerTest(resource struct {
+        server_end server_end:ServerTest;
+        observer client_end:Observer;
+    });
+    StartClientTest(resource struct {
+        client_end client_end:ClientTest;
+        observer client_end:Observer;
+    });
+};
+
+/// Base defines all interactions used to test servers and clients, and is
+/// composed into `ServerTest` and `ClientTest`.
+protocol Base {
+    OneWayInteractionNoPayload();
+};
+
+/// ServerTest defines a protocol which the server under test should implement.
+/// Once the server under test is bound, the harness will interact with the
+/// server in various ways (sometimes, erroneously) to verify boundary
+/// conditions. As an example, the harness may send an unknown ordinal, or an
+/// incorrect payload.
+protocol ServerTest {
+    compose Base;
+};
+
+/// ClientTest defines a protocol which the client under test should interact
+/// with in order to test various boundary conditions. The harness will
+/// implement the server, and respond to the client in various ways (sometimes,
+/// erroneously). As an example, the harness may fail to respond at all, or
+/// respond with an incorrect payload.
+protocol ClientTest {
+    // TODO(fxbug.dev/88343): Use top-level union directly.
+    -> OnPleaseDo(struct {
+        action ClientAction;
+    });
+
+    compose Base;
+};
+
+type ClientAction = strict union {
+    1: close_channel struct {};
+    2: invoke Method;
+};
+
+/// The Method lists all methods for which observations must be reported by the
+/// bindings under test.
+type Method = strict enum {
+    /// For [`Entry.StartServerTest`].
+    START_SERVER_TEST = 1;
+    /// For [`Base.OneWayInteractionNoPayload`].
+    ONE_WAY_INTERACTION_NO_PAYLOAD = 2;
+    /// For [`ClientTest.OnPleaseDo`].
+    ON_PLEASE_DO = 3;
+};
+
+/// The MethodPoint enum identifies the entry of a method, or the exit of a
+/// method.
+type MethodPoint = strict enum {
+    ENTER = 1;
+    EXIT = 2;
+};
+
+/// The Observation union describes the various observations which the bindings
+/// under test can send to the harness. These observations describe various
+/// states reached by the bindings under test.
+type Observation = strict union {
+    /// The [`on_bind`] variant is always observed first, and indicates that the
+    /// bindings under test have started listening for messages on the endpoint
+    /// provided by the harness (i.e. either through [`Entry.StartServerTest`]
+    /// or [`Entry.StartClientTest`]).
+    1: on_bind struct {};
+
+    /// The [`on_method_invocation`] variant indicates that a method was
+    /// invoked on the bindings under test. Both entry and exit of the invoked
+    /// method is reported.
+    2: on_method_invocation struct {
+        method Method;
+        method_point MethodPoint;
+    };
+
+    /// The [`program_point`] variant is a emitted by the bindings under test in
+    /// response to the [`Observer.OnProgramPoint`] challenge. The harness will
+    /// send an "on program point" event, to which the bindings under test must
+    /// respond to with this observation.
+    3: program_point uint64;
+
+    /// The [`on_unbind`] variant indicates that the bindings under test have
+    /// stopped listening for messages. This could be expected, or abnormal.
+    /// See also the [`on_error`] variant.
+    4: on_unbind struct {};
+
+    /// The [`on_complete`] variant indicates that the currently running test
+    /// has completed from the perspective of the bindings under test. This
+    /// observation should follow the [`on_unbind`] observation, though some
+    /// bindings under may instrument both differently providing more details
+    /// to the harness of the destruction sequence.
+    5: on_complete struct {};
+
+    /// The [`on_error`] variant indicates that some error occured in the
+    /// bindings under test. The `context` string is depedendant on the kind
+    /// of bindings being tested, and is provided for informational purposes.
+    6: on_error struct {
+        context string;
+        err zx.status;
+    };
+};
+
+/// Observer protocols allows the bindings under test to report state changes
+/// and other interesting observations to the test harness.
+protocol Observer {
+    /// Sends an observation to the test harness.
+    // TODO(fxbug.dev/88343): Use top-level union directly.
+    Observe(struct {
+        observation Observation;
+    });
+
+    /// The test harness wants to synchronize with the bindings under test, and
+    /// will wait until a program point observation is sent in response.
+    ///
+    /// Bindings under test must respond to this on program point event by
+    /// sending an obversation of the program point.
+    -> OnProgramPoint(struct {
+        program_point uint64;
+    });
+};

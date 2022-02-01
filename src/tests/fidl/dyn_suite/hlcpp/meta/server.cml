@@ -1,0 +1,22 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/dyn_suite_under_test_hlcpp",
+    },
+    capabilities: [
+        { protocol: "fidl.dynsuite.Entry" },
+    ],
+    expose: [
+        {
+            protocol: "fidl.dynsuite.Entry",
+            from: "self",
+        },
+    ],
+}

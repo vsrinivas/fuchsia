@@ -1,0 +1,35 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // gtest runner
+        "//src/sys/test_runners/gtest/default.shard.cml",
+
+        // Enable system logging
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/dyn_suite_harness",
+        args: [ "--target=hlcpp" ],
+    },
+    children: [
+        {
+            name: "hlcpp",
+            url: "#meta/server.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fidl.dynsuite.Entry",
+            from: "#hlcpp",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#hlcpp",
+        },
+    ],
+}

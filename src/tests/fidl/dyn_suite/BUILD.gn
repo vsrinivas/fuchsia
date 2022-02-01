@@ -1,0 +1,40 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+fuchsia_component("harness_go") {
+  testonly = true
+  component_name = "harness"
+  manifest = "harness/meta/harness_go.cml"
+  deps = [ "harness:bin" ]
+}
+
+fuchsia_test_package("fidl-dyn-suite-go-test") {
+  test_components = [ ":harness_go" ]
+  deps = [ "go" ]
+}
+
+fuchsia_component("harness_hlcpp") {
+  testonly = true
+  component_name = "harness"
+  manifest = "harness/meta/harness_hlcpp.cml"
+  deps = [ "harness:bin" ]
+}
+
+fuchsia_test_package("fidl-dyn-suite-hlcpp-test") {
+  test_components = [ ":harness_hlcpp" ]
+  deps = [
+    # ":harness_hlcpp",
+    "hlcpp",
+  ]
+}
+
+group("dyn_suite") {
+  testonly = true
+  deps = [
+    ":fidl-dyn-suite-go-test",
+    ":fidl-dyn-suite-hlcpp-test",
+  ]
+}
