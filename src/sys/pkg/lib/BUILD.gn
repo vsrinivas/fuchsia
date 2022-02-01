@@ -29,6 +29,7 @@ group("lib") {
     "update-package",
     "version",
     "version-history",
+    "work-queue",
   ]
 }
 
@@ -61,5 +62,6 @@ group("tests") {
     "update-package:tests",
     "version:tests",
     "version-history:tests",
+    "work-queue:tests",
   ]
 }

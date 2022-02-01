@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{queue, repository::Repository, repository_manager::Stats, TCP_KEEPALIVE_TIMEOUT},
+    crate::{repository::Repository, repository_manager::Stats, TCP_KEEPALIVE_TIMEOUT},
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{self as pkg, BlobId, BlobInfo, MirrorConfig, RepositoryConfig},
@@ -502,7 +502,7 @@ pub struct FetchBlobContext {
     use_local_mirror: bool,
 }
 
-impl queue::TryMerge for FetchBlobContext {
+impl work_queue::TryMerge for FetchBlobContext {
     fn try_merge(&mut self, other: Self) -> Result<(), Self> {
         // The NeededBlobs protocol requires pkg-resolver to attempt to open each blob associated
         // with a Get() request, and attempting to open a blob being written by another Get()
@@ -541,7 +541,9 @@ impl queue::TryMerge for FetchBlobContext {
 /// [`BlobFetcher`] are dropped, the queue will fetch all remaining blobs in
 /// the queue and terminate its output stream.
 #[derive(Clone)]
-pub struct BlobFetcher(queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>);
+pub struct BlobFetcher(
+    work_queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>,
+);
 
 impl BlobFetcher {
     /// Creates an unbounded queue that will fetch up to  `max_concurrency`
@@ -559,8 +561,9 @@ impl BlobFetcher {
         ));
         let inspect = inspect::BlobFetcher::from_node_and_params(node, &blob_fetch_params);
 
-        let (blob_fetch_queue, blob_fetcher) =
-            queue::work_queue(max_concurrency, move |merkle: BlobId, context: FetchBlobContext| {
+        let (blob_fetch_queue, blob_fetcher) = work_queue::work_queue(
+            max_concurrency,
+            move |merkle: BlobId, context: FetchBlobContext| {
                 let inspect = inspect.fetch(&merkle);
                 let http_client = Arc::clone(&http_client);
                 let stats = Arc::clone(&stats);
@@ -582,7 +585,8 @@ impl BlobFetcher {
                     .await;
                     res
                 }
-            });
+            },
+        );
 
         (blob_fetch_queue.into_future(), BlobFetcher(blob_fetcher))
     }
@@ -593,7 +597,7 @@ impl BlobFetcher {
         &self,
         blob_id: BlobId,
         context: FetchBlobContext,
-    ) -> impl Future<Output = Result<Result<(), Arc<FetchError>>, queue::Closed>> {
+    ) -> impl Future<Output = Result<Result<(), Arc<FetchError>>, work_queue::Closed>> {
         self.0.push(blob_id, context)
     }
 
@@ -606,8 +610,9 @@ impl BlobFetcher {
     pub fn push_all(
         &self,
         entries: impl Iterator<Item = (BlobId, FetchBlobContext)>,
-    ) -> impl Iterator<Item = impl Future<Output = Result<Result<(), Arc<FetchError>>, queue::Closed>>>
-    {
+    ) -> impl Iterator<
+        Item = impl Future<Output = Result<Result<(), Arc<FetchError>>, work_queue::Closed>>,
+    > {
         self.0.push_all(entries)
     }
 }

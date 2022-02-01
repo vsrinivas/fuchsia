@@ -1,0 +1,43 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/resource.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("work-queue") {
+  version = "0.1.0"
+  edition = "2021"
+  with_unit_tests = true
+
+  deps = [
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-project",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [
+    "src/lib.rs",
+    "src/state.rs",
+  ]
+}
+
+fuchsia_unittest_component("test-component") {
+  component_name = "work-queue-lib-test"
+  visibility = [ ":*" ]
+  deps = [ ":work-queue_test" ]
+}
+
+fuchsia_test_package("work-queue-tests") {
+  test_components = [ ":test-component" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":work-queue-tests",
+    ":work-queue_test($host_toolchain)",
+  ]
+}

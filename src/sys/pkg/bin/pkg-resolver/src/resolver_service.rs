@@ -9,7 +9,6 @@ use {
             ToResolveError as _, ToResolveStatus as _,
         },
         font_package_manager::FontPackageManager,
-        queue,
         repository_manager::RepositoryManager,
         repository_manager::{GetPackageError, GetPackageError::*, GetPackageHashError},
         rewrite_manager::RewriteManager,
@@ -44,7 +43,7 @@ pub use inspect::ResolverService as ResolverServiceInspectState;
 /// packages and terminate its output stream.
 #[derive(Clone)]
 pub struct PackageFetcher(
-    queue::WorkSender<PkgUrl, (), Result<PackageDirectory, pkg::ResolveError>>,
+    work_queue::WorkSender<PkgUrl, (), Result<PackageDirectory, pkg::ResolveError>>,
 );
 
 impl PackageFetcher {
@@ -61,7 +60,7 @@ impl PackageFetcher {
         inspect: Arc<ResolverServiceInspectState>,
     ) -> (impl Future<Output = ()>, PackageFetcher) {
         let (package_fetch_queue, package_fetcher) =
-            queue::work_queue(max_concurrency, move |url: PkgUrl, _: ()| {
+            work_queue::work_queue(max_concurrency, move |url: PkgUrl, _: ()| {
                 let cache = cache.clone();
                 let base_package_index = Arc::clone(&base_package_index);
                 let system_cache_list = Arc::clone(&system_cache_list);
@@ -92,7 +91,7 @@ impl PackageFetcher {
         &self,
         key: PkgUrl,
         context: (),
-    ) -> impl Future<Output = Result<Result<PackageDirectory, pkg::ResolveError>, queue::Closed>>
+    ) -> impl Future<Output = Result<Result<PackageDirectory, pkg::ResolveError>, work_queue::Closed>>
     {
         self.0.push(key, context)
     }
