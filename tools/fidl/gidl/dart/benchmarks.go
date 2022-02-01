@@ -130,12 +130,12 @@ void decode{{ .Name }}Benchmark(run, teardown) {
 {{- end }}
 	final value = {{ .Value }};
 	final Encoder encoder = Encoder(kWireFormatDefault)
-    ..alloc({{ .ValueType}}.inlineSize(kWireFormatDefault), 0);
-	{{ .ValueType }}.encode(encoder, value, 0, 1);
+    ..alloc(kMessageHeaderSize + {{ .ValueType}}.inlineSize(kWireFormatDefault), 0);
+	{{ .ValueType }}.encode(encoder, value, kMessageHeaderSize, 1);
 	run(() {
 		final Decoder decoder = Decoder(IncomingMessage.fromOutgoingMessage(encoder.message))
-			..claimBytes({{ .ValueType}}.inlineSize(kWireFormatDefault), 0);
-			{{ .ValueType }}.decode(decoder, 0, 1);
+			..claimBytes(kMessageHeaderSize + {{ .ValueType}}.inlineSize(kWireFormatDefault), 0);
+			{{ .ValueType }}.decode(decoder, kMessageHeaderSize, 1);
   });
 }
 {{ end }}

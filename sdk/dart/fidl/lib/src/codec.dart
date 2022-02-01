@@ -35,6 +35,7 @@ class Encoder {
   Encoder(this.wireFormat);
 
   OutgoingMessage get message {
+    encodeUint8(kWireFormatV2FlagMask, kMessageFlagOffset);
     final ByteData trimmed = ByteData.view(data.buffer, 0, _extent);
     return OutgoingMessage(trimmed, _handleDispositions);
   }
@@ -84,7 +85,7 @@ class Encoder {
   void encodeMessageHeader(int ordinal, int txid) {
     alloc(kMessageHeaderSize, 0);
     encodeUint32(txid, kMessageTxidOffset);
-    encodeUint8(0, kMessageFlagOffset);
+    encodeUint8(kWireFormatV2FlagMask, kMessageFlagOffset);
     encodeUint8(0, kMessageFlagOffset + 1);
     encodeUint8(0, kMessageFlagOffset + 2);
     encodeUint8(kMagicNumberInitial, kMessageMagicOffset);
