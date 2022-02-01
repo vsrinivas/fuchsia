@@ -120,6 +120,19 @@ impl PkgUrl {
         }
     }
 
+    /// Produce a new [PkgUrl] with a different host.
+    pub fn replace_host(&self, host: String) -> Result<PkgUrl, ParseError> {
+        let repo = RepoUrl::new(host)?;
+        Ok(PkgUrl {
+            repo,
+            path: self.path.clone(),
+            hash: self.hash.clone(),
+            resource: self.resource.clone(),
+            name: self.name.clone(),
+            variant: self.variant.clone(),
+        })
+    }
+
     /// Produce a new [PkgUrl] with any variant stripped off.
     pub fn strip_variant(&self) -> PkgUrl {
         PkgUrl {
@@ -1096,6 +1109,30 @@ mod tests {
             RepoUrl::new("test.fuchsia.com.fuchsia.com".to_string()).unwrap().channel(),
             Some("fuchsia")
         );
+    }
+
+    #[test]
+    fn test_replace_host() {
+        let input_urls = &[
+            "fuchsia-pkg://fuchsia.com/foo/0",
+            "fuchsia-pkg://fuchsia.com/foo/0#bar",
+            "fuchsia-pkg://fuchsia.com/foo/0?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+        ];
+        let output_urls = &[
+            "fuchsia-pkg://example.com/foo/0",
+            "fuchsia-pkg://example.com/foo/0#bar",
+            "fuchsia-pkg://example.com/foo/0?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+        ];
+
+        for (i, expected_url) in output_urls.into_iter().enumerate() {
+            assert_eq!(
+                PkgUrl::parse(input_urls[i])
+                    .unwrap()
+                    .replace_host("example.com".to_string())
+                    .unwrap(),
+                PkgUrl::parse(expected_url).unwrap()
+            );
+        }
     }
 
     #[test]
