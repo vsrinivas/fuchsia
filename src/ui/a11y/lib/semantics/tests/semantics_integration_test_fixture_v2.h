@@ -30,12 +30,12 @@ namespace accessibility_test {
 // Types imported for the realm_builder library.
 using fuchsia::accessibility::semantics::Node;
 
-using sys::testing::ChildRef;
-using sys::testing::LocalComponent;
-using sys::testing::LocalComponentHandles;
-using sys::testing::experimental::RealmRoot;
+using component_testing::ChildRef;
+using component_testing::LocalComponent;
+using component_testing::LocalComponentHandles;
+using component_testing::RealmRoot;
 
-using RealmBuilder = sys::testing::experimental::RealmBuilder;
+using RealmBuilder = component_testing::RealmBuilder;
 
 // Mock component that will proxy SemanticsManager and SemanticTree requests to the ViewManager
 // owned by the test fixture.

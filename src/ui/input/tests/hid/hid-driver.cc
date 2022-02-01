@@ -29,10 +29,10 @@ class HidDriverTest : public zxtest::Test {
  public:
   void Start(bool use_dfv2) {
     // Create and build the realm.
-    auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
+    auto realm_builder = component_testing::RealmBuilder::Create();
     driver_test_realm::Setup(realm_builder);
-    realm_ = std::make_unique<sys::testing::experimental::RealmRoot>(
-        realm_builder.Build(loop_.dispatcher()));
+    realm_ =
+        std::make_unique<component_testing::RealmRoot>(realm_builder.Build(loop_.dispatcher()));
 
     // Start DriverTestRealm.
     ASSERT_EQ(ZX_OK, realm_->Connect(driver_test_realm.NewRequest()));
@@ -74,7 +74,7 @@ class HidDriverTest : public zxtest::Test {
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::unique_fd dev_fd_;
   fidl::WireSyncClient<fuchsia_hardware_hidctl::Device> hidctl_client_;
-  std::unique_ptr<sys::testing::experimental::RealmRoot> realm_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
   fidl::SynchronousInterfacePtr<fuchsia::driver::test::Realm> driver_test_realm;
 };
 

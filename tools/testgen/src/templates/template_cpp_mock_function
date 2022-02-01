@@ -1,4 +1,4 @@
-class CLASS_NAME : public COMPONENT_PROTOCOL_NAME, public sys::testing::LocalComponent {
+class CLASS_NAME : public COMPONENT_PROTOCOL_NAME, public component_testing::LocalComponent {
  public:
   CLASS_NAME(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
@@ -7,7 +7,7 @@ class CLASS_NAME : public COMPONENT_PROTOCOL_NAME, public sys::testing::LocalCom
   //
   // }
 
-  void Start(std::unique_ptr<sys::testing::LocalComponentHandles> mock_handles) override {
+  void Start(std::unique_ptr<component_testing::LocalComponentHandles> mock_handles) override {
     mock_handles_ = std::move(mock_handles);
     ASSERT_EQ(mock_handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)), ZX_OK);
   }
@@ -15,5 +15,5 @@ class CLASS_NAME : public COMPONENT_PROTOCOL_NAME, public sys::testing::LocalCom
  private:
   async_dispatcher_t* dispatcher_;
   fidl::BindingSet<COMPONENT_PROTOCOL_NAME> bindings_;
-  std::unique_ptr<sys::testing::LocalComponentHandles> mock_handles_;
+  std::unique_ptr<component_testing::LocalComponentHandles> mock_handles_;
 }

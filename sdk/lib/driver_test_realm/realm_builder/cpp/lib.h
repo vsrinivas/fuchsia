@@ -10,7 +10,7 @@
 namespace driver_test_realm {
 
 // Sets up the DriverTestRealm component in the given `realm_builder`.
-void Setup(sys::testing::experimental::RealmBuilder& realm_builder);
+void Setup(component_testing::RealmBuilder& realm_builder);
 
 }  // namespace driver_test_realm
 

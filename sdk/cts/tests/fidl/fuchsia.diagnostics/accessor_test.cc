@@ -24,7 +24,7 @@
 namespace {
 
 class AccessorTest : public zxtest::Test {};
-using namespace sys::testing;
+using namespace component_testing;
 
 const char EXPECTED_DATA[] = R"JSON({
     "data_source": "Inspect",
@@ -259,7 +259,7 @@ TEST_F(AccessorTest, StreamDiagnosticsInspect) {
   fuchsia::diagnostics::ArchiveAccessorPtr accessor;
   ASSERT_EQ(ZX_OK, context->svc()->Connect(accessor.NewRequest()));
 
-  auto realm = experimental::RealmBuilder::Create(context->svc())
+  auto realm = RealmBuilder::Create(context->svc())
                    .AddChild(kInspectPublisher, kInspectPublisherUrl,
                              ChildOptions{.startup_mode = StartupMode::EAGER})
                    .AddRoute(Route{

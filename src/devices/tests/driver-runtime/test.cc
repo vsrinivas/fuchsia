@@ -21,10 +21,9 @@ class RuntimeTest : public gtest::TestLoopFixture {
  protected:
   void SetUp() override {
     // Create and build the realm.
-    auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
+    auto realm_builder = component_testing::RealmBuilder::Create();
     driver_test_realm::Setup(realm_builder);
-    realm_ =
-        std::make_unique<sys::testing::experimental::RealmRoot>(realm_builder.Build(dispatcher()));
+    realm_ = std::make_unique<component_testing::RealmRoot>(realm_builder.Build(dispatcher()));
 
     // Start DriverTestRealm.
     fidl::SynchronousInterfacePtr<fuchsia::driver::test::Realm> driver_test_realm;
@@ -67,7 +66,7 @@ class RuntimeTest : public gtest::TestLoopFixture {
   fidl::ClientEnd<TestDevice> parent_chan;
 
  private:
-  std::unique_ptr<sys::testing::experimental::RealmRoot> realm_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
 void RuntimeTest::ParentSetTestData(const void* data_to_send, size_t size) {

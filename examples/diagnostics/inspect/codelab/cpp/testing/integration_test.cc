@@ -20,32 +20,32 @@ constexpr char reverser_url[] =
 }  // namespace
 
 fuchsia::examples::inspect::ReverserPtr IntegrationTest::ConnectToReverser(TestOptions options) {
-  auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
+  auto realm_builder = component_testing::RealmBuilder::Create();
   realm_builder.AddChild("reverser", reverser_url);
 
   if (options.include_fizzbuzz) {
     realm_builder.AddChild("fizzbuzz", fizzbuzz_url);
     realm_builder
-        .AddRoute(sys::testing::Route{
-            .capabilities = {sys::testing::Protocol{"fuchsia.examples.inspect.FizzBuzz"}},
-            .source = sys::testing::ChildRef{"fizzbuzz"},
-            .targets = {sys::testing::ChildRef{"reverser"}}})
-        .AddRoute(
-            sys::testing::Route{.capabilities = {sys::testing::Protocol{"fuchsia.logger.LogSink"}},
-                                .source = sys::testing::ParentRef(),
-                                .targets = {sys::testing::ChildRef{"fizzbuzz"}}});
+        .AddRoute(component_testing::Route{
+            .capabilities = {component_testing::Protocol{"fuchsia.examples.inspect.FizzBuzz"}},
+            .source = component_testing::ChildRef{"fizzbuzz"},
+            .targets = {component_testing::ChildRef{"reverser"}}})
+        .AddRoute(component_testing::Route{
+            .capabilities = {component_testing::Protocol{"fuchsia.logger.LogSink"}},
+            .source = component_testing::ParentRef(),
+            .targets = {component_testing::ChildRef{"fizzbuzz"}}});
   }
 
   realm_builder
-      .AddRoute(sys::testing::Route{
-          .capabilities = {sys::testing::Protocol{"fuchsia.examples.inspect.Reverser"}},
-          .source = sys::testing::ChildRef{"reverser"},
-          .targets = {sys::testing::ParentRef()}})
-      .AddRoute(
-          sys::testing::Route{.capabilities = {sys::testing::Protocol{"fuchsia.logger.LogSink"}},
-                              .source = sys::testing::ParentRef(),
-                              .targets = {sys::testing::ChildRef{"reverser"}}});
-  realm_ = std::make_unique<sys::testing::experimental::RealmRoot>(realm_builder.Build());
+      .AddRoute(component_testing::Route{
+          .capabilities = {component_testing::Protocol{"fuchsia.examples.inspect.Reverser"}},
+          .source = component_testing::ChildRef{"reverser"},
+          .targets = {component_testing::ParentRef()}})
+      .AddRoute(component_testing::Route{
+          .capabilities = {component_testing::Protocol{"fuchsia.logger.LogSink"}},
+          .source = component_testing::ParentRef(),
+          .targets = {component_testing::ChildRef{"reverser"}}});
+  realm_ = std::make_unique<component_testing::RealmRoot>(realm_builder.Build());
   fuchsia::examples::inspect::ReverserPtr proxy;
   realm_->Connect(proxy.NewRequest());
   return proxy;

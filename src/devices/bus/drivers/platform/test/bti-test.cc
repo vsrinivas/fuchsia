@@ -26,13 +26,13 @@ namespace {
 
 using device_watcher::RecursiveWaitForFile;
 
-using namespace sys::testing;
+using namespace component_testing;
 
 constexpr char kParentPath[] = "sys/platform/11:01:1a";
 constexpr char kDevicePath[] = "sys/platform/11:01:1a/test-bti";
 
 TEST(PbusBtiTest, BtiIsSameAfterCrash) {
-  auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
+  auto realm_builder = component_testing::RealmBuilder::Create();
   driver_test_realm::Setup(realm_builder);
   realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.boot.RootResource"}},
                                .source = {ParentRef()},

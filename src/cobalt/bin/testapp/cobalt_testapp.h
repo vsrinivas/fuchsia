@@ -53,7 +53,7 @@ class CobaltTestApp {
 
  private:
   // Starts and connects to the cobalt fidl service using the provided variant file.
-  sys::testing::ScopedChild Connect(const std::string &variant);
+  component_testing::ScopedChild Connect(const std::string &variant);
 
   void SetChannel(const std::string &current_channel);
   bool DoDebugMetricTest();

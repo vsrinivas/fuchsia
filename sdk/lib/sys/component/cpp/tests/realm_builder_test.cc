@@ -24,8 +24,7 @@
 
 namespace {
 
-using namespace sys::testing::experimental;
-using namespace sys::testing;
+using namespace component_testing;
 
 constexpr char kEchoServerUrl[] =
     "fuchsia-pkg://fuchsia.com/component_cpp_tests#meta/echo_server.cm";

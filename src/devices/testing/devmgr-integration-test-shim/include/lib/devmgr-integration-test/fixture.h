@@ -64,7 +64,7 @@ class IsolatedDevmgr {
   // That is, `realm_` needs to be destroyed before `loop_` because it will
   // hold a reference to `loop_` async dispatcher object.
   std::unique_ptr<async::Loop> loop_;
-  std::unique_ptr<sys::testing::experimental::RealmRoot> realm_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 
   // FD to the root of devmgr's devfs
   fbl::unique_fd devfs_root_;

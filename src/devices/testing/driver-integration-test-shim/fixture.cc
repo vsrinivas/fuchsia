@@ -21,14 +21,14 @@
 
 namespace driver_integration_test {
 
-using namespace sys::testing;
+using namespace component_testing;
 
 zx_status_t IsolatedDevmgr::Create(Args* args, IsolatedDevmgr* out) {
   IsolatedDevmgr devmgr;
   devmgr.loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // Create and build the realm.
-  auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
+  auto realm_builder = component_testing::RealmBuilder::Create();
   driver_test_realm::Setup(realm_builder);
 
   // Setup Fshost.
@@ -85,7 +85,7 @@ zx_status_t IsolatedDevmgr::Create(Args* args, IsolatedDevmgr* out) {
                                .targets = {ChildRef{"fshost"}}});
 
   // Build the realm.
-  devmgr.realm_ = std::make_unique<sys::testing::experimental::RealmRoot>(
+  devmgr.realm_ = std::make_unique<component_testing::RealmRoot>(
       realm_builder.Build(devmgr.loop_->dispatcher()));
 
   // Start DriverTestRealm.

@@ -78,9 +78,9 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   devmgr.loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // Create and build the realm.
-  auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
+  auto realm_builder = component_testing::RealmBuilder::Create();
   driver_test_realm::Setup(realm_builder);
-  devmgr.realm_ = std::make_unique<sys::testing::experimental::RealmRoot>(
+  devmgr.realm_ = std::make_unique<component_testing::RealmRoot>(
       realm_builder.Build(devmgr.loop_->dispatcher()));
 
   // Start DriverTestRealm.

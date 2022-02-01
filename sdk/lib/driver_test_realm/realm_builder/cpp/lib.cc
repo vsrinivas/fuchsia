@@ -14,9 +14,9 @@
 
 namespace driver_test_realm {
 
-using namespace sys::testing;
+using namespace component_testing;
 
-void Setup(sys::testing::experimental::RealmBuilder& realm_builder) {
+void Setup(component_testing::RealmBuilder& realm_builder) {
   realm_builder.AddChild("driver_test_realm", "#meta/driver_test_realm.cm");
   realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
                                .source = {ParentRef()},

@@ -31,7 +31,7 @@ class IntegrationTest : public gtest::RealLoopFixture {
   std::string ReverserMonikerForSelectors() const;
 
  private:
-  std::unique_ptr<sys::testing::experimental::RealmRoot> realm_ = nullptr;
+  std::unique_ptr<component_testing::RealmRoot> realm_ = nullptr;
 };
 
 }  // namespace codelab::testing

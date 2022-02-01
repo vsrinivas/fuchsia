@@ -35,15 +35,15 @@ static constexpr uint32_t kAllocateFlags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WR
 static const size_t kBufferSize = kVirtioMagmaVmarSize / 4;
 static const uint32_t kMockVfdId = 42;
 
-using sys::testing::ChildRef;
-using sys::testing::Directory;
-using sys::testing::LocalComponent;
-using sys::testing::LocalComponentHandles;
-using sys::testing::ParentRef;
-using sys::testing::Protocol;
-using sys::testing::Route;
-using sys::testing::experimental::RealmBuilder;
-using sys::testing::experimental::RealmRoot;
+using component_testing::ChildRef;
+using component_testing::Directory;
+using component_testing::LocalComponent;
+using component_testing::LocalComponentHandles;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmBuilder;
+using component_testing::RealmRoot;
+using component_testing::Route;
 
 class WaylandImporterMock : public fuchsia::virtualization::hardware::VirtioWaylandImporter {
  public:
@@ -486,7 +486,7 @@ class VirtioMagmaTest : public TestWithDeviceV2 {
       wayland_importer_mock_binding_;
   async::Loop wayland_importer_mock_loop_;
   ScenicAllocatorFake scenic_allocator_fake_;
-  std::unique_ptr<sys::testing::experimental::RealmRoot> realm_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
 TEST_F(VirtioMagmaTest, HandleQuery) {

@@ -18,12 +18,12 @@ namespace {
 constexpr uint16_t kNumQueues = 1;
 constexpr uint16_t kQueueSize = 16;
 
-using sys::testing::ChildRef;
-using sys::testing::ParentRef;
-using sys::testing::Protocol;
-using sys::testing::Route;
-using sys::testing::experimental::RealmRoot;
-using RealmBuilder = sys::testing::experimental::RealmBuilder;
+using component_testing::ChildRef;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmRoot;
+using component_testing::Route;
+using RealmBuilder = component_testing::RealmBuilder;
 
 class VirtioInputTest : public TestWithDeviceV2 {
  protected:
@@ -87,7 +87,7 @@ class VirtioInputTest : public TestWithDeviceV2 {
   fuchsia::virtualization::hardware::KeyboardListenerSyncPtr keyboard_listener_;
   fuchsia::virtualization::hardware::PointerListenerSyncPtr pointer_listener_;
   VirtioQueueFake event_queue_;
-  std::unique_ptr<sys::testing::experimental::RealmRoot> realm_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
 TEST_F(VirtioInputTest, Keyboard) {

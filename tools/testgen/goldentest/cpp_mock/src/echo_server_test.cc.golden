@@ -9,23 +9,23 @@ constexpr char COMPONENT_URL[] = "fuchsia-pkg://fuchsia.com/echo_server_test#met
 class EchoServerTest: public ::gtest::RealLoopFixture {
 
  protected:
-  std::unique_ptr<sys::testing::experimental::RealmRoot> CreateRealm() {
+  std::unique_ptr<component_testing::RealmRoot> CreateRealm() {
 
-    auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
+    auto realm_builder = component_testing::RealmBuilder::Create();
     realm_builder
       .AddChild(
         "echo_server",
         COMPONENT_URL)
-      .AddRoute(sys::testing::Route {
-        .capabilities = {sys::testing::Protocol {"fuchsia.logger.LogSink"}},
-        .source = sys::testing::ParentRef(),
-        .targets = {sys::testing::ChildRef{"echo_server"}, }})
-      .AddRoute(sys::testing::Route {
-        .capabilities = {sys::testing::Protocol {"fidl.examples.routing.echo.Echo"}},
-        .source = sys::testing::ChildRef{"echo_server"},
-        .targets = {sys::testing::ParentRef(), }});
+      .AddRoute(component_testing::Route {
+        .capabilities = {component_testing::Protocol {"fuchsia.logger.LogSink"}},
+        .source = component_testing::ParentRef(),
+        .targets = {component_testing::ChildRef{"echo_server"}, }})
+      .AddRoute(component_testing::Route {
+        .capabilities = {component_testing::Protocol {"fidl.examples.routing.echo.Echo"}},
+        .source = component_testing::ChildRef{"echo_server"},
+        .targets = {component_testing::ParentRef(), }});
 
-    return std::make_unique<sys::testing::experimental::RealmRoot>(realm_builder.Build(dispatcher()));
+    return std::make_unique<component_testing::RealmRoot>(realm_builder.Build(dispatcher()));
   }
 };
 

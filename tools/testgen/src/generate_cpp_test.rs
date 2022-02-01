@@ -35,7 +35,7 @@ class {}Test: public ::gtest::RealLoopFixture {{
         test_fixture.push_str(
             "
  protected:
-  std::unique_ptr<sys::testing::experimental::RealmRoot> CreateRealm() {
+  std::unique_ptr<component_testing::RealmRoot> CreateRealm() {
 ",
         );
 
@@ -51,7 +51,7 @@ class {}Test: public ::gtest::RealLoopFixture {{
         }
         test_fixture.push_str(
             r#"
-    auto realm_builder = sys::testing::experimental::RealmBuilder::Create();
+    auto realm_builder = component_testing::RealmBuilder::Create();
     realm_builder
 "#,
         );
@@ -59,7 +59,7 @@ class {}Test: public ::gtest::RealLoopFixture {{
         test_fixture.push_str(&self.code.realm_builder_snippets.join("\n"));
         test_fixture.push_str(";\n\n");
         test_fixture.push_str(
-            r#"    return std::make_unique<sys::testing::experimental::RealmRoot>(realm_builder.Build(dispatcher()));
+            r#"    return std::make_unique<component_testing::RealmRoot>(realm_builder.Build(dispatcher()));
   }
 };
 
@@ -207,28 +207,27 @@ impl TestCodeBuilder for CppTestCode {
         targets: Vec<String>,
     ) -> &'a dyn TestCodeBuilder {
         let source_code = match source {
-            "root" => "sys::testing::ParentRef()".to_string(),
-            "self" => format!("sys::testing::ChildRef{{\"{}\"}}", self.component_under_test),
-            _ => format!("sys::testing::ChildRef{{\"{}\"}}", source),
+            "root" => "component_testing::ParentRef()".to_string(),
+            "self" => format!("component_testing::ChildRef{{\"{}\"}}", self.component_under_test),
+            _ => format!("component_testing::ChildRef{{\"{}\"}}", source),
         };
 
         let mut targets_code: String = "".to_string();
         for i in 0..targets.len() {
             let t = &targets[i];
             match t.as_str() {
-                "root" => targets_code.push_str("sys::testing::ParentRef(), "),
+                "root" => targets_code.push_str("component_testing::ParentRef(), "),
                 "self" => targets_code.push_str(
-                    format!("sys::testing::ChildRef{{\"{}\"}}, ", self.component_under_test)
+                    format!("component_testing::ChildRef{{\"{}\"}}, ", self.component_under_test)
                         .as_str(),
                 ),
-                _ => {
-                    targets_code.push_str(format!("sys::testing::ChildRef{{\"{}\"}}, ", t).as_str())
-                }
+                _ => targets_code
+                    .push_str(format!("component_testing::ChildRef{{\"{}\"}}, ", t).as_str()),
             }
         }
         self.realm_builder_snippets.push(format!(
-            r#"      .AddRoute(sys::testing::Route {{
-        .capabilities = {{sys::testing::Protocol {{"{}"}}}},
+            r#"      .AddRoute(component_testing::Route {{
+        .capabilities = {{component_testing::Protocol {{"{}"}}}},
         .source = {},
         .targets = {{{}}}}})"#,
             protocol, source_code, targets_code
@@ -246,23 +245,22 @@ impl TestCodeBuilder for CppTestCode {
         for i in 0..targets.len() {
             let t = &targets[i];
             match t.as_str() {
-                "root" => targets_code.push_str("sys::testing::ParentRef(), "),
+                "root" => targets_code.push_str("component_testing::ParentRef(), "),
                 "self" => targets_code.push_str(
-                    format!("sys::testing::ChildRef{{\"{}\"}}, ", self.component_under_test)
+                    format!("component_testing::ChildRef{{\"{}\"}}, ", self.component_under_test)
                         .as_str(),
                 ),
-                _ => {
-                    targets_code.push_str(format!("sys::testing::ChildRef{{\"{}\"}}, ", t).as_str())
-                }
+                _ => targets_code
+                    .push_str(format!("component_testing::ChildRef{{\"{}\"}}, ", t).as_str()),
             }
         }
         self.realm_builder_snippets.push(format!(
-            r#"      .AddRoute(sys::testing::Route {{
-        .capabilities = {{sys::testing::Directory {{
+            r#"      .AddRoute(component_testing::Route {{
+        .capabilities = {{component_testing::Directory {{
           .name = "{}",
           .path = "{}",
           .rights = fuchsia::io2::RW_STAR_DIR,}}}},
-        .source = sys::testing::ParentRef(),
+        .source = component_testing::ParentRef(),
         .targets = {{{}}}}})"#,
             dir_name, dir_path, targets_code
         ));
@@ -279,22 +277,21 @@ impl TestCodeBuilder for CppTestCode {
         for i in 0..targets.len() {
             let t = &targets[i];
             match t.as_str() {
-                "root" => targets_code.push_str("sys::testing::ParentRef(), "),
+                "root" => targets_code.push_str("component_testing::ParentRef(), "),
                 "self" => targets_code.push_str(
-                    format!("sys::testing::ChildRef{{\"{}\"}}, ", self.component_under_test)
+                    format!("component_testing::ChildRef{{\"{}\"}}, ", self.component_under_test)
                         .as_str(),
                 ),
-                _ => {
-                    targets_code.push_str(format!("sys::testing::ChildRef{{\"{}\"}}, ", t).as_str())
-                }
+                _ => targets_code
+                    .push_str(format!("component_testing::ChildRef{{\"{}\"}}, ", t).as_str()),
             }
         }
         self.realm_builder_snippets.push(format!(
-            r#"      .AddRoute(sys::testing::Route {{
-        .capabilities = {{sys::testing::Storage {{
+            r#"      .AddRoute(component_testing::Route {{
+        .capabilities = {{component_testing::Storage {{
           .name = "{}",
           .path = "{}",}}}},
-        .source = sys::testing::ParentRef(),
+        .source = component_testing::ParentRef(),
         .targets = {{{}}}}})"#,
             storage_name, storage_path, targets_code
         ));

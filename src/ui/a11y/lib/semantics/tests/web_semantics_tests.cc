@@ -43,11 +43,11 @@
 namespace accessibility_test {
 namespace {
 
-using sys::testing::ChildRef;
-using sys::testing::LocalComponent;
-using sys::testing::ParentRef;
-using sys::testing::Protocol;
-using sys::testing::Route;
+using component_testing::ChildRef;
+using component_testing::LocalComponent;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::Route;
 
 static constexpr auto kStaticHtml = R"(
 <html>

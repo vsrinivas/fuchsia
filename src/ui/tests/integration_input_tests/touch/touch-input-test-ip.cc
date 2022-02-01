@@ -119,14 +119,14 @@ using ScenicEvent = fuchsia::ui::scenic::Event;
 using GfxEvent = fuchsia::ui::gfx::Event;
 
 // Types imported for the realm_builder library.
-using sys::testing::ChildRef;
-using sys::testing::LocalComponent;
-using sys::testing::LocalComponentHandles;
-using sys::testing::ParentRef;
-using sys::testing::Protocol;
-using sys::testing::Route;
-using sys::testing::experimental::RealmRoot;
-using RealmBuilder = sys::testing::experimental::RealmBuilder;
+using component_testing::ChildRef;
+using component_testing::LocalComponent;
+using component_testing::LocalComponentHandles;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmRoot;
+using component_testing::Route;
+using RealmBuilder = component_testing::RealmBuilder;
 
 // Alias for Component child name as provided to Realm Builder.
 using ChildName = std::string;

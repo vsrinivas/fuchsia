@@ -19,7 +19,7 @@
 
 // [START use_namespace_cpp]
 // NOLINTNEXTLINE
-using namespace sys::testing;
+using namespace component_testing;
 // [END use_namespace_cpp]
 
 // [START mock_component_impl_cpp]
@@ -56,7 +56,7 @@ TEST(SampleTest, CallsEcho) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   // [START init_realm_builder_cpp]
-  auto builder = experimental::RealmBuilder::Create();
+  auto builder = RealmBuilder::Create();
   // [END init_realm_builder_cpp]
 
   // [START add_component_cpp]

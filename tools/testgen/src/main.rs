@@ -519,24 +519,24 @@ mod test {
         let expect_realm_snippets = r#"      .AddLocalChild(
         "service_1",
         &mock_service_1)
-      .AddRoute(sys::testing::Route {
-        .capabilities = {sys::testing::Protocol {"fuchsia.diagnostics.ArchiveAccessor"}},
-        .source = sys::testing::ChildRef{"service_1"},
-        .targets = {sys::testing::ParentRef(), sys::testing::ChildRef{"foo_bar"}, }})
+      .AddRoute(component_testing::Route {
+        .capabilities = {component_testing::Protocol {"fuchsia.diagnostics.ArchiveAccessor"}},
+        .source = component_testing::ChildRef{"service_1"},
+        .targets = {component_testing::ParentRef(), component_testing::ChildRef{"foo_bar"}, }})
       .AddLocalChild(
         "service_2",
         &mock_service_2)
-      .AddRoute(sys::testing::Route {
-        .capabilities = {sys::testing::Protocol {"fuchsia.metrics.MetricEventLoggerFactory"}},
-        .source = sys::testing::ChildRef{"service_2"},
-        .targets = {sys::testing::ParentRef(), sys::testing::ChildRef{"foo_bar"}, }})
-      .AddRoute(sys::testing::Route {
-        .capabilities = {sys::testing::Directory {
+      .AddRoute(component_testing::Route {
+        .capabilities = {component_testing::Protocol {"fuchsia.metrics.MetricEventLoggerFactory"}},
+        .source = component_testing::ChildRef{"service_2"},
+        .targets = {component_testing::ParentRef(), component_testing::ChildRef{"foo_bar"}, }})
+      .AddRoute(component_testing::Route {
+        .capabilities = {component_testing::Directory {
           .name = "config-data",
           .path = "/config/data",
           .rights = fuchsia::io2::RW_STAR_DIR,}},
-        .source = sys::testing::ParentRef(),
-        .targets = {sys::testing::ChildRef{"foo_bar"}, }})"#;
+        .source = component_testing::ParentRef(),
+        .targets = {component_testing::ChildRef{"foo_bar"}, }})"#;
         assert_eq!(create_realm_impl, expect_realm_snippets);
 
         let mut all_imports = code.imports.clone();

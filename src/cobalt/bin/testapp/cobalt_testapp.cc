@@ -54,23 +54,23 @@ constexpr uint32_t kExperimentId = 48954962;
     return false;      \
   }
 
-#define CONNECT_AND_TRY_TEST_TWICE(test, variant)                            \
-  {                                                                          \
-    std::unique_ptr<sys::testing::ScopedChild> child =                       \
-        std::make_unique<sys::testing::ScopedChild>(Connect(variant));       \
-    if (!(test)) {                                                           \
-      child->MakeTeardownAsync(loop_->dispatcher());                         \
-      child = std::make_unique<sys::testing::ScopedChild>(Connect(variant)); \
-      if (!(test)) {                                                         \
-        return false;                                                        \
-      }                                                                      \
-    }                                                                        \
-    child->MakeTeardownAsync(loop_->dispatcher());                           \
+#define CONNECT_AND_TRY_TEST_TWICE(test, variant)                                 \
+  {                                                                               \
+    std::unique_ptr<component_testing::ScopedChild> child =                       \
+        std::make_unique<component_testing::ScopedChild>(Connect(variant));       \
+    if (!(test)) {                                                                \
+      child->MakeTeardownAsync(loop_->dispatcher());                              \
+      child = std::make_unique<component_testing::ScopedChild>(Connect(variant)); \
+      if (!(test)) {                                                              \
+        return false;                                                             \
+      }                                                                           \
+    }                                                                             \
+    child->MakeTeardownAsync(loop_->dispatcher());                                \
   }
 
 bool CobaltTestApp::RunTests() {
-  std::unique_ptr<sys::testing::ScopedChild> child =
-      std::make_unique<sys::testing::ScopedChild>(Connect(kCobaltWithEventAggregatorWorker));
+  std::unique_ptr<component_testing::ScopedChild> child =
+      std::make_unique<component_testing::ScopedChild>(Connect(kCobaltWithEventAggregatorWorker));
 
   // TODO(zmbush): Create tests for all logger methods.
   TRY_TEST(TestLogEvent(&logger_));
@@ -120,12 +120,12 @@ bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days,
   return true;
 }
 
-sys::testing::ScopedChild CobaltTestApp::Connect(const std::string &variant) {
+component_testing::ScopedChild CobaltTestApp::Connect(const std::string &variant) {
   fuchsia::component::RealmSyncPtr realm_proxy;
   FX_CHECK(ZX_OK == context_->svc()->Connect(realm_proxy.NewRequest()))
       << "Failed to connect to fuchsia.component.Realm";
 
-  auto child = sys::testing::ScopedChild::New(
+  auto child = component_testing::ScopedChild::New(
       std::move(realm_proxy), "realm_builder",
       "cobalt_under_test_" + std::to_string(scoped_children_), variant);
   logger_.SetCobaltUnderTestMoniker("realm_builder\\:" + child.GetChildName());

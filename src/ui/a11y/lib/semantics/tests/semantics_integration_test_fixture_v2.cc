@@ -37,10 +37,10 @@ namespace accessibility_test {
 using ScenicEvent = fuchsia::ui::scenic::Event;
 using GfxEvent = fuchsia::ui::gfx::Event;
 
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::Route;
 using fuchsia::accessibility::semantics::Node;
-using sys::testing::ParentRef;
-using sys::testing::Protocol;
-using sys::testing::Route;
 
 void AddBaseComponents(RealmBuilder* realm_builder) {
   FX_LOGS(INFO) << "Add root presenter";
