@@ -51,9 +51,7 @@ class Page : public fbl::RefCounted<Page>,
   // to prevent the page of |vmo_| from being decommitted until there are one or more references. If
   // it fails, it means the the kernel has decommitted the page of |vmo_| due to memory pressure,
   // and thus it commits a page to |vmo_| and requests ZX_VMO_OP_TRY_LOCK again.
-  // TODO: call op_range() w/ ZX_VMO_OP_TRYLOCK only when a caller is the first reference to |this|.
-  // This way reduces the number of calls to the syscall.
-  zx_status_t GetPage();
+  zx_status_t GetPage(bool need_vmo_lock);
   // f2fs should call Page::PutPage() after using a Page.
   // First, it requests ZX_VMO_OP_UNLOCK to allow the kernel to free the committed page when there
   // is no reference. Then, it clears the PageFlag::kPageLoced flag and wakes up waiters if |unlock|
@@ -61,8 +59,6 @@ class Page : public fbl::RefCounted<Page>,
   // Finally, it resets the reference pointer, and then unmaps |address_| when there is no
   // reference to it except that PageFlag::kPageDirty is set. Writeback will use the mapping of a
   // dirty page soon.
-  // TODO: call op_range() w/ ZX_VMO_OP_UNLOCK only when a caller is the last reference to |this|.
-  // This way reduces the number of calls to the syscall.
   static void PutPage(fbl::RefPtr<Page> &&page, int unlock);
   zx_status_t VmoOpUnlock();
   void *GetAddress() const {
@@ -195,7 +191,6 @@ class FileCache {
   zx_status_t GetPage(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);
   // It does the same things as GetPage() except that it returns a unlocked Page.
   zx_status_t FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);
-  zx_status_t Evict(Page *page) __TA_EXCLUDES(tree_lock_);
   uint64_t Writeback(const pgoff_t start = 0, const pgoff_t end = kPgOffMax)
       __TA_EXCLUDES(tree_lock_);
   // It removes and invalidates all Pages in |page_tree_|.
@@ -204,7 +199,8 @@ class FileCache {
   VnodeF2fs &GetVnode() const { return *vnode_; }
 
  private:
-  zx_status_t GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_REQUIRES(tree_lock_);
+  zx::status<bool> GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page> *out)
+      __TA_REQUIRES(tree_lock_);
   zx_status_t AddPageUnsafe(fbl::RefPtr<Page> page) __TA_REQUIRES(tree_lock_);
   zx_status_t EvictUnsafe(Page *page) __TA_REQUIRES(tree_lock_);
   zx_status_t ResetUnsafe() __TA_REQUIRES(tree_lock_);

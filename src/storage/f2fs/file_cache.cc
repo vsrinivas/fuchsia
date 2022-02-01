@@ -51,7 +51,7 @@ bool Page::SetDirty() {
   return true;
 }
 
-zx_status_t Page::GetPage() {
+zx_status_t Page::GetPage(bool need_vmo_lock) {
   zx_status_t ret = ZX_OK;
   auto clear_flag = fit::defer([&] { ClearFlag(PageFlag::kPageAlloc); });
 
@@ -66,7 +66,7 @@ zx_status_t Page::GetPage() {
         ret != ZX_OK) {
       return ret;
     }
-  } else {
+  } else if (need_vmo_lock) {
     if (ret = vmo_.op_range(ZX_VMO_OP_TRY_LOCK, 0, kPageSize, nullptr, 0); ret != ZX_OK) {
       ZX_ASSERT(ret == ZX_ERR_UNAVAILABLE);
       ZX_ASSERT(IsDirty() == false);
@@ -100,17 +100,13 @@ zx_status_t Page::VmoOpUnlock() {
 
 void Page::PutPage(fbl::RefPtr<Page> &&page, int unlock) {
   ZX_ASSERT(page != nullptr);
-  bool unmap_and_release = (!page->IsUptodate() || (!page->IsDirty() && page->IsMapped()));
   pgoff_t index = page->GetKey();
   FileCache &file_cache = page->GetFileCache();
-  page->VmoOpUnlock();
   if (unlock) {
     page->Unlock();
   }
   page.reset();
-  if (unmap_and_release) {
-    file_cache.UnmapAndReleasePage(index);
-  }
+  file_cache.UnmapAndReleasePage(index);
 }
 
 void Page::Unmap() {
@@ -152,7 +148,10 @@ void FileCache::UnmapAndReleasePage(const pgoff_t index) {
   std::lock_guard tree_lock(tree_lock_);
   auto iter = page_tree_.find(index);
   if (iter != page_tree_.end() && (*iter).IsLastReference()) {
-    (*iter).Unmap();
+    if (!(*iter).IsDirty()) {
+      (*iter).Unmap();
+    }
+    (*iter).VmoOpUnlock();
     if (!(*iter).IsUptodate()) {
       EvictUnsafe(&(*iter));
     }
@@ -170,11 +169,15 @@ zx_status_t FileCache::AddPageUnsafe(fbl::RefPtr<Page> page) {
 zx_status_t FileCache::GetPage(const pgoff_t index, fbl::RefPtr<Page> *out) {
   {
     std::lock_guard tree_lock(tree_lock_);
-    if (zx_status_t ret = GetPageUnsafe(index, out); ret == ZX_ERR_NOT_FOUND) {
+    auto ret = GetPageUnsafe(index, out);
+    bool need_vmo_lock = true;
+    if (ret.is_error()) {
       *out = fbl::MakeRefCounted<Page>(this, index);
       ZX_ASSERT(AddPageUnsafe(*out) == ZX_OK);
+    } else {
+      need_vmo_lock = ret.value();
     }
-    (*out)->GetPage();
+    (*out)->GetPage(need_vmo_lock);
   }
   (*out)->Lock();
   return ZX_OK;
@@ -182,23 +185,22 @@ zx_status_t FileCache::GetPage(const pgoff_t index, fbl::RefPtr<Page> *out) {
 
 zx_status_t FileCache::FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) {
   std::lock_guard tree_lock(tree_lock_);
-  if (zx_status_t ret = GetPageUnsafe(index, out); ret != ZX_OK) {
-    return ret;
+  auto ret = GetPageUnsafe(index, out);
+  if (ret.is_error()) {
+    return ret.error_value();
   }
-  (*out)->GetPage();
+  (*out)->GetPage(ret.value());
   return ZX_OK;
 }
 
-zx_status_t FileCache::GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page> *out) {
-  if ((*out) = page_tree_.find(index).CopyPointer(); (*out) != nullptr) {
-    return ZX_OK;
+zx::status<bool> FileCache::GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page> *out) {
+  auto iter = page_tree_.find(index);
+  if (iter != page_tree_.end()) {
+    bool is_last = (*iter).IsLastReference();
+    *out = iter.CopyPointer();
+    return zx::ok(is_last);
   }
-  return ZX_ERR_NOT_FOUND;
-}
-
-zx_status_t FileCache::Evict(Page *page) {
-  std::lock_guard tree_lock(tree_lock_);
-  return EvictUnsafe(page);
+  return zx::error(ZX_ERR_NOT_FOUND);
 }
 
 zx_status_t FileCache::EvictUnsafe(Page *page) {
@@ -239,6 +241,7 @@ zx_status_t FileCache::ResetUnsafe() {
   return ZX_OK;
 }
 
+// TODO: Do not acquire tree_lock_ during writeback
 uint64_t FileCache::Writeback(const pgoff_t start, const pgoff_t end) {
   std::lock_guard tree_lock(tree_lock_);
   F2fs *fs = vnode_->Vfs();
