@@ -12,6 +12,7 @@ source_set("fasync-source-set") {
     "include/lib/fasync/internal/future.h",
     "include/lib/fasync/internal/type_traits.h",
     "include/lib/fasync/poll.h",
+    "include/lib/fasync/scheduler.h",
     "include/lib/fasync/type_traits.h",
   ]
   public_deps = [
@@ -32,10 +33,11 @@ zx_library("fasync") {
     "lib/fasync/internal/type_traits.h",
     "lib/fasync/future.h",
     "lib/fasync/poll.h",
+    "lib/fasync/scheduler.h",
     "lib/fasync/type_traits.h",
   ]
 
-  sources = []
+  sources = [ "scheduler.cc" ]
   deps = []
   public_deps = [
     ":fasync-source-set",
