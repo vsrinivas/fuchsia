@@ -17,7 +17,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet},
-    fidl_fuchsia_net_stack::{ForwardingDestination, ForwardingEntry, StackMarker},
+    fidl_fuchsia_net_stack::{ForwardingEntry, StackMarker},
     fidl_fuchsia_net_stack_ext::FidlReturn,
     fidl_fuchsia_netstack::NetstackMarker,
     fidl_fuchsia_telephony_manager::ManagerMarker,
@@ -139,8 +139,8 @@ pub struct Connections {
     pub file_ref: Option<File>,
 }
 
-async fn handle_cmd<'a>(
-    ril_modem: &'a RadioInterfaceLayerProxy,
+async fn handle_cmd(
+    ril_modem: &RadioInterfaceLayerProxy,
     line: String,
     state: Arc<Mutex<Connections>>,
 ) -> Result<ReplControl, Error> {
@@ -177,12 +177,6 @@ async fn handle_cmd<'a>(
                             .squash_result()?;
                         let ip = settings.ip_v4_addr;
                         let () = netstack.add_forwarding_entry(&mut ForwardingEntry {
-                            destination: ForwardingDestination::NextHop(IpAddress::Ipv4(Ipv4Address{
-                                addr: [
-                                    ((settings.ip_v4_gateway >> 24) & 0xFF) as u8,
-                                    ((settings.ip_v4_gateway >> 16) & 0xFF) as u8,
-                                    ((settings.ip_v4_gateway >> 8)  & 0xFF) as u8,
-                                    (settings.ip_v4_gateway & 0xFF) as u8]})),
                             subnet: Subnet {
                                 addr: IpAddress::Ipv4(Ipv4Address{
                                     addr: [
@@ -192,6 +186,16 @@ async fn handle_cmd<'a>(
                                         (ip & 0xFF) as u8]}),
                                 prefix_len: u32_to_cidr(settings.ip_v4_subnet)?
                             },
+                            device_id: 0,
+                            next_hop: Some(Box::new(IpAddress::Ipv4(Ipv4Address{
+                                addr: [
+                                    ((settings.ip_v4_gateway >> 24) & 0xFF) as u8,
+                                    ((settings.ip_v4_gateway >> 16) & 0xFF) as u8,
+                                    ((settings.ip_v4_gateway >> 8)  & 0xFF) as u8,
+                                    (settings.ip_v4_gateway & 0xFF) as u8,
+                                ],
+                            }))),
+                            metric: 0,
                         }).await.squash_result()?;
                         Ok("connected".to_string())
                     }

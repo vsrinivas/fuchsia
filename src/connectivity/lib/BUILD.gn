@@ -7,7 +7,6 @@ group("lib") {
   deps = [
     "fidl_fuchsia_net_name_ext",
     "fidl_fuchsia_net_stack_ext",
-    "fidl_fuchsia_netstack_ext",
     "fuzz-util",
     "internet-checksum",
     "net-declare",
@@ -25,7 +24,6 @@ group("tests") {
   deps = [
     "fidl_fuchsia_net_name_ext:fidl-fuchsia-net-name-ext-tests",
     "fidl_fuchsia_net_stack_ext:fidl-fuchsia-net-stack-ext-tests",
-    "fidl_fuchsia_netstack_ext:fidl-fuchsia-netstack-ext-tests",
     "packet-formats:tests",
     "packet-formats-dhcp:tests",
     "//src/connectivity/lib/internet-checksum:tests",

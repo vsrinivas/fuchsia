@@ -16,7 +16,6 @@ use fidl_fuchsia_net_neighbor_ext as fneighbor_ext;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_net_stack_ext::{self as fstack_ext, FidlReturn as _};
 use fidl_fuchsia_netstack as fnetstack;
-use fidl_fuchsia_netstack_ext as fnetstack_ext;
 use fuchsia_zircon_status as zx;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use log::info;
@@ -92,9 +91,6 @@ pub async fn do_root<C: NetCliDepsConnector>(
     match cmd {
         CommandEnum::If(opts::If { if_cmd: cmd }) => {
             do_if(std::io::stdout(), cmd, connector).await.context("failed during if command")
-        }
-        CommandEnum::Fwd(opts::Fwd { fwd_cmd: cmd }) => {
-            do_fwd(std::io::stdout(), cmd, connector).await.context("failed during fwd command")
         }
         CommandEnum::Route(opts::Route { route_cmd: cmd }) => {
             do_route(std::io::stdout(), cmd, connector).await.context("failed during route command")
@@ -441,14 +437,14 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
     Ok(())
 }
 
-async fn do_fwd<W: std::io::Write, C: NetCliDepsConnector>(
+async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
     mut out: W,
-    cmd: opts::FwdEnum,
+    cmd: opts::RouteEnum,
     connector: &C,
 ) -> Result<(), Error> {
     let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
     match cmd {
-        opts::FwdEnum::List(opts::FwdList { json }) => {
+        opts::RouteEnum::List(opts::RouteList { json }) => {
             let response =
                 stack.get_forwarding_table().await.context("error retrieving forwarding table")?;
             if json {
@@ -459,88 +455,16 @@ async fn do_fwd<W: std::io::Write, C: NetCliDepsConnector>(
                     .collect();
                 let () = serde_json::to_writer(out, &response).context("serialize")?;
             } else {
-                for entry in response {
-                    writeln!(out, "{}", fstack_ext::ForwardingEntry::from(entry))?;
-                }
-            }
-        }
-        opts::FwdEnum::AddDevice(opts::FwdAddDevice { interface, addr, prefix }) => {
-            let id = interface.find_nicid(connector).await?;
-            let mut entry = fstack::ForwardingEntry {
-                subnet: fnet::Subnet {
-                    addr: fnet_ext::IpAddress::from_str(&addr)?.into(),
-                    prefix_len: prefix,
-                },
-                destination: fstack::ForwardingDestination::DeviceId(id),
-            };
-            let () = fstack_ext::exec_fidl!(
-                stack.add_forwarding_entry(&mut entry),
-                "error adding device forwarding entry"
-            )?;
-            info!("Added forwarding entry for {}/{} to device {}", addr, prefix, id);
-        }
-        opts::FwdEnum::AddHop(opts::FwdAddHop { next_hop, addr, prefix }) => {
-            let mut entry = fstack::ForwardingEntry {
-                subnet: fnet::Subnet {
-                    addr: fnet_ext::IpAddress::from_str(&addr)?.into(),
-                    prefix_len: prefix,
-                },
-                destination: fstack::ForwardingDestination::NextHop(
-                    fnet_ext::IpAddress::from_str(&next_hop)?.into(),
-                ),
-            };
-            let () = fstack_ext::exec_fidl!(
-                stack.add_forwarding_entry(&mut entry),
-                "error adding next-hop forwarding entry"
-            )?;
-            info!("Added forwarding entry for {}/{} to {}", addr, prefix, next_hop);
-        }
-        opts::FwdEnum::Del(opts::FwdDel { addr, prefix }) => {
-            let mut entry = fnet::Subnet {
-                addr: fnet_ext::IpAddress::from_str(&addr)?.into(),
-                prefix_len: prefix,
-            };
-            let () = fstack_ext::exec_fidl!(
-                stack.del_forwarding_entry(&mut entry),
-                "error removing forwarding entry"
-            )?;
-            info!("Removed forwarding entry for {}/{}", addr, prefix);
-        }
-    }
-    Ok(())
-}
-
-async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
-    mut out: W,
-    cmd: opts::RouteEnum,
-    connector: &C,
-) -> Result<(), Error> {
-    let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
-    match cmd {
-        opts::RouteEnum::List(opts::RouteList { json }) => {
-            let response =
-                netstack.get_route_table().await.context("error retrieving routing table")?;
-
-            if json {
-                let response: Vec<_> = response
-                    .into_iter()
-                    .map(fnetstack_ext::RouteTableEntry::from)
-                    .map(ser::RouteTableEntry::from)
-                    .collect();
-                serde_json::to_writer(out, &response).context("serialize")?;
-            } else {
                 let mut t = Table::new();
                 t.set_format(format::FormatBuilder::new().padding(2, 2).build());
 
                 t.set_titles(row!["Destination", "Gateway", "NICID", "Metric"]);
                 for entry in response {
-                    let fnetstack_ext::RouteTableEntry { destination, gateway, nicid, metric } =
+                    let fstack_ext::ForwardingEntry { subnet, device_id, next_hop, metric } =
                         entry.into();
-                    let gateway = match gateway {
-                        None => "-".to_string(),
-                        Some(g) => format!("{}", g),
-                    };
-                    let () = add_row(&mut t, row![destination, gateway, nicid, metric]);
+                    let next_hop = next_hop.map(|next_hop| next_hop.to_string());
+                    let next_hop = next_hop.as_ref().map_or("-", |s| s.as_str());
+                    let () = add_row(&mut t, row![subnet, next_hop, device_id, metric]);
                 }
 
                 let _lines_printed: usize = t.print(&mut out)?;
@@ -550,36 +474,20 @@ async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
         opts::RouteEnum::Add(route) => {
             let nicid = route.interface.find_u32_nicid(connector).await?;
             let mut entry = route.into_route_table_entry(nicid);
-            let () = with_route_table_transaction_and_entry(&netstack, |transaction| {
-                transaction.add_route(&mut entry)
-            })
-            .await?;
+            let () = fstack_ext::exec_fidl!(
+                stack.add_forwarding_entry(&mut entry),
+                "error adding next-hop forwarding entry"
+            )?;
         }
         opts::RouteEnum::Del(route) => {
             let nicid = route.interface.find_u32_nicid(connector).await?;
             let mut entry = route.into_route_table_entry(nicid);
-            let () = with_route_table_transaction_and_entry(&netstack, |transaction| {
-                transaction.del_route(&mut entry)
-            })
-            .await?;
+            let () = fstack_ext::exec_fidl!(
+                stack.del_forwarding_entry(&mut entry),
+                "error removing forwarding entry"
+            )?;
         }
     }
-    Ok(())
-}
-
-async fn with_route_table_transaction_and_entry<T, F>(
-    netstack: &fnetstack::NetstackProxy,
-    func: T,
-) -> Result<(), Error>
-where
-    F: core::future::Future<Output = Result<i32, fidl::Error>>,
-    T: FnOnce(&fnetstack::RouteTableTransactionProxy) -> F,
-{
-    let (route_table, server_end) =
-        fidl::endpoints::create_proxy::<fnetstack::RouteTableTransactionMarker>()?;
-    let () = zx::Status::ok(netstack.start_route_table_transaction(server_end).await?)?;
-    let status = func(&route_table).await?;
-    let () = zx::Status::ok(status)?;
     Ok(())
 }
 
@@ -1812,90 +1720,6 @@ mac             -
         }
     }
 
-    fn wanted_fwd_list_json() -> String {
-        json!([
-            {
-                "destination": { "DeviceId": 4 },
-                "subnet": {"addr":"1.2.3.4","prefix_len":24}
-            },
-            {
-                "destination": { "NextHop": "1.2.3.6" },
-                "subnet": {"addr":"1.2.3.5","prefix_len":24}
-            }
-        ])
-        .to_string()
-    }
-
-    fn wanted_fwd_list_tabular() -> String {
-        "1.2.3.4/24 device id 4
-         1.2.3.5/24 next hop 1.2.3.6"
-            .to_string()
-    }
-
-    #[test_case(true, wanted_fwd_list_json() ; "in json format")]
-    #[test_case(false, wanted_fwd_list_tabular() ; "in tabular format")]
-    #[fasync::run_singlethreaded(test)]
-    async fn fwd_list(json: bool, wanted_output: String) {
-        let (stack_controller, mut stack_requests) =
-            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
-        let connector = TestConnector { stack: Some(stack_controller), ..Default::default() };
-
-        let mut output: Vec<u8> = Vec::new();
-
-        let do_fwd_fut =
-            do_fwd(&mut output, opts::FwdEnum::List(opts::FwdList { json }), &connector);
-
-        let requests_fut = async {
-            let responder = stack_requests
-                .try_next()
-                .await
-                .expect("stack FIDL error")
-                .expect("request stream should not have ended")
-                .into_get_forwarding_table()
-                .expect("request should be of type GetForwardingTable");
-            let () = responder
-                .send(
-                    &mut vec![
-                        fstack::ForwardingEntry {
-                            subnet: fnet::Subnet {
-                                addr: fnet_ext::IpAddress::from_str("1.2.3.4")?.into(),
-                                prefix_len: 24,
-                            },
-                            destination: fstack::ForwardingDestination::DeviceId(4),
-                        },
-                        fstack::ForwardingEntry {
-                            subnet: fnet::Subnet {
-                                addr: fnet_ext::IpAddress::from_str("1.2.3.5")?.into(),
-                                prefix_len: 24,
-                            },
-                            destination: fstack::ForwardingDestination::NextHop(
-                                fnet_ext::IpAddress::from_str("1.2.3.6")?.into(),
-                            ),
-                        },
-                    ]
-                    .iter_mut(),
-                )
-                .expect("responder.send should succeed");
-            Ok(())
-        };
-        let ((), ()) = futures::future::try_join(do_fwd_fut, requests_fut)
-            .await
-            .expect("listing forwarding table entries should succeed");
-
-        let got_output: &str = std::str::from_utf8(&output).unwrap();
-
-        if json {
-            let got: Value = serde_json::from_str(got_output).unwrap();
-            let want: Value = serde_json::from_str(&wanted_output).unwrap();
-            pretty_assertions::assert_eq!(got, want);
-        } else {
-            pretty_assertions::assert_eq!(
-                trim_whitespace_for_comparison(got_output),
-                trim_whitespace_for_comparison(&wanted_output),
-            );
-        }
-    }
-
     async fn test_do_dhcp(cmd: opts::DhcpEnum) {
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
@@ -1969,23 +1793,11 @@ mac             -
             }
         };
 
-        let (netstack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector { netstack: Some(netstack), ..Default::default() };
+        let (stack, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
+        let connector = TestConnector { stack: Some(stack), ..Default::default() };
         let op = do_route(std::io::sink(), cmd.clone(), &connector);
         let op_succeeds = async move {
-            let (route_table_requests, netstack_responder) = requests
-                .try_next()
-                .await
-                .expect("start route table transaction FIDL error")
-                .expect("request stream should not have ended")
-                .into_start_route_table_transaction()
-                .expect("request should be of type StartRouteTableTransaction");
-            let mut route_table_requests =
-                route_table_requests.into_stream().expect("should convert to request stream");
-            let () = netstack_responder
-                .send(zx::Status::OK.into_raw())
-                .expect("netstack_responder.send should succeed");
             let () = match cmd {
                 opts::RouteEnum::List(opts::RouteList { json: _ }) => {
                     panic!("test_modify_route should not take a List command")
@@ -1994,29 +1806,29 @@ mac             -
                     let expected_entry = route.into_route_table_entry(
                         expected_id.try_into().expect("nicid does not fit in u32"),
                     );
-                    let (entry, responder) = route_table_requests
+                    let (entry, responder) = requests
                         .try_next()
                         .await
                         .expect("add route FIDL error")
                         .expect("request stream should not have ended")
-                        .into_add_route()
+                        .into_add_forwarding_entry()
                         .expect("request should be of type AddRoute");
                     assert_eq!(entry, expected_entry);
-                    responder.send(zx::Status::OK.into_raw())
+                    responder.send(&mut Ok(()))
                 }
                 opts::RouteEnum::Del(route) => {
                     let expected_entry = route.into_route_table_entry(
                         expected_id.try_into().expect("nicid does not fit in u32"),
                     );
-                    let (entry, responder) = route_table_requests
+                    let (entry, responder) = requests
                         .try_next()
                         .await
                         .expect("del route FIDL error")
                         .expect("request stream should not have ended")
-                        .into_del_route()
+                        .into_del_forwarding_entry()
                         .expect("request should be of type DelRoute");
                     assert_eq!(entry, expected_entry);
-                    responder.send(zx::Status::OK.into_raw())
+                    responder.send(&mut Ok(()))
                 }
             }?;
             Ok(())
@@ -2080,9 +1892,9 @@ mac             -
     #[test_case(false, wanted_route_list_tabular() ; "in tabular format")]
     #[fasync::run_singlethreaded(test)]
     async fn route_list(json: bool, wanted_output: String) {
-        let (netstack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector { netstack: Some(netstack), ..Default::default() };
+        let (stack_controller, mut stack_requests) =
+            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
+        let connector = TestConnector { stack: Some(stack_controller), ..Default::default() };
 
         let mut output: Vec<u8> = Vec::new();
 
@@ -2090,37 +1902,36 @@ mac             -
             do_route(&mut output, opts::RouteEnum::List(opts::RouteList { json }), &connector);
 
         let requests_fut = async {
-            let responder = requests
+            let responder = stack_requests
                 .try_next()
                 .await
-                .expect("netstack FIDL error")
+                .expect("stack FIDL error")
                 .expect("request stream should not have ended")
-                .into_get_route_table()
-                .expect("request should be of type GetRouteTable");
-
+                .into_get_forwarding_table()
+                .expect("request should be of type GetForwardingTable");
             let () = responder
                 .send(
                     &mut vec![
-                        fnetstack::RouteTableEntry {
-                            destination: fnet::Subnet {
+                        fstack::ForwardingEntry {
+                            subnet: fnet::Subnet {
                                 addr: fnet_ext::IpAddress::from_str("1.1.1.1")?.into(),
                                 prefix_len: 24,
                             },
-                            gateway: Some(Box::new(
+                            device_id: 3,
+                            next_hop: Some(Box::new(
                                 fnet_ext::IpAddress::from_str("1.1.1.2")?.into(),
                             )),
-                            nicid: 3,
                             metric: 4,
                         },
-                        fnetstack::RouteTableEntry {
-                            destination: fnet::Subnet {
+                        fstack::ForwardingEntry {
+                            subnet: fnet::Subnet {
                                 addr: fnet_ext::IpAddress::from_str("10.10.10.10")?.into(),
                                 prefix_len: 24,
                             },
-                            gateway: Some(Box::new(
+                            device_id: 30,
+                            next_hop: Some(Box::new(
                                 fnet_ext::IpAddress::from_str("10.10.10.20")?.into(),
                             )),
-                            nicid: 30,
                             metric: 40,
                         },
                     ]

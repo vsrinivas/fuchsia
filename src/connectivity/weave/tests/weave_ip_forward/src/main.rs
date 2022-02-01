@@ -2,23 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::{format_err, Context, Error},
-    fidl::endpoints::create_endpoints,
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_net_interfaces as fnet_interfaces,
     fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext,
     fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
-    fidl_fuchsia_netstack::{NetstackMarker, RouteTableEntry, RouteTableTransactionMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_err, fx_log_info},
-    futures::TryStreamExt,
+    futures::TryStreamExt as _,
     net_declare::fidl_subnet,
     prettytable::{cell, format, row, Table},
     std::collections::HashMap,
-    std::convert::TryFrom,
-    std::io::{Read, Write},
+    std::io::{Read as _, Write as _},
     std::net::{SocketAddr, TcpListener, TcpStream},
     structopt::StructOpt,
 };
@@ -111,24 +107,23 @@ fn get_interface_id(
 }
 
 async fn add_route_table_entry(
-    destination: fidl_fuchsia_net::Subnet,
+    stack_proxy: &fidl_fuchsia_net_stack::StackProxy,
+    subnet: fidl_fuchsia_net::Subnet,
     nicid: u64,
-    route_proxy: &fidl_fuchsia_netstack::RouteTableTransactionProxy,
 ) -> Result<(), Error> {
-    let mut entry = RouteTableEntry {
-        destination,
-        gateway: None,
-        nicid: u32::try_from(nicid)?,
+    let mut entry = fidl_fuchsia_net_stack::ForwardingEntry {
+        subnet,
+        device_id: nicid,
+        next_hop: None,
         metric: ENTRY_METRICS,
     };
-    let zx_status = route_proxy
-        .add_route(&mut entry)
+    stack_proxy
+        .add_forwarding_entry(&mut entry)
         .await
-        .with_context(|| format!("error in route_proxy.add_route {:?}", entry))?;
-    if zx_status != 0 {
-        return Err(format_err!("error in route_proxy.add_route, zx_status {}", zx_status));
-    }
-    Ok(())
+        .with_context(|| format!("failed to send add fowrarding entry {:?}", entry))?
+        .map_err(|e: fidl_fuchsia_net_stack::Error| {
+            format_err!("failed to add fowrarding entry {:?}: {:?}", entry, e)
+        })
 }
 
 async fn run_fuchsia_node() -> Result<(), Error> {
@@ -137,8 +132,6 @@ async fn run_fuchsia_node() -> Result<(), Error> {
             .context("failed to connect to interfaces/State")?;
     let stack =
         client::connect_to_protocol::<StackMarker>().context("failed to connect to netstack")?;
-    let netstack =
-        connect_to_protocol::<NetstackMarker>().context("failed to connect to netstack")?;
 
     let stream = fnet_interfaces_ext::event_stream_from_state(&interface_state)
         .context("failed to get interface stream")?;
@@ -153,62 +146,46 @@ async fn run_fuchsia_node() -> Result<(), Error> {
     fx_log_info!("wpan intf: {:?}", wpan_if_id);
     fx_log_info!("weave intf: {:?}", weave_if_id);
 
-    let (client_end, server_end) =
-        create_endpoints::<RouteTableTransactionMarker>().context("error creating endpoint")?;
-    let zx_status = netstack
-        .start_route_table_transaction(server_end)
-        .await
-        .context("error start_route_table_transaction")?;
-    if zx_status != 0 {
-        return Err(format_err!(
-            "error in netstack.start_route_table_transaction, zx_status {}",
-            zx_status
-        ));
-    }
-
-    let route_proxy = client_end.into_proxy().context("error route_proxy.into_proxy")?;
-
     // routing rules for weave tun
     let () = add_route_table_entry(
+        &stack,
         fidl_subnet!("fdce:da10:7616:6:6616:6600:4734:b051/128"),
         weave_if_id,
-        &route_proxy,
     )
     .await
     .context("adding routing table entry for weave tun")?;
-    let () = add_route_table_entry(fidl_subnet!("fdce:da10:7616::/48"), weave_if_id, &route_proxy)
+    let () = add_route_table_entry(&stack, fidl_subnet!("fdce:da10:7616::/48"), weave_if_id)
         .await
         .context("adding routing table entry for weave tun")?;
 
     // routing rules for wpan
-    let () = add_route_table_entry(fidl_subnet!("fdce:da10:7616:6::/64"), wpan_if_id, &route_proxy)
+    let () = add_route_table_entry(&stack, fidl_subnet!("fdce:da10:7616:6::/64"), wpan_if_id)
         .await
         .context("adding routing table entry for wpan")?;
-    let () = add_route_table_entry(fidl_subnet!("fdd3:b786:54dc::/64"), wpan_if_id, &route_proxy)
+    let () = add_route_table_entry(&stack, fidl_subnet!("fdd3:b786:54dc::/64"), wpan_if_id)
         .await
         .context("adding routing table entry for wpan")?;
 
     // routing rules for wlan
-    let () = add_route_table_entry(fidl_subnet!("fdce:da10:7616:1::/64"), wlan_if_id, &route_proxy)
+    let () = add_route_table_entry(&stack, fidl_subnet!("fdce:da10:7616:1::/64"), wlan_if_id)
         .await
         .context("adding routing table entry for wlan")?;
 
     fx_log_info!("successfully added entries to route table");
 
-    let route_table = netstack.get_route_table().await.context("error retrieving routing table")?;
+    let route_table =
+        stack.get_forwarding_table().await.context("error retrieving routing table")?;
 
     let mut t = Table::new();
     t.set_format(format::FormatBuilder::new().padding(2, 2).build());
 
     t.set_titles(row!["Destination", "Gateway", "NICID", "Metric"]);
     for entry in route_table {
-        let fidl_fuchsia_netstack_ext::RouteTableEntry { destination, gateway, nicid, metric } =
+        let fidl_fuchsia_net_stack_ext::ForwardingEntry { subnet, device_id, next_hop, metric } =
             entry.into();
-        let gateway = match gateway {
-            None => "-".to_string(),
-            Some(g) => format!("{}", g),
-        };
-        t.add_row(row![destination, gateway, nicid, metric]);
+        let next_hop = next_hop.map(|next_hop| next_hop.to_string());
+        let next_hop = next_hop.as_ref().map_or("-", |s| s.as_str());
+        t.add_row(row![subnet, next_hop, device_id, metric]);
     }
 
     fx_log_info!("{}", t.printstd());

@@ -8,7 +8,7 @@ rustc_test("sandbox_service") {
   name = "sandbox_service"
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",

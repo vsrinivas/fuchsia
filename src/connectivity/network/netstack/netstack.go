@@ -139,8 +139,7 @@ type Netstack struct {
 
 	mu struct {
 		sync.Mutex
-		transactionRequest *netstack.RouteTableTransactionWithCtxInterfaceRequest
-		countNIC           tcpip.NICID
+		countNIC tcpip.NICID
 	}
 
 	stats stats

@@ -367,9 +367,9 @@ async fn bridged_packet_test<E: netemul::Endpoint>(name: &str) {
                     addr: fnet::IpAddress::Ipv4(NETWORK_ADDR),
                     prefix_len: PREFIX_LEN,
                 },
-                destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(
-                    bridge_id.into(),
-                ),
+                device_id: bridge_id.into(),
+                next_hop: None,
+                metric: 0,
             })
             .await
             .expect("FIDL error adding subnet route to bridge")

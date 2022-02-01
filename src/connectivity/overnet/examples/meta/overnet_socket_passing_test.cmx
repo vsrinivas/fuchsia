@@ -32,6 +32,7 @@
                                 "url": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mock-device-settings.cmx"
                             },
                             "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx",
+                            "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx",
                             "fuchsia.net.debug.Interfaces": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx",
                             "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mdns.cmx",
                             "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mdns.cmx",
@@ -70,6 +71,7 @@
                         "url": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mock-device-settings.cmx"
                     },
                     "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx",
+                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx",
                     "fuchsia.net.debug.Interfaces": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/netstack-debug.cmx",
                     "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mdns.cmx",
                     "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/overnet-examples-tests#meta/mdns.cmx",

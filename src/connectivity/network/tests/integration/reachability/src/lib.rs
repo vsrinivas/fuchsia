@@ -10,6 +10,7 @@ use std::{collections::HashMap, convert::TryInto as _};
 
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_neighbor as fnet_neighbor;
+use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -275,6 +276,7 @@ impl<'a> NetemulInterface<'a> {
 async fn configure_interface(
     id: u64,
     controller: &fnet_neighbor::ControllerProxy,
+    stack: &fnet_stack::StackProxy,
     netstack: &fnetstack::NetstackProxy,
     InterfaceConfig {
         name_suffix: _,
@@ -329,40 +331,26 @@ async fn configure_interface(
         .expect("add IPv4 gateway neighbor table entry failed");
 
     // Add default routes.
-    let (route_transaction, channel) =
-        fidl::endpoints::create_proxy::<fnetstack::RouteTableTransactionMarker>()
-            .expect("failed to create RouteTableTransaction endpoint pair");
-    let () = zx::Status::ok(
-        netstack
-            .start_route_table_transaction(channel)
-            .await
-            .expect("start route table transaction FIDL error"),
-    )
-    .expect("start route table transaction error");
-    let () = zx::Status::ok(
-        route_transaction
-            .add_route(&mut fnetstack::RouteTableEntry {
-                destination: fidl_subnet!("0.0.0.0/0"),
-                gateway: Some(Box::new(gateway_v4)),
-                nicid: id.try_into().unwrap(),
-                metric,
-            })
-            .await
-            .expect("add IPv4 default route FIDL error"),
-    )
-    .expect("add IPv4 default route error");
-    let () = zx::Status::ok(
-        route_transaction
-            .add_route(&mut fnetstack::RouteTableEntry {
-                destination: fidl_subnet!("::/0"),
-                gateway: Some(Box::new(gateway_v6)),
-                nicid: id.try_into().unwrap(),
-                metric,
-            })
-            .await
-            .expect("add IPv6 default route FIDL error"),
-    )
-    .expect("add IPv6 default route error");
+    let () = stack
+        .add_forwarding_entry(&mut fnet_stack::ForwardingEntry {
+            subnet: fidl_subnet!("0.0.0.0/0"),
+            device_id: id,
+            next_hop: Some(Box::new(gateway_v4)),
+            metric,
+        })
+        .await
+        .expect("add IPv4 default route FIDL error")
+        .expect("add IPv4 default route error");
+    let () = stack
+        .add_forwarding_entry(&mut fnet_stack::ForwardingEntry {
+            subnet: fidl_subnet!("::/0"),
+            device_id: id,
+            next_hop: Some(Box::new(gateway_v6)),
+            metric,
+        })
+        .await
+        .expect("add IPv6 default route FIDL error")
+        .expect("add IPv6 default route error");
 }
 
 fn handle_frame_stream<'a>(
@@ -447,6 +435,8 @@ async fn test_state<E: netemul::Endpoint>(
     let controller = realm
         .connect_to_protocol::<fnet_neighbor::ControllerMarker>()
         .expect("failed to connect to Controller");
+    let stack =
+        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("failed to connect to Stack");
     let netstack = realm
         .connect_to_protocol::<fnetstack::NetstackMarker>()
         .expect("failed to connect to Netstack");
@@ -466,7 +456,7 @@ async fn test_state<E: netemul::Endpoint>(
                     .expect("failed to join network with netdevice endpoint");
 
                 let interface = NetemulInterface { _network: network, interface, fake_ep };
-                configure_interface(interface.id(), &controller, &netstack, config).await;
+                configure_interface(interface.id(), &controller, &stack, &netstack, config).await;
                 interface
             }
         })

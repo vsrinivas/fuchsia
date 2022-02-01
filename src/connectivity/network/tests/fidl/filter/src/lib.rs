@@ -1103,7 +1103,9 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
         let () = stack
             .add_forwarding_entry(&mut fnet_stack::ForwardingEntry {
                 subnet: fnet_ext::apply_subnet_mask(other_subnet),
-                destination: fnet_stack::ForwardingDestination::NextHop(next_hop),
+                device_id: 0,
+                next_hop: Some(Box::new(next_hop)),
+                metric: 0,
             })
             .map(move |r| {
                 r.squash_result().unwrap_or_else(|e| {

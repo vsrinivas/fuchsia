@@ -137,7 +137,9 @@ func (ns *Netstack) getForwardingTable() []stack.ForwardingEntry {
 	ert := ns.GetExtendedRouteTable()
 	entries := make([]stack.ForwardingEntry, 0, len(ert))
 	for _, er := range ert {
-		entries = append(entries, fidlconv.TCPIPRouteToForwardingEntry(er.Route))
+		entry := fidlconv.TCPIPRouteToForwardingEntry(er.Route)
+		entry.Metric = uint32(er.Metric)
+		entries = append(entries, entry)
 	}
 	return entries
 }
@@ -181,7 +183,7 @@ func (ns *Netstack) addForwardingEntry(entry stack.ForwardingEntry) stack.StackA
 	}
 
 	route := fidlconv.ForwardingEntryToTCPIPRoute(entry)
-	if err := ns.AddRoute(route, metricNotSet, false /* not dynamic */); err != nil {
+	if err := ns.AddRoute(route, routes.Metric(entry.Metric), false /* not dynamic */); err != nil {
 		if errors.Is(err, routes.ErrNoSuchNIC) {
 			result.SetErr(stack.ErrorInvalidArgs)
 		} else {
@@ -194,20 +196,20 @@ func (ns *Netstack) addForwardingEntry(entry stack.ForwardingEntry) stack.StackA
 	return result
 }
 
-func (ns *Netstack) delForwardingEntry(subnet net.Subnet) stack.StackDelForwardingEntryResult {
+func (ns *Netstack) delForwardingEntry(entry stack.ForwardingEntry) stack.StackDelForwardingEntryResult {
 	var result stack.StackDelForwardingEntryResult
 
-	if !validateSubnet(subnet) {
+	if !validateSubnet(entry.Subnet) {
 		result.SetErr(stack.ErrorInvalidArgs)
 		return result
 	}
 
-	destination := fidlconv.ToTCPIPSubnet(subnet)
-	if err := ns.DelRoute(tcpip.Route{Destination: destination}); err != nil {
+	route := fidlconv.ForwardingEntryToTCPIPRoute(entry)
+	if err := ns.DelRoute(route); err != nil {
 		if errors.Is(err, routes.ErrNoSuchRoute) {
 			result.SetErr(stack.ErrorNotFound)
 		} else {
-			_ = syslog.Errorf("deleting destination %s from route table failed: %s", destination, err)
+			_ = syslog.Errorf("deleting route %s from route table failed: %s", route, err)
 			result.SetErr(stack.ErrorInternal)
 		}
 		return result
@@ -328,8 +330,8 @@ func (ni *stackImpl) AddForwardingEntry(_ fidl.Context, entry stack.ForwardingEn
 	return ni.ns.addForwardingEntry(entry), nil
 }
 
-func (ni *stackImpl) DelForwardingEntry(_ fidl.Context, subnet net.Subnet) (stack.StackDelForwardingEntryResult, error) {
-	return ni.ns.delForwardingEntry(subnet), nil
+func (ni *stackImpl) DelForwardingEntry(_ fidl.Context, entry stack.ForwardingEntry) (stack.StackDelForwardingEntryResult, error) {
+	return ni.ns.delForwardingEntry(entry), nil
 }
 
 func (ni *stackImpl) EnableIpForwarding(fidl.Context) error {

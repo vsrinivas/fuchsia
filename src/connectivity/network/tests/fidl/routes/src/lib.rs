@@ -9,7 +9,6 @@ use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
 use netstack_testing_common::Result;
-use std::convert::TryFrom as _;
 
 async fn resolve(
     routes: &fidl_fuchsia_net_routes::StateProxy,
@@ -72,8 +71,8 @@ async fn test_resolve_route() {
         .create_netstack_realm::<Netstack2, _>("resolve_route_host")
         .expect("failed to create client realm");
 
-    let host_netstack = host
-        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
+    let host_stack = host
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
         .expect("failed to connect to netstack");
     let host_interface_state = host
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -160,7 +159,7 @@ async fn test_resolve_route() {
     };
 
     let interface_id = host_ep.id();
-    let host_netstack = &host_netstack;
+    let host_stack = &host_stack;
 
     let do_test = |gateway: fidl_fuchsia_net::IpAddress,
                    unreachable_peer: fidl_fuchsia_net::IpAddress,
@@ -185,28 +184,16 @@ async fn test_resolve_route() {
         let () = resolve_fails(public_ip).await.expect("error resolving without route");
 
         // Install a default route and try to resolve through the gateway.
-        let (route_transaction, route_transaction_server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_netstack::RouteTableTransactionMarker>()
-                .expect("failed to create route table transaction");
-        let () = fuchsia_zircon::ok(
-            host_netstack
-                .start_route_table_transaction(route_transaction_server_end)
-                .await
-                .expect("start_route_table_transaction FIDL error"),
-        )
-        .expect("start_route_table_transaction error");
-        let () = fuchsia_zircon::ok(
-            route_transaction
-                .add_route(&mut fidl_fuchsia_netstack::RouteTableEntry {
-                    destination: fidl_fuchsia_net::Subnet { addr: unspecified, prefix_len: 0 },
-                    gateway: Some(Box::new(gateway)),
-                    nicid: u32::try_from(interface_id).expect("interface ID doesn't fit u32"),
-                    metric: 100,
-                })
-                .await
-                .expect("add_route FIDL error"),
-        )
-        .expect("add_route error");
+        let () = host_stack
+            .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                subnet: fidl_fuchsia_net::Subnet { addr: unspecified, prefix_len: 0 },
+                device_id: interface_id,
+                next_hop: Some(Box::new(gateway)),
+                metric: 100,
+            })
+            .await
+            .expect("call add_route")
+            .expect("add route");
 
         // Resolve a public IP again and check that we get the gateway response.
         let resolved = resolve(routes, public_ip).await.expect("can't resolve through gateway");
@@ -250,8 +237,8 @@ async fn test_resolve_default_route_while_dhcp_is_running() {
         .create_netstack_realm::<Netstack2, _>("resolve_route_host")
         .expect("failed to create client realm");
 
-    let netstack = realm
-        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
         .expect("failed to connect to netstack");
 
     let ep = realm
@@ -290,28 +277,16 @@ async fn test_resolve_default_route_while_dhcp_is_running() {
         .expect("add_entry error");
 
     // Install a default route and try to resolve through the gateway.
-    let (route_transaction, route_transaction_server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_netstack::RouteTableTransactionMarker>()
-            .expect("failed to create route table transaction");
-    let () = fuchsia_zircon::ok(
-        netstack
-            .start_route_table_transaction(route_transaction_server_end)
-            .await
-            .expect("start_route_table_transaction FIDL error"),
-    )
-    .expect("start_route_table_transaction error");
-    let () = fuchsia_zircon::ok(
-        route_transaction
-            .add_route(&mut fidl_fuchsia_netstack::RouteTableEntry {
-                destination: fidl_fuchsia_net::Subnet { addr: UNSPECIFIED_IP, prefix_len: 0 },
-                gateway: Some(Box::new(GATEWAY_ADDR)),
-                nicid: u32::try_from(ep.id()).expect("interface ID doesn't fit u32"),
-                metric: 100,
-            })
-            .await
-            .expect("add_route FIDL error"),
-    )
-    .expect("add_route error");
+    let () = stack
+        .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+            subnet: fidl_fuchsia_net::Subnet { addr: UNSPECIFIED_IP, prefix_len: 0 },
+            device_id: ep.id(),
+            next_hop: Some(Box::new(GATEWAY_ADDR)),
+            metric: 100,
+        })
+        .await
+        .expect("call add_route")
+        .expect("add route");
 
     let resolved = routes
         .resolve(&mut UNSPECIFIED_IP.clone())

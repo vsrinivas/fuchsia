@@ -6,7 +6,8 @@
 mod tests {
     use {
         anyhow::{format_err, Error},
-        fidl::endpoints::ProtocolMarker,
+        fidl::endpoints::ProtocolMarker as _,
+        fidl_fuchsia_net_stack::StackMarker,
         fidl_fuchsia_netemul_environment::{
             EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker,
             ManagedEnvironmentProxy,
@@ -17,7 +18,6 @@ mod tests {
         },
         fidl_fuchsia_netemul_sandbox::{SandboxMarker, SandboxProxy},
         fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker, SyncManagerProxy},
-        fidl_fuchsia_netstack::{NetstackMarker, RouteTableEntry},
         fuchsia_async as fasync,
         fuchsia_component::client,
         fuchsia_zircon as zx,
@@ -29,7 +29,7 @@ mod tests {
     ) -> Result<ManagedEnvironmentProxy, Error> {
         let (env, env_server_end) = fidl::endpoints::create_proxy::<ManagedEnvironmentMarker>()?;
         let services = vec![LaunchService {
-            name: String::from("fuchsia.netstack.Netstack"),
+            name: String::from(StackMarker::NAME),
             url: String::from("fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx"),
             arguments: Vec::new(),
         }];
@@ -135,13 +135,11 @@ mod tests {
         let sandbox =
             client::connect_to_protocol::<SandboxMarker>().expect("Can't connect to sandbox");
         let env = create_env_with_netstack(&sandbox).unwrap();
-        let (netstack, netstack_server_end) =
-            fidl::endpoints::create_proxy::<NetstackMarker>().unwrap();
+        let (stack, server_end) = fidl::endpoints::create_proxy::<StackMarker>().unwrap();
         let () = env
-            .connect_to_service(NetstackMarker::NAME, netstack_server_end.into_channel())
+            .connect_to_service(StackMarker::NAME, server_end.into_channel())
             .expect("Can't connect to netstack");
-        let _: Vec<RouteTableEntry> =
-            netstack.get_route_table().await.expect("can't list netstack routes");
+        let _: Vec<_> = stack.get_forwarding_table().await.expect("can't list netstack routes");
     }
 
     #[fasync::run_singlethreaded]

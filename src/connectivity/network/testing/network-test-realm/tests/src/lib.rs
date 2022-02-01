@@ -282,7 +282,9 @@ async fn add_address_to_hermetic_interface(
     stack_proxy
         .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
             subnet: fnet_ext::apply_subnet_mask(subnet),
-            destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(id),
+            device_id: id,
+            next_hop: None,
+            metric: 0,
         })
         .await
         .expect("add_forwarding_entry failed")

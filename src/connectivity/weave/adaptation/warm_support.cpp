@@ -105,6 +105,27 @@ std::optional<uint64_t> GetInterfaceId(std::string interface_name) {
   return 0;
 }
 
+std::string_view StackErrorToString(fuchsia::net::stack::Error error) {
+  switch (error) {
+    case fuchsia::net::stack::Error::INTERNAL:
+      return "internal";
+    case fuchsia::net::stack::Error::NOT_SUPPORTED:
+      return "not supported";
+    case fuchsia::net::stack::Error::INVALID_ARGS:
+      return "invalid arguments";
+    case fuchsia::net::stack::Error::BAD_STATE:
+      return "bad state";
+    case fuchsia::net::stack::Error::TIME_OUT:
+      return "timeout";
+    case fuchsia::net::stack::Error::NOT_FOUND:
+      return "not found";
+    case fuchsia::net::stack::Error::ALREADY_EXISTS:
+      return "already exists";
+    case fuchsia::net::stack::Error::IO:
+      return "i/o";
+  }
+}
+
 // Add or remove an address attached to the Thread or WLAN interfaces.
 PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
                                         const Inet::IPAddress &address, uint8_t prefix_length,
@@ -173,40 +194,22 @@ PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
   // Verify that the result from netstack confirms that the address was actually
   // added or removed.
   if (error.has_value()) {
-    const std::string_view error_str = [error_val = error.value()]() {
-      switch (error_val) {
-        case fuchsia::net::stack::Error::INTERNAL:
-          return "internal";
-        case fuchsia::net::stack::Error::NOT_SUPPORTED:
-          return "not supported";
-        case fuchsia::net::stack::Error::INVALID_ARGS:
-          return "invalid arguments";
-        case fuchsia::net::stack::Error::BAD_STATE:
-          return "bad state";
-        case fuchsia::net::stack::Error::TIME_OUT:
-          return "timeout";
-        case fuchsia::net::stack::Error::NOT_FOUND:
-          return "not found";
-        case fuchsia::net::stack::Error::ALREADY_EXISTS:
-          return "already exists";
-        case fuchsia::net::stack::Error::IO:
-          return "i/o";
-      }
-    }();
     if (add) {
       constexpr std::string_view msg = "Failed to add address on interface id ";
       if (error.value() == fuchsia::net::stack::Error::ALREADY_EXISTS) {
-        FX_LOGS(WARNING) << msg << interface_id.value() << ": " << error_str;
+        FX_LOGS(WARNING) << msg << interface_id.value() << ": "
+                         << StackErrorToString(error.value());
         return kPlatformResultSuccess;
       }
-      FX_LOGS(ERROR) << msg << interface_id.value() << ": " << error_str;
+      FX_LOGS(ERROR) << msg << interface_id.value() << ": " << StackErrorToString(error.value());
     } else {
       constexpr std::string_view msg = "Failed to remove address on interface id ";
       if (error.value() == fuchsia::net::stack::Error::NOT_FOUND) {
-        FX_LOGS(WARNING) << msg << interface_id.value() << ": " << error_str;
+        FX_LOGS(WARNING) << msg << interface_id.value() << ": "
+                         << StackErrorToString(error.value());
         return kPlatformResultSuccess;
       }
-      FX_LOGS(ERROR) << msg << interface_id.value() << ": " << error_str;
+      FX_LOGS(ERROR) << msg << interface_id.value() << ": " << StackErrorToString(error.value());
     }
     return kPlatformResultFailure;
   }
@@ -276,9 +279,8 @@ PlatformResult AddRemoveRouteInternal(InterfaceType interface_type, const Inet::
     return kPlatformResultFailure;
   }
 
-  fuchsia::netstack::NetstackSyncPtr stack_sync_ptr;
-  zx_status_t status = svc->Connect(stack_sync_ptr.NewRequest());
-  if (status != ZX_OK) {
+  fuchsia::net::stack::StackSyncPtr net_stack_sync_ptr;
+  if (zx_status_t status = svc->Connect(net_stack_sync_ptr.NewRequest()); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to connect to netstack: " << zx_status_get_string(status);
     return kPlatformResultFailure;
   }
@@ -294,31 +296,20 @@ PlatformResult AddRemoveRouteInternal(InterfaceType interface_type, const Inet::
     return kPlatformResultFailure;
   }
 
-  // Begin route table transaction to add or remove forwarding entries.
-  fuchsia::netstack::RouteTableTransactionSyncPtr route_table_sync_ptr;
-  zx_status_t transaction_status;
-  status = stack_sync_ptr->StartRouteTableTransaction(route_table_sync_ptr.NewRequest(),
-                                                      &transaction_status);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to start route table transaction: " << zx_status_get_string(status);
-    return kPlatformResultFailure;
-  } else if (transaction_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to start route table transaction: "
-                   << zx_status_get_string(transaction_status);
-    return kPlatformResultFailure;
-  }
-
   // Construct route table entry to add or remove.
-  fuchsia::netstack::RouteTableEntry route_table_entry;
-  fuchsia::net::Subnet destination;
-
-  fuchsia::net::Ipv6Address ipv6_addr;
-  std::memcpy(ipv6_addr.addr.data(), (uint8_t *)(prefix.IPAddr.Addr), ipv6_addr.addr.size());
-  destination.addr.set_ipv6(ipv6_addr);
-  destination.prefix_len = prefix.Length;
-
-  route_table_entry.destination = std::move(destination);
-  route_table_entry.nicid = interface_id.value();
+  fuchsia::net::stack::ForwardingEntry route_table_entry{
+      .subnet =
+          {
+              .addr = fuchsia::net::IpAddress::WithIpv6([&prefix]() {
+                fuchsia::net::Ipv6Address ipv6_addr;
+                std::memcpy(ipv6_addr.addr.data(), (uint8_t *)(prefix.IPAddr.Addr),
+                            ipv6_addr.addr.size());
+                return ipv6_addr;
+              }()),
+              .prefix_len = prefix.Length,
+          },
+      .device_id = interface_id.value(),
+  };
   switch (priority) {
     case RoutePriority::kRoutePriorityHigh:
       route_table_entry.metric = kRouteMetric_HighPriority;
@@ -334,14 +325,32 @@ PlatformResult AddRemoveRouteInternal(InterfaceType interface_type, const Inet::
       route_table_entry.metric = kRouteMetric_LowPriority;
   }
 
-  // Start route table transaction.
-  status = add ? route_table_sync_ptr->AddRoute(std::move(route_table_entry), &transaction_status)
-               : route_table_sync_ptr->DelRoute(std::move(route_table_entry), &transaction_status);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to modify route: " << zx_status_get_string(status);
-    return kPlatformResultFailure;
-  } else if (transaction_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to modify route: " << zx_status_get_string(transaction_status);
+  std::optional<fuchsia::net::stack::Error> error;
+  if (add) {
+    fuchsia::net::stack::Stack_AddForwardingEntry_Result result;
+    if (zx_status_t status =
+            net_stack_sync_ptr->AddForwardingEntry(std::move(route_table_entry), &result);
+        status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to add route";
+      return kPlatformResultFailure;
+    }
+    if (result.is_err()) {
+      error = result.err();
+    }
+  } else {
+    fuchsia::net::stack::Stack_DelForwardingEntry_Result result;
+    if (zx_status_t status =
+            net_stack_sync_ptr->DelForwardingEntry(std::move(route_table_entry), &result);
+        status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to delete route";
+      return kPlatformResultFailure;
+    }
+    if (result.is_err()) {
+      error = result.err();
+    }
+  }
+  if (error.has_value()) {
+    FX_LOGS(ERROR) << "Unable to modify route: " << StackErrorToString(error.value());
     return kPlatformResultFailure;
   }
 
@@ -362,19 +371,13 @@ PlatformResult AddRemoveRouteInternal(InterfaceType interface_type, const Inet::
   // now. Long term, this bug tracks proposing upstream changes that would create a
   // targeted action to enable forwarding / border-routing to clarify this contract.
   if (add && ShouldEnableV6Forwarding(interface_type)) {
-    fuchsia::net::stack::StackSyncPtr net_stack_sync_ptr;
-    status = svc->Connect(net_stack_sync_ptr.NewRequest());
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to connect to netstack: " << zx_status_get_string(status);
-      return kPlatformResultFailure;
-    }
-
     fuchsia::net::stack::Stack_SetInterfaceIpForwarding_Result forwarding_result;
-    status = net_stack_sync_ptr->SetInterfaceIpForwarding(
-        interface_id.value(), fuchsia::net::IpVersion::V6, true /* enable */, &forwarding_result);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to enable IPv6 forwarding on interface id " << interface_id.value()
-                     << ": " << zx_status_get_string(status);
+    if (zx_status_t status = net_stack_sync_ptr->SetInterfaceIpForwarding(
+            interface_id.value(), fuchsia::net::IpVersion::V6, true /* enable */,
+            &forwarding_result);
+        status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to enable IPv6 forwarding on interface id "
+                              << interface_id.value();
       return kPlatformResultFailure;
     } else if (forwarding_result.is_err()) {
       FX_LOGS(ERROR) << "Unable to enable IPv6 forwarding on interface id " << interface_id.value()

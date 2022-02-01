@@ -290,9 +290,9 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
                 let () = switch_stack
                     .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
                         subnet: fidl_subnet!("192.168.0.0/16"),
-                        destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(
-                            u64::from(bridge_id),
-                        ),
+                        device_id: bridge_id.into(),
+                        next_hop: None,
+                        metric: 0,
                     })
                     .await
                     .expect("FIDL error adding subnet route to bridge")

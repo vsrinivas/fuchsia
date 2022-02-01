@@ -678,7 +678,9 @@ async fn configure_endpoint_address(
     let () = cli
         .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
             subnet: addr.addr_subnet().1.into_fidl(),
-            destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(if_id),
+            device_id: if_id,
+            next_hop: None,
+            metric: 0,
         })
         .await
         .squash_result()
@@ -1098,14 +1100,18 @@ async fn test_add_device_routes() {
             addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: [192, 168, 0, 0] }),
             prefix_len: 24,
         },
-        destination: fidl_net_stack::ForwardingDestination::DeviceId(if_id),
+        device_id: if_id,
+        next_hop: None,
+        metric: 0,
     };
     let mut fwd_entry2 = fidl_net_stack::ForwardingEntry {
         subnet: fidl_net::Subnet {
             addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: [10, 0, 0, 0] }),
             prefix_len: 24,
         },
-        destination: fidl_net_stack::ForwardingDestination::DeviceId(if_id),
+        device_id: if_id,
+        next_hop: None,
+        metric: 0,
     };
 
     let () = stack
@@ -1126,7 +1132,9 @@ async fn test_add_device_routes() {
             addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: [192, 168, 0, 0] }),
             prefix_len: 24,
         },
-        destination: fidl_net_stack::ForwardingDestination::DeviceId(if_id),
+        device_id: if_id,
+        next_hop: None,
+        metric: 0,
     };
     assert_eq!(
         stack.add_forwarding_entry(&mut bad_entry).await.unwrap().unwrap_err(),
@@ -1138,7 +1146,9 @@ async fn test_add_device_routes() {
             addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: [10, 0, 0, 0] }),
             prefix_len: 64,
         },
-        destination: fidl_net_stack::ForwardingDestination::DeviceId(if_id),
+        device_id: if_id,
+        next_hop: None,
+        metric: 0,
     };
     assert_eq!(
         stack.add_forwarding_entry(&mut bad_entry).await.unwrap().unwrap_err(),
@@ -1150,7 +1160,9 @@ async fn test_add_device_routes() {
             addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: [10, 0, 0, 0] }),
             prefix_len: 24,
         },
-        destination: fidl_net_stack::ForwardingDestination::DeviceId(10),
+        device_id: 10,
+        next_hop: None,
+        metric: 0,
     };
     assert_eq!(
         stack.add_forwarding_entry(&mut bad_entry).await.unwrap().unwrap_err(),
@@ -1160,6 +1172,8 @@ async fn test_add_device_routes() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_list_del_routes() {
+    use crate::bindings::util::TryIntoFidlWithContext;
+
     // create a stack and add a single endpoint to it so we have the interface
     // id:
     let mut t = TestSetupBuilder::new()
@@ -1208,14 +1222,15 @@ async fn test_list_del_routes() {
     assert!(routes.iter().any(|e| e == &route2));
 
     // delete route1:
-    let mut fidl = route1.into_subnet_dest().0.into_fidl();
+    let mut fidl = test_stack
+        .with_ctx(|ctx| route1.try_into_fidl_with_ctx(&ctx.dispatcher).expect("valid FIDL"))
+        .await;
     let () = stack
         .del_forwarding_entry(&mut fidl)
         .await
         .squash_result()
         .expect("can delete device forwarding entry");
     // can't delete again:
-    let mut fidl = route1.into_subnet_dest().0.into_fidl();
     assert_eq!(
         stack.del_forwarding_entry(&mut fidl).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::NotFound
@@ -1228,14 +1243,15 @@ async fn test_list_del_routes() {
     assert!(all_routes.iter().any(|e| e == &route2));
 
     // delete route2:
-    let mut fidl = route2.into_subnet_dest().0.into_fidl();
+    let mut fidl = test_stack
+        .with_ctx(|ctx| route2.try_into_fidl_with_ctx(&ctx.dispatcher).expect("valid FIDL"))
+        .await;
     let () = stack
         .del_forwarding_entry(&mut fidl)
         .await
         .squash_result()
         .expect("can delete next-hop forwarding entry");
     // can't delete again:
-    let mut fidl = route2.into_subnet_dest().0.into_fidl();
     assert_eq!(
         stack.del_forwarding_entry(&mut fidl).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::NotFound
@@ -1259,9 +1275,11 @@ async fn test_add_remote_routes() {
             addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: [192, 168, 0, 0] }),
             prefix_len: 24,
         },
-        destination: fidl_net_stack::ForwardingDestination::NextHop(fidl_net::IpAddress::Ipv4(
-            fidl_net::Ipv4Address { addr: [192, 168, 0, 1] },
-        )),
+        device_id: 0,
+        next_hop: Some(Box::new(fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address {
+            addr: [192, 168, 0, 1],
+        }))),
+        metric: 0,
     };
 
     let () = stack
@@ -1277,9 +1295,11 @@ async fn test_add_remote_routes() {
             addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: [192, 168, 0, 0] }),
             prefix_len: 24,
         },
-        destination: fidl_net_stack::ForwardingDestination::NextHop(fidl_net::IpAddress::Ipv4(
-            fidl_net::Ipv4Address { addr: [192, 168, 0, 1] },
-        )),
+        device_id: 0,
+        next_hop: Some(Box::new(fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address {
+            addr: [192, 168, 0, 1],
+        }))),
+        metric: 0,
     };
     assert_eq!(
         stack.add_forwarding_entry(&mut bad_entry).await.unwrap().unwrap_err(),

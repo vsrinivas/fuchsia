@@ -15,7 +15,6 @@ import (
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -29,94 +28,6 @@ import (
 
 type netstackImpl struct {
 	ns *Netstack
-}
-
-func (ni *netstackImpl) GetRouteTable(fidl.Context) ([]netstack.RouteTableEntry, error) {
-	table := ni.ns.GetExtendedRouteTable()
-	out := make([]netstack.RouteTableEntry, 0, len(table))
-	for _, e := range table {
-		var gatewayPtr *fidlnet.IpAddress
-		if len(e.Route.Gateway) != 0 {
-			gateway := fidlconv.ToNetIpAddress(e.Route.Gateway)
-			gatewayPtr = &gateway
-		}
-		out = append(out, netstack.RouteTableEntry{
-			Destination: fidlnet.Subnet{
-				Addr:      fidlconv.ToNetIpAddress(e.Route.Destination.ID()),
-				PrefixLen: uint8(e.Route.Destination.Prefix()),
-			},
-			Gateway: gatewayPtr,
-			Nicid:   uint32(e.Route.NIC),
-			Metric:  uint32(e.Metric),
-		})
-	}
-	return out, nil
-}
-
-func routeToNs(r netstack.RouteTableEntry) tcpip.Route {
-	route := tcpip.Route{
-		Destination: fidlconv.ToTCPIPSubnet(r.Destination),
-		NIC:         tcpip.NICID(r.Nicid),
-	}
-	if g := r.Gateway; g != nil {
-		route.Gateway = fidlconv.ToTCPIPAddress(*g)
-	}
-	return route
-}
-
-type routeTableTransactionImpl struct {
-	ni *netstackImpl
-}
-
-func (i *routeTableTransactionImpl) AddRoute(_ fidl.Context, r netstack.RouteTableEntry) (int32, error) {
-	err := i.ni.ns.AddRoute(routeToNs(r), routes.Metric(r.Metric), false /* not dynamic */)
-	if err != nil {
-		return int32(zx.ErrInvalidArgs), err
-	}
-	return int32(zx.ErrOk), nil
-}
-
-func (i *routeTableTransactionImpl) DelRoute(_ fidl.Context, r netstack.RouteTableEntry) (int32, error) {
-	err := i.ni.ns.DelRoute(routeToNs(r))
-	if err != nil {
-		return int32(zx.ErrInvalidArgs), err
-	}
-	return int32(zx.ErrOk), nil
-}
-
-func (ni *netstackImpl) StartRouteTableTransaction(_ fidl.Context, req netstack.RouteTableTransactionWithCtxInterfaceRequest) (int32, error) {
-	{
-		ni.ns.mu.Lock()
-		defer ni.ns.mu.Unlock()
-
-		if ni.ns.mu.transactionRequest != nil {
-			oldChannel := ni.ns.mu.transactionRequest.Channel
-			var observed zx.Signals
-			if status := zx.Sys_object_wait_one(zx.Handle(oldChannel), zx.SignalChannelReadable|zx.SignalChannelWritable, 0, &observed); status != zx.ErrOk {
-				_ = syslog.WarnTf("fuchsia.netstack.Netstack/StartRouteTableTransaction", "zx.Sys_object_wait_one(_, zx.SignalChannelReadable|zx.SignalChannelWritable, _, _): %s", status)
-			}
-			// If the channel is neither readable nor writable, there is no
-			// data left to be processed (not readable) and we can't return
-			// any more results (not writable).  It's not enough to only
-			// look at peerclosed because the peer can close the channel
-			// while it still has data in its buffers.
-			if observed&(zx.SignalChannelReadable|zx.SignalChannelWritable) == 0 {
-				ni.ns.mu.transactionRequest = nil
-			}
-		}
-		if ni.ns.mu.transactionRequest != nil {
-			return int32(zx.ErrShouldWait), nil
-		}
-		ni.ns.mu.transactionRequest = &req
-	}
-	stub := netstack.RouteTableTransactionWithCtxStub{Impl: &routeTableTransactionImpl{ni: ni}}
-	go component.Serve(context.Background(), &stub, req.Channel, component.ServeOptions{
-		OnError: func(err error) {
-			// NB: this protocol is not discoverable, so the bindings do not include its name.
-			_ = syslog.WarnTf("fuchsia.netstack.RouteTableTransaction", "%s", err)
-		},
-	})
-	return int32(zx.ErrOk), nil
 }
 
 // Add address to the given network interface.

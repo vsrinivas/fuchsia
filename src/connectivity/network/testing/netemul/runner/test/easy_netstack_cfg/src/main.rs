@@ -112,12 +112,16 @@ async fn test_gateway(gw_addr: fidl_fuchsia_net::IpAddress) -> Result<(), Error>
     let response =
         stack.get_forwarding_table().await.context("failed to call get_forwarding_table")?;
     let found = response.iter().any(|entry| {
-        let fidl_fuchsia_net_ext::IpAddress(entry_addr) = entry.subnet.addr.into();
-        if let fidl_fuchsia_net_stack::ForwardingDestination::NextHop(gw) = entry.destination {
-            entry_addr.is_unspecified() && entry.subnet.prefix_len == 0 && gw == gw_addr
-        } else {
-            false
-        }
+        let fidl_fuchsia_net_stack::ForwardingEntry {
+            subnet: fidl_fuchsia_net::Subnet { addr, prefix_len },
+            device_id: _,
+            next_hop,
+            metric: _,
+        } = entry;
+        let fidl_fuchsia_net_ext::IpAddress(addr) = (*addr).into();
+        next_hop.as_ref().map(|next_hop| **next_hop == gw_addr).unwrap_or(false)
+            && addr.is_unspecified()
+            && *prefix_len == 0
     });
     if found {
         log::info!("Found default route for gateway");

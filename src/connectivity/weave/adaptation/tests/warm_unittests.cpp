@@ -48,8 +48,6 @@ using fuchsia::lowpan::device::OnMeshPrefix;
 using fuchsia::lowpan::device::Protocols;
 using fuchsia::lowpan::device::ServiceError;
 
-using fuchsia::netstack::RouteTableEntry;
-
 using DeviceLayer::ConnectivityMgrImpl;
 using DeviceLayer::PlatformMgrImpl;
 using DeviceLayer::ThreadStackMgrImpl;
@@ -246,8 +244,7 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
 
 // The minimal set of fuchsia networking protocols required for WARM to run.
 class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
-                     public fuchsia::netstack::testing::Netstack_TestBase,
-                     public fuchsia::netstack::testing::RouteTableTransaction_TestBase {
+                     public fuchsia::netstack::testing::Netstack_TestBase {
  private:
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
@@ -327,35 +324,29 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
     callback(std::move(result));
   }
 
-  void StartRouteTableTransaction(
-      ::fidl::InterfaceRequest<::fuchsia::netstack::RouteTableTransaction> route_table_transaction,
-      StartRouteTableTransactionCallback callback) override {
-    route_table_binding_.Bind(std::move(route_table_transaction), dispatcher_);
-    callback(ZX_OK);
-  }
-
-  void AddRoute(::fuchsia::netstack::RouteTableEntry route_table_entry,
-                AddRouteCallback callback) override {
+  void AddForwardingEntry(fuchsia::net::stack::ForwardingEntry route_table_entry,
+                          AddForwardingEntryCallback callback) override {
     route_table_.push_back(std::move(route_table_entry));
-    callback(ZX_OK);
+    callback(fuchsia::net::stack::Stack_AddForwardingEntry_Result::WithResponse({}));
   }
 
-  void DelRoute(::fuchsia::netstack::RouteTableEntry route_table_entry,
-                DelRouteCallback callback) override {
-    auto it = std::remove_if(
-        route_table_.begin(), route_table_.end(),
-        [&](const ::fuchsia::netstack::RouteTableEntry& entry) {
-          return route_table_entry.nicid == entry.nicid &&
-                 route_table_entry.metric == entry.metric &&
-                 CompareIpAddress(route_table_entry.destination.addr, entry.destination.addr) &&
-                 route_table_entry.destination.prefix_len == entry.destination.prefix_len;
-        });
+  void DelForwardingEntry(fuchsia::net::stack::ForwardingEntry route_table_entry,
+                          DelForwardingEntryCallback callback) override {
+    auto it =
+        std::remove_if(route_table_.begin(), route_table_.end(),
+                       [&](const fuchsia::net::stack::ForwardingEntry& entry) {
+                         return entry.device_id == route_table_entry.device_id &&
+                                entry.metric == route_table_entry.metric &&
+                                entry.subnet.prefix_len == route_table_entry.subnet.prefix_len &&
+                                CompareIpAddress(entry.subnet.addr, route_table_entry.subnet.addr);
+                       });
     if (it == route_table_.end()) {
-      callback(ZX_ERR_NOT_FOUND);
+      callback(fuchsia::net::stack::Stack_DelForwardingEntry_Result::WithErr(
+          fuchsia::net::stack::Error::NOT_FOUND));
       return;
     }
     route_table_.erase(it, route_table_.end());
-    callback(ZX_OK);
+    callback(fuchsia::net::stack::Stack_DelForwardingEntry_Result::WithResponse({}));
   }
 
  public:
@@ -388,7 +379,9 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
   const std::vector<OwnedInterface>& interfaces() const { return interfaces_; }
 
   // Access the current route table.
-  const std::vector<RouteTableEntry>& route_table() const { return route_table_; }
+  const std::vector<fuchsia::net::stack::ForwardingEntry>& route_table() const {
+    return route_table_;
+  }
 
   // Get a pointer to an interface by name.
   OwnedInterface& GetInterfaceByName(const std::string name) {
@@ -418,11 +411,12 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
   // Check if the given interface ID and address exists in the route table.
   bool FindRouteTableEntry(uint32_t nicid, ::nl::Inet::IPAddress addr,
                            uint32_t metric = kRouteMetric_HighPriority) {
-    auto it = std::find_if(
-        route_table_.begin(), route_table_.end(), [&](const RouteTableEntry& route_table_entry) {
-          return nicid == route_table_entry.nicid && metric == route_table_entry.metric &&
-                 CompareIpAddress(addr, route_table_entry.destination.addr);
-        });
+    auto it = std::find_if(route_table_.begin(), route_table_.end(),
+                           [&](const fuchsia::net::stack::ForwardingEntry& route_table_entry) {
+                             return nicid == route_table_entry.device_id &&
+                                    metric == route_table_entry.metric &&
+                                    CompareIpAddress(addr, route_table_entry.subnet.addr);
+                           });
 
     return it != route_table_.end();
   }
@@ -438,9 +432,8 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
  private:
   fidl::Binding<fuchsia::net::stack::Stack> stack_binding_{this};
   fidl::Binding<fuchsia::netstack::Netstack> netstack_binding_{this};
-  fidl::Binding<fuchsia::netstack::RouteTableTransaction> route_table_binding_{this};
   async_dispatcher_t* dispatcher_;
-  std::vector<RouteTableEntry> route_table_;
+  std::vector<fuchsia::net::stack::ForwardingEntry> route_table_;
   std::vector<OwnedInterface> interfaces_;
   std::vector<uint64_t> ip_forwarded_interfaces_;
   bool forwarding_success_ = true;

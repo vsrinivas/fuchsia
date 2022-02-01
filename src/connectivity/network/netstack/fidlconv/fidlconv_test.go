@@ -16,6 +16,8 @@ import (
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
@@ -129,42 +131,55 @@ func TestForwardingEntryAndTcpipRouteConversions(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
-		dest stack.ForwardingDestination
+		dest func(*stack.ForwardingEntry)
 		want tcpip.Route
 	}{
-		{dest: func() stack.ForwardingDestination {
-			var dest stack.ForwardingDestination
-			dest.SetDeviceId(789)
-			return dest
-		}(),
+		{
+			dest: func(fe *stack.ForwardingEntry) {
+				fe.DeviceId = 789
+			},
 			want: tcpip.Route{
 				Destination: destination,
 				NIC:         789,
-			}},
-		{dest: func() stack.ForwardingDestination {
-			var dest stack.ForwardingDestination
-			dest.SetNextHop(ToNetIpAddress(gateway))
-			return dest
-		}(),
+			},
+		},
+		{
+			dest: func(fe *stack.ForwardingEntry) {
+				nextHop := ToNetIpAddress(gateway)
+				fe.NextHop = &nextHop
+			},
 			want: tcpip.Route{
 				Destination: destination,
 				Gateway:     gateway,
-			}},
+			},
+		},
+		{
+			dest: func(fe *stack.ForwardingEntry) {
+				fe.DeviceId = 789
+				nextHop := ToNetIpAddress(gateway)
+				fe.NextHop = &nextHop
+			},
+			want: tcpip.Route{
+				Destination: destination,
+				Gateway:     gateway,
+				NIC:         789,
+			},
+		},
 	} {
 		fe := stack.ForwardingEntry{
 			Subnet: fidlnet.Subnet{
 				Addr:      ToNetIpAddress(destination.ID()),
 				PrefixLen: 19,
 			},
-			Destination: tc.dest,
 		}
+		tc.dest(&fe)
 		got := ForwardingEntryToTCPIPRoute(fe)
 		if got != tc.want {
 			t.Errorf("got ForwardingEntryToTCPIPRoute(%v) = %v, want = %v", fe, got, tc.want)
 		}
 		roundtripFe := TCPIPRouteToForwardingEntry(got)
-		if roundtripFe != fe {
-			t.Errorf("got TCPIPRouteToForwardingEntry(%+v) = %+v, want = %+v", got, roundtripFe, fe)
+		if diff := cmp.Diff(roundtripFe, fe, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+			t.Fatalf("forwarding entry mismatch (-want +got):\n%s", diff)
 		}
 	}
 }

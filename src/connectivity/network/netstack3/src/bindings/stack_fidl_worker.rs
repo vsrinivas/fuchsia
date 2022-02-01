@@ -112,7 +112,16 @@ where
                             &mut worker.lock_worker().await.fidl_add_forwarding_entry(entry)
                         );
                     }
-                    StackRequest::DelForwardingEntry { subnet, responder } => {
+                    StackRequest::DelForwardingEntry {
+                        entry:
+                            fidl_net_stack::ForwardingEntry {
+                                subnet,
+                                device_id: _,
+                                next_hop: _,
+                                metric: _,
+                            },
+                        responder,
+                    } => {
                         responder_send!(
                             responder,
                             &mut worker.lock_worker().await.fidl_del_forwarding_entry(subnet)

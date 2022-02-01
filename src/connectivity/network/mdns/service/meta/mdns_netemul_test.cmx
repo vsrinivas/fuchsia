@@ -31,6 +31,7 @@
                             },
                             "fuchsia.net.debug.Interfaces": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",
                             "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",
+                            "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",
                             "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/mdns.cmx",
                             "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",
                             "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx"
@@ -66,6 +67,7 @@
                     },
                     "fuchsia.net.debug.Interfaces": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",
                     "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",
+                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",
                     "fuchsia.net.mdns.Resolver": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/mdns.cmx",
                     "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/mdns.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/mdns-netemul-tests#meta/netstack-debug.cmx",

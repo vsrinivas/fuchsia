@@ -8,7 +8,7 @@
     "sandbox": {
         "services": [
             "fuchsia.net.interfaces.State",
-            "fuchsia.netstack.Netstack",
+            "fuchsia.net.stack.Stack",
             "fuchsia.posix.socket.Provider"
         ]
     }

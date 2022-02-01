@@ -128,61 +128,22 @@ impl From<(fidl_fuchsia_net_interfaces_ext::Properties, Option<fidl_fuchsia_net:
 #[derive(serde::Serialize)]
 /// Intermediary struct for serializing IP forwarding table entries into JSON.
 pub struct ForwardingEntry {
+    #[serde(rename = "destination")]
     subnet: Subnet<std::net::IpAddr>,
-    destination: ForwardingDestination,
+    #[serde(rename = "nicid")]
+    device_id: u64,
+    #[serde(rename = "gateway")]
+    next_hop: Option<std::net::IpAddr>,
+    metric: u32,
 }
 
 impl From<fidl_fuchsia_net_stack_ext::ForwardingEntry> for ForwardingEntry {
     fn from(
-        fidl_fuchsia_net_stack_ext::ForwardingEntry { subnet, destination }: fidl_fuchsia_net_stack_ext::ForwardingEntry,
-    ) -> ForwardingEntry {
-        ForwardingEntry { subnet: subnet.into(), destination: destination.into() }
-    }
-}
-
-#[derive(serde::Serialize)]
-enum ForwardingDestination {
-    DeviceId(u64),
-    NextHop(std::net::IpAddr),
-}
-
-impl From<fidl_fuchsia_net_stack_ext::ForwardingDestination> for ForwardingDestination {
-    fn from(dest: fidl_fuchsia_net_stack_ext::ForwardingDestination) -> ForwardingDestination {
-        match dest {
-            fidl_fuchsia_net_stack_ext::ForwardingDestination::DeviceId(id) => {
-                ForwardingDestination::DeviceId(id)
-            }
-            fidl_fuchsia_net_stack_ext::ForwardingDestination::NextHop(
-                fidl_fuchsia_net_ext::IpAddress(ip),
-            ) => ForwardingDestination::NextHop(ip),
-        }
-    }
-}
-
-#[derive(serde::Serialize)]
-/// Intermediary struct for serializing route table entries into JSON.
-pub struct RouteTableEntry {
-    destination: Subnet<std::net::IpAddr>,
-    gateway: Option<std::net::IpAddr>,
-    nicid: u64,
-    metric: u32,
-}
-
-impl From<fidl_fuchsia_netstack_ext::RouteTableEntry> for RouteTableEntry {
-    fn from(
-        fidl_fuchsia_netstack_ext::RouteTableEntry {
-        destination,
-        gateway,
-        nicid,
-        metric,
-     }: fidl_fuchsia_netstack_ext::RouteTableEntry,
-    ) -> RouteTableEntry {
-        RouteTableEntry {
-            destination: destination.into(),
-            gateway: gateway.map(|fidl_fuchsia_net_ext::IpAddress(addr)| addr),
-            nicid: nicid.into(),
-            metric,
-        }
+        fidl_fuchsia_net_stack_ext::ForwardingEntry { subnet, device_id, next_hop, metric }: fidl_fuchsia_net_stack_ext::ForwardingEntry,
+    ) -> Self {
+        let subnet = subnet.into();
+        let next_hop = next_hop.map(|fidl_fuchsia_net_ext::IpAddress(next_hop)| next_hop);
+        Self { subnet, device_id, next_hop, metric }
     }
 }
 

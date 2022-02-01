@@ -125,7 +125,9 @@ async fn main() -> Result<(), Error> {
                         addr: mask_with_prefix(ip_address, prefix_len),
                         prefix_len,
                     },
-                    destination: netstack::ForwardingDestination::DeviceId(id),
+                    device_id: id,
+                    next_hop: None,
+                    metric: 0,
                 })
                 .await
                 .squash_result()

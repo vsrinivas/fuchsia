@@ -657,7 +657,9 @@ mod helpers {
         let () = stack
             .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
                 subnet: fidl_fuchsia_net_ext::apply_subnet_mask(subnet),
-                destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(interface_id),
+                device_id: interface_id,
+                next_hop: None,
+                metric: 0,
             })
             .await
             .expect("add_forwarding_entry FIDL error")

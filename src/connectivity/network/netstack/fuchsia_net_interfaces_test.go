@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
@@ -29,6 +30,10 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 )
+
+func toIpAddress(addr net.IP) fidlnet.IpAddress {
+	return fidlconv.ToNetIpAddress(tcpip.Address(addr))
+}
 
 func TestDiffInterfaceProperties(t *testing.T) {
 	var addr1 interfaces.Address

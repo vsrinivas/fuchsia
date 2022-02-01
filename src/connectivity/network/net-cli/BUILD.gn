@@ -26,7 +26,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/connectivity/lib/fidl_fuchsia_net_neighbor_ext",
     "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
-    "//src/connectivity/lib/fidl_fuchsia_netstack_ext",
     "//src/connectivity/network/lib/netfilter",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

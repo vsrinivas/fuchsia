@@ -8,8 +8,6 @@ use std::{convert::TryFrom as _, mem::size_of};
 
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack as net_stack;
-use fidl_fuchsia_netstack as netstack;
-use fidl_fuchsia_netstack_ext::RouteTable;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
@@ -787,21 +785,20 @@ async fn on_and_off_link_route_discovery<E: netemul::Endpoint>(
     };
 
     async fn check_route_table(
-        netstack: &netstack::NetstackProxy,
-        want_routes: &[netstack::RouteTableEntry],
+        stack: &net_stack::StackProxy,
+        want_routes: &[net_stack::ForwardingEntry],
     ) {
         let check_attempts = ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.into_seconds()
             / ASYNC_EVENT_CHECK_INTERVAL.into_seconds();
         for attempt in 0..check_attempts {
             let () = sleep(ASYNC_EVENT_CHECK_INTERVAL.into_seconds()).await;
-            let route_table = netstack.get_route_table().await.expect("failed to get route table");
+            let route_table =
+                stack.get_forwarding_table().await.expect("failed to get route table");
 
             if want_routes.iter().all(|route| route_table.contains(route)) {
                 return;
             }
-            let route_table =
-                RouteTable::new(route_table).display().expect("failed to format route table");
-            println!("route table at attempt={}:\n{}", attempt, route_table);
+            println!("route table at attempt={}:\n{:?}", attempt, route_table);
         }
 
         panic!(
@@ -814,13 +811,13 @@ async fn on_and_off_link_route_discovery<E: netemul::Endpoint>(
     let name = name.as_str();
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let (_network, realm, netstack, iface, fake_ep) =
+    let (_network, realm, _netstack, iface, fake_ep) =
         setup_network::<E>(&sandbox, name).await.expect("failed to setup network");
 
+    let stack =
+        realm.connect_to_protocol::<net_stack::StackMarker>().expect("failed to get stack proxy");
+
     if forwarding {
-        let stack = realm
-            .connect_to_protocol::<net_stack::StackMarker>()
-            .expect("failed to get stack proxy");
         let () = stack.enable_ip_forwarding().await.expect("error enabling IP forwarding");
     }
 
@@ -844,49 +841,47 @@ async fn on_and_off_link_route_discovery<E: netemul::Endpoint>(
         .expect("failed to send router advertisement");
 
     let nicid = iface.id();
-    let nicid = u32::try_from(iface.id())
-        .unwrap_or_else(|e| panic!("interface ID ({}) should fit in a u32: {}", nicid, e));
     check_route_table(
-        &netstack,
+        &stack,
         &[
             // Test that a default route through the router is installed.
-            netstack::RouteTableEntry {
-                destination: net::Subnet {
+            net_stack::ForwardingEntry {
+                subnet: net::Subnet {
                     addr: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: net_types_ip::Ipv6::UNSPECIFIED_ADDRESS.ipv6_bytes(),
                     }),
                     prefix_len: 0,
                 },
-                gateway: Some(Box::new(net::IpAddress::Ipv6(net::Ipv6Address {
+                device_id: nicid,
+                next_hop: Some(Box::new(net::IpAddress::Ipv6(net::Ipv6Address {
                     addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
                 }))),
-                nicid,
                 metric: 0,
             },
             // Test that a route to `SUBNET_WITH_MORE_SPECIFIC_ROUTE` exists through the router.
-            netstack::RouteTableEntry {
-                destination: net::Subnet {
+            net_stack::ForwardingEntry {
+                subnet: net::Subnet {
                     addr: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: SUBNET_WITH_MORE_SPECIFIC_ROUTE.network().ipv6_bytes(),
                     }),
                     prefix_len: SUBNET_WITH_MORE_SPECIFIC_ROUTE.prefix(),
                 },
-                gateway: Some(Box::new(net::IpAddress::Ipv6(net::Ipv6Address {
+                device_id: nicid,
+                next_hop: Some(Box::new(net::IpAddress::Ipv6(net::Ipv6Address {
                     addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
                 }))),
-                nicid,
                 metric: 0,
             },
             // Test that the prefix should be discovered after it is advertised.
-            netstack::RouteTableEntry {
-                destination: net::Subnet {
+            net_stack::ForwardingEntry {
+                subnet: net::Subnet {
                     addr: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: ipv6_consts::PREFIX.network().ipv6_bytes(),
                     }),
                     prefix_len: ipv6_consts::PREFIX.prefix(),
                 },
-                gateway: None,
-                nicid,
+                device_id: nicid,
+                next_hop: None,
                 metric: 0,
             },
         ][..],

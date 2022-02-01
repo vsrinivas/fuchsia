@@ -12,20 +12,22 @@ using fuchsia.net;
 alias device_path = string:255;
 
 /// An entry in the forwarding table for the network stack.
+///
+/// Valid if at least one of [`device_id`] and [`next_hop`] is specified.
 type ForwardingEntry = struct {
-    /// The subnet is the key for the entry in the table.
+    /// The destination subnet this route can be used to send to.
     subnet fuchsia.net.Subnet;
 
-    /// The destination that will receive the forwarded packet.
-    destination @generated_name("ForwardingDestination") strict union {
-        /// The opaque identifier of the device to which packets should be
-        /// forwarded.
-        1: device_id fuchsia.net.interface_id;
+    /// The opaque identifier of the device to which packets should be forwarded. The zero value is
+    /// interpreted as unspecified. If unspecified, [`next_hop`] must be set, and will be used by
+    /// the server to select an appropriate device.
+    device_id fuchsia.net.interface_id;
 
-        /// The IP address of the next hop, used to look up the next forwarding
-        /// entry.
-        2: next_hop fuchsia.net.IpAddress;
-    };
+    /// The IP address of the next hop. Used for link-layer address resolution, if present.
+    next_hop fuchsia.net.IpAddress:optional;
+
+    /// This entry's metric. The zero value is interpreted as unspecified.
+    metric uint32;
 };
 
 type Error = strict enum {
@@ -155,12 +157,11 @@ protocol Stack {
         entry ForwardingEntry;
     }) -> (struct {}) error Error;
 
-    /// Removes the forwarding entry with the given subnet. This will not affect
-    /// any overlapping subnets (superset or subset) so the subnet must exactly
-    /// match an entry in the forwarding table. If no entry for the subnet
-    /// exists, an error is returned.
+    /// Removes the forwarding entry. The entry must exactly match an entry in
+    /// the forwarding table, with the exception of the metric value, which is
+    /// ignored.
     DelForwardingEntry(struct {
-        subnet fuchsia.net.Subnet;
+        entry ForwardingEntry;
     }) -> (struct {}) error Error;
 
     /// Enable IP Forwarding for all interfaces and IP versions.

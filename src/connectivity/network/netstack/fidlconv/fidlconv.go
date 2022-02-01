@@ -140,14 +140,11 @@ func TCPIPRouteToForwardingEntry(route tcpip.Route) stack.ForwardingEntry {
 			Addr:      ToNetIpAddress(route.Destination.ID()),
 			PrefixLen: uint8(route.Destination.Prefix()),
 		},
+		DeviceId: uint64(route.NIC),
 	}
-	// There are two types of destinations: link-local and next-hop.
-	//   If a route has a gateway, use that as the next-hop, and ignore the NIC.
-	//   Otherwise, it is considered link-local, and use the NIC.
-	if len(route.Gateway) == 0 {
-		forwardingEntry.Destination.SetDeviceId(uint64(route.NIC))
-	} else {
-		forwardingEntry.Destination.SetNextHop(ToNetIpAddress(route.Gateway))
+	if len(route.Gateway) != 0 {
+		nextHop := ToNetIpAddress(route.Gateway)
+		forwardingEntry.NextHop = &nextHop
 	}
 	return forwardingEntry
 }
@@ -155,12 +152,10 @@ func TCPIPRouteToForwardingEntry(route tcpip.Route) stack.ForwardingEntry {
 func ForwardingEntryToTCPIPRoute(forwardingEntry stack.ForwardingEntry) tcpip.Route {
 	route := tcpip.Route{
 		Destination: ToTCPIPSubnet(forwardingEntry.Subnet),
+		NIC:         tcpip.NICID(forwardingEntry.DeviceId),
 	}
-	switch forwardingEntry.Destination.Which() {
-	case stack.ForwardingDestinationDeviceId:
-		route.NIC = tcpip.NICID(forwardingEntry.Destination.DeviceId)
-	case stack.ForwardingDestinationNextHop:
-		route.Gateway = ToTCPIPAddress(forwardingEntry.Destination.NextHop)
+	if nextHop := forwardingEntry.NextHop; nextHop != nil {
+		route.Gateway = ToTCPIPAddress(*nextHop)
 	}
 	return route
 }

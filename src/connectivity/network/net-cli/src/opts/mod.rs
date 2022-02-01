@@ -31,7 +31,6 @@ pub struct Command {
 #[argh(subcommand)]
 pub enum CommandEnum {
     Filter(Filter),
-    Fwd(Fwd),
     If(If),
     IpFwd(IpFwd),
     Log(Log),
@@ -97,66 +96,6 @@ pub struct FilterSetRdrRules {
 pub struct FilterSetRules {
     #[argh(positional)]
     pub rules: String,
-}
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand, name = "fwd")]
-/// commands for forwarding tables
-pub struct Fwd {
-    #[argh(subcommand)]
-    pub fwd_cmd: FwdEnum,
-}
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand)]
-pub enum FwdEnum {
-    AddDevice(FwdAddDevice),
-    AddHop(FwdAddHop),
-    Del(FwdDel),
-    List(FwdList),
-}
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand, name = "add-device")]
-/// adds a forwarding table entry to route to a device
-pub struct FwdAddDevice {
-    #[argh(positional, arg_name = "nicid or name:ifname")]
-    pub interface: InterfaceIdentifier,
-    #[argh(positional)]
-    pub addr: String,
-    #[argh(positional)]
-    pub prefix: u8,
-}
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand, name = "add-hop")]
-/// adds a forwarding table entry to route to a IP address
-pub struct FwdAddHop {
-    #[argh(positional)]
-    pub next_hop: String,
-    #[argh(positional)]
-    pub addr: String,
-    #[argh(positional)]
-    pub prefix: u8,
-}
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand, name = "del")]
-/// deletes a forwarding table entry
-pub struct FwdDel {
-    #[argh(positional)]
-    pub addr: String,
-    #[argh(positional)]
-    pub prefix: u8,
-}
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand, name = "list")]
-/// lists forwarding table entries
-pub struct FwdList {
-    #[argh(switch)]
-    /// format output as JSON
-    pub json: bool,
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
@@ -684,16 +623,16 @@ macro_rules! route_struct {
             pub fn into_route_table_entry(
                 self,
                 nicid: u32,
-            ) -> fidl_fuchsia_netstack::RouteTableEntry {
+            ) -> fidl_fuchsia_net_stack::ForwardingEntry {
                 let Self { destination, prefix_len, gateway, interface: _, metric } = self;
-                fidl_fuchsia_netstack::RouteTableEntry {
-                    destination: fidl_fuchsia_net::Subnet {
+                fidl_fuchsia_net_stack::ForwardingEntry {
+                    subnet: fidl_fuchsia_net::Subnet {
                         addr: fidl_fuchsia_net_ext::IpAddress(destination).into(),
                         prefix_len,
                     },
-                    gateway: gateway
+                    device_id: nicid.into(),
+                    next_hop: gateway
                         .map(|gateway| Box::new(fidl_fuchsia_net_ext::IpAddress(gateway).into())),
-                    nicid,
                     metric,
                 }
             }

@@ -20,8 +20,8 @@ use {
     std::{sync::Arc, thread},
 };
 
-pub async fn run<'a>(
-    ril_modem: &'a RadioInterfaceLayerProxy,
+pub async fn run(
+    ril_modem: &RadioInterfaceLayerProxy,
     state: Arc<Mutex<crate::Connections>>,
 ) -> Result<(), Error> {
     // `cmd_stream` blocks on input in a separate thread and passes commands and acks back to
@@ -29,7 +29,7 @@ pub async fn run<'a>(
     let (mut commands, mut acks) = cmd_stream();
     loop {
         if let Some(cmd) = commands.next().await {
-            match crate::handle_cmd(&ril_modem, cmd, state.clone()).await {
+            match crate::handle_cmd(ril_modem, cmd, state.clone()).await {
                 Ok(ReplControl::Continue) => {}
                 Ok(ReplControl::Break) => {
                     break;

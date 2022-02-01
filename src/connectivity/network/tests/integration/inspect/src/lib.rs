@@ -395,13 +395,13 @@ async fn inspect_routing_table() {
         .create_netstack_realm::<Netstack2, _>("inspect_routing_table")
         .expect("failed to create realm");
 
-    let netstack = realm
-        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
-        .expect("failed to connect to fuchsia.netstack/Netstack");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("failed to connect to fuchsia.net.stack/Stack");
 
     // Capture the state of the routing table to verify the inspect data, and
     // confirm that it's not empty.
-    let routing_table = netstack.get_route_table().await.expect("get_route_table FIDL error");
+    let routing_table = stack.get_forwarding_table().await.expect("get_route_table FIDL error");
     assert!(!routing_table.is_empty());
     println!("Got routing table: {:#?}", routing_table);
 
@@ -409,17 +409,18 @@ async fn inspect_routing_table() {
     let mut routing_table_assertion = TreeAssertion::new("Routes", true);
     for (i, route) in routing_table.into_iter().enumerate() {
         let index = &i.to_string();
-        let fidl_fuchsia_netstack::RouteTableEntry { destination, gateway, nicid, metric } = route;
+        let fidl_fuchsia_net_stack_ext::ForwardingEntry { subnet, device_id, next_hop, metric } =
+            route.into();
         let route_assertion = fuchsia_inspect::tree_assertion!(var index: {
             "Destination": format!(
                 "{}",
-                fidl_fuchsia_net_ext::Subnet::from(destination),
+                subnet,
             ),
-            "Gateway": match gateway {
-                Some(addr) => fidl_fuchsia_net_ext::IpAddress::from(*addr).to_string(),
-                None => "".to_string(),
+            "Gateway": match next_hop {
+                Some(next_hop) => next_hop.to_string(),
+                None => String::new(),
             },
-            "NIC": nicid.to_string(),
+            "NIC": device_id.to_string(),
             "Metric": metric.to_string(),
             "MetricTracksInterface": AnyProperty,
             "Dynamic": AnyProperty,
@@ -679,9 +680,9 @@ async fn inspect_stat_counters() {
         .create_netstack_realm::<Netstack2, _>("inspect_for_sampler")
         .expect("failed to create realm");
     // Connect to netstack service to spawn a netstack instance.
-    let _netstack = realm
-        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
-        .expect("failed to connect to fuchsia.netstack/Netstack");
+    let _stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("failed to connect to fuchsia.net.stack/Stack");
 
     let data = get_inspect_data(&realm, "netstack", r#"Networking\ Stat\ Counters"#, "counters")
         .await
@@ -919,9 +920,9 @@ async fn inspect_for_sampler() {
         .create_netstack_realm::<Netstack2, _>("inspect_for_sampler")
         .expect("failed to create realm");
     // Connect to netstack service to spawn a netstack instance.
-    let _netstack = realm
-        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
-        .expect("failed to connect to fuchsia.netstack/Netstack");
+    let _stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("failed to connect to fuchsia.net.stack/Stack");
 
     // We can pass any sample rate here. It is not used at all in this test.
     const MINIMUM_SAMPLE_RATE_SEC: i64 = 60;

@@ -159,7 +159,9 @@ async fn watcher_existing<N: Netstack>(name: &str) {
             stack
                 .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
                     subnet: fidl_subnet!("0.0.0.0/0"),
-                    destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(id),
+                    device_id: id,
+                    next_hop: None,
+                    metric: 0,
                 })
                 .await
                 .squash_result()
@@ -170,7 +172,9 @@ async fn watcher_existing<N: Netstack>(name: &str) {
             stack
                 .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
                     subnet: fidl_subnet!("::/0"),
-                    destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(id),
+                    device_id: id,
+                    next_hop: None,
+                    metric: 0,
                 })
                 .await
                 .squash_result()
@@ -927,14 +931,14 @@ async fn test_watcher() {
 
     // Add a default route.
     let () = assert_blocked(&mut blocking_stream).await;
-    let mut default_v4_subnet = fidl_subnet!("0.0.0.0/0");
+    let mut default_v4_entry = fidl_fuchsia_net_stack::ForwardingEntry {
+        subnet: fidl_subnet!("0.0.0.0/0"),
+        device_id: 0,
+        next_hop: Some(Box::new(fidl_ip!("192.168.255.254"))),
+        metric: 0,
+    };
     let () = stack
-        .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
-            subnet: default_v4_subnet,
-            destination: fidl_fuchsia_net_stack::ForwardingDestination::NextHop(fidl_ip!(
-                "192.168.255.254"
-            )),
-        })
+        .add_forwarding_entry(&mut default_v4_entry)
         .await
         .squash_result()
         .expect("add default route");
@@ -950,7 +954,7 @@ async fn test_watcher() {
     // Remove the default route.
     let () = assert_blocked(&mut blocking_stream).await;
     let () = stack
-        .del_forwarding_entry(&mut default_v4_subnet)
+        .del_forwarding_entry(&mut default_v4_entry)
         .await
         .squash_result()
         .expect("delete default route");

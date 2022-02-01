@@ -19,40 +19,7 @@ use netstack_testing_common::{
 };
 use netstack_testing_macros::variants_test;
 use std::collections::{HashMap, HashSet};
-use std::convert::TryInto as _;
 use test_case::test_case;
-
-async fn add_subnet_route(
-    realm: &netemul::TestRealm<'_>,
-    interface: u64,
-    subnet: fidl_fuchsia_net::Subnet,
-) {
-    let netstack = realm
-        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
-        .expect("connect to protocol");
-    let (route_table, route_table_server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_netstack::RouteTableTransactionMarker>()
-            .expect("create endpoints");
-    let () = zx::Status::ok(
-        netstack
-            .start_route_table_transaction(route_table_server_end)
-            .await
-            .expect("start route table transaction"),
-    )
-    .expect("start route table transaction returned error");
-    let () = zx::Status::ok(
-        route_table
-            .add_route(&mut fidl_fuchsia_netstack::RouteTableEntry {
-                destination: subnet,
-                gateway: None,
-                nicid: interface.try_into().expect("can't convert NICID"),
-                metric: 0,
-            })
-            .await
-            .expect("add route"),
-    )
-    .expect("add route returned error");
-}
 
 fn create_tun_device() -> (
     fidl_fuchsia_net_tun::DeviceProxy,
@@ -415,8 +382,8 @@ async fn add_address_success() {
         .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
         .expect(<fidl_fuchsia_net_debug::InterfacesMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME);
 
-    let netstack = realm
-        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
         .expect("connect to protocol");
 
     let (control, server) = fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
@@ -441,12 +408,12 @@ async fn add_address_success() {
                 .expect("add address failed unexpectedly");
 
         // Ensure that no route to the subnet was added as a result of adding the address.
-        assert!(netstack
-            .get_route_table()
+        assert!(stack
+            .get_forwarding_table()
             .await
-            .expect("FIDL error calling fuchsia.netstack/Netstack.GetRouteTable")
+            .expect("FIDL error calling fuchsia.net.stack/Stack.GetForwardingTable")
             .into_iter()
-            .all(|r| r.destination != subnet));
+            .all(|r| r.subnet != subnet));
 
         let (watcher, server_endpoint) =
             ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
@@ -1218,7 +1185,19 @@ async fn installer_creates_datapath() {
 
                 // Adding addresses through Control does not add the subnet
                 // routes.
-                let () = add_subnet_route(&realm, iface_id, SUBNET).await;
+                let stack = realm
+                    .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+                    .expect("connect to protocol");
+                let () = stack
+                    .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                        subnet: SUBNET,
+                        device_id: iface_id,
+                        next_hop: None,
+                        metric: 0,
+                    })
+                    .await
+                    .expect("send add route")
+                    .expect("add route");
 
                 RealmInfo { realm, endpoint, device_control, control, address_state_provider }
             }

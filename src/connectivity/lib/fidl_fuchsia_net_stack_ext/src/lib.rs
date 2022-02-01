@@ -7,50 +7,19 @@ pub use self::error::{FidlReturn, NetstackError};
 
 use fidl_fuchsia_net_stack as fidl;
 
-pub enum ForwardingDestination {
-    DeviceId(u64),
-    NextHop(fidl_fuchsia_net_ext::IpAddress),
-}
-
-impl From<fidl::ForwardingDestination> for ForwardingDestination {
-    fn from(forwarding_destination: fidl::ForwardingDestination) -> Self {
-        match forwarding_destination {
-            fidl::ForwardingDestination::DeviceId(id) => ForwardingDestination::DeviceId(id),
-            fidl::ForwardingDestination::NextHop(ip_address) => {
-                ForwardingDestination::NextHop(ip_address.into())
-            }
-        }
-    }
-}
-
-impl std::fmt::Display for ForwardingDestination {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        match self {
-            ForwardingDestination::DeviceId(id) => write!(f, "device id {}", id),
-            ForwardingDestination::NextHop(nh) => write!(f, "next hop {}", nh),
-        }
-    }
-}
-
 pub struct ForwardingEntry {
     pub subnet: fidl_fuchsia_net_ext::Subnet,
-    pub destination: ForwardingDestination,
+    pub device_id: u64,
+    pub next_hop: Option<fidl_fuchsia_net_ext::IpAddress>,
+    pub metric: u32,
 }
 
 impl From<fidl::ForwardingEntry> for ForwardingEntry {
     fn from(forwarding_entry: fidl::ForwardingEntry) -> Self {
-        let fidl::ForwardingEntry { subnet, destination } = forwarding_entry;
+        let fidl::ForwardingEntry { subnet, device_id, next_hop, metric } = forwarding_entry;
         let subnet = subnet.into();
-        let destination = destination.into();
-        Self { subnet, destination }
-    }
-}
-
-impl std::fmt::Display for ForwardingEntry {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let Self { subnet, destination } = self;
-        write!(f, "{} {}", subnet, destination)?;
-        Ok(())
+        let next_hop = next_hop.map(|next_hop| (*next_hop).into());
+        Self { subnet, device_id, next_hop, metric }
     }
 }
 

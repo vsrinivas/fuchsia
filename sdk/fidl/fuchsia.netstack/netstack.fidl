@@ -21,20 +21,8 @@ type NetErr = struct {
     message string:MAX;
 };
 
-type RouteTableEntry = struct {
-    destination fuchsia.net.Subnet;
-    gateway fuchsia.net.IpAddress:optional;
-    nicid uint32;
-    metric uint32;
-};
-
 @discoverable
 protocol Netstack {
-    /// Returns current route table.
-    GetRouteTable() -> (struct {
-        rt vector<RouteTableEntry>:MAX;
-    });
-
     /// Sets the address for the interface with the given nicid.
     /// Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
     @deprecated("Use fuchsia.net.interfaces.admin/Control.AddAddress")
@@ -95,28 +83,4 @@ protocol Netstack {
         nicid uint32;
         client server_end:fuchsia.net.dhcp.Client;
     }) -> (struct {}) error zx.status;
-
-    /// Begin a route transaction to synchronize updates to the route table.
-    ///
-    /// Returns `ZX_OK` if a transaction can be started; `ZX_ERR_SHOULD_WAIT` if
-    /// a transaction is currently in progress.
-    StartRouteTableTransaction(resource struct {
-        route_table_transaction server_end:RouteTableTransaction;
-    }) -> (struct {
-        status zx.status;
-    });
-};
-
-@discoverable
-protocol RouteTableTransaction {
-    AddRoute(struct {
-        r RouteTableEntry;
-    }) -> (struct {
-        status zx.status;
-    });
-    DelRoute(struct {
-        r RouteTableEntry;
-    }) -> (struct {
-        status zx.status;
-    });
 };

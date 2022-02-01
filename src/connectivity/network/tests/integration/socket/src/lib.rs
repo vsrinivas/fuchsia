@@ -303,7 +303,9 @@ async fn install_ip_device(
             let add_forwarding_entry_fut = stack
                 .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
                     subnet: fidl_fuchsia_net_ext::apply_subnet_mask(subnet.clone()),
-                    destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(id),
+                    device_id: id,
+                    next_hop: None,
+                    metric: 0,
                 })
                 .map(move |r| {
                     r.squash_result().unwrap_or_else(|e| {

@@ -1218,7 +1218,9 @@ func TestListInterfaceAddresses(t *testing.T) {
 				}
 
 				result, err := ni.AddInterfaceAddress(context.Background(), uint64(ifState.nicid), ifAddr)
-				AssertNoError(t, err)
+				if err != nil {
+					t.Fatalf("ni.AddInterfaceAddress(%d, %#v): %s", ifState.nicid, ifAddr, err)
+				}
 				if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
 					t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 				}
@@ -1254,7 +1256,9 @@ func TestListInterfaceAddresses(t *testing.T) {
 				}
 
 				result, err := ni.DelInterfaceAddress(context.Background(), uint64(ifState.nicid), ifAddr)
-				AssertNoError(t, err)
+				if err != nil {
+					t.Fatalf("ni.DelInterfaceAddress(%d, %#v): %s", ifState.nicid, ifAddr, err)
+				}
 				if result != stack.StackDelInterfaceAddressResultWithResponse(stack.StackDelInterfaceAddressResponse{}) {
 					t.Fatalf("got ni.DelInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 				}
@@ -1293,7 +1297,9 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 	}
 
 	result, err := ni.AddInterfaceAddress(context.Background(), uint64(ifState.nicid), ifAddr)
-	AssertNoError(t, err)
+	if err != nil {
+		t.Fatalf("ni.AddInterfaceAddress(%d, %#v): %s", ifState.nicid, ifAddr, err)
+	}
 	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
 		t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 	}
@@ -1307,7 +1313,9 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 	ifAddr.PrefixLen *= 2
 
 	result, err = ni.AddInterfaceAddress(context.Background(), uint64(ifState.nicid), ifAddr)
-	AssertNoError(t, err)
+	if err != nil {
+		t.Fatalf("ni.AddInterfaceAddress(%d, %#v): %s", ifState.nicid, ifAddr, err)
+	}
 	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
 		t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 	}
