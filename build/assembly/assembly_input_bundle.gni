@@ -46,7 +46,7 @@ template("assembly_input_bundle_package") {
                              "testonly",
                            ])
     visibility = [ ":${labels.package}" ]
-    binary_label = "//build/assembly/scripts:assembly_input_bundle_tool"
+    binary_label = "scripts:assembly_input_bundle_tool"
     inputs = [ invoker.manifest ]
     outputs = [
       files.creation_manifest,  # must be the first output, for passing to

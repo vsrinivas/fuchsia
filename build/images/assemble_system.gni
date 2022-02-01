@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/assembly/legacy.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
@@ -15,7 +14,6 @@ import("//build/images/fvm.gni")
 import("//build/images/shell_commands.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
-import("//build/python/python_action.gni")
 import("//build/security/verifier/verify_bootfs.gni")
 import("//build/security/verifier/verify_kernel_cmdline.gni")
 import("//build/security/verifier/verify_route_sources.gni")
@@ -207,15 +205,10 @@ template("assemble_system") {
     cache_packages_group = "${image_name}_cache_packages"
     meta_packages_group = "${image_name}_meta_packages"
     all_packages_group = "${image_name}_packages"
-    legacy_assembly_input_bundle = "${image_name}_legacy_input_bundle"
-    product_assembly_config = "${image_name}_product_assembly_config"
     image_assembly_config = "${image_name}_image_assembly_config"
-    compare_image_assembly_configs =
-        "${image_name}_compare_image_assembly_configs"
     board_config = "${image_name}_board_config"
     images_config = "${image_name}_images_config"
     partitions_config = "${image_name}_partitions_config"
-    product_assembler = "${image_name}_product_assembler"
     image_assembler = "${image_name}_image_assembler"
     create_system = "${image_name}_create_system"
     copy_vbmeta = "${image_name}_copy_vbmeta"
@@ -232,8 +225,6 @@ template("assemble_system") {
 
   # Intermediate files produced for Image Assembly.
   files = {
-    product_assembly_config =
-        "$target_out_dir/${image_name}_product_assembly_config.json"
     image_assembly_config =
         "$target_out_dir/${image_name}_image_assembly_config.json"
     board_config = "$target_out_dir/${image_name}_board_config.json"
@@ -242,17 +233,6 @@ template("assemble_system") {
 
     outdir = "$target_out_dir/$image_name"
     gendir = "$outdir/gen"
-
-    legacy_assembly_input_bundle_manifest =
-        "${outdir}/legacy/assembly_config.json"
-
-    # This file is created implicitly by ffx assembly product, so this is the
-    # path that it's expected to be found at, not the path that it's to be
-    # written to.
-    regenerated_image_assembly_config = "${outdir}/image_assembly.json"
-    config_data_manifest = "${outdir}/config_data.package_manifest.json"
-    compare_image_assembly_configs =
-        "${outdir}/compare_image_assembly_configs.verified"
 
     zbi = "${outdir}/${image_name}.zbi"
     zbi_signed = "${zbi}.signed"
@@ -611,96 +591,6 @@ template("assemble_system") {
     ]
   }
 
-  generated_file(labels.product_assembly_config) {
-    outputs = [ files.product_assembly_config ]
-    output_conversion = "json"
-    contents = {
-      # This isn't used, except to validate that the file is read correctly.
-      build_type = "eng"
-    }
-  }
-
-  # Create the legacy assembly input bundle for the above-generated image
-  # assembly configuration.
-  legacy_assembly_input_bundle(labels.legacy_assembly_input_bundle) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    image_assembly_label = ":${image_name}"
-    bundles_dir = files.outdir
-    include_config_data = generate_fvm
-  }
-
-  # Run product assembly, but just to verify that the image assembly config
-  # that it generates matches that used to create the legacy input assembly
-  # bundles.
-  ffx_action(labels.product_assembler) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-
-    # TODO(fxbug.dev/77290) - Add depfile support and then remove the following
-    hermetic_deps = false
-
-    args = [
-      "--config",
-      "assembly_enabled=true",
-      "assembly",
-      "product",
-      "--product",
-      rebase_path(files.product_assembly_config, root_build_dir),
-      "--input-bundles-dir",
-      rebase_path(files.outdir, root_build_dir),
-      "--outdir",
-      rebase_path(files.outdir, root_build_dir),
-    ]
-
-    deps = [
-      ":${labels.legacy_assembly_input_bundle}",
-      ":${labels.product_assembly_config}",
-    ]
-
-    inputs = [
-      files.product_assembly_config,
-      files.legacy_assembly_input_bundle_manifest,
-    ]
-
-    outputs = [ files.regenerated_image_assembly_config ]
-
-    # If there isn't an FVM, there won't be a config-data package, and so it
-    # won't be created by product assembly (it won't have any config data in
-    # the legacy or common configs.)
-    if (generate_fvm) {
-      outputs += [ files.config_data_manifest ]
-    }
-  }
-
-  python_action(labels.compare_image_assembly_configs) {
-    forward_variables_from(invoker, [ "testonly" ])
-    hermetic_deps = false
-
-    binary_label = "//build/assembly/scripts:compare_image_assembly_configs"
-    deps = [
-      ":${labels.image_assembly_config}",
-      ":${labels.product_assembler}",
-    ]
-    inputs = [
-      files.image_assembly_config,
-      files.regenerated_image_assembly_config,
-    ]
-    outputs = [ files.compare_image_assembly_configs ]
-    args = [
-      "--stamp",
-      rebase_path(files.compare_image_assembly_configs, root_build_dir),
-      rebase_path(files.image_assembly_config, root_build_dir),
-      rebase_path(files.regenerated_image_assembly_config, root_build_dir),
-    ]
-  }
-
   ffx_action(labels.image_assembler) {
     forward_variables_from(invoker,
                            [
@@ -1001,7 +891,6 @@ template("assemble_system") {
     # available to external targets.
     public_deps = [
       ":${labels.assembly_inputs}",
-      ":${labels.compare_image_assembly_configs}",
       ":${labels.create_system}",
       ":${labels.image_assembler}",
       ":${labels.images_config}",
