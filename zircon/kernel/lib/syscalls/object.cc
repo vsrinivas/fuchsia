@@ -1131,8 +1131,6 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
         return status;
       if (!x86_is_vaddr_canonical(addr))
         return ZX_ERR_INVALID_ARGS;
-      if (!is_user_address(addr))
-        return ZX_ERR_INVALID_ARGS;
       write_msr(X86_MSR_IA32_FS_BASE, addr);
       return ZX_OK;
     }
@@ -1147,8 +1145,6 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
       if (status != ZX_OK)
         return status;
       if (!x86_is_vaddr_canonical(addr))
-        return ZX_ERR_INVALID_ARGS;
-      if (!is_user_address(addr))
         return ZX_ERR_INVALID_ARGS;
       write_msr(X86_MSR_IA32_KERNEL_GS_BASE, addr);
       return ZX_OK;

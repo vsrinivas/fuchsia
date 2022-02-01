@@ -507,7 +507,7 @@ TEST(Property, RegisterFsNoncanonical) { ASSERT_NO_FATAL_FAILURE(TestNoncanonica
 
 TEST(Property, RegisterGsNoncanonical) { ASSERT_NO_FATAL_FAILURE(TestNoncanonical(kGs)); }
 
-// Machine instructions allow non-user addresses but system calls don't.
+// Non-user addresses are allowed even though they'll always fault when used.
 void TestNonuser(const WhichRegister& reg) {
   const bool have_insns = HaveInsns();
   const uint32_t read_exception = have_insns ? 0 : kNoInsnsException;
@@ -517,9 +517,9 @@ void TestNonuser(const WhichRegister& reg) {
       .write_prop = kNonuserValue,
   };
 
-  ASSERT_NO_FATAL_FAILURE(TestInThread(reg, test, read_exception, write_exception,
-                                       have_insns ? kNonuserValue : kInitialValue));
+  ASSERT_NO_FATAL_FAILURE(TestInThread(reg, test, read_exception, write_exception, kNonuserValue));
 
+  EXPECT_OK(test.set_status);
   EXPECT_OK(test.get_status);
 
   if (have_insns) {
@@ -529,9 +529,6 @@ void TestNonuser(const WhichRegister& reg) {
     EXPECT_EQ(kUndefinedInsnValue, test.read_insn);
     EXPECT_EQ(kInitialValue, test.read_prop);
   }
-
-  // Writing via system call fails though the instruction doesn't.
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, test.set_status);
 }
 
 TEST(Property, RegisterFsNonuser) { ASSERT_NO_FATAL_FAILURE(TestNonuser(kFs)); }

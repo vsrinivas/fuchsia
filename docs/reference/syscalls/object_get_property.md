@@ -61,7 +61,15 @@ The name of the object, as a NUL-terminated string.
 Allowed operations: **get**, **set**
 
 The value of the x86 FS.BASE or GS.BASE register, respectively. `value` must
-be a canonical address, and must be a userspace address.
+be a canonical address.
+
+This is a software substitute for the `rdfsbase`, `wrfsbase` and `rdgsbase`,
+`wrgsbase` instruction pairs supported on newer x86-64 CPUs, and should behave
+exactly the same as using the CPU instructions directly (except that
+attempting to set a noncanonical address as the value just gets an error
+return rather than generating a machine exception).  When using a CPU that
+supports these instructions (as reported by the `cpuid` instruction), it's
+more efficient and simpler to use the machine instructions directly.
 
 Only defined for x86-64.
 
