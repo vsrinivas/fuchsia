@@ -5,7 +5,7 @@
 use fidl::endpoints::ProtocolMarker as _;
 use fixture::fixture;
 use fuchsia_zircon::{self as zx, HandleBased as _};
-use futures::{Future, FutureExt as _, StreamExt as _, TryStreamExt as _};
+use futures::{Future, FutureExt as _, StreamExt as _};
 use itertools::Itertools as _;
 use net_types::Witness as _;
 use netemul::{Endpoint as _, RealmUdpSocket as _};
@@ -116,26 +116,26 @@ where
             }
             Services::SysInfo(rs) => {
                 let () = rs
-                    .map_ok(|req| {
-                        match req {
-                        fidl_fuchsia_sysinfo::SysInfoRequest::GetBoardName { responder } => {
-                            responder.send(zx::Status::OK.into_raw(), Some(MOCK_BOARD_NAME))
-                        }
-                        fidl_fuchsia_sysinfo::SysInfoRequest::GetBoardRevision { responder } => {
-                            responder.send(zx::Status::OK.into_raw(), MOCK_BOARD_REVISION)
-                        }
-                        fidl_fuchsia_sysinfo::SysInfoRequest::GetBootloaderVendor { responder } => {
-                            responder.send(zx::Status::OK.into_raw(), Some(MOCK_BOOTLOADER_VENDOR))
-                        }
-                        r @ fidl_fuchsia_sysinfo::SysInfoRequest::GetInterruptControllerInfo {
-                            ..
-                        } => panic!("unsupported request {:?}", r),
-                    }
-                    .expect("failed to send response")
+                    .for_each(|req| {
+                        futures::future::ready(
+                            match req.expect("request stream error") {
+                                fidl_fuchsia_sysinfo::SysInfoRequest::GetBoardName { responder } => {
+                                    responder.send(zx::Status::OK.into_raw(), Some(MOCK_BOARD_NAME))
+                                }
+                                fidl_fuchsia_sysinfo::SysInfoRequest::GetBoardRevision { responder } => {
+                                    responder.send(zx::Status::OK.into_raw(), MOCK_BOARD_REVISION)
+                                }
+                                fidl_fuchsia_sysinfo::SysInfoRequest::GetBootloaderVendor { responder } => {
+                                    responder.send(zx::Status::OK.into_raw(), Some(MOCK_BOOTLOADER_VENDOR))
+                                }
+                                r @ fidl_fuchsia_sysinfo::SysInfoRequest::GetInterruptControllerInfo {
+                                    ..
+                                } => panic!("unsupported request {:?}", r),
+                            }
+                                .expect("failed to send response"),
+                        )
                     })
-                    .try_collect()
-                    .await
-                    .expect("handling request stream");
+                    .await;
             }
             Services::Paver(rs) => {
                 let () = rs
