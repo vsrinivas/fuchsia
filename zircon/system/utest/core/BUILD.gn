@@ -18,6 +18,7 @@ core_tests = [
   "channel-write-etc",
   "clock",
   "event-pair",
+  "exceptions",
   "fifo",
   "fpu",
   "futex",

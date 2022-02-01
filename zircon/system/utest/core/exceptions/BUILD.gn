@@ -1,0 +1,16 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("exceptions") {
+  testonly = true
+  sources = [ "far-exceptions.cc" ]
+  deps = [
+    "//zircon/kernel/lib/arch",
+    "//zircon/system/ulib/elf-psabi",
+    "//zircon/system/ulib/test-utils",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
