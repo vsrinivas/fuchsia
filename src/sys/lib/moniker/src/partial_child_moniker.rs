@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{child_moniker::ChildMonikerBase, error::MonikerError},
+    crate::error::MonikerError,
     cm_types::Name,
     core::cmp::{Ord, Ordering},
     std::{fmt, str::FromStr},
@@ -11,6 +11,24 @@ use {
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+/// A child moniker locally identifies a child component instance using the name assigned by
+/// its parent and its collection (if present). It is a building block for more complex monikers.
+///
+/// Display notation: "[collection:]name:instance_id".
+pub trait ChildMonikerBase: Eq + PartialOrd + Clone + Default + fmt::Display {
+    fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError>
+    where
+        Self: Sized;
+
+    fn name(&self) -> &str;
+
+    fn collection(&self) -> Option<&str>;
+
+    fn as_str(&self) -> &str;
+
+    fn to_partial(&self) -> PartialChildMoniker;
+}
 
 /// Validates that the given string is valid as the instance or collection name in a moniker.
 // TODO(fxbug.dev/77563): The moniker types should be updated to use Name directly instead of String

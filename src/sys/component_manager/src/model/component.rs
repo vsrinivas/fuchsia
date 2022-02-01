@@ -59,8 +59,8 @@ use {
     },
     log::{error, warn},
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, InstanceId,
-        InstancedAbsoluteMoniker, PartialChildMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, InstanceId,
+        InstancedAbsoluteMoniker, InstancedChildMoniker, PartialChildMoniker,
     },
     std::iter::Iterator,
     std::{
@@ -646,11 +646,12 @@ impl ComponentInstance {
         };
         if let Some(tup) = tup {
             let (instance, _) = tup;
-            let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
+            let instanced_child_moniker =
+                InstancedChildMoniker::from_partial(partial_moniker, instance);
             ActionSet::register(self.clone(), DestroyChildAction::new(partial_moniker.clone()))
                 .await?;
             let mut actions = self.lock_actions().await;
-            let nf = actions.register_no_wait(self, PurgeChildAction::new(child_moniker));
+            let nf = actions.register_no_wait(self, PurgeChildAction::new(instanced_child_moniker));
             Ok(nf)
         } else {
             Err(ModelError::instance_not_found_in_realm(
@@ -739,15 +740,15 @@ impl ComponentInstance {
             self.hooks.dispatch(&event).await?;
         }
         if let ExtendedInstance::Component(parent) = self.try_get_parent()? {
-            let child_moniker = self.child_moniker().unwrap();
-            parent.destroy_child_if_single_run(&child_moniker).await?;
+            let instanced_child_moniker = self.instanced_child_moniker().unwrap();
+            parent.destroy_child_if_single_run(&instanced_child_moniker).await?;
         }
         Ok(())
     }
 
     async fn destroy_child_if_single_run(
         self: &Arc<Self>,
-        child_moniker: &ChildMoniker,
+        instanced_child_moniker: &InstancedChildMoniker,
     ) -> Result<(), ModelError> {
         let single_run_colls = {
             let state = self.lock_state().await;
@@ -770,14 +771,14 @@ impl ComponentInstance {
                 .collect();
             single_run_colls
         };
-        if let Some(coll) = child_moniker.collection() {
+        if let Some(coll) = instanced_child_moniker.collection() {
             if single_run_colls.contains(coll) {
                 let component = self.clone();
-                let child_moniker = child_moniker.clone();
+                let instanced_child_moniker = instanced_child_moniker.clone();
                 fasync::Task::spawn(async move {
                     match ActionSet::register(
                         component.clone(),
-                        DestroyChildAction::new(child_moniker.to_partial()),
+                        DestroyChildAction::new(instanced_child_moniker.to_partial()),
                     )
                     .await
                     {
@@ -793,7 +794,7 @@ impl ComponentInstance {
 
                     // This returns a Future that does not need to be polled.
                     let _ = actions
-                        .register_no_wait(&component, PurgeChildAction::new(child_moniker.clone()));
+                        .register_no_wait(&component, PurgeChildAction::new(instanced_child_moniker.clone()));
                 })
                 .detach();
             }
@@ -864,7 +865,7 @@ impl ComponentInstance {
     /// Registers actions to destroy all children of this instance that live in non-persistent
     /// collections.
     async fn destroy_non_persistent_children(self: &Arc<Self>) -> Result<(), ModelError> {
-        let (transient_colls, child_monikers) = {
+        let (transient_colls, instanced_child_monikers) = {
             let state = self.lock_state().await;
             let state = match *state {
                 InstanceState::Resolved(ref s) => s,
@@ -883,11 +884,12 @@ impl ComponentInstance {
                     fdecl::Durability::SingleRun => Some(c.name.clone()),
                 })
                 .collect();
-            let child_monikers: Vec<_> = state.all_children().keys().map(|m| m.clone()).collect();
-            (transient_colls, child_monikers)
+            let instanced_child_monikers: Vec<_> =
+                state.all_children().keys().map(|m| m.clone()).collect();
+            (transient_colls, instanced_child_monikers)
         };
         let mut futures = vec![];
-        for m in child_monikers {
+        for m in instanced_child_monikers {
             // Delete a child if its collection is in the set of transient collections created
             // above.
             if let Some(coll) = m.collection() {
@@ -1097,7 +1099,7 @@ impl ComponentInstanceInterface for ComponentInstance {
         &self.abs_moniker
     }
 
-    fn child_moniker(&self) -> Option<&ChildMoniker> {
+    fn instanced_child_moniker(&self) -> Option<&InstancedChildMoniker> {
         self.instanced_moniker.leaf()
     }
 
@@ -1235,7 +1237,7 @@ pub struct ResolvedInstanceState {
     /// The component's declaration.
     decl: ComponentDecl,
     /// All child instances, indexed by instanced moniker.
-    children: HashMap<ChildMoniker, Arc<ComponentInstance>>,
+    children: HashMap<InstancedChildMoniker, Arc<ComponentInstance>>,
     /// Child instances that have not been deleted, indexed by child moniker.
     live_children: HashMap<PartialChildMoniker, (InstanceId, Arc<ComponentInstance>)>,
     /// The next unique identifier for a dynamic children created in this realm.
@@ -1337,12 +1339,12 @@ impl ResolvedInstanceState {
         self.live_children.get(m).map(|(i, _)| *i)
     }
 
-    /// Given a `PartialChildMoniker` returns the `ChildMoniker`
-    pub fn get_live_child_moniker(&self, m: &PartialChildMoniker) -> Option<ChildMoniker> {
-        self.live_children.get(m).map(|(i, _)| ChildMoniker::from_partial(m, *i))
+    /// Given a `PartialChildMoniker` returns the `InstancedChildMoniker`
+    pub fn get_live_child_moniker(&self, m: &PartialChildMoniker) -> Option<InstancedChildMoniker> {
+        self.live_children.get(m).map(|(i, _)| InstancedChildMoniker::from_partial(m, *i))
     }
 
-    pub fn get_all_child_monikers(&self, m: &PartialChildMoniker) -> Vec<ChildMoniker> {
+    pub fn get_all_child_monikers(&self, m: &PartialChildMoniker) -> Vec<InstancedChildMoniker> {
         self.children
             .iter()
             .filter(|(child, _)| m.name() == child.name() && m.collection() == child.collection())
@@ -1351,12 +1353,12 @@ impl ResolvedInstanceState {
     }
 
     /// Returns a reference to the list of all children.
-    pub fn all_children(&self) -> &HashMap<ChildMoniker, Arc<ComponentInstance>> {
+    pub fn all_children(&self) -> &HashMap<InstancedChildMoniker, Arc<ComponentInstance>> {
         &self.children
     }
 
     /// Returns a child `ComponentInstance`. The child may or may not be live.
-    pub fn get_child(&self, cm: &ChildMoniker) -> Option<Arc<ComponentInstance>> {
+    pub fn get_child(&self, cm: &InstancedChildMoniker) -> Option<Arc<ComponentInstance>> {
         self.children.get(cm).map(|i| i.clone())
     }
 
@@ -1374,14 +1376,14 @@ impl ResolvedInstanceState {
     ) -> Option<InstancedAbsoluteMoniker> {
         match self.get_live_child_instance_id(partial) {
             Some(instance_id) => {
-                Some(moniker.child(ChildMoniker::from_partial(partial, instance_id)))
+                Some(moniker.child(InstancedChildMoniker::from_partial(partial, instance_id)))
             }
             None => None,
         }
     }
 
     /// Returns all deleting children.
-    pub fn get_deleting_children(&self) -> HashMap<ChildMoniker, Arc<ComponentInstance>> {
+    pub fn get_deleting_children(&self) -> HashMap<InstancedChildMoniker, Arc<ComponentInstance>> {
         let mut deleting_children = HashMap::new();
         for (m, r) in self.all_children().iter() {
             if self.get_live_child(&m.to_partial()).is_none() {
@@ -1416,7 +1418,7 @@ impl ResolvedInstanceState {
     }
 
     /// Removes a child.
-    pub fn remove_child(&mut self, moniker: &ChildMoniker) {
+    pub fn remove_child(&mut self, moniker: &InstancedChildMoniker) {
         self.children.remove(moniker);
     }
 
@@ -1514,15 +1516,18 @@ impl ResolvedInstanceState {
             }
             None => 0,
         };
-        let child_moniker =
-            ChildMoniker::new(child.name.clone(), collection.map(|c| c.name.clone()), instance_id);
-        let partial_moniker = child_moniker.to_partial();
+        let instanced_child_moniker = InstancedChildMoniker::new(
+            child.name.clone(),
+            collection.map(|c| c.name.clone()),
+            instance_id,
+        );
+        let partial_moniker = instanced_child_moniker.to_partial();
         if self.get_live_child(&partial_moniker).is_some() {
             return None;
         }
         let child = ComponentInstance::new(
             self.environment_for_child(component, child, collection.clone()),
-            component.instanced_moniker.child(child_moniker.clone()),
+            component.instanced_moniker.child(instanced_child_moniker.clone()),
             child.url.clone(),
             child.startup,
             child.on_terminate.unwrap_or(fdecl::OnTerminate::None),
@@ -1531,7 +1536,7 @@ impl ResolvedInstanceState {
             Arc::new(Hooks::new(Some(component.hooks.clone()))),
             numbered_handles,
         );
-        self.children.insert(child_moniker, child.clone());
+        self.children.insert(instanced_child_moniker, child.clone());
         self.live_children.insert(partial_moniker, (instance_id, child.clone()));
         if let Some(dynamic_offers) = dynamic_offers {
             self.dynamic_offers.extend(dynamic_offers.into_iter());

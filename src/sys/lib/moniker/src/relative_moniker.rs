@@ -30,9 +30,9 @@
 use {
     crate::{
         abs_moniker::AbsoluteMonikerBase,
-        child_moniker::{ChildMoniker, ChildMonikerBase},
         error::MonikerError,
-        partial_child_moniker::PartialChildMoniker,
+        instanced_child_moniker::InstancedChildMoniker,
+        partial_child_moniker::{ChildMonikerBase, PartialChildMoniker},
     },
     std::{convert::TryFrom, fmt, iter},
 };
@@ -149,8 +149,8 @@ pub trait RelativeMonikerBase: Sized {
 
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]
 pub struct RelativeMoniker {
-    up_path: Vec<ChildMoniker>,
-    down_path: Vec<ChildMoniker>,
+    up_path: Vec<InstancedChildMoniker>,
+    down_path: Vec<InstancedChildMoniker>,
 }
 
 impl RelativeMoniker {
@@ -162,12 +162,12 @@ impl RelativeMoniker {
         let up_path = up_path
             .iter()
             .map(PartialChildMoniker::parse)
-            .map(|p| p.map(|ok_p| ChildMoniker::from_partial(&ok_p, 0)))
+            .map(|p| p.map(|ok_p| InstancedChildMoniker::from_partial(&ok_p, 0)))
             .collect::<Result<_, MonikerError>>()?;
         let down_path = down_path
             .iter()
             .map(PartialChildMoniker::parse)
-            .map(|p| p.map(|ok_p| ChildMoniker::from_partial(&ok_p, 0)))
+            .map(|p| p.map(|ok_p| InstancedChildMoniker::from_partial(&ok_p, 0)))
             .collect::<Result<_, MonikerError>>()?;
 
         Ok(Self::new(up_path, down_path))
@@ -175,7 +175,7 @@ impl RelativeMoniker {
 }
 
 impl RelativeMonikerBase for RelativeMoniker {
-    type Part = ChildMoniker;
+    type Part = InstancedChildMoniker;
 
     fn new(up_path: Vec<Self::Part>, down_path: Vec<Self::Part>) -> Self {
         Self { up_path, down_path }
@@ -287,8 +287,8 @@ mod tests {
 
         let ancestor = RelativeMoniker::new(
             vec![
-                ChildMoniker::new("a".to_string(), None, 1),
-                ChildMoniker::new("b".to_string(), None, 2),
+                InstancedChildMoniker::new("a".to_string(), None, 1),
+                InstancedChildMoniker::new("b".to_string(), None, 2),
             ],
             vec![],
         );
@@ -298,28 +298,28 @@ mod tests {
         let descendant = RelativeMoniker::new(
             vec![],
             vec![
-                ChildMoniker::new("a".to_string(), None, 1),
-                ChildMoniker::new("b".to_string(), None, 2),
+                InstancedChildMoniker::new("a".to_string(), None, 1),
+                InstancedChildMoniker::new("b".to_string(), None, 2),
             ],
         );
         assert_eq!(false, descendant.is_self());
         assert_eq!("./a:1/b:2", format!("{}", descendant));
 
         let sibling = RelativeMoniker::new(
-            vec![ChildMoniker::new("a".to_string(), None, 1)],
-            vec![ChildMoniker::new("b".to_string(), None, 2)],
+            vec![InstancedChildMoniker::new("a".to_string(), None, 1)],
+            vec![InstancedChildMoniker::new("b".to_string(), None, 2)],
         );
         assert_eq!(false, sibling.is_self());
         assert_eq!(".\\a:1/b:2", format!("{}", sibling));
 
         let cousin = RelativeMoniker::new(
             vec![
-                ChildMoniker::new("a".to_string(), None, 1),
-                ChildMoniker::new("a0".to_string(), None, 1),
+                InstancedChildMoniker::new("a".to_string(), None, 1),
+                InstancedChildMoniker::new("a0".to_string(), None, 1),
             ],
             vec![
-                ChildMoniker::new("b0".to_string(), None, 2),
-                ChildMoniker::new("b".to_string(), None, 2),
+                InstancedChildMoniker::new("b0".to_string(), None, 2),
+                InstancedChildMoniker::new("b".to_string(), None, 2),
             ],
         );
         assert_eq!(false, cousin.is_self());
@@ -547,12 +547,12 @@ mod tests {
         ] {
             let up_path = up_path
                 .into_iter()
-                .map(|s| ChildMoniker::parse(s).unwrap())
-                .collect::<Vec<ChildMoniker>>();
+                .map(|s| InstancedChildMoniker::parse(s).unwrap())
+                .collect::<Vec<InstancedChildMoniker>>();
             let down_path = down_path
                 .into_iter()
-                .map(|s| ChildMoniker::parse(s).unwrap())
-                .collect::<Vec<ChildMoniker>>();
+                .map(|s| InstancedChildMoniker::parse(s).unwrap())
+                .collect::<Vec<InstancedChildMoniker>>();
             assert_eq!(
                 RelativeMoniker::new(up_path, down_path),
                 string_to_parse.try_into().unwrap()
@@ -584,8 +584,8 @@ mod tests {
     fn relative_monikers_parse_string_without_instances() -> Result<(), Error> {
         let under_test = |s| RelativeMoniker::parse_string_without_instances(s);
 
-        let a = ChildMoniker::new("a".to_string(), None, 0);
-        let bb = ChildMoniker::new("b".to_string(), Some("b".to_string()), 0);
+        let a = InstancedChildMoniker::new("a".to_string(), None, 0);
+        let bb = InstancedChildMoniker::new("b".to_string(), Some("b".to_string()), 0);
 
         assert_eq!(under_test("./a")?, RelativeMoniker::new(vec![], vec![a.clone()]));
         assert_eq!(

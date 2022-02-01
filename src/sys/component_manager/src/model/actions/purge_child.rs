@@ -10,17 +10,17 @@ use {
         hooks::{Event, EventPayload},
     },
     async_trait::async_trait,
-    moniker::ChildMoniker,
+    moniker::InstancedChildMoniker,
     std::sync::Arc,
 };
 
 /// Completely deletes the given child of a component.
 pub struct PurgeChildAction {
-    moniker: ChildMoniker,
+    moniker: InstancedChildMoniker,
 }
 
 impl PurgeChildAction {
-    pub fn new(moniker: ChildMoniker) -> Self {
+    pub fn new(moniker: InstancedChildMoniker) -> Self {
         Self { moniker }
     }
 }
@@ -38,7 +38,7 @@ impl Action for PurgeChildAction {
 
 async fn do_purge_child(
     component: &Arc<ComponentInstance>,
-    moniker: ChildMoniker,
+    moniker: InstancedChildMoniker,
 ) -> Result<(), ModelError> {
     // The child may not exist or may already be deleted by a previous DeleteChild action.
     let child = {

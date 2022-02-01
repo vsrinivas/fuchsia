@@ -18,7 +18,7 @@ use {
     },
     futures::future::select_all,
     maplit::hashset,
-    moniker::{ChildMoniker, ChildMonikerBase, PartialChildMoniker},
+    moniker::{ChildMonikerBase, InstancedChildMoniker, PartialChildMoniker},
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::sync::Arc,
@@ -318,7 +318,7 @@ async fn do_shutdown(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 enum ParentOrChildMoniker {
     Parent,
-    ChildMoniker(ChildMoniker),
+    ChildMoniker(InstancedChildMoniker),
 }
 
 /// Used to track information during the shutdown process. The dependents

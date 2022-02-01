@@ -77,7 +77,7 @@ use {
         task::{Context, Poll},
         Future,
     },
-    moniker::{ChildMoniker, PartialChildMoniker},
+    moniker::{InstancedChildMoniker, PartialChildMoniker},
     std::any::Any,
     std::collections::HashMap,
     std::fmt::Debug,
@@ -106,7 +106,7 @@ pub enum ActionKey {
     Stop,
     Shutdown,
     DestroyChild(PartialChildMoniker),
-    PurgeChild(ChildMoniker),
+    PurgeChild(InstancedChildMoniker),
     Purge,
 }
 
@@ -405,7 +405,7 @@ pub mod tests {
 pub(crate) mod test_utils {
     use {
         crate::model::component::{ComponentInstance, InstanceState},
-        moniker::{AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
+        moniker::{AbsoluteMonikerBase, ChildMonikerBase, InstancedChildMoniker},
         routing::component_instance::ComponentInstanceInterface,
     };
 
@@ -413,10 +413,13 @@ pub(crate) mod test_utils {
         component.lock_execution().await.runtime.is_some()
     }
 
-    pub async fn is_destroyed(component: &ComponentInstance, moniker: &ChildMoniker) -> bool {
-        let partial = moniker.to_partial();
+    pub async fn is_destroyed(
+        component: &ComponentInstance,
+        instanced_moniker: &InstancedChildMoniker,
+    ) -> bool {
+        let partial = instanced_moniker.to_partial();
         match *component.lock_state().await {
-            InstanceState::Resolved(ref s) => match s.get_child(moniker) {
+            InstanceState::Resolved(ref s) => match s.get_child(instanced_moniker) {
                 Some(child) => {
                     let child_execution = child.lock_execution().await;
                     s.get_live_child(&partial).is_none() && child_execution.is_shut_down()
@@ -459,9 +462,12 @@ pub(crate) mod test_utils {
             && child_execution.is_shut_down()
     }
 
-    pub async fn is_stopped(component: &ComponentInstance, moniker: &ChildMoniker) -> bool {
+    pub async fn is_stopped(
+        component: &ComponentInstance,
+        instanced_moniker: &InstancedChildMoniker,
+    ) -> bool {
         match *component.lock_state().await {
-            InstanceState::Resolved(ref s) => match s.get_child(moniker) {
+            InstanceState::Resolved(ref s) => match s.get_child(instanced_moniker) {
                 Some(child) => {
                     let child_execution = child.lock_execution().await;
                     println!("{}", child_execution.runtime.is_some());

@@ -260,8 +260,8 @@ where
                     .cloned()
                     .ok_or_else(|| {
                         let child_moniker = child_component
-                            .child_moniker()
-                            .expect("ChildMoniker should exist")
+                            .instanced_child_moniker()
+                            .expect("InstancedChildMoniker should exist")
                             .to_partial();
                         <U as ErrorNotFoundInChild>::error_not_found_in_child(
                             use_target.abs_moniker().clone(),
@@ -834,8 +834,10 @@ where
                 ExtendedInstanceInterface::<C>::Component(parent_component) => {
                     let parent_offer: O = {
                         let parent_offers = parent_component.lock_resolved_state().await?.offers();
-                        let child_moniker =
-                            target.child_moniker().expect("ChildMoniker should exist").to_partial();
+                        let child_moniker = target
+                            .instanced_child_moniker()
+                            .expect("ChildMoniker should exist")
+                            .to_partial();
                         find_matching_offer(use_.source_name(), &child_moniker, &parent_offers)
                             .cloned()
                             .ok_or_else(|| {
@@ -968,8 +970,10 @@ where
                 ExtendedInstanceInterface::<C>::Component(parent_component) => {
                     let parent_offer: O = {
                         let parent_offers = parent_component.lock_resolved_state().await?.offers();
-                        let child_moniker =
-                            target.child_moniker().expect("ChildMoniker should exist").to_partial();
+                        let child_moniker = target
+                            .instanced_child_moniker()
+                            .expect("ChildMoniker should exist")
+                            .to_partial();
                         find_matching_offer(
                             registration.source_name(),
                             &child_moniker,
@@ -1005,8 +1009,8 @@ where
                         .cloned()
                         .ok_or_else(|| {
                             let child_moniker = child_component
-                                .child_moniker()
-                                .expect("ChildMoniker should exist")
+                                .instanced_child_moniker()
+                                .expect("InstancedChildMoniker should exist")
                                 .to_partial();
                             <R as ErrorNotFoundInChild>::error_not_found_in_child(
                                 target.abs_moniker().clone(),
@@ -1124,8 +1128,10 @@ where
                         }
                         ExtendedInstanceInterface::<C>::Component(component) => component,
                     };
-                    let child_moniker =
-                        target.child_moniker().expect("ChildMoniker should exist").to_partial();
+                    let child_moniker = target
+                        .instanced_child_moniker()
+                        .expect("ChildMoniker should exist")
+                        .to_partial();
                     let parent_offer = {
                         let parent_offers = parent_component.lock_resolved_state().await?.offers();
                         find_matching_offer(offer.source_name(), &child_moniker, &parent_offers)
@@ -1192,7 +1198,7 @@ where
                 find_matching_expose(offer.source_name(), &child_exposes).cloned().ok_or_else(
                     || {
                         let child_moniker = child_component
-                            .child_moniker()
+                            .instanced_child_moniker()
                             .expect("ChildMoniker should exist")
                             .to_partial();
                         <O as ErrorNotFoundInChild>::error_not_found_in_child(
@@ -1291,7 +1297,7 @@ where
                             .cloned()
                             .ok_or_else(|| {
                                 let child_moniker = child_component
-                                    .child_moniker()
+                                    .instanced_child_moniker()
                                     .expect("ChildMoniker should exist")
                                     .to_partial();
                                 <E as ErrorNotFoundInChild>::error_not_found_in_child(

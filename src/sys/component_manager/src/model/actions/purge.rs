@@ -141,7 +141,7 @@ pub mod tests {
         cm_rust_testing::ComponentDeclBuilder,
         fidl_fuchsia_component_decl as fdecl, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{join, FutureExt},
-        moniker::{ChildMoniker, InstancedAbsoluteMoniker, PartialChildMoniker},
+        moniker::{InstancedAbsoluteMoniker, InstancedChildMoniker, PartialChildMoniker},
         std::sync::atomic::Ordering,
         std::sync::Weak,
     };
@@ -765,7 +765,7 @@ pub mod tests {
                 }
                 _ => panic!("not resolved"),
             };
-            assert_eq!(children, Vec::<ChildMoniker>::new());
+            assert_eq!(children, Vec::<InstancedChildMoniker>::new());
         }
         {
             let events: Vec<_> = test

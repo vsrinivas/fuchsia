@@ -4,8 +4,9 @@
 
 use {
     crate::{
-        child_moniker::ChildMonikerBase, error::MonikerError,
-        partial_child_moniker::PartialChildMoniker, relative_moniker::RelativeMonikerBase,
+        error::MonikerError,
+        partial_child_moniker::{ChildMonikerBase, PartialChildMoniker},
+        relative_moniker::RelativeMonikerBase,
     },
     core::cmp::{self, Ord, Ordering},
     itertools,

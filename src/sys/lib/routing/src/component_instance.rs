@@ -14,7 +14,9 @@ use {
     async_trait::async_trait,
     cm_rust::{CapabilityDecl, CollectionDecl, ExposeDecl, OfferDecl, UseDecl},
     derivative::Derivative,
-    moniker::{AbsoluteMoniker, ChildMoniker, InstancedAbsoluteMoniker, PartialChildMoniker},
+    moniker::{
+        AbsoluteMoniker, InstancedAbsoluteMoniker, InstancedChildMoniker, PartialChildMoniker,
+    },
     std::{
         clone::Clone,
         sync::{Arc, Weak},
@@ -33,7 +35,7 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
     }
 
     /// Returns this `ComponentInstanceInterface`'s child moniker, if it is not the root instance.
-    fn child_moniker(&self) -> Option<&ChildMoniker>;
+    fn instanced_child_moniker(&self) -> Option<&InstancedChildMoniker>;
 
     /// Returns this `ComponentInstanceInterface`'s instanced absolute moniker.
     fn instanced_moniker(&self) -> &InstancedAbsoluteMoniker;

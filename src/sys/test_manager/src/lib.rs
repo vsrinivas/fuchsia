@@ -1437,7 +1437,7 @@ impl RunningSuite {
                 .iter()
                 .skip(3)
                 .map(Clone::clone)
-                .collect::<Vec<moniker::ChildMoniker>>();
+                .collect::<Vec<moniker::InstancedChildMoniker>>();
             let moniker_relative_to_test_root = moniker::RelativeMoniker::new(vec![], down_path);
             sender
                 .send(Ok(SuiteEvents::suite_custom_artifact(ftest_manager::CustomArtifact {

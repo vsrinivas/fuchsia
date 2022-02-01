@@ -12,8 +12,8 @@ use {
         CapabilityDecl, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl, OfferDecl, UseDecl,
     },
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase,
-        InstancedAbsoluteMoniker, PartialChildMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, InstancedAbsoluteMoniker,
+        InstancedChildMoniker, PartialChildMoniker,
     },
     routing::{
         capability_source::{BuiltinCapabilities, NamespaceCapabilities},
@@ -100,7 +100,7 @@ impl ComponentInstanceForAnalyzer {
     ) -> Result<Arc<Self>, BuildAnalyzerModelError> {
         let environment = EnvironmentForAnalyzer::new_for_child(&parent, child)?;
         let instanced_moniker =
-            parent.instanced_moniker.child(ChildMoniker::new(child.name.clone(), None, 0));
+            parent.instanced_moniker.child(InstancedChildMoniker::new(child.name.clone(), None, 0));
         let abs_moniker = instanced_moniker.clone().to_partial();
         Ok(Arc::new(Self {
             instanced_moniker,
@@ -159,7 +159,7 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
         &self.abs_moniker
     }
 
-    fn child_moniker(&self) -> Option<&ChildMoniker> {
+    fn instanced_child_moniker(&self) -> Option<&InstancedChildMoniker> {
         self.instanced_moniker.leaf()
     }
 
