@@ -47,7 +47,7 @@ impl GenerateFidlSource {
             .as_ref()
             .ok_or_else(|| anyhow::format_err!("missing config declaration in manifest"))?;
 
-        let fidl_contents = config_client::create_fidl_source(config_decl, self.library_name);
+        let fidl_contents = config_client::fidl::create_fidl_source(config_decl, self.library_name);
 
         let formatted_fidl_contents = format_source(self.fidl_format, fidl_contents)?;
 

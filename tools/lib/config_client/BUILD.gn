@@ -7,7 +7,11 @@ import("//build/rust/rustc_library.gni")
 if (is_host) {
   rustc_library("config_client") {
     with_unit_tests = true
-    sources = [ "src/lib.rs" ]
+    sources = [
+      "src/fidl.rs",
+      "src/lib.rs",
+      "src/rust.rs",
+    ]
     deps = [
       "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
       "//src/sys/lib/cm_rust",

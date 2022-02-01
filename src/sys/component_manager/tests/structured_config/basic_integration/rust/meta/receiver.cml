@@ -2,7 +2,7 @@
     include: [ "//sdk/lib/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/basic_config_receiver_bin",
+        binary: "bin/basic_config_rust_receiver",
     },
     capabilities: [
         {
