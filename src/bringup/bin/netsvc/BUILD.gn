@@ -34,7 +34,6 @@ executable("netsvc") {
   }
   sources = [
     "debug-command.cc",
-    "debuglog.cc",
     "netsvc.cc",
   ]
   deps = [
@@ -73,6 +72,7 @@ source_set("args") {
 source_set("netsvc_common") {
   sources = [
     "board-info.cc",
+    "debuglog.cc",
     "file-api.cc",
     "netboot.cc",
     "netcp.cc",
@@ -103,6 +103,7 @@ source_set("netsvc_common") {
   ]
   public_deps = [
     ":inet6",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
@@ -115,6 +116,7 @@ source_set("netsvc_common") {
 test("netsvc-test") {
   sources = [
     "test/args-test.cc",
+    "test/debuglog-test.cc",
     "test/file-api-test.cc",
     "test/paver-test.cc",
     "test/payload-streamer-test.cc",

@@ -38,6 +38,11 @@ const MOCK_BOARD_REVISION: u32 = 0xDEADBEEF;
 const PAVE_IMAGE_LEN: u64 = (50 << 10) + 20;
 const PAVE_IMAGE_LEN_USIZE: usize = PAVE_IMAGE_LEN as usize;
 
+const LOG_MSG_PID: u64 = 1234;
+const LOG_MSG_TID: u64 = 6789;
+const LOG_MSG_TAG: &str = "tag";
+const LOG_MSG_CONTENTS: &str = "hello world";
+
 fn create_netsvc_realm<'a, N, T, V>(
     sandbox: &'a netemul::TestSandbox,
     name: N,
@@ -53,7 +58,7 @@ where
     let (mock_dir, server_end) = fidl::endpoints::create_endpoints().expect("create endpoints");
 
     enum Services {
-        ReadOnlyLog(fidl_fuchsia_boot::ReadOnlyLogRequestStream),
+        Log(fidl_fuchsia_logger::LogRequestStream),
         SysInfo(fidl_fuchsia_sysinfo::SysInfoRequestStream),
         Paver(fidl_fuchsia_paver::PaverRequestStream),
     }
@@ -61,7 +66,7 @@ where
     let mut fs = ServiceFs::new();
     let _: &mut ServiceFsDir<'_, _> = fs
         .dir("svc")
-        .add_fidl_service(Services::ReadOnlyLog)
+        .add_fidl_service(Services::Log)
         .add_fidl_service(Services::SysInfo)
         .add_fidl_service(Services::Paver);
     let _: &mut ServiceFs<_> =
@@ -69,23 +74,45 @@ where
 
     let fs = fs.for_each_concurrent(None, |r| async move {
         match r {
-            Services::ReadOnlyLog(rs) => {
+            Services::Log(rs) => {
                 let () = rs
-                    .map_ok(|fidl_fuchsia_boot::ReadOnlyLogRequest::Get { responder }| {
-                        // TODO(https://fxbug.dev/91150): Move netsvc to use LogListener
-                        // instead. We're temporarily using a loophole here that
-                        // zx_debuglog_create accepts an invalid root resource handle,
-                        // but that might not be true forever.
-                        let debuglog = zx::DebugLog::create(
-                            &zx::Handle::invalid().into(),
-                            zx::DebugLogOpts::READABLE,
-                        )
-                        .expect("failed to create debuglog handle");
-                        let () = responder.send(debuglog).expect("failed to respond");
+                    .for_each_concurrent(None, |req| async move {
+                        let log_listener = match req.expect("request stream error") {
+                            fidl_fuchsia_logger::LogRequest::ListenSafe {
+                                log_listener,
+                                control_handle: _,
+                                options,
+                            } => {
+                                assert_eq!(options, None);
+                                log_listener.into_proxy().expect("create proxy")
+                            }
+                            r @ fidl_fuchsia_logger::LogRequest::ListenSafeWithSelectors {
+                                ..
+                            }
+                            | r @ fidl_fuchsia_logger::LogRequest::DumpLogsSafe { .. } => {
+                                panic!("unsupported request {:?}", r)
+                            }
+                        };
+                        let messages_gen = (0..).map(|v| fidl_fuchsia_logger::LogMessage {
+                            pid: LOG_MSG_PID,
+                            tid: LOG_MSG_TID,
+                            time: zx::Duration::from_seconds(v).into_nanos(),
+                            severity: fidl_fuchsia_logger::LOG_LEVEL_DEFAULT.into(),
+                            dropped_logs: 0,
+                            tags: vec![LOG_MSG_TAG.to_string()],
+                            msg: LOG_MSG_CONTENTS.to_string(),
+                        });
+                        let log_listener = &log_listener;
+                        futures::stream::iter(messages_gen)
+                            .for_each(|mut msg| async move {
+                                let () = log_listener
+                                    .log(&mut msg)
+                                    .await
+                                    .expect("failed to send log to listener");
+                            })
+                            .await;
                     })
-                    .try_collect()
-                    .await
-                    .expect("handling request stream");
+                    .await;
             }
             Services::SysInfo(rs) => {
                 let () = rs
@@ -291,7 +318,7 @@ where
                                 name: Some(MOCK_SERVICES_NAME.to_string()),
                                 capability: Some(
                                     fidl_fuchsia_netemul::ExposedCapability::Protocol(
-                                        fidl_fuchsia_boot::ReadOnlyLogMarker::NAME.to_string(),
+                                        fidl_fuchsia_logger::LogMarker::NAME.to_string(),
                                     ),
                                 ),
                                 ..fidl_fuchsia_netemul::ChildDep::EMPTY
@@ -611,66 +638,71 @@ async fn debuglog(sock: fuchsia_async::net::UdpSocket, _scope_id: u32) {
     // The delay for retransmission is low on the first retransmission, which
     // should not make this test unnecessarily long, but we keep it to one
     // observation of that event.
-    let _: (fuchsia_async::net::UdpSocket, Option<u32>) =
-        futures::stream::iter(std::iter::repeat(Ack::Yes).take(10).chain(std::iter::once(Ack::No)))
-            .fold((sock, None), |(sock, seqno), ack| async move {
+    let _: (fuchsia_async::net::UdpSocket, Option<u32>) = futures::stream::iter(
+        std::iter::repeat(Ack::Yes).take(10).chain(std::iter::once(Ack::No)).enumerate(),
+    )
+    .fold((sock, None), |(sock, seqno), (index, ack)| async move {
+        let mut buf = [0; BUFFER_SIZE];
+        let (n, addr) = sock.recv_from(&mut buf[..]).await.expect("recv_from failed");
+        let mut bv = &buf[..n];
+        let pkt = bv.parse::<debuglog::DebugLogPacket<_>>().expect("parse failed");
+
+        match ack {
+            Ack::Yes => {
+                let () = send_message(
+                    debuglog::AckPacketBuilder::new(pkt.seqno()).into_serializer(),
+                    &sock,
+                    addr,
+                )
+                .await;
+            }
+            Ack::No => (),
+        }
+
+        let seqno = match seqno {
+            None => pkt.seqno(),
+            Some(s) => {
+                if pkt.seqno() <= s {
+                    // Don't verify repeat or old packets.
+                    return (sock, Some(s));
+                }
+                let nxt = s + 1;
+                assert_eq!(pkt.seqno(), nxt);
+                nxt
+            }
+        };
+
+        let nodename = pkt.nodename();
+        assert!(nodename.starts_with("fuchsia-"), "bad nodename {}", nodename);
+        let msg: &str = pkt.data();
+        assert_eq!(
+            msg,
+            format!(
+                "[{:05}.000] {:05}.{:05} [{}] {}\n",
+                index, LOG_MSG_PID, LOG_MSG_TID, LOG_MSG_TAG, LOG_MSG_CONTENTS,
+            )
+        );
+
+        // Wait for a repeat of the packet if we didn't ack.
+        match ack {
+            Ack::No => {
+                // NB: we need to read into a new buffer because we use
+                // variables stored in the old one for comparison.
                 let mut buf = [0; BUFFER_SIZE];
-                let (n, addr) = sock.recv_from(&mut buf[..]).await.expect("recv_from failed");
+                let (n, next_addr) = sock.recv_from(&mut buf[..]).await.expect("recv_from failed");
                 let mut bv = &buf[..n];
                 let pkt = bv.parse::<debuglog::DebugLogPacket<_>>().expect("parse failed");
+                assert_eq!(next_addr, addr);
+                assert_eq!(pkt.seqno(), seqno);
+                assert_eq!(pkt.nodename(), nodename);
+                assert_eq!(pkt.data(), msg);
+            }
+            Ack::Yes => (),
+        }
 
-                match ack {
-                    Ack::Yes => {
-                        let () = send_message(
-                            debuglog::AckPacketBuilder::new(pkt.seqno()).into_serializer(),
-                            &sock,
-                            addr,
-                        )
-                        .await;
-                    }
-                    Ack::No => (),
-                }
-
-                let seqno = match seqno {
-                    None => pkt.seqno(),
-                    Some(s) => {
-                        if pkt.seqno() <= s {
-                            // Don't verify repeat or old packets.
-                            return (sock, Some(s));
-                        }
-                        let nxt = s + 1;
-                        assert_eq!(pkt.seqno(), nxt);
-                        nxt
-                    }
-                };
-
-                let nodename = pkt.nodename();
-                assert!(nodename.starts_with("fuchsia-"), "bad nodename {}", nodename);
-                // TODO(https://fxbug.dev/91150): We can assert on message contents
-                // here when we move netsvc to use LogListener.
-                let msg: &str = pkt.data();
-
-                // Wait for a repeat of the packet if we didn't ack.
-                match ack {
-                    Ack::No => {
-                        // NB: we need to read into a new buffer because we use
-                        // variables stored in the old one for comparison.
-                        let mut buf = [0; BUFFER_SIZE];
-                        let (n, next_addr) =
-                            sock.recv_from(&mut buf[..]).await.expect("recv_from failed");
-                        let mut bv = &buf[..n];
-                        let pkt = bv.parse::<debuglog::DebugLogPacket<_>>().expect("parse failed");
-                        assert_eq!(next_addr, addr);
-                        assert_eq!(pkt.seqno(), seqno);
-                        assert_eq!(pkt.nodename(), nodename);
-                        assert_eq!(pkt.data(), msg);
-                    }
-                    Ack::Yes => (),
-                }
-
-                (sock, Some(seqno))
-            })
-            .await;
+        (sock, Some(seqno))
+    })
+    .await;
 }
 
 #[fixture(with_netsvc_and_netstack)]
