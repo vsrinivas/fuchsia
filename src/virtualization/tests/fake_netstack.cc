@@ -471,6 +471,14 @@ FakeNetstack::FakeNetstack()
 FakeNetstack::~FakeNetstack() {
   // Destruct the thread-hostile FakeNetwork instance on the dispatcher thread.
   RunOnExecutorSync(executor_, [network = std::move(network_)]() mutable { network.reset(); });
+  // Even once RunOnExecutorSync has completed the executor_ could still be running a task. This is
+  // because for us to know our 'task' completed, it gets wrapped in another task that signals us of
+  // completion. But now there is a chance of a race where we unblock and then finish this
+  // destructor before the executor_ finishes running the rest of the task and gets back to idle.
+  // Therefore we need to perform a graceful shutdown of the async loops thread to ensure there is
+  // definitely nothing running before shutting down the executor.
+  loop_.Quit();
+  loop_.JoinThreads();
 }
 
 void FakeNetstack::Install(sys::testing::EnvironmentServices& services) {
