@@ -16,8 +16,7 @@
 #include <map>
 #include <memory>
 
-namespace sys {
-namespace testing {
+namespace component_testing {
 namespace internal {
 
 class ComponentController final : public fuchsia::component::runner::ComponentController {
@@ -101,7 +100,6 @@ class LocalComponentRunner::Builder final {
 };
 
 }  // namespace internal
-}  // namespace testing
-}  // namespace sys
+}  // namespace component_testing
 
 #endif  // LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_LOCAL_COMPONENT_RUNNER_H_

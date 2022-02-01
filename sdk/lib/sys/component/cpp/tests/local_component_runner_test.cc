@@ -36,10 +36,9 @@
 namespace {
 
 // NOLINTNEXTLINE
-using namespace sys::testing::internal;
-
+using namespace component_testing;
 // NOLINTNEXTLINE
-using namespace sys::testing;
+using namespace component_testing::internal;
 
 class TestComponent : public LocalComponent {
  public:

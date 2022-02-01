@@ -12,8 +12,7 @@
 
 #include <memory>
 
-namespace sys {
-namespace testing {
+namespace component_testing {
 
 namespace {
 
@@ -24,7 +23,7 @@ LocalComponent::~LocalComponent() = default;
 
 void LocalComponent::Start(std::unique_ptr<LocalComponentHandles> mock_handles) {}
 
-LocalComponentHandles::LocalComponentHandles(fdio_ns_t* ns, OutgoingDirectory outgoing_dir)
+LocalComponentHandles::LocalComponentHandles(fdio_ns_t* ns, sys::OutgoingDirectory outgoing_dir)
     : namespace_(ns), outgoing_dir_(std::move(outgoing_dir)) {}
 
 LocalComponentHandles::~LocalComponentHandles() { ZX_ASSERT(fdio_ns_destroy(namespace_) == ZX_OK); }
@@ -43,17 +42,16 @@ LocalComponentHandles& LocalComponentHandles::operator=(LocalComponentHandles&& 
 
 fdio_ns_t* LocalComponentHandles::ns() { return namespace_; }
 
-OutgoingDirectory* LocalComponentHandles::outgoing() { return &outgoing_dir_; }
+sys::OutgoingDirectory* LocalComponentHandles::outgoing() { return &outgoing_dir_; }
 
-ServiceDirectory LocalComponentHandles::svc() {
+sys::ServiceDirectory LocalComponentHandles::svc() {
   zx::channel local;
   zx::channel remote;
   ZX_ASSERT(zx::channel::create(0, &local, &remote) == ZX_OK);
   ZX_ASSERT(fdio_ns_connect(namespace_, kSvcDirectoryPath,
                             fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                             remote.release()) == ZX_OK);
-  return ServiceDirectory(std::move(local));
+  return sys::ServiceDirectory(std::move(local));
 }
 
-}  // namespace testing
-}  // namespace sys
+}  // namespace component_testing

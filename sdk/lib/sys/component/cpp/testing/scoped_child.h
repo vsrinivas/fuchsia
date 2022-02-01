@@ -15,8 +15,7 @@
 
 #include <memory>
 
-namespace sys {
-namespace testing {
+namespace component_testing {
 
 // A scoped instance of a dynamically created child component. This class
 // will automatically destroy the child component once it goes out of scope.
@@ -123,15 +122,22 @@ class ScopedChild final {
 
  private:
   ScopedChild(std::shared_ptr<sys::ServiceDirectory> svc,
-              fuchsia::component::decl::ChildRef child_ref, ServiceDirectory exposed_dir);
+              fuchsia::component::decl::ChildRef child_ref, sys::ServiceDirectory exposed_dir);
 
   std::shared_ptr<sys::ServiceDirectory> svc_ = nullptr;
   fuchsia::component::decl::ChildRef child_ref_;
-  ServiceDirectory exposed_dir_;
+  sys::ServiceDirectory exposed_dir_;
   async_dispatcher_t* dispatcher_ = nullptr;
   bool has_moved_ = false;
 };
 
+}  // namespace component_testing
+
+// Until all clients of the API have been migrated, keep the legacy namespace.
+// TODO(fxbug.dev/90794): Remove this.
+namespace sys {
+namespace testing {
+using component_testing::ScopedChild;
 }  // namespace testing
 }  // namespace sys
 

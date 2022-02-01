@@ -20,8 +20,7 @@
 #include <memory>
 #include <random>
 
-namespace sys {
-namespace testing {
+namespace component_testing {
 
 namespace {
 
@@ -70,7 +69,8 @@ ScopedChild ScopedChild::New(std::string collection, std::string url,
 }
 
 ScopedChild::ScopedChild(std::shared_ptr<sys::ServiceDirectory> svc,
-                         fuchsia::component::decl::ChildRef child_ref, ServiceDirectory exposed_dir)
+                         fuchsia::component::decl::ChildRef child_ref,
+                         sys::ServiceDirectory exposed_dir)
     : svc_(std::move(svc)),
       child_ref_(std::move(child_ref)),
       exposed_dir_(std::move(exposed_dir)) {}
@@ -122,5 +122,4 @@ zx_status_t ScopedChild::Connect(const std::string& interface_name, zx::channel 
 
 std::string ScopedChild::GetChildName() const { return child_ref_.name; }
 
-}  // namespace testing
-}  // namespace sys
+}  // namespace component_testing

@@ -7,8 +7,7 @@
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
-namespace sys {
-namespace testing {
+namespace component_testing {
 namespace internal {
 
 const char* ConvertToString(fuchsia::component::test::RealmBuilderError2& error) {
@@ -95,5 +94,4 @@ void PanicWithMessage(const char* stacktrace, const char* context,
 }
 
 }  // namespace internal
-}  // namespace testing
-}  // namespace sys
+}  // namespace component_testing

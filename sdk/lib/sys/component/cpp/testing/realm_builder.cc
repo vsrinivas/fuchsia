@@ -29,8 +29,7 @@
 #include <variant>
 #include <vector>
 
-namespace sys {
-namespace testing {
+namespace component_testing {
 
 namespace {
 
@@ -106,26 +105,24 @@ std::vector<Output> ConvertToFidlVec(std::vector<Input> inputs) {
 
 fidl::InterfaceHandle<fuchsia::io::Directory> CreatePkgDirHandle() {
   int fd;
-  ZX_SYS_ASSERT_STATUS_OK(
+  ZX_COMPONENT_ASSERT_STATUS_OK(
       "fdio_open_fd",
       fdio_open_fd("/pkg", fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                    &fd));
   zx_handle_t handle;
-  ZX_SYS_ASSERT_STATUS_OK("fdio_fd_transfer", fdio_fd_transfer(fd, &handle));
+  ZX_COMPONENT_ASSERT_STATUS_OK("fdio_fd_transfer", fdio_fd_transfer(fd, &handle));
   auto channel = zx::channel(handle);
   return fidl::InterfaceHandle<fuchsia::io::Directory>(std::move(channel));
 }
 
 }  // namespace
 
-namespace experimental {
-
 // Implementation methods for Realm.
 
 Realm& Realm::AddChild(const std::string& child_name, const std::string& url,
                        ChildOptions options) {
   fuchsia::component::test::Realm_AddChild_Result result;
-  ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/AddChild", realm_proxy_->AddChild(child_name, url, ConvertToFidl(options), &result),
       result);
   return *this;
@@ -133,7 +130,7 @@ Realm& Realm::AddChild(const std::string& child_name, const std::string& url,
 Realm& Realm::AddLegacyChild(const std::string& child_name, const std::string& url,
                              ChildOptions options) {
   fuchsia::component::test::Realm_AddLegacyChild_Result result;
-  ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/AddLegacyChild",
       realm_proxy_->AddLegacyChild(child_name, url, ConvertToFidl(options), &result), result);
   return *this;
@@ -143,7 +140,7 @@ Realm& Realm::AddLocalChild(const std::string& child_name, LocalComponent* local
   ZX_SYS_ASSERT_NOT_NULL(local_impl);
   runner_builder_->Register(GetResolvedName(child_name), local_impl);
   fuchsia::component::test::Realm_AddLocalChild_Result result;
-  ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/AddLocalChild",
       realm_proxy_->AddLocalChild(child_name, ConvertToFidl(options), &result), result);
   return *this;
@@ -156,7 +153,7 @@ Realm Realm::AddChildRealm(const std::string& child_name, ChildOptions options) 
   Realm sub_realm(std::move(sub_realm_proxy), runner_builder_, std::move(sub_realm_scope));
 
   fuchsia::component::test::Realm_AddChildRealm_Result result;
-  ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/AddChildRealm",
       realm_proxy_->AddChildRealm(child_name, ConvertToFidl(options),
                                   sub_realm.realm_proxy_.NewRequest(), &result),
@@ -171,7 +168,7 @@ Realm& Realm::AddRoute(Route route) {
   auto target = ConvertToFidlVec<Ref, fuchsia::component::decl::Ref>(route.targets);
 
   fuchsia::component::test::Realm_AddRoute_Result result;
-  ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/AddRoute",
       realm_proxy_->AddRoute(std::move(capabilities), std::move(source), std::move(target),
                              &result),
@@ -212,9 +209,10 @@ RealmBuilder RealmBuilder::Create(std::shared_ptr<sys::ServiceDirectory> svc) {
   exposed_dir.Connect(factory_proxy.NewRequest());
   fuchsia::component::test::BuilderSyncPtr builder_proxy;
   fuchsia::component::test::RealmSyncPtr test_realm_proxy;
-  ZX_SYS_ASSERT_STATUS_OK("RealmBuilderFactory/Create",
-                          factory_proxy->Create(CreatePkgDirHandle(), test_realm_proxy.NewRequest(),
-                                                builder_proxy.NewRequest()));
+  ZX_COMPONENT_ASSERT_STATUS_OK(
+      "RealmBuilderFactory/Create",
+      factory_proxy->Create(CreatePkgDirHandle(), test_realm_proxy.NewRequest(),
+                            builder_proxy.NewRequest()));
   return RealmBuilder(svc, std::move(builder_proxy), std::move(test_realm_proxy));
 }
 
@@ -265,7 +263,7 @@ RealmRoot RealmBuilder::Build(async_dispatcher* dispatcher) {
   ZX_ASSERT_MSG(!realm_commited_, "Builder::Build() called after Realm already created");
   auto local_component_runner = runner_builder_->Build(dispatcher);
   fuchsia::component::test::Builder_Build_Result result;
-  ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Builder/Build", builder_proxy_->Build(local_component_runner->NewBinding(), &result),
       result);
   realm_commited_ = true;
@@ -302,7 +300,4 @@ zx_status_t RealmRoot::Connect(const std::string& interface_name, zx::channel re
 
 std::string RealmRoot::GetChildName() const { return root_.GetChildName(); }
 
-}  // namespace experimental
-
-}  // namespace testing
-}  // namespace sys
+}  // namespace component_testing

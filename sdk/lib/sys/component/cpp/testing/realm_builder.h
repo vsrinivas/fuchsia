@@ -25,10 +25,7 @@
 #include <variant>
 #include <vector>
 
-namespace sys {
-namespace testing {
-
-namespace experimental {
+namespace component_testing {
 
 // Default child options provided to all components.
 const ChildOptions kDefaultChildOptions{.startup_mode = StartupMode::LAZY, .environment = ""};
@@ -220,8 +217,17 @@ class RealmBuilder final {
   Realm root_;
 };
 
-}  // namespace experimental
+}  // namespace component_testing
 
+// Until all clients of the API have been migrated, keep the legacy namespace.
+// TODO(fxbug.dev/90794): Remove this.
+namespace sys {
+namespace testing {
+namespace experimental {
+using component_testing::Realm;
+using component_testing::RealmBuilder;
+using component_testing::RealmRoot;
+}  // namespace experimental
 }  // namespace testing
 }  // namespace sys
 

@@ -19,8 +19,7 @@
 #include <memory>
 #include <optional>
 
-namespace sys {
-namespace testing {
+namespace component_testing {
 namespace internal {
 
 namespace {
@@ -40,9 +39,9 @@ std::string ExtractLocalComponentName(const fuchsia::data::Dictionary& program) 
 std::unique_ptr<LocalComponentHandles> CreateFromStartInfo(
     fuchsia::component::runner::ComponentStartInfo start_info, async_dispatcher_t* dispatcher) {
   fdio_ns_t* ns;
-  ZX_SYS_ASSERT_STATUS_OK("CreateFromStartInfo", fdio_ns_create(&ns));
+  ZX_COMPONENT_ASSERT_STATUS_OK("CreateFromStartInfo", fdio_ns_create(&ns));
   for (auto& entry : *start_info.mutable_ns()) {
-    ZX_SYS_ASSERT_STATUS_OK(
+    ZX_COMPONENT_ASSERT_STATUS_OK(
         "CreateFromStartInfo",
         fdio_ns_bind(ns, entry.path().c_str(), entry.mutable_directory()->TakeChannel().release()));
   }
@@ -111,5 +110,4 @@ bool LocalComponentRunner::Builder::Contains(std::string name) const {
 }
 
 }  // namespace internal
-}  // namespace testing
-}  // namespace sys
+}  // namespace component_testing

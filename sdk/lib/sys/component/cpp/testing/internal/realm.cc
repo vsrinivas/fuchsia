@@ -9,8 +9,7 @@
 
 #include <cstddef>
 
-namespace sys {
-namespace testing {
+namespace component_testing {
 namespace internal {
 
 fuchsia::component::RealmSyncPtr CreateRealmPtr(const sys::ComponentContext* context) {
@@ -31,15 +30,15 @@ fuchsia::component::RealmSyncPtr CreateRealmPtr(std::shared_ptr<sys::ServiceDire
   return realm;
 }
 
-ServiceDirectory OpenExposedDir(fuchsia::component::Realm_Sync* realm,
-                                const fuchsia::component::decl::ChildRef& child_ref) {
+sys::ServiceDirectory OpenExposedDir(fuchsia::component::Realm_Sync* realm,
+                                     const fuchsia::component::decl::ChildRef& child_ref) {
   ZX_SYS_ASSERT_NOT_NULL(realm);
   fuchsia::io::DirectorySyncPtr exposed_dir;
   fuchsia::component::Realm_OpenExposedDir_Result result;
-  ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/OpenExposedDir", realm->OpenExposedDir(child_ref, exposed_dir.NewRequest(), &result),
       result);
-  return ServiceDirectory(std::move(exposed_dir));
+  return sys::ServiceDirectory(std::move(exposed_dir));
 }
 
 void CreateChild(fuchsia::component::Realm_Sync* realm, std::string collection, std::string name,
@@ -53,7 +52,7 @@ void CreateChild(fuchsia::component::Realm_Sync* realm, std::string collection, 
   child_decl.set_url(url);
   child_decl.set_startup(fuchsia::component::decl::StartupMode::LAZY);
   fuchsia::component::Realm_CreateChild_Result result;
-  ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/CreateChild",
       realm->CreateChild(std::move(collection_ref), std::move(child_decl),
                          fuchsia::component::CreateChildArgs{}, &result),
@@ -64,8 +63,8 @@ void DestroyChild(fuchsia::component::Realm_Sync* realm,
                   fuchsia::component::decl::ChildRef child_ref) {
   ZX_SYS_ASSERT_NOT_NULL(realm);
   fuchsia::component::Realm_DestroyChild_Result result;
-  ZX_SYS_ASSERT_STATUS_AND_RESULT_OK("Realm/DestroyChild",
-                                     realm->DestroyChild(std::move(child_ref), &result), result);
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
+      "Realm/DestroyChild", realm->DestroyChild(std::move(child_ref), &result), result);
 }
 
 void DestroyChild(fuchsia::component::Realm* realm, fuchsia::component::decl::ChildRef child_ref) {
@@ -74,5 +73,4 @@ void DestroyChild(fuchsia::component::Realm* realm, fuchsia::component::decl::Ch
 }
 
 }  // namespace internal
-}  // namespace testing
-}  // namespace sys
+}  // namespace component_testing

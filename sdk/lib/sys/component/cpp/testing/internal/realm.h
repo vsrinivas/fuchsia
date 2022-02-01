@@ -13,14 +13,13 @@
 #include <memory>
 #include <string>
 
-namespace sys {
-namespace testing {
+namespace component_testing {
 namespace internal {
 
 fuchsia::component::RealmSyncPtr CreateRealmPtr(const sys::ComponentContext* context);
 fuchsia::component::RealmSyncPtr CreateRealmPtr(std::shared_ptr<sys::ServiceDirectory> svc);
-ServiceDirectory OpenExposedDir(fuchsia::component::Realm_Sync* realm,
-                                const fuchsia::component::decl::ChildRef& child_ref);
+sys::ServiceDirectory OpenExposedDir(fuchsia::component::Realm_Sync* realm,
+                                     const fuchsia::component::decl::ChildRef& child_ref);
 
 void CreateChild(fuchsia::component::Realm_Sync* realm, std::string collection, std::string name,
                  std::string url);
@@ -30,7 +29,6 @@ void DestroyChild(fuchsia::component::Realm_Sync* realm,
 void DestroyChild(fuchsia::component::Realm* realm, fuchsia::component::decl::ChildRef child_ref);
 
 }  // namespace internal
-}  // namespace testing
-}  // namespace sys
+}  // namespace component_testing
 
 #endif  // LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_REALM_H_

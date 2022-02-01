@@ -10,8 +10,7 @@
 #ifndef LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_ERRORS_H_
 #define LIB_SYS_COMPONENT_CPP_TESTING_INTERNAL_ERRORS_H_
 
-namespace sys {
-namespace testing {
+namespace component_testing {
 namespace internal {
 
 const char* ConvertToString(fuchsia::component::test::RealmBuilderError2& error);
@@ -24,27 +23,27 @@ void PanicWithMessage(const char* stacktrace, const char* context,
                       fuchsia::component::Error& error);
 
 }  // namespace internal
-}  // namespace testing
-}  // namespace sys
+}  // namespace component_testing
 
-#define ZX_SYS_ASSERT_STATUS_OK(method, status)                                            \
-  do {                                                                                     \
-    if ((status) != ZX_OK) {                                                               \
-      ::sys::testing::internal::PanicWithMessage(__PRETTY_FUNCTION__, (method), (status)); \
-    }                                                                                      \
+#define ZX_COMPONENT_ASSERT_STATUS_OK(method, status)                                           \
+  do {                                                                                          \
+    if ((status) != ZX_OK) {                                                                    \
+      ::component_testing::internal::PanicWithMessage(__PRETTY_FUNCTION__, (method), (status)); \
+    }                                                                                           \
   } while (0)
 
-#define ZX_SYS_ASSERT_RESULT_OK(method, result)                                                  \
-  do {                                                                                           \
-    if ((result).is_err()) {                                                                     \
-      ::sys::testing::internal::PanicWithMessage(__PRETTY_FUNCTION__, (method), (result).err()); \
-    }                                                                                            \
+#define ZX_COMPONENT_ASSERT_RESULT_OK(method, result)                                \
+  do {                                                                               \
+    if ((result).is_err()) {                                                         \
+      ::component_testing::internal::PanicWithMessage(__PRETTY_FUNCTION__, (method), \
+                                                      (result).err());               \
+    }                                                                                \
   } while (0)
 
-#define ZX_SYS_ASSERT_STATUS_AND_RESULT_OK(method, status, result) \
-  do {                                                             \
-    ZX_SYS_ASSERT_STATUS_OK((method), (status));                   \
-    ZX_SYS_ASSERT_RESULT_OK((method), (result));                   \
+#define ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(method, status, result) \
+  do {                                                                   \
+    ZX_COMPONENT_ASSERT_STATUS_OK((method), (status));                   \
+    ZX_COMPONENT_ASSERT_RESULT_OK((method), (result));                   \
   } while (0)
 
 #define ZX_SYS_ASSERT_NOT_NULL(value)                                                           \

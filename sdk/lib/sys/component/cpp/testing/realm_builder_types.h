@@ -19,8 +19,7 @@
 
 // This file contains structs used by the RealmBuilder library to create realms.
 
-namespace sys {
-namespace testing {
+namespace component_testing {
 
 // A protocol capability. The name refers to the name of the FIDL protocol,
 // e.g. `fuchsia.logger.LogSink`.
@@ -53,7 +52,7 @@ using Capability = cpp17::variant<Protocol, Service, Directory>;
 class LocalComponentHandles final {
  public:
   // [START_EXCLUDE]
-  LocalComponentHandles(fdio_ns_t* ns, OutgoingDirectory outgoing_dir);
+  LocalComponentHandles(fdio_ns_t* ns, sys::OutgoingDirectory outgoing_dir);
   ~LocalComponentHandles();
 
   LocalComponentHandles(LocalComponentHandles&&) noexcept;
@@ -70,16 +69,16 @@ class LocalComponentHandles final {
   // Returns a wrapper around the component's outgoing directory. The mock
   // component may publish capabilities using the returned object. The returned
   // pointer will be invalid once *this is destroyed.
-  OutgoingDirectory* outgoing();
+  sys::OutgoingDirectory* outgoing();
 
   // Convenience method to construct a ServiceDirectory by opening a handle to
   // "/svc" in the namespace object returned by `ns()`.
-  ServiceDirectory svc();
+  sys::ServiceDirectory svc();
 
   // [START_EXCLUDE]
  private:
   fdio_ns_t* namespace_;
-  OutgoingDirectory outgoing_dir_;
+  sys::OutgoingDirectory outgoing_dir_;
   // [END_EXCLUDE]
 };
 // [END mock_handles_cpp]
@@ -129,6 +128,24 @@ struct Route {
   std::vector<Ref> targets;
 };
 
+}  // namespace component_testing
+
+// Until all clients of the API have been migrated, keep the legacy namespace.
+// TODO(fxbug.dev/90794): Remove this.
+namespace sys {
+namespace testing {
+using component_testing::Capability;
+using component_testing::ChildOptions;
+using component_testing::ChildRef;
+using component_testing::Directory;
+using component_testing::LocalComponent;
+using component_testing::LocalComponentHandles;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::Ref;
+using component_testing::Route;
+using component_testing::Service;
+using component_testing::StartupMode;
 }  // namespace testing
 }  // namespace sys
 
