@@ -166,7 +166,6 @@ zx_status_t Tas58xx::Reset() {
   }
   constexpr float kDefaultGainDb = -30.f;
   SetGainState({.gain = kDefaultGainDb, .muted = true});
-  initialized_ = true;
   return ZX_OK;
 }
 
@@ -294,6 +293,40 @@ void Tas58xx::SetProcessingElement(
 
   callback(fuchsia::hardware::audio::SignalProcessing_SetProcessingElement_Result::WithResponse(
       fuchsia::hardware::audio::SignalProcessing_SetProcessingElement_Response()));
+}
+
+void Tas58xx::GetTopologies(
+    fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) {
+  fuchsia::hardware::audio::EdgePair edge;
+  edge.processing_element_id_from = kAglPeId;
+  edge.processing_element_id_to = kAglPeId;
+
+  std::vector<fuchsia::hardware::audio::EdgePair> edges;
+  edges.emplace_back(edge);
+
+  fuchsia::hardware::audio::Topology topology;
+  topology.set_id(kTopologyId);
+  topology.set_processing_elements_edge_pairs(edges);
+
+  std::vector<fuchsia::hardware::audio::Topology> topologies;
+  topologies.emplace_back(std::move(topology));
+
+  fuchsia::hardware::audio::SignalProcessing_GetTopologies_Response response(std::move(topologies));
+  fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result result;
+  result.set_response(std::move(response));
+  callback(std::move(result));
+}
+
+void Tas58xx::SetTopology(
+    uint64_t topology_id,
+    fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) {
+  if (topology_id != kTopologyId) {
+    callback(fuchsia::hardware::audio::SignalProcessing_SetTopology_Result::WithErr(
+        ZX_ERR_INVALID_ARGS));
+    return;
+  }
+  callback(fuchsia::hardware::audio::SignalProcessing_SetTopology_Result::WithResponse(
+      fuchsia::hardware::audio::SignalProcessing_SetTopology_Response()));
 }
 
 DaiSupportedFormats Tas58xx::GetDaiFormats() { return kSupportedDaiDaiFormats; }

@@ -22,6 +22,8 @@ namespace audio {
 struct Tas58xxCodec : public Tas58xx {
   explicit Tas58xxCodec(zx_device_t* parent, const ddk::I2cChannel& i2c) : Tas58xx(parent, i2c) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
+  uint64_t GetTopologyId() { return Tas58xx::GetTopologyId(); }
+  uint64_t GetAglPeId() { return Tas58xx::GetAglPeId(); }
 };
 
 TEST(Tas58xxTest, GoodSetDai) {
@@ -402,6 +404,56 @@ TEST(Tas58xxTest, SetAglSignalProcessing) {
     auto unused = client.GetInfo();
     static_cast<void>(unused);
   }
+
+  mock_i2c.VerifyAndClear();
+}
+
+TEST(Tas58xxTest, GetTopologySignalProcessing) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+
+  ASSERT_OK(
+      SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(), mock_i2c.GetProto()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
+  auto codec_proto = codec->GetProto();
+
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  zx::channel channel_remote, channel_local;
+  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+  ddk::CodecProtocolClient proto_client;
+  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+  fuchsia::hardware::audio::CodecSyncPtr codec_client;
+  codec_client.Bind(std::move(channel_local));
+
+  // We should get one topology with an AGL processing element.
+  fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result result;
+  ASSERT_OK(codec_client->GetTopologies(&result));
+  ASSERT_FALSE(result.is_err());
+  ASSERT_EQ(result.response().topologies.size(), 1);
+  ASSERT_EQ(result.response().topologies[0].id(), codec->GetTopologyId());
+  ASSERT_EQ(result.response().topologies[0].processing_elements_edge_pairs().size(), 1);
+  ASSERT_EQ(result.response()
+                .topologies[0]
+                .processing_elements_edge_pairs()[0]
+                .processing_element_id_from,
+            codec->GetAglPeId());
+  ASSERT_EQ(
+      result.response().topologies[0].processing_elements_edge_pairs()[0].processing_element_id_to,
+      codec->GetAglPeId());
+
+  // Set the only topology must work.
+  fuchsia::hardware::audio::SignalProcessing_SetTopology_Result result2;
+  ASSERT_OK(codec_client->SetTopology(codec->GetTopologyId(), &result2));
+  ASSERT_FALSE(result2.is_err());
+
+  // Set the an incorrect topology id must fail.
+  fuchsia::hardware::audio::SignalProcessing_SetTopology_Result result3;
+  ASSERT_OK(codec_client->SetTopology(codec->GetTopologyId() + 1, &result3));
+  ASSERT_TRUE(result3.is_err());
 
   mock_i2c.VerifyAndClear();
 }

@@ -50,14 +50,22 @@ class Tas58xx : public SimpleCodecServer {
   void SetProcessingElement(
       uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementControl control,
       fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback) override;
+  void GetTopologies(
+      fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) override;
+  void SetTopology(
+      uint64_t topology_id,
+      fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) override;
 
-  std::atomic<bool> initialized_ = false;  // Protected for unit tests.
+  // Protected for unit tests.
+  uint64_t GetTopologyId() { return kTopologyId; }
+  uint64_t GetAglPeId() { return kAglPeId; }
 
  private:
   static constexpr float kMaxGain = 24.0;
   static constexpr float kMinGain = -103.0;
   static constexpr float kGainStep = 0.5;
   static constexpr uint64_t kAglPeId = 1;
+  static constexpr uint64_t kTopologyId = 1;
 
   zx_status_t WriteReg(uint8_t reg, uint8_t value) TA_REQ(lock_);
   zx_status_t WriteRegs(uint8_t* regs, size_t count) TA_REQ(lock_);
