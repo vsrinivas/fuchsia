@@ -67,3 +67,80 @@ TEST(Table, Equality) {
   EXPECT_NE(table, different2);
   EXPECT_NE(table, different3);
 }
+
+TEST(Table, PresenceAccessors) {
+  test_types::SampleTable sample_table{{.x = 0, .y = 1, .b = false}};
+  EXPECT_TRUE(sample_table.x());
+  EXPECT_TRUE(sample_table.x().has_value());
+  EXPECT_TRUE(sample_table.y());
+  EXPECT_TRUE(sample_table.y().has_value());
+  EXPECT_FALSE(sample_table.vector_of_struct());
+  EXPECT_FALSE(sample_table.vector_of_struct().has_value());
+  EXPECT_TRUE(sample_table.b());
+  EXPECT_TRUE(sample_table.b().has_value());
+}
+
+TEST(Table, ValueAccessors) {
+  std::vector<test_types::CopyableStruct> vec{{3}, {4}};
+  test_types::SampleTable sample_table{{.x = 0, .y = 1, .vector_of_struct = vec, .b = false}};
+  EXPECT_EQ(0, sample_table.x());
+  EXPECT_EQ(0, sample_table.x().value());
+  EXPECT_EQ(1, sample_table.y());
+  EXPECT_EQ(1, sample_table.y().value());
+  EXPECT_EQ(vec, sample_table.vector_of_struct());
+  EXPECT_EQ(vec, sample_table.vector_of_struct().value());
+  EXPECT_EQ(false, sample_table.b());
+  EXPECT_EQ(false, sample_table.b().value());
+}
+
+TEST(Table, SetAndClear) {
+  test_types::SampleTable sample_table{};
+  EXPECT_TRUE(sample_table.IsEmpty());
+  sample_table.x() = 42;
+  sample_table.y() = 0;
+  EXPECT_FALSE(sample_table.IsEmpty());
+  EXPECT_EQ(sample_table.x(), 42);
+  EXPECT_EQ(sample_table.x().value(), 42);
+  EXPECT_TRUE(sample_table.x());
+  EXPECT_TRUE(sample_table.x().has_value());
+  EXPECT_EQ(sample_table.y(), 0);
+  EXPECT_EQ(sample_table.y().value(), 0);
+  EXPECT_TRUE(sample_table.y());
+  EXPECT_TRUE(sample_table.y().has_value());
+  sample_table.y() = std::nullopt;
+  EXPECT_FALSE(sample_table.IsEmpty());
+  EXPECT_FALSE(sample_table.y());
+  EXPECT_FALSE(sample_table.y().has_value());
+  EXPECT_TRUE(sample_table.x());
+  sample_table.x().reset();
+  EXPECT_TRUE(sample_table.IsEmpty());
+  EXPECT_FALSE(sample_table.x());
+  EXPECT_FALSE(sample_table.x().has_value());
+}
+
+TEST(Table, Copy) {
+  test_types::SampleTable original{
+      {.x = 1, .y = 2, .vector_of_struct = std::vector<test_types::CopyableStruct>{{3}, {4}}}};
+  test_types::SampleTable copy = original;
+  EXPECT_EQ(copy, original);
+  original.vector_of_struct()->push_back({5});
+  EXPECT_NE(copy, original);
+}
+
+TEST(Table, Move) {
+  test_types::SampleTable original{
+      {.x = 1, .y = 2, .vector_of_struct = std::vector<test_types::CopyableStruct>{{3}, {4}}}};
+  test_types::SampleTable moved = std::move(original);
+  EXPECT_EQ(original.x(), 1);
+  EXPECT_EQ(original.y(), 2);
+  EXPECT_EQ(original.vector_of_struct(), (std::vector<test_types::CopyableStruct>{}));
+  EXPECT_EQ(moved.x(), 1);
+  EXPECT_EQ(moved.y(), 2);
+  EXPECT_EQ(moved.vector_of_struct(), (std::vector<test_types::CopyableStruct>{{3}, {4}}));
+
+  test_types::TestHandleTable original_resource{{.hs = MakeHandleStruct()}};
+  zx_handle_t handle = original_resource.hs()->h().get();
+  test_types::TestHandleTable moved_resource = std::move(original_resource);
+  EXPECT_EQ(handle, moved_resource.hs()->h().get());
+  EXPECT_EQ(ZX_HANDLE_INVALID, original_resource.hs()->h().get());
+}
