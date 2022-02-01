@@ -6,6 +6,8 @@ use crate::container::ComponentIdentity;
 use async_trait::async_trait;
 use fidl_fuchsia_io::DirectoryProxy;
 use fidl_fuchsia_logger::LogSinkRequestStream;
+use fuchsia_inspect::{self as inspect, NumericProperty};
+use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -15,6 +17,7 @@ use std::{
 use thiserror::Error;
 
 const MAX_EVENT_BUS_CAPACITY: usize = 1024;
+const RECENT_EVENT_LIMIT: usize = 200;
 
 /// Core archivist internal event router that supports multiple event producers and multiple event
 /// consumers.
@@ -23,17 +26,19 @@ pub struct EventRouter {
     producers_registered: BTreeSet<AnyEventType>,
     event_sender: mpsc::Sender<Event>,
     event_receiver: mpsc::Receiver<Event>,
+    inspect_logger: EventStreamLogger,
 }
 
 impl EventRouter {
     /// Creates a new empty event router.
-    pub fn new() -> Self {
+    pub fn new(node: inspect::Node) -> Self {
         let (event_sender, event_receiver) = mpsc::channel(MAX_EVENT_BUS_CAPACITY);
         Self {
             consumers: BTreeMap::new(),
             event_sender,
             event_receiver,
             producers_registered: BTreeSet::new(),
+            inspect_logger: EventStreamLogger::new(node),
         }
     }
 
@@ -78,6 +83,7 @@ impl EventRouter {
     pub async fn start(mut self) -> Result<(), RouterError> {
         self.validate_routing()?;
         while let Some(event) = self.event_receiver.next().await {
+            self.inspect_logger.log(&event);
             let consumers = match self.consumers.get_mut(&event.ty()) {
                 Some(consumers) => consumers,
                 None => continue,
@@ -149,6 +155,58 @@ impl Dispatcher {
     }
 }
 
+struct EventStreamLogger {
+    counters: BTreeMap<AnyEventType, inspect::UintProperty>,
+    component_log_node: BoundedListNode,
+    counters_node: inspect::Node,
+    _node: inspect::Node,
+}
+
+impl EventStreamLogger {
+    /// Creates a new event logger. All inspect data will be written as children of `parent`.
+    pub fn new(node: inspect::Node) -> Self {
+        let counters_node = node.create_child("event_counts");
+        let recent_events_node = node.create_child("recent_events");
+        Self {
+            _node: node,
+            counters: BTreeMap::new(),
+            counters_node,
+            component_log_node: BoundedListNode::new(recent_events_node, RECENT_EVENT_LIMIT),
+        }
+    }
+
+    /// Log a new component event to inspect.
+    pub fn log(&mut self, event: &Event) {
+        let ty = event.ty();
+        if self.counters.contains_key(&ty) {
+            self.counters.get_mut(&ty).unwrap().add(1);
+        } else {
+            let counter = self.counters_node.create_uint(ty.as_ref(), 1);
+            self.counters.insert(ty.clone(), counter);
+        }
+        // TODO(fxbug.dev/92374): leverage string references for the payload.
+        match &event.payload {
+            EventPayload::ComponentStarted(ComponentStartedPayload { component })
+            | EventPayload::ComponentStopped(ComponentStoppedPayload { component })
+            | EventPayload::DiagnosticsReady(DiagnosticsReadyPayload { component, .. })
+            | EventPayload::LogSinkRequested(LogSinkRequestedPayload { component, .. }) => {
+                self.log_inspect(&ty.as_ref(), &component);
+            }
+        }
+    }
+
+    fn log_inspect(&mut self, event_name: &str, identity: &ComponentIdentity) {
+        // TODO(fxbug.dev/92374): leverage string references for the keys.
+        inspect_log!(self.component_log_node,
+            event: event_name,
+            moniker: match &identity.instance_id {
+                Some(instance_id) => format!("{}:{}", identity.relative_moniker, instance_id),
+                None => identity.relative_moniker.to_string(),
+            }
+        );
+    }
+}
+
 /// Set of errors that can happen when setting up an event router and executing its dispatching loop.
 #[derive(Debug, Error)]
 pub enum RouterError {
@@ -190,14 +248,20 @@ pub enum AnyEventType {
     Singleton(SingletonEventType),
 }
 
+impl AsRef<str> for AnyEventType {
+    fn as_ref(&self) -> &str {
+        match &self {
+            Self::General(event) => event.as_ref(),
+            Self::Singleton(singleton_event) => singleton_event.as_ref(),
+        }
+    }
+}
+
 /// Event types that don't contain singleton data and can be cloned directly.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum EventType {
     ComponentStarted,
     ComponentStopped,
-    InspectDisconnected,
-    LogSinkRequested,
-    LogsDisconnected,
 }
 
 /// Event types that contain singleton data. When these events are cloned, their singleton data
@@ -206,7 +270,24 @@ pub enum EventType {
 pub enum SingletonEventType {
     DiagnosticsReady,
     LogSinkRequested,
-    LogsReady,
+}
+
+impl AsRef<str> for EventType {
+    fn as_ref(&self) -> &str {
+        match &self {
+            Self::ComponentStarted => "component_started",
+            Self::ComponentStopped => "component_stopped",
+        }
+    }
+}
+
+impl AsRef<str> for SingletonEventType {
+    fn as_ref(&self) -> &str {
+        match &self {
+            Self::DiagnosticsReady => "diagnostics_ready",
+            Self::LogSinkRequested => "log_sink_requested",
+        }
+    }
 }
 
 impl Into<AnyEventType> for EventType {
@@ -323,6 +404,7 @@ mod tests {
     use assert_matches::assert_matches;
     use fidl_fuchsia_logger::LogSinkMarker;
     use fuchsia_async as fasync;
+    use fuchsia_inspect::assert_data_tree;
     use futures::{lock::Mutex, FutureExt};
     use lazy_static::lazy_static;
 
@@ -332,11 +414,48 @@ mod tests {
             ComponentIdentifier::parse_from_moniker("./a/b").unwrap(),
             TEST_URL
         );
+        static ref LEGACY_IDENTITY: ComponentIdentity = ComponentIdentity::from_identifier_and_url(
+            ComponentIdentifier::Legacy {
+                instance_id: "12345".to_string(),
+                moniker: vec!["a", "b", "foo.cmx"].into(),
+            },
+            &*TEST_URL
+        );
     }
 
     #[derive(Default)]
     struct TestEventProducer {
         dispatcher: Dispatcher,
+    }
+
+    impl TestEventProducer {
+        async fn emit(&mut self, event_type: AnyEventType, identity: ComponentIdentity) {
+            let event = match event_type {
+                AnyEventType::General(EventType::ComponentStarted) => Event {
+                    payload: EventPayload::ComponentStarted(ComponentStartedPayload {
+                        component: identity,
+                    }),
+                },
+                AnyEventType::General(EventType::ComponentStopped) => Event {
+                    payload: EventPayload::ComponentStopped(ComponentStoppedPayload {
+                        component: identity,
+                    }),
+                },
+                AnyEventType::Singleton(SingletonEventType::DiagnosticsReady) => Event {
+                    payload: EventPayload::DiagnosticsReady(DiagnosticsReadyPayload {
+                        component: identity,
+                        directory: None,
+                    }),
+                },
+                AnyEventType::Singleton(SingletonEventType::LogSinkRequested) => Event {
+                    payload: EventPayload::LogSinkRequested(LogSinkRequestedPayload {
+                        component: identity,
+                        request_stream: None,
+                    }),
+                },
+            };
+            self.dispatcher.emit(event).await.unwrap();
+        }
     }
 
     impl EventProducer for TestEventProducer {
@@ -367,7 +486,7 @@ mod tests {
     async fn invalid_routing() {
         let mut producer = TestEventProducer::default();
         let (_receiver, consumer) = TestEventConsumer::new();
-        let mut router = EventRouter::new();
+        let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             events: vec![EventType::ComponentStarted],
@@ -390,7 +509,7 @@ mod tests {
 
         let mut producer = TestEventProducer::default();
         let (_receiver, consumer) = TestEventConsumer::new();
-        let mut router = EventRouter::new();
+        let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             events: vec![],
@@ -418,7 +537,7 @@ mod tests {
         let mut producer = TestEventProducer::default();
         let (mut first_receiver, first_consumer) = TestEventConsumer::new();
         let (mut second_receiver, second_consumer) = TestEventConsumer::new();
-        let mut router = EventRouter::new();
+        let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             events: vec![],
@@ -470,7 +589,8 @@ mod tests {
         let mut producer = TestEventProducer::default();
         let (mut first_receiver, first_consumer) = TestEventConsumer::new();
         let (mut second_receiver, second_consumer) = TestEventConsumer::new();
-        let mut router = EventRouter::new();
+        let inspector = inspect::Inspector::new();
+        let mut router = EventRouter::new(inspector.root().create_child("events"));
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             events: vec![EventType::ComponentStarted],
@@ -519,7 +639,7 @@ mod tests {
         let (mut first_receiver, first_consumer) = TestEventConsumer::new();
         let (mut second_receiver, second_consumer) = TestEventConsumer::new();
         let (mut third_receiver, third_consumer) = TestEventConsumer::new();
-        let mut router = EventRouter::new();
+        let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             events: vec![EventType::ComponentStarted],
@@ -577,5 +697,95 @@ mod tests {
         assert_matches!(event.payload, EventPayload::ComponentStarted(_));
         assert!(first_receiver.next().now_or_never().unwrap().is_none());
         assert!(third_receiver.next().now_or_never().unwrap().is_none());
+    }
+
+    #[fuchsia::test]
+    async fn inspect_log() {
+        let inspector = inspect::Inspector::new();
+        let mut router = EventRouter::new(inspector.root().create_child("events"));
+        let mut producer1 = TestEventProducer::default();
+        let mut producer2 = TestEventProducer::default();
+        let (receiver, consumer) = TestEventConsumer::new();
+        router.add_consumer(ConsumerConfig {
+            consumer: &consumer,
+            events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
+            singleton_events: vec![
+                SingletonEventType::LogSinkRequested,
+                SingletonEventType::DiagnosticsReady,
+            ],
+        });
+        router.add_producer(ProducerConfig {
+            producer: &mut producer1,
+            events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
+            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+        });
+        router.add_producer(ProducerConfig {
+            producer: &mut producer2,
+            events: vec![EventType::ComponentStarted],
+            singleton_events: vec![SingletonEventType::LogSinkRequested],
+        });
+
+        producer1
+            .emit(AnyEventType::General(EventType::ComponentStarted), LEGACY_IDENTITY.clone())
+            .await;
+        producer1
+            .emit(
+                AnyEventType::Singleton(SingletonEventType::DiagnosticsReady),
+                LEGACY_IDENTITY.clone(),
+            )
+            .await;
+        producer1
+            .emit(AnyEventType::General(EventType::ComponentStopped), LEGACY_IDENTITY.clone())
+            .await;
+
+        producer2.emit(AnyEventType::General(EventType::ComponentStarted), IDENTITY.clone()).await;
+        producer2
+            .emit(AnyEventType::Singleton(SingletonEventType::LogSinkRequested), IDENTITY.clone())
+            .await;
+
+        // Consume the events.
+        let _router_task = fasync::Task::spawn(async move { router.start().await.unwrap() });
+        fasync::Task::spawn(async move {
+            receiver.take(5).collect::<Vec<_>>().await;
+        })
+        .await;
+
+        assert_data_tree!(inspector, root: {
+            events: {
+                event_counts: {
+                    component_started: 2u64,
+                    component_stopped: 1u64,
+                    diagnostics_ready: 1u64,
+                    log_sink_requested: 1u64
+                },
+                recent_events: {
+                    "0": {
+                        "@time": inspect::testing::AnyProperty,
+                        event: "component_started",
+                        moniker: "a/b/foo.cmx:12345"
+                    },
+                    "1": {
+                        "@time": inspect::testing::AnyProperty,
+                        event: "diagnostics_ready",
+                        moniker: "a/b/foo.cmx:12345"
+                    },
+                    "2": {
+                        "@time": inspect::testing::AnyProperty,
+                        event: "component_stopped",
+                        moniker: "a/b/foo.cmx:12345"
+                    },
+                    "3": {
+                        "@time": inspect::testing::AnyProperty,
+                        event: "component_started",
+                        moniker: "a/b"
+                    },
+                    "4": {
+                        "@time": inspect::testing::AnyProperty,
+                        event: "log_sink_requested",
+                        moniker: "a/b"
+                    },
+                }
+            }
+        });
     }
 }
