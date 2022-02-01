@@ -1090,12 +1090,18 @@ func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	}
 	logger.Debugf(ctx, "starting: %s", command)
 
+	// TODO(fxbug.dev/86771): Currently, serial output is coming out jumbled,
+	// so the started string sometimes comes after the completed string, resulting
+	// in a timeout because we fail to read the completed string after the
+	// started string. Uncomment below to use the lastWriteSaver once the bug is
+	// fixed.
+	var lastWrite bytes.Buffer
 	// If a single read from the socket includes both the bytes that indicate the test started and the bytes
 	// that indicate the test completed, then the startedReader will consume the bytes needed for detecting
 	// completion. Thus we save the last read from the socket and replay it when searching for completion.
-	lastWrite := &lastWriteSaver{}
+	// lastWrite := &lastWriteSaver{}
 	t.socket.SetIOTimeout(testStartedTimeout)
-	reader := io.TeeReader(t.socket, lastWrite)
+	reader := io.TeeReader(t.socket, &lastWrite)
 	commandStarted := false
 	var readErr error
 	for i := 0; i < startSerialCommandMaxAttempts; i++ {
@@ -1126,7 +1132,7 @@ func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	t.socket.SetIOTimeout(test.Timeout + 30*time.Second)
 	testOutputReader := io.TeeReader(
 		// See comment above lastWrite declaration.
-		&parseOutKernelReader{ctx: ctx, reader: io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket)},
+		&parseOutKernelReader{ctx: ctx, reader: io.MultiReader(&lastWrite, t.socket)},
 		// Writes to stdout as it reads from the above reader.
 		stdout)
 	if success, err := runtests.TestPassed(ctx, testOutputReader, test.Name); err != nil {
