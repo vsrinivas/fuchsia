@@ -766,10 +766,10 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         },
                     ]),
-                    declaration_checksum: Some(vec![
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([
                         123, 17, 189, 232, 119, 7, 252, 236, 147, 55, 78, 138, 209, 232, 241, 225,
                         91, 155, 38, 197, 126, 10, 71, 100, 157, 39, 114, 195, 190, 132, 83, 65
-                    ]),
+                    ])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 }),

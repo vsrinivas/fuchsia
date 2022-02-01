@@ -783,8 +783,14 @@ impl EnvironmentDecl {
 #[fidl_decl(fidl_table = "fdecl::ConfigSchema")]
 pub struct ConfigDecl {
     pub fields: Vec<ConfigField>,
-    pub declaration_checksum: Vec<u8>,
+    pub checksum: ConfigChecksum,
     pub value_source: ConfigValueSource,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fdecl::ConfigChecksum")]
+pub enum ConfigChecksum {
+    Sha256([u8; 32]),
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
@@ -964,7 +970,7 @@ impl NativeIntoFidl<fdecl::ConfigType> for ConfigValueType {
 #[fidl_decl(fidl_table = "fconfig::ValuesData")]
 pub struct ValuesData {
     pub values: Vec<ValueSpec>,
-    pub declaration_checksum: Vec<u8>,
+    pub checksum: ConfigChecksum,
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
@@ -1169,6 +1175,7 @@ impl Default for ProgramDecl {
     }
 }
 
+fidl_translations_identical!([u8; 32]);
 fidl_translations_identical!(u8);
 fidl_translations_identical!(u16);
 fidl_translations_identical!(u32);
@@ -2329,11 +2336,11 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([
                         0x64, 0x49, 0x9E, 0x75, 0xF3, 0x37, 0x69, 0x88, 0x74, 0x3B, 0x38, 0x16,
                         0xCD, 0x14, 0x70, 0x9F, 0x3D, 0x4A, 0xD3, 0xE2, 0x24, 0x9A, 0x1A, 0x34,
                         0x80, 0xB4, 0x9E, 0xB9, 0x63, 0x57, 0xD6, 0xED,
-                    ]),
+                    ])),
                     value_source: Some(
                         fdecl::ConfigValueSource::PackagePath("fake.cvf".to_string())
                     ),
@@ -2610,11 +2617,11 @@ mod tests {
                                 type_: ConfigValueType::Bool
                             }
                         ],
-                        declaration_checksum: vec![
+                        checksum: ConfigChecksum::Sha256([
                             0x64, 0x49, 0x9E, 0x75, 0xF3, 0x37, 0x69, 0x88, 0x74, 0x3B, 0x38, 0x16,
                             0xCD, 0x14, 0x70, 0x9F, 0x3D, 0x4A, 0xD3, 0xE2, 0x24, 0x9A, 0x1A, 0x34,
                             0x80, 0xB4, 0x9E, 0xB9, 0x63, 0x57, 0xD6, 0xED,
-                        ],
+                        ]),
                         value_source: ConfigValueSource::PackagePath("fake.cvf".to_string())
                     }),
                 }

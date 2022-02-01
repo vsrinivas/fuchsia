@@ -751,8 +751,8 @@ mod tests {
             },
         },
         cm_rust::{
-            self, CapabilityName, CapabilityPath, ComponentDecl, ConfigDecl, ConfigField,
-            ConfigNestedValueType, ConfigValueSource, ConfigValueType, DependencyType,
+            self, CapabilityName, CapabilityPath, ComponentDecl, ConfigChecksum, ConfigDecl,
+            ConfigField, ConfigNestedValueType, ConfigValueSource, ConfigValueType, DependencyType,
             DirectoryDecl, EventMode, EventSubscription, ExposeDecl, ExposeDirectoryDecl,
             ExposeProtocolDecl, ExposeSource, ExposeTarget, ListValue, ProtocolDecl, SingleValue,
             UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDeprecatedDecl, UseProtocolDecl,
@@ -1016,11 +1016,11 @@ mod tests {
     #[fuchsia::test]
     async fn hub_config_dir_in_resolved() {
         let root_component_url = "test:///root".to_string();
-        let checksum = vec![
+        let checksum = ConfigChecksum::Sha256([
             0x07, 0xA8, 0xE6, 0x85, 0xC8, 0x79, 0xA9, 0x79, 0xC3, 0x26, 0x17, 0xDC, 0x4E, 0x74,
             0x65, 0x7F, 0xF1, 0xF7, 0x73, 0xE7, 0x12, 0xEE, 0x51, 0xFD, 0xF6, 0x57, 0x43, 0x07,
             0xA7, 0xAF, 0x2E, 0x64,
-        ];
+        ]);
 
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
@@ -1045,7 +1045,7 @@ mod tests {
                                 },
                             },
                         ],
-                        declaration_checksum: checksum.clone(),
+                        checksum: checksum.clone(),
                         value_source: ConfigValueSource::PackagePath("meta/root.cvf".into()),
                     })
                     .build(),
@@ -1064,7 +1064,7 @@ mod tests {
                                 ])),
                             },
                         ],
-                        declaration_checksum: checksum,
+                        checksum,
                     },
                 )),
                 host_fn: None,

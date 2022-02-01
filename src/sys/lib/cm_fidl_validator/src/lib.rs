@@ -73,8 +73,15 @@ pub fn validate_values_data(data: &fconfig::ValuesData) -> Result<(), ErrorList>
         errors.push(Error::missing_field("ValuesData", "values"));
     }
 
-    if data.declaration_checksum.is_none() {
-        errors.push(Error::missing_field("ValuesData", "declaration_checksum"));
+    if let Some(checksum) = &data.checksum {
+        match checksum {
+            fdecl::ConfigChecksum::Sha256(_) => {}
+            fdecl::ConfigChecksumUnknown!() => {
+                errors.push(Error::invalid_field("ValuesData", "checksum"));
+            }
+        }
+    } else {
+        errors.push(Error::missing_field("ValuesData", "checksum"));
     }
 
     if errors.is_empty() {
@@ -346,8 +353,15 @@ impl<'a> ValidationContext<'a> {
             self.errors.push(Error::missing_field("ConfigSchema", "fields"));
         }
 
-        if config.declaration_checksum.is_none() {
-            self.errors.push(Error::missing_field("ConfigSchema", "declaration_checksum"));
+        if let Some(checksum) = &config.checksum {
+            match checksum {
+                fdecl::ConfigChecksum::Sha256(_) => {}
+                fdecl::ConfigChecksumUnknown!() => {
+                    self.errors.push(Error::invalid_field("ConfigSchema", "checksum"));
+                }
+            }
+        } else {
+            self.errors.push(Error::missing_field("ConfigSchema", "checksum"));
         }
 
         if config.value_source.is_none() {
@@ -2459,7 +2473,7 @@ mod tests {
                         ..fconfig::ValueSpec::EMPTY
                     }
                 ]),
-                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                 ..fconfig::ValuesData::EMPTY
             },
             result = Ok(()),
@@ -2467,17 +2481,27 @@ mod tests {
         test_values_data_no_checksum => {
             input = fconfig::ValuesData {
                 values: Some(vec![]),
-                declaration_checksum: None,
+                checksum: None,
                 ..fconfig::ValuesData::EMPTY
             },
             result = Err(ErrorList::new(vec![
-                Error::missing_field("ValuesData", "declaration_checksum")
+                Error::missing_field("ValuesData", "checksum")
+            ])),
+        },
+        test_values_data_unknown_checksum => {
+            input = fconfig::ValuesData {
+                values: Some(vec![]),
+                checksum: Some(fdecl::ConfigChecksum::unknown(0, vec![])),
+                ..fconfig::ValuesData::EMPTY
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("ValuesData", "checksum")
             ])),
         },
         test_values_data_no_values => {
             input = fconfig::ValuesData {
                 values: None,
-                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                 ..fconfig::ValuesData::EMPTY
             },
             result = Err(ErrorList::new(vec![
@@ -2489,7 +2513,7 @@ mod tests {
                 values: Some(vec![
                     fconfig::ValueSpec::EMPTY
                 ]),
-                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                 ..fconfig::ValuesData::EMPTY
             },
             result = Err(ErrorList::new(vec![
@@ -2504,7 +2528,7 @@ mod tests {
                         ..fconfig::ValueSpec::EMPTY
                     }
                 ]),
-                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                 ..fconfig::ValuesData::EMPTY
             },
             result = Err(ErrorList::new(vec![
@@ -2519,7 +2543,7 @@ mod tests {
                         ..fconfig::ValueSpec::EMPTY
                     }
                 ]),
-                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                 ..fconfig::ValuesData::EMPTY
             },
             result = Err(ErrorList::new(vec![
@@ -2534,7 +2558,7 @@ mod tests {
                         ..fconfig::ValueSpec::EMPTY
                     }
                 ]),
-                declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                 ..fconfig::ValuesData::EMPTY
             },
             result = Err(ErrorList::new(vec![
@@ -6781,7 +6805,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.config = Some(fdecl::ConfigSchema{
                     fields: None,
-                    declaration_checksum: None,
+                    checksum: None,
                     value_source: None,
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -6789,7 +6813,7 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::missing_field("ConfigSchema", "fields"),
-                Error::missing_field("ConfigSchema", "declaration_checksum"),
+                Error::missing_field("ConfigSchema", "checksum"),
                 Error::missing_field("ConfigSchema", "value_source"),
             ])),
         },
@@ -6805,7 +6829,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -6832,7 +6856,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -6856,7 +6880,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -6882,7 +6906,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -6908,7 +6932,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -6932,7 +6956,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -6958,7 +6982,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -6984,7 +7008,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -7014,7 +7038,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -7046,7 +7070,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -7072,7 +7096,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -7102,7 +7126,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });
@@ -7134,7 +7158,7 @@ mod tests {
                             ..fdecl::ConfigField::EMPTY
                         }
                     ]),
-                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                     value_source: Some(fdecl::ConfigValueSource::PackagePath("config/test.cvf".to_string())),
                     ..fdecl::ConfigSchema::EMPTY
                 });

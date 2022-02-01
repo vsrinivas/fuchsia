@@ -12,7 +12,7 @@ type ValuesData = table {
     1: values vector<ValueSpec>:MAX;
     /// A SHA-256 checksum of the configuration schema. Must match the checksum in the component
     /// manifest and config parser library used to resolve the final configuration.
-    2: declaration_checksum fuchsia.component.decl.ConfigChecksum;
+    2: checksum fuchsia.component.decl.ConfigChecksum;
 };
 
 /// An individual configuration value. It is matched against a specific configuration field based

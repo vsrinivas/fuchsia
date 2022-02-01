@@ -7,8 +7,8 @@
 //! Library for resolving and encoding the runtime configuration values of a component.
 
 use cm_rust::{
-    ConfigDecl, ConfigField as ConfigFieldDecl, ConfigNestedValueType, ConfigValueType, ListValue,
-    SingleValue, Value, ValueSpec, ValuesData,
+    ConfigChecksum, ConfigDecl, ConfigField as ConfigFieldDecl, ConfigNestedValueType,
+    ConfigValueType, ListValue, SingleValue, Value, ValueSpec, ValuesData,
 };
 use dynfidl::{BasicField, Field, Structure, VectorField};
 use thiserror::Error;
@@ -18,18 +18,18 @@ use thiserror::Error;
 pub struct ConfigFields {
     /// A list of all resolved fields, in the order of the compiled manifest.
     pub fields: Vec<ConfigField>,
-    /// A SHA-256 checksum from the compiled manifest.
-    pub declaration_checksum: Vec<u8>,
+    /// A checksum from the compiled manifest.
+    pub checksum: ConfigChecksum,
 }
 
 impl ConfigFields {
     /// Resolve a component's configuration values according to its declared schema. Should not fail if
     /// `decl` and `specs` are well-formed.
     pub fn resolve(decl: &ConfigDecl, specs: ValuesData) -> Result<Self, ResolutionError> {
-        if decl.declaration_checksum != specs.declaration_checksum {
+        if decl.checksum != specs.checksum {
             return Err(ResolutionError::ChecksumFailure {
-                expected: decl.declaration_checksum.clone(),
-                received: specs.declaration_checksum.clone(),
+                expected: decl.checksum.clone(),
+                received: specs.checksum.clone(),
             });
         }
 
@@ -51,7 +51,7 @@ impl ConfigFields {
             })
             .collect::<Result<Vec<ConfigField>, _>>()?;
 
-        Ok(Self { fields, declaration_checksum: decl.declaration_checksum.clone() })
+        Ok(Self { fields, checksum: decl.checksum.clone() })
     }
 
     /// Encode the resolved fields as a FIDL struct with every field non-nullable.
@@ -60,7 +60,7 @@ impl ConfigFields {
     /// the `checksum_length`. Bytes `2..2+checksum_length` are used to store the declaration
     /// checksum. All remaining bytes are used to store the FIDL header and struct.
     pub fn encode_as_fidl_struct(self) -> Vec<u8> {
-        let Self { fields, declaration_checksum } = self;
+        let Self { fields, checksum: ConfigChecksum::Sha256(checksum) } = self;
         let mut structure = Structure::default();
         for ConfigField { value, .. } in fields {
             structure = match value {
@@ -130,8 +130,8 @@ impl ConfigFields {
         }
 
         let mut buf = Vec::new();
-        buf.extend((declaration_checksum.len() as u16).to_le_bytes());
-        buf.extend(declaration_checksum);
+        buf.extend((checksum.len() as u16).to_le_bytes());
+        buf.extend(checksum);
         buf.extend(structure.encode_persistent());
         buf
     }
@@ -222,7 +222,7 @@ impl ConfigField {
 #[allow(missing_docs)]
 pub enum ResolutionError {
     #[error("Checksums in declaration and value file do not match. Expected {expected:04x?}, received {received:04x?}")]
-    ChecksumFailure { expected: Vec<u8>, received: Vec<u8> },
+    ChecksumFailure { expected: ConfigChecksum, received: ConfigChecksum },
 
     #[error("Value file has a different number of values ({received}) than declaration has fields ({expected}).")]
     WrongNumberOfValues { expected: usize, received: usize },
@@ -267,7 +267,7 @@ mod tests {
     #[test]
     fn basic_success() {
         let decl = config_decl! {
-            ck@ vec![0x50, 0x12, 0x82],
+            ck@ ConfigChecksum::Sha256([0; 32]),
             my_flag: { bool },
             my_uint8: { uint8 },
             my_uint16: { uint16 },
@@ -295,7 +295,7 @@ mod tests {
         };
 
         let specs = values_data![
-            ck@ decl.declaration_checksum.clone(),
+            ck@ decl.checksum.clone(),
             Single(Flag(false)),
             Single(Unsigned8(255u8)),
             Single(Unsigned16(65535u16)),
@@ -374,15 +374,15 @@ mod tests {
                     value: List(TextList(vec!["valid".into(), "valid".into()])),
                 },
             ],
-            declaration_checksum: decl.declaration_checksum.clone(),
+            checksum: decl.checksum.clone(),
         };
         assert_eq!(ConfigFields::resolve(&decl, specs).unwrap(), expected);
     }
 
     #[test]
     fn checksums_must_match() {
-        let expected = vec![0x50, 0x12, 0x82];
-        let received = vec![0x50, 0x12];
+        let expected = ConfigChecksum::Sha256([0; 32]);
+        let received = ConfigChecksum::Sha256([0xFF; 32]);
         let decl = config_decl! {
             ck@ expected.clone(),
             foo: { bool },
@@ -400,11 +400,11 @@ mod tests {
     #[test]
     fn too_many_values_fails() {
         let decl = config_decl! {
-            ck@ vec![0x50, 0x12, 0x82],
+            ck@ ConfigChecksum::Sha256([0; 32]),
             foo: { bool },
         };
         let specs = values_data! [
-            ck@ decl.declaration_checksum.clone(),
+            ck@ decl.checksum.clone(),
             Value::Single(SingleValue::Flag(true)),
             Value::Single(SingleValue::Flag(false)),
         ];
@@ -417,11 +417,11 @@ mod tests {
     #[test]
     fn not_enough_values_fails() {
         let decl = config_decl! {
-            ck@ vec![0x50, 0x12, 0x82],
+            ck@ ConfigChecksum::Sha256([0; 32]),
             foo: { bool },
         };
         let specs = values_data! {
-            ck@ vec![0x50, 0x12, 0x82],
+            ck@ decl.checksum.clone(),
         };
         assert_eq!(
             ConfigFields::resolve(&decl, specs).unwrap_err(),
@@ -432,11 +432,11 @@ mod tests {
     #[test]
     fn string_length_is_validated() {
         let decl = config_decl! {
-            ck@ vec![0x50, 0x12, 0x82],
+            ck@ ConfigChecksum::Sha256([0; 32]),
             foo: { string, max_size: 10 },
         };
         let specs = values_data! [
-            ck@ decl.declaration_checksum.clone(),
+            ck@ decl.checksum.clone(),
             Value::Single(SingleValue::Text("hello, world!".into())),
         ];
         assert_eq!(
@@ -451,11 +451,11 @@ mod tests {
     #[test]
     fn vector_length_is_validated() {
         let decl = config_decl! {
-            ck@ vec![0x50, 0x12, 0x82],
+            ck@ ConfigChecksum::Sha256([0; 32]),
             foo: { vector, element: uint8, max_count: 2 },
         };
         let specs = values_data! [
-            ck@ decl.declaration_checksum.clone(),
+            ck@ decl.checksum.clone(),
             Value::List(ListValue::Unsigned8List(vec![1, 2, 3])),
         ];
         assert_eq!(
@@ -470,11 +470,11 @@ mod tests {
     #[test]
     fn vector_elements_validated() {
         let decl = config_decl! {
-            ck@ vec![0x50, 0x12, 0x82],
+            ck@ ConfigChecksum::Sha256([0; 32]),
             foo: { vector, element: { string, max_size: 5 }, max_count: 2 },
         };
         let specs = values_data! [
-            ck@ decl.declaration_checksum.clone(),
+            ck@ decl.checksum.clone(),
             Value::List(ListValue::TextList(vec![
                 "valid".into(),
                 "invalid".into(),

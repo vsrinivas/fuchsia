@@ -4,23 +4,26 @@
 
 library fuchsia.component.decl;
 
+/// Config keys can only consist of these many bytes
+const CONFIG_KEY_MAX_SIZE uint32 = 64;
+
 /// The string identifier for a config field.
 alias ConfigKey = string:CONFIG_KEY_MAX_SIZE;
 
-/// A SHA-256 hash produced over a component's config interface.
-/// NOTE: 32 bytes is enough to encode a SHA-256 hash, max can be grown ABI-compatibly
-alias ConfigChecksum = vector<uint8>:32;
-
-/// Config keys can only consist of these many characters
-const CONFIG_KEY_MAX_SIZE uint32 = 64;
+/// The checksum produced for a configuration interface.
+/// Two configuration interfaces are the same if their checksums are the same.
+type ConfigChecksum = flexible union {
+    /// A SHA-256 hash produced over a component's config interface.
+    1: sha256 array<uint8, 32>;
+};
 
 /// The schema of a component's configuration interface.
 type ConfigSchema = table {
     /// Ordered fields of the component's configuration interface.
     1: fields vector<ConfigField>:MAX;
 
-    /// Checksum produced over a component's configuration interface.
-    2: declaration_checksum ConfigChecksum;
+    /// Checksum over the config declaration.
+    2: checksum ConfigChecksum;
 
     /// Strategy used to resolve config values.
     3: value_source ConfigValueSource;

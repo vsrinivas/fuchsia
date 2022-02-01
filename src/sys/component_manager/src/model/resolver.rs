@@ -526,7 +526,7 @@ mod tests {
                     ..fconfig::ValueSpec::EMPTY
                 },
             ]),
-            declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+            checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
             ..fconfig::ValuesData::EMPTY
         };
         let config_values = cm_rust::ValuesData {
@@ -550,7 +550,7 @@ mod tests {
                     ])),
                 },
             ],
-            declaration_checksum: vec![0x0, 0x0, 0x0, 0x0],
+            checksum: cm_rust::ConfigChecksum::Sha256([0; 32]),
         };
         let data = fmem::Data::Bytes(
             fidl::encoding::encode_persistent(&mut fidl_config_values)

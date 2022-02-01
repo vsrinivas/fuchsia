@@ -385,10 +385,10 @@ fn main() {
                     ..ConfigField::EMPTY
                 },
             ]),
-            declaration_checksum: Some(vec![
+            checksum: Some(ConfigChecksum::Sha256([
                 227, 126, 183, 151, 1, 15, 67, 110, 144, 49, 222, 176, 221, 111, 19, 165, 34, 204,
                 240, 41, 165, 95, 117, 57, 203, 42, 186, 167, 84, 26, 25, 231,
-            ]),
+            ])),
             value_source: Some(ConfigValueSource::PackagePath("meta/example.cvf".to_string())),
             ..ConfigSchema::EMPTY
         };

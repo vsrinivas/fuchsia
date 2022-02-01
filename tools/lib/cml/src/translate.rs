@@ -15,7 +15,7 @@ use {
     serde_json::{Map, Value},
     sha2::{Digest, Sha256},
     std::collections::{BTreeMap, HashSet},
-    std::convert::Into,
+    std::convert::{Into, TryInto},
 };
 
 /// Compiles the Document into a FIDL `Component`.
@@ -697,13 +697,12 @@ fn translate_config(
         value.update_digest(&mut hasher);
     }
 
-    // The SHA-256 hash must be 32 bytes in size
-    let hash: Vec<u8> = hasher.finalize().to_vec();
-    assert_eq!(hash.len(), 32);
+    let hash = hasher.finalize();
+    let checksum = fdecl::ConfigChecksum::Sha256(*hash.as_ref());
 
     fdecl::ConfigSchema {
         fields: Some(fidl_fields),
-        declaration_checksum: Some(hash),
+        checksum: Some(checksum),
         // for now we only support ELF components that look up config by package path
         value_source: Some(fdecl::ConfigValueSource::PackagePath(package_path.to_owned())),
         ..fdecl::ConfigSchema::EMPTY

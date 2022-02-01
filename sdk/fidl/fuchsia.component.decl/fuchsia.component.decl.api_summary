@@ -39,10 +39,12 @@ table/member fuchsia.component.decl/Component.offers vector<fuchsia.component.de
 table/member fuchsia.component.decl/Component.program fuchsia.component.decl/Program
 table/member fuchsia.component.decl/Component.uses vector<fuchsia.component.decl/Use>
 table fuchsia.component.decl/Component
+union/member fuchsia.component.decl/ConfigChecksum.sha256 array<uint8,32>
+flexible union fuchsia.component.decl/ConfigChecksum
 table/member fuchsia.component.decl/ConfigField.key string:64
 table/member fuchsia.component.decl/ConfigField.type fuchsia.component.decl/ConfigType
 table fuchsia.component.decl/ConfigField
-table/member fuchsia.component.decl/ConfigSchema.declaration_checksum vector<uint8>:32
+table/member fuchsia.component.decl/ConfigSchema.checksum fuchsia.component.decl/ConfigChecksum
 table/member fuchsia.component.decl/ConfigSchema.fields vector<fuchsia.component.decl/ConfigField>
 table/member fuchsia.component.decl/ConfigSchema.value_source fuchsia.component.decl/ConfigValueSource
 table fuchsia.component.decl/ConfigSchema

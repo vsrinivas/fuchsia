@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use cm_rust::{FidlIntoNative, ListValue, SingleValue, Value};
+use cm_rust::{ConfigChecksum, FidlIntoNative, ListValue, SingleValue, Value};
 use fidl::encoding::decode_persistent;
 use fidl_test_structuredconfig_receiver::{ConfigReceiverPuppetMarker, ReceiverConfig};
 use std::fs::{read_dir, read_to_string};
@@ -111,13 +111,11 @@ fn manually_resolve_structured_config() {
         config_encoder::ConfigFields::resolve(config, value_file.clone()).unwrap();
 
     // check the checksums
-    let value_checksum = &value_file.declaration_checksum;
-    let resolved_checksum = &resolved_fields.declaration_checksum;
+    assert_eq!(config.checksum, value_file.checksum, "decl and value file checksums must match");
     assert_eq!(
-        &config.declaration_checksum, value_checksum,
-        "decl and value file checksums must match"
+        value_file.checksum, resolved_fields.checksum,
+        "decl and resolved checksums must match"
     );
-    assert_eq!(value_checksum, resolved_checksum, "decl and resolved checksums must match");
 
     // collect the resolved fields ignoring their order
     let observed_values =
@@ -167,6 +165,7 @@ fn manually_resolve_structured_config() {
     let checksum_length = u16::from_le_bytes([encoded[0], encoded[1]]) as usize;
     let fidl_start = 2 + checksum_length;
     let encoded_checksum = &encoded[2..fidl_start];
+    let ConfigChecksum::Sha256(value_checksum) = &value_file.checksum;
     assert_eq!(value_checksum, encoded_checksum);
     let decoded: ReceiverConfig = decode_persistent(&encoded[fidl_start..]).unwrap();
     assert_eq!(decoded, expected_config());

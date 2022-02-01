@@ -249,7 +249,7 @@ mod tests {
                                             }),
                                             ..fdecl::ConfigField::EMPTY
                                         }]),
-                                        declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                                        checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                                         value_source: Some(fdecl::ConfigValueSource::PackagePath("config/foo.cvf".to_string())),
                                         ..fdecl::ConfigSchema::EMPTY
                                     }),
@@ -266,7 +266,7 @@ mod tests {
                                             ..fconfig::ValueSpec::EMPTY
                                         }
                                     ]),
-                                    declaration_checksum: Some(vec![0x0, 0x0, 0x0, 0x0]),
+                                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
                                     ..fconfig::ValuesData::EMPTY
                                 }).unwrap()
                             ),
@@ -366,7 +366,7 @@ mod tests {
                 key: "test".to_string(),
                 type_: cm_rust::ConfigValueType::Bool,
             }],
-            declaration_checksum: vec![0x0, 0x0, 0x0, 0x0],
+            checksum: cm_rust::ConfigChecksum::Sha256([0; 32]),
             value_source: cm_rust::ConfigValueSource::PackagePath("config/foo.cvf".to_string()),
         });
 
@@ -376,7 +376,7 @@ mod tests {
             values: vec![cm_rust::ValueSpec {
                 value: cm_rust::Value::Single(cm_rust::SingleValue::Flag(false)),
             }],
-            declaration_checksum: vec![0x0, 0x0, 0x0, 0x0],
+            checksum: cm_rust::ConfigChecksum::Sha256([0; 32]),
         });
 
         assert_eq!(config_values, expected_values);

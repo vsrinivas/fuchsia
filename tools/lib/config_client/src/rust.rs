@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{normalize_field_key, SourceGenError};
-use cm_rust::{ConfigDecl, ConfigNestedValueType, ConfigValueType};
+use cm_rust::{ConfigChecksum, ConfigDecl, ConfigNestedValueType, ConfigValueType};
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::quote;
 use std::str::FromStr;
@@ -18,7 +18,7 @@ pub fn create_rust_wrapper(
         format!("fidl_{}", fidl_library_name.replace('.', "_").to_ascii_lowercase());
     let fidl_library_name = parse_str::<Ident>(&fidl_library_name)
         .map_err(|source| SourceGenError::InvalidIdentifier { input: fidl_library_name, source })?;
-    let expected_checksum = &config_decl.declaration_checksum;
+    let ConfigChecksum::Sha256(expected_checksum) = &config_decl.checksum;
 
     let expected_checksum =
         expected_checksum.into_iter().map(|b| Literal::from_str(&format!("{:#04x}", b)).unwrap());

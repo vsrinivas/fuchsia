@@ -41,7 +41,7 @@ pub fn populate_value_file(
         return Err(FileError::ExtraValues { keys: json_values.into_keys().collect() });
     }
 
-    Ok(ValuesData { values, declaration_checksum: config_decl.declaration_checksum.clone() })
+    Ok(ValuesData { values, checksum: config_decl.checksum.clone() })
 }
 
 /// Error from working with a configuration value file.
@@ -65,17 +65,17 @@ pub enum FileError {
 #[cfg(test)]
 mod tests {
     use super::{field::JsonTy, *};
-    use cm_rust::{ListValue::*, SingleValue::*, Value::*};
+    use cm_rust::{ConfigChecksum, ListValue::*, SingleValue::*, Value::*};
     use fidl_fuchsia_component_config_ext::{config_decl, values_data};
     use serde_json::json;
 
-    fn test_checksum() -> Vec<u8> {
+    fn test_checksum() -> ConfigChecksum {
         // sha256("Back to the Fuchsia")
-        vec![
+        ConfigChecksum::Sha256([
             0xb5, 0xf9, 0x33, 0xe8, 0x94, 0x56, 0x3a, 0xf9, 0x61, 0x39, 0xe5, 0x05, 0x79, 0x4b,
             0x88, 0xa5, 0x3e, 0xd4, 0xd1, 0x5c, 0x32, 0xe2, 0xb4, 0x49, 0x9e, 0x42, 0xeb, 0xa3,
             0x32, 0xb1, 0xf5, 0xbb,
-        ]
+        ])
     }
 
     #[test]
