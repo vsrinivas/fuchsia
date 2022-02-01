@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use std::{
-    cell::RefCell,
-    rc::Rc,
+    sync::{Arc, RwLock},
     time::{Duration, Instant, SystemTime},
 };
 
@@ -41,18 +40,18 @@ impl TimeSource for StandardTimeSource {
 /// concurrently.
 #[derive(Clone, Debug)]
 pub struct MockTimeSource {
-    time: Rc<RefCell<ComplexTime>>,
+    time: Arc<RwLock<ComplexTime>>,
 }
 
 impl TimeSource for MockTimeSource {
     fn now_in_walltime(&self) -> SystemTime {
-        self.time.borrow().wall
+        self.time.read().unwrap().wall
     }
     fn now_in_monotonic(&self) -> Instant {
-        self.time.borrow().mono
+        self.time.read().unwrap().mono
     }
     fn now(&self) -> ComplexTime {
-        *(self.time.borrow())
+        *(self.time.read().unwrap())
     }
 }
 
@@ -67,7 +66,7 @@ impl MockTimeSource {
     /// let next_time = mock_source.now();
     /// ```
     pub fn new(t: impl Into<ComplexTime>) -> Self {
-        MockTimeSource { time: Rc::new(RefCell::new(t.into())) }
+        MockTimeSource { time: Arc::new(RwLock::new(t.into())) }
     }
 
     /// Create a new `MockTimeSource`, initialized to the values from `SystemTime` and `Instant`
@@ -97,7 +96,7 @@ impl MockTimeSource {
     /// This method uses a mutable reference for `self` for clarity.  The interior mutability of the
     /// time does not require it.
     pub fn advance(&mut self, duration: Duration) {
-        let mut borrowed_time = self.time.borrow_mut();
+        let mut borrowed_time = self.time.write().unwrap();
         *borrowed_time += duration;
     }
 
@@ -105,7 +104,7 @@ impl MockTimeSource {
     /// This is useful for tests that involves storing time in storage, which will lose
     /// submicrosecond precision.
     pub fn truncate_submicrosecond_walltime(&mut self) {
-        let mut borrowed_time = self.time.borrow_mut();
+        let mut borrowed_time = self.time.write().unwrap();
         *borrowed_time = borrowed_time.truncate_submicrosecond_walltime();
     }
 }
