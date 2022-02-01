@@ -5,5 +5,7 @@
 package constants
 
 const (
-	TimeoutReachingTargetMsg = "Timeout attempting to reach target "
+	// General ffx error.
+	CommandFailedMsg         = "FFX command failed"
+	TimeoutReachingTargetMsg = "Timeout attempting to reach target"
 )

@@ -406,6 +406,11 @@ func infraToolLogChecks() []FailureModeCheck {
 			String: ffxutilconstants.TimeoutReachingTargetMsg,
 			Type:   swarmingOutputType,
 		},
+		// General ffx error check.
+		&stringInLogCheck{
+			String: ffxutilconstants.CommandFailedMsg,
+			Type:   swarmingOutputType,
+		},
 		// For fxbug.dev/56651.
 		// This error usually happens due to an SSH failure, so that error should take precedence.
 		&stringInLogCheck{

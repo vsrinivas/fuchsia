@@ -7,11 +7,13 @@ package ffxutil
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil/constants"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
@@ -98,7 +100,10 @@ func (f *FFXInstance) SetStdoutStderr(stdout, stderr io.Writer) {
 // Run runs ffx with the associated config and provided args.
 func (f *FFXInstance) Run(ctx context.Context, args ...string) error {
 	args = append([]string{f.ffxPath, "--config", f.ConfigPath}, args...)
-	return runCommand(ctx, f.runner, f.stdout, f.stderr, args...)
+	if err := runCommand(ctx, f.runner, f.stdout, f.stderr, args...); err != nil {
+		return fmt.Errorf("%s: %w", constants.CommandFailedMsg, err)
+	}
+	return nil
 }
 
 // RunWithTarget runs ffx with the associated target.

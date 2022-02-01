@@ -15,6 +15,7 @@ go_library("ffxutil") {
     "test.go",
   ]
   deps = [
+    ":constants",
     "//tools/lib/jsonutil",
     "//tools/lib/subprocess",
   ]
