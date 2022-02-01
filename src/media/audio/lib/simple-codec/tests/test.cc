@@ -57,7 +57,8 @@ class TestCodec : public SimpleCodecServer {
       uint64_t processing_element_id, audio_fidl::ProcessingElementControl control,
       audio_fidl::SignalProcessing::SetProcessingElementCallback callback) override {
     ASSERT_EQ(processing_element_id, kAglPeId);
-    agl_mode_ = control.has_enabled() && control.enabled();
+    ASSERT_TRUE(control.has_enabled());
+    agl_mode_ = control.enabled();
     callback(audio_fidl::SignalProcessing_SetProcessingElement_Result::WithResponse(
         audio_fidl::SignalProcessing_SetProcessingElement_Response()));
   }
