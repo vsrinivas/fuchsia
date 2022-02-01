@@ -31,6 +31,7 @@ core_tests = [
   "page-size",
   "pager",
   "port",
+  "property",
   "pthread",
   "pthread-barrier",
   "pthread-tls",
