@@ -24,21 +24,18 @@ import("//build/toolchain/variant.gni")
 # These flags are enabled by default in Fuchsia's Clang toolchain, but we set
 # them explicitly to support other Clang toolchains and Clang-based tools.
 config("clang_defaults") {
-  cflags = [ "-fexperimental-new-pass-manager" ]
-  asmflags = cflags
-  ldflags = cflags
   if (clang_embed_bitcode) {
-    cflags += [
+    cflags = [
       "-Xclang",
       "-fembed-bitcode=all",
     ]
   }
   if (current_cpu == "x64") {
-    asmflags += [ "-Wa,--mrelax-relocations=yes" ]
+    asmflags = [ "-Wa,--mrelax-relocations=yes" ]
   }
   if (current_os == "linux") {
     cflags_cc = [ "-stdlib=libc++" ]
-    ldflags += [
+    ldflags = [
       "-stdlib=libc++",
       "-unwindlib=",
       "-rtlib=compiler-rt",
