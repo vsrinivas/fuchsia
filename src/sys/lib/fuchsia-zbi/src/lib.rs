@@ -85,6 +85,13 @@ pub struct ZbiItem {
     header_offset: u32,
     item_offset: u32,
     item_length: u32,
+    extra: u32,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ZbiResult {
+    bytes: Vec<u8>,
+    extra: u32, // Optional metadata that might be used to identify ZBI items with the same type.
 }
 
 #[derive(Debug)]
@@ -210,12 +217,12 @@ impl ZbiParser {
     }
 
     /// Try and get one stored item type.
-    pub fn try_get_item(&self, zbi_type: ZbiType) -> Result<Vec<Vec<u8>>, ZbiParserError> {
+    pub fn try_get_item(&self, zbi_type: ZbiType) -> Result<Vec<ZbiResult>, ZbiParserError> {
         if !self.items.contains_key(&zbi_type) {
             return Err(ZbiParserError::ItemNotFound { zbi_type });
         }
 
-        let mut result: Vec<Vec<u8>> = Vec::new();
+        let mut result: Vec<ZbiResult> = Vec::new();
         for item in &self.items[&zbi_type] {
             let mut bytes = vec![0; item.item_length as usize];
             self.vmo.read(&mut bytes, item.item_offset.into()).map_err(|status| {
@@ -225,14 +232,14 @@ impl ZbiParser {
                     status,
                 }
             })?;
-            result.push(bytes);
+            result.push(ZbiResult { bytes, extra: item.extra });
         }
 
         Ok(result)
     }
 
     /// Get all stored ZBI items.
-    pub fn get_items(&self) -> Result<HashMap<ZbiType, Vec<Vec<u8>>>, ZbiParserError> {
+    pub fn get_items(&self) -> Result<HashMap<ZbiType, Vec<ZbiResult>>, ZbiParserError> {
         let mut result = HashMap::new();
         for key in self.items.keys() {
             result.insert(key.clone(), self.try_get_item(key.clone())?);
@@ -383,6 +390,7 @@ impl ZbiParser {
                     header_offset: current_offset,
                     item_offset: current_offset + header_offset,
                     item_length: header.length.get(),
+                    extra: header.extra.get(),
                 });
 
                 // If there is a decommit range, resolve it now so that it doesn't include this
@@ -421,7 +429,7 @@ mod tests {
         for (zbi_type, items) in &parser.items {
             let expected = builder.get_bytes(items);
             let actual = match parser.try_get_item(zbi_type.clone()) {
-                Ok(val) => val,
+                Ok(val) => val.iter().map(|result| result.bytes.clone()).collect(),
                 Err(_) => {
                     assert!(false);
                     Vec::new()
@@ -614,6 +622,25 @@ mod tests {
 
         assert!(parser.is_err());
         assert_eq!(parser.unwrap_err(), ZbiParserError::Overflow);
+    }
+
+    #[fuchsia::test]
+    async fn zbi_item_has_correct_extra_field() {
+        let mut crash_header = ZbiBuilder::simple_header(ZbiType::Crashlog, 0x80);
+        crash_header.extra = U32::<LittleEndian>::new(0xABCD);
+
+        let (zbi, _builder) = ZbiBuilder::new()
+            .add_header(ZbiBuilder::simple_header(ZbiType::Container, 0))
+            .add_header(crash_header)
+            .add_item(0x80)
+            .calculate_item_length()
+            .generate()
+            .expect("failed to create zbi");
+        let parser = ZbiParser::new(zbi).parse().expect("Failed to parse ZBI");
+
+        let items = parser.try_get_item(ZbiType::Crashlog).expect("Failed to get item");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].extra, 0xABCD);
     }
 
     #[fuchsia::test]
