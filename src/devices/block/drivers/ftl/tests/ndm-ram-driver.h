@@ -40,6 +40,12 @@ struct TestOptions {
 
   // Delay before power failure kicks in.
   int power_failure_delay = -1;
+
+  // Any write that triggers a power cut will write only the first half of the page and spare.
+  bool emulate_half_write_on_power_failure = false;
+
+  // Override logger passed to FTL via the NDMBaseDriver.
+  std::optional<FtlLogger> ftl_logger;
 };
 
 // Ram-backed driver for testing purposes.
@@ -47,7 +53,9 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
  public:
   explicit NdmRamDriver(const ftl::VolumeOptions& options) : NdmRamDriver(options, {}) {}
   NdmRamDriver(const ftl::VolumeOptions& options, const TestOptions& test_options)
-      : NdmBaseDriver(ftl::DefaultLogger()), options_(options), test_options_(test_options) {}
+      : NdmBaseDriver(test_options.ftl_logger.value_or(ftl::DefaultLogger())),
+        options_(options),
+        test_options_(test_options) {}
   ~NdmRamDriver() final = default;
 
   // Extends the visible volume to the whole size of the storage.

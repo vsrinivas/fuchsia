@@ -338,6 +338,11 @@ bool NdmRamDriver::ShouldTriggerPowerFailure() {
 void NdmRamDriver::OnWritePowerFailure(uint64_t page_number, const uint8_t* data,
                                        const uint8_t* spare) {
   SetWritten(page_number, true);
+  if (test_options_.emulate_half_write_on_power_failure) {
+    // Write the first half of the page and oob.
+    memcpy(MainData(page_number), data, options_.page_size / 2);
+    memcpy(SpareData(page_number), spare, options_.eb_size / 2);
+  }
 }
 
 void NdmRamDriver::OnErasePowerFailure(uint64_t page_number) {

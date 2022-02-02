@@ -21,7 +21,7 @@ constexpr uint32_t kPagesPerBlock = 64;
 constexpr ftl::VolumeOptions kDefaultOptions = {50,        2,          kPageSize* kPagesPerBlock,
                                                 kPageSize, kSpareSize, 0};
 // Don't sprinkle in errors by default.
-constexpr TestOptions kBoringTestOptions = {-1, -1, 0, false, true, -1};
+constexpr TestOptions kBoringTestOptions = {-1, -1, 0, false, true, -1, false, std::nullopt};
 
 TEST(FtlTest, IncompleteWriteWithValidity) {
   uint8_t spare[kSpareSize];
