@@ -8,6 +8,8 @@
 script="$0"
 script_dir="$(dirname "$script")"
 
+remote_action_wrapper="$script_dir"/fuchsia-rbe-action.sh
+
 # The project_root must cover all inputs, prebuilt tools, and build outputs.
 # This should point to $FUCHSIA_DIR for the Fuchsia project.
 # ../../ because this script lives in build/rbe.
@@ -62,10 +64,15 @@ Options:
   --check-determinism: [requires --local]
       Locally run the same command twice and compare outputs.
 
-  All other options before -- are forwarded to
-  $script_dir/fuchsia-rbe-action.sh,
-  most of which are forwarded to 'rewrapper'.
-  See '$script_dir/fuchsia-rbe-action.sh --help' for additional debug features.
+  There are two ways to forward options to $remote_action_wrapper,
+  most of which are forwarded to 'rewrapper':
+
+    Before -- : all unhandled flags are forwarded to $remote_action_wrapper.
+
+    After -- : --remote-flag=* will be forwarded to $remote_action_wrapper
+      and removed from the remote command.
+
+  See '$remote_action_wrapper --help' for additional debug features.
 
 If the rust-command contains --remote-inputs=..., those will be interpreted
 as extra --inputs to upload, and removed from the command prior to local and
@@ -121,7 +128,7 @@ do
     # stop option processing
     --) shift; break ;;
     # Forward all other options to rewrapper
-    *) rewrapper_options+=("$opt") ;;
+    *) rewrapper_options+=( "$opt" ) ;;
   esac
   shift
 done
@@ -218,6 +225,7 @@ do
   then
     eval "$prev_opt"=\$opt
     case "$prev_opt" in
+      remote_flag) rewrapper_options+=( "$opt" ) ;;
       comma_remote_inputs) ;;  # Remove this optarg.
       comma_remote_outputs) ;;  # Remove this optarg.
       # Copy this opt, but also append its value to extern_paths.
@@ -293,6 +301,19 @@ EOF
       continue
       ;;
     --remote-outputs) prev_opt=comma_remote_outputs
+      # Remove this from the actual command to be executed.
+      shift
+      continue
+      ;;
+
+    # Redirect these flags to rewrapper.
+    --remote-flag=*)
+      rewrapper_options+=( "$optarg" )
+      # Remove this from the actual command to be executed.
+      shift
+      continue
+      ;;
+    --remote-flag) prev_opt=remote_flag
       # Remove this from the actual command to be executed.
       shift
       continue
@@ -793,6 +814,7 @@ dump_vars() {
   debug_var "extern paths" "${extern_paths[@]}"
   debug_var "extra inputs" "${extra_inputs_rel_project_root[@]}"
   debug_var "extra outputs" "${extra_outputs[@]}"
+  debug_var "rewrapper options" "${rewrapper_options[@]}"
 }
 
 dump_vars
@@ -846,7 +868,7 @@ test "$trace" = 0 || {
 # and pass options available in the new version, e.g.:
 #  --preserve_symlink
 remote_rustc_command=(
-  "$script_dir"/fuchsia-rbe-action.sh
+  "$remote_action_wrapper"
   --exec_root="$project_root"
   "${remote_trace_flags[@]}"
   --input_list_paths="$inputs_file_list"
