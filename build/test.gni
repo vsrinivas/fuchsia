@@ -55,6 +55,9 @@ template("test") {
       if (defined(invoker.data_deps)) {
         deps += invoker.data_deps
       }
+      if (defined(invoker.host_args)) {
+        args = invoker.host_args
+      }
       forward_variables_from(invoker,
                              [
                                "environments",
@@ -67,6 +70,7 @@ template("test") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "host_args",
                              "output_name",
                              "target_name",
                              "testonly",

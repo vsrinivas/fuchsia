@@ -17,7 +17,6 @@ core_tests = [
   "channel-iovec",
   "channel-write-etc",
   "clock",
-  "elf-tls",
   "event-pair",
   "exceptions",
   "fifo",
@@ -50,8 +49,13 @@ core_tests = [
 
 # Requires use_next_vdso in the manifest. Build as a package and unified bootfs test, but not a
 # standalone bootfs test.
-# TODO(fxbug.dev/89597): Remove this one standalone bootfs tests can access the next vDSO.
+# TODO(fxbug.dev/89597): Remove this once standalone bootfs tests can access the next vDSO.
 requires_next_vdso = [ "pager-writeback" ]
+
+# zxtest test shuffling breaks these tests. They must be able to pass when the tests are run
+# out of order.
+# TODO(fxbug.dev/92567): Remove this after fixing the test.
+doesnt_work_with_shuffle = [ "elf-tls" ]
 
 # These tests require custom component manifests to execute as components.
 core_tests_with_custom_manifests =
@@ -62,7 +66,7 @@ core_tests_with_custom_manifests =
 
       # Some tests require ZX_POL_AMBIENT_MARK_VMO_EXEC.
       "vmo",
-    ] + requires_next_vdso
+    ] + requires_next_vdso + doesnt_work_with_shuffle
 
 # These tests need to run in a bootfs environment and can't run as a Fuchsia
 # component even with additional configuration.

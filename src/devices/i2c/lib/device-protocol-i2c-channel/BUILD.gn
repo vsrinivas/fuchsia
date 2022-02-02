@@ -38,6 +38,7 @@ executable("i2c-channel-test-bin") {
 }
 
 fuchsia_unittest_package("i2c-channel-test") {
+  manifest = "meta/i2c-channel-test.cml"
   deps = [ ":i2c-channel-test-bin" ]
 }
 
