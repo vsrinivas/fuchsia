@@ -653,8 +653,15 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
 }
 
 void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
-  auto match_callback = [this,
-                         &node](fidl::WireUnownedResult<fdf::DriverIndex::MatchDriver>& result) {
+  auto match_callback = [this, weak_node = node.weak_from_this()](
+                            fidl::WireUnownedResult<fdf::DriverIndex::MatchDriver>& result) {
+    auto shared_node = weak_node.lock();
+    if (!shared_node) {
+      LOGF(WARNING, "Node was freed before it could be bound");
+      return;
+    }
+
+    Node& node = *shared_node;
     auto driver_node = &node;
     auto orphaned = [this, &driver_node] {
       orphaned_nodes_.push_back(driver_node->weak_from_this());
