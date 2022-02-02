@@ -109,9 +109,22 @@ pub use border_router::*;
 mod platform;
 pub use platform::*;
 
+mod joiner;
+pub use joiner::*;
+
 /// Trait implemented by all OpenThread instances.
 pub trait InstanceInterface:
-    Ip6 + Reset + Dataset + Link + State + Tasklets + Thread + BorderRouter + MessageBuffer + Radio
+    Ip6
+    + Reset
+    + Dataset
+    + Link
+    + State
+    + Tasklets
+    + Thread
+    + BorderRouter
+    + MessageBuffer
+    + Radio
+    + Joiner
 {
 }
 

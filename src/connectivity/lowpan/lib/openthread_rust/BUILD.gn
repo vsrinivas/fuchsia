@@ -37,6 +37,7 @@ rustc_library("openthread") {
     "src/ot/dataset.rs",
     "src/ot/error.rs",
     "src/ot/ip6.rs",
+    "src/ot/joiner.rs",
     "src/ot/link.rs",
     "src/ot/message.rs",
     "src/ot/mod.rs",

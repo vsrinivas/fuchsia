@@ -70,4 +70,8 @@ pub(crate) mod prelude_internal {
         MessageBuffer, Platform, Tasklets, Thread,
     };
     pub use static_assertions as sa;
+    pub use std::ffi::{CStr, CString};
+    pub use std::marker::PhantomData;
+    pub use std::os::raw::c_char;
+    pub use std::ptr::null;
 }
