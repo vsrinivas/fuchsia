@@ -84,51 +84,6 @@ function is-valid-fuchsia-property {
   [[ "${FUCHSIA_PROPERTY_NAMES[*]}" =~ $1 ]]
 }
 
-# Migration code to use the fconfig binary to
-# store configured values vs. the legacy file
-# file based.
-function migrate-properties {
-  # If there is a default device, the user has migrated,
-  # or manually set a default device using fconfig,
-  # so don't do anything.
-  #
-  # Don't use get-fuchsia-property in migrate-properties to avoid
-  # recursion.
-  device_name="$("$(get-fuchsia-sdk-tools-dir)/fconfig" "get" "device-name")"
-  if [[ -n "${device_name}" ]]; then
-    return 0
-  fi
-  # To migrate properties, we need a device-name or
-  # a migrated default device name.
-  device_name="$(get-internal-property device-name)"
-  if [[ -z "${device_name}" ]]; then
-    # if no device name, don't migrate
-    return 0
-  fi
-
-  args=("$(get-fuchsia-sdk-tools-dir)/fconfig" "set-device" "${device_name}" "--default")
-  for prop in "${FUCHSIA_PROPERTY_NAMES[@]}"; do
-    val="$(get-internal-property "${prop}")"
-    if [[ -n "${val}" ]]; then
-      # Skip over the emu-image and bucket if image and bucket are set.
-      if [[ "${prop}" == "emu-image" ]]; then
-        if [[ -z "$("$(get-fuchsia-sdk-tools-dir)/fconfig" "get" "${DEFAULT_EMULATOR_NAME}.image")" ]]; then
-          "$(get-fuchsia-sdk-tools-dir)/fconfig" "set-device" "${DEFAULT_EMULATOR_NAME}" "image" "${val}"
-        fi
-      elif [[ "${prop}" == "emu-bucket" ]]; then
-        if [[ -z "$("$(get-fuchsia-sdk-tools-dir)/fconfig" "get" "${DEFAULT_EMULATOR_NAME}.bucket")" ]]; then
-          "$(get-fuchsia-sdk-tools-dir)/fconfig" "set-device" "${DEFAULT_EMULATOR_NAME}" "bucket" "${val}"
-        fi
-      else
-        args+=("--${prop}" "${val}")
-      fi
-    fi
-  done
-
-  "${args[@]}"
-
-}
-
 function get-internal-property {
   local prop_path
   prop_path="$(get-fuchsia-sdk-data-dir)/.properties/$1.txt"
@@ -140,7 +95,6 @@ function get-internal-property {
 }
 
 function get-fuchsia-property {
-  migrate-properties
   "$(get-fuchsia-sdk-tools-dir)/fconfig" "get" "$1"
 }
 
