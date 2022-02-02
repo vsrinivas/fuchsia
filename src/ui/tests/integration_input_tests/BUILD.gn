@@ -49,6 +49,7 @@ fuchsia_component("workstation-test-realm") {
     ":wrapped-text-manager",
     "//examples/fidl/rust/server:echo-server",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/lib/ui/input-synthesis:input-synthesis-component",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/bin/text:text_manager_comp",
   ]

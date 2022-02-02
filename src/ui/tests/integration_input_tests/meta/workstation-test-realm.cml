@@ -1,6 +1,17 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// The manifest seen below represents a subset of the Workstation UI realm
+// as needed for input tests.  It starts the relevant components, and establishes
+// known necessary static routes.
+//
+// There are also known missing capabilities, which we may be able to backfill.
+// The missing capabilities are reported as missing, and clutter the tests, but
+// it depends on the individual component whether a missing FIDL API is a fatal
+// error or not.
+//
+// Feel free to add the components that you need but aren't here yet.
 {
     include: [
         "sys/component/realm_builder.shard.cml",
@@ -9,7 +20,9 @@
     program: {
         runner: "elf",
 
-        // A fake binary to allow realm startup.
+        // A fake binary to allow realm startup, as the `program.binary`
+        // property is required in a manifest.  This is not a CF bug. Rather,
+        // we are using the manifest in a somewhat unconventional way.
         binary: "bin/fidl_echo_rust_server",
     },
     children: [
@@ -24,20 +37,41 @@
         {
             name: "text_manager",
             url: "#meta/wrapped-text-manager.cm",
+
+            // Known missing capabilities
+            //
+            // fuchsia.settings.Keyboard: this is provided by SetUI, perhaps
+            // we should add it in.
         },
         {
             name: "scenic",
             url: "#meta/wrapped-scenic.cm",
+
+            // Known missing capabilities:
+            //
+            // fuchsia.stash.Store: we may find that we need to add this to
+            // ensure that Scenic behaves sensibly.
         },
         {
-            name: "root_presenter",
-            url: "#meta/wrapped-root-presenter.cm",
-        },
+            name: "scene_manager",
+            url: "#meta/scene_manager.cm",
 
-        //{
-        //    name: "scene_manager",
-        //    url: "fuchsia-pkg://fuchsia.com/text-input-test#meta/scene_manager.cm",
-        //},
+            // Known missing capabilities:
+            //
+            // fuchsia.settings.Keyboard: should be non-essential so long as
+            // the tests don't require changing keyboard settings.
+            //
+            // dev-input-report: this should be turned off, but no such
+            // test component exists yet.
+            //
+            // fuchsia.ui.shortcut.Manager: a warning is printed in the logs,
+            // but so long as we don't attempt to test shortcuts, the scene
+            // manager will otherwise work.
+        },
+        {
+            name: "input_synthesis",
+            url: "#meta/input-synthesis-component.cm",
+        },
     ],
     offer: [
         {
@@ -45,8 +79,9 @@
             from: "parent",
             to: [
                 "#fake_display_provider",
+                "#input_synthesis",
                 "#mock_cobalt",
-                "#root_presenter",
+                "#scene_manager",
                 "#scenic",
                 "#text_manager",
             ],
@@ -84,24 +119,43 @@
         },
         {
             protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "#scenic",
-            to: [ "#root_presenter" ],
+            to: [ "#scene_manager" ],
         },
         {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
             from: "parent",
-            to: [ "#root_presenter" ],
+            to: [ "#scene_manager" ],
         },
-
-        // TODO(fmil): replace root_presenter with scene_manager.
-        // fidl.fuchsia.ui.pointerinjector.configuration
+        {
+            protocol: [ "fuchsia.ui.input3.KeyEventInjector" ],
+            from: "#text_manager",
+            to: [ "#scene_manager" ],
+        },
+        {
+            protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
+            from: "#scene_manager",
+            to: [ "#input_synthesis" ],
+        },
     ],
     expose: [
         {
+            protocol: [ "test.inputsynthesis.Text" ],
+            from: "#input_synthesis",
+        },
+        {
             protocol: [
+                "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.scenic.Scenic",
             ],
@@ -110,6 +164,12 @@
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.session.scene.Manager",
+            ],
+            from: "#scene_manager",
+        },
+        {
+            protocol: [
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
             ],
@@ -118,10 +178,6 @@
         {
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "#mock_cobalt",
-        },
-        {
-            protocol: [ "fuchsia.ui.policy.Presenter" ],
-            from: "#root_presenter",
         },
     ],
 }

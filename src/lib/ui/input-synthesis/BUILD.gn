@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
 declare_args() {
@@ -10,6 +12,11 @@ declare_args() {
   # protocol `fuchsia.input.injection.InputDeviceRegistry`. If not set, input-synthesis
   # defaults to connect to `fuchsia.ui.input.InputDeviceRegistry`.
   use_modern_input_injection = false
+}
+
+fidl("test.inputsynthesis") {
+  testonly = true
+  sources = [ "input_synthesis.test.fidl" ]
 }
 
 rustc_library("input-synthesis") {
@@ -50,6 +57,29 @@ rustc_library("input-synthesis") {
   ]
 
   configs += [ ":use_modern_input_injection" ]
+}
+
+rustc_binary("input-synthesis-bin") {
+  testonly = true
+  edition = "2018"
+  deps = [
+    ":input-synthesis",
+    ":test.inputsynthesis-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "src/main.rs" ]
+
+  configs += [ ":use_modern_input_injection" ]
+}
+
+fuchsia_component("input-synthesis-component") {
+  testonly = true
+  manifest = "meta/input-synthesis.cml"
+  deps = [ ":input-synthesis-bin" ]
 }
 
 config("use_modern_input_injection") {

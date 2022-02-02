@@ -1,0 +1,47 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// A test library that allows tests to pretend to be devices and inject input
+/// into the input pipeline.
+///
+/// The library exposes the functionality from the Rust library
+/// `//src/lib/ui/input-synthesis` through a FIDL adapter.
+///
+/// This FIDL adapter makes it possible to call the test methods from all languages
+/// that FIDL supports.
+library test.inputsynthesis;
+
+/// A protocol that allows the test to pretend to be a keyboard and inject
+/// key presses into the input pipeline.
+///
+/// Only minimally required text synthesis is exposed through the protocol. If
+/// you need to expose more functionality, feel free to add methods to this
+/// protocol.
+@discoverable
+protocol Text {
+    /// Sends `text` through the input pipeline, pretending to be a keyboard,
+    /// effectively converting the text into key presses as if on a US QWERTY
+    /// keyboard, and typing characters up one at a time with a brief pause
+    /// between successive key events.
+    ///
+    /// US ASCII text get mapped to the corresponding key presses.
+    /// For example `a` gets mapped into a press and
+    /// a followup release of the key `a` on the US QWERTY keyboard.  Also,
+    /// `A` gets mapped into a press of the `Shift` key, followed by a press
+    /// and release of `a`.
+    ///
+    /// For convenience, the `\n` and `\t` get converted into `Enter` and `Tab`
+    /// keys respectively.
+    ///
+    /// On error-free return, the caller can assume that all keys corresponding
+    /// to `text` has been typed up on the fake keyboard.  On error, the caller
+    /// should fail the test.
+    ///
+    /// This API does not support sending multiple key events at the same time.
+    /// Feel free to expose the appropriate functionality from the
+    /// `input-synthesis` library if you need that.
+    Send(struct {
+        text string:1024;
+    }) -> ();
+};

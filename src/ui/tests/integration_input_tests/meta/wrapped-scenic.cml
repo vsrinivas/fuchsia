@@ -16,6 +16,8 @@
             protocol: [
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.FlatlandDisplay",
+                "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
             ],
         },
@@ -37,6 +39,8 @@
             protocol: [
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.FlatlandDisplay",
+                "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
             ],
             from: "self",
