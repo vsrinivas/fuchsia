@@ -13,6 +13,7 @@ use ffx_emulator_config::{
     convert_bundle_to_configs, AccelerationMode, ConsoleType, EmulatorConfiguration, LogLevel,
     NetworkingMode,
 };
+use ffx_emulator_engines::get_instance_dir;
 use ffx_emulator_start_args::StartCommand;
 use fms;
 use futures::executor::block_on;
@@ -50,6 +51,7 @@ pub(crate) async fn make_configs(
     // Integrate the values from command line flags into the emulation configuration, and
     // return the result to the caller.
     emu_config = apply_command_line_options(emu_config, cmd, ffx_config)
+        .await
         .context("problem with apply command lines")?;
 
     if emu_config.host.networking == NetworkingMode::User {
@@ -61,7 +63,7 @@ pub(crate) async fn make_configs(
 
 /// Given an EmulatorConfiguration and a StartCommand, write the values from the
 /// StartCommand onto the EmulatorConfiguration, overriding any previous values.
-fn apply_command_line_options(
+async fn apply_command_line_options(
     mut emu_config: EmulatorConfiguration,
     cmd: &StartCommand,
     ffx_config: &FfxConfigWrapper,
@@ -78,6 +80,9 @@ fn apply_command_line_options(
     // Process any values that are Options, have Auto values, or need any transformation.
     if let Some(log) = &cmd.log {
         emu_config.host.log = PathBuf::from(log);
+    } else {
+        let instance = get_instance_dir(&ffx_config, &cmd.name, false).await?;
+        emu_config.host.log = instance.join("emulator.log");
     }
     if emu_config.host.acceleration == AccelerationMode::Auto {
         if emu_config.host.os == "linux" {
@@ -253,8 +258,8 @@ mod tests {
     use regex::Regex;
     use std::collections::HashMap;
 
-    #[test]
-    fn test_apply_command_line_options() -> Result<()> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_apply_command_line_options() -> Result<()> {
         let mut ffx_config = FfxConfigWrapper::new();
         ffx_config.overrides.insert(EMU_UPSCRIPT_FILE, "/path/to/upscript".to_string());
 
@@ -292,7 +297,7 @@ mod tests {
         assert_eq!(emu_config.runtime.upscript, None);
 
         // Apply the test data, which should change everything in the config.
-        let opts = apply_command_line_options(emu_config, &cmd, &ffx_config)?;
+        let opts = apply_command_line_options(emu_config, &cmd, &ffx_config).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
         assert_eq!(opts.host.gpu, GpuType::Host);
         assert_eq!(opts.host.log, PathBuf::from("/path/to/log"));
@@ -309,7 +314,7 @@ mod tests {
         // "console" and "monitor" are exclusive, so swap them and reapply.
         cmd.console = false;
         cmd.monitor = true;
-        let opts = apply_command_line_options(opts, &cmd, &ffx_config)?;
+        let opts = apply_command_line_options(opts, &cmd, &ffx_config).await?;
         assert_eq!(opts.runtime.console, ConsoleType::Monitor);
 
         Ok(())

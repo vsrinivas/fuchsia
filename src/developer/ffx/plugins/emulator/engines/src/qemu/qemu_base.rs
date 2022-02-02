@@ -20,7 +20,7 @@ use ffx_emulator_config::{
 };
 use fidl_fuchsia_developer_bridge as bridge;
 use shared_child::SharedChild;
-use std::{fs, path::PathBuf, process::Command, str, sync::Arc};
+use std::{fs, fs::File, path::PathBuf, process::Command, str, sync::Arc};
 
 /// QemuBasedEngine collects the interface for
 /// emulator engine implementations that use
@@ -182,6 +182,14 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         self.emu_config_mut().flags = process_flag_template(&self.emu_config())?;
 
         let mut emulator_cmd = self.build_emulator_cmd(&emu_binary)?;
+
+        if self.emu_config().runtime.console == ConsoleType::None {
+            let stdout = File::create(&self.emu_config().host.log)
+                .expect(&format!("Couldn't open log life {:?}", &self.emu_config().host.log));
+            let stderr = stdout.try_clone()?;
+            emulator_cmd.stdout(stdout).stderr(stderr);
+            println!("Logging to {:?}", &self.emu_config().host.log);
+        }
 
         if self.emu_config().runtime.log_level == LogLevel::Verbose
             || self.emu_config().runtime.dry_run
