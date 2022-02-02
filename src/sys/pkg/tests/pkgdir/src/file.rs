@@ -567,13 +567,13 @@ async fn assert_set_flags_meta_file_unsupported(root_dir: &DirectoryProxy, path:
 
 #[fuchsia::test]
 async fn unsupported() {
-    for source in just_pkgfs_for_now().await {
+    for source in dirs_to_test().await {
         unsupported_per_package_source(source).await
     }
 }
 
 async fn unsupported_per_package_source(source: PackageSource) {
-    let root_dir = source.dir;
+    let root_dir = &source.dir;
     async fn verify_unsupported_calls(
         root_dir: &DirectoryProxy,
         path: &str,
@@ -620,8 +620,14 @@ async fn unsupported_per_package_source(source: PackageSource) {
     // BAD_HANDLE for the unsupported file APIs. This is actually consistent with the fuchsia.io
     // documentation because files without WRITE permissions *should* yield BAD_HANDLE for these
     // methods.
-    verify_unsupported_calls(&root_dir, "file", zx::Status::BAD_HANDLE).await;
+    verify_unsupported_calls(root_dir, "file", zx::Status::BAD_HANDLE).await;
 
-    verify_unsupported_calls(&root_dir, "meta/file", zx::Status::NOT_SUPPORTED).await;
-    verify_unsupported_calls(&root_dir, "meta", zx::Status::NOT_SUPPORTED).await;
+    // Rights enforced for write operations.
+    if source.is_pkgdir() {
+        verify_unsupported_calls(root_dir, "meta/file", zx::Status::BAD_HANDLE).await;
+        verify_unsupported_calls(root_dir, "meta", zx::Status::BAD_HANDLE).await;
+    } else {
+        verify_unsupported_calls(root_dir, "meta/file", zx::Status::NOT_SUPPORTED).await;
+        verify_unsupported_calls(root_dir, "meta", zx::Status::NOT_SUPPORTED).await;
+    }
 }

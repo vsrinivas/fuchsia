@@ -83,6 +83,14 @@ package-directory rejects opening a directory with `OPEN_FLAG_NOT_DIRECTORY`.
 pkgfs ignores `OPEN_FLAG_NOT_DIRECTORY` and therefore allows opening files with
 the flag.
 
+### Rights enforced for write operations
+
+package-directory enforces hierarchical rights on write operation attempts, and
+therefore returns `BAD_HANDLE` so that fdio will return [EBADF], whereas pkgfs
+does not enforce rights and so just returns `NOT_SUPPORTED`.
+
+[EBADF]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/fdio/fdio_unistd.cc;l=99-100;drc=83f4c24fe96daa2c5535329415bd32c0ca9d90dd
+
 ### trailing slash implies `OPEN_FLAG_DIRECTORY`
 
 package-directory allows opens of the form "subdir/" only if subdir is a
@@ -187,8 +195,13 @@ pkgfs only supports reading from the beginning of that file.
 
 ### mode protection bits not set
 
-When `GetAttrs()` is called, package-directory always returns 0 for the [mode protection bits](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/directory.fidl;l=97;drc=1cc9164ebb39d1c4b070e23f3808216403fcb526) of [NodeAttributes.mode](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/node.fidl;l=91;drc=7fab2b7a07b1ab6c3d190cdf07daed196e3f4168), whereas pkgfs returns 0o755 for directories and 0o644 for files.
+When `GetAttrs()` is called, package-directory always returns 0 for the
+[mode protection bits](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/directory.fidl;l=97;drc=1cc9164ebb39d1c4b070e23f3808216403fcb526)
+of
+[NodeAttributes.mode](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.io/node.fidl;l=91;drc=7fab2b7a07b1ab6c3d190cdf07daed196e3f4168),
+whereas pkgfs returns 0o755 for directories and 0o644 for files.
 
 ### content files support `OPEN_FLAG_APPEND`
 
-blobfs allows `OPEN_FLAG_APPEND`, but pkgfs rejects the flag before forwarding the open.
+blobfs allows `OPEN_FLAG_APPEND`, but pkgfs rejects the flag before forwarding
+the open.
