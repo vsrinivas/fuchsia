@@ -41,7 +41,7 @@ constexpr char kTerminaGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
 constexpr char kGuestManagerUrl[] =
     "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
-constexpr char kRealm[] = "realmguestintegrationtest";
+constexpr char kDefaultRealm[] = "realmguestintegrationtest";
 // TODO(fxbug.dev/12589): Use consistent naming for the test utils here.
 constexpr char kFuchsiaTestUtilsUrl[] = "fuchsia-pkg://fuchsia.com/virtualization-test-utils";
 constexpr char kDebianTestUtilDir[] = "/test_utils";
@@ -131,7 +131,7 @@ zx_status_t EnclosedGuest::Install(sys::testing::EnvironmentServices& services) 
 }
 
 zx_status_t EnclosedGuest::Launch(sys::testing::EnclosingEnvironment& environment,
-                                  zx::time deadline) {
+                                  const std::string& realm, zx::time deadline) {
   PeriodicLogger logger;
   std::string url;
   fuchsia::virtualization::GuestConfig cfg;
@@ -230,7 +230,7 @@ zx_status_t EnclosedGuest::Launch(sys::testing::EnclosingEnvironment& environmen
   BacktraceWatchdog watchdog;
   {
     // Find the path to the jobprovider in the realm.
-    files::Glob glob(std::string("/hub/r/") + kRealm + "/*/job");
+    files::Glob glob(std::string("/hub/r/") + realm + "/*/job");
     FX_CHECK(1u == glob.size());
     const std::string path = *glob.begin();
 
@@ -284,7 +284,7 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
 
   logger.Start("Creating guest sandbox", zx::sec(5));
   enclosing_environment_ =
-      sys::testing::EnclosingEnvironment::Create(kRealm, real_env_, std::move(services));
+      sys::testing::EnclosingEnvironment::Create(kDefaultRealm, real_env_, std::move(services));
   bool environment_running = RunLoopUntil(
       GetLoop(), [this] { return enclosing_environment_->is_running(); }, deadline);
   if (!environment_running) {
@@ -292,7 +292,7 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
     return ZX_ERR_TIMED_OUT;
   }
 
-  return Launch(*enclosing_environment_, deadline);
+  return Launch(*enclosing_environment_, kDefaultRealm, deadline);
 }
 
 zx_status_t EnclosedGuest::Stop(zx::time deadline) {

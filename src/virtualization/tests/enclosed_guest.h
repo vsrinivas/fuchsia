@@ -50,7 +50,8 @@ class EnclosedGuest {
   // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` first.
   // Use `Start` instead, unless `environment` is created externally, where `Install` was called to
   // install the guest services prior to its creation.
-  zx_status_t Launch(sys::testing::EnclosingEnvironment& environment, zx::time deadline);
+  zx_status_t Launch(sys::testing::EnclosingEnvironment& environment, const std::string& realm,
+                     zx::time deadline);
 
   // Start the guest.
   //
