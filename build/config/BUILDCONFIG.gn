@@ -1302,6 +1302,15 @@ declare_args() {
         "tsan",
       ]
     },
+    {
+      configs = [ "//build/config/sanitizers:hwasan" ]
+      tags = [
+        "hwasan",
+        "instrumentation-runtime",
+        "instrumented",
+        "kernel-excluded",
+      ]
+    },
 
     {
       configs = [ "//build/config/sanitizers:ubsan" ]

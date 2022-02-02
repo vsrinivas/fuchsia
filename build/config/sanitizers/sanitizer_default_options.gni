@@ -80,6 +80,18 @@ declare_args() {
   # any program in the build that needs such a setting (which should be only in
   # tests) can use the sanitizer_extra_options() mechanism instead.
   scudo_default_options = []
+
+  # Default [HawrdwareAddressSanitizer](https://clang.llvm.org/docs/HardwareAssistedAddressSanitizerDesign.html)
+  # options (before the `HWASAN_OPTIONS` environment variable is read at
+  # runtime).  This can be set as a build argument to affect most "hwasan"
+  # variants in $variants (which see), or overridden in $toolchain_args in
+  # one of those variants.  This can be a list of strings or a single string.
+  #
+  # Note that even if this is empty, programs in this build **cannot** define
+  # their own `__hwasan_default_options` C function.  Instead, they can use a
+  # sanitizer_extra_options() target in their `deps` and then any options
+  # injected that way can override that option's setting in this list.
+  hwasan_default_options = []
 }
 
 # This lists the GN build arguments declared above.
@@ -90,6 +102,7 @@ sanitizer_default_options_args = [
   "ubsan_default_options",
   "scudo_default_options",
   "tsan_default_options",
+  "hwasan_default_options",
 ]
 
 # Adapt to being used in the Fuchsia GN build or in the Zircon build.

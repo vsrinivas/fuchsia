@@ -12,6 +12,9 @@ if (toolchain_variant.tags + [ "asan" ] - [ "asan" ] !=
 } else if (toolchain_variant.tags + [ "ubsan" ] - [ "ubsan" ] !=
            toolchain_variant.tags) {
   _toolchain_runtime_deps_cflags += [ "-fsanitize=undefined" ]
+} else if (toolchain_variant.tags + [ "hwasan" ] - [ "hwasan" ] !=
+           toolchain_variant.tags) {
+  _toolchain_runtime_deps_cflags += [ "-fsanitize=hwaddress" ]
 }
 
 toolchain_runtime_deps("static-libc++-deps") {

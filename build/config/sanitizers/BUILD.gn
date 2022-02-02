@@ -267,3 +267,58 @@ variant("tsan") {
 
 sanitizer_default_options("tsan_default_options") {
 }
+
+variant("hwasan") {
+  common_flags = [ "-fsanitize=hwaddress" ]
+
+  cflags = [
+    # TODO(fxbug.dev/57112): Temporarily disable instrumenting globals for now.
+    # Tagging on globals affects taking offsets of vtables in the relative-
+    # vtables ABI and results in a linker error. Once we finalize how we want
+    # to handle this case, we should come back and re-enable global
+    # instrumentation.
+    "-mllvm",
+    "-hwasan-globals=0",
+  ]
+
+  # TODO(phosek): use runtime.json instead of invoking Clang.
+  if (is_fuchsia) {
+    extension = ".so"
+  } else {
+    extension = ".a"
+  }
+
+  # For dynamic linking (Fuchsia and macOS), there is just one combined DSO.
+  # For static linking (other platforms), there are separate libraries for the
+  # generic (C) and C++-specific runtime support.
+  needed_hwasan_libs = [ "hwasan" ]
+  if (extension == ".a") {
+    needed_hwasan_libs += [ "hwasan_cxx" ]
+  }
+  rustflags = []
+  foreach(hwasan, needed_hwasan_libs) {
+    libclang_rt_hwasan =
+        exec_script("/usr/bin/env",
+                    [
+                      "${rebased_clang_prefix}/clang",
+                      "--target=${current_target_tuple}",
+                      "-print-file-name=libclang_rt.${hwasan}${extension}",
+                    ],
+                    "trim string")
+    rustflags += [ "-Clink-arg=${libclang_rt_hwasan}" ]
+  }
+  if (is_fuchsia) {
+    rustflags += [ "-Clink-arg=-dynamic-linker=hwasan/ld.so.1" ]
+  }
+
+  deps = [ ":hwasan_default_options" ]
+
+  # Expose the presence of sanitizers as a compile-time condition.
+  # This allows conditional compilation of code for this variant,
+  # for instance in order to disable a specific test case.
+  # TODO(fxbug.dev/87239): use cfg_sanitize instead.
+  rustflags += [ "--cfg=feature=\"variant_hwasan\"" ]
+}
+
+sanitizer_default_options("hwasan_default_options") {
+}
