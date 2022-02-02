@@ -39,7 +39,7 @@ impl<'a> Arbitrary<'a> for Fuzzed<Ipv4PacketBuilder> {
         let proto = u8::arbitrary(u)?.into();
 
         let mut builder = Ipv4PacketBuilder::new(src, dst, ttl, proto);
-        builder.dscp(u.int_in_range(0..=(1 << 6))?);
+        builder.dscp(u.int_in_range(0..=(1 << 6 - 1))?);
         builder.ecn(u.int_in_range(0..=3)?);
         builder.df_flag(u.arbitrary()?);
         builder.mf_flag(u.arbitrary()?);

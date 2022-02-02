@@ -770,7 +770,7 @@ impl Ipv4PacketBuilder {
     ///
     /// `dscp` panics if `dscp` is greater than 2^6 - 1.
     pub fn dscp(&mut self, dscp: u8) {
-        assert!(dscp <= 1 << 6, "invalid DCSP: {}", dscp);
+        assert!(dscp <= DSCP_MAX, "invalid DSCP: {}", dscp);
         self.dscp = dscp;
     }
 
@@ -780,7 +780,7 @@ impl Ipv4PacketBuilder {
     ///
     /// `ecn` panics if `ecn` is greater than 3.
     pub fn ecn(&mut self, ecn: u8) {
-        assert!(ecn <= 3, "invalid ECN: {}", ecn);
+        assert!(ecn <= ECN_MAX, "invalid ECN: {}", ecn);
         self.ecn = ecn;
     }
 
@@ -1524,6 +1524,21 @@ mod tests {
         (v4_pkt_buf, v6_pkt_buf)
     }
 
+    #[test]
+    #[should_panic(expected = "invalid DSCP")]
+    fn test_serialize_dscp_out_of_bounds() {
+        let mut ipv4_builder =
+            Ipv4PacketBuilder::new(DEFAULT_SRC_IP, DEFAULT_DST_IP, 64, IpProto::Tcp.into());
+        ipv4_builder.dscp(DSCP_MAX + 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "invalid ECN")]
+    fn test_serialize_ecn_out_of_bounds() {
+        let mut ipv4_builder =
+            Ipv4PacketBuilder::new(DEFAULT_SRC_IP, DEFAULT_DST_IP, 64, IpProto::Tcp.into());
+        ipv4_builder.ecn(ECN_MAX + 1);
+    }
     #[test]
     fn test_nat64_translate_tcp() {
         let (mut v4_pkt_buf, expected_v6_pkt_buf) = create_tcp_ipv4_and_ipv6_pkt();
