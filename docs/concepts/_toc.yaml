@@ -40,9 +40,6 @@ toc:
 - title: "Packages"
   section:
   - include: /docs/concepts/packages/_toc.yaml
-- title: "Prebuilt packages"
-  section:
-  - include: /docs/concepts/prebuilt_packages/_toc.yaml
 - title: "Security"
   section:
   - include: /docs/concepts/security/_toc.yaml
