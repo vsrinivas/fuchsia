@@ -21,7 +21,7 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_moniker::ExtendedMoniker,
+    cm_moniker::InstancedExtendedMoniker,
     cm_rust::EventMode,
     cm_task_scope::TaskScope,
     cm_util::channel,
@@ -66,7 +66,7 @@ impl EventSource {
                 stream_provider.upgrade().ok_or(EventsError::StreamProviderNotFound)?;
             stream_provider
                 .create_static_event_stream(
-                    &ExtendedMoniker::ComponentManager,
+                    &InstancedExtendedMoniker::ComponentManager,
                     "StartComponentTree".to_string(),
                     vec![EventSubscription::new("resolved".into(), EventMode::Sync)],
                 )
@@ -114,9 +114,9 @@ impl EventSource {
         target_path: String,
     ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
         let moniker = match &self.options.subscription_type {
-            SubscriptionType::AboveRoot => ExtendedMoniker::ComponentManager,
+            SubscriptionType::AboveRoot => InstancedExtendedMoniker::ComponentManager,
             SubscriptionType::Component(abs_moniker) => {
-                ExtendedMoniker::ComponentInstance(abs_moniker.clone())
+                InstancedExtendedMoniker::ComponentInstance(abs_moniker.clone())
             }
         };
         if let Some(stream_provider) = self.stream_provider.upgrade() {

@@ -16,7 +16,7 @@ use {
         hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
     },
     async_trait::async_trait,
-    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
+    cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     cm_rust::{CapabilityName, ComponentDecl, EventMode, UseDecl, UseEventStreamDeprecatedDecl},
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
@@ -45,7 +45,7 @@ pub struct EventStreamProvider {
 
     /// A mapping from a component instance's InstancedAbsoluteMoniker, to the set of
     /// event streams and their corresponding paths in the component instance's out directory.
-    streams: Arc<Mutex<HashMap<ExtendedMoniker, Vec<EventStreamAttachment>>>>,
+    streams: Arc<Mutex<HashMap<InstancedExtendedMoniker, Vec<EventStreamAttachment>>>>,
 
     /// The mode in which component manager is running.
     execution_mode: ExecutionMode,
@@ -69,7 +69,7 @@ impl EventStreamProvider {
     /// does not exist or the channel has already been taken.
     pub async fn take_static_event_stream(
         &self,
-        target_moniker: &ExtendedMoniker,
+        target_moniker: &InstancedExtendedMoniker,
         stream_name: String,
     ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
         let mut streams = self.streams.lock().await;
@@ -87,14 +87,14 @@ impl EventStreamProvider {
     /// component and with the provided `target_path`.
     pub async fn create_static_event_stream(
         self: &Arc<Self>,
-        target_moniker: &ExtendedMoniker,
+        target_moniker: &InstancedExtendedMoniker,
         stream_name: String,
         subscriptions: Vec<EventSubscription>,
     ) -> Result<(), ModelError> {
         let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
         let subscription_type = match target_moniker {
-            ExtendedMoniker::ComponentManager => SubscriptionType::AboveRoot,
-            ExtendedMoniker::ComponentInstance(abs_moniker) => {
+            InstancedExtendedMoniker::ComponentManager => SubscriptionType::AboveRoot,
+            InstancedExtendedMoniker::ComponentInstance(abs_moniker) => {
                 SubscriptionType::Component(abs_moniker.clone())
             }
         };
@@ -120,7 +120,7 @@ impl EventStreamProvider {
     ) -> Result<(), ModelError> {
         let mut streams = self.streams.lock().await;
         // Remove all event streams associated with the `target_moniker` component.
-        streams.remove(&ExtendedMoniker::ComponentInstance(target_moniker.clone()));
+        streams.remove(&InstancedExtendedMoniker::ComponentInstance(target_moniker.clone()));
         Ok(())
     }
 
@@ -136,7 +136,7 @@ impl EventStreamProvider {
                     subscriptions,
                 }) => {
                     self.create_static_event_stream(
-                        &ExtendedMoniker::ComponentInstance(target_moniker.clone()),
+                        &InstancedExtendedMoniker::ComponentInstance(target_moniker.clone()),
                         name.to_string(),
                         subscriptions
                             .iter()

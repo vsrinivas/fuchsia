@@ -14,7 +14,7 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_moniker::ExtendedMoniker,
+    cm_moniker::InstancedExtendedMoniker,
     cm_rust::CapabilityTypeName,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     routing::capability_source::{AggregateCapability, AggregateCapabilityProvider},
@@ -82,10 +82,10 @@ impl Hook for CollectionCapabilityHost {
         }) = &event.result
         {
             let target_moniker = match &event.target_moniker {
-                ExtendedMoniker::ComponentManager => {
+                InstancedExtendedMoniker::ComponentManager => {
                     Err(ModelError::UnexpectedComponentManagerMoniker)
                 }
-                ExtendedMoniker::ComponentInstance(moniker) => Ok(moniker),
+                InstancedExtendedMoniker::ComponentInstance(moniker) => Ok(moniker),
             }?;
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self

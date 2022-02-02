@@ -15,7 +15,7 @@ use {
     },
     ::routing::event::{EventFilter, EventModeSet},
     anyhow::Error,
-    cm_moniker::ExtendedMoniker,
+    cm_moniker::InstancedExtendedMoniker,
     cm_rust::{DictionaryValue, EventMode},
     fuchsia_trace as trace,
     futures::{
@@ -130,7 +130,7 @@ impl EventDispatcher {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct EventDispatcherScope {
     /// The moniker of the realm
-    pub moniker: ExtendedMoniker,
+    pub moniker: InstancedExtendedMoniker,
 
     /// Filters for an event in that realm.
     pub filter: EventFilter,
@@ -139,7 +139,7 @@ pub struct EventDispatcherScope {
 }
 
 impl EventDispatcherScope {
-    pub fn new(moniker: ExtendedMoniker) -> Self {
+    pub fn new(moniker: InstancedExtendedMoniker) -> Self {
         Self {
             moniker,
             filter: EventFilter::new(None),

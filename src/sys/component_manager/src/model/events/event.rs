@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::hooks::Event as ComponentEvent, cm_moniker::ExtendedMoniker, cm_rust::EventMode,
-    fuchsia_trace as trace, futures::channel::oneshot,
+    crate::model::hooks::Event as ComponentEvent, cm_moniker::InstancedExtendedMoniker,
+    cm_rust::EventMode, fuchsia_trace as trace, futures::channel::oneshot,
 };
 
 /// Created for a particular component event.
@@ -18,7 +18,7 @@ pub struct Event {
     /// The scope where this event comes from. This can be seen as a superset of the
     /// `event.target_moniker` itself given that the events might have been offered from an
     /// ancestor realm.
-    pub scope_moniker: ExtendedMoniker,
+    pub scope_moniker: InstancedExtendedMoniker,
 
     /// This Sender is used to unblock the component manager if available.
     /// If a Sender is unspecified then that indicates that this event is asynchronous and

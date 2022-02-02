@@ -12,7 +12,7 @@ use {
     },
     ::routing::{component_instance::ComponentInstanceInterface, event::EventFilter},
     async_trait::async_trait,
-    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
+    cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     cm_rust::CapabilityName,
     fuchsia_async as fasync,
     futures::{channel::mpsc, future::join_all, stream, SinkExt, StreamExt},
@@ -165,7 +165,7 @@ impl SynthesisTask {
             // If the scope is component manager, synthesize the builtin events first and then
             // proceed to synthesize from the root and down.
             let scope_moniker = match scope.moniker {
-                ExtendedMoniker::ComponentManager => {
+                InstancedExtendedMoniker::ComponentManager => {
                     // Ignore this error. This can occur when the event stream is closed in the
                     // middle of synthesis. We can finish synthesizing if an error happens.
                     if let Err(_) = Self::send_events(
@@ -180,7 +180,9 @@ impl SynthesisTask {
                     }
                     InstancedAbsoluteMoniker::root()
                 }
-                ExtendedMoniker::ComponentInstance(ref scope_moniker) => scope_moniker.clone(),
+                InstancedExtendedMoniker::ComponentInstance(ref scope_moniker) => {
+                    scope_moniker.clone()
+                }
             };
             let root = model.look_up(&scope_moniker.to_partial()).await?;
             let mut component_stream = get_subcomponents(root, visited_components.clone());
@@ -435,7 +437,7 @@ mod tests {
         let event = event_stream.next().await.expect("got running event");
         match event.event.result {
             Ok(EventPayload::DirectoryReady { name, .. }) if name == "diagnostics" => {
-                assert_eq!(event.event.target_moniker, ExtendedMoniker::ComponentManager);
+                assert_eq!(event.event.target_moniker, InstancedExtendedMoniker::ComponentManager);
             }
             payload => panic!("Expected running or directory ready. Got: {:?}", payload),
         }
@@ -453,7 +455,7 @@ mod tests {
             .collect::<Vec<_>>();
         if args.include_builtin {
             scopes.push(EventDispatcherScope {
-                moniker: ExtendedMoniker::ComponentManager,
+                moniker: InstancedExtendedMoniker::ComponentManager,
                 filter: EventFilter::debug(),
                 mode_set: EventModeSet::new(cm_rust::EventMode::Sync),
             });

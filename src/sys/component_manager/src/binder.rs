@@ -14,7 +14,7 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_moniker::ExtendedMoniker,
+    cm_moniker::InstancedExtendedMoniker,
     cm_rust::{CapabilityName, CapabilityPath, ProtocolDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
@@ -142,10 +142,10 @@ impl Hook for BinderCapabilityHost {
         }) = &event.result
         {
             let target_moniker = match &event.target_moniker {
-                ExtendedMoniker::ComponentManager => {
+                InstancedExtendedMoniker::ComponentManager => {
                     Err(ModelError::UnexpectedComponentManagerMoniker)
                 }
-                ExtendedMoniker::ComponentInstance(moniker) => Ok(moniker),
+                InstancedExtendedMoniker::ComponentInstance(moniker) => Ok(moniker),
             }?;
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self

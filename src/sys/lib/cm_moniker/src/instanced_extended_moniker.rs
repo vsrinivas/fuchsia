@@ -1,4 +1,4 @@
-// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -17,20 +17,20 @@ use serde::{Deserialize, Serialize};
 /// - A marker representing component manager's realm
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Eq, Ord, PartialOrd, PartialEq, Debug, Clone, Hash)]
-pub enum ExtendedMoniker {
+pub enum InstancedExtendedMoniker {
     ComponentInstance(InstancedAbsoluteMoniker),
     ComponentManager,
 }
 
-/// The string representation of ExtendedMoniker::ComponentManager
+/// The string representation of InstancedExtendedMoniker::ComponentManager
 const EXTENDED_MONIKER_COMPONENT_MANAGER_STR: &'static str = "<component_manager>";
 
-impl ExtendedMoniker {
+impl InstancedExtendedMoniker {
     pub fn parse_string_without_instances(rep: &str) -> Result<Self, MonikerError> {
         if rep == EXTENDED_MONIKER_COMPONENT_MANAGER_STR {
-            Ok(ExtendedMoniker::ComponentManager)
+            Ok(InstancedExtendedMoniker::ComponentManager)
         } else {
-            Ok(ExtendedMoniker::ComponentInstance(
+            Ok(InstancedExtendedMoniker::ComponentInstance(
                 InstancedAbsoluteMoniker::parse_string_without_instances(rep)?,
             ))
         }
@@ -46,7 +46,7 @@ impl ExtendedMoniker {
         }
     }
 
-    pub fn contains_in_realm(&self, other: &ExtendedMoniker) -> bool {
+    pub fn contains_in_realm(&self, other: &InstancedExtendedMoniker) -> bool {
         match (self, other) {
             (Self::ComponentManager, _) => true,
             (Self::ComponentInstance(_), Self::ComponentManager) => false,
@@ -62,7 +62,7 @@ impl ExtendedMoniker {
     }
 }
 
-impl fmt::Display for ExtendedMoniker {
+impl fmt::Display for InstancedExtendedMoniker {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ComponentInstance(m) => {
@@ -76,7 +76,7 @@ impl fmt::Display for ExtendedMoniker {
     }
 }
 
-impl From<InstancedAbsoluteMoniker> for ExtendedMoniker {
+impl From<InstancedAbsoluteMoniker> for InstancedExtendedMoniker {
     fn from(m: InstancedAbsoluteMoniker) -> Self {
         Self::ComponentInstance(m)
     }
@@ -89,30 +89,37 @@ mod tests {
     #[test]
     fn extended_monikers_parse() {
         assert_eq!(
-            ExtendedMoniker::parse_string_without_instances(EXTENDED_MONIKER_COMPONENT_MANAGER_STR)
-                .unwrap(),
-            ExtendedMoniker::ComponentManager
+            InstancedExtendedMoniker::parse_string_without_instances(
+                EXTENDED_MONIKER_COMPONENT_MANAGER_STR
+            )
+            .unwrap(),
+            InstancedExtendedMoniker::ComponentManager
         );
         assert_eq!(
-            ExtendedMoniker::parse_string_without_instances("/foo/bar").unwrap(),
-            ExtendedMoniker::ComponentInstance(
+            InstancedExtendedMoniker::parse_string_without_instances("/foo/bar").unwrap(),
+            InstancedExtendedMoniker::ComponentInstance(
                 InstancedAbsoluteMoniker::parse_string_without_instances("/foo/bar").unwrap()
             )
         );
-        assert!(ExtendedMoniker::parse_string_without_instances("").is_err(), "cannot be empty");
         assert!(
-            ExtendedMoniker::parse_string_without_instances("foo/bar").is_err(),
+            InstancedExtendedMoniker::parse_string_without_instances("").is_err(),
+            "cannot be empty"
+        );
+        assert!(
+            InstancedExtendedMoniker::parse_string_without_instances("foo/bar").is_err(),
             "must start with /"
         );
     }
 
     #[test]
     fn to_string_functions() {
-        let cm_moniker =
-            ExtendedMoniker::parse_string_without_instances(EXTENDED_MONIKER_COMPONENT_MANAGER_STR)
-                .unwrap();
-        let foobar_moniker = ExtendedMoniker::parse_string_without_instances("/foo/bar").unwrap();
-        let empty_moniker = ExtendedMoniker::parse_string_without_instances("/").unwrap();
+        let cm_moniker = InstancedExtendedMoniker::parse_string_without_instances(
+            EXTENDED_MONIKER_COMPONENT_MANAGER_STR,
+        )
+        .unwrap();
+        let foobar_moniker =
+            InstancedExtendedMoniker::parse_string_without_instances("/foo/bar").unwrap();
+        let empty_moniker = InstancedExtendedMoniker::parse_string_without_instances("/").unwrap();
 
         assert_eq!(format!("{}", cm_moniker), EXTENDED_MONIKER_COMPONENT_MANAGER_STR.to_string());
         assert_eq!(

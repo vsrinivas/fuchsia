@@ -11,7 +11,7 @@ use {
         },
         hooks::{EventType, HasEventType},
     },
-    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
+    cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     cm_rust::EventMode,
     fuchsia_trace as trace,
     futures::{channel::mpsc, StreamExt},
@@ -65,7 +65,7 @@ impl EventStream {
         expected_event_type: EventType,
         expected_moniker: InstancedAbsoluteMoniker,
     ) -> Option<Event> {
-        let expected_moniker = ExtendedMoniker::ComponentInstance(expected_moniker);
+        let expected_moniker = InstancedExtendedMoniker::ComponentInstance(expected_moniker);
         while let Some(event) = self.next().await {
             let actual_event_type = event.event.event_type();
             if expected_moniker == event.event.target_moniker

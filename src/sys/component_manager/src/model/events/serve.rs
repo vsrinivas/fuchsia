@@ -14,7 +14,7 @@ use {
             },
         },
     },
-    cm_moniker::ExtendedMoniker,
+    cm_moniker::InstancedExtendedMoniker,
     cm_rust::{CapabilityName, EventMode},
     fidl::endpoints::{create_request_stream, ClientEnd, Proxy},
     fidl_fuchsia_component as fcomponent,
@@ -306,18 +306,20 @@ async fn create_event_fidl_object(
     event: Event,
 ) -> Result<(Option<BoxFuture<'static, ()>>, fsys::Event), fidl::Error> {
     let moniker_string = match (&event.event.target_moniker, &event.scope_moniker) {
-        (moniker @ ExtendedMoniker::ComponentManager, _) => moniker.to_string(),
-        (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentManager) => {
-            RelativeMoniker::from_absolute(&AbsoluteMoniker::root(), &target.to_partial())
-                .to_string()
-        }
-        (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentInstance(scope)) => {
-            RelativeMoniker::from_absolute::<AbsoluteMoniker>(
-                &scope.to_partial(),
-                &target.to_partial(),
-            )
-            .to_string()
-        }
+        (moniker @ InstancedExtendedMoniker::ComponentManager, _) => moniker.to_string(),
+        (
+            InstancedExtendedMoniker::ComponentInstance(target),
+            InstancedExtendedMoniker::ComponentManager,
+        ) => RelativeMoniker::from_absolute(&AbsoluteMoniker::root(), &target.to_partial())
+            .to_string(),
+        (
+            InstancedExtendedMoniker::ComponentInstance(target),
+            InstancedExtendedMoniker::ComponentInstance(scope),
+        ) => RelativeMoniker::from_absolute::<AbsoluteMoniker>(
+            &scope.to_partial(),
+            &target.to_partial(),
+        )
+        .to_string(),
     };
     let header = Some(fsys::EventHeader {
         event_type: Some(event.event.event_type().into()),

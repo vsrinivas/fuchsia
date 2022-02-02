@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     assert_matches::assert_matches,
-    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
+    cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     cm_rust::{
         CapabilityName, CapabilityTypeName, ProtocolDecl, StorageDecl, StorageDirectorySource,
     },
@@ -71,9 +71,9 @@ where
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
         config_builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(
-                    vec!["foo:0", "bar:0"],
-                )),
+                source_moniker: InstancedExtendedMoniker::ComponentInstance(
+                    InstancedAbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
+                ),
                 source_name: CapabilityName::from("running"),
                 source: CapabilityAllowlistSource::Framework,
                 capability: CapabilityTypeName::Event,
@@ -119,7 +119,7 @@ where
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
         config_builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentManager,
+                source_moniker: InstancedExtendedMoniker::ComponentManager,
                 source_name: CapabilityName::from("fuchsia.kernel.RootResource"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
@@ -173,9 +173,9 @@ where
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
         config_builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(
-                    vec!["foo:0"],
-                )),
+                source_moniker: InstancedExtendedMoniker::ComponentInstance(
+                    InstancedAbsoluteMoniker::from(vec!["foo:0"]),
+                ),
                 source_name: CapabilityName::from("fuchsia.foo.FooBar"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
@@ -225,9 +225,9 @@ where
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
         config_builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(
-                    vec!["foo:0"],
-                )),
+                source_moniker: InstancedExtendedMoniker::ComponentInstance(
+                    InstancedAbsoluteMoniker::from(vec!["foo:0"]),
+                ),
                 source_name: CapabilityName::from("cache"),
                 source: CapabilityAllowlistSource::Capability,
                 capability: CapabilityTypeName::Storage,
@@ -280,9 +280,9 @@ where
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
         config_builder.add_debug_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(
-                    vec!["foo:0"],
-                )),
+                source_moniker: InstancedExtendedMoniker::ComponentInstance(
+                    InstancedAbsoluteMoniker::from(vec!["foo:0"]),
+                ),
                 source_name: CapabilityName::from("debug_service1"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
@@ -354,7 +354,7 @@ where
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
         config_builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentManager,
+                source_moniker: InstancedExtendedMoniker::ComponentManager,
                 source_name: CapabilityName::from("hub"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Directory,
@@ -402,7 +402,7 @@ where
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
         config_builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentManager,
+                source_moniker: InstancedExtendedMoniker::ComponentManager,
                 source_name: CapabilityName::from("fuchsia.kernel.RootResource"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
@@ -450,7 +450,7 @@ where
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
         config_builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentManager,
+                source_moniker: InstancedExtendedMoniker::ComponentManager,
                 source_name: CapabilityName::from("fuchsia.kernel.RootResource"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,

@@ -24,7 +24,7 @@ use {
         path::PathBufExt, route_capability, route_storage_and_backing_directory,
     },
     async_trait::async_trait,
-    cm_moniker::{ExtendedMoniker, InstancedRelativeMoniker},
+    cm_moniker::{InstancedExtendedMoniker, InstancedRelativeMoniker},
     cm_rust::{self, CapabilityName, CapabilityPath, ExposeDecl, UseDecl, UseStorageDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
@@ -419,10 +419,10 @@ async fn open_storage_capability(
                 .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_chan))
                 .map_err(|e| {
                     let moniker = match &dir_source {
-                        Some(r) => {
-                            ExtendedMoniker::ComponentInstance(r.instanced_moniker().clone())
-                        }
-                        None => ExtendedMoniker::ComponentManager,
+                        Some(r) => InstancedExtendedMoniker::ComponentInstance(
+                            r.instanced_moniker().clone(),
+                        ),
+                        None => InstancedExtendedMoniker::ComponentManager,
                     };
                     ModelError::from(OpenResourceError::open_storage_failed(
                         &moniker,

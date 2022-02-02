@@ -13,7 +13,7 @@ use {
     },
     anyhow::format_err,
     async_trait::async_trait,
-    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
+    cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     cm_rust::{CapabilityName, ComponentDecl},
     config_encoder::ConfigFields,
     fidl_fuchsia_diagnostics_types as fdiagnostics,
@@ -391,7 +391,7 @@ pub struct Event {
     pub id: u64,
 
     /// Moniker of component that this event applies to
-    pub target_moniker: ExtendedMoniker,
+    pub target_moniker: InstancedExtendedMoniker,
 
     /// Component url of the component that this event applies to
     pub component_url: String,
@@ -417,7 +417,7 @@ impl Event {
     pub fn new_builtin(result: EventResult) -> Self {
         let timestamp = zx::Time::get_monotonic();
         Self::new_internal(
-            ExtendedMoniker::ComponentManager,
+            InstancedExtendedMoniker::ComponentManager,
             "bin/component_manager".to_string(),
             timestamp,
             result,
@@ -445,7 +445,7 @@ impl Event {
     ) -> Self {
         let timestamp = zx::Time::get_monotonic();
         Self::new_internal(
-            ExtendedMoniker::ComponentInstance(target_moniker),
+            InstancedExtendedMoniker::ComponentInstance(target_moniker),
             component_url.into(),
             timestamp,
             result,
@@ -453,7 +453,7 @@ impl Event {
     }
 
     fn new_internal(
-        target_moniker: ExtendedMoniker,
+        target_moniker: InstancedExtendedMoniker,
         component_url: String,
         timestamp: zx::Time,
         result: EventResult,

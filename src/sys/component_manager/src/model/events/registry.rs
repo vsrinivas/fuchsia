@@ -28,7 +28,7 @@ use {
         route_capability,
     },
     async_trait::async_trait,
-    cm_moniker::{ExtendedMoniker, InstancedAbsoluteMoniker},
+    cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     cm_rust::{CapabilityName, EventMode, UseDecl, UseEventDecl},
     fuchsia_trace as trace,
     futures::lock::Mutex,
@@ -382,7 +382,7 @@ impl EventRegistry {
     async fn route_event(
         event_decl: UseEventDecl,
         component: &Arc<ComponentInstance>,
-    ) -> Result<(CapabilityName, ExtendedMoniker), ModelError> {
+    ) -> Result<(CapabilityName, InstancedExtendedMoniker), ModelError> {
         let (route_source, _route) =
             route_capability(RouteRequest::UseEvent(event_decl), component).await?;
         match route_source {
@@ -394,7 +394,7 @@ impl EventRegistry {
                 capability: InternalCapability::Event(source_name),
                 ..
             }) if source_name == "directory_ready" => {
-                Ok((source_name, ExtendedMoniker::ComponentManager))
+                Ok((source_name, InstancedExtendedMoniker::ComponentManager))
             }
             _ => unreachable!(),
         }
