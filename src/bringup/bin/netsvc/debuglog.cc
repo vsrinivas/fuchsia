@@ -134,9 +134,9 @@ void LogListener::PushLogMessage(const fuchsia_logger::wire::LogMessage& message
   zx::duration timestamp(message.time);
   // Add time in format [secs.millis].
   ss << '[' << std::setw(5) << std::setfill('0') << (timestamp.to_secs());
-  ss << '.' << std::setw(3) << std::setfill('0') << (timestamp.to_msecs() % 1000ULL) << "]";
+  ss << '.' << std::setw(3) << std::setfill('0') << (timestamp.to_msecs() % 1000ULL) << ']';
   // Add PID and TID as "tid.pid".
-  ss << " " << std::setw(5) << std::setfill('0') << message.pid;
+  ss << ' ' << std::setw(5) << std::setfill('0') << message.pid;
   ss << '.' << std::setw(5) << std::setfill('0') << message.tid;
 
   // Add message tags.
@@ -168,7 +168,7 @@ void LogListener::PushLogMessage(const fuchsia_logger::wire::LogMessage& message
   }
   PendingMessage& last = pending_.back();
   if (last.log_message.size() < max_msg_size_) {
-    last.log_message += "\n";
+    last.log_message += '\n';
   } else {
     pending_.push(PendingMessage{.log_message = "\n"});
   }
