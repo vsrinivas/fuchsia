@@ -16,13 +16,26 @@ pub const EWMA_SMOOTHING_FACTOR: usize = 10;
 #[derive(Clone, Debug, PartialEq)]
 pub struct SignalData {
     pub ewma_rssi: EwmaPseudoDecibel,
+    pub ewma_snr: EwmaPseudoDecibel,
     pub rssi_velocity: PseudoDecibel,
 }
 
 impl SignalData {
-    pub fn update_with_new_measurement(&mut self, rssi: PseudoDecibel) {
+    pub fn new(
+        initial_rssi: PseudoDecibel,
+        initial_snr: PseudoDecibel,
+        ewma_weight: usize,
+    ) -> Self {
+        Self {
+            ewma_rssi: EwmaPseudoDecibel::new(ewma_weight, initial_rssi),
+            ewma_snr: EwmaPseudoDecibel::new(ewma_weight, initial_snr),
+            rssi_velocity: 0,
+        }
+    }
+    pub fn update_with_new_measurement(&mut self, rssi: PseudoDecibel, snr: PseudoDecibel) {
         let prev_rssi = self.ewma_rssi.get();
         self.ewma_rssi.update_average(rssi);
+        self.ewma_snr.update_average(snr);
         self.rssi_velocity =
             match calculate_pseudodecibel_velocity(vec![prev_rssi, self.ewma_rssi.get()]) {
                 Ok(velocity) => velocity,
@@ -49,4 +62,23 @@ pub struct ConnectionData {
     pub signal_data_at_disconnect: SignalData,
     /// Average phy rate over connection duration
     pub average_tx_rate: u16,
+}
+
+#[cfg(test)]
+mod test {
+    use {
+        super::*,
+        test_util::{assert_gt, assert_lt},
+    };
+
+    #[fuchsia::test]
+    fn test_update_with_new_measurements() {
+        let mut signal_data = SignalData::new(-40, 30, EWMA_SMOOTHING_FACTOR);
+        signal_data.update_with_new_measurement(-60, 15);
+        assert_lt!(signal_data.ewma_rssi.get(), -40);
+        assert_gt!(signal_data.ewma_rssi.get(), -60);
+        assert_lt!(signal_data.ewma_snr.get(), 30);
+        assert_gt!(signal_data.ewma_snr.get(), 15);
+        assert_lt!(signal_data.rssi_velocity, 0);
+    }
 }

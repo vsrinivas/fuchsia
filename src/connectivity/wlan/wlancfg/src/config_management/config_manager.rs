@@ -11,11 +11,12 @@ use {
         },
         stash_conversion::*,
     },
-    crate::{client::types, util::pseudo_energy::EwmaPseudoDecibel},
+    crate::client::types,
     anyhow::format_err,
     async_trait::async_trait,
     fidl_fuchsia_wlan_common::ScanType,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -143,7 +144,7 @@ pub trait SavedNetworksManagerApi: Send + Sync {
         id: &NetworkIdentifier,
         credential: &Credential,
         bssid: types::Bssid,
-        connection_data: i8,
+        connection_data: fidl_internal::SignalReportIndication,
     ) -> Option<SignalData>;
 }
 
@@ -519,7 +520,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         id: &NetworkIdentifier,
         credential: &Credential,
         bssid: types::Bssid,
-        connection_data: i8,
+        connection_data: fidl_internal::SignalReportIndication,
     ) -> Option<SignalData> {
         // Find saved networks matching network id.
         let mut saved_networks = self.saved_networks.lock().await;
@@ -536,14 +537,19 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                 match network.perf_stats.rssi_data_by_bssid.get_mut(&bssid) {
                     // Update connection data for BSS
                     Some(signal_data) => {
-                        signal_data.update_with_new_measurement(connection_data);
+                        signal_data.update_with_new_measurement(
+                            connection_data.rssi_dbm,
+                            connection_data.snr_db,
+                        );
                         return Some(signal_data.clone());
                     }
                     // Add connection quality data for BSS
                     None => {
-                        let ewma_rssi =
-                            EwmaPseudoDecibel::new(EWMA_SMOOTHING_FACTOR, connection_data);
-                        let signal_data = SignalData { ewma_rssi: ewma_rssi, rssi_velocity: 0 };
+                        let signal_data = SignalData::new(
+                            connection_data.rssi_dbm,
+                            connection_data.snr_db,
+                            EWMA_SMOOTHING_FACTOR,
+                        );
                         let _ = network
                             .perf_stats
                             .rssi_data_by_bssid
@@ -698,7 +704,7 @@ mod tests {
         std::{convert::TryFrom, io::Write},
         tempfile::TempDir,
         test_case::test_case,
-        test_util::{assert_geq, assert_leq},
+        test_util::{assert_gt, assert_lt},
         wlan_common::assert_variant,
     };
 
@@ -2013,8 +2019,10 @@ mod tests {
             .is_none());
 
         // Record connection quality data
+        let signal_ind =
+            fidl_fuchsia_wlan_internal::SignalReportIndication { rssi_dbm: -50, snr_db: 35 };
         let response = saved_networks
-            .record_connection_quality_data(&net_id, &credential, bssid, -50)
+            .record_connection_quality_data(&net_id, &credential, bssid, signal_ind)
             .await
             .expect("failed to get RSSI data response.");
 
@@ -2032,11 +2040,14 @@ mod tests {
             .expect("failed to get rssi data.");
         assert_eq!(response, *signal_data);
         assert_eq!(signal_data.ewma_rssi.get(), -50);
+        assert_eq!(signal_data.ewma_snr.get(), 35);
         assert_eq!(signal_data.rssi_velocity, 0);
 
         // Record second quality connection data
+        let signal_ind =
+            fidl_fuchsia_wlan_internal::SignalReportIndication { rssi_dbm: -80, snr_db: 20 };
         let response = saved_networks
-            .record_connection_quality_data(&net_id, &credential, bssid, -80)
+            .record_connection_quality_data(&net_id, &credential, bssid, signal_ind)
             .await
             .expect("failed to get RSSI data response.");
 
@@ -2051,9 +2062,11 @@ mod tests {
             .get(&bssid)
             .expect("failed to get rssi data.");
         assert_eq!(response, *signal_data);
-        assert_leq!(signal_data.ewma_rssi.get(), -50);
-        assert_geq!(signal_data.ewma_rssi.get(), -80);
-        assert_leq!(signal_data.rssi_velocity, 0);
+        assert_lt!(signal_data.ewma_rssi.get(), -50);
+        assert_gt!(signal_data.ewma_rssi.get(), -80);
+        assert_lt!(signal_data.ewma_snr.get(), 35);
+        assert_gt!(signal_data.ewma_snr.get(), 20);
+        assert_lt!(signal_data.rssi_velocity, 0);
     }
 
     fn fake_successful_connect_result() -> fidl_sme::ConnectResult {

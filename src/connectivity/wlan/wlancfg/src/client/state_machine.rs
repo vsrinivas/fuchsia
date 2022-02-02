@@ -852,7 +852,7 @@ async fn handle_connection_stats(
     ind: fidl_internal::SignalReportIndication,
 ) {
     let signal_data = saved_network_manager
-        .record_connection_quality_data(&id.clone().into(), &credential, bssid, ind.rssi_dbm)
+        .record_connection_quality_data(&id.clone().into(), &credential, bssid, ind)
         .await;
     // Send RSSI and RSSI velocity metrics
     let rssi_velocity = signal_data.map(|data| {
@@ -880,7 +880,6 @@ mod tests {
             telemetry::{TelemetryEvent, TelemetrySender},
             util::{
                 listener,
-                pseudo_energy::EwmaPseudoDecibel,
                 testing::{
                     create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
                     create_wlan_hasher, generate_disconnect_info, poll_sme_req,
@@ -3716,17 +3715,17 @@ mod tests {
         pin_mut!(sme_fut);
 
         let rssi = -40;
-        let ewma_rssi = EwmaPseudoDecibel::new(EWMA_SMOOTHING_FACTOR, rssi);
-        let velocity = -1;
+        let snr = 30;
+        let velocity = 0;
         // Tell the FakeSavedNetworksManager what to respond to record_connection_quality_data
-        let signal_data = SignalData { ewma_rssi: ewma_rssi, rssi_velocity: velocity };
+        let signal_data = SignalData::new(rssi, snr, EWMA_SMOOTHING_FACTOR);
         test_values
             .record_connection_quality_channel
             .unbounded_send(Some(signal_data))
             .expect("failed to send expected connection quality data");
         // Send the signal report from SME
         let mut fidl_signal_report =
-            fidl_internal::SignalReportIndication { rssi_dbm: rssi.into(), snr_db: 30 };
+            fidl_internal::SignalReportIndication { rssi_dbm: rssi, snr_db: snr };
         connect_txn_handle
             .send_on_signal_report(&mut fidl_signal_report)
             .expect("failed to send signal report");
