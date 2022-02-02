@@ -39,9 +39,8 @@ struct BufferTraits<ReadableRingBuffer> {
     // in the interim, however to be strictly correct, a flush is needed in all cases.
     size_t payload_bytes = payload_frames * format.bytes_per_frame();
     zx_cache_flush(payload, payload_bytes, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
-    return std::make_optional<ReadableStream::Buffer>(Fixed(start_frame), Fixed(payload_frames),
-                                                      payload, true, StreamUsageMask(),
-                                                      Gain::kUnityGainDb);
+    return std::make_optional<ReadableStream::Buffer>(Fixed(start_frame), payload_frames, payload,
+                                                      true, StreamUsageMask(), Gain::kUnityGainDb);
   }
 };
 
@@ -51,7 +50,7 @@ struct BufferTraits<WritableRingBuffer> {
                                                           int64_t payload_frames, void* payload) {
     size_t payload_bytes = payload_frames * format.bytes_per_frame();
     return std::make_optional<WritableStream::Buffer>(
-        Fixed(start_frame), Fixed(payload_frames), payload,
+        Fixed(start_frame), payload_frames, payload,
         // RingBuffers are synchronized only by time, which means there may not be a synchronization
         // happens-before edge connecting the current writer with the next reader. When this buffer
         // is unlocked, we must flush our cache to ensure we have published the latest data.

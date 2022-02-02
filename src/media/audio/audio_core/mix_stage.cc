@@ -199,9 +199,9 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(ReadLockContext& ctx, F
   }
 
   // Cache the buffer in case it is not fully read by the caller.
-  cached_buffer_.Set(ReadableStream::Buffer(
-      Fixed(dest_frame.Floor()), Fixed(cur_mix_job_.buf_frames), cur_mix_job_.buf, true,
-      cur_mix_job_.usages_mixed, cur_mix_job_.total_applied_gain_db));
+  cached_buffer_.Set(ReadableStream::Buffer(Fixed(dest_frame.Floor()), cur_mix_job_.buf_frames,
+                                            cur_mix_job_.buf, true, cur_mix_job_.usages_mixed,
+                                            cur_mix_job_.total_applied_gain_db));
   return cached_buffer_.Get();
 }
 
@@ -365,12 +365,10 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   if (kMixerPositionTraceEvents) {
     TRACE_DURATION("audio", "MixStage::ProcessMix position", "start",
                    source_buffer.start().Integral().Floor(), "start.frac",
-                   source_buffer.start().Fraction().raw_value(), "length",
-                   source_buffer.length().Integral().Floor(), "length.frac",
-                   source_buffer.length().Fraction().raw_value(), "next_source_frame",
-                   info.next_source_frame.Integral().Floor(), "next_source_frame.frac",
-                   info.next_source_frame.Fraction().raw_value(), "frames_produced",
-                   info.frames_produced, "buf_frames", cur_mix_job_.buf_frames);
+                   source_buffer.start().Fraction().raw_value(), "length", source_buffer.length(),
+                   "next_source_frame", info.next_source_frame.Integral().Floor(),
+                   "next_source_frame.frac", info.next_source_frame.Fraction().raw_value(),
+                   "frames_produced", info.frames_produced, "buf_frames", cur_mix_job_.buf_frames);
   }
 
   // At this point we know we need to consume some source data, but we don't yet know how much.
@@ -388,7 +386,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   // already enforced by the renderer implementation.
   static_assert(fuchsia::media::MAX_FRAMES_PER_RENDERER_PACKET <= Fixed::Max().Floor());
   FX_DCHECK(source_buffer.end() > source_buffer.start());
-  FX_DCHECK(source_buffer.length() <= Fixed(Fixed::Max()));
+  FX_DCHECK(source_buffer.length() <= Fixed::Max());
 
   // Retrieve the actual times of this source packet's first and last frames.
   auto source_for_first_packet_frame = source_buffer.start();
@@ -489,7 +487,8 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   // window. It is possible that this advancement has moved our sampling point beyond the current
   // source packet, or has moved our target mix position beyond our dest mix buffer, or even BOTH:
   int64_t dest_offset = initial_dest_advance;
-  bool consumed_source = (source_offset + mixer.pos_filter_width() >= source_buffer.length());
+  bool consumed_source =
+      (source_offset + mixer.pos_filter_width() >= Fixed(source_buffer.length()));
   if (consumed_source) {
     // This packet was initially within our mix window, but after aligning our sampling point to
     // the forward-nearest dest frame, it is now entirely in the past. This occurs when downsampling
@@ -521,16 +520,15 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
       local_gain_db = bookkeeping.gain.GetGainDb();
     }
 
-    consumed_source =
-        mixer.Mix(buf, dest_frames_left, &dest_offset, source_buffer.payload(),
-                  source_buffer.length().Floor(), &source_offset, cur_mix_job_.accumulate);
+    consumed_source = mixer.Mix(buf, dest_frames_left, &dest_offset, source_buffer.payload(),
+                                source_buffer.length(), &source_offset, cur_mix_job_.accumulate);
     if (consumed_source) {
-      FX_DCHECK(source_offset + pos_width >= source_buffer.length())
+      FX_DCHECK(source_offset + pos_width >= Fixed(source_buffer.length()))
           << "source_offset (" << ffl::String::DecRational << source_offset << ") plus pos_width ("
           << ffl::String::DecRational << pos_width << ") should equal/exceed source_buffer.length ("
           << ffl::String::DecRational << source_buffer.length() << ")";
     } else {
-      FX_DCHECK(source_offset + pos_width < source_buffer.length())
+      FX_DCHECK(source_offset + pos_width < Fixed(source_buffer.length()))
           << "source_offset (" << ffl::String::DecRational << source_offset << ") plus pos_width ("
           << ffl::String::DecRational << pos_width << ") should be less than source_buffer.length ("
           << ffl::String::DecRational << source_buffer.length() << ")";
@@ -558,7 +556,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   info.UpdateRunningPositionsBy(dest_offset - initial_dest_advance, bookkeeping);
 
   if (consumed_source) {
-    FX_DCHECK(source_offset + mixer.pos_filter_width() >= source_buffer.length());
+    FX_DCHECK(source_offset + mixer.pos_filter_width() >= Fixed(source_buffer.length()));
   }
 
   info.frames_produced += dest_offset;

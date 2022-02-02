@@ -483,7 +483,7 @@ void BaseRenderer::SendPacketInternal(fuchsia::media::StreamPacket packet,
 
   // Create the packet.
   auto packet_ref = packet_allocator_.New(
-      payload_buffer, packet.payload_offset, Fixed(frame_count), start_pts,
+      payload_buffer, packet.payload_offset, frame_count, start_pts,
       context_.threading_model().FidlDomain().dispatcher(), std::move(callback));
   if (!packet_ref) {
     FX_LOGS(ERROR) << "Client created too many concurrent Packets; Allocator has created "

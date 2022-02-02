@@ -316,9 +316,8 @@ TEST_F(AudioOutputTest, ProcessMultipleMixJobs) {
   }
   // Enqueue several buffers, each with the same payload buffer.
   for (size_t i = 0; i < kNumBuffers; ++i) {
-    pipeline->Enqueue(ReadableStream::Buffer(Fixed(i * kBufferFrames), Fixed(kBufferFrames),
-                                             buffer.data(), true, StreamUsageMask(),
-                                             Gain::kUnityGainDb));
+    pipeline->Enqueue(ReadableStream::Buffer(Fixed(i * kBufferFrames), kBufferFrames, buffer.data(),
+                                             true, StreamUsageMask(), Gain::kUnityGainDb));
   }
 
   // Return some valid, non-silent frame range from StartMixJob.
@@ -412,8 +411,8 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
     auto buf = pipeline->ReadLock(rlctx, Fixed(0), 48);
 
     EXPECT_TRUE(buf);
-    EXPECT_EQ(buf->start().Floor(), 0u);
-    EXPECT_EQ(buf->length().Floor(), 48u);
+    EXPECT_EQ(buf->start().Floor(), 0);
+    EXPECT_EQ(buf->length(), 48);
     CheckBuffer(buf->payload(), 0.0, 96);
   }
 
@@ -479,8 +478,8 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   {
     auto buf = pipeline->ReadLock(rlctx, Fixed(0), 48);
     EXPECT_TRUE(buf);
-    EXPECT_EQ(buf->start().Floor(), 0u);
-    EXPECT_EQ(buf->length().Floor(), 48u);
+    EXPECT_EQ(buf->start().Floor(), 0);
+    EXPECT_EQ(buf->length(), 48);
     CheckBuffer(buf->payload(), 2.0, 96);
   }
 

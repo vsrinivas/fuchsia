@@ -331,7 +331,7 @@ TEST_F(OutputPipelineTest, Loopback) {
   auto buf = pipeline->ReadLock(rlctx, Fixed(loopback_frame), 48);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), loopback_frame);
-  ASSERT_EQ(buf->length().Floor(), 48u);
+  ASSERT_EQ(buf->length(), 48);
   CheckBuffer(buf->payload(), 2.0, 96);
 
   // Advance time to our safe_read_frame past the above mix, which includes 1ms of output.
@@ -342,19 +342,19 @@ TEST_F(OutputPipelineTest, Loopback) {
   auto loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
-  ASSERT_LE(loopback_buf->length().Floor(), 48u);
-  CheckBuffer(loopback_buf->payload(), 1.0, loopback_buf->length().Floor() * 2);
+  ASSERT_LE(loopback_buf->length(), 48);
+  CheckBuffer(loopback_buf->payload(), 1.0, loopback_buf->length() * 2);
 
-  if (loopback_buf->length().Floor() < 48u) {
+  if (loopback_buf->length() < 48u) {
     // The loopback read might need to wrap around the ring buffer. When this happens,
     // the first ReadLock returns fewer frames that we asked for. Verify we can read the
     // remaining frames instantly.
-    loopback_frame += loopback_buf->length().Floor();
-    auto frames_remaining = 48 - loopback_buf->length().Floor();
+    loopback_frame += loopback_buf->length();
+    auto frames_remaining = 48 - loopback_buf->length();
     loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
     ASSERT_TRUE(loopback_buf);
     ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
-    ASSERT_EQ(loopback_buf->length().Floor(), frames_remaining);
+    ASSERT_EQ(loopback_buf->length(), frames_remaining);
     CheckBuffer(loopback_buf->payload(), 1.0, frames_remaining * 2);
   }
 }
@@ -425,7 +425,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   auto buf = pipeline->ReadLock(rlctx, Fixed(loopback_frame), 96);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), loopback_frame);
-  ASSERT_EQ(buf->length().Floor(), 96u);
+  ASSERT_EQ(buf->length(), 96);
   CheckBuffer(buf->payload(), 2.0, 192);
 
   // Advance time to our safe_read_frame past the above mix, which includes 1ms of output.
@@ -435,19 +435,19 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   auto loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
-  ASSERT_LE(loopback_buf->length().Floor(), 48u);
-  CheckBuffer(loopback_buf->payload(), 1.0, loopback_buf->length().Floor() * 2);
+  ASSERT_LE(loopback_buf->length(), 48);
+  CheckBuffer(loopback_buf->payload(), 1.0, loopback_buf->length() * 2);
 
-  if (loopback_buf->length().Floor() < 48u) {
+  if (loopback_buf->length() < 48u) {
     // The loopback read might need to wrap around the ring buffer. When this happens,
     // the first ReadLock returns fewer frames that we asked for. Verify we can read the
     // remaining frames instantly.
-    loopback_frame += loopback_buf->length().Floor();
-    auto frames_remaining = 48 - loopback_buf->length().Floor();
+    loopback_frame += loopback_buf->length();
+    auto frames_remaining = 48 - loopback_buf->length();
     loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
     ASSERT_TRUE(loopback_buf);
     ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
-    ASSERT_EQ(loopback_buf->length().Floor(), frames_remaining);
+    ASSERT_EQ(loopback_buf->length(), frames_remaining);
     CheckBuffer(loopback_buf->payload(), 1.0, frames_remaining * 2);
   }
 }
@@ -507,7 +507,7 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
   auto buf = pipeline->ReadLock(rlctx, Fixed(0), 48);
   ASSERT_TRUE(buf);
   ASSERT_EQ(buf->start().Floor(), 0u);
-  ASSERT_EQ(buf->length().Floor(), 48u);
+  ASSERT_EQ(buf->length(), 48);
   float expected_sample = static_cast<float>(kConfig.size());
   CheckBuffer(buf->payload(), expected_sample, 96);
 }
@@ -708,7 +708,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
     EXPECT_FALSE(packet_released[1]);
 
     EXPECT_EQ(buf->start().Floor(), 0);
-    EXPECT_EQ(buf->length().Floor(), kFramesPerRead);
+    EXPECT_EQ(buf->length(), kFramesPerRead);
     auto arr = SampleOffset(buf->payload(), sample_start);
     CheckBuffer(arr, kVal1, sample_length, kValTolerance * kVal1);
   }
@@ -722,7 +722,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
     EXPECT_FALSE(packet_released[2]);
 
     EXPECT_EQ(buf->start().Floor(), kFramesPerRead);
-    EXPECT_EQ(buf->length().Floor(), kFramesPerRead);
+    EXPECT_EQ(buf->length(), kFramesPerRead);
 
     auto arr = SampleOffset(buf->payload(), sample_start);
     CheckBuffer(arr, kVal2, sample_length, kValTolerance * kVal2);
@@ -939,7 +939,7 @@ TEST_F(OutputPipelineTest, PipelineWithEffectsV2) {
     auto buf = pipeline->ReadLock(rlctx, Fixed(loopback_frame), 48);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), loopback_frame);
-    ASSERT_EQ(buf->length().Floor(), 48u);
+    ASSERT_EQ(buf->length(), 48);
     CheckBuffer(buf->payload(), 2.0, 96);
 
     // Check metrics: must have called the effect twice.
@@ -959,20 +959,20 @@ TEST_F(OutputPipelineTest, PipelineWithEffectsV2) {
     auto loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), 48);
     ASSERT_TRUE(loopback_buf);
     ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
-    ASSERT_LE(loopback_buf->length().Floor(), 48u);
-    CheckBuffer(loopback_buf->payload(), 1.0, loopback_buf->length().Floor() * 2);
+    ASSERT_LE(loopback_buf->length(), 48);
+    CheckBuffer(loopback_buf->payload(), 1.0, loopback_buf->length() * 2);
 
-    if (loopback_buf->length().Floor() < 48u) {
+    if (loopback_buf->length() < 48u) {
       SCOPED_TRACE("loopback->ReadLock second call");
       // The loopback read might need to wrap around the ring buffer. When this happens,
       // the first ReadLock returns fewer frames that we asked for. Verify we can read the
       // remaining frames instantly.
-      loopback_frame += loopback_buf->length().Floor();
-      auto frames_remaining = 48 - loopback_buf->length().Floor();
+      loopback_frame += loopback_buf->length();
+      auto frames_remaining = 48 - loopback_buf->length();
       loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
       ASSERT_TRUE(loopback_buf);
       ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
-      ASSERT_EQ(loopback_buf->length().Floor(), frames_remaining);
+      ASSERT_EQ(loopback_buf->length(), frames_remaining);
       CheckBuffer(loopback_buf->payload(), 1.0, frames_remaining * 2);
     }
   }

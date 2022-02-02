@@ -210,9 +210,6 @@ std::optional<ReadableStream::Buffer> EffectsStageV1::ReadLock(ReadLockContext& 
 
   auto source_buffer = source_->ReadLock(ctx, Fixed(aligned_first_frame), aligned_frame_count);
   if (source_buffer) {
-    // We expect an integral buffer length.
-    FX_CHECK(source_buffer->length().Floor() == source_buffer->length().Ceiling());
-
     fuchsia_audio_effects_stream_info stream_info;
     stream_info.usage_mask = source_buffer->usage_mask().mask() & kSupportedUsageMask;
     stream_info.gain_dbfs = source_buffer->total_applied_gain_db();
@@ -221,7 +218,7 @@ std::optional<ReadableStream::Buffer> EffectsStageV1::ReadLock(ReadLockContext& 
 
     float* buf_out = nullptr;
     auto payload = static_cast<float*>(source_buffer->payload());
-    effects_processor_->Process(source_buffer->length().Floor(), payload, &buf_out);
+    effects_processor_->Process(source_buffer->length(), payload, &buf_out);
 
     // Since we just sent some frames through the effects, we need to reset our ringout counter if
     // we had one.
@@ -256,8 +253,8 @@ std::optional<ReadableStream::Buffer> EffectsStageV1::ReadLock(ReadLockContext& 
     const bool is_continuous = true;
     // TODO(fxbug.dev/50669): Should we clamp length to |frame_count|?
     cached_buffer_.Set(ReadableStream::Buffer(Fixed(aligned_first_frame),
-                                              Fixed(ringout_.buffer_frames), buf_out, is_continuous,
-                                              StreamUsageMask(), 0.0));
+                                              static_cast<int64_t>(ringout_.buffer_frames), buf_out,
+                                              is_continuous, StreamUsageMask(), 0.0));
     ringout_frames_sent_ += ringout_.buffer_frames;
     next_ringout_frame_ = aligned_first_frame + ringout_.buffer_frames;
     return cached_buffer_.Get();

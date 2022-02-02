@@ -58,7 +58,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
       ++released_packet_count_;
       released_packets_.push_back(payload_buffer_id);
     };
-    return allocator_.New(it->second, 0, Fixed(length), Fixed(start), dispatcher(), callback);
+    return allocator_.New(it->second, 0, length, Fixed(start), dispatcher(), callback);
   }
 
   std::vector<int64_t> released_packets() const { return released_packets_; }

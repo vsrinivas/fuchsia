@@ -82,7 +82,7 @@ TEST_F(EffectsStageV1Test, ApplyEffectsToSourceStream) {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
     ASSERT_TRUE(buf);
     ASSERT_EQ(0u, buf->start().Floor());
-    ASSERT_EQ(480u, buf->length().Floor());
+    ASSERT_EQ(480u, buf->length());
 
     auto& arr = as_array<float, 480>(buf->payload());
     EXPECT_THAT(arr, Each(FloatEq(2.0f)));
@@ -121,35 +121,35 @@ TEST_F(EffectsStageV1Test, BlockAlignRequests) {
     // Ask for a single negative frame. We should receive an entire block.
     auto buffer = effects_stage->ReadLock(rlctx, Fixed(-1), 1);
     EXPECT_EQ(buffer->start().Floor(), -static_cast<int32_t>(kBlockSize));
-    EXPECT_EQ(buffer->length().Floor(), kBlockSize);
+    EXPECT_EQ(buffer->length(), kBlockSize);
   }
 
   {
     // Ask for 1 frame; expect to get a full block.
     auto buffer = effects_stage->ReadLock(rlctx, Fixed(0), 1);
     EXPECT_EQ(buffer->start().Floor(), 0u);
-    EXPECT_EQ(buffer->length().Floor(), kBlockSize);
+    EXPECT_EQ(buffer->length(), kBlockSize);
   }
 
   {
     // Ask for subsequent frames; expect the same block still.
     auto buffer = effects_stage->ReadLock(rlctx, Fixed(kBlockSize / 2), kBlockSize / 2);
     EXPECT_EQ(buffer->start().Floor(), 0u);
-    EXPECT_EQ(buffer->length().Floor(), kBlockSize);
+    EXPECT_EQ(buffer->length(), kBlockSize);
   }
 
   {
     // Ask for the second block
     auto buffer = effects_stage->ReadLock(rlctx, Fixed(kBlockSize), kBlockSize);
     EXPECT_EQ(buffer->start().Floor(), kBlockSize);
-    EXPECT_EQ(buffer->length().Floor(), kBlockSize);
+    EXPECT_EQ(buffer->length(), kBlockSize);
   }
 
   {
     // Check for a frame to verify we handle frame numbers > UINT32_MAX.
     auto buffer = effects_stage->ReadLock(rlctx, Fixed(0x100000000), 1);
     EXPECT_EQ(buffer->start().Floor(), 0x100000000);
-    EXPECT_EQ(buffer->length().Floor(), kBlockSize);
+    EXPECT_EQ(buffer->length(), kBlockSize);
   }
 }
 
@@ -179,7 +179,7 @@ TEST_F(EffectsStageV1Test, TruncateToMaxBufferSize) {
     auto buffer = effects_stage->ReadLock(rlctx, Fixed(0), 512);
     EXPECT_EQ(buffer->start().Floor(), 0u);
     // Length is 2 full blocks since 3 blocks would be > 300 frames.
-    EXPECT_EQ(buffer->length().Floor(), 256u);
+    EXPECT_EQ(buffer->length(), 256);
   }
 }
 
@@ -301,7 +301,7 @@ TEST_F(EffectsStageV1Test, UpdateEffect) {
   auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
   ASSERT_TRUE(buf);
   ASSERT_EQ(0u, buf->start().Floor());
-  ASSERT_EQ(480u, buf->length().Floor());
+  ASSERT_EQ(480u, buf->length());
 
   float expected_sample = static_cast<float>(kConfig.size());
 
@@ -357,7 +357,7 @@ TEST_F(EffectsStageV1Test, CreateStageWithRechannelization) {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
     ASSERT_TRUE(buf);
     EXPECT_EQ(0, buf->start().Floor());
-    EXPECT_EQ(480, buf->length().Floor());
+    EXPECT_EQ(480, buf->length());
 
     // Expect 480, 4-channel frames.
     auto& arr = as_array<float, 480 * 4>(buf->payload());
@@ -407,7 +407,7 @@ TEST_F(EffectsStageV1Test, ReleasePacketWhenFullyConsumed) {
   RunLoopUntilIdle();
   ASSERT_TRUE(buf);
   EXPECT_EQ(0, buf->start().Floor());
-  EXPECT_EQ(480, buf->length().Floor());
+  EXPECT_EQ(480, buf->length());
   EXPECT_FALSE(packet_released);
 
   // Now release |buf| and mark it as fully consumed. This should release the underlying packet.
@@ -450,7 +450,7 @@ TEST_F(EffectsStageV1Test, ReleasePacketWhenNoLongerReferenced) {
   RunLoopUntilIdle();
   ASSERT_TRUE(buf);
   EXPECT_EQ(0, buf->start().Floor());
-  EXPECT_EQ(480u, buf->length().Floor());
+  EXPECT_EQ(480u, buf->length());
   EXPECT_FALSE(packet_released);
 
   // Release |buf|, we don't yet expect the underlying packet to be released.
@@ -579,7 +579,7 @@ TEST_F(EffectsStageV1Test, SkipRingoutIfDiscontinuous) {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
     ASSERT_TRUE(buf);
     EXPECT_EQ(0, buf->start().Floor());
-    EXPECT_EQ(48, buf->length().Floor());
+    EXPECT_EQ(48, buf->length());
   }
 
   // Now we expect 3 buffers of ringout; Read the first.
@@ -587,7 +587,7 @@ TEST_F(EffectsStageV1Test, SkipRingoutIfDiscontinuous) {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(1 * kBlockSize), kBlockSize);
     ASSERT_TRUE(buf);
     EXPECT_EQ(kBlockSize, buf->start().Floor());
-    EXPECT_EQ(kBlockSize, buf->length().Floor());
+    EXPECT_EQ(kBlockSize, buf->length());
   }
 
   // Now skip the second and try to read the 3rd. This is discontinuous and should not return any
@@ -676,7 +676,7 @@ TEST_P(EffectsStageV1RingoutTest, RingoutFrames) {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
     ASSERT_TRUE(buf);
     EXPECT_EQ(0, buf->start().Floor());
-    EXPECT_EQ(48, buf->length().Floor());
+    EXPECT_EQ(48, buf->length());
   }
 
   // Now we expect our ringout to be split across many buffers.
@@ -688,7 +688,7 @@ TEST_P(EffectsStageV1RingoutTest, RingoutFrames) {
           effects_stage->ReadLock(rlctx, Fixed(start_frame), GetParam().effect_ring_out_frames);
       ASSERT_TRUE(buf);
       EXPECT_EQ(start_frame, buf->start().Floor());
-      EXPECT_EQ(GetParam().ring_out_block_frames, buf->length().Floor());
+      EXPECT_EQ(GetParam().ring_out_block_frames, buf->length());
       start_frame += GetParam().ring_out_block_frames;
       ringout_frames += GetParam().ring_out_block_frames;
     }
@@ -709,8 +709,8 @@ TEST_P(EffectsStageV1RingoutTest, RingoutFrames) {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), 48);
     ASSERT_TRUE(buf);
     EXPECT_EQ(start_frame, buf->start().Floor());
-    EXPECT_EQ(48, buf->length().Floor());
-    start_frame += buf->length().Floor();
+    EXPECT_EQ(48, buf->length());
+    start_frame += buf->length();
   }
 
   // Now we expect our ringout to be split across many buffers.
@@ -721,7 +721,7 @@ TEST_P(EffectsStageV1RingoutTest, RingoutFrames) {
           effects_stage->ReadLock(rlctx, Fixed(start_frame), GetParam().effect_ring_out_frames);
       ASSERT_TRUE(buf);
       EXPECT_EQ(start_frame, buf->start().Floor());
-      EXPECT_EQ(GetParam().ring_out_block_frames, buf->length().Floor());
+      EXPECT_EQ(GetParam().ring_out_block_frames, buf->length());
       start_frame += GetParam().ring_out_block_frames;
       ringout_frames += GetParam().ring_out_block_frames;
     }

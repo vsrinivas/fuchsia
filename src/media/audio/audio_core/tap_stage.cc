@@ -50,7 +50,7 @@ std::optional<ReadableStream::Buffer> TapStage::ReadLock(ReadLockContext& ctx, F
     // If we don't have a write buffer left over from writing silence, acquire one now. If we can't
     // get a write buffer then we have nothing to do.
     if (!write_buffer) {
-      write_buffer = tap_->WriteLock(first_tap_frame.Floor(), source_buffer->length().Floor());
+      write_buffer = tap_->WriteLock(first_tap_frame.Floor(), source_buffer->length());
     }
     if (write_buffer) {
       CopyFrames(std::move(write_buffer), *source_buffer, source_frac_frame_to_tap_frac_frame);

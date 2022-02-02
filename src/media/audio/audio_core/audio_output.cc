@@ -84,16 +84,14 @@ void AudioOutput::Process() {
           // we did not mix enough data. This can happen if our pipeline is unable to produce the
           // entire requested frame region in a single pass.
           FX_DCHECK(buf->start().Floor() == mix_frames->start);
-          FX_DCHECK(buf->length().Floor() > 0);
           FX_DCHECK(pipeline_->format().sample_format() ==
                     fuchsia::media::AudioSampleFormat::FLOAT);
           payload = reinterpret_cast<float*>(buf->payload());
 
           // Reduce the frame range if we did not fill the entire requested frame region.
-          int64_t buffer_length = buf->length().Floor();
-          FX_CHECK(buffer_length >= 0);
+          FX_CHECK(buf->length() > 0);
           uint64_t valid_frames =
-              std::min(mix_frames->length, static_cast<uint64_t>(buffer_length));
+              std::min(mix_frames->length, static_cast<uint64_t>(buf->length()));
           frames_remaining = mix_frames->length - valid_frames;
           mix_frames->length = valid_frames;
         } else {

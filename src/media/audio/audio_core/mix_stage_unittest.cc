@@ -340,7 +340,7 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
     auto buf = mix_stage_->ReadLock(rlctx, Fixed(output_frame_start), output_frame_count);
     // 1ms @ 48000hz == 48 frames. 2ms == 96 (frames).
     ASSERT_TRUE(buf);
-    ASSERT_EQ(buf->length().Floor(), 96u);
+    ASSERT_EQ(buf->length(), 96);
     // Each frame is 2 channels, so 1ms will be 96 samples.
     auto& arr1 = as_array<float, 96>(buf->payload(), 0);
     EXPECT_THAT(arr1, Each(FloatEq(0.8f)))
@@ -356,7 +356,7 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
   {  // Mix frames 2-4ms. Expect 1 ms of 0.9 samples, then 1 ms of 0.8 values.
     auto buf = mix_stage_->ReadLock(rlctx, Fixed(output_frame_start), output_frame_count);
     ASSERT_TRUE(buf);
-    ASSERT_EQ(buf->length().Floor(), 96u);
+    ASSERT_EQ(buf->length(), 96);
 
     auto& arr1 = as_array<float, 96>(buf->payload(), 0);
     EXPECT_THAT(arr1, Each(FloatEq(0.9f)))
@@ -373,7 +373,7 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
   {  // Mix frames 4-6ms. Expect 1 ms of 0.8 values, then 1 ms of 0.6 values.
     auto buf = mix_stage_->ReadLock(rlctx, Fixed(output_frame_start), output_frame_count);
     ASSERT_TRUE(buf);
-    ASSERT_EQ(buf->length().Floor(), 96u);
+    ASSERT_EQ(buf->length(), 96);
 
     auto& arr1 = as_array<float, 96>(buf->payload(), 0);
     EXPECT_THAT(arr1, Each(FloatEq(0.8f)))
@@ -434,7 +434,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
     auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), 0u);
-    ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
+    ASSERT_EQ(buf->length(), kRequestedFrames);
 
     auto& arr = as_array<float, kRequestedFrames * kDefaultNumChannels>(buf->payload(), 0);
     EXPECT_THAT(arr, Each(FloatEq(kRingBufferSampleValue1)))
@@ -447,7 +447,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
     auto buf = mix_stage_->ReadLock(rlctx, Fixed(kRequestedFrames), kRequestedFrames);
     ASSERT_TRUE(buf);
     ASSERT_EQ(buf->start().Floor(), kRequestedFrames);
-    ASSERT_EQ(buf->length().Floor(), kRequestedFrames);
+    ASSERT_EQ(buf->length(), kRequestedFrames);
 
     auto& arr = as_array<float, kRequestedFrames * kDefaultNumChannels>(buf->payload(), 0);
     EXPECT_THAT(arr, Each(FloatEq(kRingBufferSampleValue2)))
@@ -685,7 +685,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
     RunLoopUntilIdle();
     ASSERT_TRUE(buf);
     EXPECT_EQ(0u, buf->start().Floor());
-    EXPECT_EQ(240u, buf->length().Floor());
+    EXPECT_EQ(240u, buf->length());
     EXPECT_EQ(1.0, static_cast<float*>(buf->payload())[0]);
     EXPECT_FALSE(packet_released);
   }
@@ -700,7 +700,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
     RunLoopUntilIdle();
     ASSERT_TRUE(buf);
     EXPECT_EQ(0u, buf->start().Floor());
-    EXPECT_EQ(480u, buf->length().Floor());
+    EXPECT_EQ(480u, buf->length());
     EXPECT_EQ(1.0, static_cast<float*>(buf->payload())[0]);
     EXPECT_TRUE(packet_released);
     buf->set_is_fully_consumed(false);
@@ -713,7 +713,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
     RunLoopUntilIdle();
     ASSERT_TRUE(buf);
     EXPECT_EQ(0u, buf->start().Floor());
-    EXPECT_EQ(480u, buf->length().Floor());
+    EXPECT_EQ(480u, buf->length());
     EXPECT_EQ(1.0, static_cast<float*>(buf->payload())[0]);
     buf->set_is_fully_consumed(true);
   }
@@ -761,7 +761,7 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
 
     ASSERT_TRUE(buffer);
     EXPECT_EQ(source_pos_for_read_lock.Floor(), buffer->start().Floor());
-    EXPECT_EQ(dest_frames_per_mix, buffer->length().Floor());
+    EXPECT_EQ(dest_frames_per_mix, buffer->length());
     source_pos_for_read_lock += Fixed(dest_frames_per_mix);
 
     // At a 48k nominal rate, we expect rate_modulo to be 47999 and denom to be 48000.
@@ -785,7 +785,7 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
 
     ASSERT_TRUE(buffer);
     EXPECT_EQ(source_pos_for_read_lock.Floor(), buffer->start().Floor());
-    EXPECT_EQ(dest_frames_per_mix, buffer->length().Floor());
+    EXPECT_EQ(dest_frames_per_mix, buffer->length());
     source_pos_for_read_lock += Fixed(dest_frames_per_mix);
 
     EXPECT_EQ(bookkeeping.step_size, Fixed(kOneFrame - Fixed::FromRaw(1)))
@@ -808,7 +808,7 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
 
     ASSERT_TRUE(buffer);
     EXPECT_EQ(source_pos_for_read_lock.Floor(), buffer->start().Floor());
-    EXPECT_EQ(dest_frames_per_mix, buffer->length().Floor());
+    EXPECT_EQ(dest_frames_per_mix, buffer->length());
     source_pos_for_read_lock += Fixed(dest_frames_per_mix);
 
     EXPECT_EQ(bookkeeping.step_size, Fixed(kOneFrame - Fixed::FromRaw(1)))
@@ -865,8 +865,8 @@ TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
   mixer->bookkeeping().SetRateModuloAndDenominator(0, 1);
 
   char payload[10 * kDefaultNumChannels * sizeof(float)];
-  ReadableStream::Buffer buffer(Fixed::FromRaw(2414204747776), Fixed(10), payload, true,
-                                StreamUsageMask(), 0);
+  ReadableStream::Buffer buffer(Fixed::FromRaw(2414204747776), 10, payload, true, StreamUsageMask(),
+                                0);
 
   mix_stage_->ProcessMix(*mixer, *input, buffer);
 }
@@ -898,7 +898,7 @@ TEST_F(MixStageTest, PositionSkip) {
 
     ASSERT_TRUE(buffer);
     EXPECT_EQ(source_pos_for_read_lock.Floor(), buffer->start().Floor());
-    EXPECT_EQ(dest_frames_per_mix, buffer->length().Floor());
+    EXPECT_EQ(dest_frames_per_mix, buffer->length());
     source_pos_for_read_lock += Fixed(dest_frames_per_mix);
 
     // At a 48k nominal rate, we expect rate_modulo to be 47999 and denom to be 48000.

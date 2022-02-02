@@ -37,8 +37,8 @@ fbl::RefPtr<Packet> PacketFactory::CreatePacket(float val, zx::duration duration
     samples[i] = val;
   }
 
-  auto packet_ref = allocator_.New(vmo_ref_, payload_offset, Fixed(frame_count), next_pts_,
-                                   dispatcher_, std::move(callback));
+  auto packet_ref = allocator_.New(vmo_ref_, payload_offset, frame_count, next_pts_, dispatcher_,
+                                   std::move(callback));
   next_pts_ = packet_ref->end();
   return packet_ref;
 }

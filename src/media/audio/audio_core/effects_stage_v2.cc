@@ -444,16 +444,13 @@ std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(ReadLockContext& 
 
   auto source_buffer = source_->ReadLock(ctx, Fixed(aligned_first_frame), aligned_frame_count);
   if (source_buffer) {
-    // We expect an integral buffer length.
-    FX_CHECK(source_buffer->length().Floor() == source_buffer->length().Ceiling());
-
     // Copy source_buffer to buffers_.input.
-    const int64_t num_frames = source_buffer->length().Floor();
+    const int64_t num_frames = source_buffer->length();
     memmove(buffers_.input, source_buffer->payload(),
             num_frames * static_cast<int64_t>(source_->format().bytes_per_frame()));
 
     // Synchronous IPC.
-    CallProcess(ctx, source_buffer->length().Floor(), source_buffer->total_applied_gain_db(),
+    CallProcess(ctx, source_buffer->length(), source_buffer->total_applied_gain_db(),
                 source_buffer->usage_mask().mask() & kSupportedUsageMask);
 
     // Since we just sent some frames through the effects, update the start of the
@@ -478,9 +475,9 @@ std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(ReadLockContext& 
 
     // Ringout frames are by definition continuous with the previous buffer.
     const bool is_continuous = true;
-    cached_buffer_.Set(ReadableStream::Buffer(
-        Fixed(aligned_first_frame), Fixed(aligned_frame_count),
-        reinterpret_cast<float*>(buffers_.output), is_continuous, StreamUsageMask(), 0.0f));
+    cached_buffer_.Set(ReadableStream::Buffer(Fixed(aligned_first_frame), aligned_frame_count,
+                                              reinterpret_cast<float*>(buffers_.output),
+                                              is_continuous, StreamUsageMask(), 0.0f));
     return cached_buffer_.Get();
   }
 

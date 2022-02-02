@@ -47,9 +47,8 @@ class SineWaveStream : public ReadableStream {
     int64_t sample_index = buffer_.SampleIndex(frame_index, 0);
     frame_count = std::min(frame_count, buffer_.NumFrames() - frame_index);
 
-    return std::make_optional<ReadableStream::Buffer>(Fixed(frame), Fixed(frame_count),
-                                                      &buffer_.samples()[sample_index], true,
-                                                      usage_mask_, 0.0f);
+    return std::make_optional<ReadableStream::Buffer>(
+        Fixed(frame), frame_count, &buffer_.samples()[sample_index], true, usage_mask_, 0.0f);
   }
 
  private:

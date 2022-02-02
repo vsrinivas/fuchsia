@@ -35,7 +35,7 @@ std::optional<ReadableStream::Buffer> FakePacketQueue::ReadLock(ReadLockContext&
     Fixed range_end = std::min(frame_end, p->end());
 
     // Clip the intersection so it has an integer number of frames.
-    Fixed range_frames = Fixed(Fixed(range_end - range_start).Floor());
+    int64_t range_frames = Fixed(range_end - range_start).Floor();
 
     // Compute the offset into this packet's payload buffer.
     int64_t payload_offset_frames = Fixed(range_start - p->start()).Ceiling();

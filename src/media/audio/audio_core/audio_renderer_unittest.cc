@@ -202,7 +202,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->is_continuous(), i != 0);
     EXPECT_EQ(buffer->start().Floor(), expected_packet_pts);
-    EXPECT_EQ(buffer->length().Floor(), kPacketSizeFrames);
+    EXPECT_EQ(buffer->length(), kPacketSizeFrames);
     EXPECT_NE(nullptr, buffer->payload());
     expected_packet_pts = buffer->end().Floor();
   }
@@ -223,7 +223,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
     // GT here as we are not continuous with the previous packet.
     EXPECT_GT(buffer->start().Floor(), expected_packet_pts);
     EXPECT_TRUE(buffer->is_continuous());
-    EXPECT_EQ(buffer->length().Floor(), kPacketSizeFrames);
+    EXPECT_EQ(buffer->length(), kPacketSizeFrames);
     EXPECT_NE(nullptr, buffer->payload());
     expected_packet_pts = buffer->end().Floor();
   }
@@ -233,7 +233,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
     ASSERT_TRUE(buffer);
     EXPECT_TRUE(buffer->is_continuous());
     EXPECT_EQ(buffer->start().Floor(), expected_packet_pts);
-    EXPECT_EQ(buffer->length().Floor(), kPacketSizeFrames);
+    EXPECT_EQ(buffer->length(), kPacketSizeFrames);
     EXPECT_NE(nullptr, buffer->payload());
     expected_packet_pts = buffer->end().Floor();
   }
@@ -489,8 +489,8 @@ TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
   // Acquire a buffer.
   auto buf = packet_queue->ReadLock(rlctx, Fixed(0), 32);
   ASSERT_TRUE(buf);
-  EXPECT_EQ(0u, buf->start().Floor());
-  EXPECT_EQ(32u, buf->length().Floor());
+  EXPECT_EQ(buf->start().Floor(), 0);
+  EXPECT_EQ(buf->length(), 32);
 
   // Simulate closing the client binding. This will shutdown the renderer.
   fidl_renderer_.Unbind();

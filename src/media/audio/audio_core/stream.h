@@ -93,7 +93,7 @@ class ReadableStream : public BaseStream {
    public:
     using DestructorT = fit::callback<void(bool fully_consumed)>;
 
-    Buffer(Fixed start_frame, Fixed length_in_frames, void* payload, bool is_continuous,
+    Buffer(Fixed start_frame, int64_t length_in_frames, void* payload, bool is_continuous,
            StreamUsageMask usage_mask, float total_applied_gain_db, DestructorT dtor = nullptr)
         : dtor_(std::move(dtor)),
           payload_(payload),
@@ -116,8 +116,8 @@ class ReadableStream : public BaseStream {
     Buffer& operator=(const Buffer& rhs) = delete;
 
     Fixed start() const { return start_; }
-    Fixed end() const { return start_ + length_; }
-    Fixed length() const { return length_; }
+    Fixed end() const { return start_ + Fixed(length_); }
+    int64_t length() const { return length_; }
     void* payload() const { return payload_; }
 
     // Indicates this packet is continuous with a packet previously returned from an immediately
@@ -146,7 +146,7 @@ class ReadableStream : public BaseStream {
     DestructorT dtor_;
     void* payload_;
     Fixed start_;
-    Fixed length_;
+    int64_t length_;
     bool is_continuous_;
     bool is_fully_consumed_ = true;
     StreamUsageMask usage_mask_;
@@ -233,7 +233,7 @@ class WritableStream : public BaseStream {
    public:
     using DestructorT = fit::callback<void()>;
 
-    Buffer(Fixed start_frame, Fixed length_in_frames, void* payload, DestructorT dtor = nullptr)
+    Buffer(Fixed start_frame, int64_t length_in_frames, void* payload, DestructorT dtor = nullptr)
         : dtor_(std::move(dtor)),
           payload_(payload),
           start_(start_frame),
@@ -252,15 +252,15 @@ class WritableStream : public BaseStream {
     Buffer& operator=(const Buffer& rhs) = delete;
 
     Fixed start() const { return start_; }
-    Fixed end() const { return start_ + length_; }
-    Fixed length() const { return length_; }
+    Fixed end() const { return start_ + Fixed(length_); }
+    int64_t length() const { return length_; }
     void* payload() const { return payload_; }
 
    private:
     DestructorT dtor_;
     void* payload_;
     Fixed start_;
-    Fixed length_;
+    int64_t length_;
   };
 
   // WritableStream is implemented by audio sinks. WriteLock acquires a write lock on the

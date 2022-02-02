@@ -314,7 +314,7 @@ void EffectsStageV2Test::TestAddOne(const Format& source_format, ConfigOptions o
     auto buf = effects_stage->ReadLock(rlctx, Fixed(0), kPacketFrames);
     ASSERT_TRUE(buf);
     ASSERT_EQ(0, buf->start().Floor());
-    ASSERT_EQ(ReadLockFrames, buf->length().Floor());
+    ASSERT_EQ(ReadLockFrames, buf->length());
 
     auto& arr = as_array<float, ReadLockFrames * OutputChannels>(buf->payload());
     EXPECT_THAT(arr, Each(FloatEq(2.0f)));
@@ -1297,7 +1297,7 @@ TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
     ASSERT_TRUE(buf);
     EXPECT_EQ(0, buf->start().Floor());
-    EXPECT_EQ(48, buf->length().Floor());
+    EXPECT_EQ(48, buf->length());
   }
 
   // TODO(fxbug.dev/50669): This will be unnecessary after we update ReadLock implementations
@@ -1312,7 +1312,7 @@ TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
       auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), GetParam().ring_out_frames);
       ASSERT_TRUE(buf);
       EXPECT_EQ(start_frame, buf->start().Floor());
-      EXPECT_EQ(GetParam().read_lock_frames, buf->length().Floor());
+      EXPECT_EQ(GetParam().read_lock_frames, buf->length());
       start_frame += GetParam().read_lock_frames;
       ringout_frames += GetParam().read_lock_frames;
     }
@@ -1334,8 +1334,8 @@ TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), 48);
     ASSERT_TRUE(buf);
     EXPECT_EQ(start_frame, buf->start().Floor());
-    EXPECT_EQ(48, buf->length().Floor());
-    start_frame += buf->length().Floor();
+    EXPECT_EQ(48, buf->length());
+    start_frame += buf->length();
   }
 
   // TODO(fxbug.dev/50669): This will be unnecessary after we update ReadLock implementations
@@ -1349,7 +1349,7 @@ TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
       auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), GetParam().ring_out_frames);
       ASSERT_TRUE(buf);
       EXPECT_EQ(start_frame, buf->start().Floor());
-      EXPECT_EQ(GetParam().read_lock_frames, buf->length().Floor());
+      EXPECT_EQ(GetParam().read_lock_frames, buf->length());
       start_frame += GetParam().read_lock_frames;
       ringout_frames += GetParam().read_lock_frames;
     }

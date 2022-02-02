@@ -617,8 +617,8 @@ zx_status_t BaseCapturer::Process() {
     auto buf = mix_stage_->ReadLock(ctx, Fixed(frame_pointer_), mix_state->frames);
     if (buf) {
       FX_DCHECK(buf->start().Floor() == frame_pointer_);
-      FX_DCHECK(buf->length().Floor() > 0);
-      FX_DCHECK(static_cast<size_t>(buf->length().Floor()) == mix_state->frames);
+      FX_DCHECK(buf->length() > 0);
+      FX_DCHECK(static_cast<size_t>(buf->length()) == mix_state->frames);
       output_producer_->ProduceOutput(reinterpret_cast<float*>(buf->payload()), mix_state->target,
                                       mix_state->frames);
     } else {

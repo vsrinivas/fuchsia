@@ -32,7 +32,7 @@ TEST_F(PacketTest, PostCallbackToDispatcherOnDestruction) {
   bool packet2_callback_received = false;
   {
     auto packet1 =
-        allocator_.New(vmo_mapper, 0, Fixed(10), Fixed(0), dispatcher(),
+        allocator_.New(vmo_mapper, 0, 10, Fixed(0), dispatcher(),
                        [&packet1_callback_received] { packet1_callback_received = true; });
     EXPECT_EQ(0, packet1->start());
     EXPECT_EQ(10, packet1->end());
@@ -40,7 +40,7 @@ TEST_F(PacketTest, PostCallbackToDispatcherOnDestruction) {
     EXPECT_EQ(vmo_mapper->start(), packet1->payload());
     {
       auto packet2 =
-          allocator_.New(vmo_mapper, 64, Fixed(10), Fixed(10), dispatcher(),
+          allocator_.New(vmo_mapper, 64, 10, Fixed(10), dispatcher(),
                          [&packet2_callback_received] { packet2_callback_received = true; });
       EXPECT_EQ(10, packet2->start());
       EXPECT_EQ(20, packet2->end());
@@ -67,8 +67,8 @@ TEST_F(PacketTest, NullCallback) {
   // Just verify we don't crash with a null callback.
   auto vmo_mapper = CreateVmoBufferWithSize(128);
   ASSERT_TRUE(vmo_mapper);
-  auto packet1 = allocator_.New(vmo_mapper, 0, Fixed(10), Fixed(0), dispatcher(), nullptr);
-  auto packet2 = allocator_.New(vmo_mapper, 0, Fixed(10), Fixed(0), nullptr, nullptr);
+  auto packet1 = allocator_.New(vmo_mapper, 0, 10, Fixed(0), dispatcher(), nullptr);
+  auto packet2 = allocator_.New(vmo_mapper, 0, 10, Fixed(0), nullptr, nullptr);
 }
 
 }  // namespace

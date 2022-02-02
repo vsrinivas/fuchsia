@@ -51,13 +51,14 @@ class Packet : public fbl::SlabAllocated<internal::PacketAllocatorTraits>,
   // be presented.  The |end| is the time at which the frame after the final
   // frame in the packet would be presented.
   Fixed start() const { return start_; }
-  Fixed end() const { return start_ + length_; }
-  Fixed length() const { return length_; }
+  Fixed end() const { return start_ + Fixed(length_); }
+  int64_t length() const { return length_; }
 
   void* payload() { return reinterpret_cast<uint8_t*>(vmo_ref_->start()) + vmo_offset_bytes_; }
 
   void Display() {
-    FX_LOGS(INFO) << "Packet start " << start_.Round() << ", length " << length_.Round();
+    FX_LOGS(INFO) << ffl::String::DecRational << "Packet start " << start_ << ", length "
+                  << length_;
   }
 
  protected:
@@ -65,14 +66,14 @@ class Packet : public fbl::SlabAllocated<internal::PacketAllocatorTraits>,
 
   // fbl::SlabAllocated _requires_ instances to be sourced from an fbl::SlabAllocator. Make this
   // ctor non-public to prevent other ways of instantiation.
-  Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, size_t vmo_offset_bytes, Fixed frac_frame_len,
+  Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, size_t vmo_offset_bytes, int64_t frame_count,
          Fixed start_frame, async_dispatcher_t* callback_dispatcher, fit::closure callback);
 
  private:
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;
   size_t vmo_offset_bytes_;
 
-  Fixed length_;
+  int64_t length_;
   Fixed start_;
 
   async_dispatcher_t* dispatcher_;

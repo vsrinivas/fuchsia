@@ -10,7 +10,7 @@
 
 namespace media::audio {
 
-Packet::Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, size_t vmo_offset_bytes, Fixed length,
+Packet::Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, size_t vmo_offset_bytes, int64_t length,
                Fixed start, async_dispatcher_t* callback_dispatcher, fit::closure callback)
     : vmo_ref_(std::move(vmo_ref)),
       vmo_offset_bytes_(vmo_offset_bytes),
