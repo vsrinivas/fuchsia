@@ -412,18 +412,19 @@ impl FlatlandViewStrategy {
             while let Some(result) = layout_info_stream.next().await {
                 match result {
                     Ok(layout_info) => {
-                        let mut width = 0;
-                        let mut height = 0;
-                        if let Some(logical_size) = layout_info.logical_size {
-                            width = logical_size.width;
-                            height = logical_size.height;
+                        if let Some(fidl_fuchsia_math::SizeU { width, height }) = layout_info
+                            .logical_size
+                            // TODO(https://fxbug.dev/91259): Remove this filter when no longer
+                            // needed.
+                            .filter(|size| size.width != 32 || size.height != 32)
+                        {
+                            sender
+                                .unbounded_send(MessageInternal::SizeChanged(
+                                    view_key,
+                                    size2(width, height).to_f32(),
+                                ))
+                                .expect("failed to send MessageInternal.");
                         }
-                        sender
-                            .unbounded_send(MessageInternal::SizeChanged(
-                                view_key,
-                                size2(width, height).to_f32(),
-                            ))
-                            .expect("failed to send MessageInternal.");
                     }
                     Err(fidl::Error::ClientChannelClosed { .. }) => {
                         println!("graph link connection closed.");
