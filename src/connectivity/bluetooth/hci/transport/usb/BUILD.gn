@@ -38,6 +38,7 @@ source_set("common") {
   sources = [
     "bt_transport_usb.cc",
     "bt_transport_usb.h",
+    "packet_reassembler.h",
   ]
 
   public_deps = [
@@ -58,7 +59,10 @@ executable("tests_executable") {
 
   output_name = "bt-transport-usb-tests"
 
-  sources = [ "bt_transport_usb_unittest.cc" ]
+  sources = [
+    "bt_transport_usb_unittest.cc",
+    "packet_reassembler_unittest.cc",
+  ]
 
   deps = [
     ":common",
