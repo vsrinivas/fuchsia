@@ -7,7 +7,7 @@ use {
         act::{self, Actions, ActionsSchema},
         metrics::{
             fetch::{InspectFetcher, KeyValueFetcher, SelectorString, TextFetcher},
-            Metric, Metrics,
+            Metric, Metrics, ValueSource,
         },
         validate::{validate, Trials, TrialsSchema},
     },
@@ -184,13 +184,13 @@ impl ParseResult {
                 for v in value.0 {
                     selectors.push(SelectorString::try_from(v)?);
                 }
-                file_metrics.insert(key, Metric::Selector(selectors));
+                file_metrics.insert(key, ValueSource::new(Metric::Selector(selectors)));
             }
             for (key, value) in file_evals.into_iter() {
                 if file_metrics.contains_key(&key) {
                     bail!("Duplicate metric name {} in file {}", key, namespace);
                 }
-                file_metrics.insert(key, Metric::Eval(value));
+                file_metrics.insert(key, ValueSource::new(Metric::Eval(value)));
             }
             metrics.insert(namespace.clone(), file_metrics);
             actions.insert(namespace.clone(), file_actions);
@@ -203,8 +203,8 @@ impl ParseResult {
     pub fn all_selectors(&self) -> Vec<String> {
         let mut result = Vec::new();
         for (_, metric_set) in self.metrics.iter() {
-            for (_, metric) in metric_set.iter() {
-                if let Metric::Selector(selectors) = metric {
+            for (_, value_source) in metric_set.iter() {
+                if let Metric::Selector(selectors) = &value_source.metric {
                     for selector in selectors {
                         result.push(selector.full_selector.to_owned());
                     }
@@ -216,6 +216,14 @@ impl ParseResult {
 
     pub fn validate(&self) -> Result<(), Error> {
         validate(self)
+    }
+
+    pub fn reset_state(&self) {
+        for (_, metric_set) in self.metrics.iter() {
+            for (_, value_source) in metric_set.iter() {
+                *value_source.cached_value.borrow_mut() = None;
+            }
+        }
     }
 }
 

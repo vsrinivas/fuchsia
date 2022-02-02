@@ -82,9 +82,10 @@ pub fn validate(parse_result: &ParseResult) -> Result<(), Error> {
                     ),
                 }
             };
-            let state = MetricState::new(metrics, fetcher, now);
             if let Some(action_names) = &trial.yes {
                 for action_name in action_names.iter() {
+                    let original_metrics = &(metrics.clone());
+                    let state = MetricState::new(original_metrics, fetcher.clone(), now);
                     failed =
                         check_failure(namespace, trial_name, action_name, actions, &state, true)
                             || failed;
@@ -92,6 +93,8 @@ pub fn validate(parse_result: &ParseResult) -> Result<(), Error> {
             }
             if let Some(action_names) = &trial.no {
                 for action_name in action_names.iter() {
+                    let original_metrics = &(metrics.clone());
+                    let state = MetricState::new(original_metrics, fetcher.clone(), now);
                     failed =
                         check_failure(namespace, trial_name, action_name, actions, &state, false)
                             || failed;
@@ -154,7 +157,7 @@ mod test {
     use {
         super::*,
         crate::act::{Action, Warning},
-        crate::metrics::Metric,
+        crate::metrics::{Metric, ValueSource},
         anyhow::Error,
     };
 
@@ -185,8 +188,8 @@ mod test {
         let metrics = build_map!((
             "foo",
             build_map!(
-                ("true", Metric::Eval("1==1".to_string())),
-                ("false", Metric::Eval("1==0".to_string()))
+                ("true", ValueSource::new(Metric::Eval("1==1".to_string()))),
+                ("false", ValueSource::new(Metric::Eval("1==0".to_string())))
             )
         ));
         let actions = build_map!((

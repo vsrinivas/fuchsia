@@ -13,7 +13,7 @@ use {
     metric_value::{MetricValue, Problem},
     regex::Regex,
     serde::{Deserialize, Deserializer},
-    std::{clone::Clone, cmp::min, collections::HashMap, convert::TryFrom},
+    std::{cell::RefCell, clone::Clone, cmp::min, collections::HashMap, convert::TryFrom},
     variable::VariableName,
 };
 
@@ -31,6 +31,20 @@ pub enum Metric {
     // Directly specify a value that's hard to generate, for example Problem::UnhandledType.
     #[cfg(test)]
     Hardcoded(MetricValue),
+}
+
+/// Contains a Metric and the resulting MetricValue if the Metric has been evaluated at least once.
+/// If the Metric has not been evaluated at least once the metric_value contains None.
+#[derive(Clone, Debug)]
+pub struct ValueSource {
+    pub metric: Metric,
+    pub cached_value: RefCell<Option<MetricValue>>,
+}
+
+impl ValueSource {
+    pub fn new(metric: Metric) -> Self {
+        Self { metric, cached_value: RefCell::new(None) }
+    }
 }
 
 impl<'de> Deserialize<'de> for Metric {
@@ -60,8 +74,8 @@ impl std::fmt::Display for Metric {
     }
 }
 
-/// [Metrics] are a map from namespaces to the named [Metric]s stored within that namespace.
-pub type Metrics = HashMap<String, HashMap<String, Metric>>;
+/// [Metrics] are a map from namespaces to the named [ValueSource]s stored within that namespace.
+pub type Metrics = HashMap<String, HashMap<String, ValueSource>>;
 
 /// Contains all the information needed to look up and evaluate a Metric - other
 /// [Metric]s that may be referred to, and a source of input values to calculate on.
@@ -300,15 +314,31 @@ impl<'a> MetricState<'a> {
                 None => {
                     return syntax_error(format!("Metric '{}' Not Found in '{}'", name, namespace))
                 }
-                Some(metric) => match metric {
-                    Metric::Selector(_) => missing(format!(
-                        "Selector {} can't be used in tests; please supply a value",
-                        name
-                    )),
-                    Metric::Eval(expression) => self.evaluate_value(namespace, &expression),
-                    #[cfg(test)]
-                    Metric::Hardcoded(value) => value.clone(),
-                },
+                Some(value_source) => {
+                    let resolved_value: MetricValue;
+                    {
+                        let cached_value_cell = value_source.cached_value.borrow();
+                        match &*cached_value_cell {
+                            None => {
+                                resolved_value = match &value_source.metric {
+                                    Metric::Selector(_) => missing(format!(
+                                        "Selector {} can't be used in tests; please supply a value",
+                                        name
+                                    )),
+                                    Metric::Eval(expression) => {
+                                        self.evaluate_value(namespace, &expression)
+                                    }
+                                    #[cfg(test)]
+                                    Metric::Hardcoded(value) => value.clone(),
+                                };
+                            }
+                            Some(cached_value) => return cached_value.clone(),
+                        }
+                    }
+                    let mut cached_value_cell = value_source.cached_value.borrow_mut();
+                    *cached_value_cell = Some(resolved_value.clone());
+                    return resolved_value.clone();
+                }
             },
         }
     }
@@ -331,16 +361,32 @@ impl<'a> MetricState<'a> {
                             real_name, real_namespace
                         ))
                     }
-                    Some(metric) => match metric {
-                        Metric::Selector(selectors) => first_usable_value(
-                            selectors.iter().map(|selector| fetcher.fetch(selector)),
-                        ),
-                        Metric::Eval(expression) => {
-                            self.evaluate_value(real_namespace, &expression)
+                    Some(value_source) => {
+                        let resolved_value: MetricValue;
+                        {
+                            let cached_value_cell = value_source.cached_value.borrow();
+                            match &*cached_value_cell {
+                                None => {
+                                    resolved_value = match &value_source.metric {
+                                        Metric::Selector(selectors) => first_usable_value(
+                                            selectors
+                                                .iter()
+                                                .map(|selector| fetcher.fetch(selector)),
+                                        ),
+                                        Metric::Eval(expression) => {
+                                            self.evaluate_value(real_namespace, &expression)
+                                        }
+                                        #[cfg(test)]
+                                        Metric::Hardcoded(value) => value.clone(),
+                                    };
+                                }
+                                Some(cached_value) => return cached_value.clone(),
+                            }
                         }
-                        #[cfg(test)]
-                        Metric::Hardcoded(value) => value.clone(),
-                    },
+                        let mut cached_value_cell = value_source.cached_value.borrow_mut();
+                        *cached_value_cell = Some(resolved_value.clone());
+                        return resolved_value.clone();
+                    }
                 },
             }
         } else {
@@ -1009,6 +1055,7 @@ pub(crate) mod test {
             vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
         };
         static ref EMPTY_FILE_FETCHER: FileDataFetcher<'static> = FileDataFetcher::new(&EMPTY_F);
+        static ref EMPTY_TRIAL_FETCHER: TrialDataFetcher<'static> = TrialDataFetcher::new_empty();
         static ref NO_PAYLOAD_FETCHER: FileDataFetcher<'static> =
             FileDataFetcher::new(&NO_PAYLOAD_F);
         static ref BAD_PAYLOAD_FETCHER: FileDataFetcher<'static> =
@@ -1107,9 +1154,12 @@ pub(crate) mod test {
         let metrics: Metrics = [(
             "root".to_string(),
             [
-                ("is42".to_string(), Metric::Eval("42".to_string())),
-                ("isOk".to_string(), Metric::Eval("'OK'".to_string())),
-                ("unhandled".to_string(), Metric::Hardcoded(unhandled_type("Unhandled"))),
+                ("is42".to_string(), ValueSource::new(Metric::Eval("42".to_string()))),
+                ("isOk".to_string(), ValueSource::new(Metric::Eval("'OK'".to_string()))),
+                (
+                    "unhandled".to_string(),
+                    ValueSource::new(Metric::Hardcoded(unhandled_type("Unhandled"))),
+                ),
             ]
             .iter()
             .cloned()
@@ -1296,6 +1346,123 @@ pub(crate) mod test {
                 &Metric::Eval("StringMatches('abcd', '[[')".to_string())
             ),
             "SyntaxError: Could not parse `[[` as regex"
+        );
+    }
+
+    // Test caching after evaluating static values
+    #[fuchsia::test]
+    fn test_caching_after_evaluation() {
+        let metrics: Metrics = [(
+            "root".to_string(),
+            [
+                ("is42".to_string(), ValueSource::new(Metric::Eval("42".to_string()))),
+                ("is43".to_string(), ValueSource::new(Metric::Eval("is42 + 1".to_string()))),
+                (
+                    "unhandled".to_string(),
+                    ValueSource::new(Metric::Hardcoded(unhandled_type("Unhandled"))),
+                ),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
+        )]
+        .iter()
+        .cloned()
+        .collect();
+
+        let state = MetricState::new(&metrics, Fetcher::FileData(EMPTY_FILE_FETCHER.clone()), None);
+        let trial_state =
+            MetricState::new(&metrics, Fetcher::TrialData(EMPTY_TRIAL_FETCHER.clone()), None);
+
+        // Test correct initialization of RefCells
+        assert_eq!(
+            *state.metrics.get("root").unwrap().get("is42").unwrap().cached_value.borrow(),
+            None
+        );
+        assert_eq!(
+            *state.metrics.get("root").unwrap().get("is43").unwrap().cached_value.borrow(),
+            None
+        );
+        assert_eq!(
+            *state.metrics.get("root").unwrap().get("unhandled").unwrap().cached_value.borrow(),
+            None
+        );
+        assert_eq!(
+            *trial_state.metrics.get("root").unwrap().get("is42").unwrap().cached_value.borrow(),
+            None
+        );
+        assert_eq!(
+            *trial_state.metrics.get("root").unwrap().get("is43").unwrap().cached_value.borrow(),
+            None
+        );
+        assert_eq!(
+            *trial_state
+                .metrics
+                .get("root")
+                .unwrap()
+                .get("unhandled")
+                .unwrap()
+                .cached_value
+                .borrow(),
+            None
+        );
+
+        // Test correct caching of values after evaluation
+        // Evaluating single metric
+        assert_eq!(state.evaluate_value("root", "is42"), MetricValue::Int(42));
+        assert_eq!(
+            *state.metrics.get("root").unwrap().get("is42").unwrap().cached_value.borrow(),
+            Some(MetricValue::Int(42))
+        );
+        assert_eq!(trial_state.evaluate_value("root", "is42"), MetricValue::Int(42));
+        assert_eq!(
+            *trial_state.metrics.get("root").unwrap().get("is42").unwrap().cached_value.borrow(),
+            Some(MetricValue::Int(42))
+        );
+
+        // Evaluating metric with a nested metric
+        // Ensure the previous metric cached value is not modified and new metric is
+        // correctly stored
+        assert_eq!(state.evaluate_value("root", "is43"), MetricValue::Int(43));
+        assert_eq!(
+            *state.metrics.get("root").unwrap().get("is42").unwrap().cached_value.borrow(),
+            Some(MetricValue::Int(42))
+        );
+        assert_eq!(
+            *state.metrics.get("root").unwrap().get("is43").unwrap().cached_value.borrow(),
+            Some(MetricValue::Int(43))
+        );
+        assert_eq!(trial_state.evaluate_value("root", "is43"), MetricValue::Int(43));
+        assert_eq!(
+            *trial_state.metrics.get("root").unwrap().get("is42").unwrap().cached_value.borrow(),
+            Some(MetricValue::Int(42))
+        );
+        assert_eq!(
+            *trial_state.metrics.get("root").unwrap().get("is43").unwrap().cached_value.borrow(),
+            Some(MetricValue::Int(43))
+        );
+
+        // Evaluating Hardcoded Metric and ensuring correct caching behaviour
+        state.evaluate_value("root", "unhandled");
+        assert_problem!(
+            (*state.metrics.get("root").unwrap().get("unhandled").unwrap().cached_value.borrow())
+                .as_ref()
+                .unwrap(),
+            "UnhandledType: Unhandled"
+        );
+        trial_state.evaluate_value("root", "unhandled");
+        assert_problem!(
+            (*trial_state
+                .metrics
+                .get("root")
+                .unwrap()
+                .get("unhandled")
+                .unwrap()
+                .cached_value
+                .borrow())
+            .as_ref()
+            .unwrap(),
+            "UnhandledType: Unhandled"
         );
     }
 

@@ -18,6 +18,7 @@ use {
 /// [Fetcher] is a source of values to feed into the calculations. It may contain data either
 /// from snapshot.zip files (e.g. inspect.json data that can be accessed via "select" entries)
 /// or supplied in the specification of a trial.
+#[derive(Clone)]
 pub enum Fetcher<'a> {
     FileData(FileDataFetcher<'a>),
     TrialData(TrialDataFetcher<'a>),
@@ -441,7 +442,7 @@ mod test {
         super::*,
         crate::{
             assert_problem,
-            metrics::{variable::VariableName, Metric, MetricState, Problem},
+            metrics::{variable::VariableName, Metric, MetricState, Problem, ValueSource},
         },
         anyhow::Error,
         serde_json::Value as JsonValue,
@@ -541,31 +542,44 @@ mod test {
     #[fuchsia::test]
     fn test_eval_with_file() {
         let mut file_map = HashMap::new();
-        file_map.insert("bar".to_owned(), Metric::Selector(vec![BAR_SELECTOR.clone()]));
-        file_map.insert("bar_plus_one".to_owned(), Metric::Eval("bar+1".to_owned()));
-        file_map.insert("oops_plus_one".to_owned(), Metric::Eval("oops+1".to_owned()));
+        file_map.insert(
+            "bar".to_owned(),
+            ValueSource::new(Metric::Selector(vec![BAR_SELECTOR.clone()])),
+        );
+        file_map
+            .insert("bar_plus_one".to_owned(), ValueSource::new(Metric::Eval("bar+1".to_owned())));
+        file_map.insert(
+            "oops_plus_one".to_owned(),
+            ValueSource::new(Metric::Eval("oops+1".to_owned())),
+        );
         file_map.insert(
             "wrong_or_bar".to_owned(),
-            Metric::Selector(vec![WRONG_SELECTOR.clone(), BAR_SELECTOR.clone()]),
+            ValueSource::new(Metric::Selector(vec![WRONG_SELECTOR.clone(), BAR_SELECTOR.clone()])),
         );
         file_map.insert(
             "wrong_or_wrong".to_owned(),
-            Metric::Selector(vec![WRONG_SELECTOR.clone(), WRONG_SELECTOR.clone()]),
+            ValueSource::new(Metric::Selector(vec![
+                WRONG_SELECTOR.clone(),
+                WRONG_SELECTOR.clone(),
+            ])),
         );
         file_map.insert(
             "wrong_or_new_bar_or_bar".to_owned(),
-            Metric::Selector(vec![
+            ValueSource::new(Metric::Selector(vec![
                 WRONG_SELECTOR.clone(),
                 NEW_BAR_SELECTOR.clone(),
                 BAR_SELECTOR.clone(),
-            ]),
+            ])),
         );
         file_map.insert(
             "bad_component_or_bar".to_owned(),
-            Metric::Selector(vec![BAD_COMPONENT_SELECTOR.clone(), BAR_SELECTOR.clone()]),
+            ValueSource::new(Metric::Selector(vec![
+                BAD_COMPONENT_SELECTOR.clone(),
+                BAR_SELECTOR.clone(),
+            ])),
         );
         let mut other_file_map = HashMap::new();
-        other_file_map.insert("bar".to_owned(), Metric::Eval("42".to_owned()));
+        other_file_map.insert("bar".to_owned(), ValueSource::new(Metric::Eval("42".to_owned())));
         let mut metrics = HashMap::new();
         metrics.insert("bar_file".to_owned(), file_map);
         metrics.insert("other_file".to_owned(), other_file_map);
@@ -630,16 +644,25 @@ mod test {
     fn test_eval_with_trial() {
         let mut trial_map = HashMap::new();
         // The (broken) "foo" selector should be ignored in favor of the "foo" fetched value.
-        trial_map.insert("foo".to_owned(), Metric::Selector(vec![BAR_SELECTOR.clone()]));
-        trial_map.insert("foo_plus_one".to_owned(), Metric::Eval("foo+1".to_owned()));
-        trial_map.insert("oops_plus_one".to_owned(), Metric::Eval("oops+1".to_owned()));
-        trial_map.insert("ab_plus_one".to_owned(), Metric::Eval("a::b+1".to_owned()));
-        trial_map.insert("ac_plus_one".to_owned(), Metric::Eval("a::c+1".to_owned()));
+        trial_map.insert(
+            "foo".to_owned(),
+            ValueSource::new(Metric::Selector(vec![BAR_SELECTOR.clone()])),
+        );
+        trial_map
+            .insert("foo_plus_one".to_owned(), ValueSource::new(Metric::Eval("foo+1".to_owned())));
+        trial_map.insert(
+            "oops_plus_one".to_owned(),
+            ValueSource::new(Metric::Eval("oops+1".to_owned())),
+        );
+        trial_map
+            .insert("ab_plus_one".to_owned(), ValueSource::new(Metric::Eval("a::b+1".to_owned())));
+        trial_map
+            .insert("ac_plus_one".to_owned(), ValueSource::new(Metric::Eval("a::c+1".to_owned())));
         // The file "a" should be completely ignored when testing foo_file.
         let mut a_map = HashMap::new();
-        a_map.insert("b".to_owned(), Metric::Eval("2".to_owned()));
-        a_map.insert("c".to_owned(), Metric::Eval("3".to_owned()));
-        a_map.insert("foo".to_owned(), Metric::Eval("4".to_owned()));
+        a_map.insert("b".to_owned(), ValueSource::new(Metric::Eval("2".to_owned())));
+        a_map.insert("c".to_owned(), ValueSource::new(Metric::Eval("3".to_owned())));
+        a_map.insert("foo".to_owned(), ValueSource::new(Metric::Eval("4".to_owned())));
         let mut metrics = HashMap::new();
         metrics.insert("foo_file".to_owned(), trial_map);
         metrics.insert("a".to_owned(), a_map);

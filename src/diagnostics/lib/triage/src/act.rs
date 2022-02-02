@@ -345,7 +345,7 @@ mod test {
     use {
         super::*,
         crate::config::Source,
-        crate::metrics::{fetch::SelectorString, Metric, Metrics},
+        crate::metrics::{fetch::SelectorString, Metric, Metrics, ValueSource},
         anyhow::Error,
         std::convert::TryFrom,
     };
@@ -363,10 +363,14 @@ mod test {
     #[fuchsia::test]
     fn actions_fire_correctly() {
         let mut eval_file = HashMap::new();
-        eval_file.insert("true".to_string(), Metric::Eval("0==0".to_string()));
-        eval_file.insert("false".to_string(), Metric::Eval("0==1".to_string()));
-        eval_file.insert("true_array".to_string(), Metric::Eval("[0==0]".to_string()));
-        eval_file.insert("false_array".to_string(), Metric::Eval("[0==1]".to_string()));
+        eval_file.insert("true".to_string(), ValueSource::new(Metric::Eval("0==0".to_string())));
+        eval_file.insert("false".to_string(), ValueSource::new(Metric::Eval("0==1".to_string())));
+        eval_file
+            .insert("true_array".to_string(), ValueSource::new(Metric::Eval("[0==0]".to_string())));
+        eval_file.insert(
+            "false_array".to_string(),
+            ValueSource::new(Metric::Eval("[0==1]".to_string())),
+        );
         let mut metrics = Metrics::new();
         metrics.insert("file".to_string(), eval_file);
         let mut actions = Actions::new();
@@ -431,15 +435,24 @@ mod test {
     #[fuchsia::test]
     fn gauges_fire_correctly() {
         let mut eval_file = HashMap::new();
-        eval_file.insert("gauge_f1".to_string(), Metric::Eval("2 / 5".to_string()));
-        eval_file.insert("gauge_f2".to_string(), Metric::Eval("4 / 5".to_string()));
-        eval_file.insert("gauge_f3".to_string(), Metric::Eval("6 / 5".to_string()));
-        eval_file.insert("gauge_i4".to_string(), Metric::Eval("9 // 2".to_string()));
-        eval_file.insert("gauge_i5".to_string(), Metric::Eval("11 // 2".to_string()));
-        eval_file.insert("gauge_i6".to_string(), Metric::Eval("13 // 2".to_string()));
-        eval_file.insert("gauge_b7".to_string(), Metric::Eval("2 == 2".to_string()));
-        eval_file.insert("gauge_b8".to_string(), Metric::Eval("2 > 2".to_string()));
-        eval_file.insert("gauge_s9".to_string(), Metric::Eval("'foo'".to_string()));
+        eval_file
+            .insert("gauge_f1".to_string(), ValueSource::new(Metric::Eval("2 / 5".to_string())));
+        eval_file
+            .insert("gauge_f2".to_string(), ValueSource::new(Metric::Eval("4 / 5".to_string())));
+        eval_file
+            .insert("gauge_f3".to_string(), ValueSource::new(Metric::Eval("6 / 5".to_string())));
+        eval_file
+            .insert("gauge_i4".to_string(), ValueSource::new(Metric::Eval("9 // 2".to_string())));
+        eval_file
+            .insert("gauge_i5".to_string(), ValueSource::new(Metric::Eval("11 // 2".to_string())));
+        eval_file
+            .insert("gauge_i6".to_string(), ValueSource::new(Metric::Eval("13 // 2".to_string())));
+        eval_file
+            .insert("gauge_b7".to_string(), ValueSource::new(Metric::Eval("2 == 2".to_string())));
+        eval_file
+            .insert("gauge_b8".to_string(), ValueSource::new(Metric::Eval("2 > 2".to_string())));
+        eval_file
+            .insert("gauge_s9".to_string(), ValueSource::new(Metric::Eval("'foo'".to_string())));
         let mut metrics = Metrics::new();
         metrics.insert("file".to_string(), eval_file);
         let mut actions = Actions::new();

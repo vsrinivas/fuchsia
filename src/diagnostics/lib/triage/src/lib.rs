@@ -54,6 +54,7 @@ pub fn analyze(
     diagnostic_data: &Vec<DiagnosticData>,
     parse_result: &ParseResult,
 ) -> Result<ActionResults, Error> {
+    parse_result.reset_state();
     let now = time_from_snapshot(diagnostic_data);
     let mut action_context =
         ActionContext::new(&parse_result.metrics, &parse_result.actions, diagnostic_data, now);
@@ -65,6 +66,7 @@ pub fn snapshots(
     data: &Vec<DiagnosticData>,
     parse_result: &ParseResult,
 ) -> (Vec<SnapshotTrigger>, act::WarningVec) {
+    parse_result.reset_state();
     let now = Some(MonotonicTime::new().now());
     let evaluator = ActionContext::new(&parse_result.metrics, &parse_result.actions, data, now);
     evaluator.into_snapshots()
