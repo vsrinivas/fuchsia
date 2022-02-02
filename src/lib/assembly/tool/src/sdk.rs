@@ -24,7 +24,11 @@ impl SdkToolProvider {
     /// Attempt to create a new SdkToolProvider. This will return an Err if the manifest cannot be
     /// found, parsed, or is invalid.
     pub fn try_new() -> Result<Self> {
-        Ok(Self { sdk: block_on(get_sdk())?, log: ToolCommandLog::default() })
+        Ok(Self {
+            sdk: block_on(get_sdk())
+                .context("Trying again may resolve this (see https://fxbug.dev/91633).")?,
+            log: ToolCommandLog::default(),
+        })
     }
 }
 
