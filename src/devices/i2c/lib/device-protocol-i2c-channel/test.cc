@@ -12,7 +12,6 @@ class I2cDevice : public fake_i2c::FakeI2c {
  protected:
   zx_status_t Transact(const uint8_t* write_buffer, size_t write_buffer_size, uint8_t* read_buffer,
                        size_t* read_buffer_size) override {
-    static int count = 0;
     count++;
     // Unique errors below to check for retries.
     switch (count) {
@@ -27,6 +26,9 @@ class I2cDevice : public fake_i2c::FakeI2c {
     }
     return ZX_OK;
   }
+
+ private:
+  size_t count = 0;
 };
 
 TEST(I2cChannelTest, NoRetries) {
@@ -43,13 +45,13 @@ TEST(I2cChannelTest, NoRetries) {
 TEST(I2cChannelTest, RetriesAllFail) {
   I2cDevice i2c_dev;
   ddk::I2cChannel channel(i2c_dev.GetProto());
-  // 2 retries, corresponding error is returned. The first time the method is called we get a
-  // ZX_ERR_NOT_SUPPORTED. Then the first retry gives us ZX_ERR_NO_RESOURCES and then the second
-  // gives us ZX_ERR_NO_MEMORY.
+  // 2 retries, corresponding error is returned. The first time Transact is called we get a
+  // ZX_ERR_INTERNAL. Then the first retry gives us ZX_ERR_NOT_SUPPORTED and then the second
+  // gives us ZX_ERR_NO_RESOURCES.
   constexpr uint8_t kNumberOfRetries = 2;
   uint8_t buffer[1] = {0x34};
   auto ret = channel.ReadSyncRetries(0x56, buffer, sizeof(buffer), kNumberOfRetries, zx::usec(1));
-  EXPECT_EQ(ret.status, ZX_ERR_NO_MEMORY);
+  EXPECT_EQ(ret.status, ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(ret.retries, 2);
 }
 
@@ -59,9 +61,9 @@ TEST(I2cChannelTest, RetriesOk) {
   // 4 retries requested but no error, return ok.
   uint8_t tx_buffer[1] = {0x78};
   uint8_t rx_buffer[1] = {0x90};
-  constexpr uint8_t kNumberOfRetries = 4;
+  constexpr uint8_t kNumberOfRetries = 5;
   auto ret = channel.WriteReadSyncRetries(tx_buffer, sizeof(tx_buffer), rx_buffer,
                                           sizeof(rx_buffer), kNumberOfRetries, zx::usec(1));
   EXPECT_EQ(ret.status, ZX_OK);
-  EXPECT_EQ(ret.retries, 0);
+  EXPECT_EQ(ret.retries, 4);
 }
