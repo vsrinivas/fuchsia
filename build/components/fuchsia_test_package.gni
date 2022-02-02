@@ -182,6 +182,7 @@ template("fuchsia_test_package") {
                              [
                                "deps",
                                "disable_elf_binaries_checks",
+                               "metadata",
                                "visibility",
                              ])
       package_name = package_name
