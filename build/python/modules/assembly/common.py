@@ -6,6 +6,7 @@
 """
 from functools import total_ordering
 import os
+import shutil
 from typing import Dict, Iterable, TextIO, Union
 from os import PathLike
 
@@ -90,4 +91,8 @@ def fast_copy(src: FilePath, dst: FilePath, **kwargs) -> None:
     """A wrapper around os and os.path fns to correctly copy a file using a
     hardlink.
     """
-    os.link(os.path.realpath(src), dst, **kwargs)
+    real_src_path = os.path.realpath(src)
+    try:
+        os.link(real_src_path, dst, **kwargs)
+    except OSError:
+        shutil.copy2(real_src_path, dst, **kwargs)
