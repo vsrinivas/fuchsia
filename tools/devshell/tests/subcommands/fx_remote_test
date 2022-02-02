@@ -19,6 +19,7 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/platform.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/verify-default-keys.sh"
+  "tools/devshell/lib/updates.sh"
 )
 
 declare fx ssh_mock scp_mock local_gensshkeys_mock remote_gensshkeys_mock compare_remote_and_local_mock

@@ -44,7 +44,7 @@ function main {
     shift
   done
 
-  if is_feature_enabled "legacy_serve"; then
+  if use-legacy-package-server; then
     if [[ -z "${repo_name}" ]]; then
       repo_name="devhost"
     fi

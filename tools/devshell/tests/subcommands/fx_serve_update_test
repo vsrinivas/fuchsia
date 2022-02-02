@@ -7,12 +7,13 @@ readonly SERVE_UPDATES_PORT=8083
 
 BT_FILE_DEPS=(
   "out/default/host_x64/pm"
-  "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/updates.sh"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/serve-updates"
   "tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.cmx"
   "tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.json"
   "tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.manifest"
-  "tools/devshell/serve-updates"
 )
 
 # Build a fake gn to satisfy vars.sh and some other commands to satisfy
