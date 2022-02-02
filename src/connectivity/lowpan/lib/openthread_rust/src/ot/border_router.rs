@@ -53,6 +53,18 @@ pub trait BorderRouter {
     fn remove_on_mesh_prefix(&self, prefix: &Ip6Prefix) -> Result;
 
     /// Functional equivalent of
+    /// [`otsys::otBorderRouterRegister`](crate::otsys::otBorderRouterRegister).
+    fn border_router_register(&self) -> Result;
+
+    /// Functional equivalent of
+    /// [`otsys::otBorderRoutingInit`](crate::otsys::otBorderRoutingInit).
+    fn border_routing_init(&self, infra_if: u32, infra_is_running: bool) -> Result;
+
+    /// Functional equivalent of
+    /// [`otsys::otBorderRoutingSetEnabled`](crate::otsys::otBorderRoutingSetEnabled).
+    fn border_routing_set_enabled(&self, enabled: bool) -> Result;
+
+    /// Functional equivalent of
     /// [`otsys::otBorderRouterGetNextRoute`](crate::otsys::otBorderRouterGetNextRoute).
     // TODO: Determine if the underlying implementation of
     //       this method has undefined behavior when network data
@@ -104,6 +116,18 @@ impl<T: BorderRouter + Boxable> BorderRouter for ot::Box<T> {
         self.as_ref().remove_on_mesh_prefix(prefix)
     }
 
+    fn border_router_register(&self) -> Result {
+        self.as_ref().border_router_register()
+    }
+
+    fn border_routing_init(&self, infra_if: u32, infra_is_running: bool) -> Result {
+        self.as_ref().border_routing_init(infra_if, infra_is_running)
+    }
+
+    fn border_routing_set_enabled(&self, enabled: bool) -> Result {
+        self.as_ref().border_routing_set_enabled(enabled)
+    }
+
     fn iter_next_local_external_route(
         &self,
         ot_iter: &mut otNetworkDataIterator,
@@ -139,6 +163,19 @@ impl BorderRouter for Instance {
             otBorderRouterRemoveOnMeshPrefix(self.as_ot_ptr(), prefix.as_ot_ptr())
         })
         .into()
+    }
+
+    fn border_router_register(&self) -> Result {
+        Error::from(unsafe { otBorderRouterRegister(self.as_ot_ptr()) }).into()
+    }
+
+    fn border_routing_init(&self, infra_if: u32, infra_is_running: bool) -> Result {
+        Error::from(unsafe { otBorderRoutingInit(self.as_ot_ptr(), infra_if, infra_is_running) })
+            .into()
+    }
+
+    fn border_routing_set_enabled(&self, enabled: bool) -> Result {
+        Error::from(unsafe { otBorderRoutingSetEnabled(self.as_ot_ptr(), enabled) }).into()
     }
 
     fn iter_next_local_external_route(
