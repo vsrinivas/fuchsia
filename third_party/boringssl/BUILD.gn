@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/fuzzing/fuzzer.gni")
+import("//build/test.gni")
 import("BUILD.generated.gni")
 import("BUILD.generated_tests.gni")
 
@@ -171,19 +172,64 @@ executable("bssl") {
 ##############
 # Unit tests #
 ##############
+
+crypto_tests = []
+common_crypto_test_sources = [
+  "crypto_test_data.cc",
+
+  # This test does nothing when BORINGSSL_SHARED_LIBRARY is defined and is
+  # needed to resolve missing symbols. /shrug
+  "src/crypto/test/abi_test.cc",
+  "src/crypto/test/file_test_gtest.cc",
+  "src/crypto/test/gtest_main.cc",
+]
+_crypto_test_sources = crypto_test_sources - common_crypto_test_sources
+foreach(crypto_test_source, _crypto_test_sources) {
+  name = get_path_info(crypto_test_source, "name")
+  target_name = "${name}_crypto_test"
+  crypto_tests += [ target_name ]
+  test(target_name) {
+    visibility = [ ":*" ]
+    sources = [ crypto_test_source ] + common_crypto_test_sources +
+              test_support_sources
+    configs += [ ":test_config" ]
+    deps = [
+      ":crypto",
+      "//third_party/googletest:gtest",
+    ]
+  }
+}
+
+test("ssl_test") {
+  visibility = [ ":*" ]
+  sources = ssl_test_sources + test_support_sources
+  configs += [ ":test_config" ]
+  deps = [
+    ":crypto",
+    ":ssl",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 if (is_fuchsia) {
-  fuchsia_unittest_component("crypto_test_component") {
-    manifest = "meta/crypto_test.cml"
-    deps = [ ":crypto_test" ]
+  crypto_test_components = []
+  needs_custom_component_manifest = [ "bio_test_crypto_test" ]
+  foreach(crypto_test, crypto_tests) {
+    _component_name = "${crypto_test}_component"
+    crypto_test_components += [ ":${_component_name}" ]
+    fuchsia_unittest_component(_component_name) {
+      if (needs_custom_component_manifest + [ crypto_test ] - [ crypto_test ] !=
+          needs_custom_component_manifest) {
+        manifest = "meta/${crypto_test}.cml"
+      }
+      deps = [ ":${crypto_test}" ]
+    }
   }
   fuchsia_unittest_component("ssl_test_component") {
     deps = [ ":ssl_test" ]
   }
   fuchsia_test_package("boringssl_tests") {
-    test_components = [
-      ":crypto_test_component",
-      ":ssl_test_component",
-    ]
+    test_components = crypto_test_components + [ ":ssl_test_component" ]
     deps = [
       "//src/connectivity/network/netstack:component",
       "//src/sys/stash:stash_secure_v2",
@@ -196,34 +242,11 @@ group("tests") {
   if (is_fuchsia) {
     deps = [ ":boringssl_tests" ]
   } else {
-    deps = [
-      ":crypto_test",
-      ":ssl_test",
-    ]
+    deps = [ ":ssl_test" ]
+    foreach(crypto_test, crypto_tests) {
+      deps += [ ":${crypto_test}" ]
+    }
   }
-}
-
-executable("crypto_test") {
-  testonly = true
-  visibility = [ ":*" ]
-  sources = crypto_test_sources + test_support_sources
-  configs += [ ":test_config" ]
-  deps = [
-    ":crypto",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-executable("ssl_test") {
-  testonly = true
-  visibility = [ ":*" ]
-  sources = ssl_test_sources + test_support_sources
-  configs += [ ":test_config" ]
-  deps = [
-    ":crypto",
-    ":ssl",
-    "//third_party/googletest:gtest",
-  ]
 }
 
 ################################################################################

@@ -7,7 +7,7 @@
         "//src/sys/test_runners/gtest/default.shard.cml",
     ],
     program: {
-        binary: "bin/crypto_test",
+        binary: "test/bio_test_crypto_test",
     },
     children: [
         {
