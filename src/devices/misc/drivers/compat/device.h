@@ -57,6 +57,9 @@ class Device : public std::enable_shared_from_this<Device> {
     vnode_teardown_callback_ = std::move(cb);
   }
 
+  std::string_view topological_path() const { return topological_path_; }
+  void set_topological_path(std::string path) { topological_path_ = std::move(path); }
+
  private:
   using Metadata = std::vector<uint8_t>;
 
@@ -65,6 +68,7 @@ class Device : public std::enable_shared_from_this<Device> {
 
   void RemoveChild(std::shared_ptr<Device>& child);
 
+  std::string topological_path_;
   const std::string name_;
   void* const context_;
   const zx_protocol_device_t* const ops_;

@@ -359,10 +359,11 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
   // Create a devfs entry for the new device.
   auto vnode = fbl::MakeRefCounted<DevfsVnode>(child->ZxDevice(), logger_);
   outgoing_.svc_dir()->AddEntry(child_protocol, vnode);
-  // TODO(fxbug.dev/90629): Replace this path with a DFv1 topological path.
-  std::string devfs_name = std::string("compat/") + child->Name();
+
+  auto devfs_name = std::string(child->topological_path());
   // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print this.
   FDF_LOG(INFO, "Created /dev/%s", devfs_name.data());
+
   // Export the devfs entry. Once the export is complete, put a callback on the
   // Device so that when the Device is removed the Vnode will also be removed.
   // This assumes that Driver will always outlive Device.

@@ -56,12 +56,7 @@ class HidDriverTest : public zxtest::Test {
 
     // Wait for HidCtl to be created
     fbl::unique_fd hidctl_fd;
-    if (use_dfv2) {
-      status = device_watcher::RecursiveWaitForFile(dev_fd_, "compat/hidctl", &hidctl_fd);
-    } else {
-      status = device_watcher::RecursiveWaitForFile(dev_fd_, "sys/test/hidctl", &hidctl_fd);
-    }
-    ASSERT_OK(status);
+    ASSERT_OK(device_watcher::RecursiveWaitForFile(dev_fd_, "sys/test/hidctl", &hidctl_fd));
 
     // Get a FIDL channel to HidCtl
     zx_handle_t handle;

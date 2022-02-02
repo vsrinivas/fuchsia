@@ -96,6 +96,13 @@ bool Device::HasChildren() const { return !children_.empty(); }
 zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   auto device = std::make_shared<Device>(zx_args->name, zx_args->ctx, zx_args->ops, this,
                                          std::nullopt, logger_, dispatcher_);
+
+  device->topological_path_ = linked_device_.topological_path_;
+  if (!device->topological_path_.empty()) {
+    device->topological_path_ += "/";
+  }
+  device->topological_path_ += device->name_;
+
   auto device_ptr = device.get();
   if (zx_args->proto_id) {
     device_ptr->proto_id_ = zx_args->proto_id;

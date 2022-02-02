@@ -27,7 +27,7 @@ async fn test_sample_driver() -> Result<()> {
 
     // Connect to our driver.
     let dev = instance.driver_test_realm_connect_to_dev()?;
-    let node = device_watcher::recursive_wait_and_open_node(&dev, "compat/leaf").await?;
+    let node = device_watcher::recursive_wait_and_open_node(&dev, "sys/test/root/leaf").await?;
     let driver = fidl_fuchsia_hardware_compat::LeafProxy::new(node.into_channel().unwrap());
     let response = driver.get_string().await.unwrap();
     assert_eq!(response, "hello world!");
