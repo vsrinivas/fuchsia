@@ -267,7 +267,8 @@ fpromise::promise<void, zx_status_t> AudioOutput::UpdateDeviceProfile(
         params.volume_curve.value_or(current_profile.volume_curve()),
         params.independent_volume_control.value_or(current_profile.independent_volume_control()),
         params.pipeline_config.value_or(current_profile.pipeline_config()),
-        params.driver_gain_db.value_or(current_profile.driver_gain_db()));
+        params.driver_gain_db.value_or(current_profile.driver_gain_db()),
+        params.software_gain_db.value_or(current_profile.software_gain_db()));
     device_config.SetOutputDeviceProfile(driver()->persistent_unique_id(), updated_profile);
     set_config(device_config);
 

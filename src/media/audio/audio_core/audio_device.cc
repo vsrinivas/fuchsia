@@ -116,46 +116,51 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info,
   fuchsia::media::AudioGainInfo limited = info;
   ApplyGainLimits(&limited, set_flags);
 
+  // This is currently implemented with a SW gain.
+  SetSoftwareGainInfo(limited);
+
+  FX_DCHECK(device_settings_ != nullptr);
+  if (device_settings_->SetGainInfo(limited, set_flags)) {
+    Wakeup();
+  }
+}
+
+void AudioDevice::SetSoftwareGainInfo(const fuchsia::media::AudioGainInfo& info) {
   // For outputs, change the gain of all links where it is the destination.
   if (is_output()) {
-    link_matrix_.ForEachSourceLink(*this, [&limited](LinkMatrix::LinkHandle link) {
+    link_matrix_.ForEachSourceLink(*this, [&info](LinkMatrix::LinkHandle link) {
       if (link.object->type() == AudioObject::Type::AudioRenderer) {
-        const auto muted = (limited.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
+        const auto muted = (info.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
                            fuchsia::media::AudioGainInfoFlags::MUTE;
         if (muted) {
           FX_LOGS(WARNING) << "Destination device is muted";
         } else {
           // TODO(fxbug.dev/51049) Logging should be removed upon creation of inspect tool or other
           // real-time method for gain observation
-          FX_LOGS(INFO) << "Destination device gain=" << limited.gain_db;
+          FX_LOGS(INFO) << "Destination device gain=" << info.gain_db;
         }
         link.mixer->bookkeeping().gain.SetDestGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB
-                                                         : limited.gain_db);
+                                                         : info.gain_db);
       }
     });
   } else {
     // For inputs, change the gain of all links where it is the source.
     FX_DCHECK(is_input());
-    link_matrix_.ForEachDestLink(*this, [&limited](LinkMatrix::LinkHandle link) {
+    link_matrix_.ForEachDestLink(*this, [&info](LinkMatrix::LinkHandle link) {
       if (link.object->type() == AudioObject::Type::AudioCapturer) {
-        const auto muted = (limited.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
+        const auto muted = (info.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
                            fuchsia::media::AudioGainInfoFlags::MUTE;
         if (muted) {
           FX_LOGS(WARNING) << "Source device is muted";
         } else {
           // TODO(fxbug.dev/51049) Logging should be removed upon creation of inspect tool or other
           // real-time method for gain observation
-          FX_LOGS(INFO) << "Source device gain=" << limited.gain_db;
+          FX_LOGS(INFO) << "Source device gain=" << info.gain_db;
         }
         link.mixer->bookkeeping().gain.SetSourceGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB
-                                                           : limited.gain_db);
+                                                           : info.gain_db);
       }
     });
-  }
-
-  FX_DCHECK(device_settings_ != nullptr);
-  if (device_settings_->SetGainInfo(limited, set_flags)) {
-    Wakeup();
   }
 }
 

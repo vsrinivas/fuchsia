@@ -58,8 +58,7 @@ class StreamVolumeManager {
   StreamVolumeManager& operator=(StreamVolumeManager) = delete;
   StreamVolumeManager& operator=(StreamVolumeManager&&) = delete;
 
-  explicit StreamVolumeManager(async_dispatcher_t* fidl_dispatcher,
-                               const RenderUsageVolumes& initial_volumes = {});
+  explicit StreamVolumeManager(async_dispatcher_t* fidl_dispatcher);
 
   const UsageGainSettings& GetUsageGainSettings() const;
 

@@ -63,38 +63,6 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithMutedVolumeCurve) {
   EXPECT_FLOAT_EQ(config.default_volume_curve().VolumeToDb(1.0), 0.0);
 }
 
-TEST(ProcessConfigLoaderTest, LoadProcessConfigWithDefaultRenderUsageVolumes) {
-  static const std::string kConfigWithDefaultRenderUsageVolumes = R"JSON({
-      "volume_curve": [
-        {
-            "level": 0.0,
-            "db": -160.0
-        },
-        {
-            "level": 1.0,
-            "db": 0.0
-        }
-      ],
-      "default_render_usage_volumes": {
-        "render:media": 0.0,
-        "background": 0.5,
-        "render:system_agent": 0.3
-      }
-    })JSON";
-  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename,
-                               kConfigWithDefaultRenderUsageVolumes.data(),
-                               kConfigWithDefaultRenderUsageVolumes.size()));
-
-  auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok()) << result.error();
-
-  auto& default_volumes = result.value().default_render_usage_volumes();
-
-  EXPECT_FLOAT_EQ(default_volumes.at(RenderUsage::MEDIA), 0.0);
-  EXPECT_FLOAT_EQ(default_volumes.at(RenderUsage::BACKGROUND), 0.5);
-  EXPECT_FLOAT_EQ(default_volumes.at(RenderUsage::SYSTEM_AGENT), 0.3);
-}
-
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
   static const std::string kConfigWithRoutingPolicy =
       R"JSON({
@@ -377,7 +345,7 @@ TEST(ProcessConfigLoaderTest, AllowConfigWithoutUltrasound) {
   ASSERT_TRUE(result.is_ok()) << result.error();
 }
 
-TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOutputDriverGain) {
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOutputGains) {
   static const std::string kConfigWithDriverGain =
       R"JSON({
     "volume_curve": [
@@ -401,7 +369,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOutputDriverGain) {
           "render:system_agent",
           "capture:loopback"
         ],
-        "driver_gain_db": -6.0
+        "driver_gain_db": -6.0,
+        "software_gain_db": -8.0
       }
     ]
   })JSON";
@@ -419,10 +388,12 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOutputDriverGain) {
                                                         0x05, 0x3b}};
   auto& config = result.value().device_config();
   EXPECT_FLOAT_EQ(config.output_device_profile(expected_id).driver_gain_db(), -6.0f);
+  EXPECT_FLOAT_EQ(config.output_device_profile(expected_id).software_gain_db(), -8.0f);
   EXPECT_FLOAT_EQ(config.output_device_profile(unknown_id).driver_gain_db(), 0.0f);
+  EXPECT_FLOAT_EQ(config.output_device_profile(unknown_id).software_gain_db(), 0.0f);
 }
 
-TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDriverGain) {
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputGains) {
   static const std::string kConfigWithDriverGain =
       R"JSON({
     "volume_curve": [
@@ -442,7 +413,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDriverGain) {
           "capture:background"
         ],
         "rate": 96000,
-        "driver_gain_db": -6.0
+        "driver_gain_db": -6.0,
+        "software_gain_db": -8.0
       }
     ]
   })JSON";
@@ -460,7 +432,9 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDriverGain) {
                                                         0x22, 0x3a}};
   auto& config = result.value().device_config();
   EXPECT_FLOAT_EQ(config.input_device_profile(expected_id).driver_gain_db(), -6.0f);
+  EXPECT_FLOAT_EQ(config.input_device_profile(expected_id).software_gain_db(), -8.0f);
   EXPECT_FLOAT_EQ(config.input_device_profile(unknown_id).driver_gain_db(), 0.0f);
+  EXPECT_FLOAT_EQ(config.input_device_profile(unknown_id).software_gain_db(), 0.0f);
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDevices) {

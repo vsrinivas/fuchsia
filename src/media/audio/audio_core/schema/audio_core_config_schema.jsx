@@ -147,6 +147,10 @@
         // If the key is not specified, a default gain value of 0.0 will be used.
         "driver_gain_db": "number",
 
+        // Gain value (in decibels) applied to the software mix.
+        // If the key is not specified, a software gain value of 0.0 will be used.
+        "software_gain_db": "number",
+
         // The mix pipeline to construct for this device.
         "pipeline": { "$ref" : "#/definitions/mix_group" }
       },
@@ -228,7 +232,11 @@
 
         // Gain value (in decibels) applied to device driver upon initialization.
         // If the key is not specified, a default gain value of 0.0 will be used.
-        "driver_gain_db": "number"
+        "driver_gain_db": "number",
+
+        // Gain value (in decibels) applied to the software mix.
+        // If the key is not specified, a software gain value of 0.0 will be used.
+        "software_gain_db": "number"
       },
       "required": [ "device_id", "rate" ],
       "additionalProperties": false
@@ -239,22 +247,6 @@
     "volume_curve": {
       "type": "array",
       "items": { "$ref": "#/definitions/volume_mapping" }
-    },
-    "default_render_usage_volumes": {
-      "type": "object",
-      "properties":{
-        "background": "number",
-        "communications": "number",
-        "interruption": "number",
-        "media": "number",
-        "system_agent": "number",
-        "render:background": "number",
-        "render:communications": "number",
-        "render:interruption": "number",
-        "render:media": "number",
-        "render:system_agent": "number"
-      },
-      "additionalProperties": false
     },
     "output_devices" : {
       "type": "array",

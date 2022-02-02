@@ -24,7 +24,6 @@ namespace media::audio {
 namespace {
 
 static constexpr char kJsonKeyVolumeCurve[] = "volume_curve";
-static constexpr char kJsonKeyDefaultRenderUsageVolumes[] = "default_render_usage_volumes";
 static constexpr char kJsonKeyPipeline[] = "pipeline";
 static constexpr char kJsonKeyLib[] = "lib";
 static constexpr char kJsonKeyName[] = "name";
@@ -46,6 +45,7 @@ static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_s
 static constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
 static constexpr char kJsonKeyIndependentVolumeControl[] = "independent_volume_control";
 static constexpr char kJsonKeyDriverGainDb[] = "driver_gain_db";
+static constexpr char kJsonKeySoftwareGainDb[] = "software_gain_db";
 static constexpr char kJsonKeyThermalPolicy[] = "thermal_policy";
 static constexpr char kJsonKeyTargetName[] = "target_name";
 static constexpr char kJsonKeyTripPoint[] = "trip_point";
@@ -146,22 +146,6 @@ std::optional<StreamUsage> StreamUsageFromString(std::string_view string) {
     return StreamUsage::WithCaptureUsage(*capture_usage);
   }
   return std::nullopt;
-}
-
-RenderUsageVolumes ParseDefaultRenderUsageVolumesFromJsonObject(const rapidjson::Value& value) {
-  FX_CHECK(value.IsObject());
-  RenderUsageVolumes default_volumes;
-  for (const auto& vol : value.GetObject()) {
-    FX_CHECK(vol.name.IsString());
-    auto usage = RenderUsageFromString(vol.name.GetString());
-    FX_CHECK(usage);
-
-    FX_CHECK(vol.value.IsNumber());
-    auto level = vol.value.GetFloat();
-
-    default_volumes[*usage] = level;
-  }
-  return default_volumes;
 }
 
 PipelineConfig::EffectV1 ParseEffectV1FromJsonObject(const rapidjson::Value& value) {
@@ -396,6 +380,13 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
     driver_gain_db = driver_gain_db_it->value.GetDouble();
   }
 
+  float software_gain_db = 0.0;
+  auto software_gain_db_it = value.FindMember(kJsonKeySoftwareGainDb);
+  if (software_gain_db_it != value.MemberEnd()) {
+    FX_CHECK(software_gain_db_it->value.IsNumber());
+    software_gain_db = software_gain_db_it->value.GetDouble();
+  }
+
   StreamUsageSet supported_stream_types;
   auto supported_stream_types_it = value.FindMember(kJsonKeySupportedOutputStreamTypes);
   if (supported_stream_types_it != value.MemberEnd()) {
@@ -442,10 +433,11 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
     }
   }
 
-  return fpromise::ok(std::make_pair(
-      device_id, DeviceConfig::OutputDeviceProfile(
-                     eligible_for_loopback, std::move(supported_stream_types), volume_curve,
-                     independent_volume_control, std::move(pipeline_config), driver_gain_db)));
+  return fpromise::ok(
+      std::make_pair(device_id, DeviceConfig::OutputDeviceProfile(
+                                    eligible_for_loopback, std::move(supported_stream_types),
+                                    volume_curve, independent_volume_control,
+                                    std::move(pipeline_config), driver_gain_db, software_gain_db)));
 }
 
 ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Value& value) {
@@ -570,17 +562,24 @@ ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
     driver_gain_db = driver_gain_db_it->value.GetDouble();
   }
 
+  float software_gain_db = 0.0;
+  auto software_gain_db_it = value.FindMember(kJsonKeySoftwareGainDb);
+  if (software_gain_db_it != value.MemberEnd()) {
+    FX_CHECK(software_gain_db_it->value.IsNumber());
+    software_gain_db = software_gain_db_it->value.GetDouble();
+  }
+
   StreamUsageSet supported_stream_types;
   auto supported_stream_types_it = value.FindMember(kJsonKeySupportedStreamTypes);
   if (supported_stream_types_it != value.MemberEnd()) {
     supported_stream_types = ParseStreamUsageSetFromJsonArray(supported_stream_types_it->value);
     return fpromise::ok(std::make_pair(
-        device_id,
-        DeviceConfig::InputDeviceProfile(rate, std::move(supported_stream_types), driver_gain_db)));
+        device_id, DeviceConfig::InputDeviceProfile(rate, std::move(supported_stream_types),
+                                                    driver_gain_db, software_gain_db)));
   }
 
-  return fpromise::ok(
-      std::make_pair(device_id, DeviceConfig::InputDeviceProfile(rate, driver_gain_db)));
+  return fpromise::ok(std::make_pair(
+      device_id, DeviceConfig::InputDeviceProfile(rate, driver_gain_db, software_gain_db)));
 }
 
 fpromise::result<> ParseInputDevicePoliciesFromJsonObject(
@@ -669,13 +668,6 @@ fpromise::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessCo
 
   auto config_builder = ProcessConfig::Builder();
   config_builder.SetDefaultVolumeCurve(curve_result.take_value());
-
-  auto default_volume_it = doc.FindMember(kJsonKeyDefaultRenderUsageVolumes);
-  if (default_volume_it != doc.MemberEnd()) {
-    auto default_volume_result =
-        ParseDefaultRenderUsageVolumesFromJsonObject(doc[kJsonKeyDefaultRenderUsageVolumes]);
-    config_builder.SetDefaultRenderUsageVolumes(default_volume_result);
-  }
 
   auto output_devices_it = doc.FindMember(kJsonKeyOutputDevices);
   if (output_devices_it != doc.MemberEnd()) {

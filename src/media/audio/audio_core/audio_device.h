@@ -115,6 +115,9 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   virtual void SetGainInfo(const fuchsia::media::AudioGainInfo& info,
                            fuchsia::media::AudioGainValidFlags set_flags);
 
+  // Like set gain, but updates SW gain only.
+  virtual void SetSoftwareGainInfo(const fuchsia::media::AudioGainInfo& info);
+
   // Device info used during device enumeration and add-notifications.
   virtual fuchsia::media::AudioDeviceInfo GetDeviceInfo() const;
 
@@ -324,8 +327,6 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
     FX_DCHECK(!activated());
     activated_ = true;
   }
-
-  bool system_gain_dirty = true;
 
   // Plug state is protected by the fact that it is only ever accessed on the
   // main message loop thread.

@@ -317,7 +317,7 @@ TEST_F(AudioTunerTest, InitialGetAudioDeviceProfile) {
                        .loopback = true,
                        .output_rate = 48000,
                        .output_channels = 2}),
-                   /*driver_gain_db=*/0.0)})
+                   /*driver_gain_db=*/0.0, /*software_gain_db=*/0.0)})
           .Build();
 
   auto context = CreateContext(expected_process_config);
@@ -497,7 +497,7 @@ TEST_F(AudioTunerTest, SetAudioEffectConfig) {
                        .loopback = true,
                        .output_rate = 48000,
                        .output_channels = 2}),
-                   /*driver_gain_db=*/0.0)})
+                   /*driver_gain_db=*/0.0, /*software_gain_db=*/0.0)})
           .Build();
   auto context = CreateContext(initial_process_config);
   AudioTunerImpl under_test(*context);

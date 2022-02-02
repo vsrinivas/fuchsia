@@ -69,7 +69,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
                          StreamUsageSetFromRenderUsages(kFidlRenderUsages),
                          VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume),
                          /* independent_volume_control */ false, CreatePipelineConfig(),
-                         /* driver_gain_db */ 0.0)})
+                         /* driver_gain_db */ 0.0, /* software_gain_db */ 0.0)})
                 .SetDefaultVolumeCurve(
                     VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
                 .Build()) {}

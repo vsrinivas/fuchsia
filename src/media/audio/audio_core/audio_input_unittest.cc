@@ -21,7 +21,9 @@ class AudioInputTestDriver : public testing::ThreadingModelFixture,
   AudioInputTestDriver()
       : ThreadingModelFixture(
             ProcessConfig::Builder()
-                .AddDeviceProfile({std::nullopt, DeviceConfig::InputDeviceProfile(GetParam())})
+                .AddDeviceProfile(
+                    {std::nullopt, DeviceConfig::InputDeviceProfile(
+                                       GetParam(), /*driver_gain_db=*/0, /*software_gain_db=*/0)})
                 .SetDefaultVolumeCurve(
                     VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
                 .Build()) {}

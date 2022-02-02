@@ -205,6 +205,20 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
     return;
   }
 
+  // Set software gain.
+  auto driver = device->driver();
+  const float software_gain_db = device->is_output()
+                                     ? process_config_.device_config()
+                                           .output_device_profile(driver->persistent_unique_id())
+                                           .software_gain_db()
+                                     : process_config_.device_config()
+                                           .input_device_profile(driver->persistent_unique_id())
+                                           .software_gain_db();
+  device->SetSoftwareGainInfo({
+      .gain_db = software_gain_db,
+      .flags = static_cast<fuchsia::media::AudioGainInfoFlags>(0),
+  });
+
   devices_.insert(std::move(dev));
   device->SetActivated();
 
@@ -346,8 +360,6 @@ void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
     FX_LOGS(WARNING) << "Invalid device gain " << gain_info.gain_db << " dB -- making no change";
     return;
   }
-
-  dev->system_gain_dirty = true;
 
   // Change the gain and then report the new settings to our clients.
   dev->SetGainInfo(gain_info, set_flags);

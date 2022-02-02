@@ -85,7 +85,7 @@ class UsageGainReporterTest : public gtest::TestLoopFixture {
                          /* eligible_for_loopback=*/true,
                          /*supported_usages=*/{}, VolumeCurve::DefaultForMinGain(-60.0),
                          /* independent_volume_control=*/true, PipelineConfig::Default(),
-                         /*driver_gain_db=*/0.0)})
+                         /*driver_gain_db=*/0.0, /*software_gain_db=*/0.0)})
                 .Build()),
         usage_(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)) {}
 

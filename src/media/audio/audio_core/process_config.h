@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <optional>
+#include <unordered_map>
 
 #include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
@@ -19,12 +20,9 @@ namespace media::audio {
 
 class ProcessConfig;
 
-using RenderUsageVolumes = std::map<RenderUsage, float>;
-
 class ProcessConfigBuilder {
  public:
   ProcessConfigBuilder& SetDefaultVolumeCurve(VolumeCurve curve);
-  ProcessConfigBuilder& SetDefaultRenderUsageVolumes(RenderUsageVolumes volumes);
   ProcessConfigBuilder& AddDeviceProfile(
       std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
                 DeviceConfig::OutputDeviceProfile>
@@ -44,7 +42,6 @@ class ProcessConfigBuilder {
 
  private:
   std::optional<VolumeCurve> default_volume_curve_;
-  RenderUsageVolumes default_render_usage_volumes_;
   std::vector<std::pair<std::vector<audio_stream_unique_id_t>, DeviceConfig::OutputDeviceProfile>>
       output_device_profiles_;
   std::optional<DeviceConfig::OutputDeviceProfile> default_output_device_profile_;
@@ -90,19 +87,14 @@ class ProcessConfig {
   }
 
   using Builder = ProcessConfigBuilder;
-  ProcessConfig(VolumeCurve curve, RenderUsageVolumes default_volumes, DeviceConfig device_config,
-                ThermalConfig thermal_config)
+  ProcessConfig(VolumeCurve curve, DeviceConfig device_config, ThermalConfig thermal_config)
       : default_volume_curve_(std::move(curve)),
-        default_render_usage_volumes_(std::move(default_volumes)),
         default_loudness_transform_(
             std::make_shared<MappedLoudnessTransform>(default_volume_curve_)),
         device_config_(std::move(device_config)),
         thermal_config_(std::move(thermal_config)) {}
 
   const VolumeCurve& default_volume_curve() const { return default_volume_curve_; }
-  const RenderUsageVolumes& default_render_usage_volumes() const {
-    return default_render_usage_volumes_;
-  }
   const DeviceConfig& device_config() const { return device_config_; }
   const ThermalConfig& thermal_config() const { return thermal_config_; }
   const std::shared_ptr<LoudnessTransform>& default_loudness_transform() const {
@@ -113,7 +105,6 @@ class ProcessConfig {
   static std::optional<ProcessConfig> instance_;
 
   VolumeCurve default_volume_curve_;
-  RenderUsageVolumes default_render_usage_volumes_;
   std::shared_ptr<LoudnessTransform> default_loudness_transform_;
   DeviceConfig device_config_;
   ThermalConfig thermal_config_;

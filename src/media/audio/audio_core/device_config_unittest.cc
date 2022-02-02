@@ -22,7 +22,7 @@ TEST(OutputDeviceProfileTest, TransformForDependentVolumeControl) {
       DeviceConfig::OutputDeviceProfile(eligible_for_loopback, /* usage_support_set */ {},
                                         kVolumeCurve, /*independent_volume_control=*/false,
                                         /*pipeline_config=*/PipelineConfig::Default(),
-                                        /*driver_gain_db=*/0.0)
+                                        /*driver_gain_db=*/0.0, /*software_gain_db=*/0.0)
           .loudness_transform();
 
   EXPECT_FLOAT_EQ(dependent_volume_tf->Evaluate<1>({GainDbFsValue{Gain::kMinGainDb}}),
@@ -38,7 +38,8 @@ TEST(OutputDeviceProfileTest, TransformForIndependentVolumeControl) {
   const auto independent_volume_tf =
       DeviceConfig::OutputDeviceProfile(eligible_for_loopback, /* usage_support_set */ {},
                                         kVolumeCurve, /*independent_volume_control=*/true,
-                                        PipelineConfig::Default(), /*driver_gain_db=*/0.0)
+                                        PipelineConfig::Default(), /*driver_gain_db=*/0.0,
+                                        /*software_gain_db=*/0.0)
           .loudness_transform();
 
   EXPECT_NE(independent_volume_tf, default_tf);

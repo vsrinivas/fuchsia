@@ -58,8 +58,7 @@ class ContextImpl : public Context {
         idle_policy_(this),
         device_manager_(*threading_model_, std::move(plug_detector), link_matrix_, process_config_,
                         clock_factory_, idle_policy_, effects_loader_v2_.get()),
-        stream_volume_manager_(threading_model_->FidlDomain().dispatcher(),
-                               process_config_.default_render_usage_volumes()),
+        stream_volume_manager_(threading_model_->FidlDomain().dispatcher()),
         audio_admin_(&stream_volume_manager_, &usage_reporter_, &activity_dispatcher_,
                      &idle_policy_, threading_model_->FidlDomain().dispatcher()),
         vmar_manager_(
