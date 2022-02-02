@@ -2,13 +2,13 @@
 
 use chrono::offset::Utc;
 use chrono::{DateTime, Duration};
+use futures_io::AsyncRead;
 use serde::de::{Deserialize, DeserializeOwned, Deserializer, Error as DeserializeError};
 use serde::ser::{Error as SerializeError, Serialize, Serializer};
 use serde_derive::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Debug, Display};
-use std::io::Read;
 use std::marker::PhantomData;
 use std::str;
 
@@ -205,7 +205,7 @@ impl Display for Role {
 }
 
 /// Enum used for addressing versioned TUF metadata.
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum MetadataVersion {
     /// The metadata is unversioned. This is the latest version of the metadata.
     None,
@@ -267,6 +267,93 @@ where
     /// exploits.
     pub fn parse_untrusted(&self) -> Result<SignedMetadata<D, M>> {
         D::from_slice(&self.bytes)
+    }
+}
+
+/// A collection of [RawSignedMetadata] that describes the metadata at one
+/// commit.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct RawSignedMetadataSet<D> {
+    root: Option<RawSignedMetadata<D, RootMetadata>>,
+    targets: Option<RawSignedMetadata<D, TargetsMetadata>>,
+    snapshot: Option<RawSignedMetadata<D, SnapshotMetadata>>,
+    timestamp: Option<RawSignedMetadata<D, TimestampMetadata>>,
+}
+
+impl<D> RawSignedMetadataSet<D> {
+    /// Returns a reference to the built root metadata, if any.
+    pub fn root(&self) -> Option<&RawSignedMetadata<D, RootMetadata>> {
+        self.root.as_ref()
+    }
+
+    /// Returns a reference to the built targets metadata, if any.
+    pub fn targets(&self) -> Option<&RawSignedMetadata<D, TargetsMetadata>> {
+        self.targets.as_ref()
+    }
+
+    /// Returns a reference to the built snapshot metadata, if any.
+    pub fn snapshot(&self) -> Option<&RawSignedMetadata<D, SnapshotMetadata>> {
+        self.snapshot.as_ref()
+    }
+
+    /// Returns a reference to the built timestamp metadata, if any.
+    pub fn timestamp(&self) -> Option<&RawSignedMetadata<D, TimestampMetadata>> {
+        self.timestamp.as_ref()
+    }
+}
+
+/// Builder for [RawSignedMetadataSet].
+#[derive(Default)]
+pub struct RawSignedMetadataSetBuilder<D>
+where
+    D: DataInterchange,
+{
+    metadata: RawSignedMetadataSet<D>,
+}
+
+impl<D> RawSignedMetadataSetBuilder<D>
+where
+    D: DataInterchange,
+{
+    /// Create a new [RawSignedMetadataSetBuilder].
+    pub fn new() -> Self {
+        Self {
+            metadata: RawSignedMetadataSet {
+                root: None,
+                targets: None,
+                snapshot: None,
+                timestamp: None,
+            },
+        }
+    }
+
+    /// Set or replace the root metadata.
+    pub fn root(mut self, root: RawSignedMetadata<D, RootMetadata>) -> Self {
+        self.metadata.root = Some(root);
+        self
+    }
+
+    /// Set or replace the targets metadata.
+    pub fn targets(mut self, targets: RawSignedMetadata<D, TargetsMetadata>) -> Self {
+        self.metadata.targets = Some(targets);
+        self
+    }
+
+    /// Set or replace the snapshot metadata.
+    pub fn snapshot(mut self, snapshot: RawSignedMetadata<D, SnapshotMetadata>) -> Self {
+        self.metadata.snapshot = Some(snapshot);
+        self
+    }
+
+    /// Set or replace the timestamp metadata.
+    pub fn timestamp(mut self, timestamp: RawSignedMetadata<D, TimestampMetadata>) -> Self {
+        self.metadata.timestamp = Some(timestamp);
+        self
+    }
+
+    /// Return a [RawSignedMetadataSet].
+    pub fn build(self) -> RawSignedMetadataSet<D> {
+        self.metadata
     }
 }
 
@@ -435,6 +522,7 @@ where
         self.signatures
             .retain(|s| s.key_id() != private_key.public().key_id());
         self.signatures.push(sig);
+        self.signatures.sort();
         Ok(())
     }
 
@@ -461,6 +549,7 @@ where
                 .filter(|s| !key_ids.contains(s.key_id()))
                 .cloned(),
         );
+        self.signatures.sort();
 
         Ok(())
     }
@@ -514,13 +603,13 @@ impl RootMetadataBuilder {
     ///
     /// * version: 1,
     /// * expires: 365 days from the current time.
-    /// * consistent snapshot: false
+    /// * consistent snapshot: true
     /// * role thresholds: 1
     pub fn new() -> Self {
         RootMetadataBuilder {
             version: 1,
             expires: Utc::now() + Duration::days(365),
-            consistent_snapshot: false,
+            consistent_snapshot: true,
             keys: HashMap::new(),
             root_threshold: 1,
             root_key_ids: Vec::new(),
@@ -973,18 +1062,16 @@ impl TimestampMetadataBuilder {
     ///
     /// * version: 1
     /// * expires: 1 day from the current time.
-    pub fn from_snapshot<D, M>(
-        snapshot: &SignedMetadata<D, M>,
+    pub fn from_snapshot<D>(
+        snapshot: &SignedMetadata<D, SnapshotMetadata>,
         hash_algs: &[HashAlgorithm],
     ) -> Result<Self>
     where
         D: DataInterchange,
-        M: Metadata,
     {
-        let mut bytes = Vec::new();
-        D::to_writer(&mut bytes, &snapshot)?;
-        let description = MetadataDescription::from_reader(
-            &*bytes,
+        let raw_snapshot = snapshot.to_raw()?;
+        let description = MetadataDescription::from_slice(
+            raw_snapshot.as_bytes(),
             snapshot.parse_version_untrusted()?,
             hash_algs,
         )?;
@@ -1105,34 +1192,30 @@ impl<'de> Deserialize<'de> for TimestampMetadata {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MetadataDescription {
     version: u32,
-    length: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    length: Option<usize>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     hashes: HashMap<HashAlgorithm, HashValue>,
 }
 
 impl MetadataDescription {
-    /// Create a `MetadataDescription` from a given reader. Size and hashes will be calculated.
-    pub fn from_reader<R: Read>(
-        read: R,
-        version: u32,
-        hash_algs: &[HashAlgorithm],
-    ) -> Result<Self> {
+    /// Create a `MetadataDescription` from a slice. Size and hashes will be calculated.
+    pub fn from_slice(buf: &[u8], version: u32, hash_algs: &[HashAlgorithm]) -> Result<Self> {
         if version < 1 {
             return Err(Error::IllegalArgument(
                 "Version must be greater than zero".into(),
             ));
         }
 
-        let (length, hashes) = crypto::calculate_hashes(read, hash_algs)?;
-
-        if length > ::std::usize::MAX as u64 {
-            return Err(Error::IllegalArgument(
-                "Calculated length exceeded usize".into(),
-            ));
-        }
+        let hashes = if hash_algs.is_empty() {
+            HashMap::new()
+        } else {
+            crypto::calculate_hashes_from_slice(buf, hash_algs)?
+        };
 
         Ok(MetadataDescription {
             version,
-            length: length as usize,
+            length: Some(buf.len()),
             hashes,
         })
     }
@@ -1140,7 +1223,7 @@ impl MetadataDescription {
     /// Create a new `MetadataDescription`.
     pub fn new(
         version: u32,
-        length: usize,
+        length: Option<usize>,
         hashes: HashMap<HashAlgorithm, HashValue>,
     ) -> Result<Self> {
         if version < 1 {
@@ -1148,12 +1231,6 @@ impl MetadataDescription {
                 "Metadata version must be greater than zero. Found: {}",
                 version
             )));
-        }
-
-        if hashes.is_empty() {
-            return Err(Error::IllegalArgument(
-                "Cannot have empty set of hashes".into(),
-            ));
         }
 
         Ok(MetadataDescription {
@@ -1169,7 +1246,7 @@ impl MetadataDescription {
     }
 
     /// The length of the described metadata.
-    pub fn length(&self) -> usize {
+    pub fn length(&self) -> Option<usize> {
         self.length
     }
 
@@ -1206,6 +1283,20 @@ impl SnapshotMetadataBuilder {
             expires: Utc::now() + Duration::days(7),
             meta: HashMap::new(),
         }
+    }
+
+    /// Create a new [SnapshotMetadataBuilder] from a given snapshot. It defaults to:
+    ///
+    /// * version: 1
+    /// * expires: 7 day from the current time.
+    pub fn from_targets<D>(
+        targets: &SignedMetadata<D, TargetsMetadata>,
+        hash_algs: &[HashAlgorithm],
+    ) -> Result<Self>
+    where
+        D: DataInterchange,
+    {
+        SnapshotMetadataBuilder::new().insert_metadata(targets, hash_algs)
     }
 
     /// Set the version number for this metadata.
@@ -1245,10 +1336,9 @@ impl SnapshotMetadataBuilder {
         M: Metadata,
         D: DataInterchange,
     {
-        let mut bytes = Vec::new();
-        D::to_writer(&mut bytes, metadata)?;
-        let description = MetadataDescription::from_reader(
-            &*bytes,
+        let raw_metadata = metadata.to_raw()?;
+        let description = MetadataDescription::from_slice(
+            raw_metadata.as_bytes(),
             metadata.parse_version_untrusted()?,
             hash_algs,
         )?;
@@ -1368,33 +1458,34 @@ impl<'de> Deserialize<'de> for SnapshotMetadata {
 
 /// Wrapper for the virtual path to a target.
 #[derive(Debug, Clone, PartialEq, Hash, Eq, PartialOrd, Ord, Serialize)]
-pub struct VirtualTargetPath(String);
+pub struct TargetPath(String);
 
-impl VirtualTargetPath {
-    /// Create a new `VirtualTargetPath` from a `String`.
+impl TargetPath {
+    /// Create a new `TargetPath` from a `String`.
     ///
     /// ```
-    /// # use tuf::metadata::VirtualTargetPath;
-    /// assert!(VirtualTargetPath::new("foo".into()).is_ok());
-    /// assert!(VirtualTargetPath::new("/foo".into()).is_err());
-    /// assert!(VirtualTargetPath::new("../foo".into()).is_err());
-    /// assert!(VirtualTargetPath::new("foo/..".into()).is_err());
-    /// assert!(VirtualTargetPath::new("foo/../bar".into()).is_err());
-    /// assert!(VirtualTargetPath::new("..foo".into()).is_ok());
-    /// assert!(VirtualTargetPath::new("foo/..bar".into()).is_ok());
-    /// assert!(VirtualTargetPath::new("foo/bar..".into()).is_ok());
+    /// # use tuf::metadata::TargetPath;
+    /// assert!(TargetPath::new("foo").is_ok());
+    /// assert!(TargetPath::new("/foo").is_err());
+    /// assert!(TargetPath::new("../foo").is_err());
+    /// assert!(TargetPath::new("foo/..").is_err());
+    /// assert!(TargetPath::new("foo/../bar").is_err());
+    /// assert!(TargetPath::new("..foo").is_ok());
+    /// assert!(TargetPath::new("foo/..bar").is_ok());
+    /// assert!(TargetPath::new("foo/bar..").is_ok());
     /// ```
-    pub fn new(path: String) -> Result<Self> {
+    pub fn new<P: Into<String>>(path: P) -> Result<Self> {
+        let path = path.into();
         safe_path(&path)?;
-        Ok(VirtualTargetPath(path))
+        Ok(TargetPath(path))
     }
 
-    /// Split `VirtualTargetPath` into components that can be joined to create URL paths, Unix
+    /// Split `TargetPath` into components that can be joined to create URL paths, Unix
     /// paths, or Windows paths.
     ///
     /// ```
-    /// # use tuf::metadata::VirtualTargetPath;
-    /// let path = VirtualTargetPath::new("foo/bar".into()).unwrap();
+    /// # use tuf::metadata::TargetPath;
+    /// let path = TargetPath::new("foo/bar").unwrap();
     /// assert_eq!(path.components(), ["foo".to_string(), "bar".to_string()]);
     /// ```
     pub fn components(&self) -> Vec<String> {
@@ -1404,19 +1495,19 @@ impl VirtualTargetPath {
     /// Return whether this path is the child of another path.
     ///
     /// ```
-    /// # use tuf::metadata::VirtualTargetPath;
-    /// let path1 = VirtualTargetPath::new("foo".into()).unwrap();
-    /// let path2 = VirtualTargetPath::new("foo/bar".into()).unwrap();
+    /// # use tuf::metadata::TargetPath;
+    /// let path1 = TargetPath::new("foo").unwrap();
+    /// let path2 = TargetPath::new("foo/bar").unwrap();
     /// assert!(!path2.is_child(&path1));
     ///
-    /// let path1 = VirtualTargetPath::new("foo/".into()).unwrap();
-    /// let path2 = VirtualTargetPath::new("foo/bar".into()).unwrap();
+    /// let path1 = TargetPath::new("foo/").unwrap();
+    /// let path2 = TargetPath::new("foo/bar").unwrap();
     /// assert!(path2.is_child(&path1));
     ///
-    /// let path2 = VirtualTargetPath::new("foo/bar/baz".into()).unwrap();
+    /// let path2 = TargetPath::new("foo/bar/baz").unwrap();
     /// assert!(path2.is_child(&path1));
     ///
-    /// let path2 = VirtualTargetPath::new("wat".into()).unwrap();
+    /// let path2 = TargetPath::new("wat").unwrap();
     /// assert!(!path2.is_child(&path1))
     /// ```
     pub fn is_child(&self, parent: &Self) -> bool {
@@ -1432,7 +1523,7 @@ impl VirtualTargetPath {
     /// previous groups.
     // TODO this is hideous and uses way too much clone/heap but I think recursively,
     // so here we are
-    pub fn matches_chain(&self, parents: &[HashSet<VirtualTargetPath>]) -> bool {
+    pub fn matches_chain(&self, parents: &[HashSet<TargetPath>]) -> bool {
         if parents.is_empty() {
             return false;
         }
@@ -1457,69 +1548,41 @@ impl VirtualTargetPath {
         self.matches_chain(&*new)
     }
 
+    /// Prefix the target path with a hash value to support TUF spec 5.5.2.
+    pub fn with_hash_prefix(&self, hash: &HashValue) -> Result<TargetPath> {
+        let mut components = self.components();
+
+        let file_name = components
+            .pop()
+            .ok_or_else(|| Error::IllegalArgument("Path cannot be empty".into()))?;
+
+        components.push(format!("{}.{}", hash, file_name));
+
+        TargetPath::new(components.join("/"))
+    }
+
     /// The string value of the path.
-    pub fn value(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         &self.0
     }
 }
 
-impl ToString for VirtualTargetPath {
+impl ToString for TargetPath {
     fn to_string(&self) -> String {
         self.0.clone()
     }
 }
 
-impl<'de> Deserialize<'de> for VirtualTargetPath {
+impl<'de> Deserialize<'de> for TargetPath {
     fn deserialize<D: Deserializer<'de>>(de: D) -> ::std::result::Result<Self, D::Error> {
         let s: String = Deserialize::deserialize(de)?;
-        VirtualTargetPath::new(s).map_err(|e| DeserializeError::custom(format!("{:?}", e)))
+        TargetPath::new(s).map_err(|e| DeserializeError::custom(format!("{:?}", e)))
     }
 }
 
-impl Borrow<str> for VirtualTargetPath {
+impl Borrow<str> for TargetPath {
     fn borrow(&self) -> &str {
-        self.value()
-    }
-}
-
-/// Wrapper for the real path to a target.
-#[derive(Debug, Clone, PartialEq, Hash, Eq, PartialOrd, Ord, Serialize)]
-pub struct TargetPath(String);
-
-impl TargetPath {
-    /// Create a new `TargetPath`.
-    pub fn new(path: String) -> Result<Self> {
-        safe_path(&path)?;
-        Ok(TargetPath(path))
-    }
-
-    /// Split `TargetPath` into components that can be joined to create URL paths, Unix paths, or
-    /// Windows paths.
-    ///
-    /// ```
-    /// # use tuf::metadata::TargetPath;
-    /// let path = TargetPath::new("foo/bar".into()).unwrap();
-    /// assert_eq!(path.components(), ["foo".to_string(), "bar".to_string()]);
-    /// ```
-    pub fn components(&self) -> Vec<String> {
-        self.0.split('/').map(|s| s.to_string()).collect()
-    }
-
-    /// The string value of the path.
-    pub fn value(&self) -> &str {
-        &self.0
-    }
-
-    /// Prefix the target path with a hash value to support TUF spec 5.5.2.
-    pub fn with_hash_prefix(&self, hash: &HashValue) -> Result<TargetPath> {
-        let mut components = self.components();
-
-        // The unwrap here is safe because we checked in `safe_path` that the path is not empty.
-        let file_name = components.pop().unwrap();
-
-        components.push(format!("{}.{}", hash, file_name));
-
-        TargetPath::new(components.join("/"))
+        self.as_str()
     }
 }
 
@@ -1554,7 +1617,7 @@ impl TargetDescription {
         })
     }
 
-    /// Read the from the given reader and calculate the length and hash values.
+    /// Read the from the given slice and calculate the length and hash values.
     ///
     /// ```
     /// # use data_encoding::BASE64URL;
@@ -1563,7 +1626,7 @@ impl TargetDescription {
     /// #
     /// let bytes: &[u8] = b"it was a pleasure to burn";
     ///
-    /// let target_description = TargetDescription::from_reader(
+    /// let target_description = TargetDescription::from_slice(
     ///     bytes,
     ///     &[HashAlgorithm::Sha256, HashAlgorithm::Sha512],
     /// ).unwrap();
@@ -1579,13 +1642,10 @@ impl TargetDescription {
     /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha256), Some(&sha256));
     /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha512), Some(&sha512));
     /// ```
-    pub fn from_reader<R>(read: R, hash_algs: &[HashAlgorithm]) -> Result<Self>
-    where
-        R: Read,
-    {
-        let (length, hashes) = crypto::calculate_hashes(read, hash_algs)?;
+    pub fn from_slice(buf: &[u8], hash_algs: &[HashAlgorithm]) -> Result<Self> {
+        let hashes = crypto::calculate_hashes_from_slice(buf, hash_algs)?;
         Ok(TargetDescription {
-            length,
+            length: buf.len() as u64,
             hashes,
             custom: None,
         })
@@ -1606,7 +1666,7 @@ impl TargetDescription {
     /// let mut custom = HashMap::new();
     /// custom.insert("Hello".into(), "World".into());
     ///
-    /// let target_description = TargetDescription::from_reader_with_custom(
+    /// let target_description = TargetDescription::from_slice_with_custom(
     ///     bytes,
     ///     &[HashAlgorithm::Sha256, HashAlgorithm::Sha512],
     ///     custom,
@@ -1624,15 +1684,104 @@ impl TargetDescription {
     /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha512), Some(&sha512));
     /// assert_eq!(target_description.custom().and_then(|c| c.get("Hello")), Some(&"World".into()));
     /// ```
-    pub fn from_reader_with_custom<R>(
+    pub fn from_slice_with_custom(
+        buf: &[u8],
+        hash_algs: &[HashAlgorithm],
+        custom: HashMap<String, serde_json::Value>,
+    ) -> Result<Self> {
+        let hashes = crypto::calculate_hashes_from_slice(buf, hash_algs)?;
+        Ok(TargetDescription {
+            length: buf.len() as u64,
+            hashes,
+            custom: Some(custom),
+        })
+    }
+
+    /// Read the from the given reader and calculate the length and hash values.
+    ///
+    /// ```
+    /// # use data_encoding::BASE64URL;
+    /// # use futures_executor::block_on;
+    /// # use tuf::crypto::{HashAlgorithm,HashValue};
+    /// # use tuf::metadata::TargetDescription;
+    /// #
+    /// # block_on(async {
+    /// let bytes: &[u8] = b"it was a pleasure to burn";
+    ///
+    /// let target_description = TargetDescription::from_reader(
+    ///     bytes,
+    ///     &[HashAlgorithm::Sha256, HashAlgorithm::Sha512],
+    /// ).await.unwrap();
+    ///
+    /// let s = "Rd9zlbzrdWfeL7gnIEi05X-Yv2TCpy4qqZM1N72ZWQs=";
+    /// let sha256 = HashValue::new(BASE64URL.decode(s.as_bytes()).unwrap());
+    ///
+    /// let s ="tuIxwKybYdvJpWuUj6dubvpwhkAozWB6hMJIRzqn2jOUdtDTBg381brV4K\
+    ///     BU1zKP8GShoJuXEtCf5NkDTCEJgQ==";
+    /// let sha512 = HashValue::new(BASE64URL.decode(s.as_bytes()).unwrap());
+    ///
+    /// assert_eq!(target_description.length(), bytes.len() as u64);
+    /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha256), Some(&sha256));
+    /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha512), Some(&sha512));
+    /// # })
+    /// ```
+    pub async fn from_reader<R>(read: R, hash_algs: &[HashAlgorithm]) -> Result<Self>
+    where
+        R: AsyncRead + Unpin,
+    {
+        let (length, hashes) = crypto::calculate_hashes_from_reader(read, hash_algs).await?;
+        Ok(TargetDescription {
+            length,
+            hashes,
+            custom: None,
+        })
+    }
+
+    /// Read the from the given reader and custom metadata and calculate the length and hash
+    /// values.
+    ///
+    /// ```
+    /// # use data_encoding::BASE64URL;
+    /// # use futures_executor::block_on;
+    /// # use serde_json::Value;
+    /// # use std::collections::HashMap;
+    /// # use tuf::crypto::{HashAlgorithm,HashValue};
+    /// # use tuf::metadata::TargetDescription;
+    /// #
+    /// # block_on(async {
+    /// let bytes: &[u8] = b"it was a pleasure to burn";
+    ///
+    /// let mut custom = HashMap::new();
+    /// custom.insert("Hello".into(), "World".into());
+    ///
+    /// let target_description = TargetDescription::from_reader_with_custom(
+    ///     bytes,
+    ///     &[HashAlgorithm::Sha256, HashAlgorithm::Sha512],
+    ///     custom,
+    /// ).await.unwrap();
+    ///
+    /// let s = "Rd9zlbzrdWfeL7gnIEi05X-Yv2TCpy4qqZM1N72ZWQs=";
+    /// let sha256 = HashValue::new(BASE64URL.decode(s.as_bytes()).unwrap());
+    ///
+    /// let s ="tuIxwKybYdvJpWuUj6dubvpwhkAozWB6hMJIRzqn2jOUdtDTBg381brV4K\
+    ///     BU1zKP8GShoJuXEtCf5NkDTCEJgQ==";
+    /// let sha512 = HashValue::new(BASE64URL.decode(s.as_bytes()).unwrap());
+    ///
+    /// assert_eq!(target_description.length(), bytes.len() as u64);
+    /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha256), Some(&sha256));
+    /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha512), Some(&sha512));
+    /// assert_eq!(target_description.custom().and_then(|c| c.get("Hello")), Some(&"World".into()));
+    /// })
+    /// ```
+    pub async fn from_reader_with_custom<R>(
         read: R,
         hash_algs: &[HashAlgorithm],
         custom: HashMap<String, serde_json::Value>,
     ) -> Result<Self>
     where
-        R: Read,
+        R: AsyncRead + Unpin,
     {
-        let (length, hashes) = crypto::calculate_hashes(read, hash_algs)?;
+        let (length, hashes) = crypto::calculate_hashes_from_reader(read, hash_algs).await?;
         Ok(TargetDescription {
             length,
             hashes,
@@ -1679,7 +1828,7 @@ impl<'de> Deserialize<'de> for TargetDescription {
 pub struct TargetsMetadata {
     version: u32,
     expires: DateTime<Utc>,
-    targets: HashMap<VirtualTargetPath, TargetDescription>,
+    targets: HashMap<TargetPath, TargetDescription>,
     delegations: Option<Delegations>,
 }
 
@@ -1688,7 +1837,7 @@ impl TargetsMetadata {
     pub fn new(
         version: u32,
         expires: DateTime<Utc>,
-        targets: HashMap<VirtualTargetPath, TargetDescription>,
+        targets: HashMap<TargetPath, TargetDescription>,
         delegations: Option<Delegations>,
     ) -> Result<Self> {
         if version < 1 {
@@ -1707,7 +1856,7 @@ impl TargetsMetadata {
     }
 
     /// An immutable reference to the descriptions of targets.
-    pub fn targets(&self) -> &HashMap<VirtualTargetPath, TargetDescription> {
+    pub fn targets(&self) -> &HashMap<TargetPath, TargetDescription> {
         &self.targets
     }
 
@@ -1753,7 +1902,7 @@ impl<'de> Deserialize<'de> for TargetsMetadata {
 pub struct TargetsMetadataBuilder {
     version: u32,
     expires: DateTime<Utc>,
-    targets: HashMap<VirtualTargetPath, TargetDescription>,
+    targets: HashMap<TargetPath, TargetDescription>,
     delegations: Option<Delegations>,
 }
 
@@ -1784,23 +1933,34 @@ impl TargetsMetadataBuilder {
     }
 
     /// Add target to the target metadata.
-    pub fn insert_target_from_reader<R>(
+    pub fn insert_target_from_slice(
         self,
-        path: VirtualTargetPath,
+        path: TargetPath,
+        buf: &[u8],
+        hash_algs: &[HashAlgorithm],
+    ) -> Result<Self> {
+        let description = TargetDescription::from_slice(buf, hash_algs)?;
+        Ok(self.insert_target_description(path, description))
+    }
+
+    /// Add target to the target metadata.
+    pub async fn insert_target_from_reader<R>(
+        self,
+        path: TargetPath,
         read: R,
         hash_algs: &[HashAlgorithm],
     ) -> Result<Self>
     where
-        R: Read,
+        R: AsyncRead + Unpin,
     {
-        let description = TargetDescription::from_reader(read, hash_algs)?;
+        let description = TargetDescription::from_reader(read, hash_algs).await?;
         Ok(self.insert_target_description(path, description))
     }
 
     /// Add `TargetDescription` to this target metadata target description.
     pub fn insert_target_description(
         mut self,
-        path: VirtualTargetPath,
+        path: TargetPath,
         description: TargetDescription,
     ) -> Self {
         self.targets.insert(path, description);
@@ -1907,7 +2067,7 @@ pub struct Delegation {
     terminating: bool,
     threshold: u32,
     key_ids: HashSet<KeyId>,
-    paths: HashSet<VirtualTargetPath>,
+    paths: HashSet<TargetPath>,
 }
 
 impl Delegation {
@@ -1917,7 +2077,7 @@ impl Delegation {
         terminating: bool,
         threshold: u32,
         key_ids: HashSet<KeyId>,
-        paths: HashSet<VirtualTargetPath>,
+        paths: HashSet<TargetPath>,
     ) -> Result<Self> {
         if key_ids.is_empty() {
             return Err(Error::IllegalArgument("Cannot have empty key IDs".into()));
@@ -1967,7 +2127,7 @@ impl Delegation {
     }
 
     /// An immutable reference to the delegation's authorized paths.
-    pub fn paths(&self) -> &HashSet<VirtualTargetPath> {
+    pub fn paths(&self) -> &HashSet<TargetPath> {
         &self.paths
     }
 }
@@ -1997,16 +2157,17 @@ mod test {
     use crate::interchange::Json;
     use crate::verify::verify_signatures;
     use chrono::prelude::*;
+    use futures_executor::block_on;
     use maplit::{hashmap, hashset};
     use matches::assert_matches;
     use pretty_assertions::assert_eq;
     use serde_json::json;
     use std::str::FromStr;
 
-    const ED25519_1_PK8: &'static [u8] = include_bytes!("../tests/ed25519/ed25519-1.pk8.der");
-    const ED25519_2_PK8: &'static [u8] = include_bytes!("../tests/ed25519/ed25519-2.pk8.der");
-    const ED25519_3_PK8: &'static [u8] = include_bytes!("../tests/ed25519/ed25519-3.pk8.der");
-    const ED25519_4_PK8: &'static [u8] = include_bytes!("../tests/ed25519/ed25519-4.pk8.der");
+    const ED25519_1_PK8: &[u8] = include_bytes!("../tests/ed25519/ed25519-1.pk8.der");
+    const ED25519_2_PK8: &[u8] = include_bytes!("../tests/ed25519/ed25519-2.pk8.der");
+    const ED25519_3_PK8: &[u8] = include_bytes!("../tests/ed25519/ed25519-3.pk8.der");
+    const ED25519_4_PK8: &[u8] = include_bytes!("../tests/ed25519/ed25519-4.pk8.der");
 
     #[test]
     fn no_pardir_in_target_path() {
@@ -2022,7 +2183,7 @@ mod test {
             assert!(safe_path(*path).is_err());
             assert!(TargetPath::new(path.to_string()).is_err());
             assert!(MetadataPath::new(path.to_string()).is_err());
-            assert!(VirtualTargetPath::new(path.to_string()).is_err());
+            assert!(TargetPath::new(path.to_string()).is_err());
         }
     }
 
@@ -2057,14 +2218,14 @@ mod test {
 
         for case in test_cases {
             let expected = case.0;
-            let target = VirtualTargetPath::new(case.1.into()).unwrap();
+            let target = TargetPath::new(case.1).unwrap();
             let parents = case
                 .2
                 .iter()
                 .map(|group| {
                     group
                         .iter()
-                        .map(|p| VirtualTargetPath::new(p.to_string()).unwrap())
+                        .map(|p| TargetPath::new(p.to_string()).unwrap())
                         .collect::<HashSet<_>>()
                 })
                 .collect::<Vec<_>>();
@@ -2079,7 +2240,7 @@ mod test {
     #[test]
     fn serde_target_path() {
         let s = "foo/bar";
-        let t = serde_json::from_str::<VirtualTargetPath>(&format!("\"{}\"", s)).unwrap();
+        let t = serde_json::from_str::<TargetPath>(&format!("\"{}\"", s)).unwrap();
         assert_eq!(t.to_string().as_str(), s);
         assert_eq!(serde_json::to_value(t).unwrap(), json!("foo/bar"));
     }
@@ -2095,7 +2256,7 @@ mod test {
     #[test]
     fn serde_target_description() {
         let s: &[u8] = b"from water does all life begin";
-        let description = TargetDescription::from_reader(s, &[HashAlgorithm::Sha256]).unwrap();
+        let description = TargetDescription::from_slice(s, &[HashAlgorithm::Sha256]).unwrap();
         let jsn_str = serde_json::to_string(&description).unwrap();
         let jsn = json!({
             "length": 30,
@@ -2177,7 +2338,7 @@ mod test {
             "spec_version": "1.0",
             "version": 1,
             "expires": "2017-01-01T00:00:00Z",
-            "consistent_snapshot": false,
+            "consistent_snapshot": true,
             "keys": {
                 "09557ed63f91b5b95917d46f66c63ea79bdaef1b008ba823808bca849f1d18a1": {
                     "keytype": "ed25519",
@@ -2470,7 +2631,7 @@ mod test {
     fn serde_timestamp_metadata() {
         let description = MetadataDescription::new(
             1,
-            100,
+            Some(100),
             hashmap! { HashAlgorithm::Sha256 => HashValue::new(vec![]) },
         )
         .unwrap();
@@ -2492,6 +2653,34 @@ mod test {
                     "hashes": {
                         "sha256": "",
                     },
+                },
+            }
+        });
+
+        let encoded = serde_json::to_value(&timestamp).unwrap();
+        assert_eq!(encoded, jsn);
+        let decoded: TimestampMetadata = serde_json::from_value(encoded).unwrap();
+        assert_eq!(decoded, timestamp);
+    }
+
+    // Deserialize timestamp metadata with optional length and hashes
+    #[test]
+    fn serde_timestamp_metadata_without_length_and_hashes() {
+        let description = MetadataDescription::new(1, None, HashMap::new()).unwrap();
+
+        let timestamp = TimestampMetadataBuilder::from_metadata_description(description)
+            .expires(Utc.ymd(2017, 1, 1).and_hms(0, 0, 0))
+            .build()
+            .unwrap();
+
+        let jsn = json!({
+            "_type": "timestamp",
+            "spec_version": "1.0",
+            "version": 1,
+            "expires": "2017-01-01T00:00:00Z",
+            "meta": {
+                "snapshot.json": {
+                    "version": 1
                 },
             }
         });
@@ -2558,7 +2747,7 @@ mod test {
                 MetadataPath::new("targets").unwrap(),
                 MetadataDescription::new(
                     1,
-                    100,
+                    Some(100),
                     hashmap! { HashAlgorithm::Sha256 => HashValue::new(vec![]) },
                 )
                 .unwrap(),
@@ -2588,77 +2777,110 @@ mod test {
         assert_eq!(decoded, snapshot);
     }
 
+    // Deserialize snapshot metadata with optional length and hashes
     #[test]
-    fn serde_targets_metadata() {
-        let targets = TargetsMetadataBuilder::new()
+    fn serde_snapshot_optional_length_and_hashes() {
+        let snapshot = SnapshotMetadataBuilder::new()
             .expires(Utc.ymd(2017, 1, 1).and_hms(0, 0, 0))
-            .insert_target_description(
-                VirtualTargetPath::new("foo".into()).unwrap(),
-                TargetDescription::from_reader(&b"foo"[..], &[HashAlgorithm::Sha256]).unwrap(),
-            )
-            .insert_target_description(
-                VirtualTargetPath::new("bar".into()).unwrap(),
-                TargetDescription::from_reader_with_custom(
-                    &b"foo"[..],
-                    &[HashAlgorithm::Sha256],
-                    HashMap::new(),
-                )
-                .unwrap(),
-            )
-            .insert_target_description(
-                VirtualTargetPath::new("baz".into()).unwrap(),
-                TargetDescription::from_reader_with_custom(
-                    &b"foo"[..],
-                    &[HashAlgorithm::Sha256],
-                    hashmap! {
-                        "foo".into() => 1.into(),
-                        "bar".into() => "baz".into(),
-                    },
-                )
-                .unwrap(),
+            .insert_metadata_description(
+                MetadataPath::new("targets").unwrap(),
+                MetadataDescription::new(1, None, HashMap::new()).unwrap(),
             )
             .build()
             .unwrap();
 
         let jsn = json!({
-            "_type": "targets",
+            "_type": "snapshot",
             "spec_version": "1.0",
             "version": 1,
             "expires": "2017-01-01T00:00:00Z",
-            "targets": {
-                "foo": {
-                    "length": 3,
-                    "hashes": {
-                        "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483\
-                            bfa0f98a5e886266e7ae",
-                    },
-                },
-                "bar": {
-                    "length": 3,
-                    "hashes": {
-                        "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483\
-                            bfa0f98a5e886266e7ae",
-                    },
-                    "custom": {},
-                },
-                "baz": {
-                    "length": 3,
-                    "hashes": {
-                        "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483\
-                            bfa0f98a5e886266e7ae",
-                    },
-                    "custom": {
-                        "foo": 1,
-                        "bar": "baz",
-                    },
+            "meta": {
+                "targets.json": {
+                    "version": 1,
                 },
             },
         });
 
-        let encoded = serde_json::to_value(&targets).unwrap();
+        let encoded = serde_json::to_value(&snapshot).unwrap();
         assert_eq!(encoded, jsn);
-        let decoded: TargetsMetadata = serde_json::from_value(encoded).unwrap();
-        assert_eq!(decoded, targets);
+        let decoded: SnapshotMetadata = serde_json::from_value(encoded).unwrap();
+        assert_eq!(decoded, snapshot);
+    }
+
+    #[test]
+    fn serde_targets_metadata() {
+        block_on(async {
+            let targets = TargetsMetadataBuilder::new()
+                .expires(Utc.ymd(2017, 1, 1).and_hms(0, 0, 0))
+                .insert_target_description(
+                    TargetPath::new("foo").unwrap(),
+                    TargetDescription::from_slice(&b"foo"[..], &[HashAlgorithm::Sha256]).unwrap(),
+                )
+                .insert_target_description(
+                    TargetPath::new("bar").unwrap(),
+                    TargetDescription::from_slice_with_custom(
+                        &b"foo"[..],
+                        &[HashAlgorithm::Sha256],
+                        HashMap::new(),
+                    )
+                    .unwrap(),
+                )
+                .insert_target_description(
+                    TargetPath::new("baz").unwrap(),
+                    TargetDescription::from_reader_with_custom(
+                        &b"foo"[..],
+                        &[HashAlgorithm::Sha256],
+                        hashmap! {
+                            "foo".into() => 1.into(),
+                            "bar".into() => "baz".into(),
+                        },
+                    )
+                    .await
+                    .unwrap(),
+                )
+                .build()
+                .unwrap();
+
+            let jsn = json!({
+                "_type": "targets",
+                "spec_version": "1.0",
+                "version": 1,
+                "expires": "2017-01-01T00:00:00Z",
+                "targets": {
+                    "foo": {
+                        "length": 3,
+                        "hashes": {
+                            "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483\
+                                bfa0f98a5e886266e7ae",
+                        },
+                    },
+                    "bar": {
+                        "length": 3,
+                        "hashes": {
+                            "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483\
+                                bfa0f98a5e886266e7ae",
+                        },
+                        "custom": {},
+                    },
+                    "baz": {
+                        "length": 3,
+                        "hashes": {
+                            "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483\
+                                bfa0f98a5e886266e7ae",
+                        },
+                        "custom": {
+                            "foo": 1,
+                            "bar": "baz",
+                        },
+                    },
+                },
+            });
+
+            let encoded = serde_json::to_value(&targets).unwrap();
+            assert_eq!(encoded, jsn);
+            let decoded: TargetsMetadata = serde_json::from_value(encoded).unwrap();
+            assert_eq!(decoded, targets);
+        })
     }
 
     #[test]
@@ -2671,7 +2893,7 @@ mod test {
                 false,
                 1,
                 hashset!(key.public().key_id().clone()),
-                hashset!(VirtualTargetPath::new("baz/quux".into()).unwrap()),
+                hashset!(TargetPath::new("baz/quux").unwrap()),
             )
             .unwrap()],
         )
@@ -2727,7 +2949,7 @@ mod test {
                 MetadataPath::new("targets").unwrap(),
                 MetadataDescription::new(
                     1,
-                    100,
+                    Some(100),
                     hashmap! { HashAlgorithm::Sha256 => HashValue::new(vec![]) },
                 )
                 .unwrap(),
@@ -2824,7 +3046,7 @@ mod test {
 
     fn make_timestamp() -> serde_json::Value {
         let description =
-            MetadataDescription::from_reader(&[][..], 1, &[HashAlgorithm::Sha256]).unwrap();
+            MetadataDescription::from_slice(&[][..], 1, &[HashAlgorithm::Sha256]).unwrap();
 
         let timestamp = TimestampMetadataBuilder::from_metadata_description(description)
             .expires(Utc.ymd(2017, 1, 1).and_hms(0, 0, 0))
@@ -2854,7 +3076,7 @@ mod test {
                 false,
                 1,
                 hashset!(key.key_id().clone()),
-                hashset!(VirtualTargetPath::new("bar".into()).unwrap()),
+                hashset!(TargetPath::new("bar").unwrap()),
             )
             .unwrap()],
         )
@@ -2873,7 +3095,7 @@ mod test {
             false,
             1,
             hashset!(key.key_id().clone()),
-            hashset!(VirtualTargetPath::new("bar".into()).unwrap()),
+            hashset!(TargetPath::new("bar").unwrap()),
         )
         .unwrap();
 
@@ -3224,7 +3446,7 @@ mod test {
         delegations
             .as_object_mut()
             .unwrap()
-            .get_mut("keys".into())
+            .get_mut("keys")
             .unwrap()
             .as_object_mut()
             .unwrap()
@@ -3239,7 +3461,7 @@ mod test {
         delegations
             .as_object_mut()
             .unwrap()
-            .get_mut("roles".into())
+            .get_mut("roles")
             .unwrap()
             .as_array_mut()
             .unwrap()
@@ -3254,7 +3476,7 @@ mod test {
         let dupe = delegations
             .as_object()
             .unwrap()
-            .get("roles".into())
+            .get("roles")
             .unwrap()
             .as_array()
             .unwrap()[0]
@@ -3262,7 +3484,7 @@ mod test {
         delegations
             .as_object_mut()
             .unwrap()
-            .get_mut("roles".into())
+            .get_mut("roles")
             .unwrap()
             .as_array_mut()
             .unwrap()
@@ -3289,7 +3511,7 @@ mod test {
         let dupe = delegation
             .as_object()
             .unwrap()
-            .get("keyids".into())
+            .get("keyids")
             .unwrap()
             .as_array()
             .unwrap()[0]
@@ -3297,7 +3519,7 @@ mod test {
         delegation
             .as_object_mut()
             .unwrap()
-            .get_mut("keyids".into())
+            .get_mut("keyids")
             .unwrap()
             .as_array_mut()
             .unwrap()
@@ -3312,7 +3534,7 @@ mod test {
         let dupe = delegation
             .as_object()
             .unwrap()
-            .get("paths".into())
+            .get("paths")
             .unwrap()
             .as_array()
             .unwrap()[0]
@@ -3320,7 +3542,7 @@ mod test {
         delegation
             .as_object_mut()
             .unwrap()
-            .get_mut("paths".into())
+            .get_mut("paths")
             .unwrap()
             .as_array_mut()
             .unwrap()

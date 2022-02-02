@@ -43,6 +43,7 @@ rustc_test("tuf_lib_test") {
   sources = [
     "//third_party/rust_crates/vendor/tuf/src/client.rs",
     "//third_party/rust_crates/vendor/tuf/src/crypto.rs",
+    "//third_party/rust_crates/vendor/tuf/src/database.rs",
     "//third_party/rust_crates/vendor/tuf/src/error.rs",
     "//third_party/rust_crates/vendor/tuf/src/format_hex.rs",
     "//third_party/rust_crates/vendor/tuf/src/interchange/cjson/mod.rs",
@@ -58,7 +59,6 @@ rustc_test("tuf_lib_test") {
     "//third_party/rust_crates/vendor/tuf/src/repository/file_system.rs",
     "//third_party/rust_crates/vendor/tuf/src/repository/http.rs",
     "//third_party/rust_crates/vendor/tuf/src/repository/track_repo.rs",
-    "//third_party/rust_crates/vendor/tuf/src/tuf.rs",
     "//third_party/rust_crates/vendor/tuf/src/util.rs",
     "//third_party/rust_crates/vendor/tuf/src/verify.rs",
   ]

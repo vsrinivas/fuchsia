@@ -114,7 +114,7 @@ where
 
     for (key_id, sig) in signatures {
         match authorized_keys.get(key_id) {
-            Some(ref pub_key) => match pub_key.verify(&canonical_bytes, sig) {
+            Some(pub_key) => match pub_key.verify(&canonical_bytes, sig) {
                 Ok(()) => {
                     debug!("Good signature from key ID {:?}", pub_key.key_id());
                     signatures_needed -= 1;

@@ -3965,9 +3965,9 @@ checksum = "bbf752f9ee0c3d93a52ae37a2af72e98bb9230b4164737623b0bfc1d84db1eda"
 
 [[package]]
 name = "tuf"
-version = "0.3.0-beta3"
+version = "0.3.0-beta4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd08ecbd32b7ee5cd0cbed459d25af251364bb8c60e77fa910b2aea177b6fc94"
+checksum = "ba08aaa52b107274f84cca90d3ddde0f63834e7affeb2fa901cec5bb9938b4f7"
 dependencies = [
  "chrono",
  "data-encoding",
@@ -3978,7 +3978,6 @@ dependencies = [
  "hyper",
  "itoa",
  "log",
- "parking_lot 0.11.1",
  "percent-encoding 2.1.0",
  "ring",
  "serde",

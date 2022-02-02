@@ -10,10 +10,12 @@ use std::time::{Duration, Instant};
 use crate::crypto::{HashAlgorithm, HashValue};
 use crate::Result;
 
-pub(crate) trait SafeAsyncRead: Sized {
+pub(crate) trait SafeAsyncRead: AsyncRead + Sized + Unpin {
     /// Creates an `AsyncRead` adapter which will fail transfers slower than
     /// `min_bytes_per_second`.
-    fn enforce_minimum_bitrate(self, min_bytes_per_second: u32) -> EnforceMinimumBitrate<Self>;
+    fn enforce_minimum_bitrate(self, min_bytes_per_second: u32) -> EnforceMinimumBitrate<Self> {
+        EnforceMinimumBitrate::new(self, min_bytes_per_second)
+    }
 
     /// Creates an `AsyncRead` adapter that ensures the consumer can't read more than `max_length`
     /// bytes. Also, when the underlying `AsyncRead` is fully consumed, the hash of the data is
@@ -25,26 +27,13 @@ pub(crate) trait SafeAsyncRead: Sized {
     fn check_length_and_hash(
         self,
         max_length: u64,
-        hash_data: Option<(&HashAlgorithm, HashValue)>,
-    ) -> Result<SafeReader<Self>>;
-}
-
-impl<R> SafeAsyncRead for R
-where
-    R: AsyncRead + Unpin,
-{
-    fn enforce_minimum_bitrate(self, min_bytes_per_second: u32) -> EnforceMinimumBitrate<Self> {
-        EnforceMinimumBitrate::new(self, min_bytes_per_second)
-    }
-
-    fn check_length_and_hash(
-        self,
-        max_length: u64,
-        hash_data: Option<(&HashAlgorithm, HashValue)>,
+        hash_data: Vec<(&'static HashAlgorithm, HashValue)>,
     ) -> Result<SafeReader<Self>> {
         SafeReader::new(self, max_length, hash_data)
     }
 }
+
+impl<R: AsyncRead + Unpin> SafeAsyncRead for R {}
 
 /// Wraps an `AsyncRead` to detect and fail transfers slower than a minimum bitrate.
 pub(crate) struct EnforceMinimumBitrate<R> {
@@ -117,7 +106,7 @@ impl<R: AsyncRead + Unpin> AsyncRead for EnforceMinimumBitrate<R> {
 pub(crate) struct SafeReader<R> {
     inner: R,
     max_size: u64,
-    hasher: Option<(digest::Context, HashValue)>,
+    hashers: Vec<(digest::Context, HashValue)>,
     bytes_read: u64,
 }
 
@@ -131,17 +120,17 @@ impl<R: AsyncRead> SafeReader<R> {
     pub(crate) fn new(
         read: R,
         max_size: u64,
-        hash_data: Option<(&HashAlgorithm, HashValue)>,
+        hash_data: Vec<(&'static HashAlgorithm, HashValue)>,
     ) -> Result<Self> {
-        let hasher = match hash_data {
-            Some((alg, value)) => Some((alg.digest_context()?, value)),
-            None => None,
-        };
+        let mut hashers = Vec::with_capacity(hash_data.len());
+        for (alg, value) in hash_data {
+            hashers.push((alg.digest_context()?, value));
+        }
 
         Ok(SafeReader {
             inner: read,
             max_size,
-            hasher,
+            hashers,
             bytes_read: 0,
         })
     }
@@ -156,7 +145,7 @@ impl<R: AsyncRead + Unpin> AsyncRead for SafeReader<R> {
         let read_bytes = ready!(Pin::new(&mut self.inner).poll_read(cx, buf))?;
 
         if read_bytes == 0 {
-            if let Some((context, expected_hash)) = self.hasher.take() {
+            for (context, expected_hash) in self.hashers.drain(..) {
                 let generated_hash = context.finish();
                 if generated_hash.as_ref() != expected_hash.value() {
                     return Poll::Ready(Err(io::Error::new(
@@ -179,8 +168,8 @@ impl<R: AsyncRead + Unpin> AsyncRead for SafeReader<R> {
             }
         }
 
-        if let Some((ref mut context, _)) = self.hasher {
-            context.update(&buf[..(read_bytes)]);
+        for (ref mut context, _) in &mut self.hashers {
+            context.update(&buf[..read_bytes]);
         }
 
         Poll::Ready(Ok(read_bytes))
@@ -198,7 +187,7 @@ mod test {
     fn valid_read() {
         block_on(async {
             let bytes: &[u8] = &[0x00, 0x01, 0x02, 0x03];
-            let mut reader = SafeReader::new(bytes, bytes.len() as u64, None).unwrap();
+            let mut reader = SafeReader::new(bytes, bytes.len() as u64, vec![]).unwrap();
             let mut buf = Vec::new();
             assert!(reader.read_to_end(&mut buf).await.is_ok());
             assert_eq!(buf, bytes);
@@ -209,7 +198,7 @@ mod test {
     fn valid_read_large_data() {
         block_on(async {
             let bytes: &[u8] = &[0x00; 64 * 1024];
-            let mut reader = SafeReader::new(bytes, bytes.len() as u64, None).unwrap();
+            let mut reader = SafeReader::new(bytes, bytes.len() as u64, vec![]).unwrap();
             let mut buf = Vec::new();
             assert!(reader.read_to_end(&mut buf).await.is_ok());
             assert_eq!(buf, bytes);
@@ -220,7 +209,7 @@ mod test {
     fn valid_read_below_max_size() {
         block_on(async {
             let bytes: &[u8] = &[0x00, 0x01, 0x02, 0x03];
-            let mut reader = SafeReader::new(bytes, (bytes.len() as u64) + 1, None).unwrap();
+            let mut reader = SafeReader::new(bytes, (bytes.len() as u64) + 1, vec![]).unwrap();
             let mut buf = Vec::new();
             assert!(reader.read_to_end(&mut buf).await.is_ok());
             assert_eq!(buf, bytes);
@@ -231,7 +220,7 @@ mod test {
     fn invalid_read_above_max_size() {
         block_on(async {
             let bytes: &[u8] = &[0x00, 0x01, 0x02, 0x03];
-            let mut reader = SafeReader::new(bytes, (bytes.len() as u64) - 1, None).unwrap();
+            let mut reader = SafeReader::new(bytes, (bytes.len() as u64) - 1, vec![]).unwrap();
             let mut buf = Vec::new();
             assert!(reader.read_to_end(&mut buf).await.is_err());
         })
@@ -241,7 +230,7 @@ mod test {
     fn invalid_read_above_max_size_large_data() {
         block_on(async {
             let bytes: &[u8] = &[0x00; 64 * 1024];
-            let mut reader = SafeReader::new(bytes, (bytes.len() as u64) - 1, None).unwrap();
+            let mut reader = SafeReader::new(bytes, (bytes.len() as u64) - 1, vec![]).unwrap();
             let mut buf = Vec::new();
             assert!(reader.read_to_end(&mut buf).await.is_err());
         })
@@ -252,12 +241,12 @@ mod test {
         block_on(async {
             let bytes: &[u8] = &[0x00, 0x01, 0x02, 0x03];
             let mut context = digest::Context::new(&SHA256);
-            context.update(&bytes);
+            context.update(bytes);
             let hash_value = HashValue::new(context.finish().as_ref().to_vec());
             let mut reader = SafeReader::new(
                 bytes,
                 bytes.len() as u64,
-                Some((&HashAlgorithm::Sha256, hash_value)),
+                vec![(&HashAlgorithm::Sha256, hash_value)],
             )
             .unwrap();
             let mut buf = Vec::new();
@@ -271,13 +260,13 @@ mod test {
         block_on(async {
             let bytes: &[u8] = &[0x00, 0x01, 0x02, 0x03];
             let mut context = digest::Context::new(&SHA256);
-            context.update(&bytes);
+            context.update(bytes);
             context.update(&[0xFF]); // evil bytes
             let hash_value = HashValue::new(context.finish().as_ref().to_vec());
             let mut reader = SafeReader::new(
                 bytes,
                 bytes.len() as u64,
-                Some((&HashAlgorithm::Sha256, hash_value)),
+                vec![(&HashAlgorithm::Sha256, hash_value)],
             )
             .unwrap();
             let mut buf = Vec::new();
@@ -290,12 +279,12 @@ mod test {
         block_on(async {
             let bytes: &[u8] = &[0x00; 64 * 1024];
             let mut context = digest::Context::new(&SHA256);
-            context.update(&bytes);
+            context.update(bytes);
             let hash_value = HashValue::new(context.finish().as_ref().to_vec());
             let mut reader = SafeReader::new(
                 bytes,
                 bytes.len() as u64,
-                Some((&HashAlgorithm::Sha256, hash_value)),
+                vec![(&HashAlgorithm::Sha256, hash_value)],
             )
             .unwrap();
             let mut buf = Vec::new();
@@ -309,13 +298,13 @@ mod test {
         block_on(async {
             let bytes: &[u8] = &[0x00; 64 * 1024];
             let mut context = digest::Context::new(&SHA256);
-            context.update(&bytes);
+            context.update(bytes);
             context.update(&[0xFF]); // evil bytes
             let hash_value = HashValue::new(context.finish().as_ref().to_vec());
             let mut reader = SafeReader::new(
                 bytes,
                 bytes.len() as u64,
-                Some((&HashAlgorithm::Sha256, hash_value)),
+                vec![(&HashAlgorithm::Sha256, hash_value)],
             )
             .unwrap();
             let mut buf = Vec::new();

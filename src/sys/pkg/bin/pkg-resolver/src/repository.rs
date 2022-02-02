@@ -93,46 +93,52 @@ impl Repository {
     ) -> Result<Self, anyhow::Error> {
         let mirror_config = config.mirrors().get(0);
         let local = get_local_repo(data_proxy, persisted_repos_dir, config).await?;
-        let local = Arc::new(RWRepository::new(local));
-        let local_clone = Arc::clone(&local);
+        let local = RWRepository::new(local);
         let remote = get_remote_repo(config, mirror_config, local_mirror)?;
         let root_keys = get_root_keys(config)?;
 
+        let client = tuf::client::Client::with_trusted_root_keys(
+            Config::default(),
+            &MetadataVersion::Number(config.root_version()),
+            config.root_threshold(),
+            &root_keys,
+            local,
+            remote,
+        )
+        .map_err(error::TufOrTimeout::Tuf)
+        .on_timeout(tuf_metadata_timeout, || Err(error::TufOrTimeout::Timeout))
+        .await
+        .map_err(|e| {
+            cobalt_sender.log_event_count(
+                metrics::CREATE_TUF_CLIENT_METRIC_ID,
+                tuf_error_as_create_tuf_client_event_code(&e),
+                0,
+                1,
+            );
+            anyhow!(e).context("creating rust-tuf client")
+        })?;
+
+        // We no longer need to read from the local repository after we've created the client.
+        // Switch the local repository into write-only mode.
+        let parts = client.into_parts();
+        parts.local.switch_to_write_only_mode();
+        let client = tuf::client::Client::from_parts(parts);
+
         let updating_client =
             updating_tuf_client::UpdatingTufClient::from_tuf_client_and_mirror_config(
-                tuf::client::Client::with_trusted_root_keys(
-                    Config::default(),
-                    &MetadataVersion::Number(config.root_version()),
-                    config.root_threshold(),
-                    &root_keys,
-                    local,
-                    remote,
-                )
-                .map_err(error::TufOrTimeout::Tuf)
-                .on_timeout(tuf_metadata_timeout, || Err(error::TufOrTimeout::Timeout))
-                .await
-                .map_err(|e| {
-                    cobalt_sender.log_event_count(
-                        metrics::CREATE_TUF_CLIENT_METRIC_ID,
-                        tuf_error_as_create_tuf_client_event_code(&e),
-                        0,
-                        1,
-                    );
-                    anyhow!(e).context("creating rust-tuf client")
-                })?,
+                client,
                 mirror_config,
                 tuf_metadata_timeout,
                 node.create_child("updating_tuf_client"),
                 cobalt_sender.clone(),
             );
+
         cobalt_sender.log_event_count(
             metrics::CREATE_TUF_CLIENT_METRIC_ID,
             metrics::CreateTufClientMetricDimensionResult::Success,
             0,
             1,
         );
-
-        local_clone.switch_to_write_only_mode();
 
         Ok(Self {
             log_ctx: LogContext { repo_url: config.repo_url().to_string() },
@@ -182,7 +188,7 @@ impl Repository {
         let description =
             updating_client.fetch_target_description(&target_path).await.map_err(|e| match e {
                 TufError::NotFound => MerkleForError::NotFound,
-                other => MerkleForError::FetchTargetDescription(target_path.value().into(), other),
+                other => MerkleForError::FetchTargetDescription(target_path.as_str().into(), other),
             })?;
 
         let custom = description.custom().ok_or(MerkleForError::NoCustomMetadata)?.to_owned();

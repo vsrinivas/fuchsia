@@ -11,9 +11,8 @@ use {
     futures::{future::BoxFuture, prelude::*},
     io_util::file::AsyncReader,
     tuf::{
-        crypto::{HashAlgorithm, HashValue},
         interchange::Json,
-        metadata::{MetadataPath, MetadataVersion, TargetDescription, TargetPath},
+        metadata::{MetadataPath, MetadataVersion, TargetPath},
         repository::RepositoryProvider,
     },
 };
@@ -36,11 +35,9 @@ fn make_opaque_error(e: Error) -> tuf::Error {
 impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
     fn fetch_metadata<'a>(
         &'a self,
-        meta_path: &'a MetadataPath,
-        version: &'a MetadataVersion,
-        _max_length: Option<usize>,
-        _hash_data: Option<(&'static HashAlgorithm, HashValue)>,
-    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin>>> {
+        meta_path: &MetadataPath,
+        version: &MetadataVersion,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = meta_path.components::<Json>(&version).join("/");
         async move {
             let (local, remote) = fidl::endpoints::create_endpoints::<FileMarker>()
@@ -102,9 +99,8 @@ impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
 
     fn fetch_target<'a>(
         &'a self,
-        _target_path: &'a TargetPath,
-        _target_description: &'a TargetDescription,
-    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin>>> {
+        _target_path: &TargetPath,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         future::ready(Err(tuf::Error::Opaque(
             "fetch_target is not supported for LocalMirrorRepositoryProvider".to_string(),
         )))
@@ -162,12 +158,7 @@ mod tests {
         let env = TestEnv::new().await;
         let mut result = env
             .provider
-            .fetch_metadata(
-                &MetadataPath::from_role(&Role::Root),
-                &MetadataVersion::None,
-                None,
-                None,
-            )
+            .fetch_metadata(&MetadataPath::from_role(&Role::Root), &MetadataVersion::None)
             .await
             .expect("fetch_metadata succeeds");
 
@@ -181,12 +172,7 @@ mod tests {
         let env = TestEnv::new().await;
         let mut result = env
             .provider
-            .fetch_metadata(
-                &MetadataPath::from_role(&Role::Root),
-                &MetadataVersion::Number(1),
-                None,
-                None,
-            )
+            .fetch_metadata(&MetadataPath::from_role(&Role::Root), &MetadataVersion::Number(1))
             .await
             .expect("fetch_metadata succeeds");
 
@@ -200,12 +186,7 @@ mod tests {
         let env = TestEnv::new().await;
         let result = env
             .provider
-            .fetch_metadata(
-                &MetadataPath::from_role(&Role::Root),
-                &MetadataVersion::Number(4),
-                None,
-                None,
-            )
+            .fetch_metadata(&MetadataPath::from_role(&Role::Root), &MetadataVersion::Number(4))
             .await;
 
         assert!(result.is_err());

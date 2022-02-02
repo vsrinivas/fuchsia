@@ -46,7 +46,7 @@ impl RootMetadata {
             typ: metadata::Role::Root,
             spec_version: SPEC_VERSION.to_string(),
             version: meta.version(),
-            expires: format_datetime(&meta.expires()),
+            expires: format_datetime(meta.expires()),
             consistent_snapshot: meta.consistent_snapshot(),
             keys: meta
                 .keys()
@@ -147,7 +147,7 @@ impl RoleDefinition {
             )));
         }
 
-        Ok(metadata::RoleDefinition::new(self.threshold, self.key_ids)?)
+        metadata::RoleDefinition::new(self.threshold, self.key_ids)
     }
 }
 
@@ -221,7 +221,7 @@ impl SnapshotMetadata {
             typ: metadata::Role::Snapshot,
             spec_version: SPEC_VERSION.to_string(),
             version: metadata.version(),
-            expires: format_datetime(&metadata.expires()),
+            expires: format_datetime(metadata.expires()),
             meta: metadata
                 .meta()
                 .iter()
@@ -275,7 +275,7 @@ pub struct TargetsMetadata {
     spec_version: String,
     version: u32,
     expires: String,
-    targets: BTreeMap<metadata::VirtualTargetPath, metadata::TargetDescription>,
+    targets: BTreeMap<metadata::TargetPath, metadata::TargetDescription>,
     #[serde(skip_serializing_if = "Option::is_none")]
     delegations: Option<metadata::Delegations>,
 }
@@ -286,7 +286,7 @@ impl TargetsMetadata {
             typ: metadata::Role::Targets,
             spec_version: SPEC_VERSION.to_string(),
             version: metadata.version(),
-            expires: format_datetime(&metadata.expires()),
+            expires: format_datetime(metadata.expires()),
             targets: metadata
                 .targets()
                 .iter()
@@ -373,7 +373,7 @@ pub struct Delegation {
     threshold: u32,
     #[serde(rename = "keyids")]
     key_ids: Vec<crypto::KeyId>,
-    paths: Vec<metadata::VirtualTargetPath>,
+    paths: Vec<metadata::TargetPath>,
 }
 
 impl Delegation {
@@ -382,7 +382,7 @@ impl Delegation {
             .paths()
             .iter()
             .cloned()
-            .collect::<Vec<metadata::VirtualTargetPath>>();
+            .collect::<Vec<metadata::TargetPath>>();
         paths.sort();
         let mut key_ids = meta
             .key_ids()
@@ -405,7 +405,7 @@ impl Delegation {
             .paths
             .iter()
             .cloned()
-            .collect::<HashSet<metadata::VirtualTargetPath>>();
+            .collect::<HashSet<metadata::TargetPath>>();
         if paths.len() != self.paths.len() {
             return Err(Error::Encoding("Non-unique delegation paths.".into()));
         }
@@ -482,7 +482,9 @@ impl TargetDescription {
 #[derive(Deserialize)]
 pub struct MetadataDescription {
     version: u32,
-    length: usize,
+    #[serde(default)]
+    length: Option<usize>,
+    #[serde(default)]
     hashes: BTreeMap<crypto::HashAlgorithm, crypto::HashValue>,
 }
 

@@ -12,9 +12,8 @@ use {
     parking_lot::Mutex,
     std::{convert::TryInto as _, marker::PhantomData, path::Path},
     tuf::{
-        crypto::{HashAlgorithm, HashValue},
         interchange::DataInterchange,
-        metadata::{MetadataPath, MetadataVersion, TargetDescription, TargetPath},
+        metadata::{MetadataPath, MetadataVersion, TargetPath},
         repository::{RepositoryProvider, RepositoryStorage},
     },
 };
@@ -53,7 +52,10 @@ where
         )
     }
 
-    async fn fetch_path(&self, path: String) -> tuf::Result<Box<dyn AsyncRead + Send + Unpin>> {
+    async fn fetch_path<'a>(
+        &'a self,
+        path: String,
+    ) -> tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>> {
         let file_proxy =
             io_util::directory::open_file(&self.repo_proxy, &path, OPEN_RIGHT_READABLE)
                 .await
@@ -64,7 +66,7 @@ where
                     _ => make_opaque_error(anyhow!("opening '{}': {:?}", path, err)),
                 })?;
 
-        let reader: Box<dyn AsyncRead + Send + Unpin> = Box::new(
+        let reader: Box<dyn AsyncRead + Send + Unpin + 'a> = Box::new(
             AsyncReader::from_proxy(file_proxy)
                 .context("creating AsyncReader for file")
                 .map_err(make_opaque_error)?,
@@ -156,20 +158,17 @@ where
 {
     fn fetch_metadata<'a>(
         &'a self,
-        meta_path: &'a MetadataPath,
-        version: &'a MetadataVersion,
-        _max_length: Option<usize>,
-        _hash_data: Option<(&'static HashAlgorithm, HashValue)>,
-    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin>>> {
+        meta_path: &MetadataPath,
+        version: &MetadataVersion,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = get_metadata_path::<D>(meta_path, version);
         self.fetch_path(path).boxed()
     }
 
     fn fetch_target<'a>(
         &'a self,
-        target_path: &'a TargetPath,
-        _target_description: &'a TargetDescription,
-    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin>>> {
+        target_path: &TargetPath,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = get_target_path(target_path);
         self.fetch_path(path).boxed()
     }
@@ -180,9 +179,9 @@ where
     D: DataInterchange + Sync + Send,
 {
     fn store_metadata<'a>(
-        &'a self,
-        meta_path: &'a MetadataPath,
-        version: &'a MetadataVersion,
+        &'a mut self,
+        meta_path: &MetadataPath,
+        version: &MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, tuf::Result<()>> {
         let path = get_metadata_path::<D>(meta_path, version);
@@ -190,9 +189,9 @@ where
     }
 
     fn store_target<'a>(
-        &'a self,
+        &'a mut self,
+        target_path: &TargetPath,
         target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
-        target_path: &'a TargetPath,
     ) -> BoxFuture<'a, tuf::Result<()>> {
         let path = get_target_path(target_path);
         self.store_path(path, target).boxed()
@@ -221,20 +220,20 @@ where
     R: RepositoryStorage<D>,
 {
     fn store_metadata<'a>(
-        &'a self,
-        meta_path: &'a MetadataPath,
-        version: &'a MetadataVersion,
+        &'a mut self,
+        meta_path: &MetadataPath,
+        version: &MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, tuf::Result<()>> {
         self.inner.store_metadata(meta_path, version, metadata)
     }
 
     fn store_target<'a>(
-        &'a self,
+        &'a mut self,
+        target_path: &TargetPath,
         target: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
-        target_path: &'a TargetPath,
     ) -> BoxFuture<'a, tuf::Result<()>> {
-        self.inner.store_target(target, target_path)
+        self.inner.store_target(target_path, target)
     }
 }
 
@@ -245,43 +244,37 @@ where
 {
     fn fetch_metadata<'a>(
         &'a self,
-        meta_path: &'a MetadataPath,
-        version: &'a MetadataVersion,
-        max_length: Option<usize>,
-        hash_data: Option<(&'static HashAlgorithm, HashValue)>,
-    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin>>> {
+        meta_path: &MetadataPath,
+        version: &MetadataVersion,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         if *self.mode.lock() == Mode::WriteOnly {
             return future::ready(Err(make_opaque_error(anyhow!(
                 "attempt to read in write only mode"
             ))))
             .boxed();
         }
-        self.inner.fetch_metadata(meta_path, version, max_length, hash_data)
+        self.inner.fetch_metadata(meta_path, version)
     }
 
     fn fetch_target<'a>(
         &'a self,
-        target_path: &'a TargetPath,
-        target_description: &'a TargetDescription,
-    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin>>> {
+        target_path: &TargetPath,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         if *self.mode.lock() == Mode::WriteOnly {
             return future::ready(Err(make_opaque_error(anyhow!(
                 "attempt to read in write only mode"
             ))))
             .boxed();
         }
-        self.inner.fetch_target(target_path, target_description)
+        self.inner.fetch_target(target_path)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        fuchsia_async as fasync,
-        futures::io::Cursor,
-        tempfile::tempdir,
-        tuf::{crypto::HashAlgorithm, interchange::Json, metadata::TargetDescription},
+        super::*, fuchsia_async as fasync, futures::io::Cursor, tempfile::tempdir,
+        tuf::interchange::Json,
     };
 
     fn get_random_buffer() -> Vec<u8> {
@@ -327,7 +320,7 @@ mod tests {
         std::fs::write(temp.path().join("metadata/root.json"), &expected_data).unwrap();
         let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
         let mut result = repo
-            .fetch_metadata(&MetadataPath::new("root").unwrap(), &MetadataVersion::None, None, None)
+            .fetch_metadata(&MetadataPath::new("root").unwrap(), &MetadataVersion::None)
             .await
             .unwrap();
 
@@ -343,12 +336,7 @@ mod tests {
         std::fs::create_dir_all(temp.path().join("targets")).unwrap();
         std::fs::write(temp.path().join("targets/foo"), &expected_data).unwrap();
         let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
-        let target_description =
-            TargetDescription::from_reader(&expected_data[..], &[HashAlgorithm::Sha256]).unwrap();
-        let mut result = repo
-            .fetch_target(&TargetPath::new("foo".into()).unwrap(), &target_description)
-            .await
-            .unwrap();
+        let mut result = repo.fetch_target(&TargetPath::new("foo").unwrap()).await.unwrap();
 
         let mut data = Vec::new();
         result.read_to_end(&mut data).await.unwrap();
@@ -359,7 +347,7 @@ mod tests {
     async fn test_store_metadata() {
         let temp = tempdir().unwrap();
         let expected_data = get_random_buffer();
-        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
         let mut cursor = Cursor::new(&expected_data);
         repo.store_metadata(
             &MetadataPath::new("root").unwrap(),
@@ -377,9 +365,9 @@ mod tests {
     async fn test_store_target() {
         let temp = tempdir().unwrap();
         let expected_data = get_random_buffer();
-        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
         let mut cursor = Cursor::new(&expected_data);
-        repo.store_target(&mut cursor, &TargetPath::new("foo/bar".into()).unwrap()).await.unwrap();
+        repo.store_target(&TargetPath::new("foo/bar").unwrap(), &mut cursor).await.unwrap();
 
         let data = std::fs::read(temp.path().join("targets/foo/bar")).unwrap();
         assert_eq!(data, expected_data);
@@ -394,7 +382,7 @@ mod tests {
         std::fs::write(temp.path().join("metadata/foo.json"), get_random_buffer()).unwrap();
 
         let mut data = Vec::new();
-        repo.fetch_metadata(&MetadataPath::new("foo").unwrap(), &MetadataVersion::None, None, None)
+        repo.fetch_metadata(&MetadataPath::new("foo").unwrap(), &MetadataVersion::None)
             .await
             .unwrap()
             .read_to_end(&mut data)
@@ -404,7 +392,7 @@ mod tests {
         repo.switch_to_write_only_mode();
 
         assert!(repo
-            .fetch_metadata(&MetadataPath::new("foo").unwrap(), &MetadataVersion::None, None, None)
+            .fetch_metadata(&MetadataPath::new("foo").unwrap(), &MetadataVersion::None)
             .await
             .is_err());
     }

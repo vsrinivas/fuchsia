@@ -30,12 +30,12 @@ use {
         time::SystemTime,
     },
     tuf::{
-        client::{Client, Config, DefaultTranslator},
+        client::{Client, Config},
         crypto::KeyType,
         interchange::Json,
         metadata::{
             Metadata as _, MetadataPath, MetadataVersion, RawSignedMetadata, Role,
-            TargetDescription, TargetsMetadata, VirtualTargetPath,
+            TargetDescription, TargetPath, TargetsMetadata,
         },
         repository::{EphemeralRepository, RepositoryProvider},
         verify::Verified,
@@ -227,16 +227,7 @@ pub struct Repository {
     drop_handlers: Mutex<Vec<Box<dyn FnOnce() + Send + Sync>>>,
 
     /// The TUF client for this repository
-    client: Arc<
-        Mutex<
-            Client<
-                Json,
-                EphemeralRepository<Json>,
-                Box<dyn RepositoryProvider<Json>>,
-                DefaultTranslator,
-            >,
-        >,
-    >,
+    client: Arc<Mutex<Client<Json, EphemeralRepository<Json>, Box<dyn RepositoryProvider<Json>>>>>,
 }
 
 impl Repository {
@@ -326,7 +317,7 @@ impl Repository {
         match client.trusted_targets() {
             Some(trusted_targets) => Ok(trusted_targets
                 .targets()
-                .get(&VirtualTargetPath::new(path.to_string()).map_err(|e| anyhow::anyhow!(e))?)
+                .get(&TargetPath::new(path).map_err(|e| anyhow::anyhow!(e))?)
                 .map(|t| t.clone())),
             None => Ok(None),
         }
@@ -381,32 +372,22 @@ impl Repository {
 
     async fn get_tuf_client(
         tuf_repo: Box<dyn RepositoryProvider<Json>>,
-    ) -> Result<
-        Client<
-            Json,
-            EphemeralRepository<Json>,
-            Box<dyn RepositoryProvider<Json>>,
-            DefaultTranslator,
-        >,
-        Error,
-    > {
+    ) -> Result<Client<Json, EphemeralRepository<Json>, Box<dyn RepositoryProvider<Json>>>, Error>
+    {
         let metadata_repo = EphemeralRepository::<Json>::new();
 
-        // FIXME(http://fxbug.dev/92126) we really should be initializing trust, rather than just
-        // trusting 1.root.json.
-        let mut md = tuf_repo
-            .fetch_metadata(
-                &MetadataPath::from_role(&Role::Root),
-                &MetadataVersion::Number(1),
-                None,
-                None,
-            )
-            .await?;
+        let raw_signed_meta = {
+            // FIXME(http://fxbug.dev/92126) we really should be initializing trust, rather than just
+            // trusting 1.root.json.
+            let mut md = tuf_repo
+                .fetch_metadata(&MetadataPath::from_role(&Role::Root), &MetadataVersion::Number(1))
+                .await?;
 
-        let mut buf = Vec::new();
-        md.read_to_end(&mut buf).await.context("reading metadata")?;
+            let mut buf = Vec::new();
+            md.read_to_end(&mut buf).await.context("reading metadata")?;
 
-        let raw_signed_meta = RawSignedMetadata::<Json, _>::new(buf);
+            RawSignedMetadata::<Json, _>::new(buf)
+        };
 
         let client =
             Client::with_trusted_root(Config::default(), &raw_signed_meta, metadata_repo, tuf_repo)
@@ -530,9 +511,8 @@ impl Repository {
         trusted_targets: &Verified<TargetsMetadata>,
         package_name: String,
     ) -> Result<Option<Vec<PackageEntry>>> {
-        let virtual_target_path = VirtualTargetPath::new(package_name.clone())?;
-
-        let target = if let Some(target) = trusted_targets.targets().get(&virtual_target_path) {
+        let target_path = TargetPath::new(&package_name)?;
+        let target = if let Some(target) = trusted_targets.targets().get(&target_path) {
             target
         } else {
             return Ok(None);

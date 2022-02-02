@@ -4,23 +4,22 @@ use futures_io::AsyncRead;
 use futures_util::future::{BoxFuture, FutureExt};
 use futures_util::stream::TryStreamExt;
 use http::{Response, StatusCode, Uri};
-#[cfg(feature = "hyper_013")]
-use hyper_013 as hyper;
-#[cfg(feature = "hyper_014")]
-use hyper_014 as hyper;
 use hyper::body::Body;
 use hyper::client::connect::Connect;
 use hyper::Client;
 use hyper::Request;
+#[cfg(feature = "hyper_013")]
+use hyper_013 as hyper;
+#[cfg(feature = "hyper_014")]
+use hyper_014 as hyper;
 use percent_encoding::utf8_percent_encode;
 use std::io;
 use std::marker::PhantomData;
 use url::Url;
 
-use crate::crypto::{HashAlgorithm, HashValue};
 use crate::error::Error;
 use crate::interchange::DataInterchange;
-use crate::metadata::{MetadataPath, MetadataVersion, TargetDescription, TargetPath};
+use crate::metadata::{MetadataPath, MetadataVersion, TargetPath};
 use crate::repository::RepositoryProvider;
 use crate::util::SafeAsyncRead;
 use crate::Result;
@@ -180,7 +179,7 @@ fn extend_uri(uri: Uri, prefix: &Option<Vec<String>>, components: &[String]) -> 
     // https://docs.rs/url/2.1.0/url/struct.PathSegmentsMut.html
     let encoded_new_path_elements = new_path_elements
         .into_iter()
-        .map(|path_segment| utf8_percent_encode(&path_segment, URLENCODE_PATH).collect());
+        .map(|path_segment| utf8_percent_encode(path_segment, URLENCODE_PATH).collect());
     path_split.extend(encoded_new_path_elements);
     let constructed_path = path_split.join("/");
 
@@ -199,12 +198,12 @@ fn extend_uri(uri: Uri, prefix: &Option<Vec<String>>, components: &[String]) -> 
             })?),
         };
 
-    Ok(Uri::from_parts(uri_parts).map_err(|_| {
+    Uri::from_parts(uri_parts).map_err(|_| {
         Error::IllegalArgument(format!(
             "Invalid URI parts: {:?}, {:?}, {:?}",
             constructed_path, prefix, components
         ))
-    })?)
+    })
 }
 
 impl<C, D> HttpRepository<C, D>
@@ -248,12 +247,10 @@ where
 {
     fn fetch_metadata<'a>(
         &'a self,
-        meta_path: &'a MetadataPath,
-        version: &'a MetadataVersion,
-        _max_length: Option<usize>,
-        _hash_data: Option<(&'static HashAlgorithm, HashValue)>,
-    ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin>>> {
-        let components = meta_path.components::<D>(&version);
+        meta_path: &MetadataPath,
+        version: &MetadataVersion,
+    ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
+        let components = meta_path.components::<D>(version);
         async move {
             let resp = self.get(&self.metadata_prefix, &components).await?;
 
@@ -273,14 +270,13 @@ where
 
     fn fetch_target<'a>(
         &'a self,
-        target_path: &'a TargetPath,
-        _target_description: &'a TargetDescription,
-    ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin>>> {
-        async move {
-            let components = target_path.components();
-            let resp = self.get(&self.targets_prefix, &components).await?;
+        target_path: &TargetPath,
+    ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
+        let components = target_path.components();
 
+        async move {
             // TODO(#278) check content length if known and fail early if the payload is too large.
+            let resp = self.get(&self.targets_prefix, &components).await?;
 
             let reader = resp
                 .into_body()
@@ -305,7 +301,7 @@ mod test {
         prefix: &Option<Vec<String>>,
         components: &[String],
     ) -> url::Url {
-        let mut url = base_url.clone();
+        let mut url = base_url;
         {
             let mut segments = url.path_segments_mut().unwrap();
             if let Some(ref prefix) = prefix {
@@ -313,7 +309,7 @@ mod test {
             }
             segments.extend(components);
         }
-        return url;
+        url
     }
 
     #[test]

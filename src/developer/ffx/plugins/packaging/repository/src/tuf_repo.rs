@@ -12,14 +12,13 @@ use tuf::interchange::{DataInterchange, Json};
 use tuf::metadata::{
     Metadata, MetadataDescription, MetadataPath, MetadataVersion, Role as TufRole, RootMetadata,
     RootMetadataBuilder, SignedMetadata, SnapshotMetadata, SnapshotMetadataBuilder,
-    TargetDescription, TargetsMetadata, TimestampMetadata, TimestampMetadataBuilder,
-    VirtualTargetPath,
+    TargetDescription, TargetPath, TargetsMetadata, TimestampMetadata, TimestampMetadataBuilder,
 };
 use tuf::repository::{
     FileSystemRepository, FileSystemRepositoryBuilder, RepositoryProvider, RepositoryStorage,
 };
 
-type TargetsMap = HashMap<VirtualTargetPath, TargetDescription>;
+type TargetsMap = HashMap<TargetPath, TargetDescription>;
 
 pub struct TufRepo {
     repo: FileSystemRepository<Json>,
@@ -37,7 +36,7 @@ impl TufRepo {
         let repo = FileSystemRepositoryBuilder::new(repo_dir).build()?;
         let mut repo = TufRepo {
             repo,
-            targets: Default::default(),
+            targets: TargetsMap::default(),
             keys_dir,
             keys: Default::default(),
             versions: Default::default(),
@@ -156,19 +155,14 @@ impl TufRepo {
             &mut metadata_raw.as_bytes(),
         ))?;
 
-        let mut buf = Vec::new();
-        Json::to_writer(&mut buf, &metadata)?;
-        Ok(MetadataDescription::from_reader(buf.as_slice(), version, HASH_ALGS)?)
+        let buf = Json::canonicalize(&Json::serialize(&metadata)?)?;
+        Ok(MetadataDescription::from_slice(&buf, version, HASH_ALGS)?)
     }
 
     fn load_signed_metadata<M: Metadata>(&self) -> Result<SignedMetadata<Json, M>> {
         let path = MetadataPath::from_role(&M::ROLE);
-        let mut metadata_reader = futures::executor::block_on(self.repo.fetch_metadata(
-            &path,
-            &MetadataVersion::None,
-            None,
-            None,
-        ))?;
+        let mut metadata_reader =
+            futures::executor::block_on(self.repo.fetch_metadata(&path, &MetadataVersion::None))?;
         let mut buf = Vec::new();
         futures::executor::block_on(metadata_reader.read_to_end(&mut buf))?;
         Ok(Json::from_slice(&buf)?)

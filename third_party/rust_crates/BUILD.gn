@@ -897,7 +897,7 @@ if (current_os == "fuchsia") {
 }
 
 group("tuf") {
-  deps = [ ":tuf-v0_3_0-beta3" ]
+  deps = [ ":tuf-v0_3_0-beta4" ]
 }
 
 group("tui") {
@@ -11272,10 +11272,10 @@ rust_library("ttf-parser-v0_10_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("tuf-v0_3_0-beta3") {
+rust_library("tuf-v0_3_0-beta4") {
   crate_name = "tuf"
   crate_root = "//third_party/rust_crates/vendor/tuf/./src/lib.rs"
-  output_name = "tuf-54223c5ba8c86c27"
+  output_name = "tuf-78e54900d3d9e6f9"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -11291,7 +11291,6 @@ rust_library("tuf-v0_3_0-beta3") {
   deps += [ ":hyper-v0_13_10" ]
   deps += [ ":itoa-v0_4_3" ]
   deps += [ ":log-v0_4_11" ]
-  deps += [ ":parking_lot-v0_11_1" ]
   deps += [ ":percent-encoding-v2_1_0" ]
   deps += [ ":ring-v0_16_12" ]
   deps += [ ":serde-v1_0_116" ]
@@ -11307,8 +11306,8 @@ rust_library("tuf-v0_3_0-beta3") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=54223c5ba8c86c27",
-    "-Cextra-filename=-54223c5ba8c86c27",
+    "-Cmetadata=78e54900d3d9e6f9",
+    "-Cextra-filename=-78e54900d3d9e6f9",
     "--cfg=feature=\"hyper_013\"",
   ]
 

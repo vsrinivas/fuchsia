@@ -1,13 +1,13 @@
 //! Error types and converters.
 
 use data_encoding::DecodeError;
-use std::io;
-use std::path::Path;
-use thiserror::Error;
 #[cfg(feature = "hyper_013")]
 use hyper_013 as hyper;
 #[cfg(feature = "hyper_014")]
 use hyper_014 as hyper;
+use std::io;
+use std::path::Path;
+use thiserror::Error;
 
 use crate::metadata::Role;
 
@@ -121,6 +121,12 @@ impl From<derp::Error> for Error {
 
 impl From<tempfile::PersistError> for Error {
     fn from(err: tempfile::PersistError) -> Error {
+        Error::Opaque(format!("Error persisting temp file: {:?}", err))
+    }
+}
+
+impl From<tempfile::PathPersistError> for Error {
+    fn from(err: tempfile::PathPersistError) -> Error {
         Error::Opaque(format!("Error persisting temp file: {:?}", err))
     }
 }

@@ -11,7 +11,7 @@
 //! # use hyper::client::Client as HttpClient;
 //! # use std::path::PathBuf;
 //! # use std::str::FromStr;
-//! # use tuf::{Result, Tuf};
+//! # use tuf::{Result, Database};
 //! # use tuf::crypto::PublicKey;
 //! # use tuf::client::{Client, Config};
 //! # use tuf::metadata::{RootMetadata, Role, MetadataPath, MetadataVersion};
@@ -52,92 +52,43 @@
 //! ```
 
 use chrono::offset::Utc;
-use futures_io::{AsyncRead, AsyncWrite};
-use futures_util::io::copy;
+use futures_io::AsyncRead;
 use log::{error, warn};
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 
 use crate::crypto::{self, HashAlgorithm, HashValue, PublicKey};
+use crate::database::Database;
 use crate::error::Error;
 use crate::interchange::DataInterchange;
 use crate::metadata::{
     Metadata, MetadataPath, MetadataVersion, RawSignedMetadata, Role, RootMetadata,
     SnapshotMetadata, TargetDescription, TargetPath, TargetsMetadata, TimestampMetadata,
-    VirtualTargetPath,
 };
 use crate::repository::{Repository, RepositoryProvider, RepositoryStorage};
-use crate::tuf::Tuf;
 use crate::verify::Verified;
 use crate::Result;
 
-/// Translates real paths (where a file is stored) into virtual paths (how it is addressed in TUF)
-/// and back.
-///
-/// Implementations must obey the following identities for all possible inputs.
-///
-/// ```
-/// # use tuf::client::{PathTranslator, DefaultTranslator};
-/// # use tuf::metadata::{VirtualTargetPath, TargetPath};
-/// let path = TargetPath::new("foo".into()).unwrap();
-/// let virt = VirtualTargetPath::new("foo".into()).unwrap();
-/// let translator = DefaultTranslator::new();
-/// assert_eq!(path,
-///            translator.virtual_to_real(&translator.real_to_virtual(&path).unwrap()).unwrap());
-/// assert_eq!(virt,
-///            translator.real_to_virtual(&translator.virtual_to_real(&virt).unwrap()).unwrap());
-/// ```
-pub trait PathTranslator {
-    /// Convert a real path into a virtual path.
-    fn real_to_virtual(&self, path: &TargetPath) -> Result<VirtualTargetPath>;
-
-    /// Convert a virtual path into a real path.
-    fn virtual_to_real(&self, path: &VirtualTargetPath) -> Result<TargetPath>;
-}
-
-/// A `PathTranslator` that does nothing.
-#[derive(Clone, Debug, Default)]
-pub struct DefaultTranslator;
-
-impl DefaultTranslator {
-    /// Create a new `DefaultTranslator`.
-    pub fn new() -> Self {
-        DefaultTranslator
-    }
-}
-
-impl PathTranslator for DefaultTranslator {
-    fn real_to_virtual(&self, path: &TargetPath) -> Result<VirtualTargetPath> {
-        VirtualTargetPath::new(path.value().into())
-    }
-
-    fn virtual_to_real(&self, path: &VirtualTargetPath) -> Result<TargetPath> {
-        TargetPath::new(path.value().into())
-    }
-}
-
 /// A client that interacts with TUF repositories.
 #[derive(Debug)]
-pub struct Client<D, L, R, T>
+pub struct Client<D, L, R>
 where
     D: DataInterchange + Sync,
     L: RepositoryProvider<D> + RepositoryStorage<D>,
     R: RepositoryProvider<D>,
-    T: PathTranslator,
 {
-    tuf: Tuf<D>,
-    config: Config<T>,
+    config: Config,
+    tuf: Database<D>,
     local: Repository<L, D>,
     remote: Repository<R, D>,
 }
 
-impl<D, L, R, T> Client<D, L, R, T>
+impl<D, L, R> Client<D, L, R>
 where
     D: DataInterchange + Sync,
     L: RepositoryProvider<D> + RepositoryStorage<D>,
     R: RepositoryProvider<D>,
-    T: PathTranslator,
 {
     /// Create a new TUF client. It will attempt to load the latest root metadata from the local
     /// repo and use it as the initial trusted root metadata, or it will return an error if it
@@ -165,7 +116,7 @@ where
     /// #     &Ed25519PrivateKey::pkcs8()?,
     /// # )?;
     /// # let public_key = private_key.public().clone();
-    /// let local = EphemeralRepository::<Json>::new();
+    /// let mut local = EphemeralRepository::<Json>::new();
     /// let remote = EphemeralRepository::<Json>::new();
     ///
     /// let root_version = 1;
@@ -196,7 +147,7 @@ where
     /// # })
     /// # }
     /// ```
-    pub async fn with_trusted_local(config: Config<T>, local: L, remote: R) -> Result<Self> {
+    pub async fn with_trusted_local(config: Config, local: L, remote: R) -> Result<Self> {
         let (local, remote) = (Repository::new(local), Repository::new(remote));
         let root_path = MetadataPath::from_role(&Role::Root);
 
@@ -204,10 +155,10 @@ where
         let root_version = MetadataVersion::Number(1);
 
         let raw_root: RawSignedMetadata<_, RootMetadata> = local
-            .fetch_metadata(&root_path, &root_version, config.max_root_length, None)
+            .fetch_metadata(&root_path, &root_version, config.max_root_length, vec![])
             .await?;
 
-        let tuf = Tuf::from_trusted_root(&raw_root)?;
+        let tuf = Database::from_trusted_root(&raw_root)?;
 
         Self::new(config, tuf, local, remote).await
     }
@@ -262,13 +213,13 @@ where
     /// # }
     /// ```
     pub async fn with_trusted_root(
-        config: Config<T>,
+        config: Config,
         trusted_root: &RawSignedMetadata<D, RootMetadata>,
         local: L,
         remote: R,
     ) -> Result<Self> {
         let (local, remote) = (Repository::new(local), Repository::new(remote));
-        let tuf = Tuf::from_trusted_root(trusted_root)?;
+        let tuf = Database::from_trusted_root(trusted_root)?;
 
         Self::new(config, tuf, local, remote).await
     }
@@ -297,7 +248,7 @@ where
     /// # )?;
     /// # let public_key = private_key.public().clone();
     /// let local = EphemeralRepository::<Json>::new();
-    /// let remote = EphemeralRepository::<Json>::new();
+    /// let mut remote = EphemeralRepository::<Json>::new();
     ///
     /// let root_version = 1;
     /// let root_threshold = 1;
@@ -333,7 +284,7 @@ where
     /// # }
     /// ```
     pub async fn with_trusted_root_keys<'a, I>(
-        config: Config<T>,
+        config: Config,
         root_version: &MetadataVersion,
         root_threshold: u32,
         trusted_root_keys: I,
@@ -343,20 +294,21 @@ where
     where
         I: IntoIterator<Item = &'a PublicKey>,
     {
-        let (local, remote) = (Repository::new(local), Repository::new(remote));
+        let (mut local, remote) = (Repository::new(local), Repository::new(remote));
 
         let root_path = MetadataPath::from_role(&Role::Root);
         let (fetched, raw_root) = fetch_metadata_from_local_or_else_remote(
             &root_path,
             root_version,
             config.max_root_length,
-            None,
+            vec![],
             &local,
             &remote,
         )
         .await?;
 
-        let tuf = Tuf::from_root_with_trusted_keys(&raw_root, root_threshold, trusted_root_keys)?;
+        let tuf =
+            Database::from_root_with_trusted_keys(&raw_root, root_threshold, trusted_root_keys)?;
 
         // FIXME(#253) verify the trusted root version matches the provided version.
         let root_version = MetadataVersion::Number(tuf.trusted_root().version());
@@ -385,17 +337,51 @@ where
         Self::new(config, tuf, local, remote).await
     }
 
+    /// Create a new TUF client. It will trust and update the TUF database.
+    pub async fn from_database(
+        config: Config,
+        tuf: Database<D>,
+        local: L,
+        remote: R,
+    ) -> Result<Self> {
+        let (local, remote) = (Repository::new(local), Repository::new(remote));
+        Self::new(config, tuf, local, remote).await
+    }
+
+    /// Construct a client with the given parts.
+    ///
+    /// Note: Since this was created by a prior [Client], it does not try to load
+    /// metadata from the included local repository, since we would have done
+    /// that when the prior [Client] was constructed.
+    pub fn from_parts(parts: Parts<D, L, R>) -> Self {
+        let Parts {
+            config,
+            database,
+            local,
+            remote,
+        } = parts;
+        Self {
+            config,
+            tuf: database,
+            local: Repository::new(local),
+            remote: Repository::new(remote),
+        }
+    }
+
+    /// Create a new TUF client. It will trust this TUF database.
     async fn new(
-        config: Config<T>,
-        mut tuf: Tuf<D>,
+        config: Config,
+        mut tuf: Database<D>,
         local: Repository<L, D>,
         remote: Repository<R, D>,
     ) -> Result<Self> {
         let res = async {
             let _r = Self::update_root_with_repos(&config, &mut tuf, None, &local).await?;
             let _ts = Self::update_timestamp_with_repos(&config, &mut tuf, None, &local).await?;
-            let _sn = Self::update_snapshot_with_repos(&mut tuf, None, &local, false).await?;
-            let _ta = Self::update_targets_with_repos(&mut tuf, None, &local, false).await?;
+            let _sn =
+                Self::update_snapshot_with_repos(&config, &mut tuf, None, &local, false).await?;
+            let _ta =
+                Self::update_targets_with_repos(&config, &mut tuf, None, &local, false).await?;
 
             Ok(())
         }
@@ -426,6 +412,22 @@ where
         let ta = self.update_targets().await?;
 
         Ok(r || ts || sn || ta)
+    }
+
+    /// Consumes the [Client] and returns the inner [Database] and other parts.
+    pub fn into_parts(self) -> Parts<D, L, R> {
+        let Client {
+            config,
+            tuf,
+            local,
+            remote,
+        } = self;
+        Parts {
+            config,
+            database: tuf,
+            local: local.into_inner(),
+            remote: remote.into_inner(),
+        }
     }
 
     /// Returns the current trusted root version.
@@ -482,14 +484,19 @@ where
     ///
     /// Returns `true` if an update occurred and `false` otherwise.
     pub async fn update_root(&mut self) -> Result<bool> {
-        Self::update_root_with_repos(&self.config, &mut self.tuf, Some(&self.local), &self.remote)
-            .await
+        Self::update_root_with_repos(
+            &self.config,
+            &mut self.tuf,
+            Some(&mut self.local),
+            &self.remote,
+        )
+        .await
     }
 
     async fn update_root_with_repos<Remote>(
-        config: &Config<T>,
-        tuf: &mut Tuf<D>,
-        local: Option<&Repository<L, D>>,
+        config: &Config,
+        tuf: &mut Database<D>,
+        mut local: Option<&mut Repository<L, D>>,
         remote: &Repository<Remote, D>,
     ) -> Result<bool>
     where
@@ -519,7 +526,7 @@ where
 
             let next_version = MetadataVersion::Number(tuf.trusted_root().version() + 1);
             let res = remote
-                .fetch_metadata(&root_path, &next_version, config.max_root_length, None)
+                .fetch_metadata(&root_path, &next_version, config.max_root_length, vec![])
                 .await;
 
             let raw_signed_root = match res {
@@ -542,7 +549,7 @@ where
             //     Persist root metadata. The client MUST write the file to non-volatile storage as
             //     FILENAME.EXT (e.g. root.json).
 
-            if let Some(local) = local {
+            if let Some(ref mut local) = local {
                 local
                     .store_metadata(&root_path, &MetadataVersion::None, &raw_signed_root)
                     .await?;
@@ -568,7 +575,7 @@ where
         //     attack. On the next update cycle, begin at step 5.0 and version N of the root
         //     metadata file.
 
-        // TODO: Consider moving the root metadata expiration check into `tuf::Tuf`, since that's
+        // TODO: Consider moving the root metadata expiration check into `tuf::Database`, since that's
         // where we check timestamp/snapshot/targets/delegations for expiration.
         if tuf.trusted_root().expires() <= &Utc::now() {
             error!("Root metadata expired, potential freeze attack");
@@ -589,16 +596,16 @@ where
         Self::update_timestamp_with_repos(
             &self.config,
             &mut self.tuf,
-            Some(&self.local),
+            Some(&mut self.local),
             &self.remote,
         )
         .await
     }
 
     async fn update_timestamp_with_repos<Remote>(
-        config: &Config<T>,
-        tuf: &mut Tuf<D>,
-        local: Option<&Repository<L, D>>,
+        config: &Config,
+        tuf: &mut Database<D>,
+        local: Option<&mut Repository<L, D>>,
         remote: &Repository<Remote, D>,
     ) -> Result<bool>
     where
@@ -619,7 +626,7 @@ where
                 &timestamp_path,
                 &MetadataVersion::None,
                 config.max_timestamp_length,
-                None,
+                vec![],
             )
             .await?;
 
@@ -650,8 +657,9 @@ where
     async fn update_snapshot(&mut self) -> Result<bool> {
         let consistent_snapshot = self.tuf.trusted_root().consistent_snapshot();
         Self::update_snapshot_with_repos(
+            &self.config,
             &mut self.tuf,
-            Some(&self.local),
+            Some(&mut self.local),
             &self.remote,
             consistent_snapshot,
         )
@@ -659,17 +667,15 @@ where
     }
 
     async fn update_snapshot_with_repos<Remote>(
-        tuf: &mut Tuf<D>,
-        local: Option<&Repository<L, D>>,
+        config: &Config,
+        tuf: &mut Database<D>,
+        local: Option<&mut Repository<L, D>>,
         remote: &Repository<Remote, D>,
         consistent_snapshots: bool,
     ) -> Result<bool>
     where
         Remote: RepositoryProvider<D>,
     {
-        // 5.3.1 Check against timestamp metadata. The hashes and version number listed in the
-        // timestamp metadata. If hashes and version do not match, discard the new snapshot
-        // metadata, abort the update cycle, and report the failure.
         let snapshot_description = match tuf.trusted_timestamp() {
             Some(ts) => Ok(ts.snapshot()),
             None => Err(Error::MissingMetadata(Role::Timestamp)),
@@ -682,8 +688,6 @@ where
             return Ok(false);
         }
 
-        let (alg, value) = crypto::hash_preference(snapshot_description.hashes())?;
-
         let version = if consistent_snapshots {
             MetadataVersion::Number(snapshot_description.version())
         } else {
@@ -691,24 +695,30 @@ where
         };
 
         let snapshot_path = MetadataPath::from_role(&Role::Snapshot);
-        let snapshot_length = Some(snapshot_description.length());
+
+        // https://theupdateframework.github.io/specification/v1.0.26/#update-snapshot 5.5.1:
+
+        // Download snapshot metadata file, up to either the number of bytes specified in the
+        // timestamp metadata file, or some Y number of bytes.
+        let snapshot_length = snapshot_description.length().or(config.max_snapshot_length);
+
+        // https://theupdateframework.github.io/specification/v1.0.26/#update-snapshot 5.5.2:
+        //
+        // [...] The hashes of the new snapshot metadata file MUST match the hashes, if any, listed
+        // in the trusted timestamp metadata.
+        let snapshot_hashes = crypto::retain_supported_hashes(snapshot_description.hashes());
 
         let raw_signed_snapshot = remote
-            .fetch_metadata(
-                &snapshot_path,
-                &version,
-                snapshot_length,
-                Some((alg, value.clone())),
-            )
+            .fetch_metadata(&snapshot_path, &version, snapshot_length, snapshot_hashes)
             .await?;
 
+        // https://theupdateframework.github.io/specification/v1.0.26/#update-snapshot 5.5.3 through
+        // 5.5.6 are checked in [Database].
         if tuf.update_snapshot(&raw_signed_snapshot)? {
-            /////////////////////////////////////////
-            // TUF-1.0.9 §5.3.5:
+            // https://theupdateframework.github.io/specification/v1.0.26/#update-snapshot 5.5.7:
             //
-            //     Persist snapshot metadata. The client MUST write the file to non-volatile
-            //     storage as FILENAME.EXT (e.g. snapshot.json).
-
+            // Persist snapshot metadata. The client MUST write the file to non-volatile storage as
+            // FILENAME.EXT (e.g. snapshot.json).
             if let Some(local) = local {
                 local
                     .store_metadata(&snapshot_path, &MetadataVersion::None, &raw_signed_snapshot)
@@ -725,8 +735,9 @@ where
     async fn update_targets(&mut self) -> Result<bool> {
         let consistent_snapshot = self.tuf.trusted_root().consistent_snapshot();
         Self::update_targets_with_repos(
+            &self.config,
             &mut self.tuf,
-            Some(&self.local),
+            Some(&mut self.local),
             &self.remote,
             consistent_snapshot,
         )
@@ -734,8 +745,9 @@ where
     }
 
     async fn update_targets_with_repos<Remote>(
-        tuf: &mut Tuf<D>,
-        local: Option<&Repository<L, D>>,
+        config: &Config,
+        tuf: &mut Database<D>,
+        local: Option<&mut Repository<L, D>>,
         remote: &Repository<Remote, D>,
         consistent_snapshot: bool,
     ) -> Result<bool>
@@ -760,8 +772,6 @@ where
             return Ok(false);
         }
 
-        let (alg, value) = crypto::hash_preference(targets_description.hashes())?;
-
         let version = if consistent_snapshot {
             MetadataVersion::Number(targets_description.version())
         } else {
@@ -769,15 +779,21 @@ where
         };
 
         let targets_path = MetadataPath::from_role(&Role::Targets);
-        let targets_length = Some(targets_description.length());
+
+        // https://theupdateframework.github.io/specification/v1.0.26/#update-targets 5.6.1:
+        //
+        // Download the top-level targets metadata file, up to either the number of bytes specified
+        // in the snapshot metadata file, or some Z number of bytes. [...]
+        let targets_length = targets_description.length().or(config.max_targets_length);
+
+        // https://theupdateframework.github.io/specification/v1.0.26/#update-targets 5.6.2:
+        //
+        // Check against snapshot role’s targets hash. The hashes of the new targets metadata file
+        // MUST match the hashes, if any, listed in the trusted snapshot metadata. [...]
+        let target_hashes = crypto::retain_supported_hashes(targets_description.hashes());
 
         let raw_signed_targets = remote
-            .fetch_metadata(
-                &targets_path,
-                &version,
-                targets_length,
-                Some((alg, value.clone())),
-            )
+            .fetch_metadata(&targets_path, &version, targets_length, target_hashes)
             .await?;
 
         if tuf.update_targets(&raw_signed_targets)? {
@@ -799,73 +815,77 @@ where
         }
     }
 
-    /// Fetch a target from the remote repo and write it to the local repo.
-    pub async fn fetch_target<'a>(&'a mut self, target: &'a TargetPath) -> Result<()> {
-        let mut read = self._fetch_target(target).await?;
-        self.local.store_target(&mut read, target).await
-    }
-
-    /// Fetch a target from the remote repo and write it to the provided writer.
+    /// Fetch a target from the remote repo.
     ///
     /// It is **critical** that none of the bytes written to the `write` are used until this future
     /// returns `Ok`, as the hash of the target is not verified until all bytes are read from the
     /// repository.
-    pub async fn fetch_target_to_writer<'a, W>(
-        &'a mut self,
-        target: &'a TargetPath,
-        mut write: W,
-    ) -> Result<()>
-    where
-        W: AsyncWrite + Send + Unpin,
-    {
-        let read = self._fetch_target(&target).await?;
-        copy(read, &mut write).await?;
-        Ok(())
+    pub async fn fetch_target(
+        &mut self,
+        target: &TargetPath,
+    ) -> Result<impl AsyncRead + Send + Unpin + '_> {
+        let target_description = self.fetch_target_description(target).await?;
+        // TODO: Check the local repository to see if it already has the target.
+        self.remote
+            .fetch_target(
+                self.tuf.trusted_root().consistent_snapshot(),
+                target,
+                target_description,
+            )
+            .await
+    }
+
+    /// Fetch a target from the remote repo and write it to the local repo.
+    ///
+    /// It is **critical** that none of the bytes written to the `write` are used until this future
+    /// returns `Ok`, as the hash of the target is not verified until all bytes are read from the
+    /// repository.
+    pub async fn fetch_target_to_local(&mut self, target: &TargetPath) -> Result<()> {
+        let target_description = self.fetch_target_description(target).await?;
+
+        // Since the async read we fetch from the remote repository has internal
+        // lifetimes, we need to break up client into sub-objects so that rust
+        // won't complain about trying to borrow `&self` for the fetch, and
+        // `&mut self` for the store.
+        let Client {
+            tuf, local, remote, ..
+        } = self;
+
+        // TODO: Check the local repository to see if it already has the target.
+        let mut read = remote
+            .fetch_target(
+                tuf.trusted_root().consistent_snapshot(),
+                target,
+                target_description,
+            )
+            .await?;
+
+        local.store_target(target, &mut read).await
     }
 
     /// Fetch a target description from the remote repo and return it.
-    pub async fn fetch_target_description<'a>(
-        &'a mut self,
-        target: &'a TargetPath,
+    pub async fn fetch_target_description(
+        &mut self,
+        target: &TargetPath,
     ) -> Result<TargetDescription> {
-        let virt = self.config.path_translator.real_to_virtual(target)?;
-
         let snapshot = self
             .tuf
             .trusted_snapshot()
-            .ok_or_else(|| Error::MissingMetadata(Role::Snapshot))?
+            .ok_or(Error::MissingMetadata(Role::Snapshot))?
             .clone();
         let (_, target_description) = self
-            .lookup_target_description(false, 0, &virt, &snapshot, None)
+            .lookup_target_description(false, 0, target, &snapshot, None)
             .await;
         target_description
     }
 
-    // TODO this should check the local repo first
-    async fn _fetch_target<'a>(
-        &'a mut self,
-        target: &'a TargetPath,
-    ) -> Result<impl AsyncRead + Send + Unpin> {
-        let target_description = self.fetch_target_description(target).await?;
-
-        // According to TUF section 5.5.2, when consistent snapshot is enabled, target files should
-        // be found at `$HASH.FILENAME.EXT`. Otherwise it is stored at `FILENAME.EXT`.
-        if self.tuf.trusted_root().consistent_snapshot() {
-            let (_, value) = crypto::hash_preference(target_description.hashes())?;
-            let target = target.with_hash_prefix(value)?;
-            self.remote.fetch_target(&target, &target_description).await
-        } else {
-            self.remote.fetch_target(target, &target_description).await
-        }
-    }
-
-    async fn lookup_target_description<'a>(
-        &'a mut self,
+    async fn lookup_target_description(
+        &mut self,
         default_terminate: bool,
         current_depth: u32,
-        target: &'a VirtualTargetPath,
-        snapshot: &'a SnapshotMetadata,
-        targets: Option<(&'a Verified<TargetsMetadata>, MetadataPath)>,
+        target: &TargetPath,
+        snapshot: &SnapshotMetadata,
+        targets: Option<(&Verified<TargetsMetadata>, MetadataPath)>,
     ) -> (bool, Result<TargetDescription>) {
         if current_depth > self.config.max_delegation_depth {
             warn!(
@@ -910,13 +930,12 @@ where
 
             let role_meta = match snapshot.meta().get(delegation.role()) {
                 Some(m) => m,
-                None if !delegation.terminating() => continue,
-                None => return (true, Err(Error::NotFound)),
-            };
-
-            let (alg, value) = match crypto::hash_preference(role_meta.hashes()) {
-                Ok(h) => h,
-                Err(e) => return (delegation.terminating(), Err(e)),
+                None if delegation.terminating() => {
+                    return (true, Err(Error::NotFound));
+                }
+                None => {
+                    continue;
+                }
             };
 
             /////////////////////////////////////////
@@ -938,41 +957,26 @@ where
                 MetadataVersion::None
             };
 
-            // FIXME: Other than root, this is the only place that first tries using the local
-            // metadata before failing back to the remote server. Is this logic correct?
-            let role_length = Some(role_meta.length());
-            let raw_signed_meta = self
-                .local
-                .fetch_metadata(
-                    delegation.role(),
-                    &MetadataVersion::None,
-                    role_length,
-                    Some((alg, value.clone())),
-                )
-                .await;
+            let role_length = role_meta.length().or(self.config.max_targets_length);
 
-            let raw_signed_meta = match raw_signed_meta {
+            // https://theupdateframework.github.io/specification/v1.0.26/#update-targets
+            //
+            //     [...] The hashes of the new targets metadata file MUST match the hashes, if
+            //      any, listed in the trusted snapshot metadata.
+            let role_hashes = crypto::retain_supported_hashes(role_meta.hashes());
+
+            let raw_signed_meta = match self
+                .remote
+                .fetch_metadata(delegation.role(), &version, role_length, role_hashes)
+                .await
+            {
                 Ok(m) => m,
-                Err(_) => {
-                    match self
-                        .remote
-                        .fetch_metadata(
-                            delegation.role(),
-                            &version,
-                            role_length,
-                            Some((alg, value.clone())),
-                        )
-                        .await
-                    {
-                        Ok(m) => m,
-                        Err(ref e) if !delegation.terminating() => {
-                            warn!("Failed to fetch metadata {:?}: {:?}", delegation.role(), e);
-                            continue;
-                        }
-                        Err(e) => {
-                            warn!("Failed to fetch metadata {:?}: {:?}", delegation.role(), e);
-                            return (true, Err(e));
-                        }
+                Err(e) => {
+                    warn!("Failed to fetch metadata {:?}: {:?}", delegation.role(), e);
+                    if delegation.terminating() {
+                        return (true, Err(e));
+                    } else {
+                        continue;
                     }
                 }
             };
@@ -1034,13 +1038,39 @@ where
     }
 }
 
+/// Deconstructed parts of a [Client].
+///
+/// This allows taking apart a [Client] in order to reclaim the [Database],
+/// local, and remote repositories.
+#[non_exhaustive]
+#[derive(Debug)]
+pub struct Parts<D, L, R>
+where
+    D: DataInterchange + Sync,
+    L: RepositoryProvider<D> + RepositoryStorage<D>,
+    R: RepositoryProvider<D>,
+{
+    /// The client configuration.
+    pub config: Config,
+
+    /// The Tuf database, which is updated by the [Client].
+    pub database: Database<D>,
+
+    /// The local repository, which is used to initialize the database, and
+    /// is updated by the [Client].
+    pub local: L,
+
+    /// The remote repository, which is used by the client to update the database.
+    pub remote: R,
+}
+
 /// Helper function that first tries to fetch the metadata from the local store, and if it doesn't
 /// exist or does and fails to parse, try fetching it from the remote store.
 async fn fetch_metadata_from_local_or_else_remote<'a, D, L, R, M>(
     path: &'a MetadataPath,
     version: &'a MetadataVersion,
     max_length: Option<usize>,
-    hash_data: Option<(&'static HashAlgorithm, HashValue)>,
+    hashes: Vec<(&'static HashAlgorithm, HashValue)>,
     local: &'a Repository<L, D>,
     remote: &'a Repository<R, D>,
 ) -> Result<(bool, RawSignedMetadata<D, M>)>
@@ -1051,13 +1081,13 @@ where
     M: Metadata + 'static,
 {
     match local
-        .fetch_metadata(path, version, max_length, hash_data.clone())
+        .fetch_metadata(path, version, max_length, hashes.clone())
         .await
     {
         Ok(raw_meta) => Ok((false, raw_meta)),
         Err(Error::NotFound) => {
             let raw_meta = remote
-                .fetch_metadata(path, version, max_length, hash_data)
+                .fetch_metadata(path, version, max_length, hashes)
                 .await?;
             Ok((true, raw_meta))
         }
@@ -1074,35 +1104,29 @@ where
 /// `ConfigBuilder` and set your own values.
 ///
 /// ```
-/// # use tuf::client::{Config, DefaultTranslator};
+/// # use tuf::client::{Config};
 /// let config = Config::default();
-/// assert_eq!(config.max_root_length(), &Some(1024 * 1024));
-/// assert_eq!(config.max_timestamp_length(), &Some(32 * 1024));
+/// assert_eq!(config.max_root_length(), &Some(500 * 1024));
+/// assert_eq!(config.max_timestamp_length(), &Some(16 * 1024));
+/// assert_eq!(config.max_snapshot_length(), &Some(2000000));
+/// assert_eq!(config.max_targets_length(), &Some(5000000));
 /// assert_eq!(config.max_delegation_depth(), 8);
-/// let _: &DefaultTranslator = config.path_translator();
 /// ```
-#[derive(Clone, Debug)]
-pub struct Config<T>
-where
-    T: PathTranslator,
-{
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Config {
     max_root_length: Option<usize>,
     max_timestamp_length: Option<usize>,
+    max_snapshot_length: Option<usize>,
+    max_targets_length: Option<usize>,
     max_delegation_depth: u32,
-    path_translator: T,
 }
 
-impl Config<DefaultTranslator> {
+impl Config {
     /// Initialize a `ConfigBuilder` with the default values.
-    pub fn build() -> ConfigBuilder<DefaultTranslator> {
+    pub fn build() -> ConfigBuilder {
         ConfigBuilder::default()
     }
-}
 
-impl<T> Config<T>
-where
-    T: PathTranslator,
-{
     /// Return the optional maximum root metadata length.
     pub fn max_root_length(&self) -> &Option<usize> {
         &self.max_root_length
@@ -1113,95 +1137,74 @@ where
         &self.max_timestamp_length
     }
 
+    /// Return the optional maximum snapshot metadata size.
+    pub fn max_snapshot_length(&self) -> &Option<usize> {
+        &self.max_snapshot_length
+    }
+
+    /// Return the optional maximum targets metadata size.
+    pub fn max_targets_length(&self) -> &Option<usize> {
+        &self.max_targets_length
+    }
+
     /// The maximum number of steps used when walking the delegation graph.
     pub fn max_delegation_depth(&self) -> u32 {
         self.max_delegation_depth
     }
-
-    /// The `PathTranslator`.
-    pub fn path_translator(&self) -> &T {
-        &self.path_translator
-    }
 }
 
-impl Default for Config<DefaultTranslator> {
+impl Default for Config {
     fn default() -> Self {
         Config {
-            max_root_length: Some(1024 * 1024),
-            max_timestamp_length: Some(32 * 1024),
+            max_root_length: Some(500 * 1024),
+            max_timestamp_length: Some(16 * 1024),
+            max_snapshot_length: Some(2000000),
+            max_targets_length: Some(5000000),
             max_delegation_depth: 8,
-            path_translator: DefaultTranslator::new(),
         }
     }
 }
 
 /// Helper for building and validating a TUF client `Config`.
-#[derive(Debug, PartialEq)]
-pub struct ConfigBuilder<T>
-where
-    T: PathTranslator,
-{
-    max_root_length: Option<usize>,
-    max_timestamp_length: Option<usize>,
-    max_delegation_depth: u32,
-    path_translator: T,
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct ConfigBuilder {
+    cfg: Config,
 }
 
-impl<T> ConfigBuilder<T>
-where
-    T: PathTranslator,
-{
+impl ConfigBuilder {
     /// Validate this builder return a `Config` if validation succeeds.
-    pub fn finish(self) -> Result<Config<T>> {
-        Ok(Config {
-            max_root_length: self.max_root_length,
-            max_timestamp_length: self.max_timestamp_length,
-            max_delegation_depth: self.max_delegation_depth,
-            path_translator: self.path_translator,
-        })
+    pub fn finish(self) -> Result<Config> {
+        Ok(self.cfg)
     }
 
     /// Set the optional maximum download length for root metadata.
     pub fn max_root_length(mut self, max: Option<usize>) -> Self {
-        self.max_root_length = max;
+        self.cfg.max_root_length = max;
         self
     }
 
     /// Set the optional maximum download length for timestamp metadata.
     pub fn max_timestamp_length(mut self, max: Option<usize>) -> Self {
-        self.max_timestamp_length = max;
+        self.cfg.max_timestamp_length = max;
+        self
+    }
+
+    /// Set the optional maximum download length for snapshot metadata.
+    pub fn max_snapshot_length(mut self, max: Option<usize>) -> Self {
+        self.cfg.max_snapshot_length = max;
+        self
+    }
+
+    /// Set the optional maximum download length for targets metadata.
+    pub fn max_targets_length(mut self, max: Option<usize>) -> Self {
+        self.cfg.max_targets_length = max;
         self
     }
 
     /// Set the maximum number of steps used when walking the delegation graph.
     pub fn max_delegation_depth(mut self, max: u32) -> Self {
-        self.max_delegation_depth = max;
+        self.cfg.max_delegation_depth = max;
         self
-    }
-
-    /// Set the `PathTranslator`.
-    pub fn path_translator<TT>(self, path_translator: TT) -> ConfigBuilder<TT>
-    where
-        TT: PathTranslator,
-    {
-        ConfigBuilder {
-            max_root_length: self.max_root_length,
-            max_timestamp_length: self.max_timestamp_length,
-            max_delegation_depth: self.max_delegation_depth,
-            path_translator,
-        }
-    }
-}
-
-impl Default for ConfigBuilder<DefaultTranslator> {
-    fn default() -> ConfigBuilder<DefaultTranslator> {
-        let cfg = Config::default();
-        ConfigBuilder {
-            max_root_length: cfg.max_root_length,
-            max_timestamp_length: cfg.max_timestamp_length,
-            max_delegation_depth: cfg.max_delegation_depth,
-            path_translator: cfg.path_translator,
-        }
     }
 }
 
@@ -1210,7 +1213,10 @@ mod test {
     use super::*;
     use crate::crypto::{Ed25519PrivateKey, HashAlgorithm, PrivateKey};
     use crate::interchange::Json;
-    use crate::metadata::{MetadataPath, MetadataVersion};
+    use crate::metadata::{
+        MetadataDescription, MetadataPath, MetadataVersion, RootMetadataBuilder,
+        SnapshotMetadataBuilder, TargetsMetadataBuilder, TimestampMetadataBuilder,
+    };
     use crate::repo_builder::RepoBuilder;
     use crate::repository::{EphemeralRepository, ErrorRepository, Track, TrackRepository};
     use chrono::prelude::*;
@@ -1218,6 +1224,7 @@ mod test {
     use lazy_static::lazy_static;
     use maplit::hashmap;
     use matches::assert_matches;
+    use pretty_assertions::assert_eq;
     use serde_json::json;
     use std::iter::once;
 
@@ -1237,16 +1244,18 @@ mod test {
         };
     }
 
+    #[allow(clippy::enum_variant_names)]
     enum ConstructorMode {
         WithTrustedLocal,
         WithTrustedRoot,
         WithTrustedRootKeys,
+        FromDatabase,
     }
 
     #[test]
     fn client_constructors_err_with_not_found() {
         block_on(async {
-            let local = EphemeralRepository::<Json>::new();
+            let mut local = EphemeralRepository::<Json>::new();
             let remote = EphemeralRepository::<Json>::new();
 
             let private_key =
@@ -1254,7 +1263,7 @@ mod test {
             let public_key = private_key.public().clone();
 
             assert_matches!(
-                Client::with_trusted_local(Config::default(), &local, &remote).await,
+                Client::with_trusted_local(Config::default(), &mut local, &remote).await,
                 Err(Error::NotFound)
             );
 
@@ -1264,7 +1273,7 @@ mod test {
                     &MetadataVersion::Number(1),
                     1,
                     once(&public_key),
-                    &local,
+                    local,
                     &remote,
                 )
                 .await,
@@ -1276,22 +1285,16 @@ mod test {
     #[test]
     fn client_constructors_err_with_invalid_keys() {
         block_on(async {
-            let remote = EphemeralRepository::new();
+            let mut remote = EphemeralRepository::<Json>::new();
 
-            let root_version = 1;
             let good_private_key = &KEYS[0];
             let bad_private_key = &KEYS[1];
 
-            let _ = RepoBuilder::<_, Json>::new(&remote)
-                .root_keys(vec![good_private_key])
-                .with_root_builder(|bld| {
-                    bld.version(root_version)
-                        .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                        .root_key(good_private_key.public().clone())
-                        .snapshot_key(good_private_key.public().clone())
-                        .targets_key(good_private_key.public().clone())
-                        .timestamp_key(good_private_key.public().clone())
-                })
+            let _ = RepoBuilder::create(&mut remote)
+                .trusted_root_keys(&[good_private_key])
+                .trusted_targets_keys(&[good_private_key])
+                .trusted_snapshot_keys(&[good_private_key])
+                .trusted_timestamp_keys(&[good_private_key])
                 .commit()
                 .await
                 .unwrap();
@@ -1299,7 +1302,7 @@ mod test {
             assert_matches!(
                 Client::with_trusted_root_keys(
                     Config::default(),
-                    &MetadataVersion::Number(root_version),
+                    &MetadataVersion::Number(1),
                     1,
                     once(bad_private_key.public()),
                     EphemeralRepository::new(),
@@ -1332,68 +1335,66 @@ mod test {
         ))
     }
 
+    #[test]
+    fn from_database_loads_metadata_from_local_repo() {
+        block_on(constructors_load_metadata_from_local_repo(
+            ConstructorMode::FromDatabase,
+        ))
+    }
+
     async fn constructors_load_metadata_from_local_repo(constructor_mode: ConstructorMode) {
         // Store an expired root in the local store.
-        let local = EphemeralRepository::<Json>::new();
-        let metadata1 = RepoBuilder::new(&local)
-            .root_keys(vec![&KEYS[0]])
-            .targets_keys(vec![&KEYS[0]])
-            .snapshot_keys(vec![&KEYS[0]])
-            .timestamp_keys(vec![&KEYS[0]])
-            .with_root_builder(|bld| {
-                bld.version(1)
-                    .consistent_snapshot(true)
-                    .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                    .root_key(KEYS[0].public().clone())
-                    .snapshot_key(KEYS[0].public().clone())
-                    .targets_key(KEYS[0].public().clone())
-                    .timestamp_key(KEYS[0].public().clone())
+        let mut local = EphemeralRepository::<Json>::new();
+        let metadata1 = RepoBuilder::create(&mut local)
+            .trusted_root_keys(&[&KEYS[0]])
+            .trusted_targets_keys(&[&KEYS[0]])
+            .trusted_snapshot_keys(&[&KEYS[0]])
+            .trusted_timestamp_keys(&[&KEYS[0]])
+            .stage_root_with_builder(|bld| {
+                bld.consistent_snapshot(true)
+                    .expires(Utc.ymd(1970, 1, 1).and_hms(0, 0, 0))
             })
-            .targets_version(1)
-            .commit()
+            .unwrap()
+            .commit_skip_validation()
             .await
             .unwrap();
 
         // Remote repo has unexpired metadata.
-        let remote = EphemeralRepository::<Json>::new();
-        let metadata2 = RepoBuilder::new(&remote)
-            .root_keys(vec![&KEYS[0]])
-            .targets_keys(vec![&KEYS[0]])
-            .snapshot_keys(vec![&KEYS[0]])
-            .timestamp_keys(vec![&KEYS[0]])
-            .with_root_builder(|bld| {
-                bld.version(2)
-                    .consistent_snapshot(true)
-                    .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                    .root_key(KEYS[0].public().clone())
-                    .snapshot_key(KEYS[0].public().clone())
-                    .targets_key(KEYS[0].public().clone())
-                    .timestamp_key(KEYS[0].public().clone())
-            })
-            .targets_version(2)
-            .snapshot_version(2)
-            .timestamp_version(2)
+        let mut remote = EphemeralRepository::<Json>::new();
+        let metadata2 = RepoBuilder::create(&mut remote)
+            .trusted_root_keys(&[&KEYS[0]])
+            .trusted_targets_keys(&[&KEYS[0]])
+            .trusted_snapshot_keys(&[&KEYS[0]])
+            .trusted_timestamp_keys(&[&KEYS[0]])
+            .stage_root_with_builder(|bld| bld.version(2).consistent_snapshot(true))
+            .unwrap()
+            .stage_targets_with_builder(|bld| bld.version(2))
+            .unwrap()
+            .stage_snapshot_with_builder(|bld| bld.version(2))
+            .unwrap()
+            .with_timestamp_builder(|bld| bld.version(2))
+            .unwrap()
             .commit()
             .await
             .unwrap();
 
         // Now, make sure that the local metadata got version 1.
-        let track_local = TrackRepository::new(&local);
-        let track_remote = TrackRepository::new(&remote);
+        let track_local = TrackRepository::new(local);
+        let track_remote = TrackRepository::new(remote);
 
         // Make sure the client initialized metadata in the right order. Each has a slightly
         // different usage of the local repository.
         let mut client = match constructor_mode {
             ConstructorMode::WithTrustedLocal => {
-                Client::with_trusted_local(Config::default(), &track_local, &track_remote)
+                Client::with_trusted_local(Config::default(), track_local, track_remote)
                     .await
                     .unwrap()
             }
             ConstructorMode::WithTrustedRoot => Client::with_trusted_root(
                 Config::default(),
-                &metadata1.root,
-                &track_local,
-                &track_remote,
+                metadata1.root().unwrap(),
+                track_local,
+                track_remote,
             )
             .await
             .unwrap(),
@@ -1402,86 +1403,75 @@ mod test {
                 &MetadataVersion::Number(1),
                 1,
                 once(&KEYS[0].public().clone()),
-                &track_local,
-                &track_remote,
+                track_local,
+                track_remote,
+            )
+            .await
+            .unwrap(),
+            ConstructorMode::FromDatabase => Client::from_database(
+                Config::default(),
+                Database::from_trusted_root(metadata1.root().unwrap()).unwrap(),
+                track_local,
+                track_remote,
             )
             .await
             .unwrap(),
         };
 
         assert_eq!(client.tuf.trusted_root().version(), 1);
-        assert_eq!(track_remote.take_tracks(), vec![]);
+        assert_eq!(client.remote.as_inner().take_tracks(), vec![]);
 
+        // According to [1], "Check for freeze attack", only the root should be
+        // fetched since it has expired.
+        //
+        // [1]: https://theupdateframework.github.io/specification/latest/#update-root
         match constructor_mode {
             ConstructorMode::WithTrustedLocal => {
                 assert_eq!(
-                    track_local.take_tracks(),
+                    client.local.as_inner().take_tracks(),
                     vec![
-                        Track::fetch_meta_found(&MetadataVersion::Number(1), &metadata1.root),
+                        Track::fetch_meta_found(
+                            &MetadataVersion::Number(1),
+                            metadata1.root().unwrap()
+                        ),
                         Track::FetchErr(
                             MetadataPath::from_role(&Role::Root),
                             MetadataVersion::Number(2)
-                        ),
-                        Track::fetch_meta_found(
-                            &MetadataVersion::None,
-                            &metadata1.timestamp.as_ref().unwrap()
-                        ),
-                        Track::fetch_meta_found(
-                            &MetadataVersion::None,
-                            &metadata1.snapshot.as_ref().unwrap()
-                        ),
-                        Track::fetch_meta_found(
-                            &MetadataVersion::None,
-                            metadata1.targets.as_ref().unwrap()
                         ),
                     ],
                 );
             }
             ConstructorMode::WithTrustedRoot => {
                 assert_eq!(
-                    track_local.take_tracks(),
-                    vec![
-                        Track::FetchErr(
-                            MetadataPath::from_role(&Role::Root),
-                            MetadataVersion::Number(2)
-                        ),
-                        Track::fetch_meta_found(
-                            &MetadataVersion::None,
-                            &metadata1.timestamp.as_ref().unwrap()
-                        ),
-                        Track::fetch_meta_found(
-                            &MetadataVersion::None,
-                            &metadata1.snapshot.as_ref().unwrap()
-                        ),
-                        Track::fetch_meta_found(
-                            &MetadataVersion::None,
-                            metadata1.targets.as_ref().unwrap()
-                        ),
-                    ],
+                    client.local.as_inner().take_tracks(),
+                    vec![Track::FetchErr(
+                        MetadataPath::from_role(&Role::Root),
+                        MetadataVersion::Number(2)
+                    )],
                 );
             }
             ConstructorMode::WithTrustedRootKeys => {
                 assert_eq!(
-                    track_local.take_tracks(),
+                    client.local.as_inner().take_tracks(),
                     vec![
-                        Track::fetch_meta_found(&MetadataVersion::Number(1), &metadata1.root),
+                        Track::fetch_meta_found(
+                            &MetadataVersion::Number(1),
+                            metadata1.root().unwrap()
+                        ),
                         Track::FetchErr(
                             MetadataPath::from_role(&Role::Root),
                             MetadataVersion::Number(2)
                         ),
-                        Track::fetch_meta_found(
-                            &MetadataVersion::None,
-                            &metadata1.timestamp.as_ref().unwrap()
-                        ),
-                        Track::fetch_meta_found(
-                            &MetadataVersion::None,
-                            &metadata1.snapshot.as_ref().unwrap()
-                        ),
-                        Track::fetch_meta_found(
-                            &MetadataVersion::None,
-                            metadata1.targets.as_ref().unwrap()
-                        ),
                     ],
+                );
+            }
+            ConstructorMode::FromDatabase => {
+                assert_eq!(
+                    client.local.as_inner().take_tracks(),
+                    vec![Track::FetchErr(
+                        MetadataPath::from_role(&Role::Root),
+                        MetadataVersion::Number(2)
+                    )],
                 );
             }
         };
@@ -1492,38 +1482,26 @@ mod test {
         // We should only fetch metadata from the remote repository and write it to the local
         // repository.
         assert_eq!(
-            track_remote.take_tracks(),
+            client.remote.as_inner().take_tracks(),
             vec![
-                Track::fetch_meta_found(&MetadataVersion::Number(2), &metadata2.root),
+                Track::fetch_meta_found(&MetadataVersion::Number(2), metadata2.root().unwrap()),
                 Track::FetchErr(
                     MetadataPath::from_role(&Role::Root),
                     MetadataVersion::Number(3)
                 ),
-                Track::fetch_meta_found(
-                    &MetadataVersion::None,
-                    &metadata2.timestamp.as_ref().unwrap()
-                ),
-                Track::fetch_meta_found(
-                    &MetadataVersion::Number(2),
-                    &metadata2.snapshot.as_ref().unwrap()
-                ),
-                Track::fetch_meta_found(
-                    &MetadataVersion::Number(2),
-                    metadata2.targets.as_ref().unwrap()
-                ),
+                Track::fetch_meta_found(&MetadataVersion::None, metadata2.timestamp().unwrap()),
+                Track::fetch_meta_found(&MetadataVersion::Number(2), metadata2.snapshot().unwrap()),
+                Track::fetch_meta_found(&MetadataVersion::Number(2), metadata2.targets().unwrap()),
             ],
         );
         assert_eq!(
-            track_local.take_tracks(),
+            client.local.as_inner().take_tracks(),
             vec![
-                Track::store_meta(&MetadataVersion::None, &metadata2.root),
-                Track::store_meta(&MetadataVersion::Number(2), &metadata2.root),
-                Track::store_meta(
-                    &MetadataVersion::None,
-                    metadata2.timestamp.as_ref().unwrap()
-                ),
-                Track::store_meta(&MetadataVersion::None, metadata2.snapshot.as_ref().unwrap()),
-                Track::store_meta(&MetadataVersion::None, metadata2.targets.as_ref().unwrap()),
+                Track::store_meta(&MetadataVersion::None, metadata2.root().unwrap()),
+                Track::store_meta(&MetadataVersion::Number(2), metadata2.root().unwrap()),
+                Track::store_meta(&MetadataVersion::None, metadata2.timestamp().unwrap()),
+                Track::store_meta(&MetadataVersion::None, metadata2.snapshot().unwrap()),
+                Track::store_meta(&MetadataVersion::None, metadata2.targets().unwrap()),
             ],
         );
 
@@ -1533,55 +1511,48 @@ mod test {
 
         // Make sure we only fetched the next root and timestamp, and didn't store anything.
         assert_eq!(
-            track_remote.take_tracks(),
+            client.remote.as_inner().take_tracks(),
             vec![
                 Track::FetchErr(
                     MetadataPath::from_role(&Role::Root),
                     MetadataVersion::Number(3)
                 ),
-                Track::fetch_meta_found(
-                    &MetadataVersion::None,
-                    metadata2.timestamp.as_ref().unwrap(),
-                ),
+                Track::fetch_meta_found(&MetadataVersion::None, metadata2.timestamp().unwrap()),
             ]
         );
-        assert_eq!(track_local.take_tracks(), vec![]);
+        assert_eq!(client.local.as_inner().take_tracks(), vec![]);
     }
 
     #[test]
     fn constructor_succeeds_with_missing_metadata() {
         block_on(async {
-            let local = EphemeralRepository::<Json>::new();
+            let mut local = EphemeralRepository::<Json>::new();
             let remote = EphemeralRepository::<Json>::new();
 
             // Store only a root in the local store.
-            let metadata1 = RepoBuilder::new(&local)
-                .root_keys(vec![&KEYS[0]])
-                .targets_keys(vec![&KEYS[0]])
-                .snapshot_keys(vec![&KEYS[0]])
-                .timestamp_keys(vec![&KEYS[0]])
-                .with_root_builder(|bld| {
-                    bld.version(1)
-                        .consistent_snapshot(true)
-                        .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                        .root_key(KEYS[0].public().clone())
-                        .snapshot_key(KEYS[0].public().clone())
-                        .targets_key(KEYS[0].public().clone())
-                        .timestamp_key(KEYS[0].public().clone())
-                })
+            let metadata1 = RepoBuilder::create(&mut local)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .stage_root_with_builder(|bld| bld.consistent_snapshot(true))
+                .unwrap()
+                .skip_targets()
+                .skip_snapshot()
+                .skip_timestamp()
                 .commit()
                 .await
                 .unwrap();
 
-            let track_local = TrackRepository::new(&local);
-            let track_remote = TrackRepository::new(&remote);
+            let track_local = TrackRepository::new(local);
+            let track_remote = TrackRepository::new(remote);
 
             // Create a client, which should try to fetch metadata from the local store.
-            let mut client = Client::with_trusted_root(
+            let client = Client::with_trusted_root(
                 Config::default(),
-                &metadata1.root,
-                &track_local,
-                &track_remote,
+                metadata1.root().unwrap(),
+                track_local,
+                track_remote,
             )
             .await
             .unwrap();
@@ -1589,12 +1560,12 @@ mod test {
             assert_eq!(client.tuf.trusted_root().version(), 1);
 
             // We shouldn't fetch metadata.
-            assert_eq!(track_remote.take_tracks(), vec![]);
+            assert_eq!(client.remote.as_inner().take_tracks(), vec![]);
 
             // We should have tried fetching a new timestamp, but it shouldn't exist in the
             // repository.
             assert_eq!(
-                track_local.take_tracks(),
+                client.local.as_inner().take_tracks(),
                 vec![
                     Track::FetchErr(
                         MetadataPath::from_role(&Role::Root),
@@ -1608,88 +1579,113 @@ mod test {
             );
 
             // An update should succeed.
-            let _metadata2 = RepoBuilder::new(&remote)
-                .root_keys(vec![&KEYS[0]])
-                .targets_keys(vec![&KEYS[0]])
-                .snapshot_keys(vec![&KEYS[0]])
-                .timestamp_keys(vec![&KEYS[0]])
-                .with_root_builder(|bld| {
-                    bld.version(2)
-                        .consistent_snapshot(true)
-                        .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                        .root_key(KEYS[0].public().clone())
-                        .snapshot_key(KEYS[0].public().clone())
-                        .targets_key(KEYS[0].public().clone())
-                        .timestamp_key(KEYS[0].public().clone())
-                })
-                .targets_version(1)
-                .snapshot_version(1)
-                .timestamp_version(1)
+            let mut parts = client.into_parts();
+            let metadata2 = RepoBuilder::create(parts.remote.as_inner_mut())
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .stage_root_with_builder(|bld| bld.version(2).consistent_snapshot(true))
+                .unwrap()
+                .stage_targets_with_builder(|bld| bld.version(2))
+                .unwrap()
+                .stage_snapshot_with_builder(|bld| bld.version(2))
+                .unwrap()
+                .with_timestamp_builder(|bld| bld.version(2))
+                .unwrap()
                 .commit()
                 .await
                 .unwrap();
 
+            let mut client = Client::from_parts(parts);
             assert_matches!(client.update().await, Ok(true));
             assert_eq!(client.tuf.trusted_root().version(), 2);
+
+            // We should have fetched the metadata, and written it to the local database.
+            assert_eq!(
+                client.remote.as_inner().take_tracks(),
+                vec![
+                    Track::fetch_meta_found(&MetadataVersion::Number(2), metadata2.root().unwrap()),
+                    Track::FetchErr(
+                        MetadataPath::from_role(&Role::Root),
+                        MetadataVersion::Number(3)
+                    ),
+                    Track::fetch_meta_found(&MetadataVersion::None, metadata2.timestamp().unwrap()),
+                    Track::fetch_meta_found(
+                        &MetadataVersion::Number(2),
+                        metadata2.snapshot().unwrap()
+                    ),
+                    Track::fetch_meta_found(
+                        &MetadataVersion::Number(2),
+                        metadata2.targets().unwrap()
+                    ),
+                ],
+            );
+            assert_eq!(
+                client.local.as_inner().take_tracks(),
+                vec![
+                    Track::store_meta(&MetadataVersion::None, metadata2.root().unwrap()),
+                    Track::store_meta(&MetadataVersion::Number(2), metadata2.root().unwrap()),
+                    Track::store_meta(&MetadataVersion::None, metadata2.timestamp().unwrap()),
+                    Track::store_meta(&MetadataVersion::None, metadata2.snapshot().unwrap()),
+                    Track::store_meta(&MetadataVersion::None, metadata2.targets().unwrap()),
+                ],
+            );
         })
     }
 
     #[test]
     fn constructor_succeeds_with_expired_metadata() {
         block_on(async {
-            let local = EphemeralRepository::<Json>::new();
+            let mut local = EphemeralRepository::<Json>::new();
             let remote = EphemeralRepository::<Json>::new();
 
             // Store an expired root in the local store.
-            let metadata1 = RepoBuilder::new(&local)
-                .root_keys(vec![&KEYS[0]])
-                .targets_keys(vec![&KEYS[0]])
-                .snapshot_keys(vec![&KEYS[0]])
-                .timestamp_keys(vec![&KEYS[0]])
-                .with_root_builder(|bld| {
+            let metadata1 = RepoBuilder::create(&mut local)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .stage_root_with_builder(|bld| {
                     bld.version(1)
                         .consistent_snapshot(true)
                         .expires(Utc.ymd(1970, 1, 1).and_hms(0, 0, 0))
-                        .root_key(KEYS[0].public().clone())
-                        .snapshot_key(KEYS[0].public().clone())
-                        .targets_key(KEYS[0].public().clone())
-                        .timestamp_key(KEYS[0].public().clone())
                 })
-                .targets_version(1)
-                .commit()
+                .unwrap()
+                .commit_skip_validation()
                 .await
                 .unwrap();
 
-            let metadata2 = RepoBuilder::new(&local)
-                .root_keys(vec![&KEYS[0]])
-                .targets_keys(vec![&KEYS[0]])
-                .snapshot_keys(vec![&KEYS[0]])
-                .timestamp_keys(vec![&KEYS[0]])
-                .with_root_builder(|bld| {
+            let metadata2 = RepoBuilder::create(&mut local)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .stage_root_with_builder(|bld| {
                     bld.version(2)
                         .consistent_snapshot(true)
                         .expires(Utc.ymd(1970, 1, 1).and_hms(0, 0, 0))
-                        .root_key(KEYS[0].public().clone())
-                        .snapshot_key(KEYS[0].public().clone())
-                        .targets_key(KEYS[0].public().clone())
-                        .timestamp_key(KEYS[0].public().clone())
                 })
-                .targets_version(2)
-                .snapshot_version(2)
-                .timestamp_version(2)
-                .commit()
+                .unwrap()
+                .stage_targets_with_builder(|bld| bld.version(2))
+                .unwrap()
+                .stage_snapshot_with_builder(|bld| bld.version(2))
+                .unwrap()
+                .with_timestamp_builder(|bld| bld.version(2))
+                .unwrap()
+                .commit_skip_validation()
                 .await
                 .unwrap();
 
             // Now, make sure that the local metadata got version 1.
-            let track_local = TrackRepository::new(&local);
-            let track_remote = TrackRepository::new(&remote);
+            let track_local = TrackRepository::new(local);
+            let track_remote = TrackRepository::new(remote);
 
-            let mut client = Client::with_trusted_root(
+            let client = Client::with_trusted_root(
                 Config::default(),
-                &metadata1.root,
-                &track_local,
-                &track_remote,
+                metadata1.root().unwrap(),
+                track_local,
+                track_remote,
             )
             .await
             .unwrap();
@@ -1697,14 +1693,14 @@ mod test {
             assert_eq!(client.tuf.trusted_root().version(), 2);
 
             // We shouldn't fetch metadata.
-            assert_eq!(track_remote.take_tracks(), vec![]);
+            assert_eq!(client.remote.as_inner().take_tracks(), vec![]);
 
             // We should only load the root metadata, but because it's expired we don't try
             // fetching the other local metadata.
             assert_eq!(
-                track_local.take_tracks(),
+                client.local.as_inner().take_tracks(),
                 vec![
-                    Track::fetch_meta_found(&MetadataVersion::Number(2), &metadata2.root),
+                    Track::fetch_meta_found(&MetadataVersion::Number(2), metadata2.root().unwrap()),
                     Track::FetchErr(
                         MetadataPath::from_role(&Role::Root),
                         MetadataVersion::Number(3)
@@ -1713,27 +1709,29 @@ mod test {
             );
 
             // An update should succeed.
-            let _metadata3 = RepoBuilder::new(&remote)
-                .root_keys(vec![&KEYS[0]])
-                .targets_keys(vec![&KEYS[0]])
-                .snapshot_keys(vec![&KEYS[0]])
-                .timestamp_keys(vec![&KEYS[0]])
-                .with_root_builder(|bld| {
+            let mut parts = client.into_parts();
+            let _metadata3 = RepoBuilder::create(&mut parts.remote)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .stage_root_with_builder(|bld| {
                     bld.version(3)
                         .consistent_snapshot(true)
                         .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                        .root_key(KEYS[0].public().clone())
-                        .snapshot_key(KEYS[0].public().clone())
-                        .targets_key(KEYS[0].public().clone())
-                        .timestamp_key(KEYS[0].public().clone())
                 })
-                .targets_version(3)
-                .snapshot_version(3)
-                .timestamp_version(3)
+                .unwrap()
+                .stage_targets_with_builder(|bld| bld.version(2))
+                .unwrap()
+                .stage_snapshot_with_builder(|bld| bld.version(2))
+                .unwrap()
+                .with_timestamp_builder(|bld| bld.version(2))
+                .unwrap()
                 .commit()
                 .await
                 .unwrap();
 
+            let mut client = Client::from_parts(parts);
             assert_matches!(client.update().await, Ok(true));
             assert_eq!(client.tuf.trusted_root().version(), 3);
         })
@@ -1743,7 +1741,7 @@ mod test {
     fn constructor_succeeds_with_malformed_metadata() {
         block_on(async {
             // Store a malformed timestamp in the local repository.
-            let local = EphemeralRepository::<Json>::new();
+            let mut local = EphemeralRepository::<Json>::new();
             let junk_timestamp = "junk timestamp";
 
             local
@@ -1756,33 +1754,25 @@ mod test {
                 .unwrap();
 
             // Create a normal repository on the remote server.
-            let remote = EphemeralRepository::<Json>::new();
-            let metadata1 = RepoBuilder::new(&remote)
-                .root_keys(vec![&KEYS[0]])
-                .targets_keys(vec![&KEYS[0]])
-                .snapshot_keys(vec![&KEYS[0]])
-                .timestamp_keys(vec![&KEYS[0]])
-                .with_root_builder(|bld| {
-                    bld.expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                        .root_key(KEYS[0].public().clone())
-                        .snapshot_key(KEYS[0].public().clone())
-                        .targets_key(KEYS[0].public().clone())
-                        .timestamp_key(KEYS[0].public().clone())
-                })
-                .targets_version(1)
+            let mut remote = EphemeralRepository::<Json>::new();
+            let metadata1 = RepoBuilder::create(&mut remote)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
                 .commit()
                 .await
                 .unwrap();
 
             // Create the client. It should ignore the malformed timestamp.
-            let track_local = TrackRepository::new(&local);
-            let track_remote = TrackRepository::new(&remote);
+            let track_local = TrackRepository::new(local);
+            let track_remote = TrackRepository::new(remote);
 
             let mut client = Client::with_trusted_root(
                 Config::default(),
-                &metadata1.root,
-                &track_local,
-                &track_remote,
+                metadata1.root().unwrap(),
+                track_local,
+                track_remote,
             )
             .await
             .unwrap();
@@ -1790,12 +1780,12 @@ mod test {
             assert_eq!(client.tuf.trusted_root().version(), 1);
 
             // We shouldn't fetch metadata.
-            assert_eq!(track_remote.take_tracks(), vec![]);
+            assert_eq!(client.remote.as_inner().take_tracks(), vec![]);
 
             // We should only load the root metadata, but because it's expired we don't try
             // fetching the other local metadata.
             assert_eq!(
-                track_local.take_tracks(),
+                client.local.as_inner().take_tracks(),
                 vec![
                     Track::FetchErr(
                         MetadataPath::from_role(&Role::Root),
@@ -1825,24 +1815,20 @@ mod test {
     }
 
     async fn root_chain_update(consistent_snapshot: bool) {
-        let repo = EphemeralRepository::<Json>::new();
+        let mut repo = EphemeralRepository::<Json>::new();
 
-        // First, create the initial metadata.
-        let metadata1 = RepoBuilder::new(&repo)
-            .root_keys(vec![&KEYS[0]])
-            .targets_keys(vec![&KEYS[0], &KEYS[1], &KEYS[2]])
-            .snapshot_keys(vec![&KEYS[0], &KEYS[1], &KEYS[2]])
-            .timestamp_keys(vec![&KEYS[0], &KEYS[1], &KEYS[2]])
-            .with_root_builder(|bld| {
-                bld.version(1)
-                    .consistent_snapshot(consistent_snapshot)
-                    .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                    .root_key(KEYS[0].public().clone())
-                    .snapshot_key(KEYS[0].public().clone())
-                    .targets_key(KEYS[0].public().clone())
-                    .timestamp_key(KEYS[0].public().clone())
-            })
-            .targets_version(1)
+        // First, create the initial metadata. We want to use the same non-root
+        // metadata, so sign it with all the keys.
+        let metadata1 = RepoBuilder::create(&mut repo)
+            .trusted_root_keys(&[&KEYS[0]])
+            .signing_targets_keys(&[&KEYS[1], &KEYS[2]])
+            .trusted_targets_keys(&[&KEYS[0]])
+            .signing_snapshot_keys(&[&KEYS[1], &KEYS[2]])
+            .trusted_snapshot_keys(&[&KEYS[0]])
+            .signing_timestamp_keys(&[&KEYS[1], &KEYS[2]])
+            .trusted_timestamp_keys(&[&KEYS[0]])
+            .stage_root_with_builder(|bld| bld.consistent_snapshot(consistent_snapshot))
+            .unwrap()
             .commit()
             .await
             .unwrap();
@@ -1862,33 +1848,33 @@ mod test {
 
         // Now, make sure that the local metadata got version 1.
         let track_local = TrackRepository::new(EphemeralRepository::new());
-        let track_remote = TrackRepository::new(&repo);
+        let track_remote = TrackRepository::new(repo);
 
         let mut client = Client::with_trusted_root_keys(
             Config::default(),
             &MetadataVersion::Number(1),
             1,
             once(&KEYS[0].public().clone()),
-            &track_local,
-            &track_remote,
+            track_local,
+            track_remote,
         )
         .await
         .unwrap();
 
         // Check that we tried to load metadata from the local repository.
         assert_eq!(
-            track_remote.take_tracks(),
+            client.remote.as_inner().take_tracks(),
             vec![Track::fetch_found(
                 &root_path,
                 &MetadataVersion::Number(1),
-                metadata1.root.as_bytes()
+                metadata1.root().unwrap().as_bytes()
             ),]
         );
         assert_eq!(
-            track_local.take_tracks(),
+            client.local.as_inner().take_tracks(),
             vec![
                 Track::FetchErr(root_path.clone(), MetadataVersion::Number(1)),
-                Track::store_meta(&MetadataVersion::Number(1), &metadata1.root),
+                Track::store_meta(&MetadataVersion::Number(1), metadata1.root().unwrap()),
                 Track::FetchErr(root_path.clone(), MetadataVersion::Number(2)),
                 Track::FetchErr(timestamp_path.clone(), MetadataVersion::None),
             ]
@@ -1899,26 +1885,20 @@ mod test {
 
         // Make sure we fetched the metadata in the right order.
         assert_eq!(
-            track_remote.take_tracks(),
+            client.remote.as_inner().take_tracks(),
             vec![
                 Track::FetchErr(root_path.clone(), MetadataVersion::Number(2)),
-                Track::fetch_meta_found(
-                    &MetadataVersion::None,
-                    &metadata1.timestamp.as_ref().unwrap()
-                ),
-                Track::fetch_meta_found(&snapshot_version, &metadata1.snapshot.as_ref().unwrap()),
-                Track::fetch_meta_found(&targets_version, metadata1.targets.as_ref().unwrap()),
+                Track::fetch_meta_found(&MetadataVersion::None, metadata1.timestamp().unwrap()),
+                Track::fetch_meta_found(&snapshot_version, metadata1.snapshot().unwrap()),
+                Track::fetch_meta_found(&targets_version, metadata1.targets().unwrap()),
             ]
         );
         assert_eq!(
-            track_local.take_tracks(),
+            client.local.as_inner().take_tracks(),
             vec![
-                Track::store_meta(
-                    &MetadataVersion::None,
-                    metadata1.timestamp.as_ref().unwrap()
-                ),
-                Track::store_meta(&MetadataVersion::None, metadata1.snapshot.as_ref().unwrap()),
-                Track::store_meta(&MetadataVersion::None, metadata1.targets.as_ref().unwrap()),
+                Track::store_meta(&MetadataVersion::None, metadata1.timestamp().unwrap()),
+                Track::store_meta(&MetadataVersion::None, metadata1.snapshot().unwrap()),
+                Track::store_meta(&MetadataVersion::None, metadata1.targets().unwrap()),
             ],
         );
 
@@ -1928,94 +1908,83 @@ mod test {
 
         // Make sure we only fetched the next root and timestamp, and didn't store anything.
         assert_eq!(
-            track_remote.take_tracks(),
+            client.remote.as_inner().take_tracks(),
             vec![
                 Track::FetchErr(root_path.clone(), MetadataVersion::Number(2)),
-                Track::fetch_meta_found(
-                    &MetadataVersion::None,
-                    metadata1.timestamp.as_ref().unwrap(),
-                ),
+                Track::fetch_meta_found(&MetadataVersion::None, metadata1.timestamp().unwrap()),
             ]
         );
-        assert_eq!(track_local.take_tracks(), vec![]);
+        assert_eq!(client.local.as_inner().take_tracks(), vec![]);
 
         ////
         // Now bump the root to version 3
 
         // Make sure the version 2 is also signed by version 1's keys.
-        let metadata2 = RepoBuilder::new(&repo)
-            .root_keys(vec![&KEYS[0], &KEYS[1]])
-            .targets_keys(vec![&KEYS[0], &KEYS[1], &KEYS[2]])
-            .snapshot_keys(vec![&KEYS[0], &KEYS[1], &KEYS[2]])
-            .timestamp_keys(vec![&KEYS[0], &KEYS[1], &KEYS[2]])
-            .with_root_builder(|bld| {
-                bld.version(2)
-                    .consistent_snapshot(consistent_snapshot)
-                    .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                    .root_key(KEYS[1].public().clone())
-                    .snapshot_key(KEYS[1].public().clone())
-                    .targets_key(KEYS[1].public().clone())
-                    .timestamp_key(KEYS[1].public().clone())
-            })
+        //
+        // Note that we write to the underlying store so TrackRepo doesn't track
+        // this new metadata.
+        let mut parts = client.into_parts();
+        let metadata2 = RepoBuilder::create(parts.remote.as_inner_mut())
+            .signing_root_keys(&[&KEYS[0]])
+            .trusted_root_keys(&[&KEYS[1]])
+            .trusted_targets_keys(&[&KEYS[1]])
+            .trusted_snapshot_keys(&[&KEYS[1]])
+            .trusted_timestamp_keys(&[&KEYS[1]])
+            .stage_root_with_builder(|bld| bld.version(2).consistent_snapshot(consistent_snapshot))
+            .unwrap()
+            .skip_targets()
+            .skip_snapshot()
+            .skip_timestamp()
             .commit()
             .await
             .unwrap();
 
         // Make sure the version 3 is also signed by version 2's keys.
-        let metadata3 = RepoBuilder::new(&repo)
-            .root_keys(vec![&KEYS[1], &KEYS[2]])
-            .targets_keys(vec![&KEYS[0], &KEYS[1], &KEYS[2]])
-            .snapshot_keys(vec![&KEYS[0], &KEYS[1], &KEYS[2]])
-            .timestamp_keys(vec![&KEYS[0], &KEYS[1], &KEYS[2]])
-            .with_root_builder(|bld| {
-                bld.version(3)
-                    .consistent_snapshot(consistent_snapshot)
-                    .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                    .root_key(KEYS[2].public().clone())
-                    .snapshot_key(KEYS[2].public().clone())
-                    .targets_key(KEYS[2].public().clone())
-                    .timestamp_key(KEYS[2].public().clone())
-            })
+        let metadata3 = RepoBuilder::create(parts.remote.as_inner_mut())
+            .signing_root_keys(&[&KEYS[1]])
+            .trusted_root_keys(&[&KEYS[2]])
+            .trusted_targets_keys(&[&KEYS[2]])
+            .trusted_snapshot_keys(&[&KEYS[2]])
+            .trusted_timestamp_keys(&[&KEYS[2]])
+            .stage_root_with_builder(|bld| bld.version(3).consistent_snapshot(consistent_snapshot))
+            .unwrap()
+            .skip_targets()
+            .skip_snapshot()
+            .skip_timestamp()
             .commit()
             .await
             .unwrap();
 
         ////
         // Finally, check that the update brings us to version 3.
-
+        let mut client = Client::from_parts(parts);
         assert_matches!(client.update().await, Ok(true));
         assert_eq!(client.tuf.trusted_root().version(), 3);
 
         // Make sure we fetched and stored the metadata in the expected order. Note that we
-        // re-fetch snapshot and targets because we rotated keys, which caused `tuf::Tuf` to delete
+        // re-fetch snapshot and targets because we rotated keys, which caused `tuf::Database` to delete
         // the metadata.
         assert_eq!(
-            track_remote.take_tracks(),
+            client.remote.as_inner().take_tracks(),
             vec![
-                Track::fetch_meta_found(&MetadataVersion::Number(2), &metadata2.root,),
-                Track::fetch_meta_found(&MetadataVersion::Number(3), &metadata3.root,),
+                Track::fetch_meta_found(&MetadataVersion::Number(2), metadata2.root().unwrap()),
+                Track::fetch_meta_found(&MetadataVersion::Number(3), metadata3.root().unwrap()),
                 Track::FetchErr(root_path.clone(), MetadataVersion::Number(4)),
-                Track::fetch_meta_found(
-                    &MetadataVersion::None,
-                    metadata1.timestamp.as_ref().unwrap(),
-                ),
-                Track::fetch_meta_found(&snapshot_version, metadata1.snapshot.as_ref().unwrap(),),
-                Track::fetch_meta_found(&targets_version, metadata1.targets.as_ref().unwrap(),),
+                Track::fetch_meta_found(&MetadataVersion::None, metadata1.timestamp().unwrap()),
+                Track::fetch_meta_found(&snapshot_version, metadata1.snapshot().unwrap()),
+                Track::fetch_meta_found(&targets_version, metadata1.targets().unwrap()),
             ]
         );
         assert_eq!(
-            track_local.take_tracks(),
+            client.local.as_inner().take_tracks(),
             vec![
-                Track::store_meta(&MetadataVersion::None, &metadata2.root,),
-                Track::store_meta(&MetadataVersion::Number(2), &metadata2.root,),
-                Track::store_meta(&MetadataVersion::None, &metadata3.root),
-                Track::store_meta(&MetadataVersion::Number(3), &metadata3.root,),
-                Track::store_meta(
-                    &MetadataVersion::None,
-                    metadata1.timestamp.as_ref().unwrap(),
-                ),
-                Track::store_meta(&MetadataVersion::None, metadata1.snapshot.as_ref().unwrap(),),
-                Track::store_meta(&MetadataVersion::None, metadata1.targets.as_ref().unwrap(),),
+                Track::store_meta(&MetadataVersion::None, metadata2.root().unwrap()),
+                Track::store_meta(&MetadataVersion::Number(2), metadata2.root().unwrap()),
+                Track::store_meta(&MetadataVersion::None, metadata3.root().unwrap()),
+                Track::store_meta(&MetadataVersion::Number(3), metadata3.root().unwrap()),
+                Track::store_meta(&MetadataVersion::None, metadata1.timestamp().unwrap()),
+                Track::store_meta(&MetadataVersion::None, metadata1.snapshot().unwrap()),
+                Track::store_meta(&MetadataVersion::None, metadata1.targets().unwrap()),
             ],
         );
     }
@@ -2024,7 +1993,7 @@ mod test {
     fn test_fetch_target_description_standard() {
         block_on(test_fetch_target_description(
             "standard/metadata".to_string(),
-            TargetDescription::from_reader(
+            TargetDescription::from_slice(
                 "target with no custom metadata".as_bytes(),
                 &[HashAlgorithm::Sha256],
             )
@@ -2036,7 +2005,7 @@ mod test {
     fn test_fetch_target_description_custom_empty() {
         block_on(test_fetch_target_description(
             "custom-empty".to_string(),
-            TargetDescription::from_reader_with_custom(
+            TargetDescription::from_slice_with_custom(
                 "target with empty custom metadata".as_bytes(),
                 &[HashAlgorithm::Sha256],
                 hashmap!(),
@@ -2049,7 +2018,7 @@ mod test {
     fn test_fetch_target_description_custom() {
         block_on(test_fetch_target_description(
             "custom/metadata".to_string(),
-            TargetDescription::from_reader_with_custom(
+            TargetDescription::from_slice_with_custom(
                 "target with lots of custom metadata".as_bytes(),
                 &[HashAlgorithm::Sha256],
                 hashmap!(
@@ -2070,26 +2039,22 @@ mod test {
 
     async fn test_fetch_target_description(path: String, expected_description: TargetDescription) {
         // Generate an ephemeral repository with a single target.
-        let remote = EphemeralRepository::<Json>::new();
+        let mut remote = EphemeralRepository::<Json>::new();
 
-        let metadata = RepoBuilder::new(&remote)
-            .root_keys(vec![&KEYS[0]])
-            .targets_keys(vec![&KEYS[0]])
-            .snapshot_keys(vec![&KEYS[0]])
-            .timestamp_keys(vec![&KEYS[0]])
-            .with_root_builder(|bld| {
-                bld.expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                    .root_key(KEYS[0].public().clone())
-                    .snapshot_key(KEYS[0].public().clone())
-                    .targets_key(KEYS[0].public().clone())
-                    .timestamp_key(KEYS[0].public().clone())
-            })
-            .with_targets_builder(|bld| {
+        let metadata = RepoBuilder::create(&mut remote)
+            .trusted_root_keys(&[&KEYS[0]])
+            .trusted_targets_keys(&[&KEYS[0]])
+            .trusted_snapshot_keys(&[&KEYS[0]])
+            .trusted_timestamp_keys(&[&KEYS[0]])
+            .stage_root()
+            .unwrap()
+            .stage_targets_with_builder(|bld| {
                 bld.insert_target_description(
-                    VirtualTargetPath::new(path.clone()).unwrap(),
+                    TargetPath::new(path.clone()).unwrap(),
                     expected_description.clone(),
                 )
             })
+            .unwrap()
             .commit()
             .await
             .unwrap();
@@ -2097,7 +2062,7 @@ mod test {
         // Initialize and update client.
         let mut client = Client::with_trusted_root(
             Config::default(),
-            &metadata.root,
+            metadata.root().unwrap(),
             EphemeralRepository::new(),
             remote,
         )
@@ -2116,24 +2081,16 @@ mod test {
     }
 
     #[test]
-    fn update_fails_if_cannot_write_to_repo() {
+    fn update_eventually_succeeds_if_cannot_write_to_repo() {
         block_on(async {
-            let remote = EphemeralRepository::<Json>::new();
+            let mut remote = EphemeralRepository::<Json>::new();
 
             // First, create the metadata.
-            let _ = RepoBuilder::new(&remote)
-                .root_keys(vec![&KEYS[0]])
-                .targets_keys(vec![&KEYS[0]])
-                .snapshot_keys(vec![&KEYS[0]])
-                .timestamp_keys(vec![&KEYS[0]])
-                .with_root_builder(|bld| {
-                    bld.expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                        .root_key(KEYS[0].public().clone())
-                        .snapshot_key(KEYS[0].public().clone())
-                        .targets_key(KEYS[0].public().clone())
-                        .timestamp_key(KEYS[0].public().clone())
-                })
-                .targets_version(1)
+            let _ = RepoBuilder::create(&mut remote)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
                 .commit()
                 .await
                 .unwrap();
@@ -2145,8 +2102,8 @@ mod test {
                 &MetadataVersion::Number(1),
                 1,
                 once(&KEYS[0].public().clone()),
-                &local,
-                &remote,
+                local,
+                remote,
             )
             .await
             .unwrap();
@@ -2154,73 +2111,102 @@ mod test {
             // The first update should succeed.
             assert_matches!(client.update().await, Ok(true));
 
+            // Make sure the database is correct.
+            let mut parts = client.into_parts();
+            assert_eq!(parts.database.trusted_root().version(), 1);
+            assert_eq!(parts.database.trusted_timestamp().unwrap().version(), 1);
+            assert_eq!(parts.database.trusted_snapshot().unwrap().version(), 1);
+            assert_eq!(parts.database.trusted_targets().unwrap().version(), 1);
+
             // Publish new metadata.
-            let _ = RepoBuilder::new(&remote)
-                .root_keys(vec![&KEYS[0]])
-                .targets_keys(vec![&KEYS[0]])
-                .snapshot_keys(vec![&KEYS[0]])
-                .timestamp_keys(vec![&KEYS[0]])
-                .with_root_builder(|bld| {
-                    bld.expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                        .root_key(KEYS[0].public().clone())
-                        .snapshot_key(KEYS[0].public().clone())
-                        .targets_key(KEYS[0].public().clone())
-                        .timestamp_key(KEYS[0].public().clone())
-                })
-                .targets_version(2)
-                .snapshot_version(2)
-                .timestamp_version(2)
+            let _ = RepoBuilder::create(&mut parts.remote)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .stage_root_with_builder(|bld| bld.version(2))
+                .unwrap()
+                .stage_targets_with_builder(|bld| bld.version(2))
+                .unwrap()
+                .stage_snapshot_with_builder(|bld| bld.version(2))
+                .unwrap()
+                .with_timestamp_builder(|bld| bld.version(2))
+                .unwrap()
                 .commit()
                 .await
                 .unwrap();
 
-            local.fail_metadata_stores(true);
+            // Make sure we fail to write metadata to the local store.
+            parts.local.fail_metadata_stores(true);
 
             // The second update should fail.
+            let mut client = Client::from_parts(parts);
             assert_matches!(client.update().await, Err(Error::Encoding(_)));
+
+            // FIXME(#297): rust-tuf diverges from the spec by throwing away the
+            // metadata if the root is updated.
+            assert_eq!(client.trusted_root().version(), 2);
+            assert_eq!(client.trusted_timestamp(), None);
+            assert_eq!(client.trusted_snapshot(), None);
+            assert_eq!(client.trusted_targets(), None);
 
             // However, due to https://github.com/theupdateframework/specification/issues/131, if
             // the update is retried a few times it will still succeed.
             assert_matches!(client.update().await, Err(Error::Encoding(_)));
+            assert_eq!(client.trusted_root().version(), 2);
+            assert_eq!(client.trusted_timestamp().unwrap().version(), 2);
+            assert_eq!(client.trusted_snapshot(), None);
+            assert_eq!(client.trusted_targets(), None);
+
             assert_matches!(client.update().await, Err(Error::Encoding(_)));
+            assert_eq!(client.trusted_root().version(), 2);
+            assert_eq!(client.trusted_timestamp().unwrap().version(), 2);
+            assert_eq!(client.trusted_snapshot().unwrap().version(), 2);
+            assert_eq!(client.trusted_targets(), None);
+
+            assert_matches!(client.update().await, Err(Error::Encoding(_)));
+            assert_eq!(client.trusted_root().version(), 2);
+            assert_eq!(client.trusted_timestamp().unwrap().version(), 2);
+            assert_eq!(client.trusted_snapshot().unwrap().version(), 2);
+            assert_eq!(client.trusted_targets().unwrap().version(), 2);
+
             assert_matches!(client.update().await, Ok(false));
+            assert_eq!(client.trusted_root().version(), 2);
+            assert_eq!(client.trusted_timestamp().unwrap().version(), 2);
+            assert_eq!(client.trusted_snapshot().unwrap().version(), 2);
+            assert_eq!(client.trusted_targets().unwrap().version(), 2);
         });
     }
 
     #[test]
     fn with_trusted_methods_return_correct_metadata() {
         block_on(async {
-            let local = EphemeralRepository::<Json>::new();
+            let mut local = EphemeralRepository::<Json>::new();
             let remote = EphemeralRepository::<Json>::new();
 
             // Store an expired root in the local store.
-            let metadata1 = RepoBuilder::new(&local)
-                .root_keys(vec![&KEYS[0]])
-                .targets_keys(vec![&KEYS[0]])
-                .snapshot_keys(vec![&KEYS[0]])
-                .timestamp_keys(vec![&KEYS[0]])
-                .with_root_builder(|bld| {
-                    bld.version(1)
-                        .consistent_snapshot(true)
-                        .expires(Utc.ymd(2038, 1, 1).and_hms(0, 0, 0))
-                        .root_key(KEYS[0].public().clone())
-                        .snapshot_key(KEYS[0].public().clone())
-                        .targets_key(KEYS[0].public().clone())
-                        .timestamp_key(KEYS[0].public().clone())
+            let metadata1 = RepoBuilder::create(&mut local)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .stage_root_with_builder(|bld| {
+                    bld.consistent_snapshot(true)
+                        .expires(Utc.ymd(1970, 1, 1).and_hms(0, 0, 0))
                 })
-                .targets_version(1)
-                .commit()
+                .unwrap()
+                .commit_skip_validation()
                 .await
                 .unwrap();
 
-            let track_local = TrackRepository::new(&local);
-            let track_remote = TrackRepository::new(&remote);
+            let track_local = TrackRepository::new(local);
+            let track_remote = TrackRepository::new(remote);
 
             let client = Client::with_trusted_root(
                 Config::default(),
-                &metadata1.root,
-                &track_local,
-                &track_remote,
+                metadata1.root().unwrap(),
+                track_local,
+                track_remote,
             )
             .await
             .unwrap();
@@ -2232,6 +2218,100 @@ mod test {
                 client.trusted_delegations(),
                 client.tuf.trusted_delegations()
             );
+        })
+    }
+
+    #[test]
+    fn client_can_update_with_unknown_len_and_hashes() {
+        block_on(async {
+            let mut repo = EphemeralRepository::<Json>::new();
+
+            let root = RootMetadataBuilder::new()
+                .consistent_snapshot(true)
+                .root_key(KEYS[0].public().clone())
+                .targets_key(KEYS[1].public().clone())
+                .snapshot_key(KEYS[2].public().clone())
+                .timestamp_key(KEYS[3].public().clone())
+                .signed::<Json>(&KEYS[0])
+                .unwrap()
+                .to_raw()
+                .unwrap();
+
+            repo.store_metadata(
+                &MetadataPath::from_role(&Role::Root),
+                &MetadataVersion::Number(1),
+                &mut root.as_bytes(),
+            )
+            .await
+            .unwrap();
+
+            let targets = TargetsMetadataBuilder::new()
+                .signed::<Json>(&KEYS[1])
+                .unwrap()
+                .to_raw()
+                .unwrap();
+
+            repo.store_metadata(
+                &MetadataPath::from_role(&Role::Targets),
+                &MetadataVersion::Number(1),
+                &mut targets.as_bytes(),
+            )
+            .await
+            .unwrap();
+
+            // Create a targets metadata description, and deliberately don't set the metadata length
+            // or hashes.
+            let targets_description = MetadataDescription::new(1, None, HashMap::new()).unwrap();
+
+            let snapshot = SnapshotMetadataBuilder::new()
+                .insert_metadata_description(
+                    MetadataPath::from_role(&Role::Targets),
+                    targets_description,
+                )
+                .signed::<Json>(&KEYS[2])
+                .unwrap()
+                .to_raw()
+                .unwrap();
+
+            repo.store_metadata(
+                &MetadataPath::from_role(&Role::Snapshot),
+                &MetadataVersion::Number(1),
+                &mut snapshot.as_bytes(),
+            )
+            .await
+            .unwrap();
+
+            // Create a snapshot metadata description, and deliberately don't set the metadata length
+            // or hashes.
+            let timestamp_description = MetadataDescription::new(1, None, HashMap::new()).unwrap();
+
+            let timestamp =
+                TimestampMetadataBuilder::from_metadata_description(timestamp_description)
+                    .signed::<Json>(&KEYS[3])
+                    .unwrap()
+                    .to_raw()
+                    .unwrap();
+
+            repo.store_metadata(
+                &MetadataPath::from_role(&Role::Timestamp),
+                &MetadataVersion::None,
+                &mut timestamp.as_bytes(),
+            )
+            .await
+            .unwrap();
+
+            let mut client = Client::with_trusted_root_keys(
+                Config::default(),
+                &MetadataVersion::Number(1),
+                1,
+                once(&KEYS[0].public().clone()),
+                EphemeralRepository::new(),
+                repo,
+            )
+            .await
+            .unwrap();
+
+            assert_matches!(client.update().await, Ok(true));
         })
     }
 }

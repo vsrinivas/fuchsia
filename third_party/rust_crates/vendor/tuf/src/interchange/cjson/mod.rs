@@ -1,7 +1,6 @@
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 use std::collections::BTreeMap;
-use std::io::{Read, Write};
 
 use crate::error::Error;
 use crate::interchange::DataInterchange;
@@ -200,7 +199,7 @@ impl DataInterchange for Json {
     /// # use tuf::interchange::{DataInterchange, Json};
     /// # use std::collections::HashMap;
     /// let jsn: &[u8] = br#"{"foo": "bar", "baz": "quux"}"#;
-    /// let raw = Json::from_reader(jsn).unwrap();
+    /// let raw = Json::from_slice(jsn).unwrap();
     /// let out = Json::canonicalize(&raw).unwrap();
     /// assert_eq!(out, br#"{"baz":"quux","foo":"bar"}"#);
     /// ```
@@ -257,51 +256,6 @@ impl DataInterchange for Json {
     }
 
     /// ```
-    /// # use serde_json::json;
-    /// # use tuf::interchange::{DataInterchange, Json};
-    /// let json = json!({
-    ///     "o": {
-    ///         "a": [1, 2, 3],
-    ///         "s": "string",
-    ///         "n": 123,
-    ///         "t": true,
-    ///         "f": false,
-    ///         "0": null,
-    ///     },
-    /// });
-    ///
-    /// let mut buf = Vec::new();
-    /// Json::to_writer(&mut buf, &json).unwrap();
-    /// assert_eq!(
-    ///     &String::from_utf8(buf).unwrap(),
-    ///     r#"{"o":{"0":null,"a":[1,2,3],"f":false,"n":123,"s":"string","t":true}}"#
-    /// );
-    /// ```
-    fn to_writer<W, T: Sized>(mut writer: W, value: &T) -> Result<()>
-    where
-        W: Write,
-        T: Serialize,
-    {
-        let bytes = Self::canonicalize(&Self::serialize(value)?)?;
-        writer.write_all(&bytes)?;
-        Ok(())
-    }
-
-    /// ```
-    /// # use tuf::interchange::{DataInterchange, Json};
-    /// # use std::collections::HashMap;
-    /// let jsn: &[u8] = br#"{"foo": "bar", "baz": "quux"}"#;
-    /// let _: HashMap<String, String> = Json::from_reader(jsn).unwrap();
-    /// ```
-    fn from_reader<R, T>(rdr: R) -> Result<T>
-    where
-        R: Read,
-        T: DeserializeOwned,
-    {
-        Ok(serde_json::from_reader(rdr)?)
-    }
-
-    /// ```
     /// # use tuf::interchange::{DataInterchange, Json};
     /// # use std::collections::HashMap;
     /// let jsn: &[u8] = br#"{"foo": "bar", "baz": "quux"}"#;
@@ -332,7 +286,7 @@ enum Value {
 }
 
 impl Value {
-    fn write(&self, mut buf: &mut Vec<u8>) -> std::result::Result<(), String> {
+    fn write(&self, buf: &mut Vec<u8>) -> std::result::Result<(), String> {
         match *self {
             Value::Null => {
                 buf.extend(b"null");
@@ -366,7 +320,7 @@ impl Value {
                     if !first {
                         buf.push(b',');
                     }
-                    a.write(&mut buf)?;
+                    a.write(buf)?;
                     first = false;
                 }
                 buf.push(b']');
@@ -387,7 +341,7 @@ impl Value {
                     buf.extend(k.as_bytes());
 
                     buf.push(b':');
-                    v.write(&mut buf)?;
+                    v.write(buf)?;
                 }
                 buf.push(b'}');
                 Ok(())
@@ -413,7 +367,7 @@ fn convert(jsn: &serde_json::Value) -> std::result::Result<Value, String> {
             .ok_or_else(|| String::from("only i64 and u64 are supported")),
         serde_json::Value::Array(ref arr) => {
             let mut out = Vec::new();
-            for res in arr.iter().map(|v| convert(v)) {
+            for res in arr.iter().map(convert) {
                 out.push(res?)
             }
             Ok(Value::Array(out))

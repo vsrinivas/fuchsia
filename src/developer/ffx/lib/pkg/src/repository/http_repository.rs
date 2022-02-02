@@ -266,7 +266,7 @@ mod test {
         fuchsia_async as fasync,
         fuchsia_hyper::new_https_client,
         fuchsia_pkg::{build_with_file_system, CreationManifest, FileSystem},
-        fuchsia_repo_builder::RepoBuilder,
+        futures::io::AllowStdIo,
         maplit::{btreemap, hashmap},
         std::{
             collections::HashMap,
@@ -276,10 +276,10 @@ mod test {
             path::Path,
         },
         tuf::{
-            client::Config,
             crypto::HashAlgorithm,
             interchange::Json,
-            metadata::{TargetDescription, VirtualTargetPath},
+            metadata::{TargetDescription, TargetPath},
+            repo_builder::RepoBuilder,
             repository::FileSystemRepositoryBuilder,
         },
     };
@@ -355,37 +355,32 @@ mod test {
             blob_dir.join("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b");
         write_file(blob_path, "".as_bytes());
 
+        let description = TargetDescription::from_reader_with_custom(
+            AllowStdIo::new(File::open(meta_far_path).unwrap()),
+            &[HashAlgorithm::Sha256],
+            hashmap! {
+                "merkle".into() =>
+                    "947015aca61730b5035469d86344aa9d68284143967e41496a9394b26ac8eabc"
+                    .into(),
+            },
+        )
+        .await
+        .unwrap();
+
         // Write TUF metadata
         let key = repo_private_key();
         RepoBuilder::create(
-            Config::default(),
-            &FileSystemRepositoryBuilder::<Json>::new(metadata_dir.clone()).build().unwrap(),
-            [&key],
-            [&key],
-            [&key],
-            [&key],
+            FileSystemRepositoryBuilder::<Json>::new(metadata_dir.clone()).build().unwrap(),
         )
-        .with_root_builder(|builder| builder.consistent_snapshot(true))
-        .await
+        .trusted_root_keys(&[&key])
+        .trusted_targets_keys(&[&key])
+        .trusted_snapshot_keys(&[&key])
+        .trusted_timestamp_keys(&[&key])
+        .stage_root()
         .unwrap()
-        .with_targets_builder(|builder| {
-            let description = TargetDescription::from_reader_with_custom(
-                File::open(meta_far_path).unwrap(),
-                &[HashAlgorithm::Sha256],
-                hashmap! {
-                    "merkle".into() =>
-                        "947015aca61730b5035469d86344aa9d68284143967e41496a9394b26ac8eabc"
-                        .into(),
-                },
-            )
-            .unwrap();
-
-            builder.insert_target_description(
-                VirtualTargetPath::new("test_package".to_owned()).unwrap(),
-                description,
-            )
+        .stage_targets_with_builder(|builder| {
+            builder.insert_target_description(TargetPath::new("test_package").unwrap(), description)
         })
-        .await
         .unwrap()
         .commit()
         .await

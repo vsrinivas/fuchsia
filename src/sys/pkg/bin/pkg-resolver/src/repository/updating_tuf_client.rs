@@ -34,13 +34,14 @@ use {
     },
 };
 
+type TufClient = tuf::client::Client<
+    Json,
+    RWRepository<Json, Box<dyn RepositoryStorageProvider<Json> + Sync + Send>>,
+    Box<dyn RepositoryProvider<Json> + Send>,
+>;
+
 pub struct UpdatingTufClient {
-    client: tuf::client::Client<
-        Json,
-        Arc<RWRepository<Json, Box<dyn RepositoryStorageProvider<Json> + Sync + Send>>>,
-        Box<dyn RepositoryProvider<Json> + Send>,
-        tuf::client::DefaultTranslator,
-    >,
+    client: TufClient,
 
     /// Time that this repository was last successfully checked for an update, or None if the
     /// repository has never successfully fetched target metadata.
@@ -123,12 +124,7 @@ pub struct RepoVersions {
 
 impl UpdatingTufClient {
     pub fn from_tuf_client_and_mirror_config(
-        client: tuf::client::Client<
-            Json,
-            Arc<RWRepository<Json, Box<dyn RepositoryStorageProvider<Json> + Sync + Send>>>,
-            Box<dyn RepositoryProvider<Json> + Send>,
-            tuf::client::DefaultTranslator,
-        >,
+        client: TufClient,
         config: Option<&MirrorConfig>,
         tuf_metadata_timeout: Duration,
         node: inspect::Node,

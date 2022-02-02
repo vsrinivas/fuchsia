@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "tuf"
-version = "0.3.0-beta3"
+version = "0.3.0-beta4"
 authors = ["heartsucker <heartsucker@autistici.org>", "Erick Tryzelaar <etryzelaar@google.com>"]
 description = "Library for The Update Framework (TUF)"
 homepage = "https://github.com/heartsucker/rust-tuf"
@@ -66,9 +66,6 @@ version = "0.4"
 [dependencies.log]
 version = "0.4"
 
-[dependencies.parking_lot]
-version = "0.11"
-
 [dependencies.percent-encoding]
 version = "2.1"
 
@@ -112,3 +109,4 @@ version = "1"
 
 [features]
 default = ["hyper_014/tcp"]
+unstable_rsa = []
