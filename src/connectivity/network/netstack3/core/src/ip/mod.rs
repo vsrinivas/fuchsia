@@ -56,7 +56,7 @@ use crate::{
             InnerIcmpContext, ShouldSendIcmpv4ErrorInfo, ShouldSendIcmpv6ErrorInfo,
         },
         ipv6::Ipv6PacketAction,
-        path_mtu::{IpLayerPathMtuCache, PmtuTimerId},
+        path_mtu::{PmtuCache, PmtuHandler, PmtuTimerId},
         reassembly::{
             process_fragment, reassemble_packet, FragmentCacheKey, FragmentProcessingState,
             IpLayerFragmentCache,
@@ -424,7 +424,7 @@ impl Ipv4StateBuilder {
                 forward: self.forward,
                 table: ForwardingTable::default(),
                 fragment_cache: IpLayerFragmentCache::new(),
-                path_mtu: IpLayerPathMtuCache::new(),
+                pmtu_cache: PmtuCache::default(),
             },
             icmp: self.icmp.build(),
             next_packet_id: 0,
@@ -469,7 +469,7 @@ impl Ipv6StateBuilder {
                 forward: self.forward,
                 table: ForwardingTable::default(),
                 fragment_cache: IpLayerFragmentCache::new(),
-                path_mtu: IpLayerPathMtuCache::new(),
+                pmtu_cache: PmtuCache::default(),
             },
             icmp: self.icmp.build(),
         }
@@ -499,7 +499,7 @@ struct IpStateInner<I: Ip, Instant: crate::Instant> {
     forward: bool,
     table: ForwardingTable<I, DeviceId>,
     fragment_cache: IpLayerFragmentCache<I>,
-    path_mtu: IpLayerPathMtuCache<I, Instant>,
+    pmtu_cache: PmtuCache<I, Instant>,
 }
 
 #[specialize_ip]
@@ -529,16 +529,6 @@ impl<I: Ip, D: EventDispatcher> StateContext<IpLayerFragmentCache<I>> for Ctx<D>
 
     fn get_state_mut_with(&mut self, _id: ()) -> &mut IpLayerFragmentCache<I> {
         &mut get_state_inner_mut(&mut self.state).fragment_cache
-    }
-}
-
-impl<I: Ip, D: EventDispatcher> StateContext<IpLayerPathMtuCache<I, D::Instant>> for Ctx<D> {
-    fn get_state_with(&self, _id: ()) -> &IpLayerPathMtuCache<I, D::Instant> {
-        &get_state_inner(&self.state).path_mtu
-    }
-
-    fn get_state_mut_with(&mut self, _id: ()) -> &mut IpLayerPathMtuCache<I, D::Instant> {
-        &mut get_state_inner_mut(&mut self.state).path_mtu
     }
 }
 
@@ -574,10 +564,18 @@ pub(crate) fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: IpLayerTime
         IpLayerTimerId::ReassemblyTimeoutv4(key) => ctx.handle_timer(key),
         IpLayerTimerId::ReassemblyTimeoutv6(key) => ctx.handle_timer(key),
         IpLayerTimerId::PmtuTimeout(IpVersion::V4) => {
-            ctx.handle_timer(PmtuTimerId::<Ipv4>::default())
+            ctx.state
+                .ipv4
+                .inner
+                .pmtu_cache
+                .handle_timer(&mut ctx.dispatcher, PmtuTimerId::default());
         }
         IpLayerTimerId::PmtuTimeout(IpVersion::V6) => {
-            ctx.handle_timer(PmtuTimerId::<Ipv6>::default())
+            ctx.state
+                .ipv6
+                .inner
+                .pmtu_cache
+                .handle_timer(&mut ctx.dispatcher, PmtuTimerId::default());
         }
     }
 }
@@ -625,25 +623,25 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Ctx
     }
 }
 
-impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for Ctx<D> {
+impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for D {
     fn schedule_timer_instant(
         &mut self,
         time: Self::Instant,
         _id: PmtuTimerId<I>,
     ) -> Option<Self::Instant> {
-        self.dispatcher.schedule_timer_instant(time, IpLayerTimerId::new_pmtu_timer_id::<I>())
+        self.schedule_timer_instant(time, IpLayerTimerId::new_pmtu_timer_id::<I>())
     }
 
     fn cancel_timer(&mut self, _id: PmtuTimerId<I>) -> Option<Self::Instant> {
-        self.dispatcher.cancel_timer(IpLayerTimerId::new_pmtu_timer_id::<I>())
+        self.cancel_timer(IpLayerTimerId::new_pmtu_timer_id::<I>())
     }
 
     fn cancel_timers_with<F: FnMut(&PmtuTimerId<I>) -> bool>(&mut self, _f: F) {
-        self.dispatcher.cancel_timers_with(|id| id == &IpLayerTimerId::new_pmtu_timer_id::<I>());
+        self.cancel_timers_with(|id| id == &IpLayerTimerId::new_pmtu_timer_id::<I>());
     }
 
     fn scheduled_instant(&self, _id: PmtuTimerId<I>) -> Option<Self::Instant> {
-        self.dispatcher.scheduled_instant(IpLayerTimerId::new_pmtu_timer_id::<I>())
+        self.scheduled_instant(IpLayerTimerId::new_pmtu_timer_id::<I>())
     }
 }
 
@@ -1794,6 +1792,52 @@ impl<D: EventDispatcher> StateContext<Icmpv6State<D::Instant, IpSock<Ipv6, Devic
     }
 }
 
+impl<D: EventDispatcher> PmtuHandler<Ipv4> for Ctx<D> {
+    fn update_pmtu_if_less(&mut self, src_ip: Ipv4Addr, dst_ip: Ipv4Addr, new_mtu: u32) {
+        // TODO(https://fxbug.dev/92599): Do something with this `Result` or
+        // change `update_pmtu_if_less` to not return one?
+        let _: Result<_, _> = self.state.ipv4.inner.pmtu_cache.update_pmtu_if_less(
+            &mut self.dispatcher,
+            src_ip,
+            dst_ip,
+            new_mtu,
+        );
+    }
+    fn update_pmtu_next_lower(&mut self, src_ip: Ipv4Addr, dst_ip: Ipv4Addr, from: u32) {
+        // TODO(https://fxbug.dev/92599): Do something with this `Result` or
+        // change `update_pmtu_next_lower` to not return one?
+        let _: Result<_, _> = self.state.ipv4.inner.pmtu_cache.update_pmtu_next_lower(
+            &mut self.dispatcher,
+            src_ip,
+            dst_ip,
+            from,
+        );
+    }
+}
+
+impl<D: EventDispatcher> PmtuHandler<Ipv6> for Ctx<D> {
+    fn update_pmtu_if_less(&mut self, src_ip: Ipv6Addr, dst_ip: Ipv6Addr, new_mtu: u32) {
+        // TODO(https://fxbug.dev/92599): Do something with this `Result` or
+        // change `update_pmtu_if_less` to not return one?
+        let _: Result<_, _> = self.state.ipv6.inner.pmtu_cache.update_pmtu_if_less(
+            &mut self.dispatcher,
+            src_ip,
+            dst_ip,
+            new_mtu,
+        );
+    }
+    fn update_pmtu_next_lower(&mut self, src_ip: Ipv6Addr, dst_ip: Ipv6Addr, from: u32) {
+        // TODO(https://fxbug.dev/92599): Do something with this `Result` or
+        // change `update_pmtu_next_lower` to not return one?
+        let _: Result<_, _> = self.state.ipv6.inner.pmtu_cache.update_pmtu_next_lower(
+            &mut self.dispatcher,
+            src_ip,
+            dst_ip,
+            from,
+        );
+    }
+}
+
 impl<D: EventDispatcher> InnerIcmpContext<Ipv4> for Ctx<D> {
     fn receive_icmp_error(
         &mut self,
@@ -2080,7 +2124,6 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use crate::device::{receive_frame, set_routing_enabled, FrameDestination};
-    use crate::ip::path_mtu::get_pmtu;
     use crate::testutil::*;
     use crate::{assert_empty, DeviceId, Mac, StackStateBuilder};
 
@@ -2828,7 +2871,10 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_state_inner::<I, DummyEventDispatcher>(&ctx.state)
+                .pmtu_cache
+                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+                .unwrap(),
             new_mtu1
         );
 
@@ -2853,7 +2899,10 @@ mod tests {
 
         // The PMTU should not have updated to `new_mtu2`
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_state_inner::<I, DummyEventDispatcher>(&ctx.state)
+                .pmtu_cache
+                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+                .unwrap(),
             new_mtu1
         );
 
@@ -2878,7 +2927,10 @@ mod tests {
 
         // The PMTU should have updated to 1900.
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_state_inner::<I, DummyEventDispatcher>(&ctx.state)
+                .pmtu_cache
+                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+                .unwrap(),
             new_mtu3
         );
     }
@@ -2914,7 +2966,9 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
+            get_state_inner::<I, DummyEventDispatcher>(&ctx.state)
+                .pmtu_cache
+                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
             None
         );
     }
@@ -2962,7 +3016,10 @@ mod tests {
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_state_inner::<Ipv4, DummyEventDispatcher>(&ctx.state)
+                .pmtu_cache
+                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+                .unwrap(),
             508
         );
 
@@ -2986,7 +3043,10 @@ mod tests {
         // Should not have updated PMTU as there is no other valid
         // lower PMTU value.
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_state_inner::<Ipv4, DummyEventDispatcher>(&ctx.state)
+                .pmtu_cache
+                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+                .unwrap(),
             508
         );
 
@@ -3010,7 +3070,10 @@ mod tests {
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_state_inner::<Ipv4, DummyEventDispatcher>(&ctx.state)
+                .pmtu_cache
+                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+                .unwrap(),
             68
         );
 
@@ -3036,7 +3099,10 @@ mod tests {
 
         // Should not have updated the PMTU as the current PMTU is lower.
         assert_eq!(
-            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).unwrap(),
+            get_state_inner::<Ipv4, DummyEventDispatcher>(&ctx.state)
+                .pmtu_cache
+                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+                .unwrap(),
             68
         );
     }
