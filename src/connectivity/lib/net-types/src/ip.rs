@@ -1042,8 +1042,7 @@ impl ScopeableAddress for IpAddr {
 ///   $witness<IpAddr>`
 /// - `From<$witness<IpAddr>> for IpAddr<$witness<Ipv4Addr>,
 ///   $witness<Ipv6Addr>>`
-/// - `From<$witness<Ipv4Addr>> for $witness<IpAddr>`
-/// - `From<$witness<Ipv6Addr>> for $witness<IpAddr>`
+/// - `From<$witness<A>> for $witness<A>`
 /// - `From<$witness<Ipv4Addr>> for IpAddr`
 /// - `From<$witness<Ipv6Addr>> for IpAddr`
 /// - `TryFrom<Ipv4Addr> for $witness<Ipv4Addr>`
@@ -1055,9 +1054,6 @@ impl ScopeableAddress for IpAddr {
 /// - `TryFrom<$ipaddr> for $witness<$ipaddr>`
 macro_rules! impl_from_witness {
     ($witness:ident) => {
-        impl_from_witness!($witness, Ipv4Addr, Witness::new_unchecked);
-        impl_from_witness!($witness, Ipv6Addr, Witness::new_unchecked);
-
         impl From<IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>> for $witness<IpAddr> {
             fn from(addr: IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>) -> $witness<IpAddr> {
                 unsafe {
@@ -1076,6 +1072,35 @@ macro_rules! impl_from_witness {
                         IpAddr::V6(addr) => IpAddr::V6(Witness::new_unchecked(addr)),
                     }
                 }
+            }
+        }
+        impl<A: IpAddress> From<$witness<A>> for $witness<IpAddr> {
+            fn from(addr: $witness<A>) -> $witness<IpAddr> {
+                unsafe { Witness::new_unchecked(addr.to_ip_addr()) }
+            }
+        }
+        // NOTE: Orphan rules prevent implementing `From` for `A: IpAddress`.
+        impl From<$witness<Ipv4Addr>> for Ipv4Addr {
+            fn from(addr: $witness<Ipv4Addr>) -> Ipv4Addr {
+                addr.get()
+            }
+        }
+        impl From<$witness<Ipv6Addr>> for Ipv6Addr {
+            fn from(addr: $witness<Ipv6Addr>) -> Ipv6Addr {
+                addr.get()
+            }
+        }
+        // NOTE: Orphan rules prevent implementing `TryFrom` for `A: IpAddress`.
+        impl TryFrom<Ipv4Addr> for $witness<Ipv4Addr> {
+            type Error = ();
+            fn try_from(addr: Ipv4Addr) -> Result<$witness<Ipv4Addr>, ()> {
+                Witness::new(addr).ok_or(())
+            }
+        }
+        impl TryFrom<Ipv6Addr> for $witness<Ipv6Addr> {
+            type Error = ();
+            fn try_from(addr: Ipv6Addr) -> Result<$witness<Ipv6Addr>, ()> {
+                Witness::new(addr).ok_or(())
             }
         }
     };
@@ -2326,6 +2351,38 @@ impl<A: Witness<Ipv6Addr> + Copy> AddrSubnet<Ipv6Addr, A> {
     }
 }
 
+/// A type which is witness to some property about an [`IpAddress`], `A`.
+///
+/// `IpAddressWitness<A>` extends [`Witness`] of the `IpAddress` type `A` by
+/// adding an associated type for the type-erased `IpAddr` version of the same
+/// witness type. For example, the following implementation is provided for
+/// `SpecifiedAddr<A>`:
+///
+/// ```rust,ignore
+/// impl<A: IpAddress> IpAddressWitness<A> for SpecifiedAddr<A> {
+///     type IpAddrWitness = SpecifiedAddr<IpAddr>;
+/// }
+/// ```
+pub trait IpAddressWitness<A: IpAddress>: Witness<A> {
+    /// The type-erased version of `Self`.
+    ///
+    /// For example, `SpecifiedAddr<Ipv4Addr>: IpAddressWitness<IpAddrWitness =
+    /// SpecifiedAddr<IpAddr>>`.
+    type IpAddrWitness: IpAddrWitness + From<Self>;
+}
+
+macro_rules! impl_ip_address_witness {
+    ($witness:ident) => {
+        impl<A: IpAddress> IpAddressWitness<A> for $witness<A> {
+            type IpAddrWitness = $witness<IpAddr>;
+        }
+    };
+}
+
+impl_ip_address_witness!(SpecifiedAddr);
+impl_ip_address_witness!(MulticastAddr);
+impl_ip_address_witness!(LinkLocalAddr);
+
 /// A type which is a witness to some property about an [`IpAddress`].
 ///
 /// `IpAddrWitness` extends [`Witness`] of [`IpAddr`] by adding associated types
@@ -2339,7 +2396,7 @@ impl<A: Witness<Ipv6Addr> + Copy> AddrSubnet<Ipv6Addr, A> {
 ///     type V6 = SpecifiedAddr<Ipv6Addr>;
 /// }
 /// ```
-pub trait IpAddrWitness: Witness<IpAddr> + Copy {
+pub trait IpAddrWitness: Witness<IpAddr> + Into<IpAddr<Self::V4, Self::V6>> + Copy {
     /// The IPv4-specific version of `Self`.
     ///
     /// For example, `SpecifiedAddr<IpAddr>: IpAddrWitness<V4 =
@@ -2422,6 +2479,26 @@ impl<A: IpAddrWitness> AddrSubnetEither<A> {
             AddrSubnetEither::V4(v4) => (v4.addr.into(), SubnetEither::V4(v4.subnet)),
             AddrSubnetEither::V6(v6) => (v6.addr.into(), SubnetEither::V6(v6.subnet)),
         }
+    }
+}
+
+impl<S: IpAddress, A: IpAddressWitness<S> + Copy> From<AddrSubnet<S, A>>
+    for AddrSubnetEither<A::IpAddrWitness>
+{
+    #[inline]
+    fn from(addr_sub: AddrSubnet<S, A>) -> AddrSubnetEither<A::IpAddrWitness> {
+        let (addr, sub) = addr_sub.addr_subnet();
+        // This unwrap is safe because:
+        // - `addr_sub: AddrSubnet<S, A>`, so we know that `addr` and
+        //   `sub.prefix` are valid arguments to `AddrSubnet::new` (which is
+        //   what `AddrSubnetEither::new` calls under the hood).
+        // - `A::IpAddrWitness` is the same witness type as `A`, but wrapping
+        //   `IpAddr` instead of `Ipv4Addr` or `Ipv6Addr`. `addr: A` means that
+        //   `addr` satisfies the property witnessed by the witness type `A`,
+        //   which is the same property witnessed by `A::IpAddrWitness`. Thus,
+        //   we're guaranteed that, when `AddrSubnetEither::new` tries to
+        //   construct the witness, it will succeed.
+        AddrSubnetEither::new(addr.get().to_ip_addr(), sub.prefix()).unwrap()
     }
 }
 
