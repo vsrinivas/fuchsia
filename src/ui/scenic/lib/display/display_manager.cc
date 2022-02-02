@@ -64,6 +64,7 @@ void DisplayManager::OnDisplaysChanged(std::vector<fuchsia::hardware::display::I
         if (*i_can_haz_display_mode_ < display.modes.size()) {
           mode_idx = *i_can_haz_display_mode_;
           (*default_display_controller_)->SetDisplayMode(display.id, display.modes[mode_idx]);
+          (*default_display_controller_)->ApplyConfig();
         } else {
           FX_LOGS(ERROR) << "Requested display mode=" << *i_can_haz_display_mode_
                          << " doesn't exist for display with id=" << display.id;
