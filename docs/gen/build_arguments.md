@@ -869,19 +869,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/d6c56223c37c798d3988f7e63febc772bd8e6627/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/1b7e77df40c19fbe22b6e27d49049aea1f11668d/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/d6c56223c37c798d3988f7e63febc772bd8e6627/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/1b7e77df40c19fbe22b6e27d49049aea1f11668d/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/d6c56223c37c798d3988f7e63febc772bd8e6627/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/1b7e77df40c19fbe22b6e27d49049aea1f11668d/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -4202,7 +4202,7 @@ defaults to connect to `fuchsia.ui.input.InputDeviceRegistry`.
 
 **Current value (from the default):** `false`
 
-From //src/lib/ui/input-synthesis/BUILD.gn:12
+From //src/lib/ui/input-synthesis/BUILD.gn:14
 
 ### use_null_vulkan_on_host
 TODO(liyl): Currently non-x64 platforms don't have Vulkan support,
