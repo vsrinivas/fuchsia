@@ -206,9 +206,7 @@ group("test") {
 
       # TODO(fxbug.dev/89829): Reenable after simple browser is working on Flatland.
       # ":experiences_ermine_simple_browser_e2e_test($host_toolchain)",
-
-      # TODO(fxbug.dev/92694): Reenable after ui->sl4f route is in place.
-      # ":experiences_ermine_smoke_e2e_test($host_toolchain)",
+      ":experiences_ermine_smoke_e2e_test($host_toolchain)",
 
       # TODO(fxbug.dev/91936): Reenable after the focus flake solution rolls.
       # ":experiences_ermine_terminal_e2e_test($host_toolchain)",

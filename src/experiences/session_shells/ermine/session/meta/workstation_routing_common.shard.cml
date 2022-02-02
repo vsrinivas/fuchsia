@@ -8,12 +8,47 @@
             environment: "#elements_env",
         },
         {
+            name: "scene_manager",
+            url: "fuchsia-pkg://fuchsia.com/scene_manager#meta/scene_manager.cm",
+            startup: "eager",
+        },
+        {
             name: "element_manager",
             url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
             environment: "#elements_env",
         },
     ],
     offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+
+                // Scene manager reads the keyboard configuration on behalf
+                // of the input pipeline library.
+                "fuchsia.settings.Keyboard",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.FlatlandDisplay",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.keyboard.focus.Controller",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "parent",
+            to: [ "#scene_manager" ],
+        },
+        {
+            directory: "dev-input-report",
+            from: "parent",
+            to: [ "#scene_manager" ],
+        },
         {
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
@@ -35,7 +70,6 @@
                 "fuchsia.power.BatteryManager",
                 "fuchsia.process.Launcher",
                 "fuchsia.recovery.FactoryReset",
-                "fuchsia.session.scene.Manager",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
@@ -63,6 +97,11 @@
                 "fuchsia.wlan.policy.ClientProvider",
             ],
             from: "parent",
+            to: [ "#workstation_session" ],
+        },
+        {
+            protocol: [ "fuchsia.session.scene.Manager" ],
+            from: "#scene_manager",
             to: [ "#workstation_session" ],
         },
         {
@@ -122,6 +161,14 @@
         {
             protocol: [ "fuchsia.element.Manager" ],
             from: "#element_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.input.keymap.Configuration",
+                "fuchsia.ui.accessibility.view.Registry",
+            ],
+            from: "#scene_manager",
         },
         {
             protocol: "fuchsia.component.Binder",
