@@ -47,16 +47,11 @@ config("compiler") {
     "//build/config/rust:one_codegen_unit",
   ]
 
-  # TODO(fxbug.dev/87244): delete the below after a soft transition
-  # to configure all boards correctly.
-  if (board_configs == []) {
-    if (current_cpu == "arm64") {
-      board_configs += [ "//build/config/arm64:cortex-a53" ]
-    } else if (current_cpu == "x64") {
-      board_configs += [ "//build/config/x64:x86-64" ]
-    }
+  if (board_configs != []) {
+    configs += board_configs
+  } else {
+    configs += [ "//build/config:cpu_baseline" ]
   }
-  configs += board_configs
 
   if (use_ccache) {
     configs += [ ":ccache" ]

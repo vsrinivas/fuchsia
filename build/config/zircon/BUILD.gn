@@ -44,20 +44,14 @@ config("clang_defaults") {
 }
 
 config("compiler") {
-  # TODO(fxbug.dev/87244): delete the below after a soft transition
-  # to configure all boards correctly.
-  if (board_configs == []) {
-    if (current_cpu == "arm64") {
-      board_configs += [ "//build/config/arm64:cortex-a53" ]
-    } else if (current_cpu == "x64") {
-      board_configs += [ "//build/config/x64:x86-64" ]
-    }
-  }
+  # Per CPU targeting policy we always target the baseline when building the
+  # kernel, rather than using board_configs. This is done to reduce binary
+  # diversity. See: TODO RFC LINK HERE
+  configs = [ "//build/config:cpu_baseline" ]
 
   compiler_flags = []
   defines = []
   ldflags = []
-  configs = board_configs
 
   # NOTE: This config should only be used with Zircon-specific toolchains
   # but this BUILD.gn file is also included from non-Zircon ones. To

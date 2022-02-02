@@ -12,8 +12,6 @@ _imports = {  # Import into hidden scope, to avoid importing into args.gn.
 
 target_cpu = "x64"
 
-board_configs += [ "//build/config/x64:x86-64" ]
-
 # Drivers and tools to include on bootfs.
 _bootfs_deps =
     [
