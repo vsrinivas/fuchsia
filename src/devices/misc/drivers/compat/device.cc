@@ -6,10 +6,10 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/binding_priv.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/stdcompat/span.h>
 #include <zircon/errors.h>
 
-#include "lib/ddk/device.h"
 #include "src/devices/lib/compat/symbols.h"
 
 namespace fdf = fuchsia_driver_framework;
@@ -51,7 +51,8 @@ Device::Device(std::string_view name, void* context, const zx_protocol_device_t*
       logger_(logger),
       dispatcher_(dispatcher),
       parent_(parent),
-      linked_device_(linked_device ? **linked_device : *this) {}
+      linked_device_(linked_device ? **linked_device : *this),
+      executor_(dispatcher) {}
 
 Device::~Device() {
   if (vnode_teardown_callback_) {
@@ -174,25 +175,42 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   }
 
   // Add the device node.
-  auto callback = [device_ptr](fidl::WireUnownedResult<fdf::Node::AddChild>& result) {
+  fpromise::bridge<void, std::variant<zx_status_t, fdf::NodeError>> bridge;
+
+  auto callback = [completer = std::move(bridge.completer)](
+                      fidl::WireUnownedResult<fdf::Node::AddChild>& result) mutable {
     if (!result.ok()) {
-      FDF_LOGL(ERROR, device_ptr->logger_, "Failed to add device '%s': %s", device_ptr->Name(),
-               result.error().FormatDescription().data());
+      completer.complete_error(result.error().status());
       return;
     }
     if (result->result.is_err()) {
-      FDF_LOGL(ERROR, device_ptr->logger_, "Failed to add device '%s': %u", device_ptr->Name(),
-               result->result.err());
+      completer.complete_error(result->result.err());
       return;
     }
-    // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
-    // init task after adding the device.
-    if (HasOp(device_ptr->ops_, &zx_protocol_device_t::init)) {
-      device_ptr->ops_->init(device_ptr->context_);
-    }
+    completer.complete_ok();
   };
   node_->AddChild(std::move(args), std::move(controller_ends->server), std::move(node_server),
                   std::move(callback));
+  auto task =
+      bridge.consumer.promise_or(fpromise::error(ZX_ERR_UNAVAILABLE))
+          .and_then([device_ptr]() {
+            // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
+            // init task after adding the device.
+            if (HasOp(device_ptr->ops_, &zx_protocol_device_t::init)) {
+              device_ptr->ops_->init(device_ptr->context_);
+            }
+          })
+          .or_else([device_ptr](std::variant<zx_status_t, fdf::NodeError>& status) {
+            if (std::holds_alternative<zx_status_t>(status)) {
+              FDF_LOGL(ERROR, device_ptr->logger_, "Failed to add device: status: '%s': %u",
+                       device_ptr->Name(), std::get<zx_status_t>(status));
+            } else if (std::holds_alternative<fdf::NodeError>(status)) {
+              FDF_LOGL(ERROR, device_ptr->logger_, "Failed to add device: NodeError: '%s': %u",
+                       device_ptr->Name(), std::get<fdf::NodeError>(status));
+            }
+          })
+          .wrap_with(device_ptr->scope_);
+  device_ptr->executor_.schedule_task(std::move(task));
 
   children_.push_back(std::move(device));
 

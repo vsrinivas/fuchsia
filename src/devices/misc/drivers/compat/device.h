@@ -7,8 +7,10 @@
 
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fpromise/scope.h>
 
 #include <list>
 #include <memory>
@@ -97,6 +99,11 @@ class Device : public std::enable_shared_from_this<Device> {
   // but these are shared pointers so that the NodeController can get a weak
   // pointer to the child in order to erase them.
   std::list<std::shared_ptr<Device>> children_;
+
+  async::Executor executor_;
+
+  // NOTE: Must be the last member.
+  fpromise::scope scope_;
 };
 
 }  // namespace compat
