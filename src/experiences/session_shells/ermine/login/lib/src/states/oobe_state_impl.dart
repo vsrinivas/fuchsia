@@ -113,7 +113,9 @@ class OobeStateImpl with Disposable implements OobeState {
     // TODO(http://fxb/85576): Remove once login and OOBE are mandatory.
     // If we are skipping OOBE, authenticate using empty password.
     if (!startOOBE) {
-      _performNullLogin();
+      _performNullLogin().then((_) {
+        runInAction(() => _loginDone.value = true);
+      });
     }
 
     return startOOBE;
@@ -376,26 +378,32 @@ class OobeStateImpl with Disposable implements OobeState {
   void factoryReset() => authService.factoryReset();
 
   void _onErmineShellExit() {
-    // Logout when Ermine exits.
-    authService.logout().then((_) {
+    // Define a local method to run after logout below.
+    void postLogout() {
       runInAction(() => _loginDone.value = false);
 
-      // If OOBE is disabled, perform empty password login.
+      // If OOBE is disabled, perform empty password re-login.
       if (!launchOobe) {
         _performNullLogin().then((_) {
           runInAction(() {
             shellService.disposeErmineShell();
             _ermineViewConnection.value = null;
+            _loginDone.value = true;
           });
         });
       } else {
+        // Display login screen again.
         runInAction(() {
           shellService.disposeErmineShell();
           _ermineViewConnection.value = null;
         });
       }
-    }).catchError((e) {
+    }
+
+    // Logout and call [postLogout] on both success and error case.
+    authService.logout().then((_) => postLogout()).catchError((e) {
       log.shout('Caught exception during logout: $e');
+      postLogout();
     });
   }
 
@@ -407,7 +415,6 @@ class OobeStateImpl with Disposable implements OobeState {
       authService.hasAccount
           ? await authService.loginWithPassword('')
           : await authService.createAccountWithPassword('');
-      runInAction(() => _loginDone.value = true);
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
       log.shout('Account found: ${authService.hasAccount}.'
