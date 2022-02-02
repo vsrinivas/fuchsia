@@ -10,11 +10,6 @@ import("//build/rust/rustc_library.gni")
 import("//build/testing/environments.gni")
 
 template("component_manager") {
-  forward_variables_from(invoker, [ "is_test" ])
-  if (!defined(is_test)) {
-    is_test = false
-  }
-
   _deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
@@ -197,7 +192,7 @@ template("component_manager") {
     "src/startup.rs",
   ]
 
-  if (is_test) {
+  if (defined(invoker.is_test) && invoker.is_test) {
     rustc_test(target_name) {
       edition = "2018"
       sources = _sources
@@ -235,6 +230,7 @@ template("component_manager") {
         "//third_party/rust_crates:serde_json",
         "//third_party/rust_crates:test-case",
       ]
+      forward_variables_from(invoker, [ "disable_rbe" ])
     }
   } else {
     rustc_library(target_name) {
@@ -250,6 +246,7 @@ template("component_manager") {
         "//src/session/*",
         "//src/sys/component_manager/*",
       ]
+      forward_variables_from(invoker, [ "disable_rbe" ])
     }
   }
 }
@@ -258,9 +255,21 @@ component_manager("lib") {
 }
 component_manager("component_manager_test") {
   is_test = true
+
+  # TODO(http://fxbug.dev/92534): accommodate large memory requirements
+  if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] !=
+      toolchain_variant.tags) {
+    disable_rbe = true
+  }
 }
 component_manager("component_manager_boot_env_test") {
   is_test = true
+
+  # TODO(http://fxbug.dev/92534): accommodate large memory requirements
+  if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] !=
+      toolchain_variant.tags) {
+    disable_rbe = true
+  }
 }
 
 rustc_binary("bin") {
