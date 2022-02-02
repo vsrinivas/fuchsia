@@ -4,6 +4,7 @@
 
 //! Messages used for NDP (ICMPv6).
 
+use core::convert::{From, TryFrom};
 use core::num::NonZeroU8;
 use core::time::Duration;
 
@@ -55,10 +56,14 @@ impl_icmp_message!(Ipv6, RouterSolicitation, RouterSolicitation, IcmpUnusedCode,
 #[allow(missing_docs)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RoutePreference {
+    // We don't want to store invalid states like Reserved, as this MUST NOT be sent nor processed.
+    // From RFC 4191 section 2.1:
+    //   10      Reserved - MUST NOT be sent
+    //   ...
+    //   If the Reserved (10) value is received, the Route Information Option MUST be ignored.
     High,
     Medium,
     Low,
-    Reserved,
 }
 
 impl Default for RoutePreference {
@@ -76,7 +81,7 @@ impl Default for RoutePreference {
     }
 }
 
-impl core::convert::From<RoutePreference> for u8 {
+impl From<RoutePreference> for u8 {
     fn from(v: RoutePreference) -> u8 {
         // As per RFC 4191 section 2.1,
         //
@@ -91,7 +96,28 @@ impl core::convert::From<RoutePreference> for u8 {
             RoutePreference::High => 0b01,
             RoutePreference::Medium => 0b00,
             RoutePreference::Low => 0b11,
-            RoutePreference::Reserved => 0b10,
+        }
+    }
+}
+
+impl TryFrom<u8> for RoutePreference {
+    type Error = ();
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        // As per RFC 4191 section 2.1,
+        //
+        //   Preference values are encoded as a two-bit signed integer, as
+        //   follows:
+        //
+        //      01      High
+        //      00      Medium (default)
+        //      11      Low
+        //      10      Reserved - MUST NOT be sent
+        match v {
+            0b01 => Ok(RoutePreference::High),
+            0b00 => Ok(RoutePreference::Medium),
+            0b11 => Ok(RoutePreference::Low),
+            _ => Err(()),
         }
     }
 }
@@ -373,6 +399,7 @@ pub mod options {
     use packet::records::options::{
         LengthEncoding, OptionBuilder, OptionLayout, OptionParseLayout, OptionsImpl,
     };
+    use packet::BufferView as _;
     use zerocopy::byteorder::{ByteOrder, NetworkEndian};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
@@ -425,6 +452,27 @@ pub mod options {
     ///
     /// [RFC 8106 section 5.3.1]: https://tools.ietf.org/html/rfc8106#section-5.1
     const RECURSIVE_DNS_SERVER_OPTION_RESERVED_BYTES_LENGTH: usize = 2;
+
+    /// The number of reserved bits immediately following (on the right of) the preference.
+    ///
+    /// See [RFC 4191 section 2.3] for more information.
+    ///
+    /// [RFC 4191 section 2.3]: https://tools.ietf.org/html/rfc4191#section-2.3
+    const ROUTE_INFORMATION_PREFERENCE_RESERVED_BITS_RIGHT: u8 = 3;
+
+    /// A mask to keep only the valid bits for the preference in the Route Information option.
+    ///
+    /// See [RFC 4191 section 2.3] for more information.
+    ///
+    /// [RFC 4191 section 2.3]: https://tools.ietf.org/html/rfc4191#section-2.3
+    const ROUTE_INFORMATION_PREFERENCE_MASK: u8 = 0x18;
+
+    /// The length of an NDP option is specified in units of 8 octets.
+    ///
+    /// See [RFC 4861 section 4.6] for more information.
+    ///
+    /// [RFC 4861 section 4.6]: https://tools.ietf.org/html/rfc4861#section-4.6
+    const OPTION_BYTES_PER_LENGTH_UNIT: usize = 8;
 
     /// Recursive DNS Server that is advertised by a router in Router Advertisements.
     ///
@@ -520,14 +568,14 @@ pub mod options {
     /// See [RFC 4191 section 2.3].
     ///
     /// [RFC 4191 section 2.3]: https://datatracker.ietf.org/doc/html/rfc4191#section-2.3
-    #[derive(Debug)]
-    pub struct RouteInformationBuilder {
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct RouteInformation {
         prefix: Subnet<Ipv6Addr>,
         route_lifetime_seconds: u32,
         preference: super::RoutePreference,
     }
 
-    impl RouteInformationBuilder {
+    impl RouteInformation {
         /// Returns a new Route Information option builder.
         pub fn new(
             prefix: Subnet<Ipv6Addr>,
@@ -537,8 +585,18 @@ pub mod options {
             Self { prefix, route_lifetime_seconds, preference }
         }
 
+        /// The prefix represented as a [`Subnet`].
+        pub fn prefix(&self) -> &Subnet<Ipv6Addr> {
+            &self.prefix
+        }
+
+        /// The preference of the route.
+        pub fn preference(&self) -> super::RoutePreference {
+            self.preference
+        }
+
         fn prefix_bytes_len(&self) -> usize {
-            let RouteInformationBuilder { prefix, route_lifetime_seconds: _, preference: _ } = self;
+            let RouteInformation { prefix, route_lifetime_seconds: _, preference: _ } = self;
 
             let prefix_length = prefix.prefix();
             // As per RFC 4191 section 2.3,
@@ -572,7 +630,7 @@ pub mod options {
                     .expect("expected buffer to hold enough bytes for serialization");
 
             let prefix_bytes_len = self.prefix_bytes_len();
-            let RouteInformationBuilder { prefix, route_lifetime_seconds, preference } = self;
+            let RouteInformation { prefix, route_lifetime_seconds, preference } = self;
 
             hdr.prefix_length = prefix.prefix();
             hdr.set_preference(*preference);
@@ -693,6 +751,8 @@ pub mod options {
         ///
         /// The number of valid leading bits in this prefix is available
         /// from [`PrefixInformation::prefix_length`];
+        // TODO(https://fxbug.dev/91764): Consider merging prefix and prefix_length and return a
+        // Subnet.
         pub fn prefix(&self) -> &Ipv6Addr {
             &self.prefix
         }
@@ -730,6 +790,7 @@ pub mod options {
         Mtu(u32),
 
         RecursiveDnsServer(RecursiveDnsServer<'a>),
+        RouteInformation(RouteInformation),
     }
 
     /// An implementation of [`OptionsImpl`] for NDP options.
@@ -756,7 +817,7 @@ pub mod options {
     impl<'a> OptionsImpl<'a> for NdpOptionsImpl {
         type Option = NdpOption<'a>;
 
-        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<NdpOption<'a>>, ()> {
+        fn parse(kind: u8, mut data: &'a [u8]) -> Result<Option<NdpOption<'a>>, ()> {
             let kind = if let Ok(k) = NdpOptionType::try_from(kind) {
                 k
             } else {
@@ -808,8 +869,59 @@ pub mod options {
                     ))
                 }
                 NdpOptionType::RouteInformation => {
-                    // TODO(https://fxbug.dev/80646): Parse Route Information option.
-                    return Ok(None);
+                    // RouteInfoFixed represents the part of the RouteInformation option
+                    // with a known and fixed length. See RFC 4191 section 2.3.
+                    #[derive(FromBytes, Unaligned)]
+                    #[repr(C)]
+                    struct RouteInfoFixed {
+                        prefix_length: u8,
+                        preference_raw: u8,
+                        route_lifetime_seconds: U32,
+                    }
+
+                    let mut buf = &mut data;
+
+                    let fixed = buf.take_obj_front::<RouteInfoFixed>().ok_or(())?;
+
+                    // The preference is preceded and followed by two 3-bit reserved fields.
+                    let preference = super::RoutePreference::try_from(
+                        (fixed.preference_raw & ROUTE_INFORMATION_PREFERENCE_MASK)
+                            >> ROUTE_INFORMATION_PREFERENCE_RESERVED_BITS_RIGHT,
+                    )?;
+
+                    // We need to check whether the remaining buffer length storing the prefix is
+                    // valid.
+                    // From RFC 4191 section 2.3:
+                    //   The length of the option (including the Type and Length fields) in units
+                    //   of 8 octets.  The Length field is 1, 2, or 3 depending on the Prefix
+                    //   Length.  If Prefix Length is greater than 64, then Length must be 3.  If
+                    //   Prefix Length is greater than 0, then Length must be 2 or 3.  If Prefix
+                    //   Length is zero, then Length must be 1, 2, or 3.
+                    // The RFC refers to the length of the body which is Route Lifetime + Prefix,
+                    // i.e. the prefix contained in the buffer can have a length from 0 to 2
+                    // (included) octets i.e. 0 to 16 bytes.
+                    let buf_len = buf.len();
+                    if buf_len % OPTION_BYTES_PER_LENGTH_UNIT != 0 {
+                        return Err(());
+                    }
+                    let length = buf_len / OPTION_BYTES_PER_LENGTH_UNIT;
+                    match (fixed.prefix_length, length) {
+                        (65..=128, 2) => {}
+                        (1..=64, 1 | 2) => {}
+                        (0, 0 | 1 | 2) => {}
+                        _ => return Err(()),
+                    }
+
+                    let mut prefix_buf = [0; 16];
+                    // It is safe to copy because we validated the remaining length of the buffer.
+                    prefix_buf[..buf_len].copy_from_slice(&buf);
+                    let prefix = Ipv6Addr::from_bytes(prefix_buf);
+
+                    NdpOption::RouteInformation(RouteInformation::new(
+                        Subnet::new(prefix, fixed.prefix_length).map_err(|_| ())?,
+                        fixed.route_lifetime_seconds.get(),
+                        preference,
+                    ))
                 }
             };
 
@@ -829,7 +941,7 @@ pub mod options {
 
         Mtu(u32),
 
-        RouteInformation(RouteInformationBuilder),
+        RouteInformation(RouteInformation),
         RecursiveDnsServer(RecursiveDnsServer<'a>),
     }
 
@@ -1189,7 +1301,9 @@ mod tests {
 
     #[test]
     fn parse_router_advertisement() {
+        use crate::icmp::ndp::options::RouteInformation;
         use crate::icmp::testdata::ndp_router::*;
+
         let mut buf = ADVERTISEMENT_IP_PACKET_BYTES;
         let ip = buf.parse::<Ipv6Packet<_>>().unwrap();
         let ipv6_builder = ip.builder();
@@ -1204,7 +1318,7 @@ mod tests {
         assert_eq!(icmp.message().reachable_time(), REACHABLE_TIME);
         assert_eq!(icmp.message().retransmit_timer(), RETRANS_TIMER);
 
-        assert_eq!(icmp.ndp_options().iter().count(), 2);
+        assert_eq!(icmp.ndp_options().iter().count(), 5);
 
         let collected = icmp.ndp_options().iter().collect::<Vec<options::NdpOption<'_>>>();
         for option in collected.iter() {
@@ -1233,9 +1347,45 @@ mod tests {
                     assert_eq!(info.prefix_length(), PREFIX_INFO_PREFIX.prefix());
                     assert_eq!(info.prefix(), &PREFIX_INFO_PREFIX.network());
                 }
+                options::NdpOption::RouteInformation(_) => {
+                    // Tested below
+                }
                 o => panic!("Found unexpected option: {:?}", o),
             }
         }
+
+        let mut route_information_options = collected
+            .iter()
+            .filter_map(|o| match o {
+                options::NdpOption::RouteInformation(info) => Some(info),
+                _ => None,
+            })
+            .collect::<Vec<&RouteInformation>>();
+        // We must not make any assumptions on the order of received data, therefore we sort them.
+        // From RFC 4861 section 4.6.2:
+        //   Options in Neighbor Discovery packets can appear in any order; receivers MUST be
+        //   prepared to process them independently of their order.
+        route_information_options.sort_by_key(|o| o.prefix().prefix());
+        assert_eq!(
+            route_information_options,
+            [
+                &options::RouteInformation::new(
+                    ROUTE_INFO_LOW_PREF_PREFIX,
+                    ROUTE_INFO_LOW_PREF_VALID_LIFETIME_SECONDS,
+                    ROUTE_INFO_LOW_PREF,
+                ),
+                &options::RouteInformation::new(
+                    ROUTE_INFO_MEDIUM_PREF_PREFIX,
+                    ROUTE_INFO_MEDIUM_PREF_VALID_LIFETIME_SECONDS,
+                    ROUTE_INFO_MEDIUM_PREF,
+                ),
+                &options::RouteInformation::new(
+                    ROUTE_INFO_HIGH_PREF_PREFIX,
+                    ROUTE_INFO_HIGH_PREF_VALID_LIFETIME_SECONDS,
+                    ROUTE_INFO_HIGH_PREF,
+                )
+            ]
+        );
 
         let option_builders = [
             options::NdpOptionBuilder::SourceLinkLayerAddress(&SOURCE_LINK_LAYER_ADDRESS),
@@ -1246,6 +1396,21 @@ mod tests {
                 PREFIX_INFO_VALID_LIFETIME_SECONDS,
                 PREFIX_INFO_PREFERRED_LIFETIME_SECONDS,
                 PREFIX_INFO_PREFIX.network(),
+            )),
+            options::NdpOptionBuilder::RouteInformation(options::RouteInformation::new(
+                ROUTE_INFO_HIGH_PREF_PREFIX,
+                ROUTE_INFO_HIGH_PREF_VALID_LIFETIME_SECONDS,
+                ROUTE_INFO_HIGH_PREF,
+            )),
+            options::NdpOptionBuilder::RouteInformation(options::RouteInformation::new(
+                ROUTE_INFO_MEDIUM_PREF_PREFIX,
+                ROUTE_INFO_MEDIUM_PREF_VALID_LIFETIME_SECONDS,
+                ROUTE_INFO_MEDIUM_PREF,
+            )),
+            options::NdpOptionBuilder::RouteInformation(options::RouteInformation::new(
+                ROUTE_INFO_LOW_PREF_PREFIX,
+                ROUTE_INFO_LOW_PREF_VALID_LIFETIME_SECONDS,
+                ROUTE_INFO_LOW_PREF,
             )),
         ];
         let serialized = OptionSequenceBuilder::new(option_builders.iter())
@@ -1423,14 +1588,14 @@ mod tests {
         SerializeRioTest{
             prefix_length: 65,
             route_lifetime_seconds: 1000000,
-            preference: RoutePreference::Reserved,
+            preference: RoutePreference::Medium,
             expected_option_length: 24,
         }; "prefix_length_65")]
     #[test_case(
         SerializeRioTest{
             prefix_length: 128,
             route_lifetime_seconds: 10000000,
-            preference: RoutePreference::Reserved,
+            preference: RoutePreference::Medium,
             expected_option_length: 24,
         }; "prefix_length_128")]
     fn serialize_route_information_option(test: SerializeRioTest) {
@@ -1446,7 +1611,7 @@ mod tests {
         let prefix = IPV6ADDR.mask(prefix_length);
 
         let option_builders =
-            [options::NdpOptionBuilder::RouteInformation(options::RouteInformationBuilder::new(
+            [options::NdpOptionBuilder::RouteInformation(options::RouteInformation::new(
                 Subnet::new(prefix, prefix_length).unwrap(),
                 route_lifetime_seconds,
                 preference,

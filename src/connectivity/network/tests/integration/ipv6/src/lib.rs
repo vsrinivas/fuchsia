@@ -34,7 +34,7 @@ use packet_formats::{
     icmp::{
         mld::MldPacket,
         ndp::{
-            options::{NdpOption, NdpOptionBuilder, PrefixInformation, RouteInformationBuilder},
+            options::{NdpOption, NdpOptionBuilder, PrefixInformation, RouteInformation},
             NeighborAdvertisement, NeighborSolicitation, RoutePreference, RouterAdvertisement,
             RouterSolicitation,
         },
@@ -830,7 +830,7 @@ async fn on_and_off_link_route_discovery<E: netemul::Endpoint>(
             0,                             /* preferred_lifetime */
             ipv6_consts::PREFIX.network(), /* prefix */
         )),
-        NdpOptionBuilder::RouteInformation(RouteInformationBuilder::new(
+        NdpOptionBuilder::RouteInformation(RouteInformation::new(
             SUBNET_WITH_MORE_SPECIFIC_ROUTE,
             1337, /* route_lifetime_seconds */
             RoutePreference::default(),
