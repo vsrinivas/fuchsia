@@ -366,6 +366,11 @@ func infraToolLogChecks() []FailureModeCheck {
 			String: serialconstants.FailedToOpenSerialSocketMsg,
 			Type:   swarmingOutputType,
 		},
+		// For fxbug.dev/89437
+		&stringInLogCheck{
+			String: serialconstants.FailedToFindCursorMsg,
+			Type:   swarmingOutputType,
+		},
 		// For fxbug.dev/53101.
 		&stringInLogCheck{
 			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg),

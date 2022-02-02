@@ -6,4 +6,5 @@ package constants
 
 const (
 	FailedToOpenSerialSocketMsg = "failed to open serial socket connection"
+	FailedToFindCursorMsg       = "failed to find cursor"
 )
