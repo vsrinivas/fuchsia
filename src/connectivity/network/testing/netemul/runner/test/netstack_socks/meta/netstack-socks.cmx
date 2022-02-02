@@ -11,6 +11,7 @@
             "fuchsia.net.debug.Interfaces",
             "fuchsia.net.interfaces.State",
             "fuchsia.net.name.Lookup",
+            "fuchsia.net.stack.Stack",
             "fuchsia.netemul.environment.ManagedEnvironment",
             "fuchsia.netemul.network.NetworkContext",
             "fuchsia.netemul.sync.SyncManager",

@@ -10,6 +10,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon_status as zx,
+    futures::TryStreamExt as _,
+    netstack_testing_common::interfaces::add_address_wait_assigned,
     std::convert::TryFrom as _,
     structopt::StructOpt,
 };
@@ -64,9 +66,8 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     let debug_interfaces =
         client::connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()?;
 
-    let (control, control_server_end) =
-        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
-            .context("failed to create control endpoints")?;
+    let (control, server_end) = fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+        .context("failed to create control endpoints")?;
 
     let nicid = match device_connection {
         fidl_fuchsia_netemul_network::DeviceConnection::Ethernet(e) => {
@@ -83,9 +84,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
                 .with_context(|| format!("add_ethernet_device error ({:?})", cfg))?;
             let nicid = nicid.into();
 
-            let () = debug_interfaces
-                .get_admin(nicid, control_server_end)
-                .context("calling get_admin")?;
+            let () = debug_interfaces.get_admin(nicid, server_end).context("calling get_admin")?;
             nicid
         }
         fidl_fuchsia_netemul_network::DeviceConnection::NetworkDevice(device_instance) => {
@@ -148,7 +147,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             let () = device_control
                 .create_interface(
                     &mut port_id,
-                    control_server_end,
+                    server_end,
                     fidl_fuchsia_net_interfaces_admin::Options {
                         name: Some(endpoint.clone()),
                         metric: Some(DEFAULT_METRIC),
@@ -171,9 +170,20 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         },
     )?;
 
-    log::info!("Added ethernet to stack.");
+    log::info!("Waiting for interface up...");
+    let interface_state =
+        client::connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()?;
+    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid),
+        |fidl_fuchsia_net_interfaces_ext::Properties { online, .. }| {
+            (skip_up_check || *online).then(|| ())
+        },
+    )
+    .await
+    .context("wait for interface")?;
 
-    let nicid = u32::try_from(nicid).with_context(|| format!("{} does not fit in a u32", nicid))?;
+    log::info!("Added ethernet with id {}", nicid);
 
     // TODO(fxbug.dev/74595): Expose an option to preempt address autogeneration instead of
     // removing them after the fact.
@@ -181,9 +191,9 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         log::info!("Listening for link-local IPv6 address generation events from the netstack.");
         let interface_state =
             client::connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()?;
-        let mut autogen_link_local_addrs = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        let autogen_link_local_addrs = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
-            &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid.into()),
+            &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid),
             |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
                 if addresses.is_empty() {
                     log::info!(
@@ -199,25 +209,36 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         .await
         .context("error listening for link-local IPv6 address generation events")?;
 
-        match autogen_link_local_addrs.as_mut_slice() {
+        match autogen_link_local_addrs.as_slice() {
             [address] => {
                 let fidl_fuchsia_net_interfaces_ext::Address {
                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len },
                     valid_until: _,
-                } = address;
-                let fidl_fuchsia_netstack::NetErr { status, message } = netstack
-                    .remove_interface_address(nicid, addr, *prefix_len)
+                } = *address;
+                let mut interface_address = match addr {
+                    fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
+                        fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                            fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len },
+                        )
+                    }
+                    fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
+                        fidl_fuchsia_net::InterfaceAddress::Ipv6(addr)
+                    }
+                };
+                let _: bool = control
+                    .remove_address(&mut interface_address)
                     .await
-                    .context("error removing interface address")?;
-                if status != fidl_fuchsia_netstack::Status::Ok {
-                    return Err(anyhow::anyhow!(
-                        "error removing link-local address {:?} on interface (id={}) with status = {:?}: {}",
-                        addr,
-                        nicid,
-                        status,
-                        message
-                    ));
-                }
+                    .context("send remove address request")?
+                    .map_err(
+                        |e: fidl_fuchsia_net_interfaces_admin::ControlRemoveAddressError| {
+                            anyhow::anyhow!(
+                            "failed to remove interface address {:?} to interface (id={}): {:?}",
+                            addr,
+                            nicid,
+                            e
+                        )
+                        },
+                    )?;
             }
             multiple_addrs => {
                 return Err(anyhow::anyhow!(
@@ -228,7 +249,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         }
     }
 
-    let mut subnets: Vec<fidl_fuchsia_net::Subnet> = ips
+    let subnets: Vec<fidl_fuchsia_net::Subnet> = ips
         .iter()
         .map(|ip| {
             ip.parse::<fidl_fuchsia_net_ext::Subnet>()
@@ -237,28 +258,15 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    if !subnets.is_empty() {
-        for fidl_fuchsia_net::Subnet { addr, prefix_len } in &mut subnets {
-            let fidl_fuchsia_netstack::NetErr { status, message } = netstack
-                .set_interface_address(nicid, addr, *prefix_len)
-                .await
-                .context("set interface address error")?;
-            if status != fidl_fuchsia_netstack::Status::Ok {
-                return Err(anyhow::anyhow!(
-                    "failed to set interface (id={}) address to {:?} with status = {:?}: {}",
-                    nicid,
-                    addr,
-                    status,
-                    message
-                ));
-            }
-        }
-    } else {
+    if subnets.is_empty() {
+        let nicid_u32 =
+            u32::try_from(nicid).with_context(|| format!("{} does not fit in a u32", nicid))?;
+
         let (dhcp_client, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()
                 .context("failed to create fidl endpoints")?;
         netstack
-            .get_dhcp_client(nicid, server_end)
+            .get_dhcp_client(nicid_u32, server_end)
             .await
             .context("failed to call get_dhcp_client")?
             .map_err(zx::Status::from_raw)
@@ -269,6 +277,48 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             .context("failed to call dhcp_client.start")?
             .map_err(zx::Status::from_raw)
             .context("failed to start dhcp client")?;
+    } else {
+        let futs = subnets.iter().copied().map(|subnet| {
+            let fidl_fuchsia_net::Subnet { addr, prefix_len } = subnet;
+            let interface_address = match addr {
+                fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
+                    fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                        fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len },
+                    )
+                }
+                fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
+                    fidl_fuchsia_net::InterfaceAddress::Ipv6(addr)
+                }
+            };
+            let control = &control;
+            let stack = &stack;
+            Ok(async move {
+                let address_state_provider = add_address_wait_assigned(
+                    control,
+                    interface_address,
+                    fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+                )
+                .await
+                .context("add interface address")?;
+                // Allow this address to live on after this process exits.
+                let () = address_state_provider.detach().context("address detach")?;
+                let subnet = fidl_fuchsia_net_ext::apply_subnet_mask(subnet);
+                let () = stack
+                    .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                        subnet,
+                        device_id: nicid,
+                        next_hop: None,
+                        metric: 0,
+                    })
+                    .await
+                    .context("send add forwarding entry request")?
+                    .map_err(|e: fidl_fuchsia_net_stack::Error| {
+                        anyhow::anyhow!("failed to add forwarding entry: {:?}", e)
+                    })?;
+                Ok::<_, Error>(())
+            })
+        });
+        futures::stream::iter(futs).try_for_each_concurrent(None, std::convert::identity).await?;
     };
 
     log::info!("Configured nic address.");
@@ -304,45 +354,6 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
 
         log::info!("Configured the default route with gateway address.");
     }
-
-    log::info!("Waiting for interface up...");
-    let interface_state =
-        client::connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()?;
-    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
-        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid.into()),
-        |fidl_fuchsia_net_interfaces_ext::Properties { online, addresses, .. }| {
-            if !skip_up_check && !online {
-                log::info!("Found interface with id {}, but it's down. waiting.", nicid);
-                return None;
-            }
-            // If configuring static addresses, make sure the addresses are present (this ensures
-            // that DAD has resolved for IPv6 addresses).
-            if subnets.iter().all(|subnet| {
-                let present = addresses.iter().any(
-                    |fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                        addr == subnet
-                    },
-                );
-                if !present {
-                    log::info!(
-                        "Found interface with id {}, but address {} not yet present. waiting.",
-                        nicid,
-                        fidl_fuchsia_net_ext::Subnet::from(*subnet),
-                    );
-                }
-                present
-            }) {
-                Some(())
-            } else {
-                None
-            }
-        },
-    )
-    .await
-    .context("wait for interface")?;
-
-    log::info!("Found ethernet with id {}", nicid);
 
     Ok(())
 }

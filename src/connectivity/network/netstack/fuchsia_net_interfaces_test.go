@@ -23,7 +23,6 @@ import (
 
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/interfaces"
-	"fidl/fuchsia/netstack"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -288,10 +287,15 @@ func TestInterfacesWatcher(t *testing.T) {
 
 	// Add an address.
 	blockingWatch()
-	addr := toIpAddress(net.IPv4(192, 168, 0, 1).To4())
-	prefixLen := uint8(16)
-	if netErr, err := ni.SetInterfaceAddress(context.Background(), uint32(ifs.nicid), addr, prefixLen); netErr.Status != netstack.StatusOk || err != nil {
-		t.Fatalf("failed to call SetInterfaceAddress: netErr=%s, err=%s", netErr, err)
+	protocolAddr := tcpip.ProtocolAddress{
+		Protocol: header.IPv4ProtocolNumber,
+		AddressWithPrefix: tcpip.AddressWithPrefix{
+			Address:   tcpip.Address(net.IPv4(192, 168, 0, 1).To4()),
+			PrefixLen: 16,
+		},
+	}
+	if status := ni.ns.addInterfaceAddress(ifs.nicid, protocolAddr, false /* addRoute */); status != zx.ErrOk {
+		t.Fatalf("addInterfaceAddress(%d, %#v, false): %s", ifs.nicid, protocolAddr, status)
 	}
 	addressAdded := id
 	properties := wantInterfaceProperties(ns, ifs.nicid)
@@ -319,8 +323,8 @@ func TestInterfacesWatcher(t *testing.T) {
 
 	// Remove an address.
 	blockingWatch()
-	if netErr, err := ni.RemoveInterfaceAddress(context.Background(), uint32(ifs.nicid), addr, prefixLen); netErr.Status != netstack.StatusOk || err != nil {
-		t.Fatalf("failed to call RemoveInterfaceAddress: netErr=%s, err=%s", netErr, err)
+	if status := ni.ns.removeInterfaceAddress(ifs.nicid, protocolAddr, false /* removeRoute */); status != zx.ErrOk {
+		t.Fatalf("removeInterfaceAddress(%d, %#v, false): %s", ifs.nicid, protocolAddr, status)
 	}
 	addressRemoved := id
 	properties = wantInterfaceProperties(ns, ifs.nicid)

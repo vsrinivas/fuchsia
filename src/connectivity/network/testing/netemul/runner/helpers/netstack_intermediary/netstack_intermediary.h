@@ -53,13 +53,7 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack,
                          ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
                          AddEthernetDeviceCallback callback) override;
 
-  void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
-                           SetInterfaceAddressCallback callback) override;
-
   // The following methods are not used by Machina guests and are stubbed out.
-  void RemoveInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
-                              RemoveInterfaceAddressCallback callback) override {}
-
   void GetDhcpClient(uint32_t nicid, ::fidl::InterfaceRequest<::fuchsia::net::dhcp::Client> client,
                      GetDhcpClientCallback callback) override {}
 

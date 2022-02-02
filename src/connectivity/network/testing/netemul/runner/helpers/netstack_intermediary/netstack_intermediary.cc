@@ -29,16 +29,6 @@ NetstackIntermediary::NetstackIntermediary(NetworkMap mac_network_mapping,
   context_->outgoing()->AddPublicService(control_.GetHandler(this));
 }
 
-void NetstackIntermediary::SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr,
-                                               uint8_t prefixLen,
-                                               SetInterfaceAddressCallback callback) {
-  fuchsia::netstack::NetErr err = {
-      .status = fuchsia::netstack::Status::OK,
-      .message = "",
-  };
-  callback(err);
-}
-
 void NetstackIntermediary::CreateNetwork(
     fuchsia::net::virtualization::Config config,
     fidl::InterfaceRequest<fuchsia::net::virtualization::Network> network) {

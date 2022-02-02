@@ -80,6 +80,7 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
             IntoIterator::into_iter([
                 fidl_fuchsia_net_debug::InterfacesMarker::NAME,
                 fidl_fuchsia_net_interfaces::StateMarker::NAME,
+                fidl_fuchsia_net_stack::StackMarker::NAME,
                 fidl_fuchsia_netstack::NetstackMarker::NAME,
                 fidl_fuchsia_posix_socket::ProviderMarker::NAME,
             ])

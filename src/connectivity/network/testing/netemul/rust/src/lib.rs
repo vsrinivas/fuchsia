@@ -970,6 +970,11 @@ impl<'a> TestInterface<'a> {
         &self.endpoint
     }
 
+    /// Returns the interface's control handle.
+    pub fn control(&self) -> &fidl_fuchsia_net_interfaces_ext::admin::Control {
+        &self.control
+    }
+
     /// Enable interface.
     ///
     /// Equivalent to `stack.enable_interface(test_interface.id())`.

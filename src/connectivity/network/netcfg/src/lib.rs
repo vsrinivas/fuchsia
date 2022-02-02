@@ -33,7 +33,7 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6;
-use fidl_fuchsia_net_ext::{self as fnet_ext, DisplayExt as _, IntoExt as _, IpExt as _};
+use fidl_fuchsia_net_ext::{self as fnet_ext, DisplayExt as _, IpExt as _};
 use fidl_fuchsia_net_filter as fnet_filter;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
@@ -358,7 +358,7 @@ fn should_enable_filter(
 #[derive(Debug)]
 struct InterfaceState {
     // Hold on to control to enforce interface ownership, even if unused.
-    _control: fidl_fuchsia_net_interfaces_ext::admin::Control,
+    control: fidl_fuchsia_net_interfaces_ext::admin::Control,
     config: InterfaceConfigState,
 }
 
@@ -380,17 +380,17 @@ struct WlanApInterfaceState {}
 impl InterfaceState {
     fn new_host(control: fidl_fuchsia_net_interfaces_ext::admin::Control) -> Self {
         Self {
-            _control: control,
+            control,
             config: InterfaceConfigState::Host(HostInterfaceState { dhcpv6_client_addr: None }),
         }
     }
 
     fn new_wlan_ap(control: fidl_fuchsia_net_interfaces_ext::admin::Control) -> Self {
-        Self { _control: control, config: InterfaceConfigState::WlanAp(WlanApInterfaceState {}) }
+        Self { control, config: InterfaceConfigState::WlanAp(WlanApInterfaceState {}) }
     }
 
     fn is_wlan_ap(&self) -> bool {
-        let Self { _control: _, config } = self;
+        let Self { control: _, config } = self;
         match config {
             InterfaceConfigState::Host(_) => false,
             InterfaceConfigState::WlanAp(_) => true,
@@ -404,7 +404,7 @@ impl InterfaceState {
         dhcpv6_client_provider: Option<&fnet_dhcpv6::ClientProviderProxy>,
         watchers: &mut DnsServerWatchers<'_>,
     ) -> Result<(), errors::Error> {
-        let Self { _control: _, config } = self;
+        let Self { control: _, config } = self;
         let fnet_interfaces_ext::Properties { online, .. } = properties;
         match config {
             InterfaceConfigState::Host(HostInterfaceState { dhcpv6_client_addr }) => {
@@ -671,7 +671,7 @@ impl<'a> NetCfg<'a> {
             }
             DnsServersUpdateSource::Netstack => {}
             DnsServersUpdateSource::Dhcpv6 { interface_id } => {
-                let InterfaceState { _control: _, config } = self
+                let InterfaceState { control: _, config } = self
                     .interface_states
                     .get_mut(&interface_id)
                     .ok_or(anyhow::anyhow!("no interface state found for id={}", interface_id))?;
@@ -1007,7 +1007,7 @@ impl<'a> NetCfg<'a> {
                     // An interface netcfg is not configuring was changed, do nothing.
                     None => return Ok(()),
                     Some(InterfaceState {
-                        _control: _,
+                        control: _,
                         config:
                             InterfaceConfigState::Host(HostInterfaceState { dhcpv6_client_addr }),
                     }) => {
@@ -1091,7 +1091,7 @@ impl<'a> NetCfg<'a> {
                         Ok(())
                     }
                     Some(InterfaceState {
-                        _control: _,
+                        control: _,
                         config: InterfaceConfigState::WlanAp(WlanApInterfaceState {}),
                     }) => {
                         // TODO(fxbug.dev/55879): Stop the DHCP server when the address it is
@@ -1137,7 +1137,7 @@ impl<'a> NetCfg<'a> {
                     // An interface netcfg was not responsible for configuring was removed, do
                     // nothing.
                     None => Ok(()),
-                    Some(InterfaceState { _control: _, config }) => {
+                    Some(InterfaceState { control: _, config }) => {
                         match config {
                             InterfaceConfigState::Host(HostInterfaceState {
                                 mut dhcpv6_client_addr,
@@ -1393,8 +1393,6 @@ impl<'a> NetCfg<'a> {
         interface_name: String,
         info: &DeviceInfo,
     ) -> Result<(), errors::Error> {
-        let interface_id_u32: u32 = interface_id.try_into().expect("NIC ID should fit in a u32");
-
         if info.is_wlan_ap() {
             if let Some(id) = self.interface_states.iter().find_map(|(id, state)| {
                 if state.is_wlan_ap() {
@@ -1405,67 +1403,84 @@ impl<'a> NetCfg<'a> {
             }) {
                 return Err(errors::Error::NonFatal(anyhow::anyhow!("multiple WLAN AP interfaces are not supported, have WLAN AP interface with id = {}", id)));
             }
-
-            match self.interface_states.entry(interface_id) {
+            let InterfaceState { control, config: _ } = match self
+                .interface_states
+                .entry(interface_id)
+            {
                 Entry::Occupied(entry) => {
                     return Err(errors::Error::Fatal(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a WLAN AP, existing state = {:?}", entry.key(), entry.get())));
                 }
-                Entry::Vacant(entry) => {
-                    let _: &mut InterfaceState = entry.insert(InterfaceState::new_wlan_ap(control));
-                }
-            }
+                Entry::Vacant(entry) => entry.insert(InterfaceState::new_wlan_ap(control)),
+            };
 
-            info!(
-                "discovered WLAN AP interface with id={}, configuring interface and DHCP server",
-                interface_id
-            );
+            info!("discovered WLAN AP (interface ID={})", interface_id);
 
-            let () = self
-                .configure_wlan_ap_and_dhcp_server(interface_id_u32, interface_name)
+            if let Some(dhcp_server) = &self.dhcp_server {
+                info!("configuring DHCP server for WLAN AP (interface ID={})", interface_id);
+                let () = Self::configure_wlan_ap_and_dhcp_server(
+                    interface_id,
+                    dhcp_server,
+                    control,
+                    &self.stack,
+                    interface_name,
+                )
                 .await
                 .context("error configuring wlan ap and dhcp server")?;
+            } else {
+                warn!("cannot configure DHCP server for WLAN AP (interface ID={}) since DHCP server service is not available", interface_id);
+            }
         } else {
-            match self.interface_states.entry(interface_id) {
+            let InterfaceState { control, config: _ } = match self
+                .interface_states
+                .entry(interface_id)
+            {
                 Entry::Occupied(entry) => {
                     return Err(errors::Error::Fatal(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a host, existing state = {:?}", entry.key(), entry.get())));
                 }
-                Entry::Vacant(entry) => {
-                    let _: &mut InterfaceState = entry.insert(InterfaceState::new_host(control));
-                }
-            }
+                Entry::Vacant(entry) => entry.insert(InterfaceState::new_host(control)),
+            };
 
             info!("discovered host interface with id={}, configuring interface", interface_id);
 
-            let () = self
-                .configure_host(interface_id_u32, info)
-                .await
-                .context("error configuring host")?;
-        }
-
-        let () = self
-            .stack
-            .enable_interface(interface_id)
+            let () = Self::configure_host(
+                &self.filter_enabled_interface_types,
+                &self.filter,
+                &self.netstack,
+                interface_id,
+                info,
+            )
             .await
-            .context("enabling interface")
-            .map_err(errors::Error::Fatal)?
-            .map_err(|e: fidl_fuchsia_net_stack::Error| {
-                errors::Error::NonFatal(anyhow::anyhow!("stack error enabling interface: {:?}", e))
-            })?;
+            .context("error configuring host")?;
+
+            let _did_enable: bool = control
+                .enable()
+                .await
+                .context("error sending enable request")
+                .and_then(|res| {
+                    // ControlEnableError is an empty *flexible* enum, so we can't match on it, but
+                    // the operation is infallible at the time of writing.
+                    res.map_err(|e: fidl_fuchsia_net_interfaces_admin::ControlEnableError| {
+                        anyhow::anyhow!("enable interface: {:?}", e)
+                    })
+                })
+                .map_err(errors::Error::Fatal)?;
+        }
 
         Ok(())
     }
 
     /// Configure host interface.
     async fn configure_host(
-        &mut self,
-        interface_id: u32,
+        filter_enabled_interface_types: &HashSet<InterfaceType>,
+        filter: &fnet_filter::FilterProxy,
+        netstack: &fnetstack::NetstackProxy,
+        interface_id: u64,
         info: &DeviceInfo,
     ) -> Result<(), errors::Error> {
-        if should_enable_filter(&self.filter_enabled_interface_types, info) {
+        if should_enable_filter(filter_enabled_interface_types, info) {
             info!("enable filter for nic {}", interface_id);
-            let () = self
-                .filter
-                .enable_interface(interface_id.into())
+            let () = filter
+                .enable_interface(interface_id)
                 .await
                 .with_context(|| {
                     format!("error sending enable filter request on nic {}", interface_id)
@@ -1481,9 +1496,8 @@ impl<'a> NetCfg<'a> {
                 .map_err(errors::Error::NonFatal)?;
         } else {
             info!("disable filter for nic {}", interface_id);
-            let () = self
-                .filter
-                .disable_interface(interface_id.into())
+            let () = filter
+                .disable_interface(interface_id)
                 .await
                 .with_context(|| {
                     format!("error sending disable filter request on nic {}", interface_id)
@@ -1499,12 +1513,13 @@ impl<'a> NetCfg<'a> {
                 .map_err(errors::Error::NonFatal)?;
         };
 
+        let interface_id: u32 = interface_id.try_into().expect("NIC ID should fit in a u32");
+
         // Enable DHCP.
         let (dhcp_client, server_end) = fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
             .context("dhcp client: failed to create fidl endpoints")
             .map_err(errors::Error::Fatal)?;
-        let () = self
-            .netstack
+        let () = netstack
             .get_dhcp_client(interface_id, server_end)
             .await
             .context("failed to call netstack.get_dhcp_client")
@@ -1530,38 +1545,146 @@ impl<'a> NetCfg<'a> {
     /// with the parameters so it is ready to be started when an interface UP event
     /// is received for the WLAN AP.
     async fn configure_wlan_ap_and_dhcp_server(
-        &mut self,
-        interface_id: u32,
+        interface_id: u64,
+        dhcp_server: &fnet_dhcp::Server_Proxy,
+        control: &fidl_fuchsia_net_interfaces_ext::admin::Control,
+        stack: &fidl_fuchsia_net_stack::StackProxy,
         name: String,
     ) -> Result<(), errors::Error> {
+        let (address_state_provider, server_end) = fidl::endpoints::create_proxy::<
+            fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
+        >()
+        .context("address state provider: failed to create fidl endpoints")
+        .map_err(errors::Error::Fatal)?;
+
         // Calculate and set the interface address based on the network address.
         // The interface address should be the first available address.
         let network_addr_as_u32 = u32::from_be_bytes(WLAN_AP_NETWORK_ADDR.addr);
         let interface_addr_as_u32 = network_addr_as_u32 + 1;
         let addr = fnet::Ipv4Address { addr: interface_addr_as_u32.to_be_bytes() };
-        let fnetstack::NetErr { status, message } = self
-            .netstack
-            .set_interface_address(interface_id, &mut addr.into_ext(), WLAN_AP_PREFIX_LEN)
-            .await
-            .context("error sending set interface address request")
-            .map_err(errors::Error::Fatal)?;
-        if status != fnetstack::Status::Ok {
-            // Do not consider this a fatal error because the interface could
-            // have been removed after it was added, but before we reached
-            // this point.
-            return Err(errors::Error::NonFatal(anyhow::anyhow!(
-                "failed to set interface address for WLAN AP with status = {:?}: {}",
-                status,
-                message
-            )));
-        }
 
-        let dhcp_server = if let Some(dhcp_server) = &self.dhcp_server {
-            dhcp_server
-        } else {
-            warn!("cannot configure DHCP server for WLAN AP (interface ID={}) since DHCP server service is not available", interface_id);
-            return Ok(());
-        };
+        let () = control
+            .add_address(
+                &mut fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                    fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                        addr,
+                        prefix_len: WLAN_AP_PREFIX_LEN,
+                    },
+                ),
+                fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+                server_end,
+            )
+            .map_err(|e| {
+                let severity = match e {
+                    fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Fidl(_) => {
+                        errors::Error::Fatal
+                    },
+                    fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(e) => match e {
+                        fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::DuplicateName
+                            | fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortAlreadyBound
+                            | fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::BadPort => {
+                                errors::Error::Fatal
+                            }
+                        fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::PortClosed
+                            | fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User | _ => {
+                                errors::Error::NonFatal
+                            }
+                    },
+                };
+                severity(anyhow::Error::new(e).context("error sending add address request"))
+            })?;
+
+        // Allow the address to outlive this scope. At the time of writing its lifetime is
+        // identical to the interface's lifetime and no updates to its properties are made. We may
+        // wish to retain the handle in the future to allow external address removal (e.g. by a
+        // user) to be observed so that an error can be emitted (as such removal would break a
+        // critical user journey).
+        let () = address_state_provider
+            .detach()
+            .context("error sending detach request")
+            .map_err(errors::Error::Fatal)?;
+
+        // Enable the interface to allow DAD to proceed.
+        let _did_enable: bool = control
+            .enable()
+            .await
+            .context("error sending enable request")
+            .and_then(|res| {
+                // ControlEnableError is an empty *flexible* enum, so we can't match on it, but the
+                // operation is infallible at the time of writing.
+                res.map_err(|e: fidl_fuchsia_net_interfaces_admin::ControlEnableError| {
+                    anyhow::anyhow!("enable interface: {:?}", e)
+                })
+            })
+            .map_err(errors::Error::Fatal)?;
+
+        let state_stream =
+            fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(address_state_provider);
+        futures::pin_mut!(state_stream);
+        let () = fidl_fuchsia_net_interfaces_ext::admin::wait_assignment_state(
+            &mut state_stream,
+            fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned,
+        )
+        .await
+        .map_err(|e| {
+            let severity = match e {
+                fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
+                    reason,
+                ) => {
+                    match reason {
+                        fnet_interfaces_admin::AddressRemovalReason::Invalid => errors::Error::Fatal,
+                        fnet_interfaces_admin::AddressRemovalReason::AlreadyAssigned
+                            | fnet_interfaces_admin::AddressRemovalReason::DadFailed
+                            | fnet_interfaces_admin::AddressRemovalReason::InterfaceRemoved
+                            | fnet_interfaces_admin::AddressRemovalReason::UserRemoved => {
+                                errors::Error::NonFatal
+                            }
+                    }
+                }
+                fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::Fidl(_)
+                    | fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::ChannelClosed => {
+                        // TODO(https://fxbug.dev/89290): Reconsider whether this should be a fatal
+                        // error, as it can be caused by a netstack bug.
+                        errors::Error::Fatal
+                    }
+            };
+            severity(anyhow::Error::new(e).context("failed to add interface address for WLAN AP"))
+        })?;
+
+        let subnet = fidl_fuchsia_net_ext::apply_subnet_mask(fidl_fuchsia_net::Subnet {
+            addr: fidl_fuchsia_net::IpAddress::Ipv4(addr),
+            prefix_len: WLAN_AP_PREFIX_LEN,
+        });
+        let () = stack
+            .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                subnet,
+                device_id: interface_id,
+                next_hop: None,
+                metric: 0,
+            })
+            .await
+            .context("error sending add route request")
+            .map_err(errors::Error::Fatal)?
+            .map_err(|e| {
+                let severity = match e {
+                    fidl_fuchsia_net_stack::Error::InvalidArgs => {
+                        // Do not consider this a fatal error because the interface could have been
+                        // removed after it was added, but before we reached this point.
+                        //
+                        // NB: this error is returned by Netstack2 when the interface doesn't
+                        // exist. 🤷
+                        errors::Error::NonFatal
+                    }
+                    fidl_fuchsia_net_stack::Error::Internal
+                    | fidl_fuchsia_net_stack::Error::NotSupported
+                    | fidl_fuchsia_net_stack::Error::BadState
+                    | fidl_fuchsia_net_stack::Error::TimeOut
+                    | fidl_fuchsia_net_stack::Error::NotFound
+                    | fidl_fuchsia_net_stack::Error::AlreadyExists
+                    | fidl_fuchsia_net_stack::Error::Io => errors::Error::Fatal,
+                };
+                severity(anyhow::anyhow!("adding route: {:?}", e))
+            })?;
 
         // First we clear any leases that the server knows about since the server
         // will be used on a new interface. If leases exist, configuring the DHCP
@@ -2174,7 +2297,7 @@ mod tests {
                         address: Some(DNS_SERVER2),
                         source: Some(fnet_name::DnsServerSource::Dhcpv6(
                             fnet_name::Dhcpv6DnsServerSource {
-                                source_interface: Some(INTERFACE_ID.into()),
+                                source_interface: Some(INTERFACE_ID),
                                 ..fnet_name::Dhcpv6DnsServerSource::EMPTY
                             },
                         )),

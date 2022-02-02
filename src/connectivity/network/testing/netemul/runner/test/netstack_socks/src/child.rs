@@ -5,12 +5,12 @@
 use {
     crate::common::{BusConnection, SERVER_READY},
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_net,
     fidl_fuchsia_netemul_network::{DeviceConnection, EndpointManagerMarker, NetworkContextMarker},
     fuchsia_component::client,
-    std::io::{Read, Write},
+    netstack_testing_common::interfaces::add_address_wait_assigned,
+    std::io::{Read as _, Write as _},
     std::net::{SocketAddr, TcpListener, TcpStream},
-    std::str::FromStr,
+    std::str::FromStr as _,
 };
 
 const PORT: i32 = 8080;
@@ -77,7 +77,9 @@ fn run_client(server_ip: &str) -> Result<(), Error> {
 }
 
 pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
-    println!("Running child with endpoint '{}'", opt.endpoint);
+    let ChildOptions { endpoint, ip, connect_ip } = opt;
+
+    println!("Running child with endpoint '{}'", &endpoint);
 
     // get the network context service:
     let netctx = client::connect_to_protocol::<NetworkContextMarker>()?;
@@ -86,23 +88,23 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
     netctx.get_endpoint_manager(epmch)?;
 
     // retrieve the created endpoint:
-    let ep = epm.get_endpoint(&opt.endpoint).await?;
-    let ep = ep.ok_or_else(|| format_err!("can't find endpoint {}", opt.endpoint))?.into_proxy()?;
+    let ep = epm.get_endpoint(&endpoint).await?;
+    let ep = ep.ok_or_else(|| format_err!("can't find endpoint {}", &endpoint))?.into_proxy()?;
     // and the device connection:
     let device_connection = ep.get_device().await?;
 
-    let if_name = format!("eth-{}", opt.endpoint);
+    let if_name = format!("eth-{}", &endpoint);
     // connect to netstack:
+    let stack = client::connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()?;
     let netstack = client::connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()?;
     let debug_interfaces =
         client::connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()?;
-    let static_ip =
-        opt.ip.parse::<fidl_fuchsia_net_ext::Subnet>().expect("must be able to parse ip");
+    let static_ip = ip.parse::<fidl_fuchsia_net_ext::Subnet>().expect("must be able to parse ip");
     println!("static ip = {:?}", static_ip);
 
-    let use_ip = match opt.ip.split("/").next() {
+    let use_ip = match ip.split("/").next() {
         Some(v) => String::from(v),
-        None => opt.ip,
+        None => ip,
     };
 
     let mut cfg = fidl_fuchsia_netstack::InterfaceConfig {
@@ -110,21 +112,20 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
         filepath: "[TBD]".to_string(),
         metric: DEFAULT_METRIC,
     };
-    let (control, control_server_end) =
-        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
-            .context("failed to create control endpoints")?;
+    let (control, server_end) = fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+        .context("failed to create control endpoints")?;
     let nicid = match device_connection {
         DeviceConnection::Ethernet(eth) => {
             let nicid = netstack
-                .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth)
+                .add_ethernet_device(&format!("/vdev/{}", &endpoint), &mut cfg, eth)
                 .await
                 .context("add_ethernet_device FIDL error")?
                 .map_err(fuchsia_zircon::Status::from_raw)
                 .context("add_ethernet_device error")?;
             let () = debug_interfaces
-                .get_admin(nicid.into(), control_server_end)
+                .get_admin(nicid.into(), server_end)
                 .context("calling get_admin")?;
-            nicid
+            nicid.into()
         }
         DeviceConnection::NetworkDevice(netdevice) => {
             panic!(
@@ -139,15 +140,13 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
             anyhow::format_err!("enable interface: {:?}", e)
         },
     )?;
-    let fidl_fuchsia_net::Subnet { mut addr, prefix_len } = static_ip.clone().into();
-    let _: fidl_fuchsia_netstack::NetErr =
-        netstack.set_interface_address(nicid, &mut addr, prefix_len).await?;
 
     let interface_state =
         client::connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()?;
+    let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid);
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
-        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid.into()),
+        &mut state,
         |&fidl_fuchsia_net_interfaces_ext::Properties { online, .. }| {
             // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
             online.then(|| ())
@@ -156,9 +155,44 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
     .await
     .context("wait for interface online")?;
 
+    let subnet = static_ip.into();
+    let &fidl_fuchsia_net::Subnet { addr, prefix_len } = &subnet;
+    let interface_address = match addr {
+        fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
+            fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                addr,
+                prefix_len,
+            })
+        }
+        fidl_fuchsia_net::IpAddress::Ipv6(addr) => fidl_fuchsia_net::InterfaceAddress::Ipv6(addr),
+    };
+
+    // Keep address alive.
+    let _address_state_provider = add_address_wait_assigned(
+        &control,
+        interface_address,
+        fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+    )
+    .await
+    .context("add address")?;
+
+    let subnet = fidl_fuchsia_net_ext::apply_subnet_mask(subnet);
+    let () = stack
+        .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+            subnet,
+            device_id: nicid,
+            next_hop: None,
+            metric: 0,
+        })
+        .await
+        .context("error sending add forwarding entry request")?
+        .map_err(|e: fidl_fuchsia_net_stack::Error| {
+            format_err!("failed to add forwarding entry: {:?}", e)
+        })?;
+
     println!("Found ethernet with id {}", nicid);
 
-    if let Some(remote) = opt.connect_ip {
+    if let Some(remote) = connect_ip {
         run_client(&remote)
     } else {
         run_server(&use_ip)

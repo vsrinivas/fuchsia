@@ -7,6 +7,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("netstack_cfg") {
   name = "netstack_cfg"
   edition = "2018"
+  testonly = true
   deps = [
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
@@ -18,6 +19,7 @@ rustc_binary("netstack_cfg") {
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
+    "//src/connectivity/network/tests/integration/common:netstack_testing_common",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

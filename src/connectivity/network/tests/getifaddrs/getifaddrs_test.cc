@@ -57,8 +57,8 @@ TEST(GetIfAddrsTest, GetIfAddrsTest) {
 #if defined(__Fuchsia__)
   want_ifaddrs.push_back(std::make_tuple("ep1", "192.168.0.1", 20, 0, IFF_UP | IFF_RUNNING));
   want_ifaddrs.push_back(std::make_tuple("ep2", "192.168.0.2", 15, 0, IFF_UP | IFF_RUNNING));
-  want_ifaddrs.push_back(std::make_tuple("ep3", "fe80::1", 64, 4, IFF_UP | IFF_RUNNING));
-  want_ifaddrs.push_back(std::make_tuple("ep4", "1234::5:6:7:8", 120, 0, IFF_UP | IFF_RUNNING));
+  want_ifaddrs.push_back(std::make_tuple("ep3", "fe80::1", 128, 4, IFF_UP | IFF_RUNNING));
+  want_ifaddrs.push_back(std::make_tuple("ep4", "1234::5:6:7:8", 128, 0, IFF_UP | IFF_RUNNING));
 #endif
 
   std::vector<InterfaceAddress> unknown_link_local_addrs, other_addrs;

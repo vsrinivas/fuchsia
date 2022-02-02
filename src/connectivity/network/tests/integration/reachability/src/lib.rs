@@ -6,12 +6,13 @@
 // Increase recursion limit in order to use `futures::select`.
 #![recursion_limit = "256"]
 
-use std::{collections::HashMap, convert::TryInto as _};
+use std::collections::HashMap;
 
 use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
+use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_net_stack as fnet_stack;
-use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 
@@ -19,7 +20,7 @@ use futures::{FutureExt as _, Stream, StreamExt as _, TryFutureExt as _};
 use net_declare::{fidl_subnet, net_ip_v4, net_ip_v6, net_mac};
 use netstack_testing_common::{
     constants::{ipv4 as ipv4_consts, ipv6 as ipv6_consts},
-    get_inspect_data,
+    get_inspect_data, interfaces,
     realms::{constants, KnownServiceProvider, Netstack2, TestSandboxExt as _},
     wait_for_component_stopped,
 };
@@ -271,13 +272,17 @@ impl<'a> NetemulInterface<'a> {
     fn id(&self) -> u64 {
         self.interface.id()
     }
+
+    pub fn control(&self) -> &fnet_interfaces_ext::admin::Control {
+        self.interface.control()
+    }
 }
 
 async fn configure_interface(
-    id: u64,
+    device_id: u64,
+    control: &fnet_interfaces_ext::admin::Control,
     controller: &fnet_neighbor::ControllerProxy,
     stack: &fnet_stack::StackProxy,
-    netstack: &fnetstack::NetstackProxy,
     InterfaceConfig {
         name_suffix: _,
         gateway_v4,
@@ -288,43 +293,62 @@ async fn configure_interface(
         metric,
     }: InterfaceConfig,
 ) {
-    // Add IPv4 address.
-    let fnetstack::NetErr { status, message } = netstack
-        .set_interface_address(
-            id.try_into().unwrap(),
-            &mut fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: addr_v4.ipv4_bytes() }),
-            PREFIX_V4,
-        )
-        .await
-        .expect("add IPv4 address FIDL error");
-    if status != fnetstack::Status::Ok {
-        panic!("add IPv4 address error; status: {:?}, message: {}", status, message);
-    }
-    // Add IPv6 address.
-    let fnetstack::NetErr { status, message } = netstack
-        .set_interface_address(
-            id.try_into().unwrap(),
-            &mut fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: addr_v6.ipv6_bytes() }),
-            PREFIX_V6,
-        )
-        .await
-        .expect("add IPv6 address FIDL error");
-    if status != fnetstack::Status::Ok {
-        panic!("add IPv6 address error; status: {:?}, message: {}", status, message);
-    }
+    // Add addresses.
+    futures::stream::iter(IntoIterator::into_iter([
+        fnet::Subnet {
+            addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: addr_v4.ipv4_bytes() }),
+            prefix_len: PREFIX_V4,
+        },
+        fnet::Subnet {
+            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: addr_v6.ipv6_bytes() }),
+            prefix_len: PREFIX_V6,
+        },
+    ]))
+    .for_each_concurrent(None, |subnet| {
+        let fnet::Subnet { addr, prefix_len } = subnet;
+        let interface_address = match addr {
+            fnet::IpAddress::Ipv4(addr) => {
+                fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix { addr, prefix_len })
+            }
+            fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
+        };
+        async move {
+            let address_state_provider = interfaces::add_address_wait_assigned(
+                control,
+                interface_address,
+                fnet_interfaces_admin::AddressParameters::EMPTY,
+            )
+            .await
+            .expect("failed to add address");
+            let () = address_state_provider.detach().expect("address detach");
+
+            let subnet = fidl_fuchsia_net_ext::apply_subnet_mask(subnet);
+            stack
+                .add_forwarding_entry(&mut fnet_stack::ForwardingEntry {
+                    subnet,
+                    device_id,
+                    next_hop: None,
+                    metric: 0,
+                })
+                .await
+                .expect("send add subnet route")
+                .expect("add subnet route")
+        }
+    })
+    .await;
 
     // Add neighbor table entries for the gateway addresses.
     let mut gateway_v4 = fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: gateway_v4.ipv4_bytes() });
     let mut gateway_v6 = fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: gateway_v6.ipv6_bytes() });
     let mut gateway_mac = fnet::MacAddress { octets: gateway_mac.bytes() };
     let () = controller
-        .add_entry(id, &mut gateway_v6, &mut gateway_mac)
+        .add_entry(device_id, &mut gateway_v6, &mut gateway_mac)
         .await
         .expect("neighbor add_entry FIDL error")
         .map_err(zx::Status::from_raw)
         .expect("add IPv6 gateway neighbor table entry failed");
     let () = controller
-        .add_entry(id, &mut gateway_v4, &mut gateway_mac)
+        .add_entry(device_id, &mut gateway_v4, &mut gateway_mac)
         .await
         .expect("neighbor add_entry FIDL error")
         .map_err(zx::Status::from_raw)
@@ -334,7 +358,7 @@ async fn configure_interface(
     let () = stack
         .add_forwarding_entry(&mut fnet_stack::ForwardingEntry {
             subnet: fidl_subnet!("0.0.0.0/0"),
-            device_id: id,
+            device_id,
             next_hop: Some(Box::new(gateway_v4)),
             metric,
         })
@@ -344,7 +368,7 @@ async fn configure_interface(
     let () = stack
         .add_forwarding_entry(&mut fnet_stack::ForwardingEntry {
             subnet: fidl_subnet!("::/0"),
-            device_id: id,
+            device_id,
             next_hop: Some(Box::new(gateway_v6)),
             metric,
         })
@@ -437,9 +461,6 @@ async fn test_state<E: netemul::Endpoint>(
         .expect("failed to connect to Controller");
     let stack =
         realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("failed to connect to Stack");
-    let netstack = realm
-        .connect_to_protocol::<fnetstack::NetstackMarker>()
-        .expect("failed to connect to Netstack");
 
     let interfaces = futures::stream::iter(configs.iter())
         .then(|(config, _): &(InterfaceConfig, State)| {
@@ -456,7 +477,14 @@ async fn test_state<E: netemul::Endpoint>(
                     .expect("failed to join network with netdevice endpoint");
 
                 let interface = NetemulInterface { _network: network, interface, fake_ep };
-                configure_interface(interface.id(), &controller, &stack, &netstack, config).await;
+                configure_interface(
+                    interface.id(),
+                    interface.control(),
+                    &controller,
+                    &stack,
+                    config,
+                )
+                .await;
                 interface
             }
         })
@@ -537,33 +565,6 @@ async fn test_state<E: netemul::Endpoint>(
             r = inspect_data_stream.next() => {
                 let (got_interfaces, IpStates { ipv4: got_system_ipv4, ipv6: got_system_ipv6 }) = r
                     .expect("inspect data stream ended unexpectedly");
-                let equal_count = got_interfaces.iter().fold(0, |equal_count, (id, got)| {
-                    let IpStates { ipv4: want_ipv4, ipv6: want_ipv6 } =
-                        want_interfaces.get(&id).expect(
-                            &format!(
-                                "unknown interface {} with state {:?} found in inspect data",
-                                id, got
-                            )
-                        );
-                    let IpStates { ipv4: got_ipv4, ipv6: got_ipv6 } = got;
-                    if got_ipv4 > want_ipv4 {
-                        panic!(
-                            "interface {} IPv4 state exceeded; got: {:?}, want: {:?}",
-                            id, got_ipv4, want_ipv4,
-                        );
-                    }
-                    if got_ipv6 > want_ipv6 {
-                        panic!(
-                            "interface {} IPv6 state exceeded; got: {:?}, want: {:?}",
-                            id, got_ipv6, want_ipv6,
-                        );
-                    }
-                    if got_ipv4 == want_ipv4 && got_ipv6 == want_ipv6 {
-                        equal_count + 1
-                    } else {
-                        equal_count
-                    }
-                });
                 if got_system_ipv4 > want_system_ipv4 {
                     panic!(
                         "system IPv4 state exceeded; got: {:?}, want: {:?}",
@@ -576,6 +577,32 @@ async fn test_state<E: netemul::Endpoint>(
                         got_system_ipv6, want_system_ipv6,
                     )
                 }
+                let equal_count = got_interfaces
+                    .iter()
+                    .filter_map(|(id, got)| {
+                        let IpStates { ipv4: want_ipv4, ipv6: want_ipv6 } =
+                            want_interfaces.get(&id).unwrap_or_else(|| {
+                                panic!(
+                                    "unknown interface {} with state {:?} found in inspect data",
+                                    id, got,
+                                )
+                            });
+                        let IpStates { ipv4: got_ipv4, ipv6: got_ipv6 } = got;
+                        if got_ipv4 > want_ipv4 {
+                            panic!(
+                                "interface {} IPv4 state exceeded; got: {:?}, want: {:?}",
+                                id, got_ipv4, want_ipv4,
+                            )
+                        }
+                        if got_ipv6 > want_ipv6 {
+                            panic!(
+                                "interface {} IPv6 state exceeded; got: {:?}, want: {:?}",
+                                id, got_ipv6, want_ipv6,
+                            )
+                        }
+                        (got_ipv4 == want_ipv4 && got_ipv6 == want_ipv6).then(|| ())
+                    })
+                    .count();
                 if got_system_ipv4 == want_system_ipv4
                     && got_system_ipv6 == want_system_ipv6
                     && equal_count == interfaces.len()

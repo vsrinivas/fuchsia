@@ -4,8 +4,6 @@
 
 #![cfg(test)]
 
-use std::{collections::HashMap, convert::TryInto as _};
-
 use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
@@ -15,7 +13,7 @@ use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
-use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr};
+use net_declare::{fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
     get_component_moniker, interfaces,
@@ -283,88 +281,6 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
                 addr: interface_address,
                 valid_until: zx::sys::ZX_TIME_INFINITE,
             })
-    );
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
-async fn set_remove_interface_address_errors() {
-    let name = "set_remove_interface_address_errors";
-
-    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
-    let netstack = realm
-        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
-        .expect("connect to protocol");
-
-    let interface_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
-    let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("create event stream"),
-        HashMap::new(),
-    )
-    .await
-    .expect("get existing interfaces");
-    let next_id = 1 + interfaces
-        .keys()
-        .max()
-        .expect("can't find any network interfaces (at least loopback should be present)");
-    let next_id =
-        next_id.try_into().unwrap_or_else(|e| panic!("{} try_into error: {:?}", next_id, e));
-
-    let mut addr = fidl_ip!("0.0.0.0");
-
-    let prefix_len = 0;
-
-    let error = netstack
-        .set_interface_address(next_id, &mut addr, prefix_len)
-        .await
-        .expect("set_interface_address");
-    assert_eq!(
-        error,
-        fidl_fuchsia_netstack::NetErr {
-            status: fidl_fuchsia_netstack::Status::UnknownInterface,
-            message: "".to_string(),
-        },
-    );
-
-    let error = netstack
-        .remove_interface_address(next_id, &mut addr, prefix_len)
-        .await
-        .expect("remove_interface_address");
-    assert_eq!(
-        error,
-        fidl_fuchsia_netstack::NetErr {
-            status: fidl_fuchsia_netstack::Status::UnknownInterface,
-            message: "".to_string(),
-        },
-    );
-
-    let prefix_len = 43;
-
-    let error = netstack
-        .set_interface_address(next_id, &mut addr, prefix_len)
-        .await
-        .expect("set_interface_address");
-    assert_eq!(
-        error,
-        fidl_fuchsia_netstack::NetErr {
-            status: fidl_fuchsia_netstack::Status::ParseError,
-            message: "prefix length exceeds address length".to_string(),
-        },
-    );
-
-    let error = netstack
-        .remove_interface_address(next_id, &mut addr, prefix_len)
-        .await
-        .expect("remove_interface_address");
-    assert_eq!(
-        error,
-        fidl_fuchsia_netstack::NetErr {
-            status: fidl_fuchsia_netstack::Status::ParseError,
-            message: "prefix length exceeds address length".to_string(),
-        },
     );
 }
 
