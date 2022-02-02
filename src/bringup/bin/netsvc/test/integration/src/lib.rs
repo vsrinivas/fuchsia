@@ -627,6 +627,8 @@ async fn can_discover(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
 
 #[fixture(with_netsvc_and_netstack_debuglog_port)]
 #[fuchsia_async::run_singlethreaded(test)]
+// TODO(https://fxbug.dev/92005): Re-enable this test when it's not flaky.
+#[ignore]
 async fn debuglog(sock: fuchsia_async::net::UdpSocket, _scope_id: u32) {
     #[derive(Clone)]
     enum Ack {
