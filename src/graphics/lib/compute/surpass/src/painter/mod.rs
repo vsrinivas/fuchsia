@@ -2,22 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{borrow::Cow, cell::Cell, collections::BTreeMap, mem, slice::ChunksExactMut};
+use std::{
+    borrow::Cow,
+    cell::{Cell, RefCell, RefMut},
+    collections::BTreeMap,
+    mem,
+    ops::Range,
+    slice::ChunksExactMut,
+};
+
+use rayon::prelude::*;
 
 use crate::{
+    layout::{Flusher, Layout, TileFill, TileWriter},
     painter::layer_workbench::TileWriteOp,
     rasterizer::{search_last_by_key, PixelSegment},
     simd::{f32x4, f32x8, i16x16, i32x8, i8x16, u32x4, u32x8, u8x32, Simd},
     PIXEL_DOUBLE_WIDTH, PIXEL_WIDTH, TILE_SIZE,
 };
 
-mod buffer_layout;
 mod layer_workbench;
 #[macro_use]
 mod style;
-
-use buffer_layout::TileSlice;
-pub use buffer_layout::{BufferLayout, BufferLayoutBuilder, Flusher, Rect};
 
 use layer_workbench::{Context, LayerPainter, LayerWorkbench};
 
@@ -149,6 +155,21 @@ fn to_srgb_bytes(color: [f32; 4]) -> [u8; 4] {
     let srgb = to_u32x4(srgb.insert::<3>(color[3]));
 
     srgb.into()
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct Rect {
+    pub(crate) hor: Range<usize>,
+    pub(crate) vert: Range<usize>,
+}
+
+impl Rect {
+    pub fn new(horizontal: Range<usize>, vertical: Range<usize>) -> Self {
+        Self {
+            hor: horizontal.start / TILE_SIZE..(horizontal.end + TILE_SIZE - 1) / TILE_SIZE,
+            vert: vertical.start / TILE_SIZE..(vertical.end + TILE_SIZE - 1) / TILE_SIZE,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -445,58 +466,18 @@ impl Painter {
         }
     }
 
-    fn write_to_tile(
-        &mut self,
-        tile: &mut [TileSlice],
-        solid_color: Option<[u8; 4]>,
-        flusher: Option<&dyn Flusher>,
-    ) {
-        let tile_len = tile.len();
-        if let Some(solid_color) = solid_color {
-            for slice in tile.iter_mut().take(tile_len) {
-                let slice = slice.as_mut_slice();
-                for color in slice.iter_mut() {
-                    *color = solid_color;
-                }
-            }
-        } else {
-            self.compute_srgb();
-            let srgb: &[[u8; 4]] = unsafe {
-                std::slice::from_raw_parts(mem::transmute(self.srgb.as_ptr()), self.srgb.len() * 16)
-            };
-
-            for (y, slice) in tile.iter_mut().enumerate().take(tile_len) {
-                let slice = slice.as_mut_slice();
-                for (x, color) in slice.iter_mut().enumerate() {
-                    *color = srgb[x * TILE_SIZE + y];
-                }
-            }
-        }
-
-        if let Some(flusher) = flusher {
-            for slice in tile.iter_mut().take(tile_len) {
-                let slice = slice.as_mut_slice();
-                flusher.flush(if let Some(subslice) = slice.get_mut(..TILE_SIZE) {
-                    subslice
-                } else {
-                    slice
-                });
-            }
-        }
-    }
-
     #[allow(clippy::too_many_arguments)]
-    pub fn paint_tile_row<P: LayerProps>(
+    pub fn paint_tile_row<'l, 'b: 'l, S: LayerProps, L: Layout<'l, 'b>>(
         &mut self,
         workbench: &mut LayerWorkbench,
-        y: usize,
+        tile_y: usize,
         mut segments: &[PixelSegment],
-        props: &P,
+        props: &S,
         clear_color: [f32; 4],
         mut previous_layers: Option<&mut [Option<u32>]>,
-        flusher: Option<&dyn Flusher>,
-        row: ChunksExactMut<'_, TileSlice>,
+        row: ChunksExactMut<'l, &'b mut [u8]>,
         crop: Option<Rect>,
+        flusher: Option<&'b dyn Flusher>,
     ) {
         fn acc_covers(segments: &[PixelSegment], covers: &mut BTreeMap<u32, Cover>) {
             for segment in segments {
@@ -532,8 +513,8 @@ impl Painter {
         populate_covers(None);
 
         if let Some(rect) = &crop {
-            if rect.horizontal.start > 0 {
-                populate_covers(Some(rect.horizontal.start as i16 - 1));
+            if rect.hor.start > 0 {
+                populate_covers(Some(rect.hor.start as i16 - 1));
             }
         }
 
@@ -543,15 +524,15 @@ impl Painter {
                 .map(|(layer, cover)| CoverCarry { cover, layer_id: layer }),
         );
 
-        for (x, tile) in row.enumerate() {
+        for (tile_x, slices) in row.enumerate() {
             if let Some(rect) = &crop {
-                if !rect.horizontal.contains(&x) {
+                if !rect.hor.contains(&tile_x) {
                     continue;
                 }
             }
 
             let current_segments =
-                search_last_by_key(segments, x as i16, |segment| segment.tile_x())
+                search_last_by_key(segments, tile_x as i16, |segment| segment.tile_x())
                     .map(|last_index| {
                         let current_segments = &segments[..=last_index];
                         segments = &segments[last_index + 1..];
@@ -560,12 +541,12 @@ impl Painter {
                     .unwrap_or(&[]);
 
             let context = Context {
-                tile_x: x,
-                tile_y: y,
+                tile_x,
+                tile_y,
                 segments: current_segments,
                 props,
                 previous_layers: Cell::new(
-                    previous_layers.as_mut().map(|layers_per_tile| &mut layers_per_tile[x]),
+                    previous_layers.as_mut().map(|layers_per_tile| &mut layers_per_tile[tile_x]),
                 ),
                 clear_color,
             };
@@ -575,13 +556,124 @@ impl Painter {
             match workbench.drive_tile_painting(self, &context) {
                 TileWriteOp::None => (),
                 TileWriteOp::Solid(color) => {
-                    self.write_to_tile(tile, Some(to_srgb_bytes(color)), flusher)
+                    L::writer(slices, flusher).write(TileFill::Solid(to_srgb_bytes(color)))
                 }
                 TileWriteOp::ColorBuffer => {
-                    self.write_to_tile(tile, None, flusher);
+                    self.compute_srgb();
+                    let colors: &[[u8; 4]] = unsafe {
+                        std::slice::from_raw_parts(
+                            mem::transmute(self.srgb.as_ptr()),
+                            self.srgb.len() * 16,
+                        )
+                    };
+                    L::writer(slices, flusher).write(TileFill::Full(colors));
                 }
             }
         }
+    }
+}
+
+thread_local!(static PAINTER_WORKBENCH: RefCell<(Painter, LayerWorkbench)> = RefCell::new((
+    Painter::new(),
+    LayerWorkbench::new(),
+)));
+
+#[allow(clippy::too_many_arguments)]
+fn print_row<'l, 'b: 'l, S: LayerProps, L: Layout<'l, 'b>>(
+    segments: &[PixelSegment],
+    clear_color: [f32; 4],
+    crop: &Option<Rect>,
+    styles: &S,
+    j: usize,
+    row: ChunksExactMut<'l, &'b mut [u8]>,
+    layers_per_tile: Option<&mut [Option<u32>]>,
+    flusher: Option<&'b dyn Flusher>,
+) {
+    if let Some(rect) = crop {
+        if !rect.vert.contains(&j) {
+            return;
+        }
+    }
+
+    let segments = search_last_by_key(segments, j as i16, |segment| segment.tile_y())
+        .map(|end| {
+            let result = search_last_by_key(segments, j as i16 - 1, |segment| segment.tile_y());
+            let start = match result {
+                Ok(i) => i + 1,
+                Err(i) => i,
+            };
+
+            &segments[start..=end]
+        })
+        .unwrap_or(&[]);
+
+    PAINTER_WORKBENCH.with(|pair| {
+        let (mut painter, mut workbench) =
+            RefMut::map_split(pair.borrow_mut(), |pair| (&mut pair.0, &mut pair.1));
+        painter.paint_tile_row::<S, L>(
+            &mut workbench,
+            j,
+            segments,
+            styles,
+            clear_color,
+            layers_per_tile,
+            row,
+            crop.clone(),
+            flusher,
+        );
+    });
+}
+
+#[allow(clippy::too_many_arguments)]
+#[inline]
+pub fn for_each_row<'l, 'b: 'l, L: Layout<'l, 'b>, S: LayerProps>(
+    layout: &'l mut L,
+    buffer: &'b mut [u8],
+    flusher: Option<&'b dyn Flusher>,
+    layers_per_tile: Option<RefMut<'_, Vec<Option<u32>>>>,
+    mut segments: &[PixelSegment],
+    clear_color: [f32; 4],
+    crop: &Option<Rect>,
+    styles: &S,
+) {
+    if let Ok(end) = search_last_by_key(segments, false, |segment| segment.tile_y().is_negative()) {
+        segments = &segments[..=end];
+    }
+
+    let width_in_tiles = layout.width_in_tiles();
+    let row_of_tiles_len = width_in_tiles * layout.slices_per_tile();
+    let splits = layout.splits(buffer);
+
+    if let Some(mut layers_per_tile) = layers_per_tile {
+        splits
+            .par_chunks_mut(row_of_tiles_len)
+            .zip_eq(layers_per_tile.par_chunks_mut(width_in_tiles))
+            .enumerate()
+            .for_each(|(j, (row_of_tiles, layers_per_tile))| {
+                print_row::<S, L>(
+                    segments,
+                    clear_color,
+                    crop,
+                    styles,
+                    j,
+                    row_of_tiles.chunks_exact_mut(row_of_tiles.len() / width_in_tiles),
+                    Some(layers_per_tile),
+                    flusher,
+                );
+            });
+    } else {
+        splits.par_chunks_mut(row_of_tiles_len).enumerate().for_each(|(j, row_of_tiles)| {
+            print_row::<S, L>(
+                segments,
+                clear_color,
+                crop,
+                styles,
+                j,
+                row_of_tiles.chunks_exact_mut(row_of_tiles.len() / width_in_tiles),
+                None,
+                flusher,
+            );
+        });
     }
 }
 
@@ -589,9 +681,10 @@ impl Painter {
 mod tests {
     use super::*;
 
-    use std::collections::HashMap;
+    use std::{collections::HashMap, iter};
 
     use crate::{
+        layout::LinearLayout,
         point::Point,
         rasterizer::{self, Rasterizer},
         LinesBuilder, Segment, TILE_SIZE,
@@ -604,6 +697,11 @@ mod tests {
     const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
     const GREEN_50: [f32; 4] = [0.0, 0.5, 0.0, 1.0];
     const RED_GREEN_50: [f32; 4] = [0.5, 0.5, 0.0, 1.0];
+    const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
+    const BLACK_RGBA: [u8; 4] = [0, 0, 0, 255];
+    const RED_RGBA: [u8; 4] = [255, 0, 0, 255];
+    const GREEN_RGBA: [u8; 4] = [0, 255, 0, 255];
+    const BLUE_RGBA: [u8; 4] = [0, 0, 255, 255];
 
     impl LayerProps for HashMap<u32, Style> {
         fn get(&self, layer_id: u32) -> Cow<'_, Props> {
@@ -926,5 +1024,225 @@ mod tests {
             0.5,
         ];
         assert_eq!(to_srgb_bytes(premultiplied), [3, 124, 187, 128]);
+    }
+
+    #[test]
+    fn flusher() {
+        macro_rules! seg {
+            ( $j:expr, $i:expr ) => {
+                PixelSegment::new(false, $j, $i, 0, 0, 0, 0, 0)
+            };
+        }
+
+        #[derive(Debug)]
+        struct WhiteFlusher;
+
+        impl Flusher for WhiteFlusher {
+            fn flush(&self, slice: &mut [u8]) {
+                for color in slice {
+                    *color = 255u8;
+                }
+            }
+        }
+
+        let size = TILE_SIZE + TILE_SIZE / 2;
+        let mut buffer = vec![0u8; size * size * 4];
+        let mut buffer_layout = LinearLayout::new(size, size * 4, TILE_SIZE);
+
+        let segments = &[seg!(0, 0), seg!(0, 1), seg!(1, 0), seg!(1, 1)];
+
+        for_each_row(
+            &mut buffer_layout,
+            &mut buffer,
+            Some(&WhiteFlusher),
+            None,
+            segments,
+            [0.0; 4],
+            &None,
+            &|_| Style::default(),
+        );
+
+        assert!(buffer.iter().all(|&color| color == 255u8));
+    }
+
+    #[test]
+    fn flush_background() {
+        #[derive(Debug)]
+        struct WhiteFlusher;
+
+        impl Flusher for WhiteFlusher {
+            fn flush(&self, slice: &mut [u8]) {
+                for color in slice {
+                    *color = 255u8;
+                }
+            }
+        }
+
+        let mut buffer = vec![0u8; TILE_SIZE * TILE_SIZE * 4];
+        let mut buffer_layout = LinearLayout::new(TILE_SIZE, TILE_SIZE * 4, TILE_SIZE);
+
+        for_each_row(
+            &mut buffer_layout,
+            &mut buffer,
+            Some(&WhiteFlusher),
+            None,
+            &[],
+            [0.0; 4],
+            &None,
+            &|_| Style::default(),
+        );
+
+        assert!(buffer.iter().all(|&color| color == 255u8));
+    }
+
+    #[test]
+    fn skip_opaque_tiles() {
+        let mut buffer = vec![0u8; TILE_SIZE * TILE_SIZE * 3 * 4];
+
+        let mut buffer_layout = LinearLayout::new(TILE_SIZE * 3, TILE_SIZE * 3 * 4, TILE_SIZE);
+
+        let mut segments = vec![];
+        for y in 0..TILE_SIZE {
+            segments.push(PixelSegment::new(
+                false,
+                0,
+                -1,
+                2,
+                y as u8,
+                TILE_SIZE as u8 - 1,
+                0,
+                PIXEL_WIDTH as i8,
+            ));
+        }
+
+        segments.push(PixelSegment::new(
+            false,
+            0,
+            -1,
+            0,
+            0,
+            TILE_SIZE as u8 - 1,
+            0,
+            PIXEL_WIDTH as i8,
+        ));
+        segments.push(PixelSegment::new(false, 0, 0, 1, 1, 0, 0, PIXEL_WIDTH as i8));
+
+        for y in 0..TILE_SIZE {
+            segments.push(PixelSegment::new(
+                false,
+                0,
+                1,
+                2,
+                y as u8,
+                TILE_SIZE as u8 - 1,
+                0,
+                -(PIXEL_WIDTH as i8),
+            ));
+        }
+
+        segments.sort();
+
+        let mut styles = HashMap::new();
+
+        styles.insert(0, Style { fill: Fill::Solid(BLUE), ..Default::default() });
+        styles.insert(1, Style { fill: Fill::Solid(GREEN), ..Default::default() });
+        styles.insert(2, Style { fill: Fill::Solid(RED), ..Default::default() });
+
+        for_each_row(
+            &mut buffer_layout,
+            &mut buffer,
+            None,
+            None,
+            &segments,
+            BLACK,
+            &None,
+            &|layer| styles[&layer].clone(),
+        );
+
+        let tiles = buffer_layout.splits(&mut buffer);
+
+        assert_eq!(
+            tiles,
+            // First two tiles need to be completely red.
+            iter::repeat(vec![RED_RGBA; TILE_SIZE].concat())
+                .take(TILE_SIZE)
+                .chain(iter::repeat(vec![RED_RGBA; TILE_SIZE].concat()).take(TILE_SIZE))
+                .chain(
+                    // The last tile contains one blue and one green line.
+                    iter::once(vec![BLUE_RGBA; TILE_SIZE].concat())
+                        .chain(iter::once(vec![GREEN_RGBA; TILE_SIZE].concat()))
+                        // Followed by black lines (clear color).
+                        .chain(
+                            iter::repeat(vec![BLACK_RGBA; TILE_SIZE].concat()).take(TILE_SIZE - 2)
+                        )
+                )
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn crop() {
+        let mut buffer = vec![0u8; TILE_SIZE * TILE_SIZE * 9 * 4];
+
+        let mut buffer_layout = LinearLayout::new(TILE_SIZE * 3, TILE_SIZE * 3 * 4, TILE_SIZE);
+
+        let mut segments = vec![];
+        for j in 0..3 {
+            for y in 0..TILE_SIZE {
+                segments.push(PixelSegment::new(
+                    false,
+                    j,
+                    0,
+                    0,
+                    y as u8,
+                    TILE_SIZE as u8 - 1,
+                    0,
+                    PIXEL_WIDTH as i8,
+                ));
+            }
+        }
+
+        segments.sort();
+
+        let mut styles = HashMap::new();
+
+        styles.insert(0, Style { fill: Fill::Solid(BLUE), ..Default::default() });
+
+        for_each_row(
+            &mut buffer_layout,
+            &mut buffer,
+            None,
+            None,
+            &segments,
+            RED,
+            &Some(Rect::new(TILE_SIZE..TILE_SIZE * 2 + TILE_SIZE / 2, TILE_SIZE..TILE_SIZE * 2)),
+            &|layer| styles[&layer].clone(),
+        );
+
+        let tiles = buffer_layout.splits(&mut buffer);
+
+        assert_eq!(
+            tiles,
+            // First row of tiles needs to be completely black.
+            iter::repeat(vec![0u8; TILE_SIZE * 4])
+                .take(TILE_SIZE * 3)
+                // Second row begins with a black tile.
+                .chain(iter::repeat(vec![0u8; TILE_SIZE * 4]).take(TILE_SIZE))
+                .chain(iter::repeat(vec![BLUE_RGBA; TILE_SIZE].concat()).take(TILE_SIZE * 2))
+                // Third row of tiles needs to be completely black as well.
+                .chain(iter::repeat(vec![0u8; TILE_SIZE * 4]).take(TILE_SIZE * 3))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn tiles_len() {
+        let width = TILE_SIZE * 4;
+        let width_stride = TILE_SIZE * 5 * 4;
+        let height = TILE_SIZE * 8;
+
+        let buffer_layout = LinearLayout::new(width, width_stride, height);
+
+        assert_eq!(buffer_layout.width_in_tiles() * buffer_layout.height_in_tiles(), 32);
     }
 }

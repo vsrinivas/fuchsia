@@ -7,13 +7,13 @@ use std::{borrow::Cow, cell::RefCell, mem, rc::Rc};
 use rustc_hash::FxHashMap;
 use surpass::{
     self,
-    painter::{BufferLayout, LayerProps, Props, Rect},
+    painter::{for_each_row, LayerProps, Props, Rect},
     rasterizer::{self, Rasterizer},
     LinesBuilder,
 };
 
 use crate::{
-    buffer::{Buffer, BufferLayerCache},
+    buffer::{layout::Layout, Buffer, BufferLayerCache},
     layer::{IdSet, Layer, SmallBitSet},
     Path,
 };
@@ -22,13 +22,6 @@ const LINES_GARBAGE_THRESHOLD: usize = 2;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct LayerId(usize);
-
-macro_rules! take_builder {
-    ( $slf:expr, $f:expr ) => {{
-        let builder = $slf.builder.take().expect("Composition::builder should not be None");
-        $slf.builder = Some($f(builder));
-    }};
-}
 
 #[derive(Debug)]
 pub struct Composition {
@@ -39,7 +32,6 @@ pub struct Composition {
     external_count: usize,
     external_to_internal: FxHashMap<LayerId, u32>,
     orders_to_layers: FxHashMap<u32, u32>,
-    layouts: FxHashMap<(*mut [u8; 4], usize), BufferLayout>,
     buffers_with_caches: Rc<RefCell<SmallBitSet>>,
 }
 
@@ -54,7 +46,6 @@ impl Composition {
             external_count: 0,
             external_to_internal: FxHashMap::default(),
             orders_to_layers: FxHashMap::default(),
-            layouts: FxHashMap::default(),
             buffers_with_caches: Rc::new(RefCell::new(SmallBitSet::default())),
         }
     }
@@ -132,7 +123,8 @@ impl Composition {
     #[inline]
     pub fn remove_disabled(&mut self) {
         if self.builder().len() >= self.actual_len() * LINES_GARBAGE_THRESHOLD {
-            take_builder!(self, |mut builder: LinesBuilder| {
+            let mut builder = self.builder.take().expect("Composition::builder should not be None");
+            self.builder = Some({
                 builder.retain(|layer| {
                     self.layers.get(&layer).map(|layer| layer.inner.is_enabled).unwrap_or_default()
                 });
@@ -162,14 +154,17 @@ impl Composition {
         })
     }
 
-    pub fn render(
+    pub fn render<'b, 'l, L>(
         &mut self,
-        mut buffer: Buffer<'_>,
+        buffer: &'b mut Buffer<'b, 'l, L>,
         background_color: [f32; 4],
         crop: Option<Rect>,
-    ) {
+    ) where
+        'b: 'l,
+        L: Layout<'l, 'b>,
+    {
         if let Some(buffer_layer_cache) = buffer.layer_cache.as_ref() {
-            let tiles_len = buffer.tiles_len();
+            let tiles_len = buffer.layout.width_in_tiles() * buffer.layout.height_in_tiles();
 
             if buffer_layer_cache.layers_per_tile.borrow().len() != tiles_len {
                 buffer_layer_cache.layers_per_tile.borrow_mut().resize(tiles_len, None);
@@ -187,11 +182,6 @@ impl Composition {
                 );
             }
         }
-
-        let layout = self
-            .layouts
-            .entry((buffer.buffer.as_mut_ptr(), buffer.buffer.len()))
-            .or_insert_with(|| buffer.generate_layout());
 
         let layers = &self.layers;
         let orders_to_layers = &self.orders_to_layers;
@@ -242,7 +232,9 @@ impl Composition {
             cache_id: buffer.layer_cache.as_ref().map(|cache| cache.id),
         };
 
-        take_builder!(self, |builder: LinesBuilder| {
+        let builder = self.builder.take().expect("Composition::builder should not be None");
+
+        self.builder = Some({
             let lines = {
                 duration!("gfx", "LinesBuilder::build");
                 builder.build(|layer_id| layers.get(&layer_id).map(|layer| layer.inner.clone()))
@@ -262,29 +254,32 @@ impl Composition {
                     segment.is_none()
                 })
                 .unwrap_or(0);
+
             let segments = rasterizer.segments().get(0..=last_segment).unwrap_or(&[]);
-            let mut layers_per_tile = buffer
+
+            let layers_per_tile = buffer
                 .layer_cache
                 .as_ref()
-                .map(|buffer_layer_cache| buffer_layer_cache.layers_per_tile.borrow_mut());
+                .map(|layer_cache| layer_cache.layers_per_tile.borrow_mut());
 
             {
-                duration!("gfx", "BufferLayout::print");
-                layout.print(
+                duration!("gfx", "painter::for_each_row");
+                for_each_row(
+                    buffer.layout,
                     buffer.buffer,
-                    layers_per_tile.as_mut().map(|layers_per_tile| layers_per_tile.as_mut_slice()),
                     buffer.flusher.as_deref(),
+                    layers_per_tile,
                     segments,
                     background_color,
-                    crop,
-                    context,
+                    &crop,
+                    &context,
                 );
             }
 
             lines.unwrap()
         });
 
-        if let Some(buffer_layer_cache) = buffer.layer_cache {
+        if let Some(buffer_layer_cache) = &buffer.layer_cache {
             for layer in self.layers.values_mut() {
                 layer.set_is_unchanged(buffer_layer_cache.id, layer.inner.is_enabled);
             }
@@ -306,7 +301,10 @@ mod tests {
 
     use surpass::TILE_SIZE;
 
-    use crate::{Fill, FillRule, Func, GeomPresTransform, PathBuilder, Point, Style};
+    use crate::{
+        buffer::{layout::LinearLayout, BufferBuilder},
+        Fill, FillRule, Func, GeomPresTransform, PathBuilder, Point, Style,
+    };
 
     const BLACK: [u8; 4] = [0x00, 0x0, 0x00, 0xFF];
     const BLACKF: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
@@ -337,56 +335,51 @@ mod tests {
 
     #[test]
     fn background_color_clear() {
-        let mut buffer = [GREEN];
+        let mut buffer = [GREEN].concat();
+        let mut layout = LinearLayout::new(1, 4, 1);
+
         let mut composition = Composition::new();
 
-        composition.render(
-            Buffer { buffer: &mut buffer, width: 1, ..Default::default() },
-            REDF,
-            None,
-        );
+        composition.render(&mut BufferBuilder::new(&mut buffer, &mut layout).build(), REDF, None);
 
-        assert_eq!(buffer, [RED]);
+        assert_eq!(buffer, [RED].concat());
     }
 
     #[test]
     fn one_pixel() {
-        let mut buffer = [GREEN; 3];
+        let mut buffer = [GREEN; 3].concat();
+        let mut layout = LinearLayout::new(3, 3 * 4, 1);
+
         let mut composition = Composition::new();
 
         let layer_id = composition.create_layer();
         composition.insert_in_layer(layer_id, &pixel_path(1, 0)).unwrap().set_props(solid(REDF));
 
-        composition.render(
-            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
-            GREENF,
-            None,
-        );
+        composition.render(&mut BufferBuilder::new(&mut buffer, &mut layout).build(), GREENF, None);
 
-        assert_eq!(buffer, [GREEN, RED, GREEN]);
+        assert_eq!(buffer, [GREEN, RED, GREEN].concat());
     }
 
     #[test]
     fn two_pixels_same_layer() {
-        let mut buffer = [GREEN; 3];
+        let mut buffer = [GREEN; 3].concat();
+        let mut layout = LinearLayout::new(3, 3 * 4, 1);
         let mut composition = Composition::new();
 
         let layer_id = composition.create_layer();
         composition.insert_in_layer(layer_id, &pixel_path(1, 0)).unwrap().set_props(solid(REDF));
         composition.insert_in_layer(layer_id, &pixel_path(2, 0)).unwrap();
 
-        composition.render(
-            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
-            GREENF,
-            None,
-        );
+        composition.render(&mut BufferBuilder::new(&mut buffer, &mut layout).build(), GREENF, None);
 
-        assert_eq!(buffer, [GREEN, RED, RED]);
+        assert_eq!(buffer, [GREEN, RED, RED].concat());
     }
 
     #[test]
     fn one_pixel_translated() {
-        let mut buffer = [GREEN; 3];
+        let mut buffer = [GREEN; 3].concat();
+        let mut layout = LinearLayout::new(3, 3 * 4, 1);
+
         let mut composition = Composition::new();
 
         let layer_id = composition.create_layer();
@@ -396,18 +389,16 @@ mod tests {
             .set_props(solid(REDF))
             .set_transform(GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.5, 0.0]).unwrap());
 
-        composition.render(
-            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
-            GREENF,
-            None,
-        );
+        composition.render(&mut BufferBuilder::new(&mut buffer, &mut layout).build(), GREENF, None);
 
-        assert_eq!(buffer, [GREEN, RED_GREEN_50, RED_GREEN_50]);
+        assert_eq!(buffer, [GREEN, RED_GREEN_50, RED_GREEN_50].concat());
     }
 
     #[test]
     fn one_pixel_rotated() {
-        let mut buffer = [GREEN; 3];
+        let mut buffer = [GREEN; 3].concat();
+        let mut layout = LinearLayout::new(3, 3 * 4, 1);
+
         let mut composition = Composition::new();
         let angle = -std::f32::consts::PI / 2.0;
 
@@ -428,18 +419,14 @@ mod tests {
                 .unwrap(),
             );
 
-        composition.render(
-            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
-            GREENF,
-            None,
-        );
+        composition.render(&mut BufferBuilder::new(&mut buffer, &mut layout).build(), GREENF, None);
 
-        assert_eq!(buffer, [GREEN, RED, GREEN]);
+        assert_eq!(buffer, [GREEN, RED, GREEN].concat());
     }
 
     #[test]
     fn remove_and_resize() {
-        let mut buffer = [GREEN; 4];
+        let mut buffer = [GREEN; 4].concat();
         let mut composition = Composition::new();
 
         let layer_id0 = composition.create_layer();
@@ -450,41 +437,35 @@ mod tests {
         composition.insert_in_layer(layer_id2, &pixel_path(2, 0)).unwrap().set_props(solid(REDF));
         composition.insert_in_layer(layer_id2, &pixel_path(3, 0)).unwrap().set_props(solid(REDF));
 
-        composition.render(
-            Buffer { buffer: &mut buffer, width: 4, ..Default::default() },
-            GREENF,
-            None,
-        );
+        let mut layout = LinearLayout::new(4, 4 * 4, 1);
 
-        assert_eq!(buffer, [RED, RED, RED, RED]);
+        composition.render(&mut BufferBuilder::new(&mut buffer, &mut layout).build(), GREENF, None);
+
+        assert_eq!(buffer, [RED, RED, RED, RED].concat());
         assert_eq!(composition.builder().len(), 16);
         assert_eq!(composition.actual_len(), 16);
 
-        buffer = [GREEN; 4];
+        buffer = [GREEN; 4].concat();
+
+        let mut layout = LinearLayout::new(4, 4 * 4, 1);
 
         composition.get_mut(layer_id0).unwrap().disable();
 
-        composition.render(
-            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
-            GREENF,
-            None,
-        );
+        composition.render(&mut BufferBuilder::new(&mut buffer, &mut layout).build(), GREENF, None);
 
-        assert_eq!(buffer, [GREEN, RED, RED, RED]);
+        assert_eq!(buffer, [GREEN, RED, RED, RED].concat());
         assert_eq!(composition.builder().len(), 16);
         assert_eq!(composition.actual_len(), 12);
 
-        buffer = [GREEN; 4];
+        buffer = [GREEN; 4].concat();
+
+        let mut layout = LinearLayout::new(4, 4 * 4, 1);
 
         composition.get_mut(layer_id2).unwrap().disable();
 
-        composition.render(
-            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
-            GREENF,
-            None,
-        );
+        composition.render(&mut BufferBuilder::new(&mut buffer, &mut layout).build(), GREENF, None);
 
-        assert_eq!(buffer, [GREEN, RED, GREEN, GREEN]);
+        assert_eq!(buffer, [GREEN, RED, GREEN, GREEN].concat());
         assert_eq!(composition.builder().len(), 4);
         assert_eq!(composition.actual_len(), 4);
     }
@@ -509,7 +490,8 @@ mod tests {
 
     #[test]
     fn render_change_layers_only() {
-        let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE];
+        let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE].concat();
+        let mut layout = LinearLayout::new(3 * TILE_SIZE, 3 * TILE_SIZE * 4, TILE_SIZE);
         let mut composition = Composition::new();
         let layer_cache = composition.create_buffer_layer_cache();
 
@@ -525,40 +507,40 @@ mod tests {
         composition.insert_in_layer(layer_id, &pixel_path(2 * TILE_SIZE as i32, 0)).unwrap();
 
         composition.render(
-            Buffer {
-                buffer: &mut buffer,
-                width: 3 * TILE_SIZE,
-                layer_cache: layer_cache.clone(),
-                ..Default::default()
-            },
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.clone().unwrap())
+                .build(),
             BLACKF,
             None,
         );
 
-        assert_eq!(buffer[0], RED);
-        assert_eq!(buffer[TILE_SIZE], RED);
-        assert_eq!(buffer[TILE_SIZE + 1], GREEN);
-        assert_eq!(buffer[2 * TILE_SIZE], GREEN);
+        assert_eq!(buffer[0..4], RED);
+        assert_eq!(buffer[TILE_SIZE * 4..TILE_SIZE * 4 + 4], RED);
+        assert_eq!(buffer[(TILE_SIZE + 1) * 4..(TILE_SIZE + 1) * 4 + 4], GREEN);
+        assert_eq!(buffer[2 * TILE_SIZE * 4..2 * TILE_SIZE * 4 + 4], GREEN);
 
-        buffer.fill(BLACK);
+        let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE].concat();
 
         composition.get_mut(layer_id).unwrap().set_props(solid(REDF));
 
         composition.render(
-            Buffer { buffer: &mut buffer, width: 3 * TILE_SIZE, layer_cache, ..Default::default() },
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.unwrap())
+                .build(),
             BLACKF,
             None,
         );
 
-        assert_eq!(buffer[0], BLACK);
-        assert_eq!(buffer[TILE_SIZE], RED);
-        assert_eq!(buffer[TILE_SIZE + 1], RED);
-        assert_eq!(buffer[2 * TILE_SIZE], RED);
+        assert_eq!(buffer[0..4], BLACK);
+        assert_eq!(buffer[TILE_SIZE * 4..TILE_SIZE * 4 + 4], RED);
+        assert_eq!(buffer[(TILE_SIZE + 1) * 4..(TILE_SIZE + 1) * 4 + 4], RED);
+        assert_eq!(buffer[2 * TILE_SIZE * 4..2 * TILE_SIZE * 4 + 4], RED);
     }
 
     #[test]
     fn clear_emptied_tiles() {
-        let mut buffer = [BLACK; 2 * TILE_SIZE * TILE_SIZE];
+        let mut buffer = [BLACK; 2 * TILE_SIZE * TILE_SIZE].concat();
+        let mut layout = LinearLayout::new(2 * TILE_SIZE, 2 * TILE_SIZE * 4, TILE_SIZE);
         let mut composition = Composition::new();
         let layer_cache = composition.create_buffer_layer_cache();
 
@@ -567,68 +549,62 @@ mod tests {
         composition.insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32, 0)).unwrap();
 
         composition.render(
-            Buffer {
-                buffer: &mut buffer,
-                width: 2 * TILE_SIZE,
-                layer_cache: layer_cache.clone(),
-                ..Default::default()
-            },
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.clone().unwrap())
+                .build(),
             BLACKF,
             None,
         );
 
-        assert_eq!(buffer[0], RED);
+        assert_eq!(buffer[0..4], RED);
 
         composition.get_mut(layer_id).unwrap().set_transform(
             GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, TILE_SIZE as f32, 0.0]).unwrap(),
         );
 
         composition.render(
-            Buffer {
-                buffer: &mut buffer,
-                width: 2 * TILE_SIZE,
-                layer_cache: layer_cache.clone(),
-                ..Default::default()
-            },
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.clone().unwrap())
+                .build(),
             BLACKF,
             None,
         );
 
-        assert_eq!(buffer[0], BLACK);
+        assert_eq!(buffer[0..4], BLACK);
 
         composition.get_mut(layer_id).unwrap().set_transform(
             GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, -(TILE_SIZE as f32), 0.0]).unwrap(),
         );
 
         composition.render(
-            Buffer {
-                buffer: &mut buffer,
-                width: TILE_SIZE,
-                layer_cache: layer_cache.clone(),
-                ..Default::default()
-            },
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.clone().unwrap())
+                .build(),
             BLACKF,
             None,
         );
 
-        assert_eq!(buffer[0], RED);
+        assert_eq!(buffer[0..4], RED);
 
         composition.get_mut(layer_id).unwrap().set_transform(
             GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.0, TILE_SIZE as f32]).unwrap(),
         );
 
         composition.render(
-            Buffer { buffer: &mut buffer, width: TILE_SIZE, layer_cache, ..Default::default() },
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache.unwrap())
+                .build(),
             BLACKF,
             None,
         );
 
-        assert_eq!(buffer[0], BLACK);
+        assert_eq!(buffer[0..4], BLACK);
     }
 
     #[test]
     fn separare_layer_caches() {
-        let mut buffer = [BLACK; TILE_SIZE * TILE_SIZE];
+        let mut buffer = [BLACK; TILE_SIZE * TILE_SIZE].concat();
+        let mut layout = LinearLayout::new(TILE_SIZE, TILE_SIZE * 4, TILE_SIZE);
         let mut composition = Composition::new();
         let layer_cache0 = composition.create_buffer_layer_cache();
         let layer_cache1 = composition.create_buffer_layer_cache();
@@ -637,45 +613,36 @@ mod tests {
         composition.insert_in_layer(layer_id, &pixel_path(0, 0)).unwrap().set_props(solid(REDF));
 
         composition.render(
-            Buffer {
-                buffer: &mut buffer,
-                width: TILE_SIZE,
-                layer_cache: layer_cache0.clone(),
-                ..Default::default()
-            },
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache0.clone().unwrap())
+                .build(),
             BLACKF,
             None,
         );
 
-        assert_eq!(buffer[0], RED);
+        assert_eq!(buffer[0..4], RED);
 
-        buffer.fill(BLACK);
+        let mut buffer = [BLACK; TILE_SIZE * TILE_SIZE].concat();
 
         composition.render(
-            Buffer {
-                buffer: &mut buffer,
-                width: TILE_SIZE,
-                layer_cache: layer_cache0.clone(),
-                ..Default::default()
-            },
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache0.clone().unwrap())
+                .build(),
             BLACKF,
             None,
         );
 
-        assert_eq!(buffer[0], BLACK);
+        assert_eq!(buffer[0..4], BLACK);
 
         composition.render(
-            Buffer {
-                buffer: &mut buffer,
-                width: TILE_SIZE,
-                layer_cache: layer_cache1.clone(),
-                ..Default::default()
-            },
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache1.clone().unwrap())
+                .build(),
             BLACKF,
             None,
         );
 
-        assert_eq!(buffer[0], RED);
+        assert_eq!(buffer[0..4], RED);
 
         composition
             .get_mut(layer_id)
@@ -683,34 +650,28 @@ mod tests {
             .set_transform(GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 1.0, 0.0]).unwrap());
 
         composition.render(
-            Buffer {
-                buffer: &mut buffer,
-                width: TILE_SIZE,
-                layer_cache: layer_cache0,
-                ..Default::default()
-            },
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache0.unwrap())
+                .build(),
             BLACKF,
             None,
         );
 
-        assert_eq!(buffer[0], BLACK);
-        assert_eq!(buffer[1], RED);
+        assert_eq!(buffer[0..4], BLACK);
+        assert_eq!(buffer[4..8], RED);
 
-        buffer.fill(BLACK);
+        let mut buffer = [BLACK; TILE_SIZE * TILE_SIZE].concat();
 
         composition.render(
-            Buffer {
-                buffer: &mut buffer,
-                width: TILE_SIZE,
-                layer_cache: layer_cache1,
-                ..Default::default()
-            },
+            &mut BufferBuilder::new(&mut buffer, &mut layout)
+                .layer_cache(layer_cache1.unwrap())
+                .build(),
             BLACKF,
             None,
         );
 
-        assert_eq!(buffer[0], BLACK);
-        assert_eq!(buffer[1], RED);
+        assert_eq!(buffer[0..4], BLACK);
+        assert_eq!(buffer[4..8], RED);
     }
 
     #[test]
@@ -729,7 +690,9 @@ mod tests {
 
         let path = builder.build();
 
-        let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE];
+        let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE].concat();
+        let mut layout = LinearLayout::new(3 * TILE_SIZE, 3 * TILE_SIZE * 4, TILE_SIZE);
+
         let mut composition = Composition::new();
 
         let layer_id = composition.create_layer();
@@ -738,14 +701,10 @@ mod tests {
             func: Func::Draw(Style { fill: Fill::Solid(REDF), ..Default::default() }),
         });
 
-        composition.render(
-            Buffer { buffer: &mut buffer, width: 3 * TILE_SIZE, ..Default::default() },
-            BLACKF,
-            None,
-        );
+        composition.render(&mut BufferBuilder::new(&mut buffer, &mut layout).build(), BLACKF, None);
 
-        assert_eq!(buffer[0], RED);
-        assert_eq!(buffer[TILE_SIZE], BLACK);
-        assert_eq!(buffer[2 * TILE_SIZE], RED);
+        assert_eq!(buffer[0..4], RED);
+        assert_eq!(buffer[TILE_SIZE * 4..(TILE_SIZE * 4 + 4)], BLACK);
+        assert_eq!(buffer[2 * TILE_SIZE * 4..2 * TILE_SIZE * 4 + 4], RED);
     }
 }

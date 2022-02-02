@@ -159,6 +159,32 @@ rustc_library("carnelian") {
   if (carnelian_enable_vulkan_validation) {
     features = [ "vulkan-validation" ]
   }
+
+  configs += [ ":carnelian-performance" ]
+}
+
+config("carnelian-performance") {
+  # Enable all optimizations that benefit speed, even if they increase size
+  configs = [
+    "//build/config:optimize_speed",
+    "//build/config/lto:thinlto",
+  ]
+
+  if (target_cpu == "x64") {
+    # TODO(fxbug.dev/87582): not all x64 targets are haswell.
+    # Consider moving this to a board config.
+    configs += [ "//build/config/x64:haswell" ]
+  }
+
+  if (target_cpu == "arm64") {
+    # TODO(fxbug.dev/87243): the flag below is not added by default.
+    # It's safe to remove the line below when //build/config/arm64:cortex-a53
+    # picks up this flag.
+    # Also note that not all arm64 targets are cortex-a53.
+    # Depending on your target board this optimization flag may actually
+    # cause a regression.
+    rustflags = [ "-Ctarget-cpu=cortex-a53" ]
+  }
 }
 
 rustc_binary("button") {

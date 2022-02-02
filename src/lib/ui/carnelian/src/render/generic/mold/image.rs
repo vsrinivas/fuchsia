@@ -19,6 +19,8 @@ pub(crate) struct VmoImage {
     // TODO(fxbug.dev/84729)
     #[allow(unused)]
     vmo: zx::Vmo,
+    // TODO(fxbug.dev/84729)
+    #[allow(unused)]
     width: u32,
     // TODO(fxbug.dev/84729)
     #[allow(unused)]
@@ -28,13 +30,14 @@ pub(crate) struct VmoImage {
     len_bytes: u64,
     mapping: Arc<Mapping>,
     stride: usize,
-    pub(crate) buffer_layer_cache: Option<(usize, mold::BufferLayerCache)>,
+    pub(crate) buffer_layer_cache: Option<(usize, mold::buffer::BufferLayerCache)>,
     coherency_domain: CoherencyDomain,
+    layout: mold::buffer::layout::LinearLayout,
 }
 
 impl VmoImage {
     pub fn new(width: u32, height: u32) -> Self {
-        let len_bytes = (width * height) as usize * mem::size_of::<u32>();
+        let len_bytes = (width * height * 4) as usize * mem::size_of::<u8>();
         let (mapping, vmo) = mapped_vmo::Mapping::allocate(len_bytes as usize)
             .expect("failed to allocated mapped VMO");
 
@@ -44,9 +47,14 @@ impl VmoImage {
             height,
             len_bytes: len_bytes as u64,
             mapping: Arc::new(mapping),
-            stride: width as usize,
+            stride: (width * 4) as usize,
             buffer_layer_cache: None,
             coherency_domain: CoherencyDomain::Cpu,
+            layout: mold::buffer::layout::LinearLayout::new(
+                width as usize,
+                (width * 4) as usize,
+                height as usize,
+            ),
         }
     }
 
@@ -54,7 +62,7 @@ impl VmoImage {
         let info = reader.info();
         let color_type = info.color_type;
         let (width, height) = info.size();
-        let stride = width as usize * mem::size_of::<u32>();
+        let stride = (width * 4) as usize * mem::size_of::<u8>();
         let len_bytes = stride * height as usize;
         let (mut mapping, vmo) = mapped_vmo::Mapping::allocate(len_bytes as usize)
             .expect("failed to allocated mapped VMO");
@@ -84,9 +92,14 @@ impl VmoImage {
             height,
             len_bytes: len_bytes as u64,
             mapping: Arc::new(mapping),
-            stride: width as usize,
+            stride: (width * 4) as usize,
             buffer_layer_cache: None,
             coherency_domain: CoherencyDomain::Cpu,
+            layout: mold::buffer::layout::LinearLayout::new(
+                width as usize,
+                (width * 4) as usize,
+                height as usize,
+            ),
         })
     }
 
@@ -126,6 +139,7 @@ impl VmoImage {
         let bytes_per_row = buffers.settings.image_format_constraints.min_bytes_per_row;
         let divisor = buffers.settings.image_format_constraints.bytes_per_row_divisor;
         let bytes_per_row = ((bytes_per_row + divisor - 1) / divisor) * divisor;
+        let stride = bytes_per_row as usize / mem::size_of::<u8>();
 
         Self {
             vmo,
@@ -133,14 +147,19 @@ impl VmoImage {
             height,
             len_bytes: len_bytes as u64,
             mapping,
-            stride: bytes_per_row as usize / mem::size_of::<u32>(),
+            stride,
             buffer_layer_cache: None,
             coherency_domain: buffers.settings.buffer_settings.coherency_domain,
+            layout: mold::buffer::layout::LinearLayout::new(
+                width as usize,
+                stride,
+                height as usize,
+            ),
         }
     }
 
     pub fn bytes_per_row(&self) -> usize {
-        self.stride * mem::size_of::<u32>()
+        self.stride * mem::size_of::<u8>()
     }
 
     pub fn coherency_domain(&self) -> CoherencyDomain {
@@ -152,15 +171,18 @@ impl VmoImage {
         unsafe { slice::from_raw_parts_mut(data, len) }
     }
 
-    pub fn as_buffer(&mut self) -> mold::Buffer<'_> {
+    pub fn as_buffer(
+        &mut self,
+    ) -> mold::buffer::Buffer<'_, '_, mold::buffer::layout::LinearLayout> {
+        #[derive(Debug)]
         struct SliceFlusher;
 
-        impl mold::Flusher for SliceFlusher {
-            fn flush(&self, slice: &mut [[u8; 4]]) {
+        impl mold::buffer::layout::Flusher for SliceFlusher {
+            fn flush(&self, slice: &mut [u8]) {
                 unsafe {
                     sys::zx_cache_flush(
                         slice.as_ptr() as *const u8,
-                        slice.len() * 4,
+                        slice.len(),
                         sys::ZX_CACHE_FLUSH_DATA,
                     );
                 }
@@ -168,19 +190,21 @@ impl VmoImage {
         }
 
         let (data, len) = Arc::get_mut(&mut self.mapping).unwrap().as_ptr_len();
-        let buffer = unsafe { slice::from_raw_parts_mut(data as *mut [u8; 4], len / 4) };
+        let raw_buffer = unsafe { slice::from_raw_parts_mut(data as *mut u8, len) };
 
-        mold::Buffer {
-            buffer,
-            width: self.width as usize,
-            width_stride: Some(self.stride),
-            layer_cache: self.buffer_layer_cache.as_ref().map(|(_, cache)| cache).cloned(),
-            flusher: if self.coherency_domain == CoherencyDomain::Ram {
-                Some(Box::new(SliceFlusher))
-            } else {
-                None
-            },
+        let mut buffer = mold::buffer::BufferBuilder::new(raw_buffer, &mut self.layout);
+
+        if let Some(buffer_layer_cache) =
+            self.buffer_layer_cache.as_ref().map(|(_, cache)| cache).cloned()
+        {
+            buffer = buffer.layer_cache(buffer_layer_cache);
         }
+
+        if self.coherency_domain == CoherencyDomain::Ram {
+            buffer = buffer.flusher(Box::new(SliceFlusher));
+        }
+
+        buffer.build()
     }
 
     pub fn clear(&mut self, clear_color: [u8; 4]) {
@@ -193,7 +217,7 @@ impl VmoImage {
         let coherency_domain = self.coherency_domain;
 
         let (data, len) = Arc::get_mut(&mut self.mapping).unwrap().as_ptr_len();
-        let buffer = unsafe { slice::from_raw_parts_mut(data as *mut [u8; 4], len / 4) };
+        let buffer = unsafe { slice::from_raw_parts_mut(data as *mut u8, len) };
 
         mold::clear_buffer(buffer, clear_color);
 
@@ -201,7 +225,7 @@ impl VmoImage {
             unsafe {
                 sys::zx_cache_flush(
                     buffer.as_ptr() as *const u8,
-                    buffer.len() * 4,
+                    buffer.len(),
                     sys::ZX_CACHE_FLUSH_DATA,
                 );
             }

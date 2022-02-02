@@ -27,13 +27,15 @@ The renderer achieves its performance through a few principles that are present 
 ## Example
 
 ```rust
-use mold::{Buffer, Composition, Fill, Point, Style};
+use mold::{Buffer, BufferBuilder, Composition, LinearLayout, Fill, Point, Style};
 
 fn main() {
     const WIDTH: usize = 256;
     const HEIGHT: usize = 256;
 
-    let mut buffer = vec![[255u8; 4]; WIDTH * HEIGHT];
+    let mut buffer = vec![255u8; WIDTH * HEIGHT * 4];
+    let mut layout = LinearLayout::new(WIDTH, WIDTH * 4);
+
     let mut composition = Composition::new();
 
     let mut triangle_path = Path::new();
@@ -50,22 +52,14 @@ fn main() {
         Point::new(100.0, 100.0),
     );
 
-    let layer_id = composition.create_layer().expect("layer limit reached");
+    let layer_id = composition.create_layer();
 
     composition.insert_in_layer(layer_id, &triangle_path).set_style(Style {
         fill: Fill::Solid([1.0, 0.0, 0.0, 1.0]),
         ..Default::default()
     });
 
-    composition.render(
-        Buffer {
-            buffer: &mut buffer,
-            width: WIDTH,
-            ..Default::default()
-        },
-        [1.0, 1.0, 1.0, 1.0],
-        None,
-    );
+    composition.render(&mut BufferBuilder::new(&mut buffer, &mut layout).build(), [1.0, 1.0, 1.0, 1.0], None);
 
 }
 ```

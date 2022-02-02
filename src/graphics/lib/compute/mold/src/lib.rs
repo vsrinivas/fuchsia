@@ -14,12 +14,11 @@ macro_rules! duration {
     ($category:expr, $name:expr $(, $key:expr => $val:expr)*) => {};
 }
 
-mod buffer;
+pub mod buffer;
 mod composition;
 mod layer;
 mod utils;
 
-pub use buffer::{Buffer, BufferLayerCache, Flusher};
 pub use composition::{Composition, LayerId};
 pub use layer::{Layer, Order};
 pub use utils::clear_buffer;

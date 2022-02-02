@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub fn clear_buffer(buffer: &mut [[u8; 4]], clear_color: [u8; 4]) {
-    for color in buffer {
+pub fn clear_buffer(buffer: &mut [u8], clear_color: [u8; 4]) {
+    for color in buffer.chunks_exact_mut(4) {
         color.copy_from_slice(&clear_color);
     }
 }
@@ -17,8 +17,8 @@ mod tests {
 
     #[test]
     fn clear_to_red() {
-        let mut buffer = [GREEN; 3];
+        let mut buffer = [GREEN; 3].concat();
         clear_buffer(&mut buffer, RED);
-        assert_eq!(buffer, [RED, RED, RED]);
+        assert_eq!(buffer, [RED, RED, RED].concat());
     }
 }

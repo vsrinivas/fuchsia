@@ -23,8 +23,9 @@ rustc_library("surpass") {
   sources = [
     "src/extend.rs",
     "src/layer.rs",
+    "src/layout/mod.rs",
+    "src/layout/splits_cache.rs",
     "src/lib.rs",
-    "src/painter/buffer_layout.rs",
     "src/painter/layer_workbench.rs",
     "src/painter/mod.rs",
     "src/painter/style.rs",

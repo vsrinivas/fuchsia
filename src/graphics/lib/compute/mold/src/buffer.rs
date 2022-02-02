@@ -7,40 +7,50 @@ use std::{
     rc::{Rc, Weak},
 };
 
-pub use surpass::painter::Flusher;
-use surpass::{
-    painter::{BufferLayout, BufferLayoutBuilder},
-    TILE_SIZE,
-};
+pub use surpass::layout;
 
 use crate::layer::SmallBitSet;
 
-#[derive(Default)]
-pub struct Buffer<'b> {
-    pub buffer: &'b mut [[u8; 4]],
-    pub width: usize,
-    pub width_stride: Option<usize>,
-    pub layer_cache: Option<BufferLayerCache>,
-    pub flusher: Option<Box<dyn Flusher>>,
+use layout::{Flusher, Layout};
+
+#[derive(Debug)]
+pub struct Buffer<'b, 'l, L: Layout<'l, 'b>> {
+    pub(crate) buffer: &'b mut [u8],
+    pub(crate) layout: &'l mut L,
+    pub(crate) layer_cache: Option<BufferLayerCache>,
+    pub(crate) flusher: Option<Box<dyn Flusher>>,
 }
 
-impl Buffer<'_> {
-    pub(crate) fn generate_layout(&mut self) -> BufferLayout {
-        let mut builder = BufferLayoutBuilder::new(self.width);
-        if let Some(width_stride) = self.width_stride {
-            builder = builder.set_width_stride(width_stride);
-        }
-        builder.build(self.buffer)
+#[derive(Debug)]
+pub struct BufferBuilder<'b, 'l, L: Layout<'l, 'b>> {
+    buffer: &'b mut [u8],
+    layout: &'l mut L,
+    layer_cache: Option<BufferLayerCache>,
+    flusher: Option<Box<dyn Flusher>>,
+}
+
+impl<'b: 'l, 'l, L: Layout<'l, 'b>> BufferBuilder<'b, 'l, L> {
+    #[inline]
+    pub fn new(buffer: &'b mut [u8], layout: &'l mut L) -> Self {
+        Self { buffer, layout, layer_cache: None, flusher: None }
     }
 
-    /// Returns the length required for the allocation of a per-tile buffer.
-    pub(crate) fn tiles_len(&self) -> usize {
-        let buffer_width = self.width_stride.unwrap_or(self.width);
-        let tiles_width = (self.width + (TILE_SIZE - 1)) / TILE_SIZE;
-        let buffer_height = self.buffer.len() / buffer_width;
-        let tiles_height = (buffer_height + (TILE_SIZE - 1)) / TILE_SIZE;
+    #[inline]
+    pub fn layer_cache(mut self, layer_cache: BufferLayerCache) -> Self {
+        self.layer_cache = Some(layer_cache);
+        self
+    }
 
-        tiles_width * tiles_height
+    #[inline]
+    pub fn flusher(mut self, flusher: Box<dyn Flusher>) -> Self {
+        self.flusher = Some(flusher);
+        self
+    }
+
+    #[inline]
+    pub fn build(self) -> Buffer<'b, 'l, L> {
+        let Self { buffer, layout, layer_cache, flusher } = self;
+        Buffer { buffer, layout, layer_cache, flusher }
     }
 }
 
@@ -52,6 +62,7 @@ pub struct BufferLayerCache {
 }
 
 impl BufferLayerCache {
+    #[inline]
     pub fn clear(&self) {
         if Weak::upgrade(&self.buffers_with_caches).is_some() {
             self.layers_per_tile.borrow_mut().fill(None);
@@ -128,18 +139,5 @@ mod tests {
         assert!(!bit_set.borrow().contains(&0));
         assert!(!bit_set.borrow().contains(&1));
         assert!(!bit_set.borrow().contains(&2));
-    }
-
-    #[test]
-    fn tiles_len() {
-        let buffer = Buffer {
-            buffer: &mut [[0; 4]; (TILE_SIZE * 5) * (TILE_SIZE * 8)],
-            width: TILE_SIZE * 4,
-            width_stride: Some(TILE_SIZE * 5),
-            ..Default::default()
-        };
-
-        // 4 tiles horizontally * 8 tiles vertically = 32 tiles in total
-        assert_eq!(buffer.tiles_len(), 32);
     }
 }
