@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.buildinfo.Provider": "fuchsia-pkg://fuchsia.com/build-info-service#meta/build-info.cmx",
                 "fuchsia.fonts.Provider": "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx",
                 "fuchsia.intl.PropertyProvider": "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx",
                 "fuchsia.memorypressure.Provider": "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx",
