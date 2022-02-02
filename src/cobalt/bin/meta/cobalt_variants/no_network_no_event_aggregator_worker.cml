@@ -1,5 +1,8 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 {
-    include: [ "//src/cobalt/bin/app/meta/cobalt.cml" ],
+    include: [ "//src/cobalt/bin/app/meta/cobalt_base.cml" ],
     program: {
         // With the following values for the scheduling parameters we are
         // essentially configuring the ShippingManager to be in manual mode. It will

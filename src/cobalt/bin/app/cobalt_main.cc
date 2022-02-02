@@ -65,6 +65,8 @@ constexpr std::string_view kMaxBytesTotalFlagName = "max_bytes_per_observation_s
 
 constexpr std::string_view kTestOnlyFakeClockFlagName = "test_only_use_fake_clock";
 
+constexpr std::string_view kRequireLifecycleService = "require_lifecycle_service";
+
 // We want to only upload every hour. This is the interval that will be
 // approached by the uploader.
 const std::chrono::hours kScheduleIntervalDefault(1);
@@ -285,11 +287,19 @@ int main(int argc, const char** argv) {
     }
   }
 
+  bool require_lifecycle_service = command_line.HasOption(kRequireLifecycleService);
+  fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle;
   // Fetch the provided fuchsia::process::lifecycle::Lifecycle service handle.
   zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
-  FX_CHECK(lifecycle_request.is_valid()) << "Received invalid lifecycle handle";
-  fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle(
-      std::move(lifecycle_request));
+  if (lifecycle_request.is_valid()) {
+    lifecycle_handle.set_channel(std::move(lifecycle_request));
+  } else {
+    FX_LOGS(ERROR) << "Startup Error: Received invalid lifecycle handle. Cobalt will not be able "
+                      "to listen for lifecycle events and shut down gracefully.";
+    if (require_lifecycle_service) {
+      FX_LOGS(FATAL) << "Lifecycle service is required. Exiting";
+    }
+  }
 
   auto boardname = ReadBoardName(context->svc());
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "cobalt_fidl_provider");

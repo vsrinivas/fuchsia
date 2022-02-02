@@ -1,0 +1,62 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/cobalt",
+        lifecycle: { stop_event: "notify" },
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.cobalt.Controller",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.cobalt.SystemDataUpdater",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.net.http.Loader",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.settings.Privacy",
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.activity.Provider",
+            ],
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            directory: "root-ssl-certificates",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.cobalt.Controller",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.cobalt.SystemDataUpdater",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+            ],
+            from: "self",
+        },
+    ],
+}
