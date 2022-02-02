@@ -313,3 +313,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0149_fidl_encode_validation_not_mandatory.md
 - title: "RFC-0150: Update Opt-out"
   path: /docs/contribute/governance/rfcs/0150_update_opt_out.md
+- title: "RFC-0151: Compiler tuning flags for CPU targeting"
+  path: /docs/contribute/governance/rfcs/0151_compiler_cpu_targeting.md

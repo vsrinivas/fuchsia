@@ -1956,3 +1956,16 @@
   consulted: ['borthakur@google.com', 'marvinpaul@google.com', 'gtsai@google.com', 'leannogasawara@google.com']
   submitted: '2022-01-14'
   reviewed: '2022-01-31'
+
+- name: 'RFC-0151'
+  title: 'Compiler tuning flags for CPU targeting'
+  short_description: 'Proposed changes to compiler flags that govern CPU targeting, and their effects on the platform and SDK build.'
+  authors: ['shayba@google.com']
+  file: '0151_compiler_cpu_targeting.md'
+  area: ['Toolchain']
+  issue: ['90784']
+  gerrit_change_id: ['624521']
+  status: 'Accepted'
+  reviewers: ['phosek@google.com', 'aaronwood@google.com', 'mvanotti@google.com', 'mcgrathr@google.com', 'digit@google.com', 'travisg@google.com', 'cpu@google.com']
+  submitted: '2021-01-04'
+  reviewed: '2022-02-02'
