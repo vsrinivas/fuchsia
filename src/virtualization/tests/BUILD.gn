@@ -38,6 +38,7 @@ group("tests") {
       # interact correctly with Scenic.
       # ":virtualization_gpu_tests_pkg",
       # ":virtualization_input_tests_pkg",
+      ":termina_integration_tests",
     ]
   }
 
@@ -493,7 +494,6 @@ romfs_image("extras") {
   output = "$target_out_dir/linux/extras.img"
 }
 
-# This should be merged into |guest_integration_tests| once the termina guest is stable in CQ.
 executable("termina_integration_tests_bin") {
   visibility = [ ":*" ]
   output_name = "termina_integration_tests"
