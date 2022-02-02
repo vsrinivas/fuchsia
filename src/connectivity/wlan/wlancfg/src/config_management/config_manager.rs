@@ -11,7 +11,7 @@ use {
         },
         stash_conversion::*,
     },
-    crate::client::types,
+    crate::{client::types, util::pseudo_energy::EwmaPseudoDecibel},
     anyhow::format_err,
     async_trait::async_trait,
     fidl_fuchsia_wlan_common::ScanType,
@@ -27,7 +27,6 @@ use {
         fs,
         path::Path,
     },
-    wlan_common::{energy::DecibelMilliWatt, ewma_signal::EwmaSignalStrength},
     wlan_metrics_registry::{
         SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations,
         SavedNetworksMetricDimensionSavedNetworks,
@@ -537,17 +536,14 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                 match network.perf_stats.rssi_data_by_bssid.get_mut(&bssid) {
                     // Update connection data for BSS
                     Some(signal_data) => {
-                        signal_data.update_with_new_measurement(DecibelMilliWatt(connection_data));
+                        signal_data.update_with_new_measurement(connection_data);
                         return Some(signal_data.clone());
                     }
                     // Add connection quality data for BSS
                     None => {
-                        let ewma_rssi = EwmaSignalStrength::new(
-                            EWMA_SMOOTHING_FACTOR,
-                            DecibelMilliWatt(connection_data),
-                        );
-                        let signal_data =
-                            SignalData { ewma_rssi: ewma_rssi, rssi_velocity: DecibelMilliWatt(0) };
+                        let ewma_rssi =
+                            EwmaPseudoDecibel::new(EWMA_SMOOTHING_FACTOR, connection_data);
+                        let signal_data = SignalData { ewma_rssi: ewma_rssi, rssi_velocity: 0 };
                         let _ = network
                             .perf_stats
                             .rssi_data_by_bssid
@@ -2035,8 +2031,8 @@ mod tests {
             .get(&bssid)
             .expect("failed to get rssi data.");
         assert_eq!(response, *signal_data);
-        assert_eq!(signal_data.ewma_rssi.dbm(), DecibelMilliWatt(-50));
-        assert_eq!(signal_data.rssi_velocity, DecibelMilliWatt(0));
+        assert_eq!(signal_data.ewma_rssi.get(), -50);
+        assert_eq!(signal_data.rssi_velocity, 0);
 
         // Record second quality connection data
         let response = saved_networks
@@ -2055,9 +2051,9 @@ mod tests {
             .get(&bssid)
             .expect("failed to get rssi data.");
         assert_eq!(response, *signal_data);
-        assert_leq!(signal_data.ewma_rssi.dbm(), DecibelMilliWatt(-50));
-        assert_geq!(signal_data.ewma_rssi.dbm(), DecibelMilliWatt(-80));
-        assert_leq!(signal_data.rssi_velocity, DecibelMilliWatt(0));
+        assert_leq!(signal_data.ewma_rssi.get(), -50);
+        assert_geq!(signal_data.ewma_rssi.get(), -80);
+        assert_leq!(signal_data.rssi_velocity, 0);
     }
 
     fn fake_successful_connect_result() -> fidl_sme::ConnectResult {

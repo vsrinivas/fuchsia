@@ -6,7 +6,7 @@ mod convert;
 mod windowed_stats;
 
 use {
-    crate::telemetry::windowed_stats::WindowedStats,
+    crate::{telemetry::windowed_stats::WindowedStats, util::pseudo_energy::PseudoDecibel},
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_device_service::{
@@ -40,9 +40,7 @@ use {
             Arc,
         },
     },
-    wlan_common::{
-        bss::BssDescription, energy::DecibelMilliWatt, format::MacFmt, hasher::WlanHasher,
-    },
+    wlan_common::{bss::BssDescription, format::MacFmt, hasher::WlanHasher},
     wlan_metrics_registry as metrics,
 };
 
@@ -206,7 +204,7 @@ pub enum TelemetryEvent {
         ind: fidl_internal::SignalReportIndication,
         /// RSSI velocity is optional because it may be unknown if there is an error finding and
         /// recording RSSI data to calculate velocity.
-        rssi_velocity: Option<DecibelMilliWatt>,
+        rssi_velocity: Option<PseudoDecibel>,
     },
     OnChannelSwitched {
         info: fidl_internal::ChannelSwitchInfo,
@@ -2181,8 +2179,8 @@ impl StatsLogger {
 
     async fn log_signal_report_metrics(
         &mut self,
-        rssi: i8,
-        rssi_velocity: Option<DecibelMilliWatt>,
+        rssi: PseudoDecibel,
+        rssi_velocity: Option<PseudoDecibel>,
     ) {
         // The range of the RSSI histogram is -128 to 0 with bucket size 1. The buckets are:
         //     bucket 0: reserved for underflow, although not possible with i8
@@ -2203,7 +2201,7 @@ impl StatsLogger {
         // example, RSSI velocity -10 should map to index 1 and velocity 0 should map to index 11.
         const RSSI_VELOCITY_HIST_OFFSET: i8 = 11;
         if let Some(rssi_velocity) = rssi_velocity {
-            let index = max(0, min(22, rssi_velocity.0 + RSSI_VELOCITY_HIST_OFFSET)) as u32;
+            let index = max(0, min(22, rssi_velocity + RSSI_VELOCITY_HIST_OFFSET)) as u32;
             let entry = self
                 .rssi_velocity_hist
                 .entry(index)
@@ -2534,10 +2532,9 @@ mod tests {
 
         // Send a signal, which resets timing information for determining driver unresponsiveness
         let ind = fidl_internal::SignalReportIndication { rssi_dbm: -40, snr_db: 30 };
-        test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
-            ind: ind.clone(),
-            rssi_velocity: Some(DecibelMilliWatt(1)),
-        });
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind.clone(), rssi_velocity: Some(1) });
 
         test_helper.advance_by(UNRESPONSIVE_FLAG_MIN_DURATION, test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -3964,8 +3961,8 @@ mod tests {
         test_helper.send_connected_event(random_bss_description!(Wpa2));
 
         // Send some RSSI velocities
-        let rssi_velocity_1 = Some(DecibelMilliWatt(-2));
-        let rssi_velocity_2 = Some(DecibelMilliWatt(2));
+        let rssi_velocity_1 = Some(-2);
+        let rssi_velocity_2 = Some(2);
         let ind_1 = fidl_internal::SignalReportIndication { rssi_dbm: -50, snr_db: 30 };
         let ind_2 = fidl_internal::SignalReportIndication { rssi_dbm: -61, snr_db: 40 };
         test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
@@ -4004,7 +4001,7 @@ mod tests {
         test_helper.clear_cobalt_events();
 
         // Send another different RSSI velocity
-        let rssi_velocity_3 = Some(DecibelMilliWatt(3));
+        let rssi_velocity_3 = Some(3);
         let ind_3 = fidl_internal::SignalReportIndication { rssi_dbm: -75, snr_db: 30 };
         test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
             ind: ind_3.clone(),
@@ -4050,29 +4047,25 @@ mod tests {
         let ind_overflow_1 = fidl_internal::SignalReportIndication { rssi_dbm: 1, snr_db: 30 };
         let ind_overflow_2 = fidl_internal::SignalReportIndication { rssi_dbm: 127, snr_db: 30 };
         // Send the telemetry events. -10 is the min velocity bucket and 10 is the max.
-        test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
-            ind: ind_min,
-            rssi_velocity: Some(DecibelMilliWatt(-11)),
-        });
-        test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
-            ind: ind_min,
-            rssi_velocity: Some(DecibelMilliWatt(-15)),
-        });
-        test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
-            ind: ind_min.clone(),
-            rssi_velocity: Some(DecibelMilliWatt(11)),
-        });
-        test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
-            ind: ind_max.clone(),
-            rssi_velocity: Some(DecibelMilliWatt(20)),
-        });
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind_min, rssi_velocity: Some(-11) });
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind_min, rssi_velocity: Some(-15) });
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind_min.clone(), rssi_velocity: Some(11) });
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind_max.clone(), rssi_velocity: Some(20) });
         test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
             ind: ind_overflow_1.clone(),
-            rssi_velocity: Some(DecibelMilliWatt(-10)),
+            rssi_velocity: Some(-10),
         });
         test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
             ind: ind_overflow_2.clone(),
-            rssi_velocity: Some(DecibelMilliWatt(10)),
+            rssi_velocity: Some(10),
         });
         test_helper.advance_by(1.hour(), test_fut.as_mut());
 

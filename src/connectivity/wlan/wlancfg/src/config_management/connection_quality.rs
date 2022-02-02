@@ -3,13 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::client::types as client_types,
+    crate::{client::types as client_types, util::pseudo_energy::*},
     fuchsia_zircon as zx,
     log::error,
-    wlan_common::{
-        energy::DecibelMilliWatt, ewma_signal::EwmaSignalStrength,
-        signal_velocity::calculate_dbm_linear_velocity,
-    },
 };
 
 // Number of previous RSSI measurements to exponentially weigh into average.
@@ -19,16 +15,16 @@ pub const EWMA_SMOOTHING_FACTOR: usize = 10;
 /// Connection quality data related to signal
 #[derive(Clone, Debug, PartialEq)]
 pub struct SignalData {
-    pub ewma_rssi: EwmaSignalStrength,
-    pub rssi_velocity: DecibelMilliWatt,
+    pub ewma_rssi: EwmaPseudoDecibel,
+    pub rssi_velocity: PseudoDecibel,
 }
 
 impl SignalData {
-    pub fn update_with_new_measurement(&mut self, rssi: DecibelMilliWatt) {
-        let prev_rssi = self.ewma_rssi.dbm();
+    pub fn update_with_new_measurement(&mut self, rssi: PseudoDecibel) {
+        let prev_rssi = self.ewma_rssi.get();
         self.ewma_rssi.update_average(rssi);
         self.rssi_velocity =
-            match calculate_dbm_linear_velocity(vec![prev_rssi, self.ewma_rssi.dbm()]) {
+            match calculate_pseudodecibel_velocity(vec![prev_rssi, self.ewma_rssi.get()]) {
                 Ok(velocity) => velocity,
                 Err(e) => {
                     error!("Failed to update SignalData velocity: {:?}", e);

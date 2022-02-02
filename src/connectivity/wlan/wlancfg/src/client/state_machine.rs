@@ -32,7 +32,7 @@ use {
     log::{debug, error, info},
     std::{convert::TryInto, sync::Arc},
     void::ResultVoidErrExt,
-    wlan_common::{bss::BssDescription, energy::DecibelMilliWatt},
+    wlan_common::bss::BssDescription,
     wlan_metrics_registry::{
         POLICY_CONNECTION_ATTEMPT_METRIC_ID as CONNECTION_ATTEMPT_METRIC_ID,
         POLICY_DISCONNECTION_METRIC_ID as DISCONNECTION_METRIC_ID,
@@ -190,7 +190,7 @@ struct CommonStateOptions {
 pub struct PeriodicConnectionStats {
     pub id: types::NetworkIdentifier,
     pub iface_id: u16,
-    pub ewma_rssi: DecibelMilliWatt,
+    pub ewma_rssi: i8,
 }
 
 pub type ConnectionStatsSender = mpsc::UnboundedSender<PeriodicConnectionStats>;
@@ -858,7 +858,7 @@ async fn handle_connection_stats(
     let rssi_velocity = signal_data.map(|data| {
         // Send periodic connection quality data to IfaceManager
         let connection_stats =
-            PeriodicConnectionStats { id, ewma_rssi: data.ewma_rssi.dbm(), iface_id };
+            PeriodicConnectionStats { id, ewma_rssi: data.ewma_rssi.get(), iface_id };
         stats_sender.unbounded_send(connection_stats).unwrap_or_else(|e| {
             error!("Failed to send periodic connection stats from the connected state: {}", e);
         });
@@ -880,6 +880,7 @@ mod tests {
             telemetry::{TelemetryEvent, TelemetrySender},
             util::{
                 listener,
+                pseudo_energy::EwmaPseudoDecibel,
                 testing::{
                     create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
                     create_wlan_hasher, generate_disconnect_info, poll_sme_req,
@@ -901,8 +902,7 @@ mod tests {
         std::convert::TryFrom,
         test_case::test_case,
         wlan_common::{
-            assert_variant, bss::Protection, ewma_signal::EwmaSignalStrength,
-            random_bss_description, random_fidl_bss_description,
+            assert_variant, bss::Protection, random_bss_description, random_fidl_bss_description,
         },
         wlan_metrics_registry::PolicyDisconnectionMetricDimensionReason,
     };
@@ -3715,9 +3715,9 @@ mod tests {
         let sme_fut = test_values.sme_req_stream.into_future();
         pin_mut!(sme_fut);
 
-        let rssi = DecibelMilliWatt(-40);
-        let ewma_rssi = EwmaSignalStrength::new(EWMA_SMOOTHING_FACTOR, rssi);
-        let velocity = DecibelMilliWatt(-1);
+        let rssi = -40;
+        let ewma_rssi = EwmaPseudoDecibel::new(EWMA_SMOOTHING_FACTOR, rssi);
+        let velocity = -1;
         // Tell the FakeSavedNetworksManager what to respond to record_connection_quality_data
         let signal_data = SignalData { ewma_rssi: ewma_rssi, rssi_velocity: velocity };
         test_values

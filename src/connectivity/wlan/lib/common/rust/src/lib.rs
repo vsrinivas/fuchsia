@@ -19,7 +19,6 @@ pub mod data_writer;
 #[allow(unused)]
 pub mod energy;
 pub mod error;
-pub mod ewma_signal;
 pub mod format;
 pub mod hasher;
 pub mod ie;
@@ -29,7 +28,6 @@ pub mod organization;
 pub mod scan;
 pub mod security;
 pub mod sequence;
-pub mod signal_velocity;
 pub mod sink;
 #[allow(unused)]
 pub mod stats;

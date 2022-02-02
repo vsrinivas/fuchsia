@@ -8,7 +8,7 @@ use {
 };
 
 /// Unified type for dB, dBm, and dB/s for Policy consumption.
-type PseudoDecibel = i8;
+pub type PseudoDecibel = i8;
 
 /// Update a weighted average with a new measurement
 fn calculate_ewma_update(current: f64, next: f64, weighting_factor: f64) -> f64 {
@@ -23,6 +23,7 @@ fn calculate_ewma_update(current: f64, next: f64, weighting_factor: f64) -> f64 
 /// small updates to the average may never move an i8 value (e.g. avg(-50, -51) rounds to -50, so
 /// updates of -51 will never result in an average of -51). This struct maintains the average signal
 /// strength as an f64, so even small changes will affect the average.
+#[derive(Clone, Debug, PartialEq)]
 pub struct EwmaPseudoDecibel {
     current: f64,
     weighting_factor: f64,
