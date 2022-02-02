@@ -8,7 +8,7 @@ mod ping;
 use {
     crate::ping::Ping,
     anyhow::Context as _,
-    fidl_fuchsia_hardware_network, fidl_fuchsia_net as fnet, fidl_fuchsia_net_ext as fnet_ext,
+    fidl_fuchsia_hardware_network, fidl_fuchsia_net_ext as fnet_ext,
     fidl_fuchsia_net_interfaces as fnet_interfaces,
     fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext, fidl_fuchsia_net_stack as fnet_stack,
     fuchsia_async as fasync,
@@ -16,7 +16,7 @@ use {
     futures::{FutureExt as _, StreamExt as _},
     inspect::InspectInfo,
     net_declare::std_ip,
-    net_types::{ip::IpAddress as _, ScopeableAddress as _},
+    net_types::ScopeableAddress as _,
     std::collections::hash_map::{Entry, HashMap},
 };
 
@@ -491,11 +491,11 @@ fn log_state(info: Option<&mut InspectInfo>, proto: Proto, state: State) {
 /// system observations.
 async fn compute_state(
     &fnet_interfaces_ext::Properties {
-        id: _,
+        id,
         ref name,
         device_class,
         online,
-        ref addresses,
+        addresses: _,
         has_default_ipv4_route: _,
         has_default_ipv6_route: _,
     }: &fnet_interfaces_ext::Properties,
@@ -513,102 +513,45 @@ async fn compute_state(
         });
     }
 
-    let (v4_addrs, v6_addrs): (Vec<_>, _) = addresses
-        .into_iter()
-        .map(|fnet_interfaces_ext::Address { addr, valid_until: _ }| addr)
-        .partition(|fnet::Subnet { addr, prefix_len: _ }| match addr {
-            fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: _ }) => true,
-            fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: _ }) => false,
-        });
-
     // TODO(https://fxbug.dev/74517) Check if packet count has increased, and if so upgrade the
     // state to LinkLayerUp.
 
     let (ipv4, ipv6) = futures::join!(
-        network_layer_state(
-            &name,
-            &v4_addrs,
-            routes,
-            pinger,
-            IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS
-        )
-        .map(|state| StateEvent { state, time: fasync::Time::now() }),
-        network_layer_state(
-            &name,
-            &v6_addrs,
-            routes,
-            pinger,
-            IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS
-        )
-        .map(|state| StateEvent { state, time: fasync::Time::now() })
+        network_layer_state(&name, id, routes, pinger, IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS)
+            .map(|state| StateEvent { state, time: fasync::Time::now() }),
+        network_layer_state(&name, id, routes, pinger, IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS)
+            .map(|state| StateEvent { state, time: fasync::Time::now() })
     );
     Some(IpVersions { ipv4, ipv6 })
-}
-
-// `local_routes` traverses `route_table` to find routes that use a gateway local to `address`
-// network.
-fn local_routes<'a, I>(
-    subnet: &'a fnet::Subnet,
-    route_table: I,
-) -> impl Iterator<Item = &'a fnet_stack::ForwardingEntry> + 'a
-where
-    I: IntoIterator<Item = &'a fnet_stack::ForwardingEntry>,
-    <I as IntoIterator>::IntoIter: 'a,
-{
-    let &fnet::Subnet { addr, prefix_len } = subnet;
-    let addr = match addr {
-        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
-            net_types::ip::IpAddr::V4(net_types::ip::Ipv4Addr::new(addr).mask(prefix_len))
-        }
-        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
-            net_types::ip::IpAddr::V6(net_types::ip::Ipv6Addr::from_bytes(addr).mask(prefix_len))
-        }
-    };
-    let subnet = net_types::ip::SubnetEither::new(addr, prefix_len).unwrap_or_else(|e| {
-        panic!("SubnetEither::new({:?}, {}): {:?}", addr, prefix_len, e);
-    });
-    route_table.into_iter().filter(
-        move |fnet_stack::ForwardingEntry { subnet: _, device_id: _, next_hop, metric: _ }| {
-            next_hop
-                .as_ref()
-                .map(|next_hop| match **next_hop {
-                    fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => match subnet {
-                        net_types::ip::SubnetEither::V4(subnet) => {
-                            net_types::ip::Ipv4Addr::new(addr).is_unicast_in_subnet(&subnet)
-                        }
-                        net_types::ip::SubnetEither::V6(_) => false,
-                    },
-                    fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => match subnet {
-                        net_types::ip::SubnetEither::V4(_) => false,
-                        net_types::ip::SubnetEither::V6(subnet) => {
-                            net_types::ip::Ipv6Addr::from_bytes(addr).is_unicast_in_subnet(&subnet)
-                        }
-                    },
-                })
-                .unwrap_or(false)
-        },
-    )
 }
 
 // `network_layer_state` determines the L3 reachability state.
 async fn network_layer_state(
     name: &str,
-    addresses: &[fnet::Subnet],
+    interface_id: u64,
     routes: &[fnet_stack::ForwardingEntry],
     p: &dyn Ping,
     internet_ping_address: std::net::IpAddr,
 ) -> State {
     use std::convert::TryInto as _;
 
-    if addresses.is_empty() {
+    let mut relevant_routes = routes
+        .into_iter()
+        .filter(|fnet_stack::ForwardingEntry { subnet: _, device_id, next_hop: _, metric: _ }| {
+            *device_id == interface_id
+        })
+        .peekable();
+
+    if relevant_routes.peek() == None {
         return State::Up;
     }
 
     // TODO(https://fxbug.dev/36242) Check neighbor reachability and upgrade state to Local.
 
-    let gateway_reachable = futures::stream::iter(addresses.into_iter()).filter(|subnet| {
-        let gateway_addr_iter = local_routes(subnet, routes).filter_map(
-            |fnet_stack::ForwardingEntry { subnet: _, device_id, next_hop, metric: _ }| {
+    let gateway_reachable = relevant_routes
+        .filter_map(
+            move |fnet_stack::ForwardingEntry { subnet: _, device_id, next_hop, metric: _ }| {
+                // TODO(https://fxbug.dev/91821): only consider default routes.
                 next_hop.as_ref().and_then(|next_hop| {
                     let fnet_ext::IpAddress(next_hop) = (**next_hop).into();
                     match next_hop {
@@ -636,17 +579,14 @@ async fn network_layer_state(
                     }
                 })
             },
-        );
-        async {
-            futures::stream::iter(gateway_addr_iter)
-                .filter(|&gw_addr| p.ping(name, gw_addr))
-                .next()
-                .await
-                .is_some()
-        }
-    });
-    futures::pin_mut!(gateway_reachable);
-    if !gateway_reachable.next().await.is_some() {
+        )
+        .map(|next_hop| p.ping(name, next_hop))
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .filter(|ok| futures::future::ready(*ok))
+        .next()
+        .await
+        .is_some();
+    if !gateway_reachable {
         return State::Local;
     };
 
@@ -661,7 +601,7 @@ mod tests {
     use {
         super::*,
         async_trait::async_trait,
-        fuchsia_async as fasync,
+        fidl_fuchsia_net as fnet, fuchsia_async as fasync,
         net_declare::{fidl_ip, fidl_subnet, std_ip},
         std::task::Poll,
     };
@@ -722,51 +662,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_local_routes() {
-        let address = fidl_subnet!("1.2.3.4/24");
-        let want_route = fnet_stack::ForwardingEntry {
-            subnet: fidl_subnet!("0.0.0.0/0"),
-            device_id: ID1,
-            next_hop: Some(Box::new(fidl_ip!("1.2.3.1"))),
-            metric: 0,
-        };
-        let other_route = fnet_stack::ForwardingEntry {
-            subnet: fidl_subnet!("1.2.3.0/24"),
-            device_id: ID1,
-            next_hop: None,
-            metric: 0,
-        };
-        let route_table = [&want_route, &other_route];
-
-        assert_eq!(local_routes(&address, route_table).collect::<Vec<_>>(), [&want_route]);
-
-        let address = fidl_subnet!("2.2.3.4/24");
-        let route_table = [
-            want_route,
-            other_route,
-            fnet_stack::ForwardingEntry {
-                subnet: fidl_subnet!("2.2.3.0/24"),
-                device_id: ID1,
-                next_hop: None,
-                metric: 0,
-            },
-        ];
-
-        // error[E0282]: type annotations needed
-        //    --> ../../src/connectivity/management/reachability/core/src/lib.rs:756:9
-        //     |
-        // 756 | /         assert_eq!(
-        // 757 | |             local_routes(&address, &route_table).collect::<Vec<&fnet_stack::ForwardingEntry>>(),
-        // 758 | |             []
-        // 759 | |         );
-        //     | |_________^ cannot infer type
-        //     |
-        //     = note: this error originates in the macro `assert_eq` (in Nightly builds, run with -Z macro-backtrace for more info)
-        let empty: &[&fnet_stack::ForwardingEntry] = &[];
-        assert_eq!(local_routes(&address, &route_table).collect::<Vec<_>>(), empty);
-    }
-
     #[derive(Default)]
     struct FakePing {
         gateway_addrs: std::collections::HashSet<std::net::IpAddr>,
@@ -776,25 +671,22 @@ mod tests {
 
     #[async_trait]
     impl Ping for FakePing {
-        async fn ping(&self, interface_name: &str, addr: std::net::SocketAddr) -> bool {
-            if self.gateway_addrs.contains(&addr.ip()) {
-                return self.gateway_response;
-            }
-            if IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS == addr.ip()
-                || IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS == addr.ip()
+        async fn ping(&self, _interface_name: &str, addr: std::net::SocketAddr) -> bool {
+            let Self { gateway_addrs, gateway_response, internet_response } = self;
+            let ip = addr.ip();
+            if [IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS, IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS]
+                .contains(&ip)
             {
-                return self.internet_response;
+                *internet_response
+            } else if gateway_addrs.contains(&ip) {
+                *gateway_response
+            } else {
+                false
             }
-            panic!(
-                "ping destination address {} on interface {} \
-                is not in the set of gateway URLs ({:?}) \
-                or equal to the IPv4/IPv6 internet connectivity check address",
-                interface_name, addr, self.gateway_addrs
-            );
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_network_layer_state_ipv4() {
         test_network_layer_state(
             fidl_ip!("1.2.3.0"),
@@ -809,7 +701,7 @@ mod tests {
         .await
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_network_layer_state_ipv6() {
         test_network_layer_state(
             fidl_ip!("123::"),
@@ -826,7 +718,7 @@ mod tests {
 
     async fn test_network_layer_state(
         net1: fnet::IpAddress,
-        net1_addr: fnet::IpAddress,
+        _net1_addr: fnet::IpAddress,
         net1_gateway: fnet::IpAddress,
         net2: fnet::IpAddress,
         net2_gateway: fnet::IpAddress,
@@ -834,7 +726,6 @@ mod tests {
         ping_internet_addr: std::net::IpAddr,
         prefix_len: u8,
     ) {
-        let address = fnet::Subnet { addr: net1_addr, prefix_len };
         let route_table = [
             fnet_stack::ForwardingEntry {
                 subnet: unspecified_addr,
@@ -869,13 +760,27 @@ mod tests {
                 metric: 0,
             },
         ];
+        let route_table_3 = [
+            fnet_stack::ForwardingEntry {
+                subnet: unspecified_addr,
+                device_id: ID2,
+                next_hop: Some(Box::new(net1_gateway)),
+                metric: 0,
+            },
+            fnet_stack::ForwardingEntry {
+                subnet: fnet::Subnet { addr: net1, prefix_len },
+                device_id: ID2,
+                next_hop: None,
+                metric: 0,
+            },
+        ];
 
         let fnet_ext::IpAddress(net1_gateway) = net1_gateway.into();
 
         assert_eq!(
             network_layer_state(
                 ETHERNET_INTERFACE_NAME,
-                &[address],
+                ID1,
                 &route_table,
                 &FakePing {
                     gateway_addrs: std::iter::once(net1_gateway).collect(),
@@ -892,7 +797,7 @@ mod tests {
         assert_eq!(
             network_layer_state(
                 ETHERNET_INTERFACE_NAME,
-                &[address],
+                ID1,
                 &route_table,
                 &FakePing {
                     gateway_addrs: std::iter::once(net1_gateway).collect(),
@@ -909,7 +814,7 @@ mod tests {
         assert_eq!(
             network_layer_state(
                 ETHERNET_INTERFACE_NAME,
-                &[address],
+                ID1,
                 &route_table,
                 &FakePing {
                     gateway_addrs: std::iter::once(net1_gateway).collect(),
@@ -926,7 +831,7 @@ mod tests {
         assert_eq!(
             network_layer_state(
                 ETHERNET_INTERFACE_NAME,
-                &[address],
+                ID1,
                 &route_table_2,
                 &FakePing::default(),
                 ping_internet_addr,
@@ -939,14 +844,14 @@ mod tests {
         assert_eq!(
             network_layer_state(
                 ETHERNET_INTERFACE_NAME,
-                &[],
-                &route_table,
+                ID1,
+                &route_table_3,
                 &FakePing::default(),
                 ping_internet_addr
             )
             .await,
             State::Up,
-            "No address"
+            "No routes"
         );
     }
 
@@ -972,6 +877,12 @@ mod tests {
                 },
             ],
         };
+        let local_routes = [fnet_stack::ForwardingEntry {
+            subnet: fidl_subnet!("1.2.3.4/24"),
+            device_id: ID1,
+            next_hop: None,
+            metric: 0,
+        }];
         let route_table = [
             fnet_stack::ForwardingEntry {
                 subnet: fidl_subnet!("0.0.0.0/0"),
@@ -1061,7 +972,7 @@ mod tests {
                 has_default_ipv6_route: false,
                 ..properties.clone()
             },
-            &[],
+            &local_routes,
             &FakePing::default(),
         )
         .expect("error calling compute_state, want Local state due to no default routes");
