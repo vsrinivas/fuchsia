@@ -77,7 +77,6 @@ fuchsia_driver_component("driver") {
 
 fuchsia_system_package("imx227") {
   deps = [ ":driver" ]
-  allowed_in_extra_deps = true
 }
 
 executable("imx227_unittest_bin") {

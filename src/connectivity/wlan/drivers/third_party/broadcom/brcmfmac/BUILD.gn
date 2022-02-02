@@ -415,6 +415,4 @@ fuchsia_system_package("brcmfmac") {
   # Allow upper level targets to depend on this one.
   visibility = []
   visibility = [ "*" ]
-
-  allowed_in_extra_deps = true
 }

@@ -119,7 +119,5 @@ template("ot_radio_driver") {
     if (internal_access) {
       deps += [ ":ot-radio-firmware-${driver_suffix}" ]
     }
-
-    allowed_in_extra_deps = true
   }
 }

@@ -60,8 +60,6 @@ fuchsia_driver_component("driver") {
 fuchsia_system_package("intel-gspi") {
   package_name = "intel-gspi"
   deps = [ ":driver" ]
-
-  allowed_in_extra_deps = true
 }
 
 test("intel-gspi-test-bin") {

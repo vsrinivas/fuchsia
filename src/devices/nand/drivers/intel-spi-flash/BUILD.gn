@@ -61,8 +61,6 @@ fuchsia_driver_component("driver") {
 fuchsia_system_package("intel-spi-flash") {
   package_name = "intel-spi-flash"
   deps = [ ":driver" ]
-
-  allowed_in_extra_deps = true
 }
 
 test("intel-spi-flash-test-bin") {

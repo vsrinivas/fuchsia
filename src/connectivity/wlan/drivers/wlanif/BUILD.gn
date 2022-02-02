@@ -71,6 +71,4 @@ fuchsia_driver_component("wlanif_driver") {
 
 fuchsia_system_package("wlanif") {
   deps = [ ":wlanif_driver" ]
-
-  allowed_in_extra_deps = true
 }

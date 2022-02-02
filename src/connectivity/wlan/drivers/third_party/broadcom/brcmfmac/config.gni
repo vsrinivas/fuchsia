@@ -59,13 +59,11 @@ template("brcmfmac_driver") {
     deps = _deps
     deps += [ ":fuchsia_driver" ]
     visibility = [ "*" ]
-    allowed_in_extra_deps = true
   }
 
   fuchsia_system_package("test-${orig_target_name}") {
     deps = _deps
     deps += [ ":test_fuchsia_driver" ]
     visibility = [ "*" ]
-    allowed_in_extra_deps = true
   }
 }

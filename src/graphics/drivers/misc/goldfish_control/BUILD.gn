@@ -67,7 +67,6 @@ fuchsia_driver_component("control_driver") {
 
 fuchsia_system_package("goldfish_control") {
   deps = [ ":control_driver" ]
-  allowed_in_extra_deps = true
 }
 
 test("goldfish-control-device-test") {

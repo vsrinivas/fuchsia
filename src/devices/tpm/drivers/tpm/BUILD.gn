@@ -44,8 +44,6 @@ fuchsia_driver_component("tpm-driver") {
 fuchsia_system_package("tpm-pkg") {
   package_name = "tpm"
   deps = [ ":tpm-driver" ]
-
-  allowed_in_extra_deps = true
 }
 
 test("tpm-driver-test-bin") {

@@ -54,7 +54,6 @@ fuchsia_driver_component("aml_mipicsi_driver") {
 fuchsia_system_package("driver_package") {
   package_name = "aml-mipicsi"
   deps = [ ":aml_mipicsi_driver" ]
-  allowed_in_extra_deps = true
 }
 
 group("aml_mipicsi") {

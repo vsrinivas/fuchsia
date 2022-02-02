@@ -65,7 +65,6 @@ fuchsia_system_package("emulator") {
   deps = [ ":driver" ]
 
   # This package is reachable from //src/connectivity/bluetooth
-  allowed_in_extra_deps = true
 }
 
 group("tests") {

@@ -103,6 +103,5 @@ template("camera_controller_driver") {
     if (defined(invoker.watermark_files)) {
       deps += [ ":firmware-watermarks-$package_name" ]
     }
-    allowed_in_extra_deps = true
   }
 }

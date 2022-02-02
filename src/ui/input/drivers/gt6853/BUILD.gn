@@ -24,7 +24,6 @@ fuchsia_system_package("gt6853") {
       ":firmware",
     ]
   }
-  allowed_in_extra_deps = true
 }
 
 if (internal_access) {

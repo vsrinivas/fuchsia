@@ -166,7 +166,6 @@ fuchsia_system_package("ath10k") {
   }
 
   # This package is reachable from //garnet/packages/prod:all
-  allowed_in_extra_deps = true
 }
 
 executable("sparse_array_tests") {

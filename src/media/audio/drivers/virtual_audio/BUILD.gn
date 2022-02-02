@@ -8,7 +8,6 @@ import("//build/zbi/kernel_cmdline.gni")
 
 fuchsia_system_package("virtual_audio") {
   deps = [ ":virtual_audio_driver" ]
-  allowed_in_extra_deps = true
 }
 
 driver_bind_rules("virtual_audio_bind") {

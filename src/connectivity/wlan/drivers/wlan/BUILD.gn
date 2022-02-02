@@ -59,8 +59,6 @@ fuchsia_system_package("wlan") {
   package_name = "wlan-system"
 
   deps = [ ":wlan_driver" ]
-
-  allowed_in_extra_deps = true
 }
 
 group("tests") {

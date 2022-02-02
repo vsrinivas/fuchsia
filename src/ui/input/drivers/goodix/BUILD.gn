@@ -76,7 +76,6 @@ fuchsia_system_package("goodix") {
   if (internal_access) {
     deps += [ ":astro-firmware" ]
   }
-  allowed_in_extra_deps = true
 }
 
 group("test") {

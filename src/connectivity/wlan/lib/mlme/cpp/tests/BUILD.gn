@@ -172,8 +172,6 @@ fuchsia_system_package("wlanphy-testdev-driver") {
   testonly = true
 
   deps = [ "//src/connectivity/wlan/drivers/testing:wlanphy-testdev" ]
-
-  allowed_in_extra_deps = true
 }
 
 tests = [

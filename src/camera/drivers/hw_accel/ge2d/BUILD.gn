@@ -77,7 +77,6 @@ fuchsia_driver_component("ge2d-driver") {
 
 fuchsia_system_package("ge2d") {
   deps = [ ":ge2d-driver" ]
-  allowed_in_extra_deps = true
 }
 
 source_set("ge2d_on_device_test") {

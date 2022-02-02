@@ -82,7 +82,6 @@ fuchsia_driver_component("driver") {
 
 fuchsia_system_package("gdc") {
   deps = [ ":driver" ]
-  allowed_in_extra_deps = true
 }
 
 executable("gdc_task_unittest_bin") {

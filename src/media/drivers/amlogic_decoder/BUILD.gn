@@ -291,14 +291,12 @@ if (target_cpu == "arm64") {
     if (_has_decoder_firmware) {
       deps = [ ":decoder_firmware" ]
     }
-    allowed_in_extra_deps = true
   }
 
   fuchsia_system_package("amlogic_decoder_package") {
     if (_has_decoder_firmware) {
       deps = [ ":amlogic_video_decoder" ]
     }
-    allowed_in_extra_deps = true
   }
 
   fuchsia_system_package("amlogic_decoder_test_package") {
@@ -310,7 +308,6 @@ if (target_cpu == "arm64") {
         ":test_files",
       ]
     }
-    allowed_in_extra_deps = true
   }
 
   #

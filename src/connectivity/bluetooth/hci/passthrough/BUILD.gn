@@ -39,9 +39,7 @@ fuchsia_driver_component("driver") {
 
 fuchsia_system_package("passthrough") {
   deps = [ ":driver" ]
-
   # This package is reachable from //garnet/packages/prod:all
-  allowed_in_extra_deps = true
 }
 
 group("tests") {

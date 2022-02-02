@@ -96,5 +96,4 @@ fuchsia_driver_component("driver") {
 
 fuchsia_system_package("usb-hci-test-driver") {
   deps = [ ":driver" ]
-  allowed_in_extra_deps = true
 }

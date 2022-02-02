@@ -48,9 +48,7 @@ fuchsia_driver_component("component") {
 
 fuchsia_system_package("chromiumos-ec-lpc") {
   deps = [ ":component" ]
-
   # Remove the line below when this package is only used by the system image.
-  allowed_in_extra_deps = true
 }
 
 test("chromiumos-ec-lpc-unit-tests") {

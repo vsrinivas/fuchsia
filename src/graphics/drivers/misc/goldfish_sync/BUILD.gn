@@ -93,7 +93,6 @@ fuchsia_unittest_package("goldfish-sync-device-test-package") {
 
 fuchsia_system_package("goldfish_sync") {
   deps = [ ":goldfish_sync_driver" ]
-  allowed_in_extra_deps = true
 }
 
 group("tests") {

@@ -86,5 +86,4 @@ fuchsia_system_package("intel") {
   }
 
   # This package is reachable from //garnet/packages/prod:all
-  allowed_in_extra_deps = true
 }

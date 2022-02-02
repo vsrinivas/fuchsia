@@ -94,7 +94,6 @@ fuchsia_system_package("iwlwifi") {
   foreach(fw_file, all_fw_files) {
     deps += [ ":iwlwifi-firmware-" + fw_file ]
   }
-  allowed_in_extra_deps = true
   visibility = []
   visibility = [ "*" ]
 }
