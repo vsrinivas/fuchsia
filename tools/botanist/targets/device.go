@@ -295,6 +295,13 @@ func getImgByName(imgs []*bootserver.Image, name string) string {
 }
 
 func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) error {
+	// TODO(fxbug.dev/91352): Remove experimental condition once stable.
+	if t.UseFFXExperimental() {
+		t.ffx.TargetWait(ctx)
+		zbi := getImgByName(images, "zbi_zircon-a")
+		vbmeta := getImgByName(images, "vbmeta_zircon-a")
+		return t.ffx.BootloaderBoot(ctx, zbi, vbmeta, "")
+	}
 	bootScript := getImgByName(images, "script_fastboot-boot-script")
 	if bootScript == "" {
 		return errors.New("fastboot boot script not found")

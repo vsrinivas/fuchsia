@@ -126,6 +126,21 @@ func (f *FFXInstance) Stop() error {
 	return err
 }
 
+// BootloaderBoot RAM boots the target.
+func (f *FFXInstance) BootloaderBoot(ctx context.Context, zbi, vbmeta, slot string) error {
+	var args []string
+	if zbi != "" {
+		args = append(args, "--zbi", zbi)
+	}
+	if vbmeta != "" {
+		args = append(args, "--vbmeta", vbmeta)
+	}
+	if slot != "" {
+		args = append(args, "--slot", slot)
+	}
+	return f.RunWithTarget(ctx, append([]string{"target", "bootloader", "boot"}, args...)...)
+}
+
 // Flash flashes the target.
 func (f *FFXInstance) Flash(ctx context.Context, manifest, sshKey string) error {
 	return f.RunWithTarget(ctx, "target", "flash", "--ssh-key", sshKey, manifest)
