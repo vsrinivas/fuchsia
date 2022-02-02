@@ -261,7 +261,17 @@ otError otPlatRadioGetRegion(otInstance *a_instance, uint16_t *a_region_code) {
   return sRadioSpinel.GetRadioRegion(a_region_code);
 }
 
-#ifndef OPENTHREAD_SOFT_TRANSITION_NEW_CODE
+#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
+otError otPlatRadioConfigureEnhAckProbing(otInstance *aInstance, otLinkMetrics aLinkMetrics,
+                                          const otShortAddress aShortAddress,
+                                          const otExtAddress *aExtAddress) {
+  OT_UNUSED_VARIABLE(aInstance);
+
+  return sRadioSpinel.ConfigureEnhAckProbing(aLinkMetrics, aShortAddress, *aExtAddress);
+}
+#endif
+
+#if OPENTHREAD_API_VERSION < 175
 void otPlatRadioSetMacKey(otInstance *a_instance, uint8_t a_key_id_mode, uint8_t a_key_id,
                           const otMacKey *a_prev_key, const otMacKey *a_curr_key,
                           const otMacKey *a_next_key) {

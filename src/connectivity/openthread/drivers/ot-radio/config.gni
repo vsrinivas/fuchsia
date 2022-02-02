@@ -17,10 +17,10 @@ template("ot_radio_driver") {
                            "firmware_config",
                          ])
   if (openthread_upstream_version ==
-      "c36c0e77a2465355bcf13bd7dc718d8c9aa6ff64" && firmware_config == "rcp" &&
+      "130957d48981c1294c8fc90d51556134cf935d6f" && firmware_config == "rcp" &&
       board == "sherlock") {
     firmware_name = "ot-" + firmware_config + "-app-" + firmware_type + "-" +
-                    board + "-c36c0e.bin"
+                    board + "-130957d48.bin"
   } else {
     firmware_name =
         "ot-" + firmware_config + "-app-" + firmware_type + "-" + board + ".bin"
