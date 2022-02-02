@@ -1061,6 +1061,11 @@ config("Wno-bitwise-instead-of-logical") {
   visibility = [ "//third_party/zstd:*" ]
 }
 
+config("Wno-defaulted-function-deleted") {
+  cflags = [ "-Wno-defaulted-function-deleted" ]
+  visibility = [ "//src/lib/vulkan/*" ]
+}
+
 config("symbol_visibility_hidden") {
   # Disable libc++ visibility annotations to make sure that the compiler option
   # has effect on symbols defined in libc++ headers. Note that we don't want to

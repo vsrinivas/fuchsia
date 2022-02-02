@@ -339,6 +339,7 @@ config("vulkan_host_config") {
   if (current_cpu == "x64" && is_host) {
     include_dirs = [ "$vulkan_host_sdk_dir/include" ]
     lib_dirs = [ "$vulkan_host_sdk_dir/lib" ]
+    configs = [ "//build/config:Wno-defaulted-function-deleted" ]
 
     # Link Vulkan loader to host executables.
     libs = [ "vulkan" ]
