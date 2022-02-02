@@ -45,7 +45,13 @@ in early boot state such as fastboot, shows 'FastbootDevice' with the
 By default, the `list` command outputs in a tabular format. To override
 the format, pass `--format` and can take the following options: 'simple'
 , 'tabular|table|tab', 'addresses|addrs|addr', 'name-only', 'json|JSON' or
-in short form 's', 't', 'a', 'n', 'j'.",
+in short form 's', 't', 'a', 'n', 'j'.
+
+By default, Zedboot discovery is disabled.  To enable discovery of Zedboot
+targets run:
+
+    $ ffx config set discovery.zedboot.enabled true
+",
     error_code(
         2,
         "If a nodename is supplied, an error code of 2 will be returned \

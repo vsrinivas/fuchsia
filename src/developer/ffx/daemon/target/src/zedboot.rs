@@ -62,37 +62,41 @@ pub async fn interface_discovery(
     let mut should_log_v6_listen_error = true;
     let mut v6_listen_socket: Weak<UdpSocket> = Weak::new();
     loop {
-        if v6_listen_socket.upgrade().is_none() {
-            match make_listen_socket((ZEDBOOT_MCAST_V6, port.get()).into())
-                .context("make_listen_socket for IPv6")
-            {
-                Ok(sock) => {
-                    let sock = Arc::new(sock);
-                    v6_listen_socket = Arc::downgrade(&sock);
-                    Task::local(recv_loop(sock.clone(), e.clone())).detach();
-                    should_log_v6_listen_error = true;
-                }
-                Err(err) => {
-                    if should_log_v6_listen_error {
-                        log::error!(
-                            "unable to bind IPv6 listen socket: {}. Discovery may fail.",
-                            err
-                        );
-                        should_log_v6_listen_error = false;
+        // fxb/90219 - disabled by default
+        let is_enabled: bool = ffx_config::get("discovery.zedboot.enabled").await.unwrap_or(false);
+        if is_enabled {
+            if v6_listen_socket.upgrade().is_none() {
+                match make_listen_socket((ZEDBOOT_MCAST_V6, port.get()).into())
+                    .context("make_listen_socket for IPv6")
+                {
+                    Ok(sock) => {
+                        let sock = Arc::new(sock);
+                        v6_listen_socket = Arc::downgrade(&sock);
+                        Task::local(recv_loop(sock.clone(), e.clone())).detach();
+                        should_log_v6_listen_error = true;
+                    }
+                    Err(err) => {
+                        if should_log_v6_listen_error {
+                            log::error!(
+                                "unable to bind IPv6 listen socket: {}. Discovery may fail.",
+                                err
+                            );
+                            should_log_v6_listen_error = false;
+                        }
                     }
                 }
             }
-        }
 
-        for iface in get_mcast_interfaces().unwrap_or(Vec::new()) {
-            match iface.id() {
-                Ok(id) => {
-                    if let Some(sock) = v6_listen_socket.upgrade() {
-                        let _ = sock.join_multicast_v6(&ZEDBOOT_MCAST_V6, id);
+            for iface in get_mcast_interfaces().unwrap_or(Vec::new()) {
+                match iface.id() {
+                    Ok(id) => {
+                        if let Some(sock) = v6_listen_socket.upgrade() {
+                            let _ = sock.join_multicast_v6(&ZEDBOOT_MCAST_V6, id);
+                        }
                     }
-                }
-                Err(err) => {
-                    log::warn!("{}", err);
+                    Err(err) => {
+                        log::warn!("{}", err);
+                    }
                 }
             }
         }
@@ -105,6 +109,12 @@ pub async fn interface_discovery(
 // silently discarded.
 async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<DaemonEvent>) {
     loop {
+        // fxb/90219 - disabled by default
+        let is_enabled: bool = ffx_config::get("discovery.zedboot.enabled").await.unwrap_or(false);
+        if !is_enabled {
+            return;
+        }
+
         let mut buf = &mut [0u8; 1500][..];
         let addr = match sock.recv_from(&mut buf).await {
             Ok((sz, addr)) => {

@@ -1,4 +1,9 @@
 {
+    "discovery": {
+        "zedboot": {
+            "enabled": false
+        }
+    },
     "fastboot": {
         "flash": {
             "min_timeout_secs": 60,
