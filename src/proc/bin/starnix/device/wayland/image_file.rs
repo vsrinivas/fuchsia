@@ -21,10 +21,6 @@ pub struct ImageInfo {
     /// The magma image info associated with the `vmo`.
     pub info: magma_image_info_t,
 
-    /// The `vmo` associated with the buffer collection. This info currently only stores the first
-    /// buffer associated with a given collection.
-    pub vmo: Arc<zx::Vmo>,
-
     /// The `BufferCollectionImportToken` associated with this file.
     pub token: fuicomp::BufferCollectionImportToken,
 }
@@ -42,18 +38,23 @@ impl Clone for ImageInfo {
                         .expect("Failed to duplicate the buffer token."),
                 ),
             },
-            vmo: self.vmo.clone(),
         }
     }
 }
 
 pub struct ImageFile {
     pub info: ImageInfo,
+
+    pub vmo: Arc<zx::Vmo>,
 }
 
 impl ImageFile {
-    pub fn new(kernel: &Kernel, info: ImageInfo) -> FileHandle {
-        Anon::new_file(anon_fs(kernel), Box::new(ImageFile { info }), OpenFlags::RDWR)
+    pub fn new(kernel: &Kernel, info: ImageInfo, vmo: zx::Vmo) -> FileHandle {
+        Anon::new_file(
+            anon_fs(kernel),
+            Box::new(ImageFile { info, vmo: Arc::new(vmo) }),
+            OpenFlags::RDWR,
+        )
     }
 }
 
@@ -68,7 +69,7 @@ impl FileOps for ImageFile {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        VmoFileObject::read_at(&self.info.vmo, file, current_task, offset, data)
+        VmoFileObject::read_at(&self.vmo, file, current_task, offset, data)
     }
 
     fn write_at(
@@ -78,7 +79,7 @@ impl FileOps for ImageFile {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        VmoFileObject::write_at(&self.info.vmo, file, current_task, offset, data)
+        VmoFileObject::write_at(&self.vmo, file, current_task, offset, data)
     }
 
     fn get_vmo(
@@ -87,6 +88,6 @@ impl FileOps for ImageFile {
         current_task: &CurrentTask,
         prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
-        VmoFileObject::get_vmo(&self.info.vmo, file, current_task, prot)
+        VmoFileObject::get_vmo(&self.vmo, file, current_task, prot)
     }
 }
