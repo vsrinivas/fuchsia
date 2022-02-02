@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_paver::{self as paver, PaverRequestStream},
     fidl_fuchsia_pkg::{PackageCacheRequestStream, PackageResolverRequestStream},
     fidl_fuchsia_update::{
+        AttemptsMonitorMarker, AttemptsMonitorRequest, AttemptsMonitorRequestStream,
         CheckNotStartedReason, CheckOptions, CheckingForUpdatesData, CommitStatusProviderMarker,
         CommitStatusProviderProxy, ErrorCheckingForUpdateData, Initiator,
         InstallationDeferralReason, InstallationDeferredData, InstallationErrorData,
@@ -529,6 +530,16 @@ impl TestEnv {
         stream
     }
 
+    async fn monitor_all_update_checks(&self) -> AttemptsMonitorRequestStream {
+        let (client_end, stream) =
+            fidl::endpoints::create_request_stream::<AttemptsMonitorMarker>().unwrap();
+        self.proxies
+            .update_manager
+            .monitor_all_update_checks(client_end)
+            .expect("make monitor_all_update call");
+        stream
+    }
+
     async fn perform_pending_reboot(&self) -> bool {
         self.proxies
             .update_manager
@@ -705,6 +716,117 @@ async fn test_omaha_client_update() {
                 }
             }
         ),
+    )
+    .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_attempt_monitor_update_progress_with_mock_installer() {
+    let (mut sender, receiver) = mpsc::channel(0);
+    let installer = MockUpdateInstallerService::builder().states_receiver(receiver).build();
+    let env =
+        TestEnvBuilder::new().response(OmahaResponse::Update).installer(installer).build().await;
+
+    env.check_now().await;
+    let mut request_stream = env.monitor_all_update_checks().await;
+    let AttemptsMonitorRequest::OnStart { options, monitor, responder } =
+        request_stream.next().await.unwrap().unwrap();
+
+    assert_matches!(options.initiator, Some(fidl_fuchsia_update::Initiator::User));
+
+    assert_matches!(responder.send(), Ok(()));
+    let mut monitor_stream = monitor.into_stream().unwrap();
+
+    expect_states(
+        &mut monitor_stream,
+        &[
+            State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
+            State::InstallingUpdate(InstallingData {
+                update: update_info(),
+                installation_progress: progress(None),
+                ..InstallingData::EMPTY
+            }),
+        ],
+    )
+    .await;
+
+    // Send installer state and expect manager step in lockstep to make sure that event queue
+    // won't merge any progress.
+    sender.send(installer::State::Prepare).await.unwrap();
+    expect_states(
+        &mut monitor_stream,
+        &[State::InstallingUpdate(InstallingData {
+            update: update_info(),
+            installation_progress: progress(Some(0.0)),
+            ..InstallingData::EMPTY
+        })],
+    )
+    .await;
+
+    let installer_update_info = installer::UpdateInfo::builder().download_size(1000).build();
+    sender
+        .send(installer::State::Fetch(
+            installer::UpdateInfoAndProgress::new(
+                installer_update_info,
+                installer::Progress::none(),
+            )
+            .unwrap(),
+        ))
+        .await
+        .unwrap();
+    expect_states(
+        &mut monitor_stream,
+        &[State::InstallingUpdate(InstallingData {
+            update: update_info(),
+            installation_progress: progress(Some(0.0)),
+            ..InstallingData::EMPTY
+        })],
+    )
+    .await;
+
+    sender
+        .send(installer::State::Stage(
+            installer::UpdateInfoAndProgress::new(
+                installer_update_info,
+                installer::Progress::builder()
+                    .fraction_completed(0.5)
+                    .bytes_downloaded(500)
+                    .build(),
+            )
+            .unwrap(),
+        ))
+        .await
+        .unwrap();
+    expect_states(
+        &mut monitor_stream,
+        &[State::InstallingUpdate(InstallingData {
+            update: update_info(),
+            installation_progress: progress(Some(0.5)),
+            ..InstallingData::EMPTY
+        })],
+    )
+    .await;
+
+    sender
+        .send(installer::State::WaitToReboot(installer::UpdateInfoAndProgress::done(
+            installer_update_info,
+        )))
+        .await
+        .unwrap();
+    expect_states(
+        &mut monitor_stream,
+        &[
+            State::InstallingUpdate(InstallingData {
+                update: update_info(),
+                installation_progress: progress(Some(1.0)),
+                ..InstallingData::EMPTY
+            }),
+            State::WaitingForReboot(InstallingData {
+                update: update_info(),
+                installation_progress: progress(Some(1.0)),
+                ..InstallingData::EMPTY
+            }),
+        ],
     )
     .await;
 }

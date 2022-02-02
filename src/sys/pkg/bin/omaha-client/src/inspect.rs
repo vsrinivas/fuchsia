@@ -213,7 +213,11 @@ mod tests {
     use crate::configuration::get_config;
     use fuchsia_async as fasync;
     use fuchsia_inspect::{assert_data_tree, Inspector};
-    use omaha_client::{common::UserCounting, protocol::Cohort, state_machine};
+    use omaha_client::{
+        common::UserCounting,
+        protocol::{request::InstallSource, Cohort},
+        state_machine,
+    };
     use std::time::Duration;
 
     #[fasync::run_singlethreaded(test)]
@@ -269,7 +273,7 @@ mod tests {
         let inspector = Inspector::new();
         let node = StateNode::new(inspector.root().create_child("state"));
         let state = State {
-            manager_state: state_machine::State::CheckingForUpdates,
+            manager_state: state_machine::State::CheckingForUpdates(InstallSource::OnDemand),
             version_available: Some("1.2.3.4".to_string()),
             install_progress: None,
         };

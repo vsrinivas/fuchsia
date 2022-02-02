@@ -162,7 +162,7 @@ where
             State::Idle => {
                 self.target_version = None;
             }
-            State::CheckingForUpdates => {
+            State::CheckingForUpdates(_) => {
                 self.last_update_start_time = clock::now();
                 self.platform_metrics_emitter.emit(platform::Event::CheckingForUpdates);
             }

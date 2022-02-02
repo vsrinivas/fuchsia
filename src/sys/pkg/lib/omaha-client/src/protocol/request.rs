@@ -92,7 +92,7 @@ pub struct RequestWrapper {
 }
 
 /// Enum of the possible reasons that this update request was initiated.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum InstallSource {
     /// This update check was triggered "on demand", by a user.

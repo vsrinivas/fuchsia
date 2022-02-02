@@ -102,7 +102,7 @@ where
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum State {
     Idle,
-    CheckingForUpdates,
+    CheckingForUpdates(InstallSource),
     ErrorCheckingForUpdate,
     NoUpdateAvailable,
     InstallationDeferredByPolicy,
@@ -700,7 +700,7 @@ where
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) -> Result<(update_check::Response, RebootAfterUpdate<IN::InstallResult>), UpdateCheckError>
     {
-        Self::yield_state(State::CheckingForUpdates, co).await;
+        Self::yield_state(State::CheckingForUpdates(request_params.source), co).await;
 
         self.report_check_interval(request_params.source.clone()).await;
 
@@ -2023,7 +2023,10 @@ mod tests {
                 .collect::<Vec<State>>()
                 .await;
 
-            let expected_states = vec![State::CheckingForUpdates, State::ErrorCheckingForUpdate];
+            let expected_states = vec![
+                State::CheckingForUpdates(InstallSource::ScheduledTask),
+                State::ErrorCheckingForUpdate,
+            ];
             assert_eq!(actual_states, expected_states);
         });
     }
@@ -3219,7 +3222,11 @@ mod tests {
 
         assert_eq!(
             observer.take_states(),
-            vec![State::CheckingForUpdates, State::InstallingUpdate, State::Idle]
+            vec![
+                State::CheckingForUpdates(InstallSource::ScheduledTask),
+                State::InstallingUpdate,
+                State::Idle
+            ]
         );
 
         assert_eq!(*reboot_check_options_received.borrow(), vec![]);
@@ -3295,7 +3302,7 @@ mod tests {
         pool.run_until_stalled();
         assert_eq!(
             observer.take_states(),
-            vec![State::CheckingForUpdates, State::InstallingUpdate]
+            vec![State::CheckingForUpdates(InstallSource::ScheduledTask), State::InstallingUpdate]
         );
 
         pool.run_until(async {
@@ -3681,7 +3688,7 @@ mod tests {
         pool.run_until_stalled();
         assert_eq!(
             observer.take_states(),
-            vec![State::CheckingForUpdates, State::InstallingUpdate]
+            vec![State::CheckingForUpdates(InstallSource::ScheduledTask), State::InstallingUpdate]
         );
 
         pool.run_until(async {
@@ -3734,7 +3741,11 @@ mod tests {
         assert_eq!(blocked_timer.requested_wait(), RequestedWait::Until(next_update_time.into()));
         assert_eq!(
             observer.take_states(),
-            vec![State::CheckingForUpdates, State::ErrorCheckingForUpdate, State::Idle]
+            vec![
+                State::CheckingForUpdates(InstallSource::ScheduledTask),
+                State::ErrorCheckingForUpdate,
+                State::Idle
+            ]
         );
 
         // Unless a control signal to start an update check comes in.
@@ -3747,7 +3758,11 @@ mod tests {
         pool.run_until_stalled();
         assert_eq!(
             observer.take_states(),
-            vec![State::CheckingForUpdates, State::ErrorCheckingForUpdate, State::Idle]
+            vec![
+                State::CheckingForUpdates(InstallSource::ScheduledTask),
+                State::ErrorCheckingForUpdate,
+                State::Idle
+            ]
         );
     }
 
