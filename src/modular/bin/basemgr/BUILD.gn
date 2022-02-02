@@ -13,6 +13,7 @@ executable("basemgr_bin") {
     ":lib",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
@@ -161,6 +162,7 @@ executable("basemgr_impl_unittest") {
   sources = [ "basemgr_impl_unittest.cc" ]
   deps = [
     ":basemgr_impl",
+    "//examples/fidl/fuchsia.examples",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/files",
@@ -249,6 +251,7 @@ fuchsia_test_package("basemgr_unittests") {
     ":bounded-inspect-list-node-unittest",
     ":basemgr-inspector-unittest",
   ]
+  deps = [ "//examples/fidl/rust/server:echo-server" ]
   test_specs = {
     # session_context_impl_unittest exercises crash handling that logs an ERROR.
     log_settings = {

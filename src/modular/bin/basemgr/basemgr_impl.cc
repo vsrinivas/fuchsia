@@ -5,12 +5,14 @@
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/time.h>
 
+#include "src/lib/files/directory.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/common/teardown.h"
@@ -20,6 +22,8 @@
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
+
+static constexpr auto kServicesForV1Sessionmgr = "/svc_for_v1_sessionmgr";
 
 using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
 
@@ -96,7 +100,7 @@ void BasemgrImpl::Connect(
 }
 
 void BasemgrImpl::Start() {
-  CreateSessionProvider(&config_accessor_, fuchsia::sys::ServiceList());
+  CreateSessionProvider(&config_accessor_);
 
   auto start_session_result = StartSession();
   if (start_session_result.is_error()) {
@@ -138,13 +142,38 @@ void BasemgrImpl::Terminate() { Shutdown(); }
 
 void BasemgrImpl::Stop() { Shutdown(); }
 
-void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const config_accessor,
-                                        fuchsia::sys::ServiceList services_for_sessionmgr) {
+void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const config_accessor) {
   FX_DCHECK(!session_provider_.get());
+
+  // launch with additional v2 services published in "svc_for_v1_sessionmgr"
+  fuchsia::sys::ServiceList svc_for_v1_sessionmgr;
+  auto path = kServicesForV1Sessionmgr;
+  if (files::IsDirectory(path)) {
+    FX_LOGS(INFO) << "Found svc_for_v1_sessionmgr";
+    zx_status_t status;
+    zx::channel ns_server;
+    status = zx::channel::create(0, &ns_server, &svc_for_v1_sessionmgr.host_directory);
+    FX_CHECK(status == ZX_OK) << "failed to create channel: " << zx_status_get_string(status);
+
+    status = fdio_open(path, ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_WRITABLE,
+                       ns_server.release());
+    FX_CHECK(status == ZX_OK) << "failed to open " << path << ": " << zx_status_get_string(status);
+
+    std::vector<std::string> v2_services;
+    FX_CHECK(files::ReadDirContents(path, &v2_services)) << "failed to read directory: " << path;
+    for (const auto& v2_service : v2_services) {
+      if (v2_service != ".") {
+        FX_LOGS(INFO) << "Found v2 service: " << v2_service;
+        svc_for_v1_sessionmgr.names.push_back(v2_service);
+      }
+    }
+  } else {
+    FX_LOGS(INFO) << "No svc_for_v1_sessionmgr from v2";
+  }
 
   session_provider_.reset(new SessionProvider(
       /*delegate=*/this, launcher_.get(), device_administrator_.get(), config_accessor,
-      std::move(services_for_sessionmgr),
+      std::move(svc_for_v1_sessionmgr),
       /*on_zero_sessions=*/[this] {
         if (state_ == State::SHUTTING_DOWN) {
           return;
@@ -222,9 +251,8 @@ void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig conf
 
   launch_sessionmgr_config_accessor_ =
       std::make_unique<modular::ModularConfigAccessor>(std::move(config));
-  fuchsia::sys::ServiceList additional_services{};
 
-  CreateSessionProvider(launch_sessionmgr_config_accessor_.get(), std::move(additional_services));
+  CreateSessionProvider(launch_sessionmgr_config_accessor_.get());
 
   if (auto result = StartSession(); result.is_error()) {
     FX_PLOGS(ERROR, result.error()) << "Could not start session";

@@ -21,7 +21,6 @@
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
-// #include "zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h"
 
 // Command-line command to delete the persistent configuration.
 constexpr std::string_view kDeletePersistentConfigCommand = "delete_persistent_config";

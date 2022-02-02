@@ -120,12 +120,8 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   // Creates a |session_provider_| that uses the given config.
   //
-  // If |services_for_sessionmgr| is populated all listed services will be provided to
-  // agent children of sessionmgr.
-  //
   // |config_accessor| must live for the duration of the session, outliving |session_provider_|.
-  void CreateSessionProvider(const ModularConfigAccessor* config_accessor,
-                             fuchsia::sys::ServiceList services_for_sessionmgr);
+  void CreateSessionProvider(const ModularConfigAccessor* config_accessor);
 
   // Contains initial basemgr and sessionmgr configuration.
   modular::ModularConfigAccessor config_accessor_;
