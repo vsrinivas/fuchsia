@@ -15,11 +15,13 @@ use {
     },
     thiserror::Error,
     zbi_abi::{
-        is_zbi_type_driver_metadata, zbi_header_t, ZbiType, ZBI_ALIGNMENT_BYTES,
-        ZBI_CONTAINER_MAGIC, ZBI_FLAG_CRC32, ZBI_FLAG_VERSION, ZBI_ITEM_MAGIC, ZBI_ITEM_NO_CRC32,
+        is_zbi_type_driver_metadata, zbi_header_t, ZBI_ALIGNMENT_BYTES, ZBI_CONTAINER_MAGIC,
+        ZBI_FLAG_CRC32, ZBI_FLAG_VERSION, ZBI_ITEM_MAGIC, ZBI_ITEM_NO_CRC32,
     },
     zerocopy::LayoutVerified,
 };
+
+pub use zbi_abi::ZbiType;
 
 const ZBI_HEADER_SIZE: usize = size_of::<zbi_header_t>();
 
@@ -90,8 +92,8 @@ pub struct ZbiItem {
 
 #[derive(Debug, PartialEq)]
 pub struct ZbiResult {
-    bytes: Vec<u8>,
-    extra: u32, // Optional metadata that might be used to identify ZBI items with the same type.
+    pub bytes: Vec<u8>,
+    pub extra: u32, // Optional metadata that can be used to identify ZBI items with the same type.
 }
 
 #[derive(Debug)]
