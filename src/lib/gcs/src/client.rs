@@ -6,10 +6,15 @@
 
 use {
     crate::token_store::TokenStore,
-    anyhow::{bail, Result},
+    anyhow::{bail, Context, Result},
     fuchsia_hyper::{new_https_client, HttpsClient},
     hyper::{body::HttpBody as _, Body, Response, StatusCode},
-    std::{fs::File, io::Write, path::Path, sync::Arc},
+    std::{
+        fs::{create_dir_all, File},
+        io::Write,
+        path::Path,
+        sync::Arc,
+    },
 };
 
 /// Create clients with credentials for use with GCS.
@@ -73,6 +78,44 @@ impl Client {
     /// Intentionally not public. Use ClientFactory::new_client() instead.
     fn from_token_store(token_store: Arc<TokenStore>) -> Self {
         Self { https: new_https_client(), token_store }
+    }
+
+    /// Save content of matching objects (blob) from GCS to local location
+    /// `output_dir`.
+    pub async fn fetch_all<P: AsRef<Path>>(
+        &self,
+        bucket: &str,
+        prefix: &str,
+        output_dir: P,
+    ) -> Result<()> {
+        let objects =
+            self.token_store.list(&self.https, bucket, prefix).await.context("token store list")?;
+        let output_dir = output_dir.as_ref();
+        for object in objects {
+            println!("GCS fetch: {:?}", object);
+            if let Some(relative_path) = object.strip_prefix(prefix) {
+                // Strip leading slash, if present.
+                let relative_path = if relative_path.starts_with("/") {
+                    &relative_path[1..]
+                } else {
+                    relative_path
+                };
+                let output_path = if relative_path.is_empty() {
+                    // The `relative_path` is empty with then specified prefix
+                    // is a file.
+                    output_dir.join(Path::new(prefix).file_name().expect("Prefix file name."))
+                } else {
+                    output_dir.join(relative_path)
+                };
+
+                if let Some(parent) = output_path.parent() {
+                    create_dir_all(&parent).context(format!("create dir all for {:?}", parent))?;
+                }
+                let mut file = File::create(output_path).context("create file")?;
+                self.write(bucket, &object, &mut file).await.context("write object")?;
+            }
+        }
+        Ok(())
     }
 
     /// Save content of a stored object (blob) from GCS at location `output`.

@@ -24,10 +24,6 @@ pub enum SubCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "list")]
 pub struct ListCommand {
-    /// list items from this product release branch only.
-    #[argh(option)]
-    pub branch: String,
-
     /// do no network IO, use the locally cached version or fail.
     #[argh(switch)]
     pub cached: bool,
@@ -37,13 +33,7 @@ pub struct ListCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "get")]
 pub struct GetCommand {
-    /// use this product release branch.
-    //
-    // Tip: in the future this may be incorporated into the product_bundle_name.
-    #[argh(option)]
-    pub branch: String,
-
     /// get (and cache) data for specific product bundle.
     #[argh(positional)]
-    pub product_bundle_name: String,
+    pub product_bundle_name: Option<String>,
 }

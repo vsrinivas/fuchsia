@@ -20,11 +20,15 @@
 use {
     crate::{
         in_tree::pbms_from_tree,
-        sdk::{fetch_from_sdk, local_entries},
+        sdk::{fetch_from_gcs, fetch_from_sdk, local_entries},
     },
     anyhow::{bail, Context, Result},
     ffx_config::sdk::SdkVersion,
-    fms::Entries,
+    fms::{find_product_bundle, Entries},
+    std::{
+        io::Write,
+        path::{Path, PathBuf},
+    },
 };
 
 mod in_tree;
@@ -50,6 +54,72 @@ pub async fn get_pbms(update_metadata: bool) -> Result<Entries> {
         }
         SdkVersion::Unknown => bail!("Unable to determine SDK version vs. in-tree"),
     }
+}
+
+/// Download data related to the product.
+///
+/// The emulator may then be run with the data downloaded.
+///
+/// If `product_name` is None and only one viable PBM is available, that entry
+/// is used.
+///
+/// `writer` is used to output user messages.
+pub async fn get_product_data<W>(product_name: &Option<String>, mut writer: W) -> Result<()>
+where
+    W: Write + Sync,
+{
+    let data_path: PathBuf =
+        ffx_config::get("pbms.data.path").await.context("config get pbms.data.path")?;
+    let entries = get_pbms(/*update_metadata=*/ true).await.context("get pbms")?;
+    let product_bundle =
+        find_product_bundle(&entries, product_name).context("find product bundle")?;
+    writeln!(writer, "Get product data for {:?}", product_bundle)?;
+    let local_dir = data_path.join(&product_bundle.name);
+    for image in &product_bundle.images {
+        writeln!(writer, "    image: {:?}", image)?;
+        match image.format.as_str() {
+            "files" => {
+                fetch_bundle_uri(&image.base_uri, &local_dir).await?;
+            }
+            "tgz" => {
+                fetch_bundle_uri(&image.base_uri, &local_dir).await?;
+            }
+            _ =>
+            // The schema currently defines only "files" or "tgz" (see RFC-100).
+            // This error could be a typo in the product bundle or a new image
+            // format has been added and this code needs an update.
+            {
+                bail!(
+                    "Unexpected image format ({:?}) in product bundle ({:?}). \
+                Supported formats are \"files\" and \"tgz\". \
+                Please report as a bug.",
+                    image.format,
+                    product_name
+                )
+            }
+        }
+    }
+    for package in &product_bundle.packages {
+        writeln!(writer, "    package: {:?}", package.repo_uri)?;
+    }
+    Ok(())
+}
+
+/// Download data from any of the supported schemes listed in RFC-100, Product
+/// Bundle, "bundle_uri".
+///
+/// Currently: "pattern": "^(?:http|https|gs|file):\/\/"
+async fn fetch_bundle_uri(uri: &str, local_dir: &Path) -> Result<()> {
+    if uri.starts_with("gs://") {
+        fetch_from_gcs(uri, local_dir).await.context("Download from GCS.")?;
+    } else if uri.starts_with("http://") || uri.starts_with("https://") {
+        unimplemented!();
+    } else if uri.starts_with("file://") {
+        unimplemented!();
+    } else {
+        bail!("Unexpected URI scheme in ({:?})", uri);
+    }
+    Ok(())
 }
 
 #[cfg(test)]

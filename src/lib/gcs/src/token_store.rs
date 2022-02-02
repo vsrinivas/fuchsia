@@ -354,6 +354,7 @@ impl TokenStore {
         // If the bucket and object are from a gs:// URL, the object may have a
         // undesirable leading slash. Trim it if present.
         let object = if object.starts_with('/') { &object[1..] } else { object };
+
         let res = self.attempt_download(https_client, bucket, object).await?;
         Ok(match res.status() {
             StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED => {
@@ -410,10 +411,6 @@ impl TokenStore {
         bucket: &str,
         prefix: &str,
     ) -> Result<Vec<String>> {
-        // If the bucket and prefix are from a gs:// URL, the prefix may have a
-        // undesirable leading slash. Trim it if present.
-        let prefix = if prefix.starts_with('/') { &prefix[1..] } else { prefix };
-
         Ok(match self.attempt_list(https_client, bucket, prefix).await {
             Err(e) => {
                 match &self.refresh_token {
@@ -439,6 +436,10 @@ impl TokenStore {
         bucket: &str,
         prefix: &str,
     ) -> Result<Vec<String>> {
+        // If the bucket and prefix are from a gs:// URL, the prefix may have a
+        // undesirable leading slash. Trim it if present.
+        let prefix = if prefix.starts_with('/') { &prefix[1..] } else { prefix };
+
         let mut base_url = self.api_base.to_owned();
         base_url.path_segments_mut().unwrap().extend(&["b", bucket, "o"]);
         base_url

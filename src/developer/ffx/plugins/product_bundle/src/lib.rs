@@ -11,7 +11,7 @@ use {
     ffx_config::sdk::Sdk,
     ffx_core::ffx_plugin,
     ffx_product_bundle_args::{GetCommand, ListCommand, ProductBundleCommand, SubCommand},
-    pbms::get_pbms,
+    pbms::{get_pbms, get_product_data},
     sdk_metadata::Metadata,
     std::io::{stdout, Write},
 };
@@ -42,7 +42,7 @@ where
 
 /// `ffx product-bundle list` sub-command.
 async fn pb_list<W: Write + Sync>(_sdk: Sdk, mut writer: W, cmd: &ListCommand) -> Result<()> {
-    let entries = get_pbms(/*update_metadata=*/ !cmd.cached).await.context("get pbms")?;
+    let entries = get_pbms(/*update_metadata=*/ !cmd.cached).await.context("list pbms")?;
     for entry in entries.iter() {
         match entry {
             Metadata::ProductBundleV1(bundle) => writeln!(writer, "{}", bundle.name)?,
@@ -53,9 +53,8 @@ async fn pb_list<W: Write + Sync>(_sdk: Sdk, mut writer: W, cmd: &ListCommand) -
 }
 
 /// `ffx product-bundle get` sub-command.
-async fn pb_get<W: Write + Sync>(_sdk: Sdk, mut writer: W, _cmd: &GetCommand) -> Result<()> {
-    writeln!(writer, "Running pb_get")?;
-    Ok(())
+async fn pb_get<W: Write + Sync>(_sdk: Sdk, writer: W, cmd: &GetCommand) -> Result<()> {
+    get_product_data(&cmd.product_bundle_name, writer).await
 }
 
 #[cfg(test)]
