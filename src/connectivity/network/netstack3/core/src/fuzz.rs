@@ -9,9 +9,19 @@ use std::convert::TryInto as _;
 
 use crate::{testutil::DummyEventDispatcher, Ctx, DeviceId, TimerId};
 use arbitrary::{Arbitrary, Unstructured};
+use fuzz_util::{zerocopy::ArbitraryFromBytes, Fuzzed};
 use net_declare::net_mac;
-use net_types::UnicastAddr;
-use packet::serialize::Buf;
+use net_types::{
+    ip::{IpAddress, Ipv4Addr},
+    UnicastAddr,
+};
+use packet::{
+    serialize::{Buf, SerializeError},
+    Nested, NestedPacketBuilder, Serializer,
+};
+use packet_formats::{
+    ethernet::EthernetFrameBuilder, ipv4::Ipv4PacketBuilder, udp::UdpPacketBuilder,
+};
 
 fn initialize_logging() {
     #[cfg(fuzz_logging)]
@@ -44,9 +54,84 @@ impl<'a> Arbitrary<'a> for SmallDuration {
     }
 }
 
+#[derive(Copy, Clone, Debug, Arbitrary)]
+enum FrameType {
+    Raw,
+    EthernetWith(EthernetFrameType),
+}
+
+#[derive(Copy, Clone, Debug, Arbitrary)]
+enum EthernetFrameType {
+    Raw,
+    Ipv4(IpFrameType),
+}
+
+#[derive(Copy, Clone, Debug, Arbitrary)]
+enum IpFrameType {
+    Raw,
+    Udp,
+}
+
+impl FrameType {
+    fn arbitrary_buf(&self, u: &mut Unstructured<'_>) -> arbitrary::Result<Buf<Vec<u8>>> {
+        match self {
+            FrameType::Raw => Ok(Buf::new(u.arbitrary()?, ..)),
+            FrameType::EthernetWith(ether_type) => {
+                let builder = Fuzzed::<EthernetFrameBuilder>::arbitrary(u)?.into();
+                ether_type.arbitrary_buf(builder, u)
+            }
+        }
+    }
+}
+
+impl EthernetFrameType {
+    fn arbitrary_buf<O: NestedPacketBuilder + std::fmt::Debug>(
+        &self,
+        outer: O,
+        u: &mut Unstructured<'_>,
+    ) -> arbitrary::Result<Buf<Vec<u8>>> {
+        match self {
+            EthernetFrameType::Raw => arbitrary_packet(outer, u),
+            EthernetFrameType::Ipv4(ip_type) => {
+                let ip_builder = Fuzzed::<Ipv4PacketBuilder>::arbitrary(u)?.into();
+                ip_type.arbitrary_buf::<Ipv4Addr, _>(ip_builder.encapsulate(outer), u)
+            }
+        }
+    }
+}
+
+impl IpFrameType {
+    fn arbitrary_buf<
+        'a,
+        A: IpAddress + ArbitraryFromBytes<'a>,
+        O: NestedPacketBuilder + std::fmt::Debug,
+    >(
+        &self,
+        outer: O,
+        u: &mut Unstructured<'a>,
+    ) -> arbitrary::Result<Buf<Vec<u8>>> {
+        match self {
+            IpFrameType::Raw => arbitrary_packet(outer, u),
+            IpFrameType::Udp => {
+                let udp_builder = Fuzzed::<UdpPacketBuilder<A>>::arbitrary(u)?.into();
+                arbitrary_packet(udp_builder.encapsulate(outer), u)
+            }
+        }
+    }
+}
+
+struct ArbitraryFrame(FrameType, Buf<Vec<u8>>);
+
+impl<'a> Arbitrary<'a> for ArbitraryFrame {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let frame_type = u.arbitrary::<FrameType>()?;
+        Ok(Self(frame_type, frame_type.arbitrary_buf(u)?))
+    }
+}
+
 #[derive(Arbitrary)]
 enum FuzzAction {
-    ReceiveFrame(Vec<u8>),
+    ReceiveFrame(ArbitraryFrame),
     AdvanceTime(SmallDuration),
 }
 
@@ -55,10 +140,41 @@ pub(crate) struct FuzzInput {
     actions: Vec<FuzzAction>,
 }
 
+fn arbitrary_packet<B: NestedPacketBuilder + std::fmt::Debug>(
+    builder: B,
+    u: &mut Unstructured<'_>,
+) -> arbitrary::Result<Buf<Vec<u8>>> {
+    let constraints = match builder.try_constraints() {
+        Some(constraints) => constraints,
+        None => return Err(arbitrary::Error::IncorrectFormat),
+    };
+
+    let body_len = std::cmp::min(
+        std::cmp::max(u.arbitrary_len::<u8>()?, constraints.min_body_len()),
+        constraints.max_body_len(),
+    );
+    let mut buffer = vec![0; body_len + constraints.header_len() + constraints.footer_len()];
+    u.fill_buffer(&mut buffer[constraints.header_len()..(constraints.header_len() + body_len)])?;
+
+    let bytes = Buf::new(buffer, constraints.header_len()..(constraints.header_len() + body_len))
+        .encapsulate(builder)
+        .serialize_vec_outer()
+        .map_err(|(e, _): (_, Nested<Buf<Vec<_>>, B>)| match e {
+            SerializeError::Alloc(e) => match e {},
+            SerializeError::Mtu => arbitrary::Error::IncorrectFormat,
+        })?
+        .map_a(|buffer| Buf::new(buffer.as_ref().to_vec(), ..))
+        .into_inner();
+    Ok(bytes)
+}
+
 fn dispatch(ctx: &mut Ctx<DummyEventDispatcher>, device_id: DeviceId, action: FuzzAction) {
     use FuzzAction::*;
     match action {
-        ReceiveFrame(frame) => crate::receive_frame(ctx, device_id, Buf::new(frame, ..)),
+        ReceiveFrame(ArbitraryFrame(frame_type, buf)) => {
+            let _: FrameType = frame_type;
+            crate::receive_frame(ctx, device_id, buf)
+        }
         AdvanceTime(SmallDuration(duration)) => {
             let _: Vec<TimerId> = crate::testutil::run_for(ctx, duration);
         }

@@ -105,6 +105,10 @@ config("fuzz") {
     "--cfg=fuzz",
     "--cfg=test",
   ]
+  # Trace logging is turned off by default so that the fuzzer can run faster,
+  # but can be enabled (for example, when reproducing a failure) by uncommenting
+  # the following line:
+  # rustflags += ["--cfg=fuzz_logging"]
 }
 
 rustc_fuzzer("fuzz-single-device") {
@@ -114,6 +118,7 @@ rustc_fuzzer("fuzz-single-device") {
   deps = lib_deps + lib_test_deps + [
            "//src/connectivity/lib/net-declare",
            "//src/connectivity/lib/net-types",
+           "//src/connectivity/lib/fuzz-util",
            "//src/lib/network/packet",
            "//src/lib/syslog/rust:syslog",
            "//third_party/rust_crates:arbitrary",
@@ -124,11 +129,6 @@ rustc_fuzzer("fuzz-single-device") {
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
   configs += [ ":fuzz" ]
-
-  # Trace logging is turned off by default so that the fuzzer can run faster,
-  # but can be enabled (for example, when reproducing a failure) by uncommenting
-  # the following line:
-  # rustflags += ["--cfg=fuzz_logging"]
 }
 
 fuzzers_package("netstack3-core-fuzzers") {
