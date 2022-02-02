@@ -50,6 +50,7 @@ class HermeticAudioEnvironment {
     std::string processor_creator_url;
     std::string processor_creator_config_data_path;
     std::function<zx_status_t(sys::testing::EnvironmentServices&)> install_additional_services_fn;
+    std::string label = "hermetic_audio_test";
   };
   HermeticAudioEnvironment(Options options);
   ~HermeticAudioEnvironment();

@@ -39,9 +39,6 @@
 namespace media::audio::test {
 namespace {
 
-// The label used for our hermetic audio environment.
-constexpr const char kIsolatedEnvironmentLabel[] = "hermetic_audio_test";
-
 // The IsolatedDevmgr will expose a fuchsia.io.Directory protocol under this service name in the
 // devmgrs public directory.
 constexpr const char kIsolatedDevmgrServiceName[] = "fuchsia.media.AudioTestDevmgr";
@@ -286,8 +283,8 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
   }
 
   std::unique_lock<std::mutex> lock(mutex_);
-  hermetic_environment_ = sys::testing::EnclosingEnvironment::Create(
-      kIsolatedEnvironmentLabel, real_env, std::move(services), {});
+  hermetic_environment_ =
+      sys::testing::EnclosingEnvironment::Create(options_.label, real_env, std::move(services), {});
   hermetic_environment_->SetRunningChangedCallback([this](bool running) {
     std::unique_lock<std::mutex> lock(mutex_);
     if (running) {
@@ -307,8 +304,7 @@ const inspect::Hierarchy HermeticAudioEnvironment::ReadInspect(ComponentType com
   FX_CHECK(it != component_urls_.end()) << "unknown component " << component_type;
 
   files::Glob glob(fxl::Substitute("/hub/r/$0/*/c/$1/*/out/diagnostics/fuchsia.inspect.Tree",
-                                   kIsolatedEnvironmentLabel,
-                                   ComponentManifestFromURL(it->second)));
+                                   options_.label, ComponentManifestFromURL(it->second)));
   FX_CHECK(glob.size() == 1) << "could not find unique fuchsia.inspect.Tree, found " << glob.size()
                              << " matches";
 
