@@ -440,7 +440,7 @@ group("tests") {
     ":feedback-tests",
 
     # Packages for the components that we are injecting in the integration tests.
-    "//garnet/bin/setui",
+    "//garnet/bin/setui:setui_service",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/connectivity/network/netstack",
     "//src/developer/forensics:copy-pkg",
