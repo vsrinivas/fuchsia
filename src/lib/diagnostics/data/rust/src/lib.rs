@@ -56,7 +56,6 @@ impl Default for DataSource {
 pub enum LifecycleType {
     Started,
     Stopped,
-    Running,
     DiagnosticsReady,
     LogSinkConnected,
 }

@@ -164,7 +164,7 @@ mod tests {
 
         diagnostics_repo
             .write()
-            .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
+            .add_new_component(identity.clone(), zx::Time::from_nanos(0))
             .unwrap();
 
         diagnostics_repo

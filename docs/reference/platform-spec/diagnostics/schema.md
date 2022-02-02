@@ -101,7 +101,7 @@ Metadata for lifecycle responses contains the following fields:
 - Timestamp: The monotonic time when the event happened in the framework.
 
 - Lifecycle event type: The name of the lifecycle event being encoded in the payload. This can be
-  one of: `Started`, `Stopped`, `Running`, `DiagnosticsReady`, `LogSinkConnected`.
+  one of: `Started`, `Stopped`, `DiagnosticsReady`, `LogSinkConnected`.
 
 This would look as follows in JSON:
 

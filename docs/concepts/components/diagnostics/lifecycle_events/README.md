@@ -37,9 +37,9 @@ The following diagram shows a very high level overview of the three lifecycle ev
     need to launch the component, but the component has started from the framework perspective.
   - **Stopped**: Sent by component manager when a component stops, the runner might still need to to
     tear down the component, but the component is gone from the framework perspective.
-  - **Existing**: Sent by component manager for all components that are running at the moment the
+  - **Running**: Sent by component manager for all components that are running at the moment the
     archivist starts listening for events. In other words, a synthesized started event. This event
-    is provided to the reader as **Running**, but consumed from the framework as “Existing”.
+    is provided to the reader as **Started**, but consumed from the framework as “Running”.
   - **Directory ready**: The archivist listens for directory ready of the `out/diagnostics`
     directory. When the component starts serving this directory, the component manager sends this
     event to the Archivist.
@@ -101,11 +101,7 @@ These are the valid values for lifecycle event types:
 is ready).
 - Started (the component has started)
 - Stopped (the component has stopped)
-- Running (the component is running)
 - LogSinkConnected (a client at some point connected to the LogSink protocol).
-
-Note: Drivers do not support log severity change
-events.
 
 #### Component URL
 

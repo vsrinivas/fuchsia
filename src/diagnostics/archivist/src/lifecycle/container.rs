@@ -8,7 +8,7 @@ use {
         logs::container::LogsArtifactsContainer,
     },
     diagnostics_data::{self as schema, LifecycleType},
-    diagnostics_hierarchy::{hierarchy, DiagnosticsHierarchy},
+    diagnostics_hierarchy::DiagnosticsHierarchy,
     fuchsia_zircon as zx,
     std::sync::Arc,
 };
@@ -18,10 +18,6 @@ pub struct LifecycleArtifactsContainer {
     // caused the instantiation of the LifecycleArtifactsContainer
     // was created.
     pub event_timestamp: zx::Time,
-    // Optional time when the component who the instantiating lifecycle
-    // event was about was started. If None, it is the same as the
-    // event_timestamp.
-    pub component_start_time: Option<zx::Time>,
 }
 
 /// LifecycleDataContainer holds all the information,
@@ -63,26 +59,11 @@ impl LifecycleDataContainer {
         artifact: &LifecycleArtifactsContainer,
         identity: Arc<ComponentIdentity>,
     ) -> Self {
-        if let Some(component_start_time) = artifact.component_start_time {
-            let payload = hierarchy! {
-                root: {
-                    component_start_time: component_start_time.into_nanos(),
-                }
-            };
-
-            LifecycleDataContainer {
-                identity,
-                payload: Some(payload),
-                event_timestamp: artifact.event_timestamp,
-                lifecycle_type: LifecycleType::Running,
-            }
-        } else {
-            LifecycleDataContainer {
-                identity,
-                payload: None,
-                event_timestamp: artifact.event_timestamp,
-                lifecycle_type: LifecycleType::Started,
-            }
+        LifecycleDataContainer {
+            identity,
+            payload: None,
+            event_timestamp: artifact.event_timestamp,
+            lifecycle_type: LifecycleType::Started,
         }
     }
 }

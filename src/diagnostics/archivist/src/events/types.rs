@@ -246,15 +246,6 @@ pub struct StartEvent {
 }
 
 /// Represents the diagnostics data associated
-/// with a component being observed running.
-#[derive(Debug, PartialEq)]
-pub struct RunningEvent {
-    pub metadata: EventMetadata,
-
-    pub component_start_time: zx::Time,
-}
-
-/// Represents the diagnostics data associated
 /// with a component being observed stopping.
 #[derive(Debug, PartialEq)]
 pub struct StopEvent {
@@ -327,9 +318,6 @@ pub enum ComponentEvent {
     /// We observed the component starting.
     Start(StartEvent),
 
-    /// We observed the component already started.
-    Running(RunningEvent),
-
     /// We observed the component stopping.
     Stop(StopEvent),
 
@@ -376,7 +364,7 @@ impl TryFrom<Event> for ComponentEvent {
 
 fn construct_payload_holding_component_event(
     event: ValidatedEvent,
-    shared_data: EventMetadata,
+    mut shared_data: EventMetadata,
 ) -> Result<ComponentEvent, EventError> {
     match event.event_result {
         Some(result) => {
@@ -401,11 +389,9 @@ fn construct_payload_holding_component_event(
                 fsys::EventResult::Payload(fsys::EventPayload::Running(payload)) => {
                     match payload.started_timestamp {
                         Some(timestamp) => {
-                            let existing_data = RunningEvent {
-                                metadata: shared_data,
-                                component_start_time: zx::Time::from_nanos(timestamp),
-                            };
-                            Ok(ComponentEvent::Running(existing_data))
+                            shared_data.timestamp = zx::Time::from_nanos(timestamp);
+                            let start = StartEvent { metadata: shared_data };
+                            Ok(ComponentEvent::Start(start))
                         }
                         None => Err(EventError::MissingStartTimestamp),
                     }
@@ -435,9 +421,6 @@ impl PartialEq for ComponentEvent {
                 return a == b;
             }
             (ComponentEvent::DiagnosticsReady(a), ComponentEvent::DiagnosticsReady(b)) => {
-                return a == b;
-            }
-            (ComponentEvent::Running(a), ComponentEvent::Running(b)) => {
                 return a == b;
             }
             // we can't check two LogSinkRequested events for equality because they have channels

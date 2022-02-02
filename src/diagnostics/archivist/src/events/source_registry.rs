@@ -162,7 +162,6 @@ impl Stream for EventStream {
 struct EventStreamLogger {
     components_started: inspect::UintProperty,
     components_stopped: inspect::UintProperty,
-    components_seen_running: inspect::UintProperty,
     diagnostics_directories_seen: inspect::UintProperty,
     log_sink_requests_seen: inspect::UintProperty,
     component_log_node: BoundedListNode,
@@ -172,7 +171,6 @@ impl EventStreamLogger {
     /// Creates a new event logger. All inspect data will be written as children of `parent`.
     pub fn new(parent: &inspect::Node) -> Self {
         let components_started = parent.create_uint("components_started", 0);
-        let components_seen_running = parent.create_uint("components_seen_running", 0);
         let components_stopped = parent.create_uint("components_stopped", 0);
         let diagnostics_directories_seen = parent.create_uint("diagnostics_directories_seen", 0);
         let log_sink_requests_seen = parent.create_uint("log_sink_requests_seen", 0);
@@ -181,7 +179,6 @@ impl EventStreamLogger {
         Self {
             components_started,
             components_stopped,
-            components_seen_running,
             diagnostics_directories_seen,
             log_sink_requests_seen,
             component_log_node,
@@ -198,10 +195,6 @@ impl EventStreamLogger {
             ComponentEvent::Stop(stop) => {
                 self.components_stopped.add(1);
                 self.log_inspect("STOP", &stop.metadata.identity);
-            }
-            ComponentEvent::Running(running) => {
-                self.components_seen_running.add(1);
-                self.log_inspect("RUNNING", &running.metadata.identity);
             }
             ComponentEvent::DiagnosticsReady(diagnostics_ready) => {
                 self.diagnostics_directories_seen.add(1);
@@ -389,7 +382,6 @@ mod tests {
                 },
                 components_started: 2u64,
                 components_stopped: 2u64,
-                components_seen_running: 0u64,
                 diagnostics_directories_seen: 2u64,
                 log_sink_requests_seen: 2u64,
                 recent_events: {

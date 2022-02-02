@@ -191,7 +191,7 @@ pub fn make_lifecycles() -> Vec<LifecycleData> {
         make_short_lifecycle(String::from("test/moniker1"), 2, LifecycleType::DiagnosticsReady),
         make_short_lifecycle(String::from("test/moniker3"), 3, LifecycleType::Started),
         make_short_lifecycle(String::from("test/moniker3"), 4, LifecycleType::DiagnosticsReady),
-        make_short_lifecycle(String::from("test/moniker4"), 6, LifecycleType::Running),
+        make_short_lifecycle(String::from("test/moniker4"), 6, LifecycleType::Started),
     ]
 }
 

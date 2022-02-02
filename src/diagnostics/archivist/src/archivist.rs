@@ -429,17 +429,10 @@ impl ArchivistState {
     }
 
     /// Updates the central repository to reference the new diagnostics source.
-    fn add_new_component(
-        &self,
-        identity: ComponentIdentity,
-        event_timestamp: zx::Time,
-        component_start_time: Option<zx::Time>,
-    ) {
-        if let Err(e) = self.diagnostics_repo.write().add_new_component(
-            identity.clone(),
-            event_timestamp,
-            component_start_time,
-        ) {
+    fn add_new_component(&self, identity: ComponentIdentity, event_timestamp: zx::Time) {
+        if let Err(e) =
+            self.diagnostics_repo.write().add_new_component(identity.clone(), event_timestamp)
+        {
             error!(%identity, ?e, "Failed to add new component to repository");
         }
     }
@@ -459,15 +452,7 @@ impl ArchivistState {
         match event {
             ComponentEvent::Start(start) => {
                 debug!(identity = %start.metadata.identity, "Adding new component.");
-                self.add_new_component(start.metadata.identity, start.metadata.timestamp, None);
-            }
-            ComponentEvent::Running(running) => {
-                debug!(identity = %running.metadata.identity, "Component is running.");
-                self.add_new_component(
-                    running.metadata.identity,
-                    running.metadata.timestamp,
-                    Some(running.component_start_time),
-                );
+                self.add_new_component(start.metadata.identity, start.metadata.timestamp);
             }
             ComponentEvent::Stop(stop) => {
                 debug!(identity = %stop.metadata.identity, "Component stopped");

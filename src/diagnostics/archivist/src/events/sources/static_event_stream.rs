@@ -99,6 +99,7 @@ pub mod tests {
     use {
         super::*,
         crate::{container::ComponentIdentity, events::types::*},
+        assert_matches::assert_matches,
         fidl_fuchsia_io::NodeMarker,
         fidl_fuchsia_sys2::EventStreamMarker,
         fuchsia_zircon as zx,
@@ -203,15 +204,20 @@ pub mod tests {
             &ComponentEvent::Start(StartEvent { metadata: shared_data.clone() }),
         );
 
-        // Assert the second received event was a Running event.
+        // Assert the second received event was a Started event.
         let event = event_stream.next().await.unwrap();
         compare_events_ignore_timestamp_and_payload(
             &event,
-            &ComponentEvent::Running(RunningEvent {
-                metadata: shared_data.clone(),
-                component_start_time: zx::Time::from_nanos(0),
-            }),
+            &ComponentEvent::Start(StartEvent { metadata: shared_data.clone() }),
         );
+        assert_matches!(event, ComponentEvent::Start(StartEvent {
+            metadata: EventMetadata {
+                timestamp, ..
+            },
+            ..
+        }) => {
+            assert_eq!(timestamp, zx::Time::from_nanos(0));
+        });
 
         // Assert the third received event was a DirectoryReady event for diagnostics.
         let event = event_stream.next().await.unwrap();
@@ -243,9 +249,6 @@ pub mod tests {
                 assert_eq!(x.metadata.identity, y.metadata.identity);
             }
             (ComponentEvent::Stop(x), ComponentEvent::Stop(y)) => {
-                assert_eq!(x.metadata.identity, y.metadata.identity);
-            }
-            (ComponentEvent::Running(x), ComponentEvent::Running(y)) => {
                 assert_eq!(x.metadata.identity, y.metadata.identity);
             }
             (ComponentEvent::DiagnosticsReady(x), ComponentEvent::DiagnosticsReady(y)) => {

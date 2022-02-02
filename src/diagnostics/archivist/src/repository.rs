@@ -279,12 +279,9 @@ impl DataRepoState {
         &mut self,
         identity: ComponentIdentity,
         event_timestamp: zx::Time,
-        component_start_time: Option<zx::Time>,
     ) -> Result<(), Error> {
-        let lifecycle_artifact_container = LifecycleArtifactsContainer {
-            event_timestamp: event_timestamp,
-            component_start_time: component_start_time,
-        };
+        let lifecycle_artifact_container =
+            LifecycleArtifactsContainer { event_timestamp: event_timestamp };
 
         let unique_key: Vec<_> = identity.unique_key().into();
         let diag_repo_entry_opt = self.data_directories.get_mut(&unique_key);
@@ -718,7 +715,7 @@ mod tests {
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
         data_repo
-            .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
+            .add_new_component(identity.clone(), zx::Time::from_nanos(0))
             .expect("instantiated new component.");
 
         let (proxy, _) =
@@ -754,14 +751,11 @@ mod tests {
         let identity = ComponentIdentity::from_identifier_and_url(component_id.clone(), TEST_URL);
 
         data_repo
-            .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
+            .add_new_component(identity.clone(), zx::Time::from_nanos(0))
             .expect("instantiated new component.");
 
-        let duplicate_new_component_insertion = data_repo.add_new_component(
-            identity.clone(),
-            zx::Time::from_nanos(1),
-            Some(zx::Time::from_nanos(0)),
-        );
+        let duplicate_new_component_insertion =
+            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(1));
 
         assert!(duplicate_new_component_insertion.is_ok());
 
@@ -770,8 +764,6 @@ mod tests {
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
         assert!(entry.lifecycle.is_some());
-        let lifecycle_container = entry.lifecycle.as_ref().unwrap();
-        assert!(lifecycle_container.component_start_time.is_none());
         assert_eq!(entry.identity.relative_moniker, component_id.relative_moniker_for_selectors());
         assert_eq!(entry.identity.url, TEST_URL);
     }
@@ -786,11 +778,8 @@ mod tests {
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
         let identity = ComponentIdentity::from_identifier_and_url(component_id.clone(), TEST_URL);
 
-        let component_insertion = data_repo.add_new_component(
-            identity.clone(),
-            zx::Time::from_nanos(1),
-            Some(zx::Time::from_nanos(0)),
-        );
+        let component_insertion =
+            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(1));
 
         assert!(component_insertion.is_ok());
 
@@ -799,9 +788,6 @@ mod tests {
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
         assert!(entry.lifecycle.is_some());
-        let lifecycle_container = entry.lifecycle.as_ref().unwrap();
-        assert!(lifecycle_container.component_start_time.is_some());
-        assert_eq!(lifecycle_container.component_start_time.unwrap().into_nanos(), 0);
         assert_eq!(entry.identity.relative_moniker, component_id.relative_moniker_for_selectors());
         assert_eq!(entry.identity.url, TEST_URL);
     }
@@ -824,7 +810,7 @@ mod tests {
             .expect("add to repo");
 
         let false_new_component_result =
-            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(0), None);
+            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(0));
         assert!(false_new_component_result.is_ok());
 
         // We shouldn't have overwritten the entry. There should still be an inspect
@@ -856,7 +842,7 @@ mod tests {
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
         data_repo
-            .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
+            .add_new_component(identity.clone(), zx::Time::from_nanos(0))
             .expect("insertion will succeed.");
 
         assert_eq!(
@@ -897,7 +883,7 @@ mod tests {
 
         data_repo
             .write()
-            .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
+            .add_new_component(identity.clone(), zx::Time::from_nanos(0))
             .expect("insertion will succeed.");
 
         data_repo
@@ -920,7 +906,7 @@ mod tests {
 
         data_repo
             .write()
-            .add_new_component(identity2.clone(), zx::Time::from_nanos(0), None)
+            .add_new_component(identity2.clone(), zx::Time::from_nanos(0))
             .expect("insertion will succeed.");
 
         data_repo
