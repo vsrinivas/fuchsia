@@ -22,6 +22,7 @@ go_library("bootserver_lib") {
     "//tools/botanist:constants",
     "//tools/build",
     "//tools/lib/color",
+    "//tools/lib/gcsutil",
     "//tools/lib/iomisc",
     "//tools/lib/jsonutil",
     "//tools/lib/logger",

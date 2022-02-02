@@ -18,14 +18,13 @@ import (
 	"cloud.google.com/go/storage"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/gcsutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
-var (
-	noOpClose = func() error { return nil }
-)
+func noOpClose() error { return nil }
 
 // Image is a fuchsia image as viewed by bootserver; a simplified version of build.Image.
 type Image struct {
@@ -117,7 +116,7 @@ type gcsReader struct {
 
 func getUncompressedReader(obj *storage.ObjectHandle) (io.ReadCloser, error) {
 	ctx := context.Background()
-	objAttrs, err := obj.Attrs(ctx)
+	objAttrs, err := gcsutil.ObjectAttrs(ctx, obj)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get attrs for %q from GCS: %v", obj.ObjectName(), err)
 	}
@@ -207,7 +206,7 @@ func ImagesFromGCS(ctx context.Context, manifest *url.URL, bootMode Mode) ([]Ima
 	for _, buildImg := range buildImgs {
 		args := getImageArgs(buildImg, bootMode)
 		obj := bkt.Object(filepath.Join(namespace, buildImg.Path))
-		objAttrs, err := obj.Attrs(ctx)
+		objAttrs, err := gcsutil.ObjectAttrs(ctx, obj)
 		if err == storage.ErrObjectNotExist {
 			// Not all images may have been uploaded so skip if it doesn't exist.
 			continue

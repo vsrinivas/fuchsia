@@ -32,8 +32,8 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/artifactory"
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/gcsutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 )
 
 const (
@@ -100,16 +100,6 @@ const (
 	// Metadata keys.
 	googleReservedFileMtime = "goog-reserved-file-mtime"
 )
-
-// Errors can be wrapped as transient, so that the the transient exit code
-// will be returned.
-type transientError struct {
-	err error
-}
-
-func (e transientError) Error() string { return e.err.Error() }
-
-func (e transientError) Unwrap() error { return e.err }
 
 type upCommand struct {
 	// GCS bucket to which build artifacts will be uploaded.
@@ -191,7 +181,7 @@ func (cmd *upCommand) SetFlags(f *flag.FlagSet) {
 }
 
 func isTransientError(err error) bool {
-	_, transient := err.(transientError)
+	_, transient := err.(gcsutil.TransientError)
 	var apiErr *googleapi.Error
 	return transient || (errors.As(err, &apiErr) && apiErr.Code >= 500)
 }
@@ -443,12 +433,8 @@ func newCloudSink(ctx context.Context, bucket string) (*cloudSink, error) {
 }
 
 func (s *cloudSink) objectExistsAt(ctx context.Context, name string) (bool, *storage.ObjectAttrs, error) {
-	var attrs *storage.ObjectAttrs
-	if err := retryGCSOperation(ctx, func() error {
-		var err error
-		attrs, err = s.bucket.Object(name).Attrs(ctx)
-		return err
-	}); err != nil {
+	attrs, err := gcsutil.ObjectAttrs(ctx, s.bucket.Object(name))
+	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
 			return false, nil, nil
 		}
@@ -553,12 +539,8 @@ func (s *cloudSink) write(ctx context.Context, upload *artifactory.Upload) error
 	t := time.Second
 	const max = 30 * time.Second
 	for {
-		var attrs *storage.ObjectAttrs
-		if err := retryGCSOperation(ctx, func() error {
-			var err error
-			attrs, err = obj.Attrs(ctx)
-			return err
-		}); err != nil {
+		attrs, err := gcsutil.ObjectAttrs(ctx, obj)
+		if err != nil {
 			return fmt.Errorf("failed to confirm MD5 for %s due to: %w", upload.Destination, err)
 		}
 		if len(attrs.MD5) == 0 {
@@ -742,7 +724,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 
 func uploadFile(ctx context.Context, upload artifactory.Upload, dest dataSink) error {
 	logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
-	if err := retryGCSOperation(ctx, func() error {
+	if err := gcsutil.Retry(ctx, func() error {
 		err := dest.write(ctx, &upload)
 		if err != nil {
 			logger.Warningf(ctx, "error uploading %q: %s", upload.Destination, err)
@@ -753,28 +735,4 @@ func uploadFile(ctx context.Context, upload artifactory.Upload, dest dataSink) e
 	}
 	logger.Debugf(ctx, "object %q: created", upload.Destination)
 	return nil
-}
-
-// retryGCSOperation wraps a function that makes a GCS API call, adding retries
-// for failures that might be transient. It also wraps any such errors with
-// `transientError` so that they will cause artifactory to produce an exit code
-// of `exitTransientError`.
-func retryGCSOperation(ctx context.Context, f func() error) error {
-	const (
-		initialWait = time.Second
-		backoff     = 2
-		maxAttempts = 5
-	)
-	retryStrategy := retry.WithMaxAttempts(
-		retry.NewExponentialBackoff(initialWait, 0, backoff),
-		maxAttempts)
-	return retry.Retry(ctx, retryStrategy, func() error {
-		if err := f(); err != nil {
-			if errors.Is(err, storage.ErrBucketNotExist) || errors.Is(err, storage.ErrObjectNotExist) {
-				return retry.Fatal(err)
-			}
-			return transientError{err: err}
-		}
-		return nil
-	}, nil)
 }

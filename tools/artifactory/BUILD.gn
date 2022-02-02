@@ -35,10 +35,10 @@ go_library("main") {
     "//third_party/golibs:github.com/google/subcommands",
     "//tools/build",
     "//tools/lib/color",
+    "//tools/lib/gcsutil",
     "//tools/lib/iomisc",
     "//tools/lib/jsonutil",
     "//tools/lib/logger",
-    "//tools/lib/retry",
   ]
 }
 

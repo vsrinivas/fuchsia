@@ -23,6 +23,7 @@ import (
 	"google.golang.org/api/googleapi"
 
 	"go.fuchsia.dev/fuchsia/tools/artifactory"
+	"go.fuchsia.dev/fuchsia/tools/lib/gcsutil"
 )
 
 const (
@@ -264,7 +265,7 @@ func TestUploading(t *testing.T) {
 			t.Fatal("non-transient error: got true, want false")
 		}
 		// True for transient errors.
-		if !isTransientError(transientError{err: errors.New("foo")}) {
+		if !isTransientError(gcsutil.TransientError{}) {
 			t.Fatal("explicit transient error: got false, want true")
 		}
 		// True on HTTP response code 500.
@@ -300,7 +301,7 @@ func TestUploading(t *testing.T) {
 			t.Fatal("transient upload error: got true, want false")
 		}
 		// Now use a transient error.
-		sink.err = transientError{err: errors.New("foo")}
+		sink.err = gcsutil.TransientError{}
 		err = uploadFiles(ctx, files, sink, 1, "")
 		if !isTransientError(err) {
 			t.Fatal("transient upload error: got false, want true")

@@ -16,6 +16,7 @@ group("tests") {
     "//tools/lib/environment:environment_tests",
     "//tools/lib/ffxutil:tests",
     "//tools/lib/flagmisc:tests",
+    "//tools/lib/gcsutil:gcsutil_tests",
     "//tools/lib/hostplatform:tests",
     "//tools/lib/iomisc:tests",
     "//tools/lib/jsonutil:tests",
