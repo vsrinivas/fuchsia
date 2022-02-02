@@ -8,7 +8,7 @@ use {
         diagnostics::IsolatedLogsProvider,
         error::*,
     },
-    anyhow::{format_err, Context, Error},
+    anyhow::{anyhow, format_err, Context, Error},
     cm_rust,
     diagnostics_bridge::ArchiveReaderManager,
     fdiagnostics::ArchiveAccessorProxy,
@@ -29,7 +29,7 @@ use {
         SuiteControllerRequestStream, SuiteEvent as FidlSuiteEvent,
         SuiteEventPayload as FidlSuiteEventPayload, SuiteStatus,
     },
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_component::client::{connect_channel_to_protocol, connect_to_protocol},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
@@ -909,6 +909,7 @@ async fn run_single_suite(
     let (mut sender, recv) = mpsc::channel(1024);
     let (stop_sender, stop_recv) = oneshot::channel::<()>();
     let mut maybe_instance = None;
+    let mut realm_moniker = None;
 
     let Suite { test_url, options, mut controller, resolver, above_root_capabilities_for_test } =
         suite;
@@ -921,9 +922,10 @@ async fn run_single_suite(
                 return;
             }
         };
-        let realm_moniker = format!("./{}:{}", facets.collection, instance_name);
-        if let Err(e) = debug_controller.add_realm(&realm_moniker, &test_url).await {
-            warn!("Failed to add realm {} to debug data: {:?}", realm_moniker, e);
+        let realm_moniker_ref =
+            realm_moniker.insert(format!("./{}:{}", facets.collection, instance_name));
+        if let Err(e) = debug_controller.add_realm(realm_moniker_ref.as_str(), &test_url).await {
+            warn!("Failed to add realm {} to debug data: {:?}", realm_moniker_ref.as_str(), e);
         }
         match RunningSuite::launch(
             &test_url,
@@ -940,7 +942,7 @@ async fn run_single_suite(
                 instance_ref.run_tests(options, sender, stop_recv).await;
             }
             Err(e) => {
-                let _ = debug_controller.remove_realm(&realm_moniker);
+                let _ = debug_controller.remove_realm(realm_moniker_ref.as_str());
                 sender.send(Err(e.into())).await.unwrap();
             }
         }
@@ -955,7 +957,22 @@ async fn run_single_suite(
     }
 
     if let Some(instance) = maybe_instance.take() {
-        instance.destroy().await;
+        const TEARDOWN_TIMEOUT: zx::Duration = zx::Duration::from_seconds(30);
+
+        // TODO(fxbug.dev/92769) Remove timeout once component manager hangs are removed.
+        if let Err(err) = instance
+            .destroy()
+            .on_timeout(TEARDOWN_TIMEOUT, || Err(anyhow!("Timeout waiting for realm destruction")))
+            .await
+        {
+            // Failure to destroy an instance could mean that some component events fail to send.
+            // Missing events could cause debug data collection to hang as it relies on events to
+            // understand when a realm has stopped.
+            error!(?err, "Failed to destroy instance for {}. Debug data may be lost.", test_url);
+            if let Some(moniker) = realm_moniker {
+                let _ = debug_controller.remove_realm(&moniker);
+            }
+        }
     }
     // Workaround to prevent zx_peer_closed error
     // TODO(fxbug.dev/87976) once fxbug.dev/87890 is fixed, the controller should be dropped as soon as all
@@ -1116,7 +1133,9 @@ pub async fn run_test_manager_query_server(
                                 )));
                             }
                         }
-                        t.await;
+                        if let Err(err) = t.await {
+                            warn!(?err, "Error destroying test realm for {}", test_url);
+                        }
                     }
                     Err(e) => {
                         let _ = responder.send(&mut Err(e.into()));
@@ -1467,7 +1486,9 @@ impl RunningSuite {
         Ok(proxy)
     }
 
-    async fn destroy(mut self) {
+    /// Mark the resources associated with the suite for destruction, then wait for destruction to
+    /// complete. Returns an error only if destruction fails.
+    async fn destroy(mut self) -> Result<(), Error> {
         // before destroying the realm, wait for any clients to finish accessing storage.
         // TODO(fxbug.dev/84825): Separate realm destruction and destruction of custom
         // storage resources.
@@ -1487,9 +1508,7 @@ impl RunningSuite {
         if let Some(task) = self.logs_iterator_task {
             task.await.unwrap_or_else(|e| warn!("Error streaming logs: {:?}", e));
         }
-        destroy_waiter.await.unwrap_or_else(|err| {
-            error!(?err, "Failed to destroy instance");
-        });
+        destroy_waiter.await
     }
 }
 
