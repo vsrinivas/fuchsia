@@ -94,6 +94,8 @@ if (is_fuchsia) {
       ":fuchsia-zircon-types",
       ":generate-rust-zircon-syscalls-definitions",
     ]
+
+    # Callers should use the re-export at fuchsia_zircon::sys instead
     visibility = [ ":*" ]
 
     sources = [ _outputs[0] ]
