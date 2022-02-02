@@ -369,7 +369,8 @@ zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, size_t l
       // and should be listed even though it has no devnode children.
       //
       // Another exception is when the devnode is for a remote service.
-      if (child.children.is_empty() && child.ino != diagnostics_devnode->ino) {
+      if (child.children.is_empty() && child.ino != diagnostics_devnode->ino &&
+          !child.service_dir) {
         continue;
       }
     } else {
