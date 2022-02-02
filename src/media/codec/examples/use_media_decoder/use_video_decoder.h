@@ -36,10 +36,6 @@ struct FrameToCompare;
 
 // Keep fields in alphabetical order please, other than is_validated_.
 struct UseVideoDecoderTestParams final {
-  // Let default constructor exist.  This doesn't count as user-declared, so aggregate
-  // initialization can still be used.
-  UseVideoDecoderTestParams() = default;
-
   ~UseVideoDecoderTestParams() {
     // Ensure Validate() gets called at least once, if a bit later than ideal.
     Validate();
@@ -293,12 +289,6 @@ struct UseVideoDecoderTestParams final {
   bool skip_formatting_output_pixels = kDefaultSkipFormattingOutputPixels;
 
  private:
-  // Private copy, assign, or move.  None of this prevents aggregate initialization.
-  UseVideoDecoderTestParams(const UseVideoDecoderTestParams& from) = default;
-  UseVideoDecoderTestParams& operator=(const UseVideoDecoderTestParams& from) = default;
-  UseVideoDecoderTestParams(UseVideoDecoderTestParams&& from) = default;
-  UseVideoDecoderTestParams& operator=(UseVideoDecoderTestParams&& from) = default;
-
   // Client code should not exploit knowledge of this value, and should not directly initialize or
   // directly set magic_validated_ to any value.
   static constexpr uint64_t kPrivateMagicValidated = 0xC001DECAFC0DE;
