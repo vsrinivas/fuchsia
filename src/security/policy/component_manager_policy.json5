@@ -259,7 +259,6 @@
                     "/core",
                     "/core/appmgr",
                     "/core/system-updater",
-                    "/core/vulkan_loader",
                 ],
             },
             {
