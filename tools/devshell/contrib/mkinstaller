@@ -18,5 +18,5 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
-PYTHONPATH="${PYTHONPATH}:${FUCHSIA_DIR}/scripts" python3.8 "${FUCHSIA_DIR}/scripts/mkinstaller/mkinstaller.py" $@
+PYTHONPATH="${PYTHONPATH}:${FUCHSIA_DIR}/scripts" "${PREBUILT_PYTHON3_DIR}/bin/python3.8" "${FUCHSIA_DIR}/scripts/mkinstaller/mkinstaller.py" $@
 exit $?
