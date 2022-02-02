@@ -802,22 +802,16 @@ impl BridgeHandler for BridgeHandlerImpl {
                 upstream_interface, interfaces
             );
 
-            let (fnetstack::NetErr { status, message }, bridge) = self
-                .netstack
+            self.netstack
                 .bridge_interfaces(&interfaces)
                 .await
-                .context("call bridge interfaces")
-                .map_err(errors::Error::Fatal)?;
-            match status {
-                fnetstack::Status::Ok => bridge,
-                status => {
-                    return Err(errors::Error::Fatal(anyhow!(
-                        "could not bridge interfaces ({:?}): {}",
-                        status,
-                        message
-                    )))
-                }
-            }
+                .map_err(anyhow::Error::new)
+                .and_then(|result| match result {
+                    fnetstack::Result_::Message(message) => Err(anyhow::Error::msg(message)),
+                    fnetstack::Result_::Nicid(id) => Ok(id),
+                })
+                .with_context(|| format!("could not bridge interfaces ({:?})", interfaces))
+                .map_err(errors::Error::Fatal)?
         };
 
         // Start a DHCPv4 client.

@@ -426,12 +426,16 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                     )
                     .await?;
 
-            let (result, bridge_id) = netstack.bridge_interfaces(&ids).await?;
-            if result.status != fnetstack::Status::Ok {
-                return Err(anyhow::anyhow!("{:?}: {}", result.status, result.message));
-            } else {
-                info!("network bridge created with id {}", bridge_id);
-            }
+            let bridge_id = netstack
+                .bridge_interfaces(&ids)
+                .await
+                .map_err(anyhow::Error::new)
+                .and_then(|result| match result {
+                    fnetstack::Result_::Message(message) => Err(anyhow::Error::msg(message)),
+                    fnetstack::Result_::Nicid(id) => Ok(id),
+                })
+                .with_context(|| format!("bridge_interfaces({:?}", ids))?;
+            info!("network bridge created with id {}", bridge_id);
         }
     }
     Ok(())
@@ -2025,13 +2029,7 @@ mac             -
                     .collect::<Vec<_>>()
             );
             let () = netstack_responder
-                .send(
-                    &mut fnetstack::NetErr {
-                        status: fnetstack::Status::Ok,
-                        message: String::from(""),
-                    },
-                    bridge_id,
-                )
+                .send(&mut fnetstack::Result_::Nicid(bridge_id))
                 .expect("responder.send should succeed");
             Ok(())
         };

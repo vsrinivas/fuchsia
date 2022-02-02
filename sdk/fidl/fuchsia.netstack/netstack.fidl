@@ -8,27 +8,18 @@ using fuchsia.net.dhcp;
 using fuchsia.net.interfaces;
 using zx;
 
-type NetErr = struct {
-    status strict enum {
-        OK = 0;
-        UNKNOWN_ERROR = 1;
-        DNS_ERROR = 2;
-        PARSE_ERROR = 3;
-        IPV4_ONLY = 4;
-        UNKNOWN_INTERFACE = 5;
-    };
-    message string:MAX;
-};
-
 @discoverable
 protocol Netstack {
     /// Creates a bridge and returns the newly created nicid or an
     /// error if the creation fails.
+    // TODO(https://fxbug.dev/86661): Redesign and re-home this.
     BridgeInterfaces(struct {
         nicids vector<uint32>:MAX;
     }) -> (struct {
-        result NetErr;
-        nicid uint32;
+        result strict union {
+            1: message string:<MAX>;
+            2: nicid uint32;
+        };
     });
 
     /// Adds a new interface backed by the given ethernet device.

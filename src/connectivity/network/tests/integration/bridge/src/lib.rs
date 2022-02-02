@@ -237,17 +237,17 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
                     .collect::<Vec<_>>();
 
                 // Create the bridge.
-                let (fidl_fuchsia_netstack::NetErr { status, message }, bridge_id) =
-                    switch_netstack
-                        .bridge_interfaces(bridge_interface_ids.as_ref())
-                        .await
-                        .expect("FIDL error creating bridge");
-                assert_eq!(
-                    status,
-                    fidl_fuchsia_netstack::Status::Ok,
-                    "bridge interfaces error: {}",
-                    message
-                );
+                let bridge_id = switch_netstack
+                    .bridge_interfaces(bridge_interface_ids.as_ref())
+                    .await
+                    .map_err(anyhow::Error::new)
+                    .and_then(|result| match result {
+                        fidl_fuchsia_netstack::Result_::Message(message) => {
+                            Err(anyhow::Error::msg(message))
+                        }
+                        fidl_fuchsia_netstack::Result_::Nicid(id) => Ok(id),
+                    })
+                    .expect("failed to create bridge");
                 bridge = Some(bridge_id);
                 let () = switch_stack
                     .enable_interface(bridge_id.into())
@@ -410,13 +410,17 @@ async fn test_remove_bridge_interface_disabled<E: netemul::Endpoint>(name: &str)
     let switch_stack = switch_realm
         .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
         .expect("failed to connect to stack in switch realm");
-    let (fidl_fuchsia_netstack::NetErr { status, message }, bridge_id) = switch_netstack
+    let bridge_id = switch_netstack
         .bridge_interfaces(&[
             u32::try_from(switch_if.id()).expect("switch interface ID doesn't fit into u32")
         ])
         .await
-        .expect("FIDL error creating bridge");
-    assert_eq!(status, fidl_fuchsia_netstack::Status::Ok, "bridge interfaces error: {}", message);
+        .map_err(anyhow::Error::new)
+        .and_then(|result| match result {
+            fidl_fuchsia_netstack::Result_::Message(message) => Err(anyhow::Error::msg(message)),
+            fidl_fuchsia_netstack::Result_::Nicid(id) => Ok(id),
+        })
+        .expect("failed to create bridge");
 
     // Disable the attached interface.
     let () = switch_if.disable_interface().await.expect("failed to disable bridged interface");

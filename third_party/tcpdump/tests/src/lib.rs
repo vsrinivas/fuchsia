@@ -314,18 +314,16 @@ async fn bridged_packet_test<E: netemul::Endpoint>(name: &str) {
         let netstack = realm
             .connect_to_protocol::<fnetstack::NetstackMarker>()
             .expect("failed to connect to netstack in switch realm");
-        let (fidl_fuchsia_netstack::NetErr { status, message }, bridge_id) = netstack
+        let bridge_id = match netstack
             .bridge_interfaces(
                 &[u32::try_from(iface.id()).expect("interface ID should fit in u32")][..],
             )
             .await
-            .expect("FIDL error creating bridge");
-        assert_eq!(
-            status,
-            fidl_fuchsia_netstack::Status::Ok,
-            "bridge interfaces error: {}",
-            message
-        );
+            .expect("create bridge")
+        {
+            fnetstack::Result_::Message(message) => panic!("{}", message),
+            fnetstack::Result_::Nicid(id) => id,
+        };
 
         let stack = realm
             .connect_to_protocol::<fnet_stack::StackMarker>()

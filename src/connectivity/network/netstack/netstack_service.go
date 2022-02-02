@@ -27,16 +27,16 @@ type netstackImpl struct {
 	ns *Netstack
 }
 
-func (ni *netstackImpl) BridgeInterfaces(_ fidl.Context, nicids []uint32) (netstack.NetErr, uint32, error) {
+func (ni *netstackImpl) BridgeInterfaces(_ fidl.Context, nicids []uint32) (netstack.Result, error) {
 	nics := make([]tcpip.NICID, len(nicids))
 	for i, n := range nicids {
 		nics[i] = tcpip.NICID(n)
 	}
 	ifs, err := ni.ns.Bridge(nics)
 	if err != nil {
-		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: err.Error()}, 0, nil
+		return netstack.ResultWithMessage(err.Error()), nil
 	}
-	return netstack.NetErr{Status: netstack.StatusOk}, uint32(ifs.nicid), nil
+	return netstack.ResultWithNicid(uint32(ifs.nicid)), nil
 }
 
 func (ni *netstackImpl) GetDhcpClient(_ fidl.Context, id uint32, request dhcp.ClientWithCtxInterfaceRequest) (netstack.NetstackGetDhcpClientResult, error) {
