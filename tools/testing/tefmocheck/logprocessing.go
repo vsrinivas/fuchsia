@@ -138,7 +138,7 @@ func splitLogByTest(input []byte, testNames []string) ([]TestLog, error) {
 					if testName == "" && newTestName == testNames[testsSeen] {
 						testName = newTestName
 						continue
-					} else if int(testsSeen+1) < len(testNames) && newTestName == testNames[testsSeen+1] {
+					} else if testName != "" && int(testsSeen+1) < len(testNames) && newTestName == testNames[testsSeen+1] {
 						// A new test started, so reset the data so this line gets
 						// included in the next TestLog.
 						advance -= advanceForLine

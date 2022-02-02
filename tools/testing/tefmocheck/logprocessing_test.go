@@ -72,9 +72,13 @@ Tests took 41 seconds.
 ok 3 v1Test3 (27.90584341s)
 hostTest4 output line 1
 hostTest4 output line 2
+Running test 'test5' inside host test
+test5 completed with result: PASSED
 hostTest4 output mixed with testrunner output not ok 4 hostTest4 (88.8s)
+Running test 'test5'
+ok 5 test5 (7s)
 Running test 'notRecordedTest'
-ok 5 notRecordedTest (234.234s)
+ok 6 notRecordedTest (234.234s)
 2020/03/20 22:57:53.569333 botanist DEBUG: stopping or rebooting the node "upper-bacon-clock-snort"
 `
 
@@ -112,7 +116,7 @@ func TestSplitLogByTest(t *testing.T) {
 		}, {
 			name:       "log with ffx tests",
 			input:      validFFXLog,
-			inputTests: []string{"ffxTest1", "ffxTest2", "v1Test3", "hostTest4"},
+			inputTests: []string{"ffxTest1", "ffxTest2", "v1Test3", "hostTest4", "test5"},
 			expectedOutput: []TestLog{
 				{"ffxTest1", []byte("testrunner output\n" +
 					"Running test 'ffxTest1'\n" +
@@ -133,7 +137,11 @@ func TestSplitLogByTest(t *testing.T) {
 					"ok 3 v1Test3 (27.90584341s)\n"), ""},
 				{"hostTest4", []byte("hostTest4 output line 1\n" +
 					"hostTest4 output line 2\n" +
+					"Running test 'test5' inside host test\n" +
+					"test5 completed with result: PASSED\n" +
 					"hostTest4 output mixed with testrunner output not ok 4 hostTest4 (88.8s)\n"), ""},
+				{"test5", []byte("Running test 'test5'\n" +
+					"ok 5 test5 (7s)\n"), ""},
 			},
 		},
 	}
