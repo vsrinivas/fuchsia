@@ -34,6 +34,7 @@ fuchsia_driver_component("ddk-runcompatibilityhook-test") {
   component_name = "ddk-runcompatibilityhook-test"
   deps = [ ":ddk-runcompatibilityhook-test-driver" ]
   info = "ddk-runcompatibilityhook-test-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-compatibility-hook-child-bind") {
@@ -63,6 +64,7 @@ fuchsia_driver_component("ddk-runcompatibilityhook-test-child") {
   component_name = "ddk-runcompatibilityhook-test-child"
   deps = [ ":ddk-runcompatibilityhook-test-child-driver" ]
   info = "ddk-runcompatibilityhook-test-child-info.json"
+  colocate = true
 }
 
 test("ddk-runcompatibilityhook") {

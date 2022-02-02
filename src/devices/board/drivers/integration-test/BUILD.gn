@@ -41,4 +41,5 @@ fuchsia_driver_component("integration-test") {
   component_name = "integration-test"
   deps = [ ":integration-test-driver" ]
   info = "integration-test-info.json"
+  colocate = true
 }

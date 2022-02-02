@@ -50,6 +50,7 @@ fuchsia_driver_component("driver") {
   component_name = "ddk-instance-lifecycle-test-driver"
   deps = [ ":fuchsia_driver" ]
   info = "driver-info.json"
+  colocate = true
 }
 
 test("tests") {

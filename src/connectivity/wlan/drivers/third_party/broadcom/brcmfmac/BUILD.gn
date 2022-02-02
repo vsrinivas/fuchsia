@@ -288,6 +288,7 @@ fuchsia_driver_component("fuchsia_driver") {
     "//src/connectivity/wlan:drivers",
   ]
   info = "fuchsia_driver-info.json"
+  colocate = true
 }
 
 # Driver module for the test version of the brcmfmac driver, which includes run_unit_tests() DDK
@@ -315,6 +316,7 @@ fuchsia_driver_component("test_fuchsia_driver") {
   deps = [ ":test_fuchsia_driver-driver" ]
   visibility += [ "//src/connectivity/wlan:drivers" ]
   info = "test_fuchsia_driver-info.json"
+  colocate = true
 }
 
 brcmfmac_driver("brcmfmac-astro") {

@@ -434,6 +434,7 @@ fuchsia_driver_component("astro") {
   component_name = "astro"
   deps = [ ":astro-driver" ]
   info = "astro-info.json"
+  colocate = true
 }
 
 group("tests") {

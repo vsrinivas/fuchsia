@@ -41,6 +41,7 @@ fuchsia_driver("fuchsia_driver") {
 fuchsia_driver_component("cr50-spi-driver") {
   info = "cr50-spi-driver-info.json"
   deps = [ ":fuchsia_driver" ]
+  colocate = true
 }
 
 fuchsia_system_package("cr50-spi-pkg") {

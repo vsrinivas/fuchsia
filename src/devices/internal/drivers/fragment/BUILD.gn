@@ -83,6 +83,7 @@ fuchsia_driver_component("fragment-component") {
   component_name = "fragment"
   deps = [ ":fragment-driver" ]
   info = "fragment-component-info.json"
+  colocate = true
 }
 
 group("fragment") {
@@ -152,4 +153,5 @@ fuchsia_driver_component("fragment.proxy") {
   component_name = "fragment.proxy"
   deps = [ ":fragment.proxy-driver" ]
   info = "fragment.proxy-info.json"
+  colocate = true
 }

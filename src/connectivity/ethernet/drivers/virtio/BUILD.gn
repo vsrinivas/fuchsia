@@ -45,6 +45,7 @@ fuchsia_driver_component("virtio_ethernet") {
   component_name = "virtio_ethernet"
   deps = [ ":virtio_ethernet-driver" ]
   info = "virtio_ethernet-info.json"
+  colocate = true
 }
 
 test("virtio-ethernet-test") {
@@ -120,6 +121,7 @@ fuchsia_driver_component("virtio_netdevice") {
   component_name = "virtio_netdevice"
   deps = [ ":virtio_netdevice-driver" ]
   info = "virtio_ethernet-info.json"
+  colocate = true
 }
 
 group("tests") {

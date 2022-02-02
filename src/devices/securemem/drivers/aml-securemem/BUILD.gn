@@ -69,6 +69,7 @@ fuchsia_driver_component("aml-securemem") {
   info = "aml-securemem-info.json"
   component_name = "aml-securemem"
   deps = [ ":aml-securemem-driver" ]
+  colocate = true
 }
 
 test("aml-securemem-test-bin") {

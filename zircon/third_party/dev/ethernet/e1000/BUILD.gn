@@ -62,6 +62,7 @@ fuchsia_driver_component("e1000") {
   component_name = "e1000"
   deps = [ ":e1000-driver" ]
   info = "e1000-info.json"
+  colocate = true
 }
 
 group("tests") {

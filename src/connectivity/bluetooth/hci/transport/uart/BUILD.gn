@@ -52,6 +52,7 @@ fuchsia_driver_component("bt-transport-uart") {
   component_name = "bt-transport-uart"
   deps = [ ":bt-transport-uart-driver" ]
   info = "bt-transport-uart-info.json"
+  colocate = true
 }
 
 executable("tests_executable") {

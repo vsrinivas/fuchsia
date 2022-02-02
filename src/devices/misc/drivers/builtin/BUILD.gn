@@ -40,4 +40,5 @@ fuchsia_driver_component("builtin") {
   component_name = "builtin"
   deps = [ ":builtin-driver" ]
   info = "builtin-info.json"
+  colocate = true
 }

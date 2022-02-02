@@ -82,6 +82,7 @@ template("ot_radio_driver") {
   fuchsia_driver_component("ot-radio-${driver_suffix}") {
     deps = [ ":ot-radio-${driver_suffix}_driver" ]
     info = "ot-radio-${driver_suffix}-info.json"
+    colocate = true
   }
 
   if (internal_access) {

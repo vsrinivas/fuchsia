@@ -36,6 +36,7 @@ fuchsia_driver("ti-tca6408a-driver") {
 fuchsia_driver_component("ti-tca6408a") {
   info = "ti-tca6408a-info.json"
   deps = [ ":ti-tca6408a-driver" ]
+  colocate = true
 }
 
 test("ti-tca6408a-test-bin") {

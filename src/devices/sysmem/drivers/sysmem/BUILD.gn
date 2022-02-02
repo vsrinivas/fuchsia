@@ -116,6 +116,7 @@ fuchsia_driver_component("sysmem") {
   info = "sysmem-info.json"
   component_name = "sysmem"
   deps = [ ":sysmem-driver" ]
+  colocate = true
 }
 
 test("sysmem-unittest-bin") {

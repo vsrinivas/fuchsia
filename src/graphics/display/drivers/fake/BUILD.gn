@@ -36,6 +36,7 @@ fuchsia_driver_component("fake-display") {
   info = "fake-display-info.json"
   component_name = "fake-display"
   deps = [ ":fake-display-driver" ]
+  colocate = true
 }
 
 source_set("fake-lib") {

@@ -52,6 +52,7 @@ fuchsia_driver_component("aml-g12-tdm") {
   component_name = "aml-g12-tdm"
   deps = [ ":aml-g12-tdm-driver" ]
   info = "aml-g12-tdm-info.json"
+  colocate = true
 }
 
 driver_bind_rules("aml-g12-tdm-dai-bind") {
@@ -104,6 +105,7 @@ fuchsia_driver_component("aml-g12-tdm-dai") {
   component_name = "aml-g12-tdm-dai"
   deps = [ ":aml-g12-tdm-dai-driver" ]
   info = "aml-g12-tdm-dai-info.json"
+  colocate = true
 }
 
 group("tests") {

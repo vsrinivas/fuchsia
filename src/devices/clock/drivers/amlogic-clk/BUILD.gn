@@ -60,6 +60,7 @@ fuchsia_driver_component("amlogic-clk") {
   component_name = "amlogic-clk"
   deps = [ ":amlogic-clk-driver" ]
   info = "amlogic-clk-info.json"
+  colocate = true
 }
 
 test("amlogic-clk-test-bin") {

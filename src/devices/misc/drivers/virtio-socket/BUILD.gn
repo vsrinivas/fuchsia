@@ -43,4 +43,5 @@ fuchsia_driver_component("virtio_socket") {
   info = "virtio_socket-info.json"
   component_name = "virtio_socket"
   deps = [ ":virtio_socket-driver" ]
+  colocate = true
 }

@@ -50,6 +50,7 @@ fuchsia_driver_component("nandpart") {
   info = "nandpart-info.json"
   component_name = "nandpart"
   deps = [ ":nandpart-driver" ]
+  colocate = true
 }
 
 test("nandpart-test-bin") {

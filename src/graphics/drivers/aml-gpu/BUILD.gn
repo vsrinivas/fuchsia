@@ -71,6 +71,7 @@ fuchsia_driver_component("aml-gpu") {
   component_name = "aml-gpu"
   deps = [ ":aml-gpu-driver" ]
   info = "aml-gpu-info.json"
+  colocate = true
 }
 
 executable("aml-gpu-test-bin") {

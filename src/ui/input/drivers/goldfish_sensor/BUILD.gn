@@ -61,6 +61,7 @@ fuchsia_driver_component("sensor_driver") {
   component_name = "goldfish_sensor"
   deps = [ ":sensor_fuchsia_driver" ]
   info = "sensor_driver-info.json"
+  colocate = true
 }
 
 fuchsia_system_package("goldfish_sensor") {

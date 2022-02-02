@@ -92,6 +92,7 @@ fuchsia_driver_component("driver") {
   info = "driver-info.json"
   component_name = "usb-hci-test-driver"
   deps = [ ":fuchsia_driver" ]
+  colocate = true
 }
 
 fuchsia_system_package("usb-hci-test-driver") {

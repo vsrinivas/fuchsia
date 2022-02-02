@@ -35,6 +35,7 @@ fuchsia_driver_component("virtio_block") {
   component_name = "virtio_block"
   deps = [ ":virtio_block-driver" ]
   info = "virtio_block-info.json"
+  colocate = true
 }
 
 source_set("block_lib") {
@@ -86,6 +87,7 @@ fuchsia_driver_component("virtio_scsi") {
   component_name = "virtio_scsi"
   deps = [ ":virtio_scsi-driver" ]
   info = "virtio_scsi-info.json"
+  colocate = true
 }
 
 test("virtio-block-test-bin") {

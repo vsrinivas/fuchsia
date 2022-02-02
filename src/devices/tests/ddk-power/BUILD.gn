@@ -41,6 +41,7 @@ fuchsia_driver_component("ddk-power-test") {
   component_name = "ddk-power-test"
   deps = [ ":ddk-power-test-driver" ]
   info = "ddk-power-test-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-power-child-bind") {
@@ -72,6 +73,7 @@ fuchsia_driver_component("ddk-power-test-child") {
   component_name = "ddk-power-test-child"
   deps = [ ":ddk-power-test-child-driver" ]
   info = "ddk-power-test-child-info.json"
+  colocate = true
 }
 
 test("ddk-power") {

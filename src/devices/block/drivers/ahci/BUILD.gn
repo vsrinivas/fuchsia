@@ -32,6 +32,7 @@ fuchsia_driver_component("ahci") {
   component_name = "ahci"
   deps = [ ":ahci-driver" ]
   info = "ahci-info.json"
+  colocate = true
 }
 
 group("tests") {

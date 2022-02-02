@@ -51,6 +51,7 @@ fuchsia_driver_component("nand") {
   info = "nand-info.json"
   component_name = "nand"
   deps = [ ":nand-driver" ]
+  colocate = true
 }
 
 group("tests") {

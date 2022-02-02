@@ -60,4 +60,5 @@ fuchsia_driver_component("wlantap_driver") {
   info = "wlantap_driver-info.json"
   component_name = "wlantap"
   deps = [ ":wlantap_driver-driver" ]
+  colocate = true
 }

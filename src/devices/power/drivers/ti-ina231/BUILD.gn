@@ -54,6 +54,7 @@ fuchsia_driver_component("ti-ina231") {
   info = "ti-ina231-info.json"
   component_name = "ti-ina231"
   deps = [ ":ti-ina231-driver" ]
+  colocate = true
 }
 
 test("ti-ina231-test-bin") {

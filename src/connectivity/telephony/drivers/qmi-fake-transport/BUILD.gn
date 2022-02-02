@@ -58,4 +58,5 @@ fuchsia_driver_component("fake_qmi_driver") {
   component_name = "qmi-fake-transport"
   deps = [ ":fake_qmi_driver-driver" ]
   info = "fake_qmi_driver-info.json"
+  colocate = true
 }

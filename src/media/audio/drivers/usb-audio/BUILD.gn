@@ -84,4 +84,5 @@ fuchsia_driver_component("usb-audio") {
   component_name = "usb-audio"
   deps = [ ":usb-audio-driver" ]
   info = "usb-audio-info.json"
+  colocate = true
 }

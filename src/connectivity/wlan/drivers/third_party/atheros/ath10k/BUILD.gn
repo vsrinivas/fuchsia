@@ -114,6 +114,7 @@ fuchsia_driver_component("ath10k_driver") {
   info = "ath10k_driver-info.json"
   component_name = "ath10k"
   deps = [ ":ath10k_driver-driver" ]
+  colocate = true
 }
 
 if (internal_access) {

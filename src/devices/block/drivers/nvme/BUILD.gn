@@ -46,4 +46,5 @@ fuchsia_driver_component("nvme") {
   component_name = "nvme"
   deps = [ ":nvme-driver" ]
   info = "nvme-info.json"
+  colocate = true
 }

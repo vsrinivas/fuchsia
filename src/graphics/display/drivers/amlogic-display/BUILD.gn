@@ -86,6 +86,7 @@ fuchsia_driver_component("amlogic-display") {
   component_name = "amlogic-display"
   deps = [ ":amlogic-display-driver" ]
   info = "amlogic-display-info.json"
+  colocate = true
 }
 
 test("amlogic-display-test") {

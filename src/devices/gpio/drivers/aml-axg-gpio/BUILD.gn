@@ -57,6 +57,7 @@ fuchsia_driver_component("aml-axg-gpio") {
   component_name = "aml-axg-gpio"
   deps = [ ":aml-axg-gpio-driver" ]
   info = "aml-axg-gpio-info.json"
+  colocate = true
 }
 
 test("aml-axg-gpio-test-bin") {

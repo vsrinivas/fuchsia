@@ -64,6 +64,7 @@ fuchsia_driver_component("spi") {
   info = "spi-info.json"
   component_name = "spi"
   deps = [ ":spi-driver" ]
+  colocate = true
 }
 
 test("spi-test-bin") {

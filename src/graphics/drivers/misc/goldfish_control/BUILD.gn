@@ -63,6 +63,7 @@ fuchsia_driver_component("control_driver") {
   component_name = "goldfish_control"
   deps = [ ":control_driver-driver" ]
   info = "control_driver-info.json"
+  colocate = true
 }
 
 fuchsia_system_package("goldfish_control") {

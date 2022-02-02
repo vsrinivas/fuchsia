@@ -66,6 +66,7 @@ if (target_cpu == "arm64") {
     component_name = "amlogic_video_decoder"
     deps = [ ":amlogic_video_decoder-driver" ]
     info = "amlogic_video_decoder-info.json"
+    colocate = true
   }
 
   # This version of the driver runs tests on startup.
@@ -94,6 +95,7 @@ if (target_cpu == "arm64") {
     component_name = "amlogic_video_decoder_test"
     deps = [ ":amlogic_decoder_test-driver" ]
     info = "amlogic_video_decoder_test-info.json"
+    colocate = true
   }
 
   config("sources_include_config") {

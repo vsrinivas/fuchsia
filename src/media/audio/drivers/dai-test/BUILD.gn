@@ -48,6 +48,7 @@ fuchsia_driver_component("dai-test") {
   component_name = "dai-test"
   deps = [ ":dai-test-driver" ]
   info = "dai-test-info.json"
+  colocate = true
 }
 
 group("tests") {

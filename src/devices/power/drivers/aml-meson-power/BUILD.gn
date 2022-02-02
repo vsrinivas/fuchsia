@@ -49,6 +49,7 @@ fuchsia_driver_component("aml-meson-power") {
   info = "aml-meson-power-info.json"
   component_name = "aml-meson-power"
   deps = [ ":aml-meson-power-driver" ]
+  colocate = true
 }
 
 test("aml-meson-power-test-bin") {

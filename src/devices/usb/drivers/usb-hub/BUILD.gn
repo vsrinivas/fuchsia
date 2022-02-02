@@ -48,6 +48,7 @@ fuchsia_driver_component("usb-hub") {
   info = "usb-hub-info.json"
   component_name = "usb-hub"
   deps = [ ":usb-hub-driver" ]
+  colocate = true
 }
 
 test("usb-hub-test") {

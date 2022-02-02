@@ -47,6 +47,7 @@ fuchsia_driver_component("driver") {
   component_name = "inspect-test"
   deps = [ ":fuchsia_driver" ]
   info = "driver-info.json"
+  colocate = true
 }
 
 test("tests") {

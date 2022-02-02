@@ -53,6 +53,7 @@ fuchsia_driver_component("netdevice-migration") {
   component_name = "netdevice-migration"
   deps = [ ":netdevice-migration-driver" ]
   info = "netdevice-migration-info.json"
+  colocate = true
 }
 
 test("unit-tests") {

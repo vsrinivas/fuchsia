@@ -47,6 +47,7 @@ fuchsia_driver_component("sy-buck") {
   info = "sy-buck-info.json"
   component_name = "sy-buck"
   deps = [ ":sy-buck-driver" ]
+  colocate = true
 }
 
 test("sy-buck-test-bin") {

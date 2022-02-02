@@ -33,6 +33,7 @@ fuchsia_driver("demo-fifo-driver") {
 fuchsia_driver_component("demo-fifo") {
   component_name = "demo-fifo"
   deps = [ ":demo-fifo-driver" ]
+  colocate = true
 }
 
 group("tests") {

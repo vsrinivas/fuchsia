@@ -44,4 +44,5 @@ fuchsia_driver_component("aml-i2c") {
   info = "aml-i2c-info.json"
   component_name = "aml-i2c"
   deps = [ ":aml-i2c-driver" ]
+  colocate = true
 }

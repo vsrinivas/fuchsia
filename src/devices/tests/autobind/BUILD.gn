@@ -44,6 +44,7 @@ fuchsia_driver_component("component") {
   component_name = "test-autobind"
   deps = [ ":driver" ]
   info = "component-info.json"
+  colocate = true
 }
 
 test("autobind-test") {

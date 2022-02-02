@@ -48,6 +48,7 @@ fuchsia_driver_component("aml-ethernet-s912") {
   component_name = "aml-ethernet-s912"
   deps = [ ":aml-ethernet-s912-driver" ]
   info = "aml-ethernet-s912-info.json"
+  colocate = true
 }
 
 group("tests") {

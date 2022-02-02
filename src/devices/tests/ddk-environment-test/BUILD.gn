@@ -42,6 +42,7 @@ fuchsia_driver_component("ddk-environment-test") {
   component_name = "ddk-environment-test"
   deps = [ ":ddk-environment-test-driver" ]
   info = "ddk-environment-test-info.json"
+  colocate = true
 }
 
 test("ddk-environment") {

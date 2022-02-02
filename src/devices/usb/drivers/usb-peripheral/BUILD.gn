@@ -62,6 +62,7 @@ fuchsia_driver_component("usb-peripheral") {
   info = "usb-peripheral-info.json"
   component_name = "usb-peripheral"
   deps = [ ":usb-peripheral-driver" ]
+  colocate = true
 }
 
 test("usb-peripheral-unittest-bin") {

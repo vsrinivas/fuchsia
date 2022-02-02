@@ -88,6 +88,7 @@ fuchsia_driver_component("pci_fake") {
   component_name = "pci_fake"
   deps = [ ":pci_fake-driver" ]
   info = "pci_fake-info.json"
+  colocate = true
 }
 
 fuchsia_driver("pci_protocol_test_driver-driver") {
@@ -117,6 +118,7 @@ fuchsia_driver_component("pci_protocol_test_driver") {
   component_name = "pci_protocol_test_driver"
   deps = [ ":pci_protocol_test_driver-driver" ]
   info = "pci_protocol_test_driver-info.json"
+  colocate = true
 }
 
 fuchsia_unittest_package("pci-unit-test") {

@@ -40,6 +40,7 @@ fuchsia_driver_component("registers") {
   info = "registers-info.json"
   component_name = "registers"
   deps = [ ":registers-driver" ]
+  colocate = true
 }
 
 test("registers-test") {

@@ -37,6 +37,7 @@ fuchsia_driver_component("clock") {
   component_name = "clock"
   deps = [ ":clock-driver" ]
   info = "clock-info.json"
+  colocate = true
 }
 
 group("tests") {

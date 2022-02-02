@@ -34,6 +34,7 @@ fuchsia_driver_component("driver") {
   info = "driver-info.json"
   component_name = "fvm"
   deps = [ ":fuchsia_driver" ]
+  colocate = true
 }
 
 # Also used by test/.

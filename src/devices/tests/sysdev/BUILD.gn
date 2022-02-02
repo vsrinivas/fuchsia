@@ -45,4 +45,5 @@ fuchsia_driver_component("sysdev") {
   component_name = "sysdev"
   deps = [ ":sysdev-driver" ]
   info = "sysdev-info.json"
+  colocate = true
 }

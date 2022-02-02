@@ -66,4 +66,5 @@ fuchsia_driver_component("bind-test-driver-v2") {
   component_name = "bind-test-v2-driver"
   deps = [ ":bind-test-driver-v2-driver" ]
   info = "bind-test-driver-v2-info.json"
+  colocate = true
 }

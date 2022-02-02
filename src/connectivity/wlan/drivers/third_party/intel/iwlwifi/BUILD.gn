@@ -73,6 +73,7 @@ fuchsia_driver_component("iwlwifi_driver") {
   deps = [ ":iwlwifi_driver-driver" ]
   visibility = []
   visibility = [ "*" ]
+  colocate = true
 }
 
 all_fw_files = [

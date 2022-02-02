@@ -41,6 +41,7 @@ fuchsia_driver_component("cypress") {
   component_name = "cypress"
   deps = [ ":cypress-driver" ]
   info = "cypress-info.json"
+  colocate = true
 }
 
 test("cypress-touch-test") {

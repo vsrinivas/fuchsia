@@ -40,4 +40,5 @@ fuchsia_driver_component("bootpart") {
   component_name = "bootpart"
   deps = [ ":bootpart-driver" ]
   info = "bootpart-info.json"
+  colocate = true
 }

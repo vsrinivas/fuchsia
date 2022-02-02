@@ -43,6 +43,7 @@ fuchsia_driver_component("ethertap") {
   component_name = "ethertap"
   deps = [ ":ethertap-driver" ]
   info = "ethertap-info.json"
+  colocate = true
 }
 
 test("ethertap-unittest") {

@@ -45,6 +45,7 @@ fuchsia_driver_component("ddk-lifecycle-test") {
   component_name = "ddk-lifecycle-test"
   deps = [ ":ddk-lifecycle-test-driver" ]
   info = "ddk-lifecycle-test-info.json"
+  colocate = true
 }
 
 test("ddk-lifecycle") {

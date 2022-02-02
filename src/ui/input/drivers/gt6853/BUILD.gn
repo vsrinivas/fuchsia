@@ -102,6 +102,7 @@ fuchsia_driver_component("gt6853-module") {
   info = "gt6853-module-info.json"
   component_name = "gt6853"
   deps = [ ":gt6853-module-driver" ]
+  colocate = true
 }
 
 test("gt6853-test") {

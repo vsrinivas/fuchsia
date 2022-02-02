@@ -49,6 +49,7 @@ fuchsia_driver("ddk-firmware-test") {
 fuchsia_driver_component("ddk-firmware-test-driver") {
   deps = [ ":ddk-firmware-test" ]
   info = "ddk-firmware-test-driver-info.json"
+  colocate = true
 }
 
 resource("test-firmware-file") {

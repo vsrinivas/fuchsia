@@ -62,6 +62,7 @@ fuchsia_driver_component("dsi-dw") {
   component_name = "dsi-dw"
   deps = [ ":dsi-dw-driver" ]
   info = "dsi-dw-info.json"
+  colocate = true
 }
 
 test("dsi-dw-test") {

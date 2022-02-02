@@ -69,6 +69,7 @@ fuchsia_driver_component("optee") {
   info = "optee-info.json"
   component_name = "optee"
   deps = [ ":optee-driver" ]
+  colocate = true
 }
 
 group("tests") {

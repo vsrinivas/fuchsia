@@ -46,6 +46,7 @@ fuchsia_driver_component("shtv3") {
   info = "shtv3-info.json"
   component_name = "shtv3"
   deps = [ ":shtv3-driver" ]
+  colocate = true
 }
 
 test("shtv3-test-bin") {

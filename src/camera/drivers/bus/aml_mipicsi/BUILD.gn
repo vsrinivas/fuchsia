@@ -49,6 +49,7 @@ fuchsia_driver_component("aml_mipicsi_driver") {
   component_name = "aml_mipicsi"
   deps = [ ":aml_mipicsi_driver-driver" ]
   info = "aml_mipicsi_driver-info.json"
+  colocate = true
 }
 
 fuchsia_system_package("driver_package") {

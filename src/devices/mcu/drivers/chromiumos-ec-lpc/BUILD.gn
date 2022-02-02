@@ -44,6 +44,7 @@ fuchsia_driver_component("component") {
   info = "component-info.json"
   component_name = "chromiumos-ec-lpc"
   deps = [ ":driver" ]
+  colocate = true
 }
 
 fuchsia_system_package("chromiumos-ec-lpc") {

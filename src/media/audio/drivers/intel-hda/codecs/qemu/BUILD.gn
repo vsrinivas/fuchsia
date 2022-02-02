@@ -44,6 +44,7 @@ fuchsia_driver_component("qemu-audio-codec") {
   component_name = "qemu-audio-codec"
   deps = [ ":qemu-audio-codec-driver" ]
   info = "qemu-audio-codec-info.json"
+  colocate = true
 }
 
 group("tests") {

@@ -38,6 +38,7 @@ fuchsia_driver_component("aml-pwm") {
   info = "aml-pwm-info.json"
   component_name = "aml-pwm"
   deps = [ ":aml-pwm-driver" ]
+  colocate = true
 }
 
 test("aml-pwm-test-bin") {

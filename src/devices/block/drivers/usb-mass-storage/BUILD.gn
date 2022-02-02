@@ -36,6 +36,7 @@ fuchsia_driver_component("usb-mass-storage") {
   component_name = "usb-mass-storage"
   deps = [ ":usb-mass-storage-driver" ]
   info = "usb-mass-storage-info.json"
+  colocate = true
 }
 
 source_set("block") {

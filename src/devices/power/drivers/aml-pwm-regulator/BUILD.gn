@@ -40,6 +40,7 @@ fuchsia_driver_component("aml-pwm-regulator") {
   info = "aml-pwm-regulator-info.json"
   component_name = "aml-pwm-regulator"
   deps = [ ":aml-pwm-regulator-driver" ]
+  colocate = true
 }
 
 test("aml-pwm-regulator-test-bin") {

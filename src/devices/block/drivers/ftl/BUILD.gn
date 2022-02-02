@@ -42,6 +42,7 @@ fuchsia_driver_component("ftl") {
   component_name = "ftl"
   deps = [ ":ftl-driver" ]
   info = "ftl-info.json"
+  colocate = true
 }
 
 # Also used by ftl-test.

@@ -37,4 +37,5 @@ fuchsia_driver_component("sample-driver") {
   component_name = "sample-driver"
   deps = [ ":driver" ]
   info = "sample_driver-info.json"
+  colocate = true
 }

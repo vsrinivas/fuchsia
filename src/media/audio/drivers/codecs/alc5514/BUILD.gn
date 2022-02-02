@@ -37,6 +37,7 @@ fuchsia_driver_component("alc5514") {
   component_name = "alc5514"
   deps = [ ":alc5514-driver" ]
   info = "alc5514-info.json"
+  colocate = true
 }
 
 group("tests") {

@@ -52,6 +52,7 @@ fuchsia_driver_component("wlanphy_driver") {
   component_name = "wlanphy"
   deps = [ ":wlanphy_driver-driver" ]
   info = "wlanphy_driver-info.json"
+  colocate = true
 }
 
 fuchsia_system_package("wlanphy") {

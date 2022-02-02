@@ -42,6 +42,7 @@ if (is_fuchsia) {
     info = "usb-peripheral-test-info.json"
     component_name = "usb-peripheral-test"
     deps = [ ":usb-peripheral-test-driver" ]
+    colocate = true
   }
 
   group("tests") {

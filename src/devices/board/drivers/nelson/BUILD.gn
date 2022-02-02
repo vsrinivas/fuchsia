@@ -477,6 +477,7 @@ fuchsia_driver_component("nelson-module") {
   component_name = "nelson-module"
   deps = [ ":nelson-module-driver" ]
   info = "nelson-module-info.json"
+  colocate = true
 }
 
 group("tests") {

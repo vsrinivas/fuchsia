@@ -36,4 +36,5 @@ fuchsia_driver_component("test-codec") {
   component_name = "test-codec"
   deps = [ ":codec-test-driver" ]
   info = "test-codec-info.json"
+  colocate = true
 }

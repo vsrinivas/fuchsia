@@ -44,6 +44,7 @@ fuchsia_driver_component("aml-thermistor") {
   info = "aml-thermistor-info.json"
   component_name = "astro-thermistor"
   deps = [ ":aml-thermistor-driver" ]
+  colocate = true
 }
 
 group("tests") {

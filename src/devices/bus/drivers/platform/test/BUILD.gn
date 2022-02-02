@@ -77,6 +77,7 @@ fuchsia_driver_component("test-board") {
   component_name = "test-board"
   deps = [ ":test-board-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-gpio-bind") {
@@ -110,6 +111,7 @@ fuchsia_driver_component("test-gpio") {
   component_name = "test-gpio"
   deps = [ ":test-gpio-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-power-bind") {
@@ -143,6 +145,7 @@ fuchsia_driver_component("test-power") {
   component_name = "test-power"
   deps = [ ":test-power-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-goldfish-address-space-bind") {
@@ -175,6 +178,7 @@ fuchsia_driver_component("test-goldfish-address-space") {
   component_name = "test-goldfish-address-space"
   deps = [ ":test-goldfish-address-space-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-goldfish-pipe-bind") {
@@ -207,6 +211,7 @@ fuchsia_driver_component("test-goldfish-pipe") {
   component_name = "test-goldfish-pipe"
   deps = [ ":test-goldfish-pipe-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-goldfish-sync-bind") {
@@ -239,6 +244,7 @@ fuchsia_driver_component("test-goldfish-sync") {
   component_name = "test-goldfish-sync"
   deps = [ ":test-goldfish-sync-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-clock-bind") {
@@ -272,6 +278,7 @@ fuchsia_driver_component("test-clock") {
   component_name = "test-clock"
   deps = [ ":test-clock-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-i2c-bind") {
@@ -305,6 +312,7 @@ fuchsia_driver_component("test-i2c") {
   component_name = "test-i2c"
   deps = [ ":test-i2c-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-spi-bind") {
@@ -338,6 +346,7 @@ fuchsia_driver_component("test-spi") {
   component_name = "test-spi"
   deps = [ ":test-spi-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-pwm-bind") {
@@ -370,6 +379,7 @@ fuchsia_driver_component("test-pwm") {
   component_name = "test-pwm"
   deps = [ ":test-pwm-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-vreg-bind") {
@@ -418,6 +428,7 @@ fuchsia_driver_component("test-pci") {
   component_name = "test-pci"
   deps = [ ":test-pci-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 fuchsia_driver("test-vreg-driver") {
@@ -442,6 +453,7 @@ fuchsia_driver_component("test-vreg") {
   component_name = "test-vreg"
   deps = [ ":test-vreg-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-composite-bind") {
@@ -483,6 +495,7 @@ fuchsia_driver_component("test-composite") {
   component_name = "test-composite"
   deps = [ ":test-composite-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-child-2.proxy-bind") {
@@ -505,6 +518,7 @@ fuchsia_driver_component("test-child-2.proxy") {
   component_name = "test-child-2.proxy"
   deps = [ ":test-child-2.proxy-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 simple_drivers = [
@@ -540,6 +554,7 @@ foreach(driver, simple_drivers) {
     component_name = "test-$driver"
     deps = [ ":test-$driver-driver" ]
     info = "test-driver-info.json"
+    colocate = true
   }
 }
 
@@ -609,6 +624,7 @@ fuchsia_driver_component("test-bti-board") {
   component_name = "test-bti-board"
   deps = [ ":test-bti-board-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 driver_bind_rules("test-bti-bind") {
@@ -637,6 +653,7 @@ fuchsia_driver_component("test-bti") {
   component_name = "test-bti"
   deps = [ ":test-bti-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 test("platform-bus-bti") {
@@ -696,6 +713,7 @@ fuchsia_driver_component("test-power-sensor") {
   component_name = "test-power-sensor"
   deps = [ ":test-power-sensor-driver" ]
   info = "test-driver-info.json"
+  colocate = true
 }
 
 fuchsia_unittest_package("platform-bus-bti-test") {

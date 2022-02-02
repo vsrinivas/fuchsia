@@ -46,6 +46,7 @@ fuchsia_driver_component("i2c-hid") {
   component_name = "i2c-hid"
   deps = [ ":i2c-hid-driver" ]
   info = "i2c-hid-info.json"
+  colocate = true
 }
 
 test("i2c-hid-test") {

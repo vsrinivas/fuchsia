@@ -41,6 +41,7 @@ fuchsia_driver_component("hidctl") {
   component_name = "hidctl"
   deps = [ ":hidctl-driver" ]
   info = "hidctl-info.json"
+  colocate = true
 }
 
 executable("hidctl-test") {

@@ -42,6 +42,7 @@ fuchsia_driver_component("component") {
   component_name = "acpi-battery"
   deps = [ ":driver" ]
   info = "component-info.json"
+  colocate = true
 }
 
 fuchsia_system_package("acpi-battery") {

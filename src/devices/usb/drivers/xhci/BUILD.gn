@@ -72,6 +72,7 @@ fuchsia_driver_component("xhci") {
   info = "xhci-info.json"
   component_name = "xhci"
   deps = [ ":xhci-driver" ]
+  colocate = true
 }
 
 source_set("test-libs") {
