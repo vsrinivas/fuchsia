@@ -113,6 +113,7 @@ rustc_library("lib") {
     "src/util/listener/generic.rs",
     "src/util/listener/mod.rs",
     "src/util/mod.rs",
+    "src/util/pseudo_energy.rs",
     "src/util/state_machine.rs",
     "src/util/testing/cobalt.rs",
     "src/util/testing/fakes.rs",
