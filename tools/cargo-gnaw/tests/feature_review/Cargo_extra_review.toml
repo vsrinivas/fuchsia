@@ -1,0 +1,10 @@
+[package]
+name = "feature_test"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+needs_feature = { path = "needs_feature" }
+
+[gn.package.crate_with_features."0.1.0"]
+reviewed_features = ["feature1"]

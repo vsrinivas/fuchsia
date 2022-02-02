@@ -115,6 +115,10 @@ pub struct PackageCfg {
     /// Configuration for GN binary targets to generate from one of the package's binary targets.
     /// The map key identifies the cargo target name within this cargo package.
     binary: HashMap<TargetName, BinaryCfg>,
+    /// List of cargo features which have been code reviewed for this cargo package
+    ///
+    /// Must be set if require_feature_reviews mentions this package.
+    reviewed_features: Option<Vec<String>>,
 }
 
 /// Configs added to all GN targets in the BUILD.gn
@@ -130,6 +134,9 @@ pub struct GlobalTargetCfgs {
 struct GnBuildMetadata {
     /// global configs
     config: Option<GlobalTargetCfgs>,
+    /// packages for which only some features will be code reviewed
+    #[serde(default)]
+    require_feature_reviews: HashSet<PackageName>,
     /// map of per-Cargo package configuration
     package: HashMap<PackageName, HashMap<Version, PackageCfg>>,
 }
@@ -282,6 +289,13 @@ pub fn generate_from_manifest<W: io::Write>(
         None => None,
     };
 
+    let empty_hash_set = &HashSet::new();
+    let require_feature_reviews = metadata_configs
+        .gn
+        .as_ref()
+        .map(|gn| &gn.require_feature_reviews)
+        .unwrap_or(empty_hash_set);
+
     // Grab the per-package configs.
     let gn_pkg_cfgs = metadata_configs.gn.as_ref().map(|i| &i.package);
 
@@ -289,6 +303,7 @@ pub fn generate_from_manifest<W: io::Write>(
     // targets, then save off a mapping of GnTarget to the target config.
     let mut target_cfgs = HashMap::<&GnTarget<'_>, CombinedTargetCfg<'_>>::new();
     let mut binary_names = HashMap::<&GnTarget<'_>, &str>::new();
+    let mut reviewed_features_map = HashMap::<&GnTarget<'_>, Option<&[String]>>::new();
     let mut unused_configs = String::new();
     if let Some(gn_pkg_cfgs) = gn_pkg_cfgs {
         for (pkg_name, versions) in gn_pkg_cfgs {
@@ -297,6 +312,12 @@ pub fn generate_from_manifest<W: io::Write>(
                 if let Some(target) = build_graph.find_library_target(pkg_name, pkg_version) {
                     assert!(
                         target_cfgs.insert(target, pkg_cfg.combined_target_cfg()).is_none(),
+                        "Duplicate library config somehow specified"
+                    );
+                    assert!(
+                        reviewed_features_map
+                            .insert(target, pkg_cfg.reviewed_features.as_deref())
+                            .is_none(),
                         "Duplicate library config somehow specified"
                     );
                 } else {
@@ -412,6 +433,59 @@ pub fn generate_from_manifest<W: io::Write>(
                     target.version(),
                     err,
                 ),
+            }
+        }
+
+        // Check to see if we need to review individual features for this crate
+        let reviewed_features = reviewed_features_map.get(target);
+        if require_feature_reviews.contains(&target.name()) {
+            match reviewed_features {
+                Some(Some(_)) => {}
+                _ => {
+                    anyhow::bail!(
+                        "{name} {version} requires feature review but reviewed features not found.\n\n\
+                        Make sure to conduct code review assuming the following features are enabled, \
+                        and then add this to your Cargo.toml located at {manifest_path}:\n\
+                        [gn.package.{name}.\"{version}\"]\n\
+                        reviewed_features = {features}",
+                        manifest_path = manifest_path.display(),
+                        name = target.name(),
+                        version = target.version(),
+                        features = toml::to_string(target.features).unwrap()
+                    );
+                }
+            }
+        } else {
+            if let Some(Some(_)) = reviewed_features {
+                anyhow::bail!(
+                    "{name} {version} sets reviewed_features but {name} was not found in \
+                    require_feature_reviews.\n\n\
+                    Make sure to add it there so that reviewed_features is not accidentally \
+                    removed during future crate version bumps.",
+                    name = target.name(),
+                    version = target.version(),
+                );
+            }
+        }
+
+        if let Some(&Some(reviewed_features)) = reviewed_features {
+            let reviewed_features_set =
+                reviewed_features.iter().map(|s| s.as_str()).collect::<HashSet<_>>();
+            let unreviewed_features = target
+                .features
+                .iter()
+                .filter(|f| !reviewed_features_set.contains(f.as_str()))
+                .collect::<Vec<_>>();
+            if !unreviewed_features.is_empty() {
+                anyhow::bail!(
+                    "{name} {version} is included with unreviewed features {unreviewed:?}\n\n\
+                    Make sure to additionally review code gated by these features, then add them \
+                    to reviewed_features under [gn.package.{name}.\"{version}\"] in {manifest_path}",
+                    name = target.name(),
+                    version = target.version(),
+                    unreviewed = unreviewed_features,
+                    manifest_path = manifest_path.display(),
+                )
             }
         }
 

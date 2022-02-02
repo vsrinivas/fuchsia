@@ -10,6 +10,7 @@ use {
     argh::FromArgs,
     // Without this, the test diffs are impractical to debug.
     pretty_assertions::assert_eq,
+    std::fmt::{Debug, Display},
     std::path::{Path, PathBuf},
     tempfile,
 };
@@ -36,6 +37,15 @@ struct Paths {
     /// path to shared libraries directory to use in test.
     #[argh(option)]
     lib_path: String,
+}
+
+#[derive(PartialEq, Eq)]
+struct DisplayAsDebug<T: Display>(T);
+
+impl<T: Display> Debug for DisplayAsDebug<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.0, f)
+    }
 }
 
 fn main() {
@@ -99,17 +109,30 @@ fn main() {
             golden_expected_filename: vec!["multiple_crate_types", "BUILD.gn"],
             skip_root: false,
         },
+        TestCase {
+            manifest_path: vec!["feature_review", "Cargo.toml"],
+            golden_expected_filename: vec!["feature_review", "BUILD.gn"],
+            skip_root: false,
+        },
     ];
 
-    for test in tests {
+    let run_gnaw = |manifest_path: &[&str], skip_root| {
         let test_dir = tempfile::TempDir::new().unwrap();
-        let manifest_path: PathBuf =
-            test_dir.path().join(test.manifest_path.iter().collect::<PathBuf>());
+        let mut manifest_path: PathBuf =
+            test_dir.path().join(manifest_path.iter().collect::<PathBuf>());
         let output = test_dir.path().join("BUILD.gn");
 
         // we need the emitted file to be under the same path as the gn targets it references
         let test_base_dir = PathBuf::from(&paths.test_base_dir);
         copy_contents(&test_base_dir, test_dir.path());
+
+        if manifest_path.file_name().unwrap() != "Cargo.toml" {
+            // rename manifest so that `cargo metadata` is happy.
+            let manifest_dest_path =
+                manifest_path.parent().expect("getting Cargo.toml parent dir").join("Cargo.toml");
+            std::fs::copy(&manifest_path, &manifest_dest_path).expect("writing Cargo.toml");
+            manifest_path = manifest_dest_path;
+        }
 
         let project_root = test_dir.path().to_str().unwrap().to_owned();
         // Note: argh does not support "--flag=value" or "--bool-flag false".
@@ -131,16 +154,23 @@ fn main() {
             // is necessary here.
             absolute_cargo_binary_path.to_str().unwrap(),
         ];
-        if test.skip_root {
+        if skip_root {
             args.push("--skip-root");
         }
         gnaw_lib::run(&args)
-            .with_context(|| format!("\n\targs were: {:?}\n\ttest was: {:?}", &args, &test))
-            .expect("gnaw_lib::run should succeed");
+            .with_context(|| format!("error running gnaw with args: {:?}\n\t", &args))?;
         let output = std::fs::read_to_string(&output)
             .with_context(|| format!("while reading tempfile: {}", output.display()))
             .expect("tempfile read success");
+        Result::<_, anyhow::Error>::Ok(output)
+    };
 
+    for test in tests {
+        let output = run_gnaw(&test.manifest_path, test.skip_root)
+            .with_context(|| format!("\n\ttest was: {:?}", &test))
+            .expect("gnaw_lib::run should succeed");
+
+        let test_base_dir = PathBuf::from(&paths.test_base_dir);
         let expected_path: PathBuf =
             test_base_dir.join(test.golden_expected_filename.iter().collect::<PathBuf>());
         let expected = std::fs::read_to_string(expected_path.to_string_lossy().to_string())
@@ -148,7 +178,55 @@ fn main() {
                 format!("while reading expected: {:?}", &test.golden_expected_filename)
             })
             .expect("expected file read success");
-        assert_eq!(expected, output, "left: expected; right: actual: {:?}", &test);
+        assert_eq!(
+            DisplayAsDebug(expected),
+            DisplayAsDebug(output),
+            "left: expected; right: actual: {:?}",
+            &test
+        );
+    }
+
+    #[derive(Debug)]
+    struct ExpectFailCase {
+        /// Manifest file path (`Cargo.toml`); relative to the base test directory.
+        manifest_path: Vec<&'static str>,
+        /// Expected string to search for in returned error.
+        expected_error_substring: &'static str,
+        /// If set, the flag `--skip-root` is added to `cargo_gnaw` invocation.
+        skip_root: bool,
+    }
+    let tests = vec![
+        ExpectFailCase {
+            manifest_path: vec!["feature_review", "Cargo_unreviewed_feature.toml"],
+            expected_error_substring:
+                "crate_with_features 0.1.0 is included with unreviewed features [\"feature1\"]",
+            skip_root: false,
+        },
+        ExpectFailCase {
+            manifest_path: vec!["feature_review", "Cargo_missing_review.toml"],
+            expected_error_substring:
+                "crate_with_features 0.1.0 requires feature review but reviewed features not found",
+            skip_root: false,
+        },
+        ExpectFailCase {
+            manifest_path: vec!["feature_review", "Cargo_extra_review.toml"],
+            expected_error_substring:
+                "crate_with_features 0.1.0 sets reviewed_features but crate_with_features was not found in require_feature_reviews",
+            skip_root: false,
+        },
+    ];
+    for test in tests {
+        let result = run_gnaw(&test.manifest_path, test.skip_root);
+        let error = match result {
+            Ok(_) => panic!("gnaw unexpectedly succeeded for {:?}", test),
+            Err(e) => e,
+        };
+        if error.chain().find(|e| e.to_string().contains(test.expected_error_substring)).is_none() {
+            panic!(
+                "expected error to contain {:?}, was: {:?}",
+                test.expected_error_substring, error
+            );
+        }
     }
 }
 

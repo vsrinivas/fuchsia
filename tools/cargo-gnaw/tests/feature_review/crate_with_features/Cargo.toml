@@ -1,0 +1,7 @@
+[package]
+name = "crate_with_features"
+version = "0.1.0"
+edition = "2018"
+[features]
+feature1 = []
+feature2 = []
