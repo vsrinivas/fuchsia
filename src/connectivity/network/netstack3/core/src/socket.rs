@@ -116,41 +116,43 @@ impl<A: Eq + Hash> Default for ListenerSocketMap<A> {
 ///
 /// It differs from a `ListenerSocketMap` in that only a single address per
 /// connection is supported.
-pub(crate) struct ConnSocketMap<A, C = A> {
-    id_to_conn: IdMap<C>,
+pub(crate) struct ConnSocketMap<A, S> {
+    id_to_sock: IdMap<ConnSocketEntry<S, A>>,
     addr_to_id: HashMap<A, usize>,
 }
 
-impl<A: Eq + Hash + Clone, C> ConnSocketMap<A, C> {
-    pub(crate) fn insert(&mut self, addr: A, conn: C) -> usize {
-        let id = self.id_to_conn.push(conn);
+/// An entry in a [`ConnSocketMap`].
+#[derive(Debug, Eq, PartialEq)]
+pub(crate) struct ConnSocketEntry<S, A> {
+    pub(crate) sock: S,
+    pub(crate) addr: A,
+}
+
+impl<A: Eq + Hash + Clone, S> ConnSocketMap<A, S> {
+    pub(crate) fn insert(&mut self, addr: A, sock: S) -> usize {
+        let id = self.id_to_sock.push(ConnSocketEntry { sock, addr: addr.clone() });
         assert_eq!(self.addr_to_id.insert(addr, id), None);
         id
     }
 }
 
-impl<A: Eq + Hash, C> ConnSocketMap<A, C> {
+impl<A: Eq + Hash, S> ConnSocketMap<A, S> {
     pub(crate) fn get_id_by_addr(&self, addr: &A) -> Option<usize> {
         self.addr_to_id.get(addr).cloned()
     }
 
-    pub(crate) fn get_conn_by_id(&self, id: usize) -> Option<&C> {
-        self.id_to_conn.get(id)
+    pub(crate) fn get_sock_by_id(&self, id: usize) -> Option<&ConnSocketEntry<S, A>> {
+        self.id_to_sock.get(id)
     }
 
     pub(crate) fn iter_addrs(&self) -> impl Iterator<Item = &'_ A> + ExactSizeIterator {
         self.addr_to_id.keys()
     }
-}
 
-impl<A: Eq + Hash, C> ConnSocketMap<A, C>
-where
-    for<'a> &'a C: Into<A>,
-{
-    pub(crate) fn remove_by_id(&mut self, id: usize) -> Option<C> {
-        let conn = self.id_to_conn.remove(id)?;
-        assert_eq!(self.addr_to_id.remove(&(&conn).into()), Some(id));
-        Some(conn)
+    pub(crate) fn remove_by_id(&mut self, id: usize) -> Option<ConnSocketEntry<S, A>> {
+        let ConnSocketEntry { sock, addr } = self.id_to_sock.remove(id)?;
+        assert_eq!(self.addr_to_id.remove(&addr), Some(id));
+        Some(ConnSocketEntry { sock, addr })
     }
 
     /// Update the elements of the map in-place, retaining only the elements for
@@ -160,20 +162,22 @@ where
     /// its documentation for details.
     ///
     /// [`IdMap::update_retain`]: crate::data_structures::IdMap::update_retain
-    pub(crate) fn update_retain<'a, E: 'a, F: 'a + Fn(&mut C) -> Result<(), E>>(
+    pub(crate) fn update_retain<'a, E: 'a, F: 'a + Fn(&mut S, &A) -> Result<(), E>>(
         &'a mut self,
         f: F,
-    ) -> impl 'a + Iterator<Item = (usize, C, E)> {
-        let Self { id_to_conn, addr_to_id } = self;
-        id_to_conn.update_retain(f).map(move |(id, conn, err)| {
-            assert_eq!(addr_to_id.remove(&(&conn).into()), Some(id));
-            (id, conn, err)
-        })
+    ) -> impl 'a + Iterator<Item = (usize, ConnSocketEntry<S, A>, E)> {
+        let Self { id_to_sock, addr_to_id } = self;
+        id_to_sock.update_retain(move |ConnSocketEntry { sock, addr }| f(sock, &*addr)).map(
+            move |(id, entry, err)| {
+                assert_eq!(addr_to_id.remove(&entry.addr), Some(id));
+                (id, entry, err)
+            },
+        )
     }
 }
 
-impl<A: Eq + Hash, C> Default for ConnSocketMap<A, C> {
-    fn default() -> ConnSocketMap<A, C> {
-        ConnSocketMap { id_to_conn: IdMap::default(), addr_to_id: HashMap::default() }
+impl<A: Eq + Hash, S> Default for ConnSocketMap<A, S> {
+    fn default() -> ConnSocketMap<A, S> {
+        ConnSocketMap { id_to_sock: IdMap::default(), addr_to_id: HashMap::default() }
     }
 }

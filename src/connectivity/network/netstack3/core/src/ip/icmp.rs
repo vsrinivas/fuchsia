@@ -44,7 +44,7 @@ use crate::ip::{
     },
     IpExt,
 };
-use crate::socket::{ConnSocketMap, Socket};
+use crate::socket::{ConnSocketEntry, ConnSocketMap, Socket};
 use crate::{BufferDispatcher, Ctx, EventDispatcher};
 
 /// The default number of ICMP error messages to send per second.
@@ -294,9 +294,11 @@ pub(super) fn update_all_ipv4_sockets<C: InnerIcmpv4Context>(
     let (state, meta) = ctx.get_state_and_update_meta();
     // We have to collect into a `Vec` here because the iterator borrows `ctx`,
     // which we need mutable access to in order to report the closures.
-    let closed_conns =
-        state.conns.update_retain(|conn| conn.ip.apply_update(&update, meta)).collect::<Vec<_>>();
-    for (id, _conn, err) in closed_conns {
+    let closed_conns = state
+        .conns
+        .update_retain(|conn, _addr| conn.ip.apply_update(&update, meta))
+        .collect::<Vec<_>>();
+    for (id, _entry, err) in closed_conns {
         ctx.close_icmp_connection(IcmpConnId::new(id), err);
     }
 }
@@ -310,9 +312,11 @@ pub(super) fn update_all_ipv6_sockets<C: InnerIcmpv6Context>(
     let (state, meta) = ctx.get_state_and_update_meta();
     // We have to collect into a `Vec` here because the iterator borrows `ctx`,
     // which we need mutable access to in order to report the closures.
-    let closed_conns =
-        state.conns.update_retain(|conn| conn.ip.apply_update(&update, meta)).collect::<Vec<_>>();
-    for (id, _conn, err) in closed_conns {
+    let closed_conns = state
+        .conns
+        .update_retain(|conn, _addr| conn.ip.apply_update(&update, meta))
+        .collect::<Vec<_>>();
+    for (id, _entry, err) in closed_conns {
         ctx.close_icmp_connection(IcmpConnId::new(id), err);
     }
 }
@@ -1972,12 +1976,12 @@ where
 {
     // TODO(joshlf): Come up with a better approach to the lifetimes issues than
     // cloning the entire socket.
-    let conn = ctx
+    let ConnSocketEntry { sock, addr: _ } = ctx
         .get_state_mut()
         .conns
-        .get_conn_by_id(conn.0)
-        .expect("icmp::send_icmp_echo_request_inner: no such conn")
-        .clone();
+        .get_sock_by_id(conn.0)
+        .expect("icmp::send_icmp_echo_request_inner: no such socket");
+    let conn = sock.clone();
     ctx.send_ip_packet(
         &conn.ip,
         body.encapsulate(IcmpPacketBuilder::<I, &[u8], _>::new(

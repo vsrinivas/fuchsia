@@ -28,7 +28,7 @@ use crate::ip::{
     icmp::IcmpIpExt, BufferIpTransportContext, BufferTransportIpContext, IpExt, IpPacketFromArgs,
     IpTransportContext, TransportIpContext, TransportReceiveError,
 };
-use crate::socket::{ConnSocketMap, ListenerSocketMap};
+use crate::socket::{ConnSocketEntry, ConnSocketMap, ListenerSocketMap};
 use crate::{BufferDispatcher, Ctx, EventDispatcher};
 
 /// A builder for UDP layer state.
@@ -92,16 +92,25 @@ impl<I: Ip> Default for UdpState<I> {
 ///
 /// `UdpConnectionState` provides a [`PortAllocImpl`] implementation to
 /// allocate unused local ports.
-#[derive(Default)]
 struct UdpConnectionState<I: Ip> {
-    conns: ConnSocketMap<Conn<I::Addr>>,
-    listeners: ListenerSocketMap<Listener<I::Addr>>,
+    conns: ConnSocketMap<ConnAddr<I::Addr>, ()>,
+    listeners: ListenerSocketMap<ListenerAddr<I::Addr>>,
     wildcard_listeners: ListenerSocketMap<NonZeroU16>,
 }
 
+impl<I: Ip> Default for UdpConnectionState<I> {
+    fn default() -> UdpConnectionState<I> {
+        UdpConnectionState {
+            conns: ConnSocketMap::default(),
+            listeners: ListenerSocketMap::default(),
+            wildcard_listeners: ListenerSocketMap::default(),
+        }
+    }
+}
+
 enum LookupResult<I: Ip> {
-    Conn(UdpConnId<I>, Conn<I::Addr>),
-    Listener(UdpListenerId<I>, Listener<I::Addr>),
+    Conn(UdpConnId<I>, ConnAddr<I::Addr>),
+    Listener(UdpListenerId<I>, ListenerAddr<I::Addr>),
     WildcardListener(UdpListenerId<I>, NonZeroU16),
 }
 
@@ -113,12 +122,12 @@ impl<I: Ip> UdpConnectionState<I> {
         local_port: NonZeroU16,
         remote_port: NonZeroU16,
     ) -> Option<LookupResult<I>> {
-        let conn = Conn { local_ip, remote_ip, local_port, remote_port };
+        let addr = ConnAddr { local_ip, remote_ip, local_port, remote_port };
         self.conns
-            .get_id_by_addr(&conn)
-            .map(move |id| LookupResult::Conn(UdpConnId::new(id), conn))
+            .get_id_by_addr(&addr)
+            .map(move |id| LookupResult::Conn(UdpConnId::new(id), addr))
             .or_else(|| {
-                let listener = Listener { addr: local_ip, port: local_port };
+                let listener = ListenerAddr { addr: local_ip, port: local_port };
                 self.listeners.get_by_addr(&listener).map(move |id| {
                     LookupResult::Listener(UdpListenerId::new_specified(id), listener)
                 })
@@ -179,7 +188,7 @@ impl<I: Ip> UdpConnectionState<I> {
         self.wildcard_listeners.get_by_addr(&port).is_none()
             && addr
                 .map(|addr| {
-                    self.listeners.get_by_addr(&Listener { addr, port }).is_none()
+                    self.listeners.get_by_addr(&ListenerAddr { addr, port }).is_none()
                         && !self
                             .conns
                             .iter_addrs()
@@ -237,30 +246,30 @@ impl<I: Ip> PortAllocImpl for UdpConnectionState<I> {
         let port = NonZeroU16::new(port).unwrap();
         // Check if we have any listeners. Return true if we have no listeners
         // or active connections using the selected local port.
-        self.listeners.get_by_addr(&Listener { addr: *id.local_addr(), port }).is_none()
+        self.listeners.get_by_addr(&ListenerAddr { addr: *id.local_addr(), port }).is_none()
             && self.wildcard_listeners.get_by_addr(&port).is_none()
             && self
                 .conns
-                .get_id_by_addr(&Conn::from_protocol_flow_and_local_port(id, port))
+                .get_id_by_addr(&ConnAddr::from_protocol_flow_and_local_port(id, port))
                 .is_none()
     }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-struct Conn<A: IpAddress> {
+struct ConnAddr<A: IpAddress> {
     local_ip: SpecifiedAddr<A>,
     local_port: NonZeroU16,
     remote_ip: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
 }
 
-impl<'a, A: IpAddress> From<&'a Conn<A>> for Conn<A> {
-    fn from(c: &'a Conn<A>) -> Self {
+impl<'a, A: IpAddress> From<&'a ConnAddr<A>> for ConnAddr<A> {
+    fn from(c: &'a ConnAddr<A>) -> Self {
         c.clone()
     }
 }
 
-impl<A: IpAddress> Conn<A> {
+impl<A: IpAddress> ConnAddr<A> {
     fn from_protocol_flow_and_local_port(id: &ProtocolFlowId<A>, local_port: NonZeroU16) -> Self {
         Self {
             local_ip: *id.local_addr(),
@@ -284,15 +293,15 @@ pub struct UdpConnInfo<A: IpAddress> {
     pub remote_port: NonZeroU16,
 }
 
-impl<A: IpAddress> From<Conn<A>> for UdpConnInfo<A> {
-    fn from(c: Conn<A>) -> Self {
-        let Conn { local_ip, local_port, remote_ip, remote_port } = c;
+impl<A: IpAddress> From<ConnAddr<A>> for UdpConnInfo<A> {
+    fn from(c: ConnAddr<A>) -> Self {
+        let ConnAddr { local_ip, local_port, remote_ip, remote_port } = c;
         Self { local_ip, local_port, remote_ip, remote_port }
     }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-struct Listener<A: IpAddress> {
+struct ListenerAddr<A: IpAddress> {
     addr: SpecifiedAddr<A>,
     port: NonZeroU16,
 }
@@ -306,8 +315,8 @@ pub struct UdpListenerInfo<A: IpAddress> {
     pub local_port: NonZeroU16,
 }
 
-impl<A: IpAddress> From<Listener<A>> for UdpListenerInfo<A> {
-    fn from(l: Listener<A>) -> Self {
+impl<A: IpAddress> From<ListenerAddr<A>> for UdpListenerInfo<A> {
+    fn from(l: ListenerAddr<A>) -> Self {
         Self { local_ip: Some(l.addr), local_port: l.port }
     }
 }
@@ -706,11 +715,12 @@ pub fn send_udp_conn<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
     body: B,
 ) -> Result<(), SendError> {
     let state = ctx.get_first_state();
-    let Conn { local_ip, local_port, remote_ip, remote_port } = *state
+    let ConnSocketEntry { sock: _, addr } = state
         .conn_state
         .conns
-        .get_conn_by_id(conn.0)
+        .get_sock_by_id(conn.0)
         .expect("transport::udp::send_udp_conn: no such conn");
+    let ConnAddr { local_ip, local_port, remote_ip, remote_port } = *addr;
 
     ctx.send_frame(
         IpPacketFromArgs::new(local_ip, remote_ip, IpProto::Udp.into()),
@@ -836,15 +846,15 @@ pub fn connect_udp<I: IcmpIpExt, C: UdpStateContext<I>>(
             .ok_or(SocketError::Local(LocalAddressError::FailedToAllocateLocalPort))?
     };
 
-    let c = Conn { local_ip, local_port, remote_ip, remote_port };
-    let listener = Listener { addr: local_ip, port: local_port };
+    let c = ConnAddr { local_ip, local_port, remote_ip, remote_port };
+    let listener = ListenerAddr { addr: local_ip, port: local_port };
     let state = ctx.get_first_state_mut();
     if state.conn_state.conns.get_id_by_addr(&c).is_some()
         || state.conn_state.listeners.get_by_addr(&listener).is_some()
     {
         return Err(SocketError::Local(LocalAddressError::AddressInUse));
     }
-    Ok(UdpConnId::new(state.conn_state.conns.insert(c.clone(), c)))
+    Ok(UdpConnId::new(state.conn_state.conns.insert(c.clone(), ())))
 }
 
 /// Removes a previously registered UDP connection.
@@ -861,7 +871,7 @@ pub fn remove_udp_conn<I: IcmpIpExt, C: UdpStateContext<I>>(
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
     let state = ctx.get_first_state_mut();
-    state.conn_state.conns.remove_by_id(id.into()).expect("UDP connection not found").into()
+    state.conn_state.conns.remove_by_id(id.into()).expect("UDP connection not found").addr.into()
 }
 
 /// Gets the [`UdpConnInfo`] associated with the UDP connection referenced by [`id`].
@@ -876,8 +886,9 @@ pub fn get_udp_conn_info<I: IcmpIpExt, C: UdpStateContext<I>>(
     ctx.get_first_state()
         .conn_state
         .conns
-        .get_conn_by_id(id.into())
+        .get_sock_by_id(id.into())
         .expect("UDP connection not found")
+        .addr
         .clone()
         .into()
 }
@@ -928,7 +939,7 @@ pub fn listen_udp<I: IcmpIpExt, C: UdpStateContext<I>>(
             }
             let state = ctx.get_first_state_mut();
             Ok(UdpListenerId::new_specified(
-                state.conn_state.listeners.insert(alloc::vec![Listener { addr, port }]),
+                state.conn_state.listeners.insert(alloc::vec![ListenerAddr { addr, port }]),
             ))
         }
     }
@@ -1451,7 +1462,7 @@ mod tests {
             let _: usize = DualStateContext::<UdpState<I>, _>::get_first_state_mut(&mut ctx)
                 .conn_state
                 .listeners
-                .insert(vec![Listener {
+                .insert(vec![ListenerAddr {
                     addr: local_ip,
                     port: NonZeroU16::new(port_num).unwrap(),
                 }]);
@@ -1832,12 +1843,13 @@ mod tests {
         let conn =
             connect_udp::<I, _>(&mut ctx, None, Some(local_port), remote_ip::<I>(), remote_port)
                 .expect("connect_udp failed");
-        let connid = ctx.get_ref().state.conn_state.conns.get_conn_by_id(conn.into()).unwrap();
+        let ConnSocketEntry { sock: _, addr } =
+            ctx.get_ref().state.conn_state.conns.get_sock_by_id(conn.into()).unwrap();
 
-        assert_eq!(connid.local_ip, local_ip::<I>());
-        assert_eq!(connid.local_port, local_port);
-        assert_eq!(connid.remote_ip, remote_ip::<I>());
-        assert_eq!(connid.remote_port, remote_port);
+        assert_eq!(addr.local_ip, local_ip::<I>());
+        assert_eq!(addr.local_port, local_port);
+        assert_eq!(addr.remote_ip, remote_ip::<I>());
+        assert_eq!(addr.remote_port, remote_port);
     }
 
     /// Tests local port allocation for [`connect_udp`].
@@ -1885,15 +1897,15 @@ mod tests {
         .expect("connect_udp failed");
         let conns = &ctx.get_ref().state.conn_state.conns;
         let valid_range = &UdpConnectionState::<I>::EPHEMERAL_RANGE;
-        let port_a = conns.get_conn_by_id(conn_a.into()).unwrap().local_port.get();
+        let port_a = conns.get_sock_by_id(conn_a.into()).unwrap().addr.local_port.get();
         assert!(valid_range.contains(&port_a));
-        let port_b = conns.get_conn_by_id(conn_b.into()).unwrap().local_port.get();
+        let port_b = conns.get_sock_by_id(conn_b.into()).unwrap().addr.local_port.get();
         assert!(valid_range.contains(&port_b));
         assert_ne!(port_a, port_b);
-        let port_c = conns.get_conn_by_id(conn_c.into()).unwrap().local_port.get();
+        let port_c = conns.get_sock_by_id(conn_c.into()).unwrap().addr.local_port.get();
         assert!(valid_range.contains(&port_c));
         assert_ne!(port_a, port_c);
-        let port_d = conns.get_conn_by_id(conn_d.into()).unwrap().local_port.get();
+        let port_d = conns.get_sock_by_id(conn_d.into()).unwrap().addr.local_port.get();
         assert!(valid_range.contains(&port_d));
         assert_ne!(port_a, port_d);
     }
@@ -2021,7 +2033,7 @@ mod tests {
             DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
                 .conn_state
                 .conns
-                .get_conn_by_id(conn.0),
+                .get_sock_by_id(conn.0),
             None
         );
     }
