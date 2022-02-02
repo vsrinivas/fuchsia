@@ -192,7 +192,7 @@ pub async fn read_and_validate_manifest(
     Ok(component_decl.fidl_into_native())
 }
 
-fn read_and_validate_config_values(
+pub fn read_and_validate_config_values(
     data: &fmem::Data,
 ) -> Result<cm_rust::ValuesData, ResolverError> {
     let bytes = mem_util::bytes_from_data(&data).map_err(ResolverError::config_values_invalid)?;

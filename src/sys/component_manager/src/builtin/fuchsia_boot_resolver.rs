@@ -11,10 +11,10 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::{ClientEnd, Proxy},
+    fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
-    fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_url::boot_url::BootUrl,
-    fuchsia_zircon::Status,
     futures::TryStreamExt,
     routing::capability_source::InternalCapability,
     std::path::Path,
@@ -81,19 +81,30 @@ impl FuchsiaBootResolver {
         };
 
         // Read the component manifest (.cm file) from the bootfs directory.
-        let cm_file =
-            io_util::directory::open_file(&self.boot_proxy, &cm_path, fio::OPEN_RIGHT_READABLE)
-                .await
-                .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
+        let data = mem_util::open_file_data(&self.boot_proxy, &cm_path)
+            .await
+            .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
+        let decl_bytes = mem_util::bytes_from_data(&data).map_err(|_| fsys::ResolverError::Io)?;
+        let decl: fdecl::Component = fidl::encoding::decode_persistent(&decl_bytes[..])
+            .map_err(|_| fsys::ResolverError::InvalidManifest)?;
 
-        let (status, buffer) =
-            cm_file.get_buffer(fio::VMO_FLAG_READ).await.map_err(|_| fsys::ResolverError::Io)?;
-        Status::ok(status).map_err(|_| fsys::ResolverError::Io)?;
-        let data = match buffer {
-            Some(buffer) => fmem::Data::Buffer(*buffer),
-            None => fmem::Data::Bytes(
-                io_util::file::read(&cm_file).await.map_err(|_| fsys::ResolverError::Io)?,
-            ),
+        let config_values = if let Some(config_decl) = decl.config.as_ref() {
+            // if we have a config declaration, we need to read the value file from the package dir
+            let strategy =
+                config_decl.value_source.as_ref().ok_or(fsys::ResolverError::InvalidManifest)?;
+            let config_path = match strategy {
+                fdecl::ConfigValueSource::PackagePath(path) => path,
+                fdecl::ConfigValueSourceUnknown!() => {
+                    return Err(fsys::ResolverError::InvalidManifest);
+                }
+            };
+            Some(
+                mem_util::open_file_data(&self.boot_proxy, &config_path)
+                    .await
+                    .map_err(|_| fsys::ResolverError::ConfigValuesNotFound)?,
+            )
+        } else {
+            None
         };
 
         // Set up the fuchsia-boot path as the component's "package" namespace.
@@ -114,6 +125,7 @@ impl FuchsiaBootResolver {
                 )),
                 ..fsys::Package::EMPTY
             }),
+            config_values,
             ..fsys::Component::EMPTY
         })
     }
@@ -126,7 +138,7 @@ impl Resolver for FuchsiaBootResolver {
         component_url: &str,
         _target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
-        let fsys::Component { resolved_url, decl, package, .. } =
+        let fsys::Component { resolved_url, decl, package, config_values, .. } =
             self.resolve_async(component_url).await?;
         let resolved_url = resolved_url.unwrap();
         let decl = decl.ok_or_else(|| {
@@ -135,13 +147,12 @@ impl Resolver for FuchsiaBootResolver {
             )
         })?;
         let decl = resolver::read_and_validate_manifest(&decl).await?;
-        Ok(ResolvedComponent {
-            resolved_url,
-            decl,
-            package,
-            // TODO(https://fxbug.dev/86861) support config for bootfs components
-            config_values: None,
-        })
+        let config_values = if let Some(cv) = config_values {
+            Some(resolver::read_and_validate_config_values(&cv)?)
+        } else {
+            None
+        };
+        Ok(ResolvedComponent { resolved_url, decl, package, config_values })
     }
 }
 
@@ -175,10 +186,12 @@ mod tests {
     use {
         super::*,
         crate::model::{component::ComponentInstance, environment::Environment},
-        cm_rust::FidlIntoNative,
+        assert_matches::assert_matches,
+        cm_rust::{FidlIntoNative, NativeIntoFidl},
         fidl::encoding::encode_persistent,
         fidl::endpoints::{create_proxy, ServerEnd},
-        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata,
+        fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
+        fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE},
         fuchsia_async::Task,
         io_util::directory::open_in_namespace,
@@ -282,6 +295,112 @@ mod tests {
             .expect("failed to open executable file");
 
         Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn config_works() {
+        let fake_checksum = cm_rust::ConfigChecksum::Sha256([0; 32]);
+        let mut manifest = fdecl::Component {
+            config: Some(
+                cm_rust::ConfigDecl {
+                    value_source: cm_rust::ConfigValueSource::PackagePath(
+                        "meta/has_config.cvf".to_string(),
+                    ),
+                    fields: vec![cm_rust::ConfigField {
+                        key: "foo".to_string(),
+                        type_: cm_rust::ConfigValueType::String { max_size: 100 },
+                    }],
+                    checksum: fake_checksum.clone(),
+                }
+                .native_into_fidl(),
+            ),
+            ..fdecl::Component::EMPTY
+        };
+        let mut values_data = fconfig::ValuesData {
+            values: Some(vec![fconfig::ValueSpec {
+                value: Some(fconfig::Value::Single(fconfig::SingleValue::Text(
+                    "hello, world!".to_string(),
+                ))),
+                ..fconfig::ValueSpec::EMPTY
+            }]),
+            checksum: Some(fake_checksum.clone().native_into_fidl()),
+            ..fconfig::ValuesData::EMPTY
+        };
+        let root = pseudo_directory! {
+            "meta" => pseudo_directory! {
+                "has_config.cm" => read_only_static(encode_persistent(&mut manifest).unwrap()),
+                "has_config.cvf" => read_only_static(encode_persistent(&mut values_data).unwrap()),
+            }
+        };
+        let (_task, bootfs) = serve_vfs_dir(root);
+        let resolver = FuchsiaBootResolver::new_from_directory(bootfs);
+
+        let root = ComponentInstance::new_root(
+            Environment::empty(),
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-boot:///#meta/root.cm".to_string(),
+        );
+
+        let url = "fuchsia-boot:///#meta/has_config.cm";
+        let component = resolver.resolve(url, &root).await.unwrap();
+
+        let ResolvedComponent { resolved_url, decl, config_values, .. } = component;
+        assert_eq!(url, resolved_url);
+
+        let config_decl = decl.config.unwrap();
+        let config_values = config_values.unwrap();
+
+        let observed_fields =
+            config_encoder::ConfigFields::resolve(&config_decl, config_values).unwrap();
+        let expected_fields = config_encoder::ConfigFields {
+            fields: vec![config_encoder::ConfigField {
+                key: "foo".to_string(),
+                value: cm_rust::Value::Single(cm_rust::SingleValue::Text(
+                    "hello, world!".to_string(),
+                )),
+            }],
+            checksum: fake_checksum,
+        };
+        assert_eq!(observed_fields, expected_fields);
+    }
+
+    #[fuchsia::test]
+    async fn config_requires_values() {
+        let mut manifest = fdecl::Component {
+            config: Some(
+                cm_rust::ConfigDecl {
+                    value_source: cm_rust::ConfigValueSource::PackagePath(
+                        "meta/has_config.cvf".to_string(),
+                    ),
+                    fields: vec![cm_rust::ConfigField {
+                        key: "foo".to_string(),
+                        type_: cm_rust::ConfigValueType::String { max_size: 100 },
+                    }],
+                    checksum: cm_rust::ConfigChecksum::Sha256([0; 32]),
+                }
+                .native_into_fidl(),
+            ),
+            ..fdecl::Component::EMPTY
+        };
+        let root = pseudo_directory! {
+            "meta" => pseudo_directory! {
+                "has_config.cm" => read_only_static(encode_persistent(&mut manifest).unwrap()),
+            }
+        };
+        let (_task, bootfs) = serve_vfs_dir(root);
+        let resolver = FuchsiaBootResolver::new_from_directory(bootfs);
+
+        let root = ComponentInstance::new_root(
+            Environment::empty(),
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-boot:///#meta/root.cm".to_string(),
+        );
+
+        let url = "fuchsia-boot:///#meta/has_config.cm";
+        let err = resolver.resolve(url, &root).await.unwrap_err();
+        assert_matches!(err, ResolverError::ConfigValuesIo { .. });
     }
 
     macro_rules! test_resolve_error {
