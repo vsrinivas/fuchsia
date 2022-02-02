@@ -56,7 +56,7 @@ the validation layers:
 This can be placed at any of these paths:
 
 * `/pkg/data/vulkan/implicit_layer.d/VkLayer_override.json`
-* `/config/vulkan/implicit_layer.d/VkLayer_override.json`
+* `/config/data/vulkan/implicit_layer.d/VkLayer_override.json`
 * `<x>/implicit_layer.d/VkLayer_override.json` if the `XDG_CONFIG_DIRS=<x>`
   [environment variable][environ] is set. This can be used to read the file from
   `/data` or `/cache`, which can be written at runtime.
