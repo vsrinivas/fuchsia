@@ -9,11 +9,58 @@ import("//build/testing/host_test_data.gni")
 import("//src/sys/core/build/core.gni")
 import("//src/sys/root/build/root.gni")
 
+# Parameters shared between recovery-eng and recovery-installer
+recovery_base = {
+  testonly = true
+  generate_fvm = !bootfs_only
+
+  # We avoid compressing blobs in the blobfs image so that they can be more
+  # effectively compressed by the ZBI compressor that is tuned to zstd max.
+  if (generate_fvm) {
+    assembly_compress_blobs = false
+  }
+  ramdisk_fvm_in_zbi = true
+
+  include_component_id_index = true
+  devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
+  cmdline = [
+    "console.shell=true",
+    "netsvc.disable=false",
+    "kernel.enable-debugging-syscalls=true",
+    "kernel.enable-serial-syscalls=true",
+  ]
+
+  bootfs_labels = [
+    ":root",
+    "//build/info:bootfs",
+    "//build/input:recovery_bootfs",
+    "//bundles:bootstrap",
+    "//bundles:debugging",
+    "//bundles/bringup:manual_testing",
+    "//bundles/drivers:bootstrap",
+    "//bundles/drivers:usb-host-stack",
+    "//bundles/drivers:usb-peripheral-stack",
+    "//bundles/drivers:utils",
+  ]
+  bootfs_labels +=
+      [ "//src/sys/component_manager:component_manager_bootfs_config" ]
+
+  if (custom_signing_script != "") {
+    zbi_signing_script = custom_signing_script
+    deps = custom_signing_script_deps
+  } else if (use_vboot) {
+    zbi_signing_script = vboot_action.script
+    zbi_signing_args = vboot_action.args
+    deps = vboot_action.deps
+  }
+}
+
 group("recovery") {
   testonly = true
   public_deps = [
     ":recovery-eng",
     ":recovery-fdr",
+    ":recovery-installer",
   ]
 }
 
@@ -90,43 +137,20 @@ recovery_eng_packages =
       "//src/sys/pkg/lib/isolated-swd:isolated-swd-components",
     ]
 
+recovery_installer_packages =
+    recovery_eng_packages - [
+      "//src/recovery/system:system_recovery",
+      "//src/recovery/system:config",
+    ] +
+    [
+      "//src/recovery/system:system_recovery_installer",
+      "//src/recovery/system:config_installer",
+    ]
+
 assemble_system("recovery-eng") {
-  testonly = true
+  forward_variables_from(recovery_base, "*")
   base_packages = recovery_eng_packages
-  generate_fvm = !bootfs_only
-
   system_image_deps = recovery_system_image_deps
-
-  # We avoid compressing blobs in the blobfs image so that they can be more
-  # effectively compressed by the ZBI compressor that is tuned to zstd max.
-  if (generate_fvm) {
-    assembly_compress_blobs = false
-  }
-  ramdisk_fvm_in_zbi = true
-
-  include_component_id_index = true
-  devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
-  cmdline = [
-    "console.shell=true",
-    "netsvc.disable=false",
-    "kernel.enable-debugging-syscalls=true",
-    "kernel.enable-serial-syscalls=true",
-  ]
-
-  bootfs_labels = [
-    ":root",
-    "//build/info:bootfs",
-    "//build/input:recovery_bootfs",
-    "//bundles:bootstrap",
-    "//bundles:debugging",
-    "//bundles/bringup:manual_testing",
-    "//bundles/drivers:bootstrap",
-    "//bundles/drivers:usb-host-stack",
-    "//bundles/drivers:usb-peripheral-stack",
-    "//bundles/drivers:utils",
-  ]
-  bootfs_labels +=
-      [ "//src/sys/component_manager:component_manager_bootfs_config" ]
 
   sysmgr_golden = "sysmgr-eng-golden.json"
 
@@ -141,15 +165,6 @@ assemble_system("recovery-eng") {
         type = "zbi"
       },
     ]
-  }
-
-  if (custom_signing_script != "") {
-    zbi_signing_script = custom_signing_script
-    deps = custom_signing_script_deps
-  } else if (use_vboot) {
-    zbi_signing_script = vboot_action.script
-    zbi_signing_args = vboot_action.args
-    deps = vboot_action.deps
   }
 }
 
@@ -195,16 +210,40 @@ assemble_system("recovery-fdr") {
   }
 }
 
+assemble_system("recovery-installer") {
+  forward_variables_from(recovery_base, "*")
+  base_packages = recovery_installer_packages
+  system_image_deps = recovery_system_image_deps
+
+  sysmgr_golden = "sysmgr-installer-golden.json"
+
+  # TODO(fxbug.dev/81569): Move this metadata to assemble_system.gni.
+  metadata = {
+    images = [
+      {
+        label = get_label_info(":$target_name", "label_with_toolchain")
+        name = "recovery-installer"
+        path = rebase_path(
+                "$target_out_dir/recovery-installer/recovery-installer.zbi",
+                root_build_dir)
+        type = "zbi"
+      },
+    ]
+  }
+}
+
 if (is_host) {
   host_test_data("test_data") {
     out_dir = get_label_info(":anything($target_toolchain)", "target_out_dir")
     sources = [
       "${out_dir}/recovery-eng/recovery-eng.zbi",
       "${out_dir}/recovery-fdr/recovery-fdr.zbi",
+      "${out_dir}/recovery-installer/recovery-installer.zbi",
     ]
     deps = [
       ":recovery-eng($target_toolchain)",
       ":recovery-fdr($target_toolchain)",
+      ":recovery-installer($target_toolchain)",
     ]
   }
 }

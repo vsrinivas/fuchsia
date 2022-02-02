@@ -26,6 +26,11 @@ group("fdr") {
   ]
 }
 
+group("installer") {
+  testonly = true
+  deps = [ ":system_recovery_installer" ]
+}
+
 group("tests") {
   testonly = true
   deps = [
@@ -202,4 +207,69 @@ fuchsia_test_package("system_recovery_tests") {
       max_severity = "ERROR"
     }
   }
+}
+
+rustc_binary("bin_installer") {
+  name = "system_recovery_installer"
+  edition = "2018"
+  source_root = "installer/main.rs"
+  with_unit_tests = true
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
+    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
+    "//src/graphics/lib/compute/rive-rs",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-hyper",
+    "//src/lib/mapped-vmo",
+    "//src/lib/storage/fs_management/rust:fs_management",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-framebuffer",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/pkg/lib/isolated-ota",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:async-channel",
+    "//third_party/rust_crates:bytes",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:mockall",
+    "//third_party/rust_crates:png",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
+  ]
+  sources = [ "installer/main.rs" ]
+}
+
+config_data("config_installer") {
+  for_pkg = "sysmgr"
+  sources = [ "config/recovery-installer.config" ]
+  outputs = [ "recovery_installer.config" ]
+}
+
+fuchsia_package_with_single_component("system_recovery_installer") {
+  deps = [
+    ":bin_installer",
+    ":recovery_logo",
+    ":roboto_regular",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
+    "//src/sys/pkg/bin/pkgfs:pkgsvr",
+  ]
+  manifest = "meta/system_recovery_installer.cmx"
+}
+
+fuchsia_component("system_installer_bin_test") {
+  testonly = true
+  deps = [ ":bin_installer_test" ]
+  manifest = "meta/system_installer_bin_test.cmx"
 }
