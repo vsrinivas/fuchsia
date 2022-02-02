@@ -214,6 +214,8 @@ impl MockPiconetServer {
                 }
             }
             bredr::MockPeerRequest::LaunchProfile { launch_info, responder, .. } => {
+                // TODO(fxbug.dev/85253): Remove this method once bt-a2dp-loopback has been migrated
+                // to CFv2.
                 let mut result = match LaunchInfo::try_from(launch_info) {
                     Ok(info) => self.launch_profile(id, info).map_err(|_| ErrorCode::Failed),
                     Err(_) => Err(ErrorCode::InvalidArguments),
@@ -610,7 +612,7 @@ mod tests {
     #[fuchsia::test]
     fn register_peer_is_handled_by_server() {
         let mut exec = fasync::TestExecutor::new().unwrap();
-        let mps = MockPiconetServer::new(true);
+        let mps = MockPiconetServer::new(false);
         let (mut sender, receiver) = mpsc::channel(MAX_CONCURRENT_PICONET_MEMBER_REQUESTS);
 
         // The main handler - this is under test.
@@ -639,7 +641,7 @@ mod tests {
     #[fuchsia::test]
     fn concurrent_registered_peers_can_connect_profile_proxy() {
         let mut exec = fasync::TestExecutor::new().unwrap();
-        let mps = MockPiconetServer::new(true);
+        let mps = MockPiconetServer::new(false);
         let (mut sender, receiver) = mpsc::channel(MAX_CONCURRENT_PICONET_MEMBER_REQUESTS);
         let mut sender_clone = sender.clone();
 
@@ -682,7 +684,7 @@ mod tests {
     #[fuchsia::test]
     fn advertisement_request_resolves_when_terminated() {
         let mut exec = fasync::TestExecutor::new().unwrap();
-        let mps = MockPiconetServer::new(true);
+        let mps = MockPiconetServer::new(false);
         let (mut sender, receiver) = mpsc::channel(MAX_CONCURRENT_PICONET_MEMBER_REQUESTS);
 
         // The main handler - this is under test.

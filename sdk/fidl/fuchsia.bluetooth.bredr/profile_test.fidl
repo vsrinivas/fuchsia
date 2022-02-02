@@ -45,6 +45,7 @@ protocol PeerObserver {
     /// why a component has terminated and should not be used for debugging.
     ///
     /// + request `component_url` URL of the component that has terminated.
+    @deprecated("Replaced by component startup in ConnectProxy")
     ComponentTerminated(struct {
         component_url fuchsia.sys.component_url;
     }) -> ();
@@ -78,6 +79,7 @@ protocol MockPeer {
     /// + request `launch_info` Information about the component to be launched.
     /// - response Acknowledgement when the profile has been launched, or an error code
     ///            if the profile could not be launched
+    @deprecated("Use ConnectProxy instead")
     LaunchProfile(struct {
         launch_info LaunchInfo;
     }) -> (struct {}) error fuchsia.bluetooth.ErrorCode;
