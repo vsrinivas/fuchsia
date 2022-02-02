@@ -21,6 +21,7 @@
 #include <kernel/mutex.h>
 #include <ktl/algorithm.h>
 #include <object/process_dispatcher.h>
+#include <object/root_job_observer.h>
 
 KCOUNTER(dispatcher_job_create_count, "dispatcher.job.create")
 KCOUNTER(dispatcher_job_destroy_count, "dispatcher.job.destroy")
@@ -409,6 +410,23 @@ bool JobDispatcher::Kill(int64_t return_code) {
   }
 
   return true;
+}
+
+void JobDispatcher::CriticalProcessKill(fbl::RefPtr<ProcessDispatcher> dead_process) {
+  char proc_name[ZX_MAX_NAME_LEN];
+  dead_process->get_name(proc_name);
+
+  char job_name[ZX_MAX_NAME_LEN];
+  get_name(job_name);
+
+  printf("critical-process: process '%s' (%" PRIu64 ") died, killing job '%s' (%" PRIu64 ")\n",
+         proc_name, dead_process->get_koid(), job_name, get_koid());
+
+  if (GetRootJobDispatcher().get() == this) {
+    RootJobObserver::CriticalProcessKill(ktl::move(dead_process));
+  }
+
+  Kill(ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
 }
 
 bool JobDispatcher::CanSetPolicy() TA_REQ(get_lock()) {

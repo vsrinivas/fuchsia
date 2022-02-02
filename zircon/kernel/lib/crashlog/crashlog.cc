@@ -30,6 +30,7 @@
 #include <ktl/span.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle.h>
+#include <object/root_job_observer.h>
 #include <vm/pmm.h>
 #include <vm/pmm_checker.h>
 #include <vm/vm.h>
@@ -57,6 +58,7 @@ enum class RenderRegion : uint32_t {
   CriticalCounters = 0x04,
   PanicBuffer      = 0x08,
   Dlog             = 0x10,
+  RootJobCritical  = 0x20,
   All              = 0xffffffff,
   // clang-format on
 };
@@ -68,8 +70,11 @@ RenderRegion MapReasonToRegions(zircon_crash_reason_t reason) {
       return RenderRegion::None;
 
     case ZirconCrashReason::Oom:
-    case ZirconCrashReason::UserspaceRootJobTermination:
       return RenderRegion::Banner | RenderRegion::CriticalCounters | RenderRegion::Dlog;
+
+    case ZirconCrashReason::UserspaceRootJobTermination:
+      return RenderRegion::Banner | RenderRegion::CriticalCounters | RenderRegion::Dlog |
+             RenderRegion::RootJobCritical;
 
     case ZirconCrashReason::Panic:
     case ZirconCrashReason::SoftwareWatchdog:
@@ -130,6 +135,17 @@ size_t crashlog_to_string(ktl::span<char> target, zircon_crash_reason_t reason) 
             "VERSION\narch: %s\nbuild_id: %s\ndso: id=%s base=%#lx "
             "name=zircon.elf\n\n",
             arch, version_string(), elf_build_id_string(), crashlog_base_address);
+  }
+
+  if (static_cast<bool>(regions & RenderRegion::RootJobCritical)) {
+    zx_koid_t proc_koid = RootJobObserver::GetCriticalProcessKoid();
+    ktl::array proc_name_chars = RootJobObserver::GetCriticalProcessName();
+    ktl::string_view proc_name(proc_name_chars.data(), proc_name_chars.size());
+    proc_name = proc_name.substr(0, proc_name.find_first_of('\0'));
+    if (proc_koid != ZX_KOID_INVALID) {
+      fprintf(&outfile, "ROOT JOB TERMINATED BY CRITICAL PROCESS DEATH: %.*s (%" PRIu64 ")\n",
+              static_cast<int>(proc_name.size()), proc_name.data(), proc_koid);
+    }
   }
 
   if (static_cast<bool>(regions & RenderRegion::DebugInfo)) {

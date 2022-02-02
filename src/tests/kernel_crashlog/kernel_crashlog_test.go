@@ -157,8 +157,10 @@ func TestKernelCrashlogOom(t *testing.T) {
 func TestKernelCrashlogRootJobTermination(t *testing.T) {
 	i := testCommon(t, "killall bootsvc", "root-job: taking reboot action", "USERSPACE ROOT JOB TERMINATION")
 
-	// Root job termination should have the same contents as an OOM.
+	// Root job termination should have the same contents as an OOM,
+	// plus the critical process name.
 	i.WaitForLogMessage("VERSION")
+	i.WaitForLogMessage("ROOT JOB TERMINATED BY CRITICAL PROCESS DEATH: bootsvc")
 	i.WaitForLogMessage("counters: ")
 	i.WaitForLogMessage("--- BEGIN DLOG DUMP ---")
 	i.WaitForLogMessage("root-job: taking reboot action")

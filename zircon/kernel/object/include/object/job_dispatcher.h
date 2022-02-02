@@ -105,6 +105,10 @@ class JobDispatcher final
   // transitions to |DEAD|.  |return_code| can be obtained via ZX_INFO_JOB.
   bool Kill(int64_t return_code);
 
+  // Called instead of Kill(ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL)
+  // for the case of critical-to-job process death.
+  void CriticalProcessKill(fbl::RefPtr<ProcessDispatcher> dead_process);
+
   // Set basic policy. |mode| is is either ZX_JOB_POL_RELATIVE or ZX_JOB_POL_ABSOLUTE and
   // in_policy is an array of |count| elements.
   //

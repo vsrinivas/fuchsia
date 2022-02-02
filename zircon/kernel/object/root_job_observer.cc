@@ -12,10 +12,16 @@
 #include <zircon/boot/crash-reason.h>
 #include <zircon/compiler.h>
 
+#include <kernel/mutex.h>
+#include <ktl/array.h>
 #include <object/root_job_observer.h>
 #include <platform/halt_helper.h>
 
 namespace {
+
+DECLARE_SINGLETON_MUTEX(CriticalProcessNameLock);
+char gCriticalProcessName[ZX_MAX_NAME_LEN] __TA_GUARDED(CriticalProcessNameLock::Get());
+zx_koid_t gCriticalProcessKoid __TA_GUARDED(CriticalProcessNameLock::Get()) = ZX_KOID_INVALID;
 
 // May or may not return.
 void Halt() {
@@ -84,3 +90,21 @@ void RootJobObserver::OnMatch(zx_signals_t signals) {
 }
 
 void RootJobObserver::OnCancel(zx_signals_t signals) {}
+
+void RootJobObserver::CriticalProcessKill(fbl::RefPtr<ProcessDispatcher> dead_process) {
+  Guard<Mutex> guard(CriticalProcessNameLock::Get());
+  if (gCriticalProcessKoid == ZX_KOID_INVALID) {
+    dead_process->get_name(gCriticalProcessName);
+    gCriticalProcessKoid = dead_process->get_koid();
+  }
+}
+
+ktl::array<char, ZX_MAX_NAME_LEN> RootJobObserver::GetCriticalProcessName() {
+  Guard<Mutex> guard(CriticalProcessNameLock::Get());
+  return ktl::to_array(gCriticalProcessName);
+}
+
+zx_koid_t RootJobObserver::GetCriticalProcessKoid() {
+  Guard<Mutex> guard(CriticalProcessNameLock::Get());
+  return gCriticalProcessKoid;
+}

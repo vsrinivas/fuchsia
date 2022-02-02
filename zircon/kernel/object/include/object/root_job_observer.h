@@ -9,6 +9,7 @@
 
 #include <lib/fit/function.h>
 
+#include <ktl/array.h>
 #include <object/job_dispatcher.h>
 #include <object/signal_observer.h>
 
@@ -30,6 +31,12 @@ class RootJobObserver final : public SignalObserver {
   // Exposed for testing.
   using Callback = fit::inline_function<void(), 3 * sizeof(void*)>;
   RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* root_job_handle, Callback callback);
+
+  // Record the dead process responsible for getting the root job killed.
+  static void CriticalProcessKill(fbl::RefPtr<ProcessDispatcher> dead_process);
+
+  static ktl::array<char, ZX_MAX_NAME_LEN> GetCriticalProcessName();
+  static zx_koid_t GetCriticalProcessKoid();
 
  private:
   // |SignalObserver| implementation.
