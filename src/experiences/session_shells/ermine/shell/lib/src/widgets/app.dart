@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/app_view.dart';
+import 'package:ermine/src/widgets/dialogs/dialogs.dart';
 import 'package:ermine/src/widgets/overlays.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide AppBar;
@@ -60,6 +61,10 @@ class App extends StatelessWidget {
                   // Show scrim and overlay layers if an overlay is visible.
                   if (app.overlaysVisible)
                     WidgetFactory.create(() => Overlays(app)),
+
+                  // Show dialogs above all.
+                  if (app.dialogsVisible)
+                    WidgetFactory.create(() => Dialogs(app)),
                 ],
               );
             }),

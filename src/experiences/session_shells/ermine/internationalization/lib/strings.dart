@@ -994,6 +994,26 @@ class Strings {
         name: 'continue',
         desc: 'The label for "Continue" text field.',
       );
+  static String get confirmLogoutAlertTitle => Intl.message(
+        'Are you sure you want to log out?',
+        name: 'confirmLogoutAlertTitle',
+        desc: 'The alert dialog title to confirm logout.',
+      );
+  static String get confirmToSaveWorkAlertBody => Intl.message(
+        'This will close all running applications and you could lose unsaved work.',
+        name: 'confirmToSaveWorkAlertBody',
+        desc: 'The alert dialog body to continue logout/restart/shutdown.',
+      );
+  static String get confirmRestartAlertTitle => Intl.message(
+        'Are you sure you want restart?',
+        name: 'confirmRestartAlertTitle',
+        desc: 'The alert dialog title to confirm restart.',
+      );
+  static String get confirmShutdownAlertTitle => Intl.message(
+        'Are you sure you want shutdown?',
+        name: 'confirmShutdownAlertTitle',
+        desc: 'The alert dialog title to confirm shutdown.',
+      );
   static String get channelUpdateAlertTitle => Intl.message(
         'System will reboot',
         name: 'system will reboot',

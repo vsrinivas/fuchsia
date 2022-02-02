@@ -35,7 +35,7 @@ abstract class AppState {
   bool get viewsVisible;
   ViewState get topView;
   ViewState? get switchTarget;
-  List<ermine.Dialog> get dialogs;
+  List<ermine.DialogInfo> get dialogs;
   List<ViewState> get views;
   Map<String, List<String>> get errors;
   Locale? get locale;

@@ -42,6 +42,7 @@ void main() async {
     when(state.locale).thenAnswer((_) => stream.value);
     when(state.views).thenAnswer((_) => <ViewState>[].asObservable());
     when(state.overlaysVisible).thenAnswer((_) => false);
+    when(state.dialogsVisible).thenAnswer((_) => false);
 
     await tester.pumpWidget(app);
     // app should be OffStage until locale is pushed.
@@ -73,6 +74,7 @@ void main() async {
     when(state.views).thenAnswer((_) => [MockViewState()].asObservable());
     // Show overlays.
     when(state.overlaysVisible).thenAnswer((_) => true);
+    when(state.dialogsVisible).thenAnswer((_) => false);
 
     await tester.pumpWidget(app);
     await tester.pumpAndSettle();

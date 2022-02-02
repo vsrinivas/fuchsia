@@ -16,8 +16,7 @@ import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/states/view_state_impl.dart';
-import 'package:ermine/src/widgets/dialogs/dialog.dart' as ermine;
-import 'package:ermine/src/widgets/dialogs/text_only_dialog.dart';
+import 'package:ermine/src/widgets/dialogs/dialog.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide Action;
 import 'package:fuchsia_inspect/inspect.dart';
@@ -174,7 +173,7 @@ class AppStateImpl with Disposable implements AppState {
   }).asComputed();
 
   @override
-  final dialogs = <ermine.Dialog>[].asObservable();
+  final dialogs = <DialogInfo>[].asObservable();
 
   @override
   final errors = <String, List<String>>{}.asObservable();
@@ -307,7 +306,11 @@ class AppStateImpl with Disposable implements AppState {
   }
 
   @override
-  void cancel() => hideOverlay();
+  void cancel() {
+    if (!dialogsVisible) {
+      hideOverlay();
+    }
+  }
 
   @override
   void closeView() => _closeView();
@@ -361,38 +364,68 @@ class AppStateImpl with Disposable implements AppState {
   }.asAction();
 
   @override
-  void restart() => runInAction(startupService.restartDevice);
+  void restart() {
+    _displayDialog(AlertDialogInfo(
+      title: Strings.confirmRestartAlertTitle,
+      body: Strings.confirmToSaveWorkAlertBody,
+      actions: [Strings.cancel, Strings.restart],
+      defaultAction: Strings.restart,
+      onAction: (action) {
+        if (action == Strings.restart) {
+          startupService.restartDevice();
+          // Clean up.
+          dispose();
+        }
+      },
+    ));
+  }
 
   @override
-  void shutdown() => runInAction(startupService.shutdownDevice);
+  void shutdown() {
+    _displayDialog(AlertDialogInfo(
+      title: Strings.confirmShutdownAlertTitle,
+      body: Strings.confirmToSaveWorkAlertBody,
+      actions: [Strings.cancel, Strings.shutdown],
+      defaultAction: Strings.shutdown,
+      onAction: (action) {
+        if (action == Strings.shutdown) {
+          startupService.shutdownDevice();
+          // Clean up.
+          dispose();
+        }
+      },
+    ));
+  }
 
   @override
   void logout() {
-    startupService.logout();
-    // Clean up.
-    dispose();
+    _displayDialog(AlertDialogInfo(
+      title: Strings.confirmLogoutAlertTitle,
+      body: Strings.confirmToSaveWorkAlertBody,
+      actions: [Strings.cancel, Strings.logout],
+      defaultAction: Strings.logout,
+      onAction: (action) {
+        if (action == Strings.logout) {
+          startupService.logout();
+          // Clean up.
+          dispose();
+        }
+      },
+    ));
   }
 
   @override
   void checkingForUpdatesAlert() {
-    runInAction(() {
-      final key = Key(
-          'checkingforupdatesalert_${DateTime.now().millisecondsSinceEpoch}');
-      dialogs.add(TextOnlyDialog(
-        key: key,
-        title: Strings.channelUpdateAlertTitle,
-        body: Strings.channelUpdateAlertBody,
-        buttons: {
-          Strings.close: () {
-            dialogs.removeWhere((dialog) => dialog.key == key);
-          },
-          Strings.continueLabel: () {
-            settingsState.checkForUpdates();
-            dialogs.removeWhere((dialog) => dialog.key == key);
-          },
-        },
-      ));
-    });
+    _displayDialog(AlertDialogInfo(
+      title: Strings.channelUpdateAlertTitle,
+      body: Strings.channelUpdateAlertBody,
+      actions: [Strings.close, Strings.continueLabel],
+      onAction: (action) {
+        if (action == Strings.continueLabel) {
+          settingsState.checkForUpdates();
+        }
+      },
+    ));
   }
 
   late final showScreenSaver = () {
@@ -495,10 +528,11 @@ class AppStateImpl with Disposable implements AppState {
     }));
 
     // Update view hittestability based on overlay visibility.
-    view.reactions.add(reaction<bool>((_) => overlaysVisible, (overlay) {
+    view.reactions.add(reaction<bool>(
+        (_) => overlaysVisible || switcherVisible || dialogsVisible, (overlay) {
       // Don't reset hittest flag when showing app switcher, because the
       // app switcher does not react to pointer events.
-      view.hitTestable = !overlay || switcherVisible;
+      view.hitTestable = !overlay;
     }));
 
     // Remove view from views when it is closed.
@@ -557,18 +591,12 @@ class AppStateImpl with Disposable implements AppState {
       if (_isPrelistedApp(url)) {
         errors[url] = [description, '$error\n$referenceLink'];
       } else {
-        final key = Key('presenterr_${DateTime.now().millisecondsSinceEpoch}');
-        dialogs.add(TextOnlyDialog(
-          key: key,
+        _displayDialog(AlertDialogInfo(
           title: description,
           body: '${Strings.errorWhilePresenting},\n$url\n\n'
               '${Strings.errorType}: $error\n\n'
               '${Strings.moreErrorInformation}\n$referenceLink',
-          buttons: {
-            Strings.close: () {
-              dialogs.removeWhere((dialog) => dialog.key == key);
-            }
-          },
+          actions: [Strings.close],
         ));
       }
     });
@@ -641,17 +669,11 @@ class AppStateImpl with Disposable implements AppState {
         return;
       }
       final description = Strings.applicationFailedToStart(view.title);
-      final key = Key('startfail_${DateTime.now().millisecondsSinceEpoch}');
-      dialogs.add(TextOnlyDialog(
-        key: key,
+      _displayDialog(AlertDialogInfo(
         title: description,
         body: 'Url: ${view.url}',
-        buttons: {
-          Strings.close: () {
-            dialogs.removeWhere((dialog) => dialog.key == key);
-            view.close();
-          }
-        },
+        actions: [Strings.close],
+        onClose: view.close,
       ));
     }
   }
@@ -696,6 +718,16 @@ class AppStateImpl with Disposable implements AppState {
       }
     }
     return data;
+  }
+
+  void _displayDialog(DialogInfo dialog) {
+    runInAction(() {
+      dialogs.add(dialog);
+      if (viewsVisible) {
+        // Set focus to shell view so that we can receive the esc key press.
+        setFocusToShellView();
+      }
+    });
   }
 
   // Adds inspect data when requested by [Inspect].
