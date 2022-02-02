@@ -609,8 +609,8 @@ void Guest::SetupGPUDriversInContainer() {
        "/usr/bin/update-alternatives --install "
        "/usr/share/vulkan/icd.d/10_magma_intel_icd.i686.json vulkan-icd32 "
        "/opt/google/cros-containers/share/vulkan/icd.d/intel_icd.i686.json 20; "
-       "echo /opt/google/cros-containers/drivers/lib64 > /etc/ld.so.conf.d/cros.conf;"
-       "echo /opt/google/cros-containers/drivers/lib32 >> /etc/ld.so.conf.d/cros.conf;"
+       "echo /opt/google/cros-containers/drivers/lib64=libc6 > /etc/ld.so.conf.d/cros.conf;"
+       "echo /opt/google/cros-containers/drivers/lib32=libc6 >> /etc/ld.so.conf.d/cros.conf;"
        "/sbin/ldconfig; "},
       {
           {"LXD_DIR", "/mnt/stateful/lxd"},
