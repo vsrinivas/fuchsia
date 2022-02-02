@@ -423,15 +423,20 @@ struct fidl_type {
   constexpr const FidlCodedString& coded_string() const;
   constexpr const FidlCodedVector& coded_vector() const;
 
+// This prevents designated initializers from working in C++20
+#if __cplusplus <= 201703L
  private:
   // Prevent instances of this class from being accidentally used standalone
   // as a value.
   constexpr fidl_type() = default;
+#endif
 };
 
 #define FIDL_INTERNAL_INHERIT_TYPE_T \
   final:                             \
   fidl_type
+
+#if __cplusplus <= 201703L
 
 // When compiling in C++14 mode, the rules around initialization
 // changes such that the compiler requires an explicit constructor.
@@ -440,7 +445,13 @@ struct fidl_type {
 // Note that this still allows the use of C++ designated initializers.
 #define FIDL_INTERNAL_DELETE_DEFAULT_CONSTRUCTOR(cls) cls() = delete;
 
-#else
+#else  // __cplusplus <= 201703L
+
+#define FIDL_INTERNAL_DELETE_DEFAULT_CONSTRUCTOR(cls)
+
+#endif  // __cplusplus <= 201703L
+
+#else  // __cplusplus
 
 // No inheritance in C mode. This is okay because inheriting
 // from an empty class does not affect the object layout at all.
