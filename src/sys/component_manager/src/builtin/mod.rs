@@ -7,6 +7,7 @@ pub mod capability;
 pub mod cpu_resource;
 pub mod crash_introspect;
 pub mod debug_resource;
+pub mod factory_items;
 pub mod fuchsia_boot_resolver;
 pub mod hypervisor_resource;
 pub mod info_resource;
