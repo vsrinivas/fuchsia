@@ -1,4 +1,4 @@
-{{! Copyright 2021 The Fuchsia Authors. All rights reserved. }}
+{{! Copyright 2022 The Fuchsia Authors. All rights reserved. }}
 {{! Use of this source code is governed by a BSD-style license that can be
     found in the LICENSE file. }}
 {{! This template is processed by Handlebars to render a json file. }}
@@ -28,13 +28,15 @@
             "-object", "iothread,id=iothread0",
             "-device", "virtio-blk-pci,drive=vdisk,iothread=iothread0",
         {{/if}}
-        "-serial",
         {{#if (eq runtime.console "monitor")}}
-            "monitor",
+            "-monitor",
+            "stdio",
         {{else}}
             {{#if (eq runtime.console "none")}}
+                "-serial",
                 "none",
             {{else}}
+                "-serial",
                 "stdio",
             {{/if}}
         {{/if}}

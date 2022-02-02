@@ -1,4 +1,4 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,39 +9,63 @@ use std::path::PathBuf;
 
 #[ffx_command()]
 #[derive(Clone, FromArgs, Debug, Default, PartialEq)]
-#[argh(subcommand, name = "start")]
-/// Starting Fuchsia Emulator
+#[argh(
+    subcommand,
+    name = "start",
+    description = "Start the Fuchsia emulator.",
+    example = "ffx emu start
+ffx emu start workstation.qemu-x64 --name my-emulator --engine femu",
+    note = "The `start` subcommand is the starting point for all emulator interactions.
+The name provided here will be used for all later interactions to indicate
+which emulator to target. Emulator names must be unique.
+
+The start command will compile all of the necessary configuration for an 
+emulator, launch the emulator, and then store the configuration on disk for 
+future reference. The configuration comes from the Product Bundle, which 
+includes a virtual device specification and a start-up flag template. See 
+https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0100_product_metadata
+for more information."
+)]
 pub struct StartCommand {
     /// virtualization acceleration. Valid choices are "none" to disable acceleration, "hyper" to
-    /// use the host's hypervisor interface, KVM on Linux and HVF on MacOS, "auto" to use the
+    /// use the host's hypervisor interface (KVM on Linux and HVF on MacOS), or "auto" to use the
     /// hypervisor if detected. The default value is "auto".
     #[argh(option, default = "AccelerationMode::Auto")]
     pub accel: AccelerationMode,
 
-    /// launches user in femu serial console.
+    /// launch the emulator in serial console mode. This redirects the virtual serial port to the
+    /// host's input/output streams, then maintains a connection to those streams rather than
+    /// returning control to the host terminal. This is especially useful when the guest is running
+    /// without networking enabled.
     #[argh(switch)]
     pub console: bool,
 
-    /// pause on launch and wait for a debugger process to attach before resuming.
+    /// pause on launch and wait for a debugger process to attach before resuming. The guest
+    /// operating system will not begin execution until a debugger, such as gdb or lldb, attaches
+    /// to the emulator process and signals the emulator to continue.
     #[argh(switch)]
     pub debugger: bool,
 
-    /// terminates the plugin before executing the emulator command.
+    /// sets up the emulation, but doesn't start the emulator. The command line arguments that the
+    /// current configuration generates will be printed to stdout for review.
     #[argh(switch)]
     pub dry_run: bool,
 
-    /// emulator engine to use for this instance.  Allowed values are
-    ///  "femu", "qemu". Default is "femu".
+    /// emulation engine to use for this instance. Allowed values are "femu" which is based on
+    /// Android Emulator, and "qemu" which uses the version of Qemu packaged with Fuchsia. Default
+    /// is "femu".
     #[argh(option, default = "EngineType::Femu")]
     pub engine: EngineType,
 
-    /// configure GPU acceleration to run the emulator. Allowed values are "host", "guest",
-    /// "swiftshader_indirect", or "auto". Default is "auto". Note: This only affects
-    /// FEMU emulator.
+    /// GPU acceleration mode. Allowed values are "host", "guest", "swiftshader_indirect", or
+    /// "auto". Default is "auto". Note: this is unused when using the "qemu" engine type. See
+    /// https://developer.android.com/studio/run/emulator-acceleration#command-gpu for details on
+    /// the available options.
     #[argh(option, default = "GpuType::Auto")]
     pub gpu: GpuType,
 
-    /// run emulator in headless mode where there is no GUI.
+    /// run the emulator without a GUI. The guest system may still initialize graphics drivers,
+    /// but no graphics interface will be presented to the user.
     #[argh(switch, short = 'H')]
     pub headless: bool,
 
@@ -49,22 +73,25 @@ pub struct StartCommand {
     #[argh(option, default = "std::env::consts::OS == \"macos\"")]
     pub hidpi_scaling: bool,
 
-    /// file path to store emulator log.
+    /// store the emulator log at the provided filesystem path. By default, all output goes to
+    /// stdout/stderr.
     #[argh(option, short = 'l')]
     pub log: Option<PathBuf>,
 
-    /// launches emulator in qemu console.
+    /// launch the emulator in Qemu monitor console mode. See
+    /// https://qemu-project.gitlab.io/qemu/system/monitor.html for more information on the Qemu
+    /// monitor console.
     #[argh(switch, short = 'm')]
     pub monitor: bool,
 
-    /// name of emulator instance. This is used to identify the instance.
-    /// Default is 'fuchsia-emulator'.
+    /// name of this emulator instance. This is used to identify the instance in other commands and
+    /// tools. Default is "fuchsia-emulator".
     #[argh(option, default = "\"fuchsia-emulator\".to_string()")]
     pub name: String,
 
-    /// host port mapping for user-networking mode.
-    /// Syntax is "--port-map <portname>:<port>".
-    /// This flag may be repeated for multiple port mappings.
+    /// specify a host port mapping for user-networking mode. Ignored in other networking modes.
+    /// Syntax is "--port-map <portname>:<port>". The <portname> must be one of those specified in
+    /// the virtual device specification. This flag may be repeated for multiple port mappings.
     #[argh(option)]
     pub port_map: Vec<String>,
 
@@ -76,17 +103,19 @@ pub struct StartCommand {
 
     /// specify a template file to populate the command line flags for the emulator.
     /// Defaults to a Handlebars template specified in the Product Bundle manifest.
-    /// TODO(fxbug.dev/90948): Make this non-optional once the template file is
-    /// included in the SDK.
+    // TODO(fxbug.dev/90948): Make this non-optional once the template file is
+    // included in the SDK.
     #[argh(option)]
     pub start_up_args_template: Option<PathBuf>,
 
-    /// specify the networking type for the emulator: 'none', 'auto', 'tap' mode with Tun/Tap,
-    /// or 'user' mode with SLiRP.
+    /// specify the networking mode for the emulator. Allowed values are "none" which disables
+    /// networking, "tap" which attaches to a Tun/Tap interface, "user" which sets up mapped ports
+    /// via SLiRP, and "auto" which will check the host system's capabilities and select "tap" if
+    /// it is available and "user" otherwise. Default is "auto".
     #[argh(option, default = "NetworkingMode::Auto")]
     pub net: NetworkingMode,
 
-    /// enables extra logging for debugging
+    /// enables extra logging for debugging.
     #[argh(switch, short = 'V')]
     pub verbose: bool,
 }
