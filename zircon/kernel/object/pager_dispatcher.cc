@@ -88,16 +88,21 @@ zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port, uint
 fbl::RefPtr<PagerProxy> PagerDispatcher::ReleaseProxy(PagerProxy* proxy) {
   Guard<Mutex> guard{&lock_};
   // proxy might not be in the container since we could be racing with a call to on_zero_handles,
-  // but that should only happen if we have triggered_zero_handles_. In particular the caller should
-  // not be trying to release a proxy that it knows is not here.
-  DEBUG_ASSERT_MSG(proxy->InContainer() != triggered_zero_handles_, "triggered_zero_handles_ is %d",
-                   triggered_zero_handles_);
+  // but that should only happen if we have triggered_zero_handles_. Note that it is possible for
+  // the proxy to still be in the container even if triggered_zero_handles_ is true, as we drop the
+  // lock between OnDispatcherClose calls for each proxy in the list, so we might not have gotten to
+  // this proxy yet.
+  DEBUG_ASSERT_MSG(proxy->InContainer() || triggered_zero_handles_,
+                   "triggered_zero_handles_ is %d and proxy is %sin container\n",
+                   triggered_zero_handles_, proxy->InContainer() ? "" : "not ");
   return proxy->InContainer() ? proxies_.erase(*proxy) : nullptr;
 }
 
 void PagerDispatcher::on_zero_handles() {
   Guard<Mutex> guard{&lock_};
   DEBUG_ASSERT(!triggered_zero_handles_);
+  // Set triggered_zero_handles_ to true before starting to release proxies, so that a racy call to
+  // PagerDispatcher::ReleaseProxy knows it's not incorrect to not find the proxy in the list.
   triggered_zero_handles_ = true;
   while (!proxies_.is_empty()) {
     fbl::RefPtr<PagerProxy> proxy = proxies_.pop_front();
