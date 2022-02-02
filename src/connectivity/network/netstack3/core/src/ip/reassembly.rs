@@ -1145,7 +1145,7 @@ mod tests {
         validate_cache_size(ctx.get_state());
 
         // Trigger the timer (simulate a timer for the fragmented packet)
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
 
         // Make sure no other times exist..
         assert_empty(ctx.timers().iter());
@@ -1190,7 +1190,10 @@ mod tests {
         validate_cache_size(ctx.get_state());
 
         // Trigger the timers, which will clear the cache.
-        let timers = ctx.trigger_timers_for(Duration::from_secs(REASSEMBLY_TIMEOUT_SECONDS + 1));
+        let timers = ctx.trigger_timers_for(
+            Duration::from_secs(REASSEMBLY_TIMEOUT_SECONDS + 1),
+            TimerHandler::handle_timer,
+        );
         assert!(timers == 171 || timers == 293); // ipv4 || ipv6
         assert_eq!(ctx.get_state_mut().cache_size, 0);
         validate_cache_size(ctx.get_state());
@@ -1406,13 +1409,13 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_2, 2, 3, ExpectedResult::NeedMore);
 
         // Advance time by 30s (should be at 30s now).
-        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(30)), 0);
+        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(30), TimerHandler::handle_timer), 0);
 
         // Process fragment #2 for packet #0
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_0, 2, 3, ExpectedResult::NeedMore);
 
         // Advance time by 10s (should be at 40s now).
-        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(10)), 0);
+        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(10), TimerHandler::handle_timer), 0);
 
         // Process fragment #1 for packet #2
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_2, 1, 3, ExpectedResult::NeedMore);
@@ -1421,7 +1424,7 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_0, 1, 3, ExpectedResult::ReadyReassemble);
 
         // Advance time by 10s (should be at 50s now).
-        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(10)), 0);
+        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(10), TimerHandler::handle_timer), 0);
 
         // Process fragment #0 for packet #1
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_1, 0, 3, ExpectedResult::NeedMore);
@@ -1431,7 +1434,7 @@ mod tests {
 
         // Advance time by 10s (should be at 60s now)), triggering the timer for
         // the reassembly of packet #1
-        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(10)), 1);
+        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(10), TimerHandler::handle_timer), 1);
 
         // Make sure no other times exist.
         assert_empty(ctx.timers().iter());

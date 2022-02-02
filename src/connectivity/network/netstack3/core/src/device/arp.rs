@@ -1146,7 +1146,7 @@ mod tests {
             );
 
             // Trigger the ARP request retry timer.
-            assert!(ctx.trigger_next_timer());
+            assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         }
 
         // We should have sent DEFAULT_ARP_REQUEST_MAX_TRIES requests total. We
@@ -1540,7 +1540,7 @@ mod tests {
         validate_single_entry_timer(&ctx, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, TEST_REMOTE_IPV4);
 
         // Trigger the entry expiration timer.
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
 
         // The right amount of time should have elapsed.
         assert_eq!(ctx.now(), DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD));
@@ -1568,7 +1568,13 @@ mod tests {
         insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // Let 5 seconds elapse.
-        assert_eq!(ctx.trigger_timers_until_instant(DummyInstant::from(Duration::from_secs(5))), 0);
+        assert_eq!(
+            ctx.trigger_timers_until_instant(
+                DummyInstant::from(Duration::from_secs(5)),
+                TimerHandler::handle_timer
+            ),
+            0
+        );
 
         // The entry should still be there.
         assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
@@ -1585,16 +1591,17 @@ mod tests {
 
         // Let the remaining time elapse to the first entry expiration timer.
         assert_eq!(
-            ctx.trigger_timers_until_instant(DummyInstant::from(
-                DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD
-            )),
+            ctx.trigger_timers_until_instant(
+                DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD),
+                TimerHandler::handle_timer
+            ),
             0
         );
         // The entry should still be there.
         assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
 
         // Trigger the entry expiration timer.
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         // The right amount of time should have elapsed.
         assert_eq!(
             ctx.now(),

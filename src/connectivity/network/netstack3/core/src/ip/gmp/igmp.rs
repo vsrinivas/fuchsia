@@ -671,7 +671,7 @@ mod tests {
         assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
 
         receive_igmp_query(&mut ctx, Duration::from_secs(10));
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
 
         // We should get two Igmpv2 reports - one for the unsolicited one for
         // the host to turn into Delay Member state and the other one for the
@@ -685,7 +685,7 @@ mod tests {
         assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.frames().len(), 1);
 
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         assert_eq!(ctx.frames().len(), 2);
 
         receive_igmp_query(&mut ctx, Duration::from_secs(10));
@@ -699,7 +699,7 @@ mod tests {
             _ => panic!("Wrong State!"),
         }
 
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         assert_eq!(ctx.frames().len(), 3);
         ensure_ttl_ihl_rtr(&ctx);
     }
@@ -731,7 +731,7 @@ mod tests {
         let instant2 = ctx.timers()[1].0.clone();
         assert_eq!(instant1, instant2);
 
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         // After the first timer, we send out our V1 report.
         assert_eq!(ctx.frames().len(), 2);
         // The last frame being sent should be a V1 report.
@@ -739,7 +739,7 @@ mod tests {
         // 34 and 0x12 are hacky but they can quickly tell it is a V1 report.
         assert_eq!(frame[24], 0x12);
 
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         // After the second timer, we should reset our flag for v1 routers.
         let IgmpGroupState(group_state) =
             ctx.get_state_with(DummyLinkDeviceId).get(&GROUP_ADDR).unwrap();
@@ -749,7 +749,7 @@ mod tests {
         }
 
         receive_igmp_query(&mut ctx, Duration::from_secs(10));
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         assert_eq!(ctx.frames().len(), 3);
         // Now we should get V2 report
         assert_eq!(ctx.frames().last().unwrap().1[24], 0x16);
@@ -773,7 +773,7 @@ mod tests {
         let instant2 = ctx.timers()[0].0.clone();
         // Because of the message, our timer should be reset to a nearer future.
         assert!(instant2 <= instant1);
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         assert!(ctx.now() - start <= duration);
         assert_eq!(ctx.frames().len(), 2);
         // Make sure it is a V2 report.
@@ -788,7 +788,7 @@ mod tests {
         assert_eq!(ctx.timers().len(), 1);
         // The initial unsolicited report.
         assert_eq!(ctx.frames().len(), 1);
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         // The report after the delay.
         assert_eq!(ctx.frames().len(), 2);
         assert_eq!(ctx.gmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
@@ -835,14 +835,14 @@ mod tests {
         assert_eq!(ctx.timers().len(), 2);
         // The initial unsolicited report.
         assert_eq!(ctx.frames().len(), 2);
-        assert!(ctx.trigger_next_timer());
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         assert_eq!(ctx.frames().len(), 4);
         receive_igmp_general_query(&mut ctx, Duration::from_secs(10));
         // Two new timers should be there.
         assert_eq!(ctx.timers().len(), 2);
-        assert!(ctx.trigger_next_timer());
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         // Two new reports should be sent.
         assert_eq!(ctx.frames().len(), 6);
         ensure_ttl_ihl_rtr(&ctx);

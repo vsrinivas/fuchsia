@@ -624,6 +624,12 @@ pub(crate) mod testutil {
         }
     }
 
+    impl<Id> AsMut<DummyTimerCtx<Id>> for DummyTimerCtx<Id> {
+        fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
+            self
+        }
+    }
+
     impl<Id: Clone> DummyTimerCtx<Id> {
         /// Get an ordered list of all currently-scheduled timers.
         pub(crate) fn timers(&self) -> Vec<(DummyInstant, Id)> {
@@ -683,19 +689,17 @@ pub(crate) mod testutil {
         }
     }
 
-    pub(crate) trait DummyTimerCtxExt<Id>:
-        AsMut<DummyTimerCtx<Id>> + TimerHandler<Id> + Sized
-    {
-        /// Trigger the next timer, if any.
+    pub(crate) trait DummyTimerCtxExt<Id>: AsMut<DummyTimerCtx<Id>> + Sized {
+        /// Trigger the next timer, if any, by calling `f` on it.
         ///
         /// `trigger_next_timer` triggers the next timer, if any, and advances
         /// the internal clock to the timer's scheduled time. It returns whether
         /// a timer was triggered.
-        fn trigger_next_timer(&mut self) -> bool {
+        fn trigger_next_timer<F: FnMut(&mut Self, Id)>(&mut self, mut f: F) -> bool {
             match self.as_mut().timers.pop() {
                 Some(InstantAndData(t, id)) => {
                     self.as_mut().instant.time = t;
-                    self.handle_timer(id);
+                    f(self, id);
                     true
                 }
                 None => false,
@@ -703,14 +707,18 @@ pub(crate) mod testutil {
         }
 
         /// Skip current time forward until `instant`, triggering all timers
-        /// until then, inclusive.
+        /// until then, inclusive, by calling `f` on them.
         ///
         /// Returns the number of timers triggered.
         ///
         /// # Panics
         ///
         /// Panics if `instant` is in the past.
-        fn trigger_timers_until_instant(&mut self, instant: DummyInstant) -> usize {
+        fn trigger_timers_until_instant<F: FnMut(&mut Self, Id)>(
+            &mut self,
+            instant: DummyInstant,
+            mut f: F,
+        ) -> usize {
             assert!(instant > self.as_mut().now());
             let mut timers_fired = 0;
 
@@ -719,7 +727,7 @@ pub(crate) mod testutil {
                     break;
                 }
 
-                assert!(self.trigger_next_timer());
+                assert!(self.trigger_next_timer(&mut f));
                 timers_fired += 1;
             }
 
@@ -730,19 +738,23 @@ pub(crate) mod testutil {
         }
 
         /// Skip current time forward by `duration`, triggering all timers until
-        /// then, inclusive.
+        /// then, inclusive, by calling `f` on them.
         ///
         /// Returns the number of timers triggered.
-        fn trigger_timers_for(&mut self, duration: Duration) -> usize {
+        fn trigger_timers_for<F: FnMut(&mut Self, Id)>(
+            &mut self,
+            duration: Duration,
+            f: F,
+        ) -> usize {
             let instant = self.as_mut().now() + duration;
             // We know the call to `self.trigger_timers_until_instant` will not
             // panic because we provide an instant that is greater than or equal
             // to the current time.
-            self.trigger_timers_until_instant(instant)
+            self.trigger_timers_until_instant(instant, f)
         }
     }
 
-    impl<Id, T: AsMut<DummyTimerCtx<Id>> + TimerHandler<Id>> DummyTimerCtxExt<Id> for T {}
+    impl<Id, T: AsMut<DummyTimerCtx<Id>>> DummyTimerCtxExt<Id> for T {}
 
     /// A dummy [`FrameContext`].
     pub struct DummyFrameCtx<Meta> {
@@ -1348,7 +1360,7 @@ pub(crate) mod testutil {
 
             // When no timers are installed, `trigger_next_timer` should return
             // `false`.
-            assert!(!ctx.trigger_next_timer());
+            assert!(!ctx.trigger_next_timer(TimerHandler::handle_timer));
             assert_eq!(ctx.get_ref().as_slice(), []);
 
             const ONE_SEC: Duration = Duration::from_secs(1);
@@ -1365,7 +1377,7 @@ pub(crate) mod testutil {
             // Timer with id `0` scheduled to execute at `ONE_SEC_INSTANT`.
             assert_eq!(ctx.scheduled_instant(0).unwrap(), ONE_SEC_INSTANT);
 
-            assert!(ctx.trigger_next_timer());
+            assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
             assert_eq!(ctx.get_ref().as_slice(), [(0, ONE_SEC_INSTANT)]);
 
             // After the timer fires, it should not still be scheduled at some
@@ -1378,14 +1390,14 @@ pub(crate) mod testutil {
             // Once it's been triggered, it should be canceled and not
             // triggerable again.
             ctx = Default::default();
-            assert!(!ctx.trigger_next_timer());
+            assert!(!ctx.trigger_next_timer(TimerHandler::handle_timer));
             assert_eq!(ctx.get_ref().as_slice(), []);
 
             // If we schedule a timer but then cancel it, it shouldn't fire.
             ctx = Default::default();
             assert_eq!(ctx.schedule_timer(ONE_SEC, 0), None);
             assert_eq!(ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
-            assert!(!ctx.trigger_next_timer());
+            assert!(!ctx.trigger_next_timer(TimerHandler::handle_timer));
             assert_eq!(ctx.get_ref().as_slice(), []);
 
             // If we schedule a timer but then schedule the same ID again, the
@@ -1401,7 +1413,10 @@ pub(crate) mod testutil {
             assert_eq!(ctx.schedule_timer(Duration::from_secs(0), 0), None,);
             assert_eq!(ctx.schedule_timer(Duration::from_secs(1), 1), None,);
             assert_eq!(ctx.schedule_timer(Duration::from_secs(2), 2), None,);
-            assert_eq!(ctx.trigger_timers_until_instant(ONE_SEC_INSTANT), 2);
+            assert_eq!(
+                ctx.trigger_timers_until_instant(ONE_SEC_INSTANT, TimerHandler::handle_timer),
+                2
+            );
 
             // The first two timers should have fired.
             assert_eq!(

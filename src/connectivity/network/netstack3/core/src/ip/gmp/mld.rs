@@ -627,7 +627,7 @@ mod tests {
         assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
 
         receive_mld_query(&mut ctx, Duration::from_secs(10), GROUP_ADDR);
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
 
         // We should get two MLD reports - one for the unsolicited one for the
         // host to turn into Delay Member state and the other one for the timer
@@ -651,7 +651,7 @@ mod tests {
         // The query says that it wants to hear from us immediately.
         assert_eq!(ctx.frames().len(), 2);
         // There should be no timers set.
-        assert!(!ctx.trigger_next_timer());
+        assert!(!ctx.trigger_next_timer(TimerHandler::handle_timer));
         // The frames are all reports.
         for (_, frame) in ctx.frames() {
             ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
@@ -665,7 +665,7 @@ mod tests {
         assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.frames().len(), 1);
 
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         assert_eq!(ctx.frames().len(), 2);
 
         receive_mld_query(&mut ctx, Duration::from_secs(10), GROUP_ADDR);
@@ -679,7 +679,7 @@ mod tests {
             _ => panic!("Wrong State!"),
         }
 
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         assert_eq!(ctx.frames().len(), 3);
         // The frames are all reports.
         for (_, frame) in ctx.frames() {
@@ -694,7 +694,7 @@ mod tests {
         assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.frames().len(), 1);
 
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         assert_eq!(ctx.frames().len(), 2);
 
         receive_mld_query(&mut ctx, Duration::from_secs(0), GROUP_ADDR);
@@ -709,7 +709,7 @@ mod tests {
         }
 
         // No timers!
-        assert!(!ctx.trigger_next_timer());
+        assert!(!ctx.trigger_next_timer(TimerHandler::handle_timer));
         assert_eq!(ctx.frames().len(), 3);
         // The frames are all reports.
         for (_, frame) in ctx.frames() {
@@ -736,7 +736,7 @@ mod tests {
         let instant2 = ctx.timers()[0].0.clone();
         // This new timer should be sooner.
         assert!(instant2 <= instant1);
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         assert!(ctx.now() - start <= duration);
         assert_eq!(ctx.frames().len(), 2);
         // The frames are all reports.
@@ -753,7 +753,7 @@ mod tests {
         assert_eq!(ctx.timers().len(), 1);
         // The initial unsolicited report.
         assert_eq!(ctx.frames().len(), 1);
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         // The report after the delay.
         assert_eq!(ctx.frames().len(), 2);
         assert_eq!(ctx.gmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
@@ -801,7 +801,7 @@ mod tests {
         let mut ctx = DummyCtx::default();
         ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
         assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert!(ctx.trigger_next_timer());
+        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
         for (_, frame) in ctx.frames() {
             ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
             ensure_slice_addr(&frame, 8, 24, MY_MAC.to_ipv6_link_local().addr().get());
