@@ -117,7 +117,24 @@ class EventRing {
   TRBPromise WaitForPortStatusChange(uint8_t port_id);
   TRBPromise LinkUp(uint8_t port_id);
   void CallPortStatusChanged(fbl::RefPtr<PortStatusChangeState> state);
-  Control AdvanceErdp(bool start);
+  // Advance ERDP according to Section 4.9.4.1. Evaluates the validity of the current TRB and the
+  // direction of the next TRB. Possible directions:
+  //   - If not at the end of the segment, next TRB is consecutive in address.
+  //   - If at the end of a segment
+  //       - When there are no new segments, next TRB is the beginning of the next segment..
+  //       - When there are new segments, but we're not about to enter into the new segment, next
+  //         TRB is still the beginning of the next segment.
+  //       - When there are new segments and we are about to enter into the new segment, checks if
+  //         the new segment is being used.
+  //           - If the new segment is being used, go to the beginning of the new segment.
+  //           - If the new segment is not being used yet, check if the event ring is empty.
+  //              - If the event ring is not empty, go to the beginning of the 0th segment (because
+  //                the new segment is always the last segment)
+  //              - If the event ring is empty, reevaluate next time (by setting the reevaluate_ bit
+  //              to true). In this case ERDP points not to the next TRB to be evaluated (as we
+  //              usually expect), but the current TRB already evaluated.
+  // Returns the next TRB pointed to by ERDP.
+  Control AdvanceErdp();
   // USB 3.0 device attach
   void Usb3DeviceAttach(uint16_t port_id);
   // USB 2.0 device attach
@@ -176,6 +193,7 @@ class EventRing {
   uint64_t* dcbaa_;
 
   uint16_t interrupter_;
+  bool reevaluate_ = false;
 };
 }  // namespace usb_xhci
 
