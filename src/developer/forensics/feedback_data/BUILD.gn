@@ -166,12 +166,10 @@ source_set("data_register") {
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/lib/fxl",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
     "//third_party/rapidjson",
   ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("default_annotations") {
