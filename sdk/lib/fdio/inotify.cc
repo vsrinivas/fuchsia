@@ -70,6 +70,17 @@ zx_status_t inotify_close(zxio_t* io) {
   return ZX_OK;
 }
 
+zx_status_t ionotify_get_read_buffer_available(zxio_t* io, size_t* out_available) {
+  zx_info_socket_t info = {};
+  zx_status_t status =
+      zxio_to_inotify(io)->client.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_available = info.rx_buf_available;
+  return ZX_OK;
+}
+
 zx_status_t inotify_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
                           zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
@@ -119,6 +130,7 @@ static void inotify_wait_end(zxio_t* io, zx_signals_t zx_signals,
 constexpr zxio_ops_t inotify_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = inotify_close;
+  ops.get_read_buffer_available = ionotify_get_read_buffer_available;
   ops.readv = inotify_readv;
   ops.wait_begin = inotify_wait_begin;
   ops.wait_end = inotify_wait_end;

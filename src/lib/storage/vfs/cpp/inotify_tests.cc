@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <sys/inotify.h>
+#include <sys/ioctl.h>
 
 #include "src/lib/storage/vfs/cpp/inotify_test_base.h"
 
@@ -25,15 +26,29 @@ TEST_F(VfsInotifyTest, BasicOpenClose) {
   int wd = inotify_add_watch(inotify_fd.get(), "/fshost-inotify-tmp/a/a.txt", IN_OPEN | IN_CLOSE);
   ASSERT_GE(wd, 0);
 
+  // Check that no event is available
+  unsigned int available_bytes;
+  ASSERT_EQ(ioctl(inotify_fd.get(), FIONREAD, &available_bytes), 0, "%s", strerror(errno));
+  ASSERT_EQ(0, available_bytes);
+
   // Try to open the file, with the filter.
   int fd = open("/fshost-inotify-tmp/a/a.txt", O_RDWR);
   ASSERT_GE(fd, 0);
 
-  // Read the open event.
   struct inotify_event event;
+
+  // Retrieve the amount of data available to read.
+  ASSERT_EQ(ioctl(inotify_fd.get(), FIONREAD, &available_bytes), 0, "%s", strerror(errno));
+  ASSERT_GE(available_bytes, sizeof(event));
+
+  // Read the open event.
   ASSERT_EQ(read(inotify_fd.get(), &event, sizeof(event)), sizeof(event), "%s", strerror(errno));
   ASSERT_EQ(event.mask, IN_OPEN);
   ASSERT_EQ(event.wd, wd);
+
+  // Check that no more event is available
+  ASSERT_EQ(ioctl(inotify_fd.get(), FIONREAD, &available_bytes), 0, "%s", strerror(errno));
+  ASSERT_EQ(0, available_bytes);
 
   // Close the file
   ASSERT_EQ(close(fd), 0);
