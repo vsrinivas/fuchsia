@@ -7,6 +7,11 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   output_name = "guest-rs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+  ]
   sources = [ "src/main.rs" ]
 }
 
