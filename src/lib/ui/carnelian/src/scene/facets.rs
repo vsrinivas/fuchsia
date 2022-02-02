@@ -5,7 +5,10 @@
 use super::{IdGenerator, LayerGroup};
 use crate::{
     color::Color,
-    drawing::{linebreak_text, measure_text_size, path_for_rectangle, FontFace, GlyphMap, Text},
+    drawing::{
+        linebreak_text, measure_text_size, path_for_rectangle, path_for_rounded_rectangle,
+        FontFace, GlyphMap, Text,
+    },
     render::{
         rive::{load_rive, RenderCache as RiveRenderCache},
         BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Shed, Style,
@@ -64,6 +67,12 @@ pub struct SetSizeMessage {
     pub size: Size,
 }
 
+/// Message used to set the corner radius of a facet
+pub struct SetCornerRadiusMessage {
+    /// corner radius to use, None for sharp-cornered
+    pub corner_radius: Option<Coord>,
+}
+
 /// The Facet trait is used to create composable units of rendering, sizing and
 /// message handling.
 pub trait Facet {
@@ -95,13 +104,19 @@ pub type FacetPtr = Box<dyn Facet>;
 pub struct RectangleFacet {
     size: Size,
     color: Color,
+    corner_radius: Option<Coord>,
     raster: Option<Raster>,
 }
 
 impl RectangleFacet {
     /// Create a rectangle facet of size and color.
     pub fn new(size: Size, color: Color) -> FacetPtr {
-        Box::new(Self { size, color, raster: None })
+        Box::new(Self { size, color, corner_radius: None, raster: None })
+    }
+
+    /// Create a rounded rectangle facet of size, corner radius and color.
+    pub fn new_rounded(size: Size, corner: Coord, color: Color) -> FacetPtr {
+        Box::new(Self { size, color, corner_radius: Some(corner), raster: None })
     }
 
     /// Create a rectangle describing a horizontal line of width, thickness and color.
@@ -123,14 +138,18 @@ impl Facet for RectangleFacet {
         render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        let line_raster = self.raster.take().unwrap_or_else(|| {
-            let line_path = path_for_rectangle(&Rect::from_size(self.size), render_context);
+        let rectangle_raster = self.raster.take().unwrap_or_else(|| {
+            let rectangle_path = if let Some(corner) = self.corner_radius.as_ref() {
+                path_for_rounded_rectangle(&Rect::from_size(self.size), *corner, render_context)
+            } else {
+                path_for_rectangle(&Rect::from_size(self.size), render_context)
+            };
             let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-            raster_builder.add(&line_path, None);
+            raster_builder.add(&rectangle_path, None);
             raster_builder.build()
         });
-        let raster = line_raster.clone();
-        self.raster = Some(line_raster);
+        let raster = rectangle_raster.clone();
+        self.raster = Some(rectangle_raster);
         layer_group.insert(
             SceneOrder::default(),
             Layer {
@@ -151,6 +170,9 @@ impl Facet for RectangleFacet {
             self.color = set_color.color;
         } else if let Some(set_size) = msg.downcast_ref::<SetSizeMessage>() {
             self.size = set_size.size;
+            self.raster = None;
+        } else if let Some(set_corner) = msg.downcast_ref::<SetCornerRadiusMessage>() {
+            self.corner_radius = set_corner.corner_radius;
             self.raster = None;
         }
     }

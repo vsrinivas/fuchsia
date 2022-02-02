@@ -704,6 +704,11 @@ impl SceneBuilder {
         self.push_facet(RectangleFacet::new(size, color), Point::zero(), None)
     }
 
+    /// Add a rounded rectangle facet of size, corner radius and color to the scene.
+    pub fn rounded_rectangle(&mut self, size: Size, corner: Coord, color: Color) -> FacetId {
+        self.push_facet(RectangleFacet::new_rounded(size, corner, color), Point::zero(), None)
+    }
+
     /// Add a spacing facet of size.
     pub fn space(&mut self, size: Size) -> FacetId {
         self.push_facet(Box::new(SpacingFacet::new(size)), Point::zero(), None)
