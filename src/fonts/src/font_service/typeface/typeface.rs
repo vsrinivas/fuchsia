@@ -292,6 +292,8 @@ mod tests {
             style: v2::Style { slant: Slant::Upright, weight: WEIGHT_NORMAL, width: Width::Normal },
             languages: vec![],
             code_points: CharSet::new(vec![]),
+            postscript_name: None,
+            full_name: None,
         };
 
         assert!(Typeface::new(AssetId(0), manifest_typeface, None).is_err())

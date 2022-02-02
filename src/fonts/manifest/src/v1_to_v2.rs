@@ -117,6 +117,8 @@ fn font_to_typeface(font: &FontV1) -> v2::Typeface {
         languages: font.languages.clone(),
         style: v2::Style { slant: font.slant, weight: font.weight, width: font.width },
         code_points: font.code_points.clone(),
+        postscript_name: None,
+        full_name: None,
     }
 }
 
@@ -220,6 +222,8 @@ mod tests {
                                 code_points: CharSet::new(vec![
                                     0x1, 0x2, 0x3, 0x7, 0x8, 0x9, 0x100,
                                 ]),
+                                postscript_name: None,
+                                full_name: None,
                             }],
                         },
                         v2::Asset {
@@ -238,6 +242,8 @@ mod tests {
                                 code_points: CharSet::new(vec![
                                     0x11, 0x12, 0x13, 0x17, 0x18, 0x19, 0x100,
                                 ]),
+                                postscript_name: None,
+                                full_name: None,
                             }],
                         },
                     ],
@@ -265,6 +271,8 @@ mod tests {
                                 code_points: CharSet::new(vec![
                                     0x1, 0x2, 0x3, 0x7, 0x8, 0x9, 0x100,
                                 ]),
+                                postscript_name: None,
+                                full_name: None,
                             },
                             v2::Typeface {
                                 index: 1,
@@ -277,6 +285,8 @@ mod tests {
                                 code_points: CharSet::new(vec![
                                     0x11, 0x12, 0x13, 0x17, 0x18, 0x19, 0x100,
                                 ]),
+                                postscript_name: None,
+                                full_name: None,
                             },
                         ],
                     }],

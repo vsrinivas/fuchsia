@@ -26,6 +26,8 @@ pub fn make_fake_typeface(
     languages: &[&str],
     char_set: &[u32],
     generic_family: impl Into<Option<GenericFontFamily>>,
+    postscript_name: impl Into<Option<String>>,
+    full_name: impl Into<Option<String>>,
 ) -> Typeface {
     // Prevent error if char_set is empty
     let char_set = if char_set.is_empty() { &[0] } else { char_set };
@@ -36,6 +38,8 @@ pub fn make_fake_typeface(
             style: v2::Style { slant, weight, width },
             languages: languages.iter().map(|s| s.to_string()).collect(),
             code_points: CharSet::new(char_set.to_vec()),
+            postscript_name: postscript_name.into(),
+            full_name: full_name.into(),
         },
         generic_family.into(),
     )
@@ -44,7 +48,7 @@ pub fn make_fake_typeface(
 
 /// Makes a `Typeface` where only the style is specified.
 pub fn make_fake_typeface_style(width: Width, slant: Slant, weight: u16) -> Typeface {
-    make_fake_typeface(width, slant, weight, &[], &[], None)
+    make_fake_typeface(width, slant, weight, &[], &[], None, None, None)
 }
 
 /// Makes a `TypefaceRequest` with the given properties (and defaults for the rest).

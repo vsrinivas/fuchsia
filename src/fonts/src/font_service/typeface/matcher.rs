@@ -261,6 +261,8 @@ mod tests {
             &vec![],
             &vec![],
             GenericFontFamily::Serif,
+            None,
+            None,
         );
 
         let fantasy_typeface = make_fake_typeface(
@@ -270,6 +272,8 @@ mod tests {
             &vec![],
             &vec![],
             GenericFontFamily::Fantasy,
+            None,
+            None,
         );
 
         let request = make_typeface_request(

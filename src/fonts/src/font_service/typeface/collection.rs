@@ -147,7 +147,6 @@ mod tests {
             GenericFontFamily, Slant, TypefaceRequestFlags, Width, WEIGHT_LIGHT, WEIGHT_NORMAL,
             WEIGHT_SEMI_BOLD, WEIGHT_THIN,
         },
-        manifest::v2,
     };
 
     fn make_fake_typeface_collection(mut faces: Vec<Typeface>) -> Collection {
@@ -159,29 +158,6 @@ mod tests {
         }
 
         builder.build()
-    }
-
-    fn make_fake_typeface(
-        width: Width,
-        slant: Slant,
-        weight: u16,
-        languages: &[&str],
-        char_set: &[u32],
-        generic_family: Option<GenericFontFamily>,
-    ) -> Typeface {
-        // Prevent error if char_set is empty
-        let char_set = if char_set.is_empty() { &[0] } else { char_set };
-        Typeface::new(
-            AssetId(0),
-            v2::Typeface {
-                index: 0,
-                style: v2::Style { slant, weight, width },
-                languages: languages.iter().map(|s| s.to_string()).collect(),
-                code_points: CharSet::new(char_set.to_vec()),
-            },
-            generic_family,
-        )
-        .unwrap() // Safe because char_set is not empty
     }
 
     fn request_typeface<'a, 'b>(
@@ -281,7 +257,16 @@ mod tests {
     }
 
     fn make_fake_typeface_with_languages(languages: &[&str]) -> Typeface {
-        make_fake_typeface(Width::Normal, Slant::Upright, WEIGHT_NORMAL, languages, &[], None)
+        make_fake_typeface(
+            Width::Normal,
+            Slant::Upright,
+            WEIGHT_NORMAL,
+            languages,
+            &[],
+            None,
+            None,
+            None,
+        )
     }
 
     fn request_lang<'a, 'b>(
@@ -338,6 +323,8 @@ mod tests {
             &[],
             &[],
             Some(fallback_family),
+            None,
+            None,
         )
     }
 

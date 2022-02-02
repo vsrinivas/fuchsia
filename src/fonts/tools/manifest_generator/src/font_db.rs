@@ -27,6 +27,7 @@ use {
 };
 
 type AssetKey = (FamilyIndex, AssetInFamilyIndex);
+type TypefaceKey = (String, TypefaceInAssetIndex);
 
 /// Collection of font metadata used for generating a font manifest for a particular target.
 ///
@@ -44,7 +45,7 @@ pub struct FontDb {
     family_name_to_family: BTreeMap<String, FamilyIndex>,
     asset_name_to_assets: BTreeMap<String, BTreeSet<AssetKey>>,
     asset_name_to_pkg_url: BTreeMap<String, PkgUrl>,
-    typeface_to_char_set: BTreeMap<(String, TypefaceInAssetIndex), CharSet>,
+    typeface_to_metadata: BTreeMap<TypefaceKey, TypefaceMetatada>,
 }
 
 impl FontDb {
@@ -60,7 +61,7 @@ impl FontDb {
         let mut family_name_to_family = BTreeMap::new();
         let mut asset_name_to_assets = BTreeMap::new();
         let mut asset_name_to_pkg_url = BTreeMap::new();
-        let typeface_to_char_set = BTreeMap::new();
+        let typeface_to_metadata = BTreeMap::new();
 
         let mut errors: Vec<FontDbError> = vec![];
 
@@ -112,7 +113,7 @@ impl FontDb {
             family_name_to_family,
             asset_name_to_assets,
             asset_name_to_pkg_url,
-            typeface_to_char_set,
+            typeface_to_metadata,
         };
 
         let mut fallback_typeface_counts: BTreeMap<v2::TypefaceId, usize> = BTreeMap::new();
@@ -137,13 +138,18 @@ impl FontDb {
         }
 
         let font_infos = Self::load_font_infos(&db, &font_pkgs, font_info_loader, font_dir);
-
         match font_infos {
             Ok(font_infos) => {
                 for (request, font_info) in font_infos {
-                    db.typeface_to_char_set.insert(
+                    // load_font_infos already asserted that postscript_name is populated
+                    let postscript_name = font_info.postscript_name.expect("postscript_name");
+                    db.typeface_to_metadata.insert(
                         (request.asset_name(), TypefaceInAssetIndex(request.index)),
-                        font_info.char_set,
+                        TypefaceMetatada {
+                            code_points: font_info.char_set,
+                            postscript_name: postscript_name.clone(),
+                            full_name: font_info.full_name,
+                        },
                     );
                 }
             }
@@ -182,10 +188,15 @@ impl FontDb {
     }
 
     /// The asset must be in the `FontDb` or this method will panic.
-    pub fn get_code_points(&self, asset: &fc::Asset, index: TypefaceInAssetIndex) -> &CharSet {
+    pub fn get_typeface_metadata(
+        &self,
+        asset: &fc::Asset,
+        index: TypefaceInAssetIndex,
+    ) -> &TypefaceMetatada {
         // Alas, no sane way to transpose between `(&str, &x)` and `&(String, x)`.
         let key = (asset.file_name.to_owned(), index);
-        self.typeface_to_char_set
+        &self
+            .typeface_to_metadata
             .get(&key)
             .ok_or_else(|| format_err!("No code points for {:?}", &key))
             .unwrap()
@@ -327,7 +338,13 @@ impl FontDb {
                 let source = FontAssetSource::FilePath(request.path.to_str().unwrap().to_owned());
                 let font_info = font_info_loader.load_font_info(source, request.index);
                 match font_info {
-                    Ok(font_info) => Ok((request, font_info)),
+                    Ok(font_info) => {
+                        if font_info.postscript_name.is_some() {
+                            Ok((request, font_info))
+                        } else {
+                            Err(FontDbError::FontInfoMissingPostscriptName { request })
+                        }
+                    }
                     Err(error) => Err(FontDbError::FontInfo { request, error }),
                 }
             })
@@ -429,6 +446,9 @@ pub enum FontDbError {
 
     #[error("Failed to load font info for {:?}: {:?}", request, error)]
     FontInfo { request: FontInfoRequest, error: Error },
+
+    #[error("Font info for {:?} is missing postscript_name", request)]
+    FontInfoMissingPostscriptName { request: FontInfoRequest },
 }
 
 /// Metadata needed for [`FontInfoLoader::load_font_info`].
@@ -444,6 +464,15 @@ impl FontInfoRequest {
     fn asset_name(&self) -> String {
         self.path.file_name().and_then(|os_str| os_str.to_str()).unwrap().to_owned()
     }
+}
+
+/// Metadata about a typeface, extracted from the actual typeface file and converted from
+/// `FontInfo`.
+#[derive(Debug)]
+pub struct TypefaceMetatada {
+    pub code_points: CharSet,
+    pub postscript_name: String,
+    pub full_name: Option<String>,
 }
 
 #[cfg(test)]
@@ -560,6 +589,46 @@ mod tests {
         assert!(result.is_err());
         let errors: Vec<FontDbError> = result.unwrap_err().into();
         assert_matches!(errors[0], FontDbError::UnknownFallbackChainEntry { typeface_id: _ });
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_missing_postscript_name() -> Result<(), Error> {
+        /// Omits Postscript name
+        struct NoPostscriptNameFontInfoLoader {}
+        impl FontInfoLoader for NoPostscriptNameFontInfoLoader {
+            fn load_font_info<S, E>(&self, _source: S, index: u32) -> Result<FontInfo, Error>
+            where
+                S: std::convert::TryInto<FontAssetSource, Error = E>,
+                E: Sync + Send + Into<Error>,
+            {
+                Ok(FontInfo {
+                    char_set: CharSet::new(vec![0x1, 0x2]),
+                    postscript_name: None,
+                    full_name: Some(format!("Some Full Name {}", index)),
+                })
+            }
+        }
+
+        let (font_catalog, font_pkgs, font_sets) = make_font_db_contents();
+        let product_config = ProductConfig {
+            fallback_chain: vec![TypefaceId::new("AlphaSans-Regular.ttc", 0)],
+            settings: Settings { cache_size_bytes: None },
+        };
+
+        let result = FontDb::new(
+            font_catalog,
+            font_pkgs,
+            font_sets,
+            product_config,
+            NoPostscriptNameFontInfoLoader {},
+            "foo/bar",
+        );
+
+        assert_matches!(result, Err(_));
+        let errors: Vec<FontDbError> = result.unwrap_err().into();
+        assert_matches!(errors[0], FontDbError::FontInfoMissingPostscriptName { .. });
 
         Ok(())
     }

@@ -43,7 +43,12 @@ impl FontInfoLoader for FakeFontInfoLoaderImpl {
         let chars: Vec<u32> = chars.into_iter().collect();
 
         let char_set = CharSet::new(chars);
-        let postscript_name = file_name.split('.').next().unwrap_or("Postscript-Name").to_string();
+        let mut postscript_name =
+            file_name.split('.').next().unwrap_or("Postscript-Name").to_string();
+        // Postscript names must be unique
+        if index > 0 {
+            postscript_name.push_str(format!("-{}", index).as_str());
+        }
         let full_name = postscript_name.replace("-", " ");
 
         Ok(FontInfo {
@@ -68,8 +73,8 @@ mod tests {
         let actual = loader.load_font_info(source, 0x999)?;
         let expected = FontInfo {
             char_set: char_collect!('a'..='z', '0'..='9', '-', '.', '\u{999}').into(),
-            postscript_name: Some("abcdefghijklmnopqrstuvwxyz-0123456789".to_string()),
-            full_name: Some("abcdefghijklmnopqrstuvwxyz 0123456789".to_string()),
+            postscript_name: Some("abcdefghijklmnopqrstuvwxyz-0123456789-2457".to_string()),
+            full_name: Some("abcdefghijklmnopqrstuvwxyz 0123456789 2457".to_string()),
         };
 
         assert_eq!(actual, expected);

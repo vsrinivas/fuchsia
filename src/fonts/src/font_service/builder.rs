@@ -454,6 +454,8 @@ mod tests {
                                     width: Width::Normal,
                                 },
                                 code_points: CharSet::new(vec![0x1, 0x2, 0x3]),
+                                postscript_name: Some("Alpha-Regular".to_string()),
+                                full_name: Some("Alpha Regular".to_string()),
                             }],
                         },
                         v2::Asset {
@@ -470,6 +472,8 @@ mod tests {
                                     width: Width::Normal,
                                 },
                                 code_points: CharSet::new(vec![0x1, 0x2, 0x3]),
+                                postscript_name: Some("Alpha-Bold".to_string()),
+                                full_name: Some("Alpha Bold".to_string()),
                             }],
                         },
                     ],
@@ -511,6 +515,8 @@ mod tests {
                                 width: Width::Expanded, // Note difference
                             },
                             code_points: CharSet::new(vec![0x1, 0x2, 0x3]),
+                            postscript_name: Some("Alpha-Regular".to_string()),
+                            full_name: Some("Alpha Regular".to_string()),
                         }],
                     }],
                 }],

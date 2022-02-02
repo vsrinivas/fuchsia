@@ -282,7 +282,7 @@ pub struct PackageLocator {
 }
 
 /// Describes a single typeface within a font file
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct Typeface {
     /// Index of the typeface in the file. If the file only contains a single typeface, this will
     /// always be `0`.
@@ -302,6 +302,20 @@ pub struct Typeface {
     /// List of Unicode code points supported by the typeface.
     #[serde(with = "code_points_serde")]
     pub code_points: CharSet,
+
+    /// The typeface's unique "Postscript name".
+    ///
+    /// This may be absent in manifests converted from v1, in which case it will need to be filled
+    /// in when the font server starts up.
+    #[serde(default)]
+    pub postscript_name: Option<String>,
+
+    /// The typeface's unique "full name".
+    ///
+    /// This may be absent in manifests converted from v1, in which case it may be filled in when
+    /// the font server starts up.
+    #[serde(default)]
+    pub full_name: Option<String>,
 }
 
 impl Typeface {
@@ -381,6 +395,16 @@ pub struct Style {
     pub weight: u16,
     #[serde(default = "Style::default_width", with = "WidthDef")]
     pub width: Width,
+}
+
+impl Default for Style {
+    fn default() -> Self {
+        Self {
+            slant: Style::default_slant(),
+            weight: Style::default_weight(),
+            width: Style::default_width(),
+        }
+    }
 }
 
 impl Style {
