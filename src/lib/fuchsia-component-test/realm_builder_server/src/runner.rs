@@ -5,19 +5,15 @@
 use {
     anyhow::{format_err, Context, Error},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsysv1,
-    fuchsia_async as fasync,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_sys as fsysv1, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     futures::lock::Mutex,
     futures::{future::BoxFuture, TryStreamExt},
     rand::{self, Rng},
     std::{collections::HashMap, sync::Arc},
     tracing::*,
-    vfs::{
-        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-        file::vmo::asynchronous::read_only_static, path::Path as VfsPath, pseudo_directory,
-    },
+    vfs::execution_scope::ExecutionScope,
 };
 
 pub const RUNNER_NAME: &'static str = "realm_builder";
@@ -35,7 +31,6 @@ impl From<LocalComponentId> for String {
 
 #[derive(Clone)]
 pub enum ComponentImplementer {
-    ControlHandle(ftest::RealmBuilderControlHandle),
     RunnerProxy(Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>),
     Builtin(
         Arc<
@@ -67,23 +62,6 @@ impl Runner {
         self: &Arc<Self>,
     ) -> HashMap<String, ComponentImplementer> {
         self.local_component_proxies.lock().await.clone()
-    }
-
-    pub async fn register_mock(
-        self: &Arc<Self>,
-        control_handle: ftest::RealmBuilderControlHandle,
-    ) -> LocalComponentId {
-        let mut next_local_component_id_guard = self.next_local_component_id.lock().await;
-        let mut local_component_proxies_guard = self.local_component_proxies.lock().await;
-
-        let local_component_id = format!("{}", *next_local_component_id_guard);
-        *next_local_component_id_guard += 1;
-
-        local_component_proxies_guard.insert(
-            local_component_id.clone(),
-            ComponentImplementer::ControlHandle(control_handle),
-        );
-        LocalComponentId(local_component_id)
     }
 
     pub async fn register_local_component(
@@ -178,23 +156,6 @@ impl Runner {
             .clone();
 
         match local_component_control_handle_or_runner_proxy {
-            ComponentImplementer::ControlHandle(mock_control_handle) => {
-                mock_control_handle.send_on_mock_run_request(
-                    &local_component_id,
-                    ftest::MockComponentStartInfo {
-                        ns: start_info.ns,
-                        outgoing_dir: start_info.outgoing_dir,
-                        ..ftest::MockComponentStartInfo::EMPTY
-                    },
-                )?;
-
-                self.execution_scope.spawn(run_mock_controller(
-                    controller.into_stream()?,
-                    local_component_id,
-                    start_info.runtime_dir.unwrap(),
-                    mock_control_handle.clone(),
-                ));
-            }
             ComponentImplementer::RunnerProxy(runner_proxy_placeholder) => {
                 let runner_proxy_placeholder_guard = runner_proxy_placeholder.lock().await;
                 if runner_proxy_placeholder_guard.is_none() {
@@ -288,43 +249,6 @@ fn remove_local_component_id(dict: &mut fdata::Dictionary) {
             .filter(|entry| entry.key.as_str() != LOCAL_COMPONENT_ID_KEY)
             .collect();
     }
-}
-
-async fn run_mock_controller(
-    mut stream: fcrunner::ComponentControllerRequestStream,
-    mock_id: String,
-    runtime_dir_server_end: ServerEnd<fio::DirectoryMarker>,
-    control_handle: ftest::RealmBuilderControlHandle,
-) {
-    let execution_scope = ExecutionScope::new();
-    let runtime_dir = pseudo_directory!(
-        "mock_id" => read_only_static(mock_id.clone().into_bytes()),
-    );
-    runtime_dir.open(
-        execution_scope.clone(),
-        fio::OPEN_RIGHT_READABLE,
-        fio::MODE_TYPE_DIRECTORY,
-        VfsPath::dot(),
-        runtime_dir_server_end.into_channel().into(),
-    );
-
-    while let Some(req) =
-        stream.try_next().await.expect("invalid controller request from component manager")
-    {
-        match req {
-            fcrunner::ComponentControllerRequest::Stop { .. }
-            | fcrunner::ComponentControllerRequest::Kill { .. } => {
-                // We don't actually care much if this succeeds. If we can no longer successfully
-                // talk to the topology builder library then the test probably crashed, and the
-                // mock has thus stopped anyway.
-                let _ = control_handle.send_on_mock_stop_request(&mock_id);
-
-                break;
-            }
-        }
-    }
-
-    execution_scope.shutdown();
 }
 
 async fn run_builtin_controller(
