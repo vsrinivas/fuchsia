@@ -104,6 +104,5 @@ group("tests") {
     ":netstack3",
     ":netstack3-tests",
     "core:tests",
-    "tools",
   ]
 }
