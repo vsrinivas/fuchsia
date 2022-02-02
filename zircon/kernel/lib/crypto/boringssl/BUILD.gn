@@ -4,8 +4,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//third_party/boringssl/zircon.gni")
-
 source_set("boringssl") {
   visibility = [ "../*" ]
 
@@ -15,10 +13,11 @@ source_set("boringssl") {
     "//third_party/boringssl/src/include/openssl/sha.h",
   ]
   public_configs = [ ":config" ]
-  sources = [ "zircon-mem.c" ]
-  foreach(file, boringssl_zircon_kernel_sources) {
-    sources += [ "//third_party/boringssl/$file" ]
-  }
+  sources = [
+    "//third_party/boringssl/src/crypto/chacha/chacha.c",
+    "//third_party/boringssl/src/crypto/fipsmodule/sha/sha256.c",
+    "zircon-mem.c",
+  ]
 
   # Some boringssl code is not -Wconversion clean.
   configs += [ "//build/config:Wno-conversion" ]
@@ -38,10 +37,13 @@ config("config") {
     "OPENSSL_NO_THREADS_CORRUPT_MEMORY_AND_LEAK_SECRETS_IF_THREADED",
   ]
 
-  include_dirs = [ "." ]
-  foreach(dir, boringssl_zircon_include_dirs) {
-    include_dirs += [ "//third_party/boringssl/$dir" ]
-  }
+  # Zircon code that depends on BoringSSL should have a
+  # "#define BORINGSSL_NO_CXX" statement before any "#include <openssl/...>"
+  # statements to avoid pulling in C++ headers.
+  include_dirs = [
+    ".",
+    "//third_party/boringssl/src/include",
+  ]
 
   if (is_gcc) {
     # Some of the boringssl code plays fast and loose with array sizes in the
