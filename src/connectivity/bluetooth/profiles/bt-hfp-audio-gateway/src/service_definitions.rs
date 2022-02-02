@@ -83,7 +83,7 @@ pub fn audio_gateway(features: AudioGatewayFeatureSupport) -> bredr::ServiceDefi
             },
         ]),
         profile_descriptors: Some(vec![bredr::ProfileDescriptor {
-            profile_id: bredr::ServiceClassProfileIdentifier::HandsfreeAudioGateway,
+            profile_id: bredr::ServiceClassProfileIdentifier::Handsfree,
             major_version: PROFILE_MAJOR_VERSION,
             minor_version: PROFILE_MINOR_VERSION,
         }]),
