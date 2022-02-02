@@ -24,7 +24,7 @@ lazy_static::lazy_static! {
             raw_name: Some("MyNetwork".as_bytes().to_vec()),
             xpanid: Some([0, 1, 2, 3, 4, 5, 6, 7].to_vec()),
             net_type: Some(NET_TYPE_THREAD_1_X.to_string()),
-            channel: Some(22),
+            channel: Some(13),
             panid: Some(0x1234),
             ..Identity::EMPTY
         };
@@ -49,7 +49,7 @@ where
         TEST_HARNESS_SINGLETON_LOCK.lock().expect("TEST_HARNESS_SINGLETON_LOCK is poisoned");
 
     // Adjust our logging so that we don't get inundated with useless logs.
-    fuchsia_syslog::LOGGER.set_severity(fuchsia_syslog::levels::WARN);
+    fuchsia_syslog::set_severity(fuchsia_syslog::levels::WARN);
 
     let (sink, stream, ncp_task) = new_fake_spinel_pair();
 
@@ -164,6 +164,23 @@ async fn test_network_scan() {
         let network_scan_stream =
             driver.start_network_scan(&fidl_fuchsia_lowpan_device::NetworkScanParameters::EMPTY);
         assert_eq!(network_scan_stream.try_collect::<Vec<_>>().await.unwrap().len(), 3);
+    })
+    .await;
+}
+
+#[fasync::run(10, test)]
+#[ignore] // TODO: Re-enable once scan support is added to test RCP
+async fn test_joiner() {
+    use fidl_fuchsia_lowpan::JoinParams;
+    use fidl_fuchsia_lowpan::JoinerCommissioningParams;
+
+    test_harness(|driver| async move {
+        let join_stream =
+            driver.join_network(JoinParams::JoinerParameter(JoinerCommissioningParams {
+                pskd: Some("ABCDEFG".to_string()),
+                ..JoinerCommissioningParams::EMPTY
+            }));
+        join_stream.try_collect::<Vec<_>>().await.unwrap();
     })
     .await;
 }

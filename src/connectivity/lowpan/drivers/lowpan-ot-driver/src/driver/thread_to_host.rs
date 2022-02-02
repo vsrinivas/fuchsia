@@ -45,6 +45,7 @@ where
                 | ot::ChangedFlags::THREAD_PANID
                 | ot::ChangedFlags::THREAD_EXT_PANID
                 | ot::ChangedFlags::THREAD_ROLE
+                | ot::ChangedFlags::JOINER_STATE
                 | ot::ChangedFlags::ACTIVE_DATASET,
         ) {
             self.driver_state_change.trigger();

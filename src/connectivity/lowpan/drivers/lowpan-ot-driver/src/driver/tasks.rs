@@ -125,8 +125,7 @@ where
 
             // Exit criteria is when we are no longer active nor ready.
             // When this future terminates, we are no longer online.
-            let exit_criteria =
-                self.wait_for_state(|x| !x.connectivity_state.is_active_and_ready());
+            let exit_criteria = self.wait_for_state(|x| !x.is_active_and_ready());
 
             self.online_task()
                 .boxed()
@@ -145,6 +144,8 @@ where
                 .boxed()
                 .map_err(|x| x.context("online_task_cleanup"))
                 .await?;
+        } else if self.get_connectivity_state().is_commissioning() {
+            self.wait_for_state(|x| !x.is_commissioning()).await;
         } else {
             fx_log_info!("main_task: Initialized, but either not active or not ready.");
 
@@ -206,7 +207,7 @@ where
         {
             let mut driver_state = self.driver_state.lock();
 
-            if driver_state.get_current_connectivity_state() == ConnectivityState::Attaching {
+            if driver_state.updated_connectivity_state() == ConnectivityState::Attaching {
                 // We are still attaching. Assume we are isolated.
                 driver_state.connectivity_state = ConnectivityState::Isolated;
 

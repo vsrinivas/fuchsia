@@ -14,6 +14,7 @@ mod convert;
 mod driver_state;
 mod error_adapter;
 mod host_to_thread;
+mod joiner;
 mod tasks;
 mod thread_to_host;
 
@@ -88,5 +89,22 @@ impl<OT, NI> OtDriver<OT, NI> {
 
     pub fn is_net_type_supported(&self, net_type: &str) -> bool {
         net_type.starts_with(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X)
+    }
+}
+
+/// Helper type for performing cleanup operations when dropped.
+struct CleanupFunc<F: FnOnce()>(Option<F>);
+impl<F: FnOnce()> CleanupFunc<F> {
+    /// Disarms the cleanup func so that it will not execute when dropped.
+    #[allow(dead_code)]
+    fn disarm(&mut self) {
+        let _ = self.0.take();
+    }
+}
+impl<F: FnOnce()> Drop for CleanupFunc<F> {
+    fn drop(&mut self) {
+        if let Some(func) = self.0.take() {
+            func();
+        }
     }
 }

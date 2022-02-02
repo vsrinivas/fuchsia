@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use super::*;
-
 use anyhow::Error;
 use async_trait::async_trait;
 use core::future::ready;
@@ -21,7 +20,7 @@ impl<OT: Send, NI> OtDriver<OT, NI> {
     /// Helper function for methods that return streams. Allows you
     /// to have an initialization method that returns a lock which can be
     /// held while another stream is running.
-    fn start_ongoing_stream_process<'a, R, FInit, SStream, L>(
+    pub(super) fn start_ongoing_stream_process<'a, R, FInit, SStream, L>(
         &'a self,
         init_task: FInit,
         stream: SStream,
@@ -98,6 +97,9 @@ where
     async fn provision_network(&self, params: ProvisioningParams) -> ZxResult<()> {
         debug!("Got provision command: {:?}", params);
 
+        // Wait until we are not busy.
+        self.wait_for_state(|x| !x.is_busy()).await;
+
         if params.identity.raw_name.is_none() {
             // We must at least have the network name specified.
             return Err(ZxStatus::INVALID_ARGS);
@@ -111,7 +113,7 @@ where
         };
 
         let task = async {
-            let mut dataset = ot::OperationalDataset::default();
+            let mut dataset = ot::OperationalDataset::empty();
             let driver_state = self.driver_state.lock();
             let ot_instance = &driver_state.ot_instance;
 
@@ -160,6 +162,9 @@ where
 
     async fn set_active(&self, enabled: bool) -> ZxResult<()> {
         fx_log_info!("Got set active command: {:?}", enabled);
+
+        // Wait until we are not busy.
+        self.wait_for_state(|x| !x.is_busy()).await;
 
         self.apply_standard_combinators(self.net_if.set_enabled(enabled).boxed()).await?;
 
@@ -304,7 +309,13 @@ where
     ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
         fx_log_debug!("Got join command: {:?}", params);
 
-        ready(Err(ZxStatus::NOT_SUPPORTED)).into_stream().boxed()
+        match params {
+            JoinParams::JoinerParameter(joiner_params) => self.joiner_start(joiner_params),
+            _ => {
+                fx_log_err!("join network: provision params not yet supported");
+                ready(Err(ZxStatus::INVALID_ARGS)).into_stream().boxed()
+            }
+        }
     }
 
     async fn get_credential(&self) -> ZxResult<Option<fidl_fuchsia_lowpan::Credential>> {
@@ -351,12 +362,8 @@ where
         let (sender, receiver) = mpsc::unbounded();
 
         let init_task = async move {
-            // Wait until any previous scan has finished.
-            self.wait_for_state(|driver_state| {
-                !driver_state.ot_instance.is_active_scan_in_progress()
-                    && !driver_state.ot_instance.is_energy_scan_in_progress()
-            })
-            .await;
+            // Wait until we are not busy.
+            self.wait_for_state(|x| !x.is_busy()).await;
 
             self.driver_state.lock().ot_instance.start_energy_scan(
                 channels?,
@@ -420,12 +427,8 @@ where
         let (sender, receiver) = mpsc::unbounded();
 
         let init_task = async move {
-            // Wait until any previous scan has finished.
-            self.wait_for_state(|driver_state| {
-                !driver_state.ot_instance.is_active_scan_in_progress()
-                    && !driver_state.ot_instance.is_energy_scan_in_progress()
-            })
-            .await;
+            // Wait until we are not busy.
+            self.wait_for_state(|x| !x.is_busy()).await;
 
             self.driver_state.lock().ot_instance.start_active_scan(
                 channels?,

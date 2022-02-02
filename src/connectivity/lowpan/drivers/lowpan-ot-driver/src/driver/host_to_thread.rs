@@ -38,9 +38,9 @@ where
                 let mut driver_state = self.driver_state.lock();
 
                 let new_connectivity_state = if enabled {
-                    driver_state.get_current_connectivity_state().activated()
+                    driver_state.updated_connectivity_state().activated()
                 } else {
-                    driver_state.get_current_connectivity_state().deactivated()
+                    driver_state.updated_connectivity_state().deactivated()
                 };
 
                 if new_connectivity_state != driver_state.connectivity_state {

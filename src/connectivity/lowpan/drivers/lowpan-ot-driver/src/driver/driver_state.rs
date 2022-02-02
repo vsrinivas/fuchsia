@@ -53,13 +53,30 @@ where
         self.connectivity_state.is_active_and_ready()
     }
 
-    pub fn get_current_connectivity_state(&self) -> ConnectivityState {
+    pub fn is_commissioning(&self) -> bool {
+        self.connectivity_state.is_commissioning()
+    }
+}
+
+impl<OT> DriverState<OT>
+where
+    OT: Send + ot::InstanceInterface,
+{
+    pub fn is_busy(&self) -> bool {
+        self.ot_instance.is_energy_scan_in_progress()
+            || self.ot_instance.is_active_scan_in_progress()
+            || self.ot_instance.joiner_get_state() != ot::JoinerState::Idle
+    }
+
+    pub fn updated_connectivity_state(&self) -> ConnectivityState {
         let mut ret = self.connectivity_state;
 
         if self.ot_instance.is_commissioned() {
             ret = ret.provisioned();
-        } else {
+        } else if self.ot_instance.joiner_get_state() == ot::JoinerState::Idle {
             ret = ret.unprovisioned();
+        } else {
+            ret = ret.commissioning().unwrap();
         }
 
         let role = self.get_current_role();
@@ -96,7 +113,7 @@ where
 
     pub fn get_current_device_state(&self) -> DeviceState {
         DeviceState {
-            connectivity_state: Some(self.get_current_connectivity_state()),
+            connectivity_state: Some(self.updated_connectivity_state()),
             role: Some(self.get_current_role()),
             ..DeviceState::EMPTY
         }
@@ -156,7 +173,7 @@ where
     pub fn update_connectivity_state(&self) {
         let mut driver_state = self.driver_state.lock();
 
-        let new_connectivity_state = driver_state.get_current_connectivity_state();
+        let new_connectivity_state = driver_state.updated_connectivity_state();
 
         if new_connectivity_state != driver_state.connectivity_state {
             let old_connectivity_state = driver_state.connectivity_state;

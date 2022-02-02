@@ -20,6 +20,9 @@ pub trait ConnectivityStateExt {
     /// 'active' and 'ready' (could also be described as 'online')
     fn is_active_and_ready(&self) -> bool;
 
+    /// Indicates if we are commissioning or not.
+    fn is_commissioning(&self) -> bool;
+
     /// Returns true if the current state is invalid during initialization.
     fn is_invalid_during_initialization(&self) -> bool;
 
@@ -82,6 +85,10 @@ impl ConnectivityStateExt for ConnectivityState {
 
     fn is_invalid_during_initialization(&self) -> bool {
         self.is_online()
+    }
+
+    fn is_commissioning(&self) -> bool {
+        *self == ConnectivityState::Commissioning
     }
 
     fn is_online(&self) -> bool {
@@ -159,12 +166,13 @@ impl ConnectivityStateExt for ConnectivityState {
     }
 
     fn commissioning(&self) -> Result<ConnectivityState, anyhow::Error> {
-        match self {
-            ConnectivityState::Offline => Ok(ConnectivityState::Commissioning),
-            state => Err(format_err!(
+        if self.is_active() {
+            Ok(ConnectivityState::Commissioning)
+        } else {
+            Err(format_err!(
                 "Can't transition to ConnectivityState::Commissioning from {:?}",
-                *state,
-            )),
+                *self,
+            ))
         }
     }
 }

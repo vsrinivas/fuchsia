@@ -5,6 +5,38 @@
 use crate::convert_ext::*;
 use crate::prelude::*;
 use fidl_fuchsia_lowpan::*;
+use fidl_fuchsia_lowpan_device::{ProvisionError, ProvisioningProgress};
+
+impl FromExt<ot::JoinerState> for ProvisioningProgress {
+    fn from_ext(x: ot::JoinerState) -> Self {
+        // Note that this mapping is somewhat arbitrary. The values
+        // are intended to be used by a user interface to display a
+        // connection progress bar.
+        match x {
+            ot::JoinerState::Idle => ProvisioningProgress::Progress(0.0),
+            ot::JoinerState::Discover => ProvisioningProgress::Progress(0.2),
+            ot::JoinerState::Connect => ProvisioningProgress::Progress(0.4),
+            ot::JoinerState::Connected => ProvisioningProgress::Progress(0.6),
+            ot::JoinerState::Entrust => ProvisioningProgress::Progress(0.8),
+            ot::JoinerState::Joined => ProvisioningProgress::Progress(1.0),
+        }
+    }
+}
+
+impl FromExt<ot::Error> for ProvisionError {
+    fn from_ext(x: ot::Error) -> Self {
+        match x {
+            ot::Error::Security => ProvisionError::CredentialRejected,
+            ot::Error::NotFound => ProvisionError::NetworkNotFound,
+            ot::Error::ResponseTimeout => ProvisionError::NetworkNotFound,
+            ot::Error::Abort => ProvisionError::Canceled,
+            x => {
+                warn!("Unexpected error when joining: {:?}", x);
+                ProvisionError::Canceled
+            }
+        }
+    }
+}
 
 impl FromExt<fidl_fuchsia_lowpan_device::RoutePreference> for ot::RoutePreference {
     fn from_ext(x: fidl_fuchsia_lowpan_device::RoutePreference) -> Self {

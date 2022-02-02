@@ -209,7 +209,7 @@ async fn main() -> Result<(), Error> {
 
     let config = Config::try_new().context("Config::try_new")?;
 
-    fuchsia_syslog::LOGGER.set_severity(config.log_level);
+    fuchsia_syslog::set_severity(config.log_level);
 
     let mut attempt_count = 0;
 
