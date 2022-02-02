@@ -8,7 +8,9 @@ group("tests") {
     "fake-drivers",
     "fake-drivers/fake-ot-radio:tests",
     "test-components:ot-radio-component-tests",
-    "test-components:ot-stack-component-tests",
+
+    # TODO(fxbug.dev/92760): Re-enable after OpenThread update lands.
+    # "test-components:ot-stack-component-tests",
   ]
 }
 
