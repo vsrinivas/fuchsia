@@ -9,6 +9,7 @@ use carnelian::{
     app::Config,
     color::Color,
     drawing::{load_font, DisplayRotation, FontFace},
+    input, make_message,
     render::{rive::load_rive, Context as RenderContext},
     scene::{
         facets::{RiveFacet, TextFacetOptions, TextHorizontalAlignment},
@@ -27,7 +28,18 @@ const INSTALLER_HEADLINE: &'static str = "Fuchsia Workstation Installer";
 const BG_COLOR: Color = Color { r: 238, g: 23, b: 128, a: 255 };
 const HEADING_COLOR: Color = Color::new();
 
+// Menu interaction
+const HID_USAGE_KEY_UP: u32 = 82;
+const HID_USAGE_KEY_DOWN: u32 = 81;
+const HID_USAGE_KEY_ENTER: u32 = 40;
+
 const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.riv";
+
+enum InstallerMessages {
+    MenuUp,
+    MenuDown,
+    MenuEnter,
+}
 
 /// Installer
 #[derive(Debug, FromArgs)]
@@ -155,6 +167,21 @@ impl InstallerViewAssistant {
     fn setup(_: &AppContext, _: ViewKey) -> Result<(), Error> {
         Ok(())
     }
+
+    fn handle_installer_message(&mut self, message: &InstallerMessages) {
+        match message {
+            // Menu Interaction
+            InstallerMessages::MenuUp => {
+                println!("menu up");
+            }
+            InstallerMessages::MenuDown => {
+                println!("menu down");
+            }
+            InstallerMessages::MenuEnter => {
+                println!("menu enter");
+            }
+        }
+    }
 }
 
 impl ViewAssistant for InstallerViewAssistant {
@@ -186,6 +213,37 @@ impl ViewAssistant for InstallerViewAssistant {
         render_resources.scene.render(_render_context, ready_event, context)?;
         context.request_render();
         Ok(())
+    }
+
+    fn handle_keyboard_event(
+        &mut self,
+        context: &mut ViewAssistantContext,
+        _event: &input::Event,
+        keyboard_event: &input::keyboard::Event,
+    ) -> Result<(), Error> {
+        if keyboard_event.phase == input::keyboard::Phase::Pressed {
+            let pressed_key = keyboard_event.hid_usage;
+            match pressed_key {
+                HID_USAGE_KEY_UP => {
+                    context.queue_message(make_message(InstallerMessages::MenuUp));
+                }
+                HID_USAGE_KEY_DOWN => {
+                    context.queue_message(make_message(InstallerMessages::MenuDown));
+                }
+                HID_USAGE_KEY_ENTER => {
+                    context.queue_message(make_message(InstallerMessages::MenuEnter));
+                }
+                _ => {}
+            }
+        }
+
+        Ok(())
+    }
+
+    fn handle_message(&mut self, message: carnelian::Message) {
+        if let Some(message) = message.downcast_ref::<InstallerMessages>() {
+            self.handle_installer_message(message);
+        }
     }
 }
 
