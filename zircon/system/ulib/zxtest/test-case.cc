@@ -58,9 +58,8 @@ void TestCase::Shuffle(uint32_t random_seed) {
 }
 
 void TestCase::UnShuffle() {
-  for (unsigned long i = 0; i < selected_indexes_.size(); ++i) {
-    selected_indexes_[i] = i;
-  }
+  // Put the, possibly filtered, list back in order.
+  std::sort(selected_indexes_.begin(), selected_indexes_.end());
 }
 
 bool TestCase::RegisterTest(const fbl::String& name, const SourceLocation& location,

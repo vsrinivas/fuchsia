@@ -79,6 +79,9 @@ void TestCaseShuffle();
 // Verify that |TestCase::UnShuffle| restores original order.
 void TestCaseUnShuffle();
 
+// Verify that |TestCase::UnShuffle| restores original order of a filtered list.
+void TestCaseUnShuffleFiltered();
+
 // Verify that |Assertion::Assertion(...)| generate the right values.
 void AssertionHasValues();
 void AssertionHasNoValues();
@@ -188,6 +191,7 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(TestCaseFilterDoNotAccumulate),
     RUN_TEST(TestCaseShuffle),
     RUN_TEST(TestCaseUnShuffle),
+    RUN_TEST(TestCaseUnShuffleFiltered),
     RUN_TEST(AssertionHasValues),
     RUN_TEST(AssertionHasNoValues),
     RUN_TEST(EventBroadcasterOnProgramStart),

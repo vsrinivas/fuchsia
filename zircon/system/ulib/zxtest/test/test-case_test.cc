@@ -373,6 +373,48 @@ void TestCaseUnShuffle() {
   ZX_ASSERT_MSG(run_order[2] == 3, "UNShuffle failed.");
 }
 
+void TestCaseUnShuffleFiltered() {
+  TestDriverStub driver;
+  TestCase test_case(kTestCaseName, &Stub, &Stub);
+  const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
+  fbl::Vector<int> run_order;
+
+  ZX_ASSERT_MSG(test_case.RegisterTest("TestName1", kLocation,
+                                       [&run_order](TestDriver* driver) {
+                                         auto test = Test::Create<FakeTest>(driver);
+                                         test->body = [&run_order]() { run_order.push_back(1); };
+                                         return test;
+                                       }),
+                "TestCase failed to register a test.");
+
+  ZX_ASSERT_MSG(test_case.RegisterTest("TestName2", kLocation,
+                                       [&run_order](TestDriver* driver) {
+                                         auto test = Test::Create<FakeTest>(driver);
+                                         test->body = [&run_order]() { run_order.push_back(2); };
+                                         return test;
+                                       }),
+                "TestCase failed to register a test.");
+
+  ZX_ASSERT_MSG(test_case.RegisterTest("TestName3", kLocation,
+                                       [&run_order](TestDriver* driver) {
+                                         auto test = Test::Create<FakeTest>(driver);
+                                         test->body = [&run_order]() { run_order.push_back(3); };
+                                         return test;
+                                       }),
+                "TestCase failed to register a test.");
+
+  test_case.Filter(
+      [](const fbl::String& test_case, const fbl::String& test) { return test != "TestName2"; });
+
+  LifecycleObserver observer;
+  test_case.Shuffle(0);
+  test_case.UnShuffle();
+  test_case.Run(&observer, &driver);
+
+  ZX_ASSERT_MSG(run_order[0] == 1, "UnShuffle failed.");
+  ZX_ASSERT_MSG(run_order[1] == 3, "UnShuffle failed.");
+}
+
 void TestCaseRunUntilFailure() {
   TestDriverStub stub_driver;
   TestCase test_case(kTestCaseName, &Stub, &Stub);
