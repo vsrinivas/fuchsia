@@ -41,7 +41,8 @@ PagerProxy::PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> 
 
 PagerProxy::~PagerProxy() {
   LTRACEF("%p\n", this);
-  // In error paths shortly after construction, we can destruct without closed_ becoming true.
+  // In error paths shortly after construction, we can destruct without page_source_closed_ becoming
+  // true.
   DEBUG_ASSERT(!complete_pending_);
 }
 
@@ -49,7 +50,7 @@ const PageSourceProperties& PagerProxy::properties() const { return kProperties;
 
 void PagerProxy::SendAsyncRequest(PageRequest* request) {
   Guard<Mutex> guard{&mtx_};
-  ASSERT(!closed_);
+  ASSERT(!page_source_closed_);
 
   QueuePacketLocked(request);
 }
@@ -111,7 +112,7 @@ void PagerProxy::QueuePacketLocked(PageRequest* request) {
 
 void PagerProxy::ClearAsyncRequest(PageRequest* request) {
   Guard<Mutex> guard{&mtx_};
-  ASSERT(!closed_);
+  ASSERT(!page_source_closed_);
 
   if (request == active_request_) {
     if (request != &complete_request_) {
@@ -137,7 +138,7 @@ void PagerProxy::ClearAsyncRequest(PageRequest* request) {
 
 void PagerProxy::SwapAsyncRequest(PageRequest* old, PageRequest* new_req) {
   Guard<Mutex> guard{&mtx_};
-  ASSERT(!closed_);
+  ASSERT(!page_source_closed_);
 
   if (fbl::InContainer<PageProviderTag>(*old)) {
     pending_requests_.insert(*old, new_req);
@@ -151,7 +152,7 @@ bool PagerProxy::DebugIsPageOk(vm_page_t* page, uint64_t offset) { return true; 
 
 void PagerProxy::OnDetach() {
   Guard<Mutex> guard{&mtx_};
-  ASSERT(!closed_);
+  ASSERT(!page_source_closed_);
 
   complete_pending_ = true;
   QueuePacketLocked(&complete_request_);
@@ -161,33 +162,39 @@ void PagerProxy::OnClose() {
   fbl::RefPtr<PagerProxy> self_ref;
   fbl::RefPtr<PageSource> self_src;
   Guard<Mutex> guard{&mtx_};
-  ASSERT(!closed_);
+  ASSERT(!page_source_closed_);
 
-  closed_ = true;
+  page_source_closed_ = true;
+  // If there isn't a complete packet pending, we're free to clean up our ties with the PageSource
+  // and PagerDispatcher right now, as we're not expecting a PagerProxy::Free to perform final
+  // delayed clean up later. The PageSource is closing, so it won't need to send us any more
+  // requests. The PagerDispatcher doesn't need to refer to us anymore as we won't be queueing any
+  // more pager requests.
   if (!complete_pending_) {
     // We know PagerDispatcher::on_zero_handles hasn't been invoked, since that would
     // have already closed this pager proxy via OnDispatcherClose. Therefore we are free to
     // immediately clean up.
+    DEBUG_ASSERT(!pager_dispatcher_closed_);
     self_ref = pager_->ReleaseProxy(this);
     self_src = ktl::move(page_source_);
   } else {
-    // There are still pending messages that we would like to wait to be received and so we do not
-    // perform CancelQueued like OnDispatcherClose does. However, we must leave the reference to
-    // ourselves in pager_ so that OnDispatcherClose (and the forced packet cancelling) can happen
-    // if needed.
-    // Otherwise final delayed cleanup will happen in ::Free
+    // There is still a pending complete message that we would like to wait to be received and so we
+    // do not perform CancelQueued like OnDispatcherClose does. However, we must leave the reference
+    // to ourselves in pager_ so that OnDispatcherClose (and the forced packet cancelling) can
+    // happen if needed. Otherwise final delayed cleanup will happen in PagerProxy::Free.
   }
 }
 
 void PagerProxy::OnDispatcherClose() {
   fbl::RefPtr<PageSource> self_src;
-  // The pager dispatcher's reference to this object is the only one we completely control. Now
-  // that it's gone, we need to make sure that port_ doesn't end up with an invalid pointer
-  // to packet_ if all external RefPtrs to this object go away.
   Guard<Mutex> guard{&mtx_};
 
-  if (!closed_) {
-    // Close the page source from our end.
+  // The PagerDispatcher is going away and there won't be a way to service any pager requests. Close
+  // the PageSource from our end so that no more requests can be sent. Closing the PageSource will
+  // clear/cancel any outstanding requests that it had forwarded, i.e. any requests except the
+  // complete request (which is owned by us and is not visible to the PageSource).
+  if (!page_source_closed_) {
+    // page_source_ is only reset to nullptr if we already closed it.
     DEBUG_ASSERT(page_source_);
     self_src = page_source_;
     // Call Close without the lock to
@@ -196,6 +203,9 @@ void PagerProxy::OnDispatcherClose() {
     guard.CallUnlocked([&self_src]() mutable { self_src->Close(); });
   }
 
+  // The pager dispatcher's reference to this object is the only one we completely control. Now
+  // that it's gone, we need to make sure that port_ doesn't end up with an invalid pointer
+  // to packet_ if all external RefPtrs to this object go away.
   // As the Pager dispatcher is going away, we are not content to keep these objects alive
   // indefinitely until messages are read, instead we want to cancel everything as soon as possible
   // to avoid memory leaks. Therefore we will attempt to cancel any queued final packet.
@@ -206,9 +216,9 @@ void PagerProxy::OnDispatcherClose() {
       complete_pending_ = false;
     } else {
       // If we failed to cancel the message, then there is a pending call to PagerProxy::Free. It
-      // will cleanup the RefPtr cycle, although only if closed_ is true, which should be the case
-      // since we performed the Close step earlier.
-      DEBUG_ASSERT(closed_);
+      // will cleanup the RefPtr cycle, although only if page_source_closed_ is true, which should
+      // be the case since we performed the Close step earlier.
+      DEBUG_ASSERT(page_source_closed_);
     }
   } else {
     // Either the complete message had already been dispatched when this object was closed or
@@ -217,6 +227,9 @@ void PagerProxy::OnDispatcherClose() {
     // and cleanup is already done.
     DEBUG_ASSERT(!page_source_);
   }
+  // The pager dispatcher calls OnDispatcherClose when it is going away on zero handles, and it's
+  // not safe to dereference pager_ anymore. Remember that pager_ is now closed.
+  pager_dispatcher_closed_ = true;
 }
 
 void PagerProxy::Free(PortPacket* packet) {
@@ -239,14 +252,18 @@ void PagerProxy::Free(PortPacket* packet) {
     // Freeing the complete_request_ indicates we have completed a pending action that might have
     // been delaying cleanup.
     complete_pending_ = false;
-    if (closed_) {
-      // If the source is closed, we need to do delayed cleanup. Make sure we are not still in the
-      // pagers proxy list, and then break our refptr cycle.
+    // If the source is closed, we need to do delayed cleanup. Make sure we are not still in the
+    // pager's proxy list (if the pager is not closed yet), and then break our refptr cycle.
+    if (page_source_closed_) {
       DEBUG_ASSERT(page_source_);
-      // self_ref could be a nullptr if we have ended up racing with pager dispatcher tear down.
-      // This is fine as OnDispatcherClose will notice closed_ is true and complete_pending_ is true
-      // and do no work.
-      self_ref = pager_->ReleaseProxy(this);
+      // If the PagerDispatcher is already closed, the proxy has already been released.
+      if (!pager_dispatcher_closed_) {
+        // self_ref could be a nullptr if we have ended up racing with
+        // PagerDispatcher::on_zero_handles which calls PagerProxy::OnDispatcherClose *after*
+        // removing the proxy from its list. This is fine as the proxy will be removed from the
+        // pager's proxy list either way.
+        self_ref = pager_->ReleaseProxy(this);
+      }
       self_src = ktl::move(page_source_);
     }
   }
@@ -339,8 +356,9 @@ void PagerProxy::Dump() {
   Guard<Mutex> guard{&mtx_};
   printf(
       "pager_proxy %p pager_dispatcher %p page_source %p key %lu\n"
-      "  closed %d packet_busy %d complete_pending %d\n",
-      this, pager_, page_source_.get(), key_, closed_, packet_busy_, complete_pending_);
+      "  source closed %d pager closed %d packet_busy %d complete_pending %d\n",
+      this, pager_, page_source_.get(), key_, page_source_closed_, pager_dispatcher_closed_,
+      packet_busy_, complete_pending_);
 
   if (active_request_) {
     printf("  active request on pager port [0x%lx, 0x%lx)\n", GetRequestOffset(active_request_),

@@ -3497,4 +3497,57 @@ TEST(Pager, OpCommitCloneVmar) {
   ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
+// Regression test for fxbug.dev/92251. Tests that a port dequeue racing with pager destruction on a
+// detached VMO does not result in use-after-frees.
+TEST(Pager, RacyPortDequeue) {
+  // Repeat multiple times so we can hit the race. 1000 is a good balance between trying to
+  // reproduce the race without drastically increasing the test runtime.
+  for (int i = 0; i < 1000; i++) {
+    zx_handle_t pager;
+    ASSERT_OK(zx_pager_create(0, &pager));
+
+    zx_handle_t port;
+    ASSERT_OK(zx_port_create(0, &port));
+
+    zx_handle_t vmo;
+    ASSERT_OK(zx_pager_create_vmo(pager, 0, port, 0, zx_system_get_page_size(), &vmo));
+
+    std::atomic<bool> ready = false;
+    TestThread t1([pager, &ready]() -> bool {
+      while (!ready)
+        ;
+      // Destroy the pager.
+      return zx_handle_close(pager) == ZX_OK;
+    });
+
+    TestThread t2([port, &ready]() -> bool {
+      while (!ready)
+        ;
+      // Dequeue the complete packet from the port.
+      zx_port_packet_t packet;
+      zx_status_t status = zx_port_wait(port, 0u, &packet);
+      // We can time out if the queued packet was successfully cancelled and taken back from the
+      // port during pager destruction.
+      return status == ZX_OK || status == ZX_ERR_TIMED_OUT;
+    });
+
+    // Destroy the vmo so that the complete packet is queued, and the page source is closed.
+    ASSERT_OK(zx_handle_close(vmo));
+
+    // Start both the threads.
+    ASSERT_TRUE(t1.Start());
+    ASSERT_TRUE(t2.Start());
+
+    // Try to race the pager destruction with the port dequeue.
+    ready = true;
+
+    // Wait for both threads to exit.
+    ASSERT_TRUE(t1.Wait());
+    ASSERT_TRUE(t2.Wait());
+
+    // Destroy the port.
+    ASSERT_OK(zx_handle_close(port));
+  }
+}
+
 }  // namespace pager_tests

@@ -81,7 +81,13 @@ class PagerProxy : public PageProvider,
   const uint64_t key_;
 
   mutable DECLARE_MUTEX(PagerProxy) mtx_;
-  bool closed_ TA_GUARDED(mtx_) = false;
+  // Whether the page_source_ is closed, i.e. this proxy object is no longer linked to the
+  // page_source_ and it can receive no more messages from the page_source_.
+  bool page_source_closed_ TA_GUARDED(mtx_) = false;
+  // Whether the pager_ is closed, i.e. it does not hold a reference to this proxy object anymore,
+  // and might even have been destroyed. We could infer the same by setting pager_ to nullptr in
+  // OnDispatcherClose, but we choose to keep pager_ as const instead.
+  bool pager_dispatcher_closed_ TA_GUARDED(mtx_) = false;
   // Flag set when there is a pending ZX_PAGER_VMO_COMPLETE message. This serves as a proxy
   // for whether or not the port has a reference to packet_ (as the complete message is the
   // last message sent). This flag is used to delay cleanup if PagerProxy::Close is called
