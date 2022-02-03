@@ -429,6 +429,128 @@ async fn test_log_packets() {
     });
 }
 
+const IPV4_LOOPBACK: fidl_fuchsia_net::Subnet = fidl_subnet!("127.0.0.1/8");
+const IPV6_LOOPBACK: fidl_fuchsia_net::Subnet = fidl_subnet!("::1/128");
+
+fn extract_v4_and_v6(
+    addrs: impl IntoIterator<Item = fidl_fuchsia_net::Subnet>,
+) -> (fidl_fuchsia_net::Subnet, fidl_fuchsia_net::Subnet) {
+    let (v4, v6) = addrs.into_iter().fold((None, None), |(v4, v6), subnet| {
+        let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = subnet;
+
+        match addr {
+            fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
+                if let Some(v4) = v4 {
+                    panic!("IPv4 address already set; already have {:?}, got {:?}", v4, addr);
+                } else {
+                    (Some(subnet), v6)
+                }
+            }
+            fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
+                if let Some(v6) = v6 {
+                    panic!("IPv6 address already set; already have {:?}, got {:?}", v6, addr);
+                } else {
+                    (v4, Some(subnet))
+                }
+            }
+        }
+    });
+
+    (v4.expect("expected v4 addr"), v6.expect("expected v6 addr"))
+}
+
+// TODO(https://fxbug.dev/91754): Run this test on Netstack3.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn add_remove_address_on_loopback() {
+    let name = "add_remove_address_on_loopback";
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+
+    let interface_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+    let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+        .expect("get interface event stream");
+    pin_utils::pin_mut!(stream);
+
+    let (loopback_id, addresses) = assert_matches::assert_matches!(
+        stream.try_next().await,
+        Ok(Some(fidl_fuchsia_net_interfaces::Event::Existing(
+            fidl_fuchsia_net_interfaces::Properties {
+                id: Some(id),
+                device_class:
+                    Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                        fidl_fuchsia_net_interfaces::Empty {},
+                    )),
+                online: Some(true),
+                addresses: Some(addresses),
+                ..
+            },
+        ))) => (id, addresses)
+    );
+    let addresses =
+        addresses.into_iter().map(|fidl_fuchsia_net_interfaces::Address { addr, .. }| {
+            addr.expect("expected address to be set")
+        });
+    assert_eq!(extract_v4_and_v6(addresses), (IPV4_LOOPBACK, IPV6_LOOPBACK));
+
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
+    let stack = &stack;
+
+    let del_addr = |mut addr| async move {
+        stack
+            .del_interface_address(loopback_id, &mut addr)
+            .await
+            .expect("del_interface_address")
+            .expect("expected to remove address")
+    };
+    del_addr(IPV4_LOOPBACK).await;
+    del_addr(IPV6_LOOPBACK).await;
+
+    const NEW_IPV4_ADDRESS: fidl_fuchsia_net::Subnet = fidl_subnet!("1.1.1.1/24");
+    const NEW_IPV6_ADDRESS: fidl_fuchsia_net::Subnet = fidl_subnet!("a::1/64");
+    let add_addr = |mut addr| async move {
+        stack
+            .add_interface_address(loopback_id, &mut addr)
+            .await
+            .expect("add_interface_address")
+            .expect("expected to add address")
+    };
+    add_addr(NEW_IPV4_ADDRESS).await;
+    add_addr(NEW_IPV6_ADDRESS).await;
+
+    // TODO(https://fxbug.dev/75553): Wait for changed event instead of creating
+    // a new watcher.
+    let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+        .expect("get interface event stream");
+    pin_utils::pin_mut!(stream);
+    let (new_loopback_id, addresses) = assert_matches::assert_matches!(
+        stream.try_next().await,
+        Ok(Some(fidl_fuchsia_net_interfaces::Event::Existing(
+            fidl_fuchsia_net_interfaces::Properties {
+                id: Some(id),
+                device_class:
+                    Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                        fidl_fuchsia_net_interfaces::Empty {},
+                    )),
+                online: Some(true),
+                addresses: Some(addresses),
+                has_default_ipv4_route: Some(false),
+                has_default_ipv6_route: Some(false),
+                ..
+            },
+        ))) => (id, addresses)
+    );
+    assert_eq!(loopback_id, new_loopback_id);
+    let addresses =
+        addresses.into_iter().map(|fidl_fuchsia_net_interfaces::Address { addr, .. }| {
+            addr.expect("expected address to be set")
+        });
+    assert_eq!(extract_v4_and_v6(addresses), (NEW_IPV4_ADDRESS, NEW_IPV6_ADDRESS));
+}
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn disable_interface_loopback() {
     let name = "disable_interface_loopback";
