@@ -29,6 +29,7 @@
                 "fuchsia.stash.Store2",
                 "fuchsia.ui.activity.Provider",
                 "fuchsia.update.CommitStatusProvider",
+                "fuchsia.update.config.OptOut",
                 "fuchsia.update.installer.Installer",
             ],
             from: "parent",

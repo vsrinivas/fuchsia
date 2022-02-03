@@ -927,6 +927,7 @@ mod stub {
             future::ready(CheckDecision::Ok(RequestParams {
                 source: check_options.source.clone(),
                 use_configured_proxies: true,
+                disable_updates: false,
             }))
             .boxed()
         }

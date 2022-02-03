@@ -1153,8 +1153,11 @@ where
     /// Sends a ping to Omaha and updates context and app_set.
     async fn ping_omaha(&mut self, co: &mut async_generator::Yield<StateMachineEvent>) {
         let apps = self.app_set.lock().await.get_apps();
-        let request_params =
-            RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: true };
+        let request_params = RequestParams {
+            source: InstallSource::ScheduledTask,
+            use_configured_proxies: true,
+            disable_updates: false,
+        };
         let config = self.config.clone();
         let mut request_builder = RequestBuilder::new(&config, &request_params);
         for app in &apps {

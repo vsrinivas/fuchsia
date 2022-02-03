@@ -48,6 +48,10 @@ pub struct RequestParams {
     /// If true, the request should use any configured proxies.  This allows the bypassing of
     /// proxies if there are difficulties in communicating with the Omaha service.
     pub use_configured_proxies: bool,
+
+    /// If true, the request should set the "updatedisabled" property for all apps in the update
+    /// check request.
+    pub disable_updates: bool,
 }
 
 /// The AppEntry holds the data for the app whose request is currently being constructed.  An app
@@ -65,6 +69,10 @@ struct AppEntry {
     /// Set to true if an update check should be performed.
     update_check: bool,
 
+    /// Set to true if an update check should set the "updatedisabled" update check parameter to
+    /// true.
+    updates_disabled: bool,
+
     /// Set to true if a ping should be send.
     ping: bool,
 
@@ -76,7 +84,13 @@ impl AppEntry {
     /// Basic constructor for the AppEntry.  All AppEntries MUST have an App and a Cohort,
     /// everything else can be omitted.
     fn new(app: &App) -> AppEntry {
-        AppEntry { app: app.clone(), update_check: false, ping: false, events: Vec::new() }
+        AppEntry {
+            app: app.clone(),
+            update_check: false,
+            updates_disabled: false,
+            ping: false,
+            events: Vec::new(),
+        }
     }
 }
 
@@ -101,7 +115,11 @@ impl From<AppEntry> for ProtocolApp {
             version: entry.app.version.to_string(),
             fingerprint: entry.app.fingerprint,
             cohort: Some(entry.app.cohort),
-            update_check: if entry.update_check { Some(UpdateCheck::default()) } else { None },
+            update_check: entry.update_check.then(if entry.updates_disabled {
+                UpdateCheck::disabled
+            } else {
+                UpdateCheck::default
+            }),
             events: entry.events,
             ping,
             extra_fields: entry.app.extra_fields,
@@ -175,8 +193,13 @@ impl<'a> RequestBuilder<'a> {
     /// an idempotent accumulator, in that it only once adds the App with it's associated Cohort to
     /// the request.  Afterward, it just marks the App as needing an update check.
     pub fn add_update_check(mut self, app: &App) -> Self {
+        let disable_updates = self.params.disable_updates;
+
         self.insert_and_modify_entry(app, |entry| {
             entry.update_check = true;
+            if disable_updates {
+                entry.updates_disabled = true;
+            }
         });
         self
     }

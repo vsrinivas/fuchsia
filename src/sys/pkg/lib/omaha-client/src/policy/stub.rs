@@ -42,6 +42,7 @@ impl<P: Plan> Policy for StubPolicy<P> {
         CheckDecision::Ok(RequestParams {
             source: check_options.source.clone(),
             use_configured_proxies: true,
+            disable_updates: false,
         })
     }
 
@@ -187,6 +188,7 @@ mod tests {
         let expected = CheckDecision::Ok(RequestParams {
             source: check_options.source,
             use_configured_proxies: true,
+            disable_updates: false,
         });
         assert_eq!(result, expected);
     }
@@ -206,6 +208,7 @@ mod tests {
         let expected = CheckDecision::Ok(RequestParams {
             source: check_options.source,
             use_configured_proxies: true,
+            disable_updates: false,
         });
         assert_eq!(result, expected);
     }

@@ -8,7 +8,9 @@ use fidl_fuchsia_ui_activity::{
     ListenerMarker, ListenerRequest, ProviderMarker, ProviderProxy, State,
 };
 use fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy};
+use fidl_fuchsia_update_config::{OptOutMarker, OptOutPreference, OptOutProxy};
 use fidl_fuchsia_update_ext::{query_commit_status, CommitStatus};
+use fuchsia_async::TimeoutExt;
 use fuchsia_component::client::connect_to_protocol;
 use futures::{future::BoxFuture, future::FutureExt, lock::Mutex, prelude::*};
 use log::{error, info, warn};
@@ -157,11 +159,16 @@ impl Policy for FuchsiaPolicy {
         if policy_data.update_check_rate_limiter.should_rate_limit(policy_data.current_time.mono) {
             return CheckDecision::ThrottledByPolicy;
         }
+        let disable_updates = match policy_data.opt_out_preference {
+            OptOutPreference::AllowAllUpdates => false,
+            OptOutPreference::AllowOnlySecurityUpdates => true,
+        };
         // Always allow update check initiated by a user.
         if check_options.source == InstallSource::OnDemand {
             CheckDecision::Ok(RequestParams {
                 source: InstallSource::OnDemand,
                 use_configured_proxies: true,
+                disable_updates,
             })
         } else {
             match scheduling.next_update_time {
@@ -172,6 +179,7 @@ impl Policy for FuchsiaPolicy {
                         CheckDecision::Ok(RequestParams {
                             source: InstallSource::ScheduledTask,
                             use_configured_proxies: true,
+                            disable_updates,
                         })
                     } else {
                         CheckDecision::TooSoon
@@ -255,8 +263,8 @@ fn fuzz_interval(
     interval
 }
 
-/// FuchsiaPolicyEngine just gathers the current time and hands it off to the FuchsiaPolicy as the
-/// PolicyData.
+/// FuchsiaPolicyEngine gathers the current time and other current system state, handing it off to
+/// the FuchsiaPolicy as the PolicyData.
 #[derive(Debug)]
 pub struct FuchsiaPolicyEngine<T> {
     time_source: T,
@@ -460,6 +468,26 @@ async fn watch_ui_activity_impl(
     Ok(())
 }
 
+/// Queries the user's update opt-out preference, defaulting to
+/// [`OptOutPreference::AllowAllUpdates`] if not set or on error.
+async fn query_opt_out_preference<ProviderFn>(provider_fn: ProviderFn) -> OptOutPreference
+where
+    ProviderFn: FnOnce() -> Result<OptOutProxy, Error>,
+{
+    // Area owners suggested 1 second as a reasonable time to expect an answer by.
+    // Wait a few times that before assuming the default to be extra sure the request is stuck.
+    const TIMEOUT: Duration = Duration::from_secs(5);
+
+    async move { Some(provider_fn().ok()?.get().await.ok()?) }
+        .on_timeout(TIMEOUT, || {
+            // Prevent unexpected hangs from blocking updates.
+            error!("Timed out reading update opt-out preference.");
+            None
+        })
+        .await
+        .unwrap_or(OptOutPreference::AllowAllUpdates)
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct UiActivityState {
     state: State,
@@ -477,15 +505,22 @@ struct FuchsiaUpdatePolicyData {
     config: PolicyConfig,
     interval_fuzz_seed: Option<u64>,
     update_check_rate_limiter: UpdateCheckRateLimiter,
+    opt_out_preference: OptOutPreference,
 }
 
 impl FuchsiaUpdatePolicyData {
     async fn from_policy_engine<T: TimeSource>(policy_engine: &FuchsiaPolicyEngine<T>) -> Self {
+        let opt_out_preference = {
+            let provider = || connect_to_protocol::<OptOutMarker>();
+            query_opt_out_preference(provider).await
+        };
+
         Self {
             current_time: policy_engine.time_source.now(),
             config: policy_engine.config.clone(),
             interval_fuzz_seed: Some(rand::random()),
             update_check_rate_limiter: policy_engine.update_check_rate_limiter.clone(),
+            opt_out_preference,
         }
     }
 }
@@ -628,6 +663,7 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_ui_activity::ProviderRequest;
     use fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderRequest};
+    use fidl_fuchsia_update_config::OptOutRequest;
     use fuchsia_async as fasync;
     use fuchsia_zircon::{self as zx, Peered};
     use omaha_client::time::{ComplexTime, MockTimeSource, StandardTimeSource, TimeSource};
@@ -642,6 +678,7 @@ mod tests {
         config: PolicyConfig,
         interval_fuzz_seed: Option<u64>,
         recent_update_check_times: VecDeque<Instant>,
+        opt_out_preference: OptOutPreference,
     }
 
     impl UpdatePolicyDataBuilder {
@@ -651,6 +688,7 @@ mod tests {
                 config: PolicyConfig::default(),
                 interval_fuzz_seed: None,
                 recent_update_check_times: VecDeque::new(),
+                opt_out_preference: OptOutPreference::AllowAllUpdates,
             }
         }
 
@@ -669,6 +707,11 @@ mod tests {
             Self { recent_update_check_times, ..self }
         }
 
+        /// Set the `opt_out_preference` explicitly from a given OptOutPreference.
+        fn opt_out_preference(self, opt_out_preference: OptOutPreference) -> Self {
+            Self { opt_out_preference, ..self }
+        }
+
         fn build(self) -> FuchsiaUpdatePolicyData {
             FuchsiaUpdatePolicyData {
                 current_time: self.current_time,
@@ -677,6 +720,7 @@ mod tests {
                 update_check_rate_limiter: UpdateCheckRateLimiter::with_recent_update_check_times(
                     self.recent_update_check_times,
                 ),
+                opt_out_preference: self.opt_out_preference,
             }
         }
     }
@@ -1147,9 +1191,11 @@ mod tests {
         // Confirm that:
         //  - the decision is Ok
         //  - the source is the same as the check_options' source
+        //  - disable_updates is set to false (the default)
         let expected = CheckDecision::Ok(RequestParams {
             source: check_options.source,
             use_configured_proxies: true,
+            disable_updates: false,
         });
         assert_eq!(result, expected);
     }
@@ -1247,6 +1293,7 @@ mod tests {
                 CheckDecision::Ok(RequestParams {
                     source: check_options.source.clone(),
                     use_configured_proxies: true,
+                    disable_updates: false,
                 })
             );
 
@@ -1289,6 +1336,48 @@ mod tests {
             policy_engine.update_check_rate_limiter.get_recent_update_check_times(),
             VecDeque::from(vec![])
         );
+    }
+
+    // Test that an update check sets the disable_updates request param when the user's opt-out
+    // preference asks to do so.
+    #[test]
+    fn test_update_check_allowed_opt_out_disables_updates() {
+        let mock_time = MockTimeSource::new_from_now();
+        let now = mock_time.now();
+        // The current context:
+        //   - the last update was far in the past
+        //   - the next update time is just in the past
+        let last_update_time = now - PERIODIC_INTERVAL - Duration::from_secs(1);
+        let next_update_time = last_update_time + PERIODIC_INTERVAL;
+        let schedule = UpdateCheckSchedule::builder()
+            .last_time(last_update_time)
+            .next_timing(CheckTiming::builder().time(next_update_time).build())
+            .build();
+        // Set up the state for this check:
+        //  - the time is "now"
+        //  - the check options are at normal defaults (scheduled background check)
+        let policy_data = UpdatePolicyDataBuilder::new(now)
+            .opt_out_preference(OptOutPreference::AllowOnlySecurityUpdates)
+            .build();
+        let check_options = CheckOptions::default();
+        // Execute the policy check
+        let result = FuchsiaPolicy::update_check_allowed(
+            &policy_data,
+            &[],
+            &schedule,
+            &ProtocolState::default(),
+            &check_options,
+        );
+        // Confirm that:
+        //  - the decision is Ok
+        //  - the source is the same as the check_options' source
+        //  - disable_updates is set to true
+        let expected = CheckDecision::Ok(RequestParams {
+            source: check_options.source,
+            use_configured_proxies: true,
+            disable_updates: true,
+        });
+        assert_eq!(result, expected);
     }
 
     // Test that update_can_start returns Ok when the system is committed.
@@ -1448,6 +1537,51 @@ mod tests {
         assert_eq!(*ui_activity.lock().await, UiActivityState { state: State::Active });
         listener.on_state_changed(State::Idle, 456).await.unwrap();
         assert_eq!(*ui_activity.lock().await, UiActivityState { state: State::Idle });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_query_opt_out_preference_ok_responses() {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<OptOutMarker>().unwrap();
+
+        let ((), ()) = futures::join!(
+            async move {
+                let OptOutRequest::Get { responder } = stream.next().await.unwrap().unwrap();
+                responder.send(OptOutPreference::AllowAllUpdates).unwrap();
+
+                let OptOutRequest::Get { responder } = stream.next().await.unwrap().unwrap();
+                responder.send(OptOutPreference::AllowOnlySecurityUpdates).unwrap();
+            },
+            async move {
+                let provider = || Ok(proxy.clone());
+
+                assert_eq!(
+                    query_opt_out_preference(provider).await,
+                    OptOutPreference::AllowAllUpdates
+                );
+                assert_eq!(
+                    query_opt_out_preference(provider).await,
+                    OptOutPreference::AllowOnlySecurityUpdates
+                );
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_query_opt_out_preference_no_response_is_allow_all_updates() {
+        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<OptOutMarker>().unwrap();
+        drop(stream);
+
+        let provider = || Ok(proxy.clone());
+
+        assert_eq!(query_opt_out_preference(provider).await, OptOutPreference::AllowAllUpdates);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_query_opt_out_preference_connect_error_is_allow_all_updates() {
+        let provider = || Err(anyhow!("oops"));
+
+        assert_eq!(query_opt_out_preference(provider).await, OptOutPreference::AllowAllUpdates);
     }
 
     #[test]
