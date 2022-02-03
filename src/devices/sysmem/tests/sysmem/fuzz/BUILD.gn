@@ -63,9 +63,6 @@ fuzzer("sysmem_fuzzer") {
     "//zircon/system/ulib/trace:trace-driver",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(fxbug.dev/56714): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuzzer("sysmem_fuzzer_multi") {
