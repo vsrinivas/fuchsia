@@ -45,10 +45,10 @@ type PointerSample = table {
     /// system.
     7: relative_motion RelativeMotion;
 
-    /// Relative vertical scrolling displacement.
+    /// Relative vertical scrolling displacement by detent.
     4: scroll_v int64;
 
-    /// Relative horizontal scrolling displacement.
+    /// Relative horizontal scrolling displacement by detent.
     5: scroll_h int64;
 
     /// Identifiers of currently pressed buttons.
