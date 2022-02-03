@@ -139,12 +139,8 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacSetKey(uint32_t options,
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureAssoc(uint32_t options,
                                                          const wlan_assoc_ctx_t* assoc_ctx) {
-  zx_status_t status = ZX_OK;
   if (ap_mvm_sta_ == nullptr) {
     return ZX_ERR_BAD_STATE;
-  }
-  if ((status = ap_mvm_sta_->ChangeState(iwl_sta_state::IWL_STA_AUTHORIZED)) != ZX_OK) {
-    return status;
   }
   return mac_configure_assoc(mvmvif_, options, assoc_ctx);
 }
