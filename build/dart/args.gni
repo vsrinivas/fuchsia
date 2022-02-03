@@ -1,0 +1,12 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Forces all Dart apps to build in product mode which is a
+  # stripped down version of the VM running in AOT mode.
+  dart_force_product = false
+
+  # Forces all Dart apps to use an AOT runner regardless of whether the build is debug or release.
+  dart_force_aot = false
+}

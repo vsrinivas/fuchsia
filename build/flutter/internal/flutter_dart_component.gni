@@ -131,6 +131,7 @@ template("_flutter_asset_manifest") {
 #      is_aot: a boolean indicating if this is an AOT build
 #      is_product: a boolean indicating if this is a product build
 #      enable_asserts: whether we should enable asserts when compiling
+#      is_debug: whether to build the dart kernel with debugging information
 #
 #   main_dart (required)
 #     File containing the main function of the component.
@@ -246,6 +247,7 @@ template("flutter_dart_component") {
     platform_name = build_cfg.platform_name
     product = build_cfg.is_product
     is_aot = build_cfg.is_aot
+    is_debug = build_cfg.is_debug
   }
 
   _component_deps += [ ":$_kernel_target_name" ]
@@ -306,7 +308,6 @@ template("flutter_dart_component") {
       # No asserts in debug or release product.
       # No asserts in non-product release
       # Yes asserts in non-product debug.
-      # if (is_debug && !dart_force_product) {
       if (build_cfg.enable_asserts) {
         args += [ "--enable_asserts" ]
       }

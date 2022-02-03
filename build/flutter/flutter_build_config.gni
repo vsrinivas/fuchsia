@@ -17,6 +17,7 @@ declare_args() {
     is_aot = false
     is_product = false
     enable_asserts = true
+    is_debug = true
   }
 
   # Builds the component in a non-product AOT build. This will
@@ -31,6 +32,7 @@ declare_args() {
     is_aot = true
     is_product = false
     enable_asserts = true
+    is_debug = true
   }
 
   # Builds the component in a non-product AOT build. This will
@@ -43,6 +45,7 @@ declare_args() {
     is_aot = true
     is_product = false
     enable_asserts = false
+    is_debug = false
   }
 
   # Builds the component in a product AOT build. This will
@@ -55,5 +58,6 @@ declare_args() {
     is_aot = true
     is_product = true
     enable_asserts = false
+    is_debug = false
   }
 }

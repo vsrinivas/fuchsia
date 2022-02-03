@@ -1,0 +1,13 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # If set to true, will force the runners to be built in
+  # product mode which means they will not have an exposed vm service
+  flutter_force_product = false
+
+  # Forces all Flutter apps to use an AOT runner regardless of whether the build is debug or
+  # release.
+  flutter_force_aot = false
+}

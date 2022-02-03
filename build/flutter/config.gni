@@ -2,19 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/flutter/args.gni")
 import("//build/flutter/flutter_build_config.gni")
-
-declare_args() {
-  # If set to true, will force the runners to be built in
-  # product mode which means they will not have an exposed vm service
-  flutter_force_product = false
-}
 
 declare_args() {
   if (flutter_force_product) {
     # Product AOT
     flutter_default_build_cfg = flutter_release_build_cfg
-  } else if (is_debug) {
+  } else if (is_debug && flutter_force_aot) {
+    # Non-product debug AOT
+    flutter_default_build_cfg = flutter_aot_debug_build_cfg
+  } else if (is_debug && !flutter_force_aot) {
     # Non-product JIT
     flutter_default_build_cfg = flutter_debug_build_cfg
   } else {
