@@ -2,31 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::{
-        container::ComponentIdentity,
-        events::error::{EventError, MonikerError},
-    },
-    async_trait::async_trait,
-    fidl::endpoints::{ProtocolMarker, ServerEnd},
-    fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequestStream},
-    fidl_fuchsia_sys2::{self as fsys, Event, EventHeader},
-    fidl_fuchsia_sys_internal::SourceIdentity,
-    fidl_table_validation::*,
-    fuchsia_zircon as zx,
-    futures::{channel::mpsc, stream::BoxStream},
-    io_util,
-    std::{convert::TryFrom, ops::Deref},
+use crate::{
+    container::ComponentIdentity,
+    events::error::{EventError, MonikerError},
 };
-
-#[async_trait]
-pub trait EventSource: Sync + Send {
-    async fn listen(&mut self, sender: mpsc::Sender<ComponentEvent>) -> Result<(), EventError>;
-}
-
-/// The capacity for bounded channels used by this implementation.
-pub static CHANNEL_CAPACITY: usize = 1024;
+use fidl::endpoints::{ProtocolMarker, ServerEnd};
+use fidl_fuchsia_io::DirectoryProxy;
+use fidl_fuchsia_logger as flogger;
+use fidl_fuchsia_sys2 as fsys;
+use fidl_fuchsia_sys_internal::SourceIdentity;
+use fidl_table_validation::ValidFidlTable;
+use fuchsia_zircon as zx;
+use std::{convert::TryFrom, ops::Deref};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Moniker(Vec<String>);
@@ -81,6 +68,166 @@ impl Into<UniqueKey> for Vec<&str> {
 impl Into<Vec<String>> for UniqueKey {
     fn into(self) -> Vec<String> {
         self.0
+    }
+}
+
+/// Wrapper for all types of events.
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum AnyEventType {
+    General(EventType),
+    Singleton(SingletonEventType),
+}
+
+/// Event types that don't contain singleton data and can be cloned directly.
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum EventType {
+    ComponentStarted,
+    ComponentStopped,
+}
+
+/// Event types that contain singleton data. When these events are cloned, their singleton data
+/// won't be cloned.
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum SingletonEventType {
+    DiagnosticsReady,
+    LogSinkRequested,
+}
+
+impl AsRef<str> for AnyEventType {
+    fn as_ref(&self) -> &str {
+        match &self {
+            Self::General(event) => event.as_ref(),
+            Self::Singleton(singleton_event) => singleton_event.as_ref(),
+        }
+    }
+}
+
+impl AsRef<str> for SingletonEventType {
+    fn as_ref(&self) -> &str {
+        match &self {
+            Self::DiagnosticsReady => "diagnostics_ready",
+            Self::LogSinkRequested => "log_sink_requested",
+        }
+    }
+}
+
+impl Into<AnyEventType> for EventType {
+    fn into(self) -> AnyEventType {
+        AnyEventType::General(self)
+    }
+}
+
+impl AsRef<str> for EventType {
+    fn as_ref(&self) -> &str {
+        match &self {
+            Self::ComponentStarted => "component_started",
+            Self::ComponentStopped => "component_stopped",
+        }
+    }
+}
+
+impl Into<AnyEventType> for SingletonEventType {
+    fn into(self) -> AnyEventType {
+        AnyEventType::Singleton(self)
+    }
+}
+
+/// An event that is emitted and consumed.
+#[derive(Debug, Clone)]
+pub struct Event {
+    /// The contents of the event.
+    pub payload: EventPayload,
+    pub timestamp: zx::Time,
+}
+
+impl Event {
+    pub fn is_singleton(&self) -> bool {
+        matches!(self.ty(), AnyEventType::Singleton(_))
+    }
+
+    pub fn ty(&self) -> AnyEventType {
+        match &self.payload {
+            EventPayload::ComponentStarted(_) => EventType::ComponentStarted.into(),
+            EventPayload::ComponentStopped(_) => EventType::ComponentStopped.into(),
+            EventPayload::DiagnosticsReady(_) => SingletonEventType::DiagnosticsReady.into(),
+            EventPayload::LogSinkRequested(_) => SingletonEventType::LogSinkRequested.into(),
+        }
+    }
+}
+
+/// The contents of the event depending on the type of event.
+#[derive(Debug, Clone)]
+pub enum EventPayload {
+    ComponentStarted(ComponentStartedPayload),
+    ComponentStopped(ComponentStoppedPayload),
+    DiagnosticsReady(DiagnosticsReadyPayload),
+    LogSinkRequested(LogSinkRequestedPayload),
+}
+
+/// Payload for a started event.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ComponentStartedPayload {
+    /// The component that started.
+    pub component: ComponentIdentity,
+}
+
+/// Payload for a stopped event.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ComponentStoppedPayload {
+    /// The component that stopped.
+    pub component: ComponentIdentity,
+}
+
+/// Payload for a CapabilityReady(diagnostics) event.
+#[derive(Debug)]
+pub struct DiagnosticsReadyPayload {
+    /// The component which diagnostics directory is available.
+    pub component: ComponentIdentity,
+    /// The `out/diagnostics` directory of the component.
+    pub directory: Option<DirectoryProxy>,
+}
+
+impl Clone for DiagnosticsReadyPayload {
+    fn clone(&self) -> Self {
+        Self { component: self.component.clone(), directory: None }
+    }
+}
+
+/// Payload for a connection to the `LogSink` protocol.
+pub struct LogSinkRequestedPayload {
+    /// The component that is connecting to `LogSink`.
+    pub component: ComponentIdentity,
+    /// The stream containing requests made on the `LogSink` channel by the component.
+    pub request_stream: Option<flogger::LogSinkRequestStream>,
+}
+
+impl Clone for LogSinkRequestedPayload {
+    fn clone(&self) -> Self {
+        Self { component: self.component.clone(), request_stream: None }
+    }
+}
+
+impl std::fmt::Debug for LogSinkRequestedPayload {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LogSinkRequestedPayload").field("component", &self.component).finish()
+    }
+}
+
+/// A single segment in the moniker of a component.
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct MonikerSegment {
+    /// The name of the component's collection, if any.
+    pub collection: Option<String>,
+    /// The name of the component.
+    pub name: String,
+}
+
+impl std::fmt::Display for MonikerSegment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(collection) = &self.collection {
+            write!(f, "{}:", collection)?;
+        }
+        write!(f, "{}", self.name)
     }
 }
 
@@ -165,24 +312,6 @@ impl ComponentIdentifier {
     }
 }
 
-/// A single segment in the moniker of a component.
-#[derive(Debug, Clone, Eq, Hash, PartialEq)]
-pub struct MonikerSegment {
-    /// The name of the component's collection, if any.
-    pub collection: Option<String>,
-    /// The name of the component.
-    pub name: String,
-}
-
-impl std::fmt::Display for MonikerSegment {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(collection) = &self.collection {
-            write!(f, "{}:", collection)?;
-        }
-        write!(f, "{}", self.name)
-    }
-}
-
 #[derive(Debug, Clone, ValidFidlTable, PartialEq)]
 #[fidl_table_src(SourceIdentity)]
 pub struct ValidatedSourceIdentity {
@@ -193,7 +322,7 @@ pub struct ValidatedSourceIdentity {
 }
 
 #[derive(Debug, ValidFidlTable)]
-#[fidl_table_src(EventHeader)]
+#[fidl_table_src(fsys::EventHeader)]
 pub struct ValidatedEventHeader {
     pub event_type: fsys::EventType,
     pub component_url: String,
@@ -202,7 +331,7 @@ pub struct ValidatedEventHeader {
 }
 
 #[derive(Debug, ValidFidlTable)]
-#[fidl_table_src(Event)]
+#[fidl_table_src(fsys::Event)]
 pub struct ValidatedEvent {
     /// Information about the component for which this event was generated.
     pub header: ValidatedEventHeader,
@@ -212,237 +341,111 @@ pub struct ValidatedEvent {
     pub event_result: Option<fsys::EventResult>,
 }
 
-/// The ID of a component as used in components V1.
-/// Represents the shared data associated with
-/// all component events.
-#[derive(Debug, PartialEq, Clone)]
-pub struct EventMetadata {
-    pub identity: ComponentIdentity,
-
-    pub timestamp: zx::Time,
-}
-
-impl EventMetadata {
-    pub fn new(identity: ComponentIdentity) -> Self {
-        Self { identity, timestamp: zx::Time::get_monotonic() }
-    }
-}
-
-impl TryFrom<SourceIdentity> for EventMetadata {
-    type Error = EventError;
-    fn try_from(component: SourceIdentity) -> Result<Self, Self::Error> {
-        Ok(EventMetadata {
-            identity: ComponentIdentity::try_from(component)?,
-            timestamp: zx::Time::get_monotonic(),
-        })
-    }
-}
-
-/// Represents the diagnostics data associated
-/// with a component being observed starting.
-#[derive(Debug, PartialEq)]
-pub struct StartEvent {
-    pub metadata: EventMetadata,
-}
-
-/// Represents the diagnostics data associated
-/// with a component being observed stopping.
-#[derive(Debug, PartialEq)]
-pub struct StopEvent {
-    pub metadata: EventMetadata,
-}
-
-/// Represents the diagnostics data associated
-/// with a new Diagnostics Directory being
-/// made available.
-#[derive(Debug)]
-pub struct DiagnosticsReadyEvent {
-    pub metadata: EventMetadata,
-
-    /// Proxy to the inspect data host.
-    pub directory: Option<DirectoryProxy>,
-}
-
-/// A new incoming connection to `LogSink`.
-pub struct LogSinkRequestedEvent {
-    pub metadata: EventMetadata,
-    pub requests: LogSinkRequestStream,
-}
-
-impl LogSinkRequestedEvent {
-    fn new(event: ValidatedEvent, metadata: EventMetadata) -> Result<Self, EventError> {
-        let payload = event.event_result.ok_or(EventError::MissingField("event_result")).and_then(
-            |result| match result {
-                fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(payload)) => {
-                    Ok(payload)
-                }
-                fsys::EventResult::Error(fsys::EventError {
-                    description: Some(description),
-                    ..
-                }) => Err(EventError::ReceivedError { description }),
-                result => Err(EventError::UnrecognizedResult { result }),
-            },
-        )?;
-
-        let capability_name = payload.name.ok_or(EventError::MissingField("name"))?;
-        if &capability_name != LogSinkMarker::NAME {
-            Err(EventError::IncorrectName {
-                received: capability_name,
-                expected: LogSinkMarker::NAME,
-            })?;
-        }
-
-        let capability = payload.capability.ok_or(EventError::MissingField("capability"))?;
-        let requests = ServerEnd::<LogSinkMarker>::new(capability)
-            .into_stream()
-            .map_err(|source| EventError::InvalidServerEnd { source })?;
-
-        Ok(Self { metadata, requests })
-    }
-}
-
-impl std::fmt::Debug for LogSinkRequestedEvent {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LogSinkRequestedEvent").field("metadata", &self.metadata).finish()
-    }
-}
-
-pub type ComponentEventChannel = mpsc::Sender<ComponentEvent>;
-
-/// A stream of |ComponentEvent|s
-pub type ComponentEventStream = BoxStream<'static, ComponentEvent>;
-
-/// An event that occurred to a component.
-#[derive(Debug)]
-pub enum ComponentEvent {
-    /// We observed the component starting.
-    Start(StartEvent),
-
-    /// We observed the component stopping.
-    Stop(StopEvent),
-
-    /// We observed the creation of a new `out` directory.
-    DiagnosticsReady(DiagnosticsReadyEvent),
-
-    /// We received a new connection to `LogSink`.
-    LogSinkRequested(LogSinkRequestedEvent),
-}
-
-impl TryFrom<Event> for ComponentEvent {
+impl TryFrom<fsys::Event> for Event {
     type Error = EventError;
 
-    fn try_from(event: Event) -> Result<ComponentEvent, Self::Error> {
+    fn try_from(event: fsys::Event) -> Result<Event, Self::Error> {
         let event: ValidatedEvent = ValidatedEvent::try_from(event)?;
 
-        let metadata = EventMetadata {
-            identity: ComponentIdentity::from_identifier_and_url(
-                ComponentIdentifier::parse_from_moniker(&event.header.moniker)?,
-                &event.header.component_url,
-            ),
-            timestamp: zx::Time::from_nanos(event.header.timestamp),
-        };
+        let identity = ComponentIdentity::from_identifier_and_url(
+            ComponentIdentifier::parse_from_moniker(&event.header.moniker)?,
+            &event.header.component_url,
+        );
 
         match event.header.event_type {
-            fsys::EventType::Started => {
-                let start_event = StartEvent { metadata };
-                Ok(ComponentEvent::Start(start_event))
+            fsys::EventType::Started | fsys::EventType::Running => {
+                let timestamp = match event.event_result {
+                    Some(fsys::EventResult::Payload(fsys::EventPayload::Started(_))) | None => {
+                        event.header.timestamp
+                    }
+                    Some(fsys::EventResult::Payload(fsys::EventPayload::Running(payload))) => {
+                        match payload.started_timestamp {
+                            Some(timestamp) => timestamp,
+                            None => return Err(EventError::MissingStartTimestamp),
+                        }
+                    }
+                    Some(result) => return Err(EventError::UnknownResult(result)),
+                };
+                Ok(Event {
+                    timestamp: zx::Time::from_nanos(timestamp),
+                    payload: EventPayload::ComponentStarted(ComponentStartedPayload {
+                        component: identity,
+                    }),
+                })
             }
-            fsys::EventType::Stopped => {
-                let stop_event = StopEvent { metadata };
-                Ok(ComponentEvent::Stop(stop_event))
-            }
-            fsys::EventType::DirectoryReady | fsys::EventType::Running => {
-                construct_payload_holding_component_event(event, metadata)
+            fsys::EventType::Stopped => Ok(Event {
+                timestamp: zx::Time::from_nanos(event.header.timestamp),
+                payload: EventPayload::ComponentStopped(ComponentStoppedPayload {
+                    component: identity,
+                }),
+            }),
+            fsys::EventType::DirectoryReady => {
+                let directory = match event.event_result {
+                    Some(fsys::EventResult::Payload(fsys::EventPayload::DirectoryReady(
+                        directory_ready,
+                    ))) => {
+                        let name = directory_ready.name.ok_or(EventError::MissingField("name"))?;
+                        if name != "diagnostics" {
+                            return Err(EventError::IncorrectName {
+                                received: name,
+                                expected: "diagnostics",
+                            });
+                        }
+                        match directory_ready.node {
+                            Some(node) => io_util::node_to_directory(node.into_proxy()?)
+                                .map_err(EventError::NodeToDirectory)?,
+                            None => return Err(EventError::MissingDiagnosticsDir),
+                        }
+                    }
+                    None => return Err(EventError::ExpectedResult),
+                    Some(result) => return Err(EventError::UnknownResult(result)),
+                };
+                Ok(Event {
+                    timestamp: zx::Time::from_nanos(event.header.timestamp),
+                    payload: EventPayload::DiagnosticsReady(DiagnosticsReadyPayload {
+                        component: identity,
+                        directory: Some(directory),
+                    }),
+                })
             }
             fsys::EventType::CapabilityRequested => {
-                Ok(ComponentEvent::LogSinkRequested(LogSinkRequestedEvent::new(event, metadata)?))
-            }
-            _ => Err(EventError::InvalidEventType { ty: event.header.event_type }),
-        }
-    }
-}
+                let request_stream = match event.event_result {
+                    Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
+                        capability_requested,
+                    ))) => {
+                        let name =
+                            capability_requested.name.ok_or(EventError::MissingField("name"))?;
 
-fn construct_payload_holding_component_event(
-    event: ValidatedEvent,
-    mut shared_data: EventMetadata,
-) -> Result<ComponentEvent, EventError> {
-    match event.event_result {
-        Some(result) => {
-            match result {
-                fsys::EventResult::Payload(fsys::EventPayload::DirectoryReady(directory_ready)) => {
-                    let name = directory_ready.name.ok_or(EventError::MissingField("name"))?;
-                    if name == "diagnostics" {
-                        match directory_ready.node {
-                            Some(node) => {
-                                let diagnostics_ready_event = DiagnosticsReadyEvent {
-                                    metadata: shared_data,
-                                    directory: io_util::node_to_directory(node.into_proxy()?).ok(),
-                                };
-                                Ok(ComponentEvent::DiagnosticsReady(diagnostics_ready_event))
-                            }
-                            None => Err(EventError::MissingDiagnosticsDir),
+                        if &name != flogger::LogSinkMarker::NAME {
+                            Err(EventError::IncorrectName {
+                                received: name,
+                                expected: flogger::LogSinkMarker::NAME,
+                            })?;
                         }
-                    } else {
-                        Err(EventError::IncorrectName { received: name, expected: "diagnostics" })
+                        let capability = capability_requested
+                            .capability
+                            .ok_or(EventError::MissingField("capability"))?;
+                        ServerEnd::<flogger::LogSinkMarker>::new(capability).into_stream()?
                     }
-                }
-                fsys::EventResult::Payload(fsys::EventPayload::Running(payload)) => {
-                    match payload.started_timestamp {
-                        Some(timestamp) => {
-                            shared_data.timestamp = zx::Time::from_nanos(timestamp);
-                            let start = StartEvent { metadata: shared_data };
-                            Ok(ComponentEvent::Start(start))
-                        }
-                        None => Err(EventError::MissingStartTimestamp),
-                    }
-                }
-                fsys::EventResult::Error(fsys::EventError {
-                    description: Some(description),
-                    ..
-                }) => {
-                    // TODO(fxbug.dev/53903): result.error carries information about errors that happened
-                    // in component_manager. We should dump those in diagnostics.
-                    Err(EventError::ReceivedError { description })
-                }
-                result => Err(EventError::UnrecognizedResult { result }),
+                    None => return Err(EventError::ExpectedResult),
+                    Some(result) => return Err(EventError::UnknownResult(result)),
+                };
+                Ok(Event {
+                    timestamp: zx::Time::from_nanos(event.header.timestamp),
+                    payload: EventPayload::LogSinkRequested(LogSinkRequestedPayload {
+                        component: identity,
+                        request_stream: Some(request_stream),
+                    }),
+                })
             }
+            _ => Err(EventError::InvalidEventType(event.header.event_type)),
         }
-        None => Err(EventError::MissingPayload { event }),
-    }
-}
-
-impl PartialEq for ComponentEvent {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (ComponentEvent::Start(a), ComponentEvent::Start(b)) => {
-                return a == b;
-            }
-            (ComponentEvent::Stop(a), ComponentEvent::Stop(b)) => {
-                return a == b;
-            }
-            (ComponentEvent::DiagnosticsReady(a), ComponentEvent::DiagnosticsReady(b)) => {
-                return a == b;
-            }
-            // we can't check two LogSinkRequested events for equality because they have channels
-            _ => false,
-        }
-    }
-}
-
-// Requires a custom partial_eq due to the presence of a directory proxy.
-// Two events with the same metadata and different directory proxies
-// will be considered the same.
-impl PartialEq for DiagnosticsReadyEvent {
-    fn eq(&self, other: &Self) -> bool {
-        self.metadata == other.metadata
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logs::testing::create_log_sink_requested_event;
-    use std::convert::TryInto;
 
     #[fuchsia::test]
     fn convert_v2_moniker_for_diagnostics() {
@@ -461,30 +464,5 @@ mod tests {
         let identifier = ComponentIdentifier::parse_from_moniker(".").unwrap();
         assert!(identifier.relative_moniker_for_selectors().is_empty());
         assert!(identifier.unique_key().is_empty());
-    }
-
-    #[fuchsia::test] // we need an executor for the fidl types
-    async fn validate_logsink_requested_event() {
-        let target_moniker = "./foo";
-        let target_url = "http://foo.com".to_string();
-        let (_log_sink_proxy, log_sink_server_end) =
-            fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();
-        let raw_event = create_log_sink_requested_event(
-            target_moniker.to_owned(),
-            target_url.clone(),
-            log_sink_server_end.into_channel(),
-        );
-        let event = match raw_event.try_into().unwrap() {
-            ComponentEvent::LogSinkRequested(e) => e,
-            other => panic!("incorrect event type received: {:?}", other),
-        };
-
-        assert_eq!(
-            event.metadata.identity,
-            ComponentIdentity::from_identifier_and_url(
-                ComponentIdentifier::parse_from_moniker(target_moniker).unwrap(),
-                target_url
-            )
-        );
     }
 }

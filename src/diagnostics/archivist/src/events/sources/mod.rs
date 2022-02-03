@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 pub use crate::events::sources::{
-    legacy::*, log_connector::*, static_event_stream::*, unattributed_log_sink::*,
+    event_source::*, legacy::*, log_connector::*, unattributed_log_sink::*,
 };
 
+mod event_source;
 mod legacy;
 mod log_connector;
-mod static_event_stream;
 mod unattributed_log_sink;

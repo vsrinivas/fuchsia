@@ -2,92 +2,100 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::{
-        container::ComponentIdentity,
-        events::{error::EventError, types::*},
+use crate::{
+    container::ComponentIdentity,
+    events::{
+        error::EventError,
+        router::{Dispatcher, EventProducer},
+        types::{Event, EventPayload, LogSinkRequestedPayload},
     },
-    async_trait::async_trait,
-    fidl_fuchsia_logger::LogSinkRequestStream,
-    fuchsia_async as fasync,
-    futures::{channel::mpsc, SinkExt, StreamExt},
 };
+use fidl_fuchsia_logger as flogger;
+use fuchsia_zircon as zx;
+use futures::{channel::mpsc, StreamExt};
 
 pub struct UnattributedLogSinkSource {
-    stream_sender: mpsc::Sender<LogSinkRequestStream>,
-    state: State,
-}
-
-enum State {
-    ReadyToListen(Option<mpsc::Receiver<LogSinkRequestStream>>),
-    Listening(fasync::Task<()>),
+    dispatcher: Dispatcher,
+    sender: mpsc::Sender<flogger::LogSinkRequestStream>,
+    receiver: mpsc::Receiver<flogger::LogSinkRequestStream>,
 }
 
 impl UnattributedLogSinkSource {
     pub fn new() -> Self {
-        let (stream_sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
-        Self { stream_sender, state: State::ReadyToListen(Some(receiver)) }
+        let (sender, receiver) = mpsc::channel(10);
+        Self { dispatcher: Dispatcher::default(), sender, receiver }
     }
 
-    pub fn get_publisher(&self) -> mpsc::Sender<LogSinkRequestStream> {
-        self.stream_sender.clone()
+    pub fn publisher(&self) -> mpsc::Sender<flogger::LogSinkRequestStream> {
+        self.sender.clone()
+    }
+
+    pub async fn spawn(mut self) -> Result<(), EventError> {
+        while let Some(stream) = self.receiver.next().await {
+            if let Err(err) = self
+                .dispatcher
+                .emit(Event {
+                    timestamp: zx::Time::get_monotonic(),
+                    payload: EventPayload::LogSinkRequested(LogSinkRequestedPayload {
+                        component: ComponentIdentity::unknown(),
+                        request_stream: Some(stream),
+                    }),
+                })
+                .await
+            {
+                if err.is_disconnected() {
+                    break;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
-#[async_trait]
-impl EventSource for UnattributedLogSinkSource {
-    async fn listen(&mut self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), EventError> {
-        match &mut self.state {
-            State::Listening(_) => Err(EventError::StreamAlreadyTaken),
-            State::ReadyToListen(ref mut receiver) => {
-                // unwrap safe since we initialize to Some().
-                debug_assert!(receiver.is_some());
-                let receiver = receiver.take().unwrap();
-                self.state = State::Listening(fasync::Task::spawn(async move {
-                    let mut stream = Box::pin(receiver.boxed());
-                    while let Some(requests) = stream.next().await {
-                        let _ = sender
-                            .send(ComponentEvent::LogSinkRequested(LogSinkRequestedEvent {
-                                metadata: EventMetadata::new(ComponentIdentity::unknown()),
-                                requests,
-                            }))
-                            .await;
-                    }
-                }));
-                Ok(())
-            }
-        }
+impl EventProducer for UnattributedLogSinkSource {
+    fn set_dispatcher(&mut self, dispatcher: Dispatcher) {
+        self.dispatcher = dispatcher;
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, assert_matches::assert_matches, fidl, fidl_fuchsia_logger::LogSinkMarker};
+    use super::*;
+    use crate::events::types::*;
+    use fidl_fuchsia_logger::LogSinkMarker;
+    use fuchsia_async as fasync;
+    use futures::{SinkExt, StreamExt};
+    use std::collections::BTreeSet;
 
     #[fuchsia::test]
     async fn events_have_unknown_identity() {
+        let events =
+            BTreeSet::from([AnyEventType::Singleton(SingletonEventType::LogSinkRequested)]);
+        let (mut event_stream, dispatcher) = Dispatcher::new_for_test(events);
         let mut source = UnattributedLogSinkSource::new();
-        let mut publisher = source.get_publisher();
+        source.set_dispatcher(dispatcher);
+        let mut publisher = source.publisher();
+        let _task = fasync::Task::spawn(async move {
+            source.spawn().await.unwrap();
+        });
         let (_, log_sink_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
         publisher.send(log_sink_stream).await.expect("send stream");
 
-        let (event_sender, receiver) = mpsc::channel(1);
-        source.listen(event_sender).await.expect("listen succeeds");
-
-        let mut stream = Box::pin(receiver.boxed());
-        let event = stream.next().await.expect("received event");
-        let _expected_identity = ComponentIdentity {
+        let event = event_stream.next().await.expect("received event");
+        let expected_identity = ComponentIdentity {
             url: "fuchsia-pkg://UNKNOWN".to_string(),
             instance_id: Some("0".to_string()),
             relative_moniker: vec!["UNKNOWN"].into(),
         };
-        assert_matches!(
-            event,
-            ComponentEvent::LogSinkRequested(LogSinkRequestedEvent {
-                metadata: EventMetadata { identity: _expected_identity, .. },
-                ..
-            })
-        );
+        match event.payload {
+            EventPayload::LogSinkRequested(LogSinkRequestedPayload {
+                component,
+                request_stream: Some(_),
+            }) => {
+                assert_eq!(component, expected_identity);
+            }
+            payload => unreachable!("{:?} never gets here", payload),
+        }
     }
 }

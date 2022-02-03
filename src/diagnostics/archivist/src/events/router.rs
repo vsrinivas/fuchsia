@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::container::ComponentIdentity;
+use crate::{container::ComponentIdentity, events::types::*};
 use async_trait::async_trait;
-use fidl_fuchsia_io::DirectoryProxy;
-use fidl_fuchsia_logger::LogSinkRequestStream;
 use fuchsia_inspect::{self as inspect, NumericProperty};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use futures::{
@@ -15,7 +13,6 @@ use futures::{
 };
 use pin_project::pin_project;
 use std::{
-    cmp::PartialEq,
     collections::{BTreeMap, BTreeSet},
     iter::Extend,
     pin::Pin,
@@ -363,6 +360,12 @@ impl Dispatcher {
         }
         Ok(())
     }
+
+    #[cfg(test)]
+    pub fn new_for_test(allowed_events: BTreeSet<AnyEventType>) -> (mpsc::Receiver<Event>, Self) {
+        let (sender, receiver) = mpsc::channel(100);
+        (receiver, Self::new(allowed_events, sender))
+    }
 }
 
 struct EventStreamLogger {
@@ -467,67 +470,6 @@ pub struct ConsumerConfig<'a, T> {
     pub singleton_events: Vec<SingletonEventType>,
 }
 
-/// Wrapper for all types of events.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum AnyEventType {
-    General(EventType),
-    Singleton(SingletonEventType),
-}
-
-impl AsRef<str> for AnyEventType {
-    fn as_ref(&self) -> &str {
-        match &self {
-            Self::General(event) => event.as_ref(),
-            Self::Singleton(singleton_event) => singleton_event.as_ref(),
-        }
-    }
-}
-
-/// Event types that don't contain singleton data and can be cloned directly.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum EventType {
-    ComponentStarted,
-    ComponentStopped,
-}
-
-/// Event types that contain singleton data. When these events are cloned, their singleton data
-/// won't be cloned.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum SingletonEventType {
-    DiagnosticsReady,
-    LogSinkRequested,
-}
-
-impl AsRef<str> for EventType {
-    fn as_ref(&self) -> &str {
-        match &self {
-            Self::ComponentStarted => "component_started",
-            Self::ComponentStopped => "component_stopped",
-        }
-    }
-}
-
-impl AsRef<str> for SingletonEventType {
-    fn as_ref(&self) -> &str {
-        match &self {
-            Self::DiagnosticsReady => "diagnostics_ready",
-            Self::LogSinkRequested => "log_sink_requested",
-        }
-    }
-}
-
-impl Into<AnyEventType> for EventType {
-    fn into(self) -> AnyEventType {
-        AnyEventType::General(self)
-    }
-}
-
-impl Into<AnyEventType> for SingletonEventType {
-    fn into(self) -> AnyEventType {
-        AnyEventType::Singleton(self)
-    }
-}
-
 /// Trait implemented by data types which receive events.
 #[async_trait]
 pub trait EventConsumer {
@@ -543,104 +485,6 @@ pub trait EventProducer {
     fn set_dispatcher(&mut self, dispatcher: Dispatcher);
 }
 
-/// An event that is emitted and consumed.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Event {
-    /// The contents of the event.
-    pub payload: EventPayload,
-}
-
-impl Event {
-    fn is_singleton(&self) -> bool {
-        matches!(self.ty(), AnyEventType::Singleton(_))
-    }
-
-    fn ty(&self) -> AnyEventType {
-        match &self.payload {
-            EventPayload::ComponentStarted(_) => EventType::ComponentStarted.into(),
-            EventPayload::ComponentStopped(_) => EventType::ComponentStopped.into(),
-            EventPayload::LogSinkRequested(_) => SingletonEventType::LogSinkRequested.into(),
-            EventPayload::DiagnosticsReady(_) => SingletonEventType::DiagnosticsReady.into(),
-        }
-    }
-}
-
-/// The contents of the event depending on the type of event.
-#[derive(Debug, Clone, PartialEq)]
-pub enum EventPayload {
-    ComponentStarted(ComponentStartedPayload),
-    ComponentStopped(ComponentStoppedPayload),
-    LogSinkRequested(LogSinkRequestedPayload),
-    DiagnosticsReady(DiagnosticsReadyPayload),
-}
-
-/// Payload for a started event.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ComponentStartedPayload {
-    /// The component that started.
-    pub component: ComponentIdentity,
-}
-
-/// Payload for a stopped event.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ComponentStoppedPayload {
-    /// The component that stopped.
-    pub component: ComponentIdentity,
-}
-
-/// Payload for a CapabilityReady(diagnostics) event.
-#[derive(Debug)]
-pub struct DiagnosticsReadyPayload {
-    /// The component which diagnostics directory is available.
-    pub component: ComponentIdentity,
-    /// The `out/diagnostics` directory of the component.
-    pub directory: Option<DirectoryProxy>,
-}
-
-impl PartialEq for DiagnosticsReadyPayload {
-    fn eq(&self, other: &DiagnosticsReadyPayload) -> bool {
-        let component_equal = self.component == other.component;
-        let directory_matches = (self.directory.is_some() && other.directory.is_some())
-            || (self.directory.is_none() && other.directory.is_none());
-        component_equal && directory_matches
-    }
-}
-
-impl Clone for DiagnosticsReadyPayload {
-    fn clone(&self) -> Self {
-        Self { component: self.component.clone(), directory: None }
-    }
-}
-
-/// Payload for a connection to the `LogSink` protocol.
-pub struct LogSinkRequestedPayload {
-    /// The component that is connecting to `LogSink`.
-    pub component: ComponentIdentity,
-    /// The stream containing requests made on the `LogSink` channel by the component.
-    pub request_stream: Option<LogSinkRequestStream>,
-}
-
-impl PartialEq for LogSinkRequestedPayload {
-    fn eq(&self, other: &LogSinkRequestedPayload) -> bool {
-        let component_equal = self.component == other.component;
-        let directory_matches = (self.request_stream.is_some() && other.request_stream.is_some())
-            || (self.request_stream.is_none() && other.request_stream.is_none());
-        component_equal && directory_matches
-    }
-}
-
-impl Clone for LogSinkRequestedPayload {
-    fn clone(&self) -> Self {
-        Self { component: self.component.clone(), request_stream: None }
-    }
-}
-
-impl std::fmt::Debug for LogSinkRequestedPayload {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LogSinkRequestedPayload").field("component", &self.component).finish()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -649,10 +493,12 @@ mod tests {
     use fidl_fuchsia_logger::LogSinkMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::assert_data_tree;
+    use fuchsia_zircon as zx;
     use futures::{lock::Mutex, FutureExt};
     use lazy_static::lazy_static;
 
     const TEST_URL: &'static str = "NO-OP URL";
+    const FAKE_TIMESTAMP: i64 = 5;
     lazy_static! {
         static ref IDENTITY: ComponentIdentity = ComponentIdentity::from_identifier_and_url(
             ComponentIdentifier::parse_from_moniker("./a/b").unwrap(),
@@ -676,22 +522,26 @@ mod tests {
         async fn emit(&mut self, event_type: AnyEventType, identity: ComponentIdentity) {
             let event = match event_type {
                 AnyEventType::General(EventType::ComponentStarted) => Event {
+                    timestamp: zx::Time::from_nanos(FAKE_TIMESTAMP),
                     payload: EventPayload::ComponentStarted(ComponentStartedPayload {
                         component: identity,
                     }),
                 },
                 AnyEventType::General(EventType::ComponentStopped) => Event {
+                    timestamp: zx::Time::from_nanos(FAKE_TIMESTAMP),
                     payload: EventPayload::ComponentStopped(ComponentStoppedPayload {
                         component: identity,
                     }),
                 },
                 AnyEventType::Singleton(SingletonEventType::DiagnosticsReady) => Event {
+                    timestamp: zx::Time::from_nanos(FAKE_TIMESTAMP),
                     payload: EventPayload::DiagnosticsReady(DiagnosticsReadyPayload {
                         component: identity,
                         directory: None,
                     }),
                 },
                 AnyEventType::Singleton(SingletonEventType::LogSinkRequested) => Event {
+                    timestamp: zx::Time::from_nanos(FAKE_TIMESTAMP),
                     payload: EventPayload::LogSinkRequested(LogSinkRequestedPayload {
                         component: identity,
                         request_stream: None,
@@ -819,9 +669,11 @@ mod tests {
         // Emit an event
         let (_, request_stream) =
             fidl::endpoints::create_request_stream::<LogSinkMarker>().unwrap();
+        let timestamp = zx::Time::get_monotonic();
         producer
             .dispatcher
             .emit(Event {
+                timestamp: timestamp.clone(),
                 payload: EventPayload::LogSinkRequested(LogSinkRequestedPayload {
                     component: IDENTITY.clone(),
                     request_stream: Some(request_stream),
@@ -833,12 +685,18 @@ mod tests {
         // The first consumer that was registered must receive the request stream. The second one
         // must receive no payload, but still receive the event.
         let first_event = first_receiver.next().await.unwrap();
-        assert_matches!(first_event, Event { payload: EventPayload::LogSinkRequested(payload) } => {
+        assert_matches!(first_event, Event {
+            payload: EventPayload::LogSinkRequested(payload),
+            ..
+        } => {
             assert_eq!(payload.component, *IDENTITY);
             assert!(payload.request_stream.is_some());
         });
         let second_event = second_receiver.next().await.unwrap();
-        assert_matches!(second_event, Event { payload: EventPayload::LogSinkRequested(payload) } => {
+        assert_matches!(second_event, Event {
+            payload: EventPayload::LogSinkRequested(payload),
+            ..
+        } => {
             assert_eq!(payload.component, *IDENTITY);
             assert!(payload.request_stream.is_none());
         });
@@ -870,11 +728,13 @@ mod tests {
 
         let (_terminate_handle, fut) = router.start().unwrap();
         let _router_task = fasync::Task::spawn(fut);
+        let timestamp = zx::Time::get_monotonic();
 
         // Emit an event
         producer
             .dispatcher
             .emit(Event {
+                timestamp,
                 payload: EventPayload::ComponentStarted(ComponentStartedPayload {
                     component: IDENTITY.clone(),
                 }),
@@ -884,14 +744,18 @@ mod tests {
 
         // Both consumers receive the exact same event.
         let first_event = first_receiver.next().await.unwrap();
-        assert_matches!(first_event, Event { payload: EventPayload::ComponentStarted(payload) } => {
+        assert_matches!(first_event, Event {
+            payload: EventPayload::ComponentStarted(payload),
+            ..
+        } => {
             assert_eq!(payload, ComponentStartedPayload { component: IDENTITY.clone() });
         });
         let second_event = second_receiver.next().await.unwrap();
         assert_matches!(
             second_event,
-            Event { payload: EventPayload::ComponentStarted(payload) } => {
+            Event { timestamp: t, payload: EventPayload::ComponentStarted(payload) } => {
                 assert_eq!(payload, ComponentStartedPayload { component: IDENTITY.clone() });
+                assert_eq!(timestamp, t);
             }
         );
     }
@@ -935,6 +799,7 @@ mod tests {
         producer
             .dispatcher
             .emit(Event {
+                timestamp: zx::Time::get_monotonic(),
                 payload: EventPayload::ComponentStarted(ComponentStartedPayload {
                     component: IDENTITY.clone(),
                 }),
@@ -952,6 +817,7 @@ mod tests {
         producer
             .dispatcher
             .emit(Event {
+                timestamp: zx::Time::get_monotonic(),
                 payload: EventPayload::ComponentStarted(ComponentStartedPayload {
                     component: IDENTITY.clone(),
                 }),
@@ -1103,7 +969,10 @@ mod tests {
             stopped(IDENTITY.clone()),
             started(IDENTITY.clone()),
         ];
-        assert_eq!(events, expected_events);
+        assert_eq!(events.len(), expected_events.len());
+        for (event, expected_event) in std::iter::zip(events, expected_events) {
+            assert_event(event, expected_event);
+        }
     }
 
     #[fuchsia::test]
@@ -1143,11 +1012,8 @@ mod tests {
         let on_drained = terminate_handle.terminate();
         let drain_finished = fasync::Task::spawn(async move { on_drained.await });
 
-        let events = vec![receiver.next().await.unwrap(), receiver.next().await.unwrap()];
-        assert!(
-            events == vec![started(IDENTITY.clone()), stopped(IDENTITY.clone())]
-                || events == vec![stopped(IDENTITY.clone()), started(IDENTITY.clone())]
-        );
+        assert_event(receiver.next().await.unwrap(), stopped(IDENTITY.clone()));
+        assert_event(receiver.next().await.unwrap(), started(IDENTITY.clone()));
 
         // This future must be complete now.
         drain_finished.await;
@@ -1157,15 +1023,35 @@ mod tests {
         external_producer
             .emit(AnyEventType::General(EventType::ComponentStopped), IDENTITY.clone())
             .await;
-        assert_eq!(receiver.next().now_or_never(), None);
+        assert!(receiver.next().now_or_never().is_none());
         internal_producer
             .emit(AnyEventType::General(EventType::ComponentStarted), IDENTITY.clone())
             .await;
-        assert_eq!(receiver.next().await.unwrap(), started(IDENTITY.clone()));
+        assert_event(receiver.next().await.unwrap(), started(IDENTITY.clone()));
+    }
+
+    fn assert_event(event: Event, other: Event) {
+        assert_eq!(event.timestamp, other.timestamp);
+        match (event.payload, other.payload) {
+            (
+                EventPayload::ComponentStarted(payload),
+                EventPayload::ComponentStarted(other_payload),
+            ) => {
+                assert_eq!(payload, other_payload);
+            }
+            (
+                EventPayload::ComponentStopped(payload),
+                EventPayload::ComponentStopped(other_payload),
+            ) => {
+                assert_eq!(payload, other_payload);
+            }
+            _ => unimplemented!("no other combinations are expected in these tests"),
+        }
     }
 
     fn started(identity: ComponentIdentity) -> Event {
         Event {
+            timestamp: zx::Time::from_nanos(FAKE_TIMESTAMP),
             payload: EventPayload::ComponentStarted(ComponentStartedPayload {
                 component: identity,
             }),
@@ -1174,6 +1060,7 @@ mod tests {
 
     fn stopped(identity: ComponentIdentity) -> Event {
         Event {
+            timestamp: zx::Time::from_nanos(FAKE_TIMESTAMP),
             payload: EventPayload::ComponentStopped(ComponentStoppedPayload {
                 component: identity,
             }),

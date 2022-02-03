@@ -4,7 +4,7 @@
 
 use crate::{
     container::ComponentIdentity,
-    events::types::{ComponentEvent, LogSinkRequestedEvent},
+    events::types::{Event, EventPayload, LogSinkRequestedPayload},
     logs::budget::BudgetManager,
     repository::DataRepo,
 };
@@ -333,13 +333,13 @@ impl EventStreamLogReader {
         sender: mpsc::UnboundedSender<Task<()>>,
         log_manager: DataRepo,
     ) {
-        let LogSinkRequestedEvent { metadata, requests } =
+        let LogSinkRequestedPayload { component, request_stream } =
             match event.try_into().expect("into component event") {
-                ComponentEvent::LogSinkRequested(event) => event,
+                Event { payload: EventPayload::LogSinkRequested(payload), .. } => payload,
                 other => unreachable!("should never see {:?} here", other),
             };
-        let container = log_manager.write().get_log_container(metadata.identity);
-        container.handle_log_sink(requests, sender);
+        let container = log_manager.write().get_log_container(component);
+        container.handle_log_sink(request_stream.unwrap(), sender);
     }
 }
 

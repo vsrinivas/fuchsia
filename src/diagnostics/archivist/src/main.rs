@@ -8,17 +8,10 @@
 
 use {
     anyhow::{Context, Error},
-    archivist_lib::{
-        archivist::{Archivist, LogOpts},
-        configs, diagnostics,
-        events::sources::{ComponentEventProvider, LogConnectorEventSource},
-        logs,
-    },
+    archivist_lib::{archivist::Archivist, configs, diagnostics, logs},
     argh::FromArgs,
     fdio::service_connect,
-    fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
     fuchsia_async::{LocalExecutor, SendExecutor},
-    fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_syslog, fuchsia_zircon as zx,
     std::path::PathBuf,
@@ -125,13 +118,14 @@ async fn async_main(
     let mut archivist = Archivist::new(archivist_configuration)?;
     debug!("Archivist initialized from configuration.");
 
-    archivist.install_log_services(LogOpts { ingest_v2_logs: opt.enable_event_source }).await;
+    archivist.install_log_services().await;
+
+    if opt.enable_event_source {
+        archivist.install_event_source().await;
+    }
+
     if opt.enable_component_event_provider {
-        let legacy_event_provider: ComponentEventProvider =
-            connect_to_protocol::<ComponentEventProviderMarker>()
-                .context("failed to connect to event provider")?
-                .into();
-        archivist.add_event_source("v1", Box::new(legacy_event_provider)).await;
+        archivist.install_component_event_provider();
     }
 
     if let Some(socket) = log_server {
@@ -152,10 +146,7 @@ async fn async_main(
     }
 
     if opt.enable_log_connector {
-        let connector = connect_to_protocol::<LogConnectorMarker>()?;
-        archivist
-            .add_event_source("log_connector", Box::new(LogConnectorEventSource::new(connector)))
-            .await;
+        archivist.install_log_connector();
     }
 
     if opt.enable_klog {
