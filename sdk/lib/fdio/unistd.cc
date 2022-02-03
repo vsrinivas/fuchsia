@@ -38,6 +38,7 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/string_buffer.h>
+#include <safemath/checked_math.h>
 
 #include "sdk/lib/fdio/cleanpath.h"
 #include "sdk/lib/fdio/fdio_unistd.h"
@@ -642,6 +643,10 @@ ssize_t writev(int fd, const struct iovec* iov, int iovcnt) {
 
 __EXPORT
 ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
+  zx_off_t zx_offset;
+  if (!safemath::MakeCheckedNum(offset).AssignIfValid(&zx_offset)) {
+    return ERRNO(EINVAL);
+  }
   fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
@@ -659,7 +664,8 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
 
   for (;;) {
     size_t actual;
-    zx_status_t status = zxio_readv_at(&io->zxio_storage().io, offset, zx_iov, iovcnt, 0, &actual);
+    zx_status_t status =
+        zxio_readv_at(&io->zxio_storage().io, zx_offset, zx_iov, iovcnt, 0, &actual);
     if (status == ZX_ERR_SHOULD_WAIT && blocking) {
       status = fdio_wait(io, FDIO_EVT_READABLE, deadline, nullptr);
       if (status == ZX_OK) {
@@ -678,6 +684,10 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
 
 __EXPORT
 ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
+  zx_off_t zx_offset;
+  if (!safemath::MakeCheckedNum(offset).AssignIfValid(&zx_offset)) {
+    return ERRNO(EINVAL);
+  }
   fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
@@ -695,7 +705,8 @@ ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
 
   for (;;) {
     size_t actual;
-    zx_status_t status = zxio_writev_at(&io->zxio_storage().io, offset, zx_iov, iovcnt, 0, &actual);
+    zx_status_t status =
+        zxio_writev_at(&io->zxio_storage().io, zx_offset, zx_iov, iovcnt, 0, &actual);
     if (status == ZX_ERR_SHOULD_WAIT && blocking) {
       status = fdio_wait(io, FDIO_EVT_WRITABLE, deadline, nullptr);
       if (status == ZX_OK) {

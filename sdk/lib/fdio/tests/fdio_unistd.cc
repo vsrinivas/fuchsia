@@ -143,4 +143,15 @@ TEST(UnistdTest, LinkAtFollow) {
 #endif
 }
 
+TEST(UnistdTest, ReadAndWriteWithNegativeOffsets) {
+  const char* filename = "/tmp/read-write-with-negative-offsets-test";
+  fbl::unique_fd fd(open(filename, O_CREAT | O_RDWR, 0666));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(-1, pwrite(fd.get(), "hello", 5, -1));
+  ASSERT_EQ(EINVAL, errno, "%s", strerror(errno));
+  char buf[5];
+  ASSERT_EQ(-1, pwrite(fd.get(), buf, 5, -1));
+  ASSERT_EQ(EINVAL, errno, "%s", strerror(errno));
+}
+
 }  // namespace
