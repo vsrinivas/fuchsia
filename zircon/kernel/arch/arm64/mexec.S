@@ -87,7 +87,7 @@ FUNCTION(mexec_asm)
 
 // Outer loop: Execute all the memmove ops in a given page.
 .Lcopypage:
-    ldr page_remaining_entries, =(MAX_OPS_PER_PAGE)
+    movlit page_remaining_entries, MAX_OPS_PER_PAGE
 
 /* Mempy the new kernel over the old kernel. Keep in mind that since the MMU
  * is disabled, unaligned accesses are no longer legal. All accesses must be
