@@ -135,7 +135,7 @@ class OobeStateImpl with Disposable implements OobeState {
   }
 
   @override
-  bool get loginDone => _loginDone.value || !launchOobe;
+  bool get loginDone => _loginDone.value;
   final _loginDone = false.asObservable();
 
   @override

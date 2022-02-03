@@ -20,7 +20,9 @@ Future<void> main() async {
           ? Offstage()
           : oobe.loginDone
               ? ErmineApp(oobe)
-              : OobeApp(oobe);
+              : oobe.launchOobe
+                  ? OobeApp(oobe)
+                  : Offstage();
     });
     runApp(app);
   });
