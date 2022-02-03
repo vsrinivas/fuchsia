@@ -2,15 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 
 #include <virtio/gpu.h>
 
+#include "fuchsia/logger/cpp/fidl.h"
+#include "fuchsia/virtualization/hardware/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/gpu.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioGpuUrl[] = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cmx";
 static constexpr uint16_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 16;
 
@@ -19,25 +23,82 @@ static constexpr size_t kPixelSizeInBytes = 4;
 static constexpr uint32_t kResourceId = 0;
 static constexpr uint32_t kScanoutId = 0;
 
-class VirtioGpuTest : public TestWithDevice, public fuchsia::ui::scenic::testing::Scenic_TestBase {
+using component_testing::ChildRef;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmRoot;
+using component_testing::Route;
+using RealmBuilder = component_testing::RealmBuilder;
+using component_testing::LocalComponent;
+using component_testing::LocalComponentHandles;
+
+class ScenicFake : public fuchsia::ui::scenic::testing::Scenic_TestBase, public LocalComponent {
+ public:
+  explicit ScenicFake(async::Loop& loop) : loop_(loop) {}
+
+  void NotImplemented_(const std::string& name) override {
+    printf("Not implemented: Scenic::%s\n", name.data());
+  }
+
+  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+    // This class contains handles to the component's incoming and outgoing capabilities.
+    handles_ = std::move(handles);
+
+    ASSERT_EQ(
+        handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, loop_.dispatcher())),
+        ZX_OK);
+  }
+
+ private:
+  async::Loop& loop_;
+  fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
+  std::unique_ptr<LocalComponentHandles> handles_;
+};
+
+class VirtioGpuTest : public TestWithDeviceV2 {
  protected:
   VirtioGpuTest()
       : control_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
-        cursor_queue_(phys_mem_, control_queue_.end(), kQueueSize) {}
+        cursor_queue_(phys_mem_, control_queue_.end(), kQueueSize),
+        scenic_fake_(loop()) {}
 
   void SetUp() override {
-    auto env_services = CreateServices();
-    zx_status_t status = env_services->AddService(bindings_.GetHandler(this));
-    ASSERT_EQ(ZX_OK, status);
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
+    constexpr auto kComponentName = "virtio_gpu";
+    constexpr auto kFakeScenic = "fake_scenic";
 
-    // Launch device process.
+    auto realm_builder = RealmBuilder::Create();
+    realm_builder.AddChild(kComponentName, kComponentUrl);
+    realm_builder.AddLocalChild(kFakeScenic, &scenic_fake_);
+
+    realm_builder
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::logger::LogSink::Name_},
+                                Protocol{fuchsia::tracing::provider::Registry::Name_},
+                            },
+                        .source = ParentRef(),
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::ui::scenic::Scenic::Name_},
+                            },
+                        .source = {ChildRef{kFakeScenic}},
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::virtualization::hardware::VirtioGpu::Name_},
+                            },
+                        .source = ChildRef{kComponentName},
+                        .targets = {ParentRef()}});
+
+    realm_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
+
     fuchsia::virtualization::hardware::StartInfo start_info;
-    status = LaunchDevice(kVirtioGpuUrl, cursor_queue_.end(), &start_info, std::move(env_services));
+    zx_status_t status = MakeStartInfo(cursor_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
-    // Start device execution.
-    services_->Connect(gpu_.NewRequest());
-    RunLoopUntilIdle();
+    gpu_ = realm_->ConnectSync<fuchsia::virtualization::hardware::VirtioGpu>();
 
     status = gpu_->Start(std::move(start_info), nullptr, nullptr);
     ASSERT_EQ(ZX_OK, status);
@@ -54,10 +115,6 @@ class VirtioGpuTest : public TestWithDevice, public fuchsia::ui::scenic::testing
     // Finish negotiating features.
     status = gpu_->Ready(0);
     ASSERT_EQ(ZX_OK, status);
-  }
-
-  void NotImplemented_(const std::string& name) override {
-    printf("Not implemented: Scenic::%s\n", name.data());
   }
 
   template <typename T>
@@ -125,7 +182,8 @@ class VirtioGpuTest : public TestWithDevice, public fuchsia::ui::scenic::testing
   fuchsia::virtualization::hardware::VirtioGpuSyncPtr gpu_;
   VirtioQueueFake control_queue_;
   VirtioQueueFake cursor_queue_;
-  fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
+  ScenicFake scenic_fake_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
 TEST_F(VirtioGpuTest, GetDisplayInfo) {

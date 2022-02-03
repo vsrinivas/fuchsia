@@ -1,0 +1,28 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/virtio_gpu",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.virtualization.hardware.VirtioGpu" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.virtualization.hardware.VirtioGpu" ],
+            from: "self",
+        },
+    ],
+}

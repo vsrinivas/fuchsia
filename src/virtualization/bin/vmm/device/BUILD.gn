@@ -247,9 +247,27 @@ executable("virtio_gpu_bin") {
   ]
 }
 
-fuchsia_package_with_single_component("virtio_gpu") {
+# TODO(fxbug.dev/72386)
+# CFv2 migration in progress
+# v2 component is being used in device tests
+# v1 component is being used in prod code
+fuchsia_package("virtio_gpu") {
+  deps = [
+    ":virtio_gpu_v1",
+    ":virtio_gpu_v2",
+  ]
+}
+
+fuchsia_component("virtio_gpu_v2") {
+  manifest = "../meta/virtio_gpu.cml"
+  deps = [ ":virtio_gpu_bin" ]
+  component_name = "virtio_gpu"
+}
+
+fuchsia_component("virtio_gpu_v1") {
   manifest = "../meta/virtio_gpu.cmx"
   deps = [ ":virtio_gpu_bin" ]
+  component_name = "virtio_gpu"
 }
 
 source_set("magma_image") {
