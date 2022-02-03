@@ -8,6 +8,7 @@
 #include <sys/types.h>
 
 #include <cstdint>
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -122,6 +123,9 @@ fpromise::result<void, std::string> UnpackRawFvm(const Reader& image,
     if (partition.IsFree()) {
       continue;
     }
+    std::cout << "Partition \"" << partition.name() << "\" has reserved " << partition.slices
+              << " slices for " << partition.slices * metadata.GetHeader().slice_size << " bytes."
+              << std::endl;
     names[i] = partition.name();
   }
 
