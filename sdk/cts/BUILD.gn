@@ -15,35 +15,22 @@ group("cts_artifacts") {
   deps = [ "//sdk:cts" ]
 }
 
-action("update_test_manifest") {
-  # When trying to build CTS at ToT and a previous version of CTS, the build fails because both CTS
-  # versions generate packages with identical names. This target appends the CTS version to the
-  # previous CTS version's package names in the test manifest. The previous version's package names
-  # are updated in the build via //sdk/cts/build/script/transform_build_gn.py.
-  script = "//sdk/cts/build/scripts/update_test_manifest.py"
-  inputs = [ "data/test_manifest.json" ]
-  outputs = [ "$target_gen_dir/test_manifest.json" ]
-
-  args = [
-    "--manifest",
-    rebase_path("data/test_manifest.json"),
-    "--out",
-    rebase_path(outputs[0]),
+generated_file("generated_test_manifest") {
+  testonly = true
+  outputs = [ "$target_gen_dir/cts/test_manifest.json" ]
+  output_conversion = "json"
+  data_keys = [ "test_manifest" ]
+  deps = [
+    "examples:tests",
+    "tests",
   ]
-
-  if (cts_version != "") {
-    args += [
-      "--cts_version",
-      cts_version,
-    ]
-  }
 }
 
 cts_copy_to_sdk("test_manifest") {
   testonly = true
   dest = ""
-  sources = get_target_outputs(":update_test_manifest")
-  non_sdk_deps = [ ":update_test_manifest" ]
+  sources = get_target_outputs(":generated_test_manifest")
+  non_sdk_deps = [ ":generated_test_manifest" ]
 }
 
 sdk_molecule("test_manifest") {

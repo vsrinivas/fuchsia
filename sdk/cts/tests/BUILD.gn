@@ -11,6 +11,9 @@ group("tests_no_e2e") {
   deps = [
     "fidl:tests",
     "pkg:tests",
+
+    # Tests not under //sdk/cts/...
+    "//src/sys/component_manager/tests/reboot_on_terminate:tests",
   ]
 
   # TODO(jcecil): add back tools tests once we're able to execute them OOT.
@@ -84,6 +87,9 @@ sdk_molecule("test_sdks") {
 
     # TODO(johnshamoon): Enable this when our Dart toolchain is sorted.
     # "tools:test_sdks",
+
+    # Tests not under //sdk/cts/...
+    "//src/sys/component_manager/tests/reboot_on_terminate:test_sdks",
   ]
   testonly = true
 }

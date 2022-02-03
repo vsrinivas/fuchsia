@@ -22,57 +22,91 @@ import("//sdk/cts/build/write_cts_file.gni")
 # }
 # ```
 template("cts_fuchsia_test_package") {
-  assert(defined(invoker.package_name), "package_name must be defined.")
-  if (cts_version != "") {
-    invoker.package_name += "_$cts_version"
-  }
+  # This parameter is a hack to skip the driver test realm tests until
+  # fxb/87160 is fixed. DO NOT add more uses of internal_only_skip_on_cq.
+  not_needed(invoker, [ "internal_only_skip_on_cq" ])
 
-  # Ensure that deps and test_components are CTS targets.
-  invoker_deps = []
-  if (defined(invoker.deps)) {
-    invoker_deps += invoker.deps
-  }
-  if (defined(invoker.test_components)) {
-    invoker_deps += invoker.test_components
-  }
-
-  if (invoker_deps != [] && cts_version == "") {
-    verify_target = target_name + "_verify_deps"
-  }
-
-  if (defined(verify_target)) {
-    cts_element(verify_target) {
-      deps = invoker_deps
-      invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
+  if (current_toolchain == default_toolchain) {
+    assert(defined(invoker.package_name), "package_name must be defined.")
+    if (cts_version != "") {
+      invoker.package_name += "_$cts_version"
     }
-  }
 
-  write_file_target = target_name + "_cts_file"
-  write_cts_file(write_file_target) {
-  }
+    # Ensure that deps and test_components are CTS targets.
+    invoker_deps = []
+    if (defined(invoker.deps)) {
+      invoker_deps += invoker.deps
+    }
+    if (defined(invoker.test_components)) {
+      invoker_deps += invoker.test_components
+    }
 
-  fuchsia_test_package(target_name) {
-    forward_variables_from(invoker, "*")
-    if (!defined(deps)) {
-      deps = []
+    if (invoker_deps != [] && cts_version == "") {
+      verify_target = target_name + "_verify_deps"
     }
 
     if (defined(verify_target)) {
-      deps += [ ":$verify_target" ]
+      cts_element(verify_target) {
+        deps = invoker_deps
+        invoker_label =
+            get_label_info(invoker.target_name, "label_no_toolchain")
+      }
     }
-    deps += [ ":$write_file_target" ]
-  }
 
-  archive_target_name = "${target_name}_archive"
-  fuchsia_package_archive(archive_target_name) {
-    testonly = true
-    package = ":${invoker.target_name}"
-  }
+    write_file_target = target_name + "_cts_file"
+    write_cts_file(write_file_target) {
+    }
 
-  cts_copy_to_sdk(target_name) {
-    testonly = true
-    dest = ""  # the root directory
-    sources = get_target_outputs(":$archive_target_name")
-    non_sdk_deps = [ ":$archive_target_name" ]
+    # Generate the test_manifest.json metadata entry for this test.
+    # This json file controls how this test's test_spec will be
+    # defined in the prebuilt_test_manifest GN template.
+    if (!defined(invoker.internal_only_skip_on_cq)) {
+      _test_components = invoker.test_components
+      _manifest_name = get_target_outputs(_test_components[0])
+      _manifest_name = get_path_info(_manifest_name[0], "file")
+      _test_manifest_metadata = {
+        archive_name = target_name
+        package = invoker.package_name
+        component_name = _manifest_name
+      }
+      if (defined(invoker.test_specs)) {
+        _test_specs = invoker.test_specs
+        _test_manifest_metadata.log_settings = _test_specs.log_settings
+      }
+      metadata = {
+        test_manifest = [ _test_manifest_metadata ]
+      }
+    }
+
+    fuchsia_test_package(target_name) {
+      forward_variables_from(invoker, "*")
+      if (!defined(deps)) {
+        deps = []
+      }
+
+      if (defined(verify_target)) {
+        deps += [ ":$verify_target" ]
+      }
+      deps += [ ":$write_file_target" ]
+    }
+
+    archive_target_name = "${target_name}_archive"
+    fuchsia_package_archive(archive_target_name) {
+      testonly = true
+      package = ":${invoker.target_name}"
+    }
+
+    cts_copy_to_sdk(target_name) {
+      testonly = true
+      dest = ""  # the root directory
+      sources = get_target_outputs(":$archive_target_name")
+      non_sdk_deps = [ ":$archive_target_name" ]
+    }
+  } else {
+    group(target_name) {
+      testonly = true
+      deps = [ "$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
   }
 }
