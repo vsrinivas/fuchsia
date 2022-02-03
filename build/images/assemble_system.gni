@@ -743,7 +743,7 @@ template("assemble_system") {
     ]
 
     # The SDK produces a manifest, which is used by ffx to find the host tools.
-    deps = [ "//sdk:host_tools.all" ]
+    deps = [ "//sdk:host_tools.modular($host_toolchain)" ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
