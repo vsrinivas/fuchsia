@@ -8,13 +8,21 @@ use fidl_fuchsia_io::DirectoryProxy;
 use fidl_fuchsia_logger::LogSinkRequestStream;
 use fuchsia_inspect::{self as inspect, NumericProperty};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
-use futures::{channel::mpsc, SinkExt, StreamExt};
+use futures::{
+    channel::{mpsc, oneshot},
+    task::{Context, Poll},
+    Future, SinkExt, Stream, StreamExt,
+};
+use pin_project::pin_project;
 use std::{
+    cmp::PartialEq,
     collections::{BTreeMap, BTreeSet},
     iter::Extend,
+    pin::Pin,
     sync::{Arc, Weak},
 };
 use thiserror::Error;
+use tracing::{debug, error};
 
 const MAX_EVENT_BUS_CAPACITY: usize = 1024;
 const RECENT_EVENT_LIMIT: usize = 200;
@@ -22,21 +30,33 @@ const RECENT_EVENT_LIMIT: usize = 200;
 /// Core archivist internal event router that supports multiple event producers and multiple event
 /// consumers.
 pub struct EventRouter {
+    // All the consumers that have been registered for an event.
     consumers: BTreeMap<AnyEventType, Vec<Weak<dyn EventConsumer + Send + Sync>>>,
+    // The types of all events that can be produced. Used only for validation.
     producers_registered: BTreeSet<AnyEventType>,
-    event_sender: mpsc::Sender<Event>,
-    event_receiver: mpsc::Receiver<Event>,
+
+    // Ends of the channel used by internal event producers.
+    internal_sender: mpsc::Sender<Event>,
+    internal_receiver: mpsc::Receiver<Event>,
+
+    // Ends of the channel used by all external event producers.
+    external_sender: mpsc::Sender<Event>,
+    external_receiver: mpsc::Receiver<Event>,
+
     inspect_logger: EventStreamLogger,
 }
 
 impl EventRouter {
     /// Creates a new empty event router.
     pub fn new(node: inspect::Node) -> Self {
-        let (event_sender, event_receiver) = mpsc::channel(MAX_EVENT_BUS_CAPACITY);
+        let (internal_sender, internal_receiver) = mpsc::channel(MAX_EVENT_BUS_CAPACITY);
+        let (external_sender, external_receiver) = mpsc::channel(MAX_EVENT_BUS_CAPACITY);
         Self {
             consumers: BTreeMap::new(),
-            event_sender,
-            event_receiver,
+            internal_sender,
+            internal_receiver,
+            external_sender,
+            external_receiver,
             producers_registered: BTreeSet::new(),
             inspect_logger: EventStreamLogger::new(node),
         }
@@ -51,7 +71,11 @@ impl EventRouter {
         let mut events: BTreeSet<_> = config.events.into_iter().map(|e| e.into()).collect();
         events.extend(config.singleton_events.into_iter().map(|e| e.into()));
         self.producers_registered.append(&mut events.clone());
-        let dispatcher = Dispatcher::new(events, self.event_sender.clone());
+        let sender = match config.producer_type {
+            ProducerType::Internal => self.internal_sender.clone(),
+            ProducerType::External => self.external_sender.clone(),
+        };
+        let dispatcher = Dispatcher::new(events, sender);
         config.producer.set_dispatcher(dispatcher);
     }
 
@@ -80,31 +104,53 @@ impl EventRouter {
     /// Afterwards, listens to events emitted by producers. When an event arrives it sends it to
     /// all consumers of the event. If the event is singleton, the first consumer that was
     /// registered will get the singleton data and the rest won't.
-    pub async fn start(mut self) -> Result<(), RouterError> {
+    pub fn start(mut self) -> Result<(TerminateHandle, impl Future<Output = ()>), RouterError> {
         self.validate_routing()?;
-        while let Some(event) = self.event_receiver.next().await {
-            self.inspect_logger.log(&event);
-            let consumers = match self.consumers.get_mut(&event.ty()) {
-                Some(consumers) => consumers,
-                None => continue,
-            };
 
-            let event_type = event.ty();
-            let event_without_singleton_data = event.clone();
-            let mut event_with_singleton_data =
-                if event.is_singleton() { Some(event) } else { None };
+        let (terminate_handle, mut stream) =
+            EventStream::new(self.external_receiver, self.internal_receiver);
+        let mut consumers = self.consumers;
+        let mut inspect_logger = self.inspect_logger;
 
-            let mut active_consumers = vec![];
-            for consumer in consumers.into_iter().filter_map(|c| c.upgrade()) {
-                active_consumers.push(Arc::downgrade(&consumer));
-                let e = event_with_singleton_data
-                    .take()
-                    .unwrap_or(event_without_singleton_data.clone());
-                consumer.handle(e).await;
+        let fut = async move {
+            loop {
+                match stream.next().await {
+                    None => {
+                        debug!("Event ingestion finished");
+                        break;
+                    }
+                    Some(event) => {
+                        inspect_logger.log(&event);
+
+                        let event_type = event.ty();
+                        let weak_consumers = match consumers.get_mut(&event_type) {
+                            Some(c) => c,
+                            None => continue,
+                        };
+
+                        let event_without_singleton_data = event.clone();
+                        let mut event_with_singleton_data =
+                            if event.is_singleton() { Some(event) } else { None };
+
+                        // Consumers which weak reference could be upgraded will be stored here.
+                        let mut active_consumers = vec![];
+                        for consumer in weak_consumers.into_iter().filter_map(|c| c.upgrade()) {
+                            active_consumers.push(Arc::downgrade(&consumer));
+                            let e = event_with_singleton_data
+                                .take()
+                                .unwrap_or(event_without_singleton_data.clone());
+                            consumer.handle(e).await;
+                        }
+
+                        // We insert the list of active consumers in the map at the key for this
+                        // event type. This leads to dropping the previous list of weak references
+                        // which contains consumers which aren't active anymore.
+                        consumers.insert(event_type, active_consumers);
+                    }
+                }
             }
-            self.consumers.insert(event_type, active_consumers);
-        }
-        Ok(())
+        };
+        Ok((terminate_handle, fut))
     }
 
     fn validate_routing(&mut self) -> Result<(), RouterError> {
@@ -119,6 +165,170 @@ impl EventRouter {
             }
         }
         Ok(())
+    }
+}
+
+/// Stream of events that merges the internal and external stream into a single stream. It also
+/// provides the mechanisms used to notify when the external events have been drained.
+#[pin_project]
+struct EventStream {
+    /// The stream containing events originating externally.
+    #[pin]
+    external: mpsc::Receiver<Event>,
+
+    /// The stream conitaining events originating internally.
+    #[pin]
+    internal: mpsc::Receiver<Event>,
+
+    /// When this future is ready, the external stream will be closed. Messages still in the buffer
+    /// will be drained.
+    #[pin]
+    on_terminate: oneshot::Receiver<()>,
+
+    /// When the external stream has been drained a notification will be sent through this channel.
+    on_external_drained: Option<oneshot::Sender<()>>,
+
+    /// Specifies what stream will be polled first. When true, the external stream is polled first,
+    /// when false, the internal stream is polled first. Polling of both streams will be alteranted
+    /// in a round robin fashion.
+    turn: Turn,
+}
+
+enum Turn {
+    Internal,
+    External,
+}
+
+impl Turn {
+    fn advance(&mut self) {
+        match self {
+            Turn::Internal => *self = Turn::External,
+            Turn::External => *self = Turn::Internal,
+        }
+    }
+}
+
+impl EventStream {
+    fn new(
+        external: mpsc::Receiver<Event>,
+        internal: mpsc::Receiver<Event>,
+    ) -> (TerminateHandle, Self) {
+        let (snd, rcv) = oneshot::channel();
+        let (external_drain_snd, external_drain_rcv) = oneshot::channel();
+        (
+            TerminateHandle { snd, external_drained: external_drain_rcv },
+            Self {
+                external,
+                internal,
+                on_terminate: rcv,
+                on_external_drained: Some(external_drain_snd),
+                turn: Turn::External,
+            },
+        )
+    }
+}
+
+impl Stream for EventStream {
+    type Item = Event;
+
+    /// This stream implementation merges two streams into a single one polling from each of them
+    /// in a round robin fashion. When one stream finishes, this will keep polling from the
+    /// remaining one.
+    ///
+    /// When receiving a request for termination, the external event stream will be
+    /// closed so that no new messages can be sent through that channel, but it'll still be drained.
+    ///
+    /// When the external stream has been drained, a message is sent through the appropriate
+    /// channel.
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let mut this = self.project();
+
+        // First check if request to terminate the external event ingestion has been requested, if
+        // it has, then close the channel to which external events are sent. This will prevent
+        // further messages to be sent, but it remains possible to drain the external channel
+        // buffer.
+        match this.on_terminate.poll(cx) {
+            Poll::Pending => {}
+            Poll::Ready(_) => {
+                this.external.close();
+            }
+        }
+
+        // Depending on the turn, pick the stream to be polled first.
+        let ((first_is_external, first), (second_is_external, second)) = match this.turn {
+            Turn::External => ((true, this.external), (false, this.internal)),
+            Turn::Internal => ((false, this.internal), (true, this.external)),
+        };
+
+        // Toggle the turn so we poll the other stream in the next poll_next call.
+        this.turn.advance();
+
+        // Poll the first stream and track whether it's drained or not.
+        let first_drained = match first.poll_next(cx) {
+            Poll::Pending => false,
+            Poll::Ready(None) => {
+                // If this stream is the external one, notify once that it has been drained.
+                if first_is_external {
+                    if let Some(snd) = this.on_external_drained.take() {
+                        snd.send(()).unwrap_or_else(|err| {
+                            error!(?err, "Failed to notify the external events have been drained.");
+                        });
+                    };
+                }
+                true
+            }
+            res @ Poll::Ready(Some(_)) => return res,
+        };
+
+        match second.poll_next(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(None) => {
+                // If this stream is the external one, notify once that it has been drained.
+                if second_is_external {
+                    if let Some(snd) = this.on_external_drained.take() {
+                        snd.send(()).unwrap_or_else(|err| {
+                            error!(?err, "Failed to notify the external events have been drained.");
+                        });
+                    };
+                }
+
+                // If the first stream was also drained, then we are done. Otherwise, this stream
+                // remains pending.
+                if first_drained {
+                    Poll::Ready(None)
+                } else {
+                    Poll::Pending
+                }
+            }
+            res @ Poll::Ready(Some(_)) => {
+                // If the first stream wasn't drained, then make sure we continue with that other
+                // stream in the next call to poll_next as we just had an item to return from this
+                // second stream. Therefore, we undo the toggling of the turn done initially.
+                if !first_drained {
+                    this.turn.advance();
+                }
+                res
+            }
+        }
+    }
+}
+
+/// Allows to termiante external event ingestion.
+pub struct TerminateHandle {
+    snd: oneshot::Sender<()>,
+    external_drained: oneshot::Receiver<()>,
+}
+
+impl TerminateHandle {
+    /// Terminates external event ingestion. Buffered events will be drained. The returned future
+    /// will complete once all buffered external events have been drained.
+    pub async fn terminate(self) {
+        self.snd.send(()).unwrap_or_else(|err| {
+            error!(?err, "Failed to terminate the external event ingestion.");
+        });
+        self.external_drained
+            .await
+            .unwrap_or_else(|err| error!(?err, "Error waiting for external events to be drained."));
     }
 }
 
@@ -227,6 +437,22 @@ pub struct ProducerConfig<'a, T> {
 
     /// The set of singleton events that the `producer` will be allowed to emit.
     pub singleton_events: Vec<SingletonEventType>,
+
+    /// The type of the producer.
+    pub producer_type: ProducerType,
+}
+
+/// Definition of the type of producers.
+pub enum ProducerType {
+    /// An external producer emits events originating externally and that the archivist ingests.
+    /// These producers can be stopped to ensure all of their events are drained and handled when
+    /// shutting down the archivist.
+    External,
+
+    /// An internal producer emits events that are generated internally in the archivist.
+    /// These producers cannot be stopped and there's no guarantee their messages will be
+    /// drained and handled when shutting down the archivist.
+    Internal,
 }
 
 /// Configuration for an event consumer.
@@ -318,7 +544,7 @@ pub trait EventProducer {
 }
 
 /// An event that is emitted and consumed.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Event {
     /// The contents of the event.
     pub payload: EventPayload,
@@ -340,7 +566,7 @@ impl Event {
 }
 
 /// The contents of the event depending on the type of event.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum EventPayload {
     ComponentStarted(ComponentStartedPayload),
     ComponentStopped(ComponentStoppedPayload),
@@ -371,6 +597,15 @@ pub struct DiagnosticsReadyPayload {
     pub directory: Option<DirectoryProxy>,
 }
 
+impl PartialEq for DiagnosticsReadyPayload {
+    fn eq(&self, other: &DiagnosticsReadyPayload) -> bool {
+        let component_equal = self.component == other.component;
+        let directory_matches = (self.directory.is_some() && other.directory.is_some())
+            || (self.directory.is_none() && other.directory.is_none());
+        component_equal && directory_matches
+    }
+}
+
 impl Clone for DiagnosticsReadyPayload {
     fn clone(&self) -> Self {
         Self { component: self.component.clone(), directory: None }
@@ -383,6 +618,15 @@ pub struct LogSinkRequestedPayload {
     pub component: ComponentIdentity,
     /// The stream containing requests made on the `LogSink` channel by the component.
     pub request_stream: Option<LogSinkRequestStream>,
+}
+
+impl PartialEq for LogSinkRequestedPayload {
+    fn eq(&self, other: &LogSinkRequestedPayload) -> bool {
+        let component_equal = self.component == other.component;
+        let directory_matches = (self.request_stream.is_some() && other.request_stream.is_some())
+            || (self.request_stream.is_none() && other.request_stream.is_none());
+        component_equal && directory_matches
+    }
 }
 
 impl Clone for LogSinkRequestedPayload {
@@ -454,7 +698,7 @@ mod tests {
                     }),
                 },
             };
-            self.dispatcher.emit(event).await.unwrap();
+            let _ = self.dispatcher.emit(event).await;
         }
     }
 
@@ -489,6 +733,7 @@ mod tests {
         let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
+            producer_type: ProducerType::Internal,
             events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
@@ -498,20 +743,29 @@ mod tests {
             singleton_events: vec![],
         });
 
-        let result = router.start().await;
-        assert_matches!(
-            result,
-            Err(RouterError::MissingConsumer(AnyEventType::General(EventType::ComponentStarted)))
-                | Err(RouterError::MissingProducer(AnyEventType::General(
-                    EventType::ComponentStopped
-                )))
-        );
+        // An explicit match is needed here since unwrap_err requires Debug implemented for both T
+        // and E in Result<T, E> and T is a pair which second element is `impl Future` which
+        // doesn't implement Debug.
+        match router.start() {
+            Err(err) => {
+                assert_matches!(
+                    err,
+                    RouterError::MissingConsumer(AnyEventType::General(
+                        EventType::ComponentStarted
+                    )) | RouterError::MissingProducer(AnyEventType::General(
+                        EventType::ComponentStopped
+                    ))
+                );
+            }
+            Ok(_) => panic!("expected an error from routing events"),
+        }
 
         let mut producer = TestEventProducer::default();
         let (_receiver, consumer) = TestEventConsumer::new();
         let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
+            producer_type: ProducerType::External,
             events: vec![],
             singleton_events: vec![SingletonEventType::DiagnosticsReady],
         });
@@ -521,15 +775,19 @@ mod tests {
             singleton_events: vec![SingletonEventType::LogSinkRequested],
         });
 
-        let result = router.start().await;
-        assert_matches!(
-            result,
-            Err(RouterError::MissingConsumer(AnyEventType::Singleton(
-                SingletonEventType::DiagnosticsReady
-            ))) | Err(RouterError::MissingProducer(AnyEventType::Singleton(
-                SingletonEventType::LogSinkRequested
-            )))
-        );
+        match router.start() {
+            Err(err) => {
+                assert_matches!(
+                    err,
+                    RouterError::MissingConsumer(AnyEventType::Singleton(
+                        SingletonEventType::DiagnosticsReady
+                    )) | RouterError::MissingProducer(AnyEventType::Singleton(
+                        SingletonEventType::LogSinkRequested,
+                    ))
+                );
+            }
+            Ok(_) => panic!("expected an error from routing events"),
+        }
     }
 
     #[fuchsia::test]
@@ -540,6 +798,7 @@ mod tests {
         let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
+            producer_type: ProducerType::External,
             events: vec![],
             singleton_events: vec![SingletonEventType::LogSinkRequested],
         });
@@ -554,7 +813,8 @@ mod tests {
             singleton_events: vec![SingletonEventType::LogSinkRequested],
         });
 
-        let _router_task = fasync::Task::spawn(async move { router.start().await.unwrap() });
+        let (_terminate_handle, fut) = router.start().unwrap();
+        let _router_task = fasync::Task::spawn(fut);
 
         // Emit an event
         let (_, request_stream) =
@@ -593,6 +853,7 @@ mod tests {
         let mut router = EventRouter::new(inspector.root().create_child("events"));
         router.add_producer(ProducerConfig {
             producer: &mut producer,
+            producer_type: ProducerType::External,
             events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
@@ -606,7 +867,9 @@ mod tests {
             events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
-        let _router_task = fasync::Task::spawn(async move { router.start().await.unwrap() });
+
+        let (_terminate_handle, fut) = router.start().unwrap();
+        let _router_task = fasync::Task::spawn(fut);
 
         // Emit an event
         producer
@@ -642,6 +905,7 @@ mod tests {
         let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
+            producer_type: ProducerType::Internal,
             events: vec![EventType::ComponentStarted],
             singleton_events: vec![],
         });
@@ -664,7 +928,8 @@ mod tests {
         drop(first_consumer);
         drop(third_consumer);
 
-        let _router_task = fasync::Task::spawn(async move { router.start().await.unwrap() });
+        let (_terminate_handle, fut) = router.start().unwrap();
+        let _router_task = fasync::Task::spawn(fut);
 
         // Emit an event
         producer
@@ -716,11 +981,13 @@ mod tests {
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer1,
+            producer_type: ProducerType::Internal,
             events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
             singleton_events: vec![SingletonEventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer2,
+            producer_type: ProducerType::Internal,
             events: vec![EventType::ComponentStarted],
             singleton_events: vec![SingletonEventType::LogSinkRequested],
         });
@@ -744,7 +1011,8 @@ mod tests {
             .await;
 
         // Consume the events.
-        let _router_task = fasync::Task::spawn(async move { router.start().await.unwrap() });
+        let (_terminate_handle, fut) = router.start().unwrap();
+        let _router_task = fasync::Task::spawn(fut);
         fasync::Task::spawn(async move {
             receiver.take(5).collect::<Vec<_>>().await;
         })
@@ -787,5 +1055,128 @@ mod tests {
                 }
             }
         });
+    }
+
+    #[fuchsia::test]
+    async fn event_stream_round_robin_semantics() {
+        let inspector = inspect::Inspector::new();
+        let mut router = EventRouter::new(inspector.root().create_child("events"));
+        let mut producer1 = TestEventProducer::default();
+        let mut producer2 = TestEventProducer::default();
+        let (receiver, consumer) = TestEventConsumer::new();
+        router.add_consumer(ConsumerConfig {
+            consumer: &consumer,
+            events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
+            singleton_events: vec![],
+        });
+        router.add_producer(ProducerConfig {
+            producer: &mut producer1,
+            producer_type: ProducerType::Internal,
+            events: vec![EventType::ComponentStarted],
+            singleton_events: vec![],
+        });
+        router.add_producer(ProducerConfig {
+            producer: &mut producer2,
+            producer_type: ProducerType::External,
+            events: vec![EventType::ComponentStopped],
+            singleton_events: vec![],
+        });
+
+        producer1
+            .emit(AnyEventType::General(EventType::ComponentStarted), LEGACY_IDENTITY.clone())
+            .await;
+        producer1.emit(AnyEventType::General(EventType::ComponentStarted), IDENTITY.clone()).await;
+        producer2
+            .emit(AnyEventType::General(EventType::ComponentStopped), LEGACY_IDENTITY.clone())
+            .await;
+        producer2.emit(AnyEventType::General(EventType::ComponentStopped), IDENTITY.clone()).await;
+
+        // We should see an event from each producer followed by an event from the other producer.
+        // Also events from each producer must be in order.
+        let (_terminate_handle, fut) = router.start().unwrap();
+        let _router_task = fasync::Task::spawn(fut);
+        let events = receiver.take(4).collect::<Vec<_>>().await;
+
+        let expected_events = vec![
+            stopped(LEGACY_IDENTITY.clone()),
+            started(LEGACY_IDENTITY.clone()),
+            stopped(IDENTITY.clone()),
+            started(IDENTITY.clone()),
+        ];
+        assert_eq!(events, expected_events);
+    }
+
+    #[fuchsia::test]
+    async fn external_stream_draining() {
+        let inspector = inspect::Inspector::new();
+        let mut router = EventRouter::new(inspector.root().create_child("events"));
+        let mut internal_producer = TestEventProducer::default();
+        let mut external_producer = TestEventProducer::default();
+        let (mut receiver, consumer) = TestEventConsumer::new();
+        router.add_consumer(ConsumerConfig {
+            consumer: &consumer,
+            events: vec![EventType::ComponentStarted, EventType::ComponentStopped],
+            singleton_events: vec![],
+        });
+        router.add_producer(ProducerConfig {
+            producer: &mut internal_producer,
+            producer_type: ProducerType::Internal,
+            events: vec![EventType::ComponentStarted],
+            singleton_events: vec![],
+        });
+        router.add_producer(ProducerConfig {
+            producer: &mut external_producer,
+            producer_type: ProducerType::External,
+            events: vec![EventType::ComponentStopped],
+            singleton_events: vec![],
+        });
+
+        internal_producer
+            .emit(AnyEventType::General(EventType::ComponentStarted), IDENTITY.clone())
+            .await;
+        external_producer
+            .emit(AnyEventType::General(EventType::ComponentStopped), IDENTITY.clone())
+            .await;
+
+        let (terminate_handle, fut) = router.start().unwrap();
+        let _router_task = fasync::Task::spawn(fut);
+        let on_drained = terminate_handle.terminate();
+        let drain_finished = fasync::Task::spawn(async move { on_drained.await });
+
+        let events = vec![receiver.next().await.unwrap(), receiver.next().await.unwrap()];
+        assert!(
+            events == vec![started(IDENTITY.clone()), stopped(IDENTITY.clone())]
+                || events == vec![stopped(IDENTITY.clone()), started(IDENTITY.clone())]
+        );
+
+        // This future must be complete now.
+        drain_finished.await;
+
+        // We must never see any new event emitted by the external producer. But we must see
+        // events emitted by the internal producer.
+        external_producer
+            .emit(AnyEventType::General(EventType::ComponentStopped), IDENTITY.clone())
+            .await;
+        assert_eq!(receiver.next().now_or_never(), None);
+        internal_producer
+            .emit(AnyEventType::General(EventType::ComponentStarted), IDENTITY.clone())
+            .await;
+        assert_eq!(receiver.next().await.unwrap(), started(IDENTITY.clone()));
+    }
+
+    fn started(identity: ComponentIdentity) -> Event {
+        Event {
+            payload: EventPayload::ComponentStarted(ComponentStartedPayload {
+                component: identity,
+            }),
+        }
+    }
+
+    fn stopped(identity: ComponentIdentity) -> Event {
+        Event {
+            payload: EventPayload::ComponentStopped(ComponentStoppedPayload {
+                component: identity,
+            }),
+        }
     }
 }
