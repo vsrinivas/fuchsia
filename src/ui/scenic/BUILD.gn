@@ -348,9 +348,28 @@ fuchsia_component("component") {
   }
 }
 
+fuchsia_component("component_v2") {
+  component_name = "scenic"
+  manifest = "bin/meta/scenic.cml"
+  deps = [ "bin" ]
+
+  if (escher_use_runtime_glsl) {
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_resources" ]
+  } else {
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_spirv_resources" ]
+  }
+
+  if (scenic_enable_vulkan_validation) {
+    deps += [ "//src/lib/vulkan:vulkan_validation_layers" ]
+  }
+}
+
 fuchsia_package("scenic_pkg") {
   package_name = "scenic"
-  deps = [ ":component" ]
+  deps = [
+    ":component",
+    ":component_v2",
+  ]
 }
 
 group("frame-scheduler-min-predicted-frame-duration-in-us--15000") {
