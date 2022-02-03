@@ -111,8 +111,7 @@ At present, these are the libraries considered in this document:
    + included in SDK
    + contains only common types, no protocols
 -  fuchsia.net.dhcp
-   + included in SDK via dependency in `fuchsia.netstack`
-   + planned for removal from SDK
+  + not planned for SDK inclusion
 -  fuchsia.net.dhcpv6
    + not planned for SDK inclusion
 - `fuchsia.net.filter`
@@ -136,17 +135,17 @@ At present, these are the libraries considered in this document:
    + broad general-purpose protocol `Stack` does not employ role separation,
      should be decomposed into several protocols after consulting industry
      standards
-   + protocol `Log` to be replaced by https://fxbug.dev/54198
+   + protocol `Log` to be replaced by inspect in https://fxbug.dev/42432
 - `fuchsia.net.tun`
    + not included in SDK
    + ownership-based
 - `fuchsia.netstack`
-   + included in SDK
-   + protocol `Netstack` being replaced in https://fxbug.dev/21222
+   + not included in SDK
+   + removal tracked in https://fxbug.dev/21222
+   + contains few remaining methods, most have been moved to `fuchsia.net.stack`
 - `fuchsia.posix.socket`
    + not included in SDK
    + used via fdio which is included in SDK
-   + undergoing portability improvements in https://fxbug.dev/44347
 
 [library_structure]: /docs/concepts/api/fidl.md#library_structure
 [chromium_on_interfaces_changed]: https://chromium-review.googlesource.com/c/chromium/src/+/2331860
