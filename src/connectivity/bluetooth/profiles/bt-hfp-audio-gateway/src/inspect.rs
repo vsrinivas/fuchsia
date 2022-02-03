@@ -121,6 +121,7 @@ pub struct PeerTaskInspect {
     peer_id: PeerId,
     pub connected_peer_handler: inspect::BoolProperty,
     pub network: NetworkInformationInspect,
+    hf_battery_level: Option<inspect::UintProperty>,
     inspect_node: inspect::Node,
 }
 
@@ -141,12 +142,21 @@ impl PeerTaskInspect {
             peer_id,
             connected_peer_handler: Default::default(),
             network: Default::default(),
+            hf_battery_level: Default::default(),
             inspect_node: Default::default(),
         }
     }
 
     pub fn node(&self) -> &inspect::Node {
         &self.inspect_node
+    }
+
+    pub fn set_hf_battery_level(&mut self, batt: u8) {
+        // Weak clone to avoid borrow issues when moving `self` into closure.
+        let node = self.inspect_node.clone_weak();
+        let batt_node =
+            self.hf_battery_level.get_or_insert_with(|| node.create_uint("hf_battery_level", 0));
+        batt_node.set(batt.into());
     }
 }
 
@@ -330,6 +340,7 @@ mod tests {
         };
         peer_task.connected_peer_handler.set(true);
         peer_task.network.update(&network);
+        peer_task.set_hf_battery_level(10);
         assert_data_tree!(inspect, root: {
             peer: {
                 peer_id: AnyProperty,
@@ -338,7 +349,8 @@ mod tests {
                     service_available: true,
                     signal_strength: "Low",
                     roaming: false,
-                }
+                },
+                hf_battery_level: 10u64,
             }
         });
     }

@@ -100,6 +100,7 @@ rustc_binary("bin") {
     "src/peer/procedure/volume_control.rs",
     "src/peer/procedure/volume_synchronization.rs",
     "src/peer/ringer.rs",
+    "src/peer/sco_state.rs",
     "src/peer/service_level_connection.rs",
     "src/peer/slc_request.rs",
     "src/peer/task.rs",

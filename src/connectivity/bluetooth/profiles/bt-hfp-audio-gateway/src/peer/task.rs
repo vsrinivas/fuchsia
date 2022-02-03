@@ -14,18 +14,18 @@ use {
         types::PeerId,
     },
     fuchsia_inspect::{self as inspect, Property},
-    fuchsia_inspect_derive::Inspect,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self, Sender},
-        future::{self, Either, Fuse, Future},
+        future::{self, Either, Future},
         select,
         stream::{empty, Empty},
         FutureExt, SinkExt, StreamExt,
     },
     parking_lot::Mutex,
     profile_client::ProfileEvent,
-    std::{convert::TryInto, fmt, pin::Pin, sync::Arc},
+    std::{convert::TryInto, fmt, sync::Arc},
     tracing::{error, info, warn},
     vigil::{DropWatch, Vigil},
 };
@@ -36,6 +36,7 @@ use super::{
     indicators::{AgIndicator, AgIndicators, HfIndicator},
     procedure::ProcedureMarker,
     ringer::Ringer,
+    sco_state::{InspectableScoState, ScoActive, ScoState},
     service_level_connection::ServiceLevelConnection,
     slc_request::SlcRequest,
     update::AgUpdate,
@@ -46,7 +47,7 @@ use crate::{
     a2dp,
     audio::AudioControl,
     config::AudioGatewayFeatureSupport,
-    error::{Error, ScoConnectError},
+    error::Error,
     features::CodecId,
     hfp,
     inspect::PeerTaskInspect,
@@ -57,52 +58,6 @@ const CONNECTION_INIT_TIMEOUT: std::time::Duration = std::time::Duration::from_s
 
 const DEFAULT_CODECS: &[CodecId] = &[CodecId::CVSD];
 
-#[derive(Debug)]
-struct ScoActive {
-    sco_connection: ScoConnection,
-    _pause_token: Option<a2dp::PauseToken>,
-}
-
-type ScoStateFuture<T> = Pin<Box<dyn Future<Output = Result<T, ScoConnectError>>>>;
-enum ScoState {
-    /// No call is in progress.
-    Inactive,
-    /// A call has been made active, and we are negotiating codecs before setting up the SCO connection.
-    /// This state prevents a race where the call has been made active but SCO not yet set up, and the peer
-    /// task, seeing that the connection is not Active, attempts to set up the SCO connection a second time,
-    SettingUp,
-    /// The HF has closed the remote SCO connection so we are waiting for the call to be set transferred to AG.
-    /// This state prevents a race where the SCO connection has been torn down but the call not yet set to inactive
-    /// by the call manager, so the peer task attempts to mark the call as inactive a second time.
-    TearingDown,
-    /// A call is transferred to the AG and we are waiting for the HF to initiate a SCO connection.
-    AwaitingRemote(ScoStateFuture<ScoConnection>),
-    /// A call is active an dso is the SCO connection.
-    Active(Vigil<ScoActive>),
-}
-
-impl ScoState {
-    fn is_active(&self) -> bool {
-        match self {
-            Self::Active(_) => true,
-            _ => false,
-        }
-    }
-}
-
-impl fmt::Debug for ScoState {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ScoState::Inactive => write!(f, "Inactive"),
-            ScoState::SettingUp => write!(f, "SettingUp"),
-            ScoState::TearingDown => write!(f, "TearingDown"),
-            ScoState::AwaitingRemote(_) => write!(f, "AwaitingRemote"),
-            ScoState::Active(active) => write!(f, "Active({:?})", active),
-        }
-    }
-}
-
-#[derive(Inspect)]
 pub(super) struct PeerTask {
     id: PeerId,
     _local_config: AudioGatewayFeatureSupport,
@@ -120,13 +75,20 @@ pub(super) struct PeerTask {
     connection: ServiceLevelConnection,
     a2dp_control: a2dp::Control,
     sco_connector: ScoConnector,
-    sco_state: ScoState,
+    sco_state: InspectableScoState,
     ringer: Ringer,
     audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
     hfp_sender: Sender<hfp::Event>,
     manager_id: Option<hfp::ManagerConnectionId>,
-    #[inspect(forward)]
     inspect: PeerTaskInspect,
+}
+
+impl Inspect for &mut PeerTask {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        let _ = self.inspect.iattach(parent, name)?;
+        self.sco_state.iattach(self.inspect.node(), "sco_connection")?;
+        Ok(())
+    }
 }
 
 impl PeerTask {
@@ -158,7 +120,7 @@ impl PeerTask {
             connection,
             a2dp_control,
             sco_connector,
-            sco_state: ScoState::Inactive,
+            sco_state: InspectableScoState::default(),
             ringer: Ringer::default(),
             audio_control,
             hfp_sender,
@@ -518,7 +480,7 @@ impl PeerTask {
                 if self.connection.get_selected_codec().is_some() {
                     self.connection.receive_ag_request(marker, AgUpdate::Ok).await;
                 }
-                if let ScoState::SettingUp = self.sco_state {
+                if let ScoState::SettingUp = *self.sco_state {
                     let codecs = self.get_codecs();
                     info!("About to connect SCO for peer {:}.", self.id);
                     let setup_result = self.sco_connector.connect(self.id.clone(), codecs).await;
@@ -573,13 +535,31 @@ impl PeerTask {
         loop {
             let mut active_sco_closed_fut = self.on_active_sco_closed().fuse();
             info!("Beginning select for peer {:?}, SCO state is {:?}", self.id, self.sco_state);
-            let mut sco_connection_fut = match &mut self.sco_state {
-                ScoState::AwaitingRemote(ref mut fut) => fut.fuse(),
-                _ => Fuse::terminated(),
-            };
+            let mut sco_state = self.sco_state.as_mut();
             select! {
+                // Wait until the HF sets up a SCO connection.
+                conn_res = sco_state.on_connected() => {
+                    drop(sco_state);
+                    info!("Handling SCO Connection accepted for peer {}.", self.id);
+                    match conn_res {
+                        Ok(sco) if !sco.is_closed() => {
+                            let finish_sco_res = self.finish_sco_connection(sco).await;
+                            if let Err(err) = finish_sco_res {
+                                warn!("Failed to finish SCO connection with {:} for peer {}", err, self.id)
+                            }
+                            let call_transfer_res = self.calls.transfer_to_hf();
+                            if let Err(err) = call_transfer_res {
+                                warn!("Transfer to HF failed with {:} for peer {}", err, self.id)
+                            }
+                        },
+                        // This can occur if the HF opens and closes a SCO connection immediately.
+                        Ok(_) => warn!("Got already closed SCO connection for peer {}.", self.id),
+                        Err(err) => warn!("Got error waiting for SCO connection {:} for peer {}", err, self.id)
+                    }
+                }
                 // New request coming from elsewhere in the component
                 request = task_channel.next() => {
+                    drop(sco_state);
                     info!("Handling peer request {:?} for peer {}", request, self.id);
                     if let Some(request) = request {
                         if let Err(e) = self.peer_request(request).await {
@@ -598,6 +578,7 @@ impl PeerTask {
                 },
                 // A new call state has been received from the call service
                 update = self.calls.select_next_some() => {
+                    drop(sco_state);
                     info!("Handling call {:?} for peer {}", update, self.id);
                     // TODO(fxbug.dev/75538): for in-band ring  setup audio if should_ring is true
                     self.ringer.ring(self.calls.should_ring());
@@ -615,33 +596,16 @@ impl PeerTask {
                 }
                 // SCO connection has closed.
                 _ = active_sco_closed_fut => {
+                    drop(sco_state);
                     info!("Handling SCO Connection closed for peer {}, transferring call to AG.", self.id);
-                    self.sco_state = ScoState::TearingDown;
+                    self.sco_state.iset(ScoState::TearingDown);
                     let call_transfer_res = self.calls.transfer_to_ag();
                     if let Err(err) = call_transfer_res {
                         warn!("Transfer to AG failed with {:} for peer {}", err, self.id)
                     }
                 }
-                // Wait until the HF sets up a SCO connection.
-                conn_res = sco_connection_fut => {
-                    info!("Handling SCO Connection accepted for peer {}.", self.id);
-                    match conn_res {
-                        Ok(sco) if !sco.is_closed() => {
-                            let finish_sco_res = self.finish_sco_connection(sco).await;
-                            if let Err(err) = finish_sco_res {
-                                warn!("Failed to finish SCO connection with {:} for peer {}", err, self.id)
-                            }
-                            let call_transfer_res = self.calls.transfer_to_hf();
-                            if let Err(err) = call_transfer_res {
-                                warn!("Transfer to HF failed with {:} for peer {}", err, self.id)
-                            }
-                        },
-                        // This can occur if the HF opens and closes a SCO connection immediately.
-                        Ok(_) => warn!("Got already closed SCO connection for peer {}.", self.id),
-                        Err(err) => warn!("Got error waiting for SCO connection {:} for peer {}", err, self.id)
-                    }
-                }
                 request = self.connection.next() => {
+                    drop(sco_state);
                     info!("Handling SLC request {:?} for peer {}.", request, self.id);
                     if let Some(request) = request {
                         match request {
@@ -657,6 +621,7 @@ impl PeerTask {
                     }
                 }
                 update = self.network_updates.next() => {
+                    drop(sco_state);
                     info!("Handling network update {:?} for peer {}", update, self.id);
                     if let Some(update) = stream_item_map_or_log(update, "PeerHandler::WatchNetworkUpdate", &self.id) {
                         self.handle_network_update(update).await
@@ -665,6 +630,7 @@ impl PeerTask {
                     }
                 }
                 _ = self.ringer.select_next_some() => {
+                    drop(sco_state);
                     info!("Handling ring for peer {}.", self.id);
                     if let Some(call) = self.calls.ringing() {
                         self.ring_update(call).await;
@@ -693,6 +659,7 @@ impl PeerTask {
                         warn!("Couldn't report headset battery level {:?} for peer {}", e, self.id);
                     }
                 }
+                self.inspect.set_hf_battery_level(v);
             }
         }
     }
@@ -719,7 +686,7 @@ impl PeerTask {
             return Err(());
         }
 
-        let previous_sco_state = &self.sco_state;
+        let previous_sco_state = &*self.sco_state;
 
         info!("Updating SCO state for peer {}.  Call active: {}, Call transferred: {}, Previous SCO state: {:?}", self.id, call_active, call_transferred, previous_sco_state);
 
@@ -731,7 +698,7 @@ impl PeerTask {
                 | ScoState::AwaitingRemote(_)
                 => {
                     self.initiate_codec_negotiation().await;
-                    self.sco_state = ScoState::SettingUp;
+                    self.sco_state.iset(ScoState::SettingUp);
                 },
                 // We are negotiating codecs; wait for that to finish before starting the SCO
                 // connection, so do nothing.
@@ -763,7 +730,7 @@ impl PeerTask {
                let fut = async move {
                 sco_connector.accept(id, codecs).await
                };
-               self.sco_state = ScoState::AwaitingRemote(Box::pin(fut));
+               self.sco_state.iset(ScoState::AwaitingRemote(Box::pin(fut)));
             }
             // A call is transferred to the HF and we are waiting for SCO to be set up by the HF,
             // so do nothing.
@@ -771,7 +738,7 @@ impl PeerTask {
         }
         } else {
             /* No call in progress */
-            self.sco_state = ScoState::Inactive
+            self.sco_state.iset(ScoState::Inactive);
         };
 
         info!(
@@ -800,7 +767,7 @@ impl PeerTask {
         {
             let mut audio = self.audio_control.lock();
             // Start the DAI with the given parameters
-            if let Err(e) = audio.start(self.id.clone(), params) {
+            if let Err(e) = audio.start(self.id.clone(), params.into()) {
                 // Cancel the SCO connection, we can't send audio.
                 // TODO(fxbug.dev/79784): this probably means we should just cancel out of HFP and
                 // this peer's connection entirely.
@@ -823,13 +790,13 @@ impl PeerTask {
             }
         });
         info!("In finish_sco_connection for peer {:}, SCO state is {:?}", peer_id, vigil);
-        self.sco_state = ScoState::Active(vigil);
+        self.sco_state.iset(ScoState::Active(vigil));
 
         Ok(())
     }
 
     fn on_active_sco_closed(&self) -> impl Future<Output = ()> + 'static {
-        match &self.sco_state {
+        match &*self.sco_state {
             ScoState::Active(connection) => connection.sco_connection.on_closed().left_future(),
             _ => future::pending().right_future(),
         }
@@ -1861,9 +1828,22 @@ mod tests {
             match result {
                 Ok(()) => {
                     let (local, remote) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+                    let default_params = bredr::ScoConnectionParameters {
+                        parameter_set: Some(bredr::HfpParameterSet::CvsdD1),
+                        air_coding_format: Some(bredr::CodingFormat::Cvsd),
+                        air_frame_size: Some(60),
+                        io_bandwidth: Some(16000),
+                        io_coding_format: Some(bredr::CodingFormat::LinearPcm),
+                        io_frame_size: Some(16),
+                        io_pcm_data_format: Some(
+                            fidl_fuchsia_hardware_audio::SampleFormat::PcmSigned,
+                        ),
+                        path: Some(bredr::DataPath::Offload),
+                        ..bredr::ScoConnectionParameters::EMPTY
+                    };
                     let connection =
                         bredr::ScoConnection { socket: Some(local), ..bredr::ScoConnection::EMPTY };
-                    proxy.connected(connection, bredr::ScoConnectionParameters::EMPTY).unwrap();
+                    proxy.connected(connection, default_params).unwrap();
                     return Some(remote);
                 }
                 Err(code) => {

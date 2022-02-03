@@ -58,6 +58,17 @@ impl<T: ?Sized> Deref for Vigil<T> {
     }
 }
 
+impl<T: fuchsia_inspect_derive::Unit> fuchsia_inspect_derive::Unit for Vigil<T> {
+    type Data = T::Data;
+    fn inspect_create(&self, parent: &fuchsia_inspect::Node, name: impl AsRef<str>) -> Self::Data {
+        self.inner().data.inspect_create(parent, name)
+    }
+
+    fn inspect_update(&self, data: &mut Self::Data) {
+        self.inner().data.inspect_update(data)
+    }
+}
+
 impl<T: Debug> Debug for Vigil<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Vigil({:?})", self.inner().data)

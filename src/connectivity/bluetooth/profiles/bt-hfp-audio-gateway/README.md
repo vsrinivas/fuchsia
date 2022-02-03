@@ -84,6 +84,19 @@ root:
             service_available
             signal_strength
             roaming
+          hf_battery_level
+          sco_connection:
+            status
+            parameters:
+              parameter_set
+              air_coding_format
+              air_frame_size
+              io_bandwidth
+              io_coding_format
+              io_frame_size
+              io_pcm_data_format
+              io_pcm_sample_payload_msb_position
+              path
           service_level_connection:
             connected_at
             initialized_at

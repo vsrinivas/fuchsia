@@ -9,6 +9,9 @@ use {
         self as fidl_bredr, ProfileDescriptor, ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
         ATTR_SERVICE_CLASS_ID_LIST,
     },
+    fidl_table_validation::ValidFidlTable,
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::{AttachError, Inspect, Unit},
     std::{
         cmp::min,
         collections::HashSet,
@@ -609,10 +612,63 @@ impl TryFrom<&ChannelParameters> for fidl_bredr::ChannelParameters {
     }
 }
 
+#[derive(Debug, Clone, ValidFidlTable, PartialEq)]
+#[fidl_table_src(fidl_bredr::ScoConnectionParameters)]
+pub struct ValidScoConnectionParameters {
+    parameter_set: fidl_bredr::HfpParameterSet,
+    air_coding_format: fidl_bredr::CodingFormat,
+    air_frame_size: u16,
+    io_bandwidth: u32,
+    io_coding_format: fidl_bredr::CodingFormat,
+    io_frame_size: u16,
+    #[fidl_field_type(optional)]
+    io_pcm_data_format: Option<fidl_fuchsia_hardware_audio::SampleFormat>,
+    #[fidl_field_type(optional)]
+    io_pcm_sample_payload_msb_position: Option<u8>,
+    path: fidl_bredr::DataPath,
+}
+
+impl Unit for ValidScoConnectionParameters {
+    type Data = inspect::Node;
+    fn inspect_create(&self, parent: &inspect::Node, name: impl AsRef<str>) -> Self::Data {
+        let mut node = parent.create_child(name.as_ref());
+        self.inspect_update(&mut node);
+        node
+    }
+
+    fn inspect_update(&self, data: &mut Self::Data) {
+        data.record_string("parameter_set", &format!("{:?}", self.parameter_set));
+        data.record_string("air_coding_format", &format!("{:?}", self.air_coding_format));
+        data.record_uint("air_frame_size", self.air_frame_size.into());
+        data.record_uint("io_bandwidth", self.io_bandwidth.into());
+        data.record_string("io_coding_format", &format!("{:?}", self.io_coding_format));
+        data.record_uint("io_frame_size", self.io_frame_size.into());
+        if let Some(io_pcm_data_format) = &self.io_pcm_data_format {
+            data.record_string("io_pcm_data_format", &format!("{:?}", io_pcm_data_format));
+        }
+        if let Some(io_pcm_sample_payload_msb_position) = &self.io_pcm_sample_payload_msb_position {
+            data.record_uint(
+                "io_pcm_sample_payload_msb_position",
+                (*io_pcm_sample_payload_msb_position).into(),
+            );
+        }
+        data.record_string("path", &format!("{:?}", self.path));
+    }
+}
+
+impl Inspect for &mut ValidScoConnectionParameters {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        // The created node is owned by the provided `parent`.
+        parent.record(self.inspect_create(parent, name));
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use fidl::encoding::Decodable;
+    use fuchsia_inspect::assert_data_tree;
 
     #[test]
     fn test_find_descriptors_fails_with_no_descriptors() {
@@ -1182,5 +1238,42 @@ mod tests {
             security_requirements: Some(combined_reqs),
         };
         assert_eq!(combine_channel_parameters(&p1, &p2), expected);
+    }
+
+    #[test]
+    fn local_sco_parameters_inspect_tree() {
+        let inspect = inspect::Inspector::new();
+        assert_data_tree!(inspect, root: {});
+
+        let params = fidl_bredr::ScoConnectionParameters {
+            parameter_set: Some(fidl_bredr::HfpParameterSet::CvsdD1),
+            air_coding_format: Some(fidl_bredr::CodingFormat::Cvsd),
+            air_frame_size: Some(60),
+            io_bandwidth: Some(16000),
+            io_coding_format: Some(fidl_bredr::CodingFormat::LinearPcm),
+            io_frame_size: Some(16),
+            io_pcm_data_format: Some(fidl_fuchsia_hardware_audio::SampleFormat::PcmSigned),
+            io_pcm_sample_payload_msb_position: Some(1),
+            path: Some(fidl_bredr::DataPath::Offload),
+            ..fidl_bredr::ScoConnectionParameters::EMPTY
+        };
+
+        let mut local: ValidScoConnectionParameters = params.try_into().expect("can convert");
+        assert_data_tree!(inspect, root: {});
+
+        let _ = local.iattach(&inspect.root(), "state").expect("can attach inspect");
+        assert_data_tree!(inspect, root: {
+            state: {
+                parameter_set: "CvsdD1",
+                air_coding_format: "Cvsd",
+                air_frame_size: 60u64,
+                io_bandwidth: 16000u64,
+                io_coding_format: "LinearPcm",
+                io_frame_size: 16u64,
+                io_pcm_data_format: "PcmSigned",
+                io_pcm_sample_payload_msb_position: 1u64,
+                path: "Offload",
+            }
+        });
     }
 }

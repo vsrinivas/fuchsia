@@ -31,6 +31,7 @@ pub mod gain_control;
 pub mod indicators;
 pub mod procedure;
 mod ringer;
+mod sco_state;
 pub mod service_level_connection;
 pub mod slc_request;
 mod task;

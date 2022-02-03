@@ -5,9 +5,11 @@
 use fidl::AsHandleRef;
 use fidl_fuchsia_bluetooth_bredr as bredr;
 use fuchsia_async as fasync;
-use fuchsia_bluetooth::types::PeerId;
+use fuchsia_bluetooth::{profile::ValidScoConnectionParameters, types::PeerId};
+use fuchsia_inspect_derive::Unit;
 use fuchsia_zircon as zx;
 use futures::{Future, FutureExt, StreamExt};
+use std::convert::TryInto;
 use tracing::info;
 
 use crate::error::ScoConnectError;
@@ -18,9 +20,20 @@ use crate::features::CodecId;
 #[derive(Debug)]
 pub struct ScoConnection {
     /// The parameters that this connection was set up with.
-    pub params: bredr::ScoConnectionParameters,
+    pub params: ValidScoConnectionParameters,
     /// Socket which holds the connection open. Held so when this is dropped the connection closes.
     socket: zx::Socket,
+}
+
+impl Unit for ScoConnection {
+    type Data = <ValidScoConnectionParameters as Unit>::Data;
+    fn inspect_create(&self, parent: &fuchsia_inspect::Node, name: impl AsRef<str>) -> Self::Data {
+        self.params.inspect_create(parent, name)
+    }
+
+    fn inspect_update(&self, data: &mut Self::Data) {
+        self.params.inspect_update(data)
+    }
 }
 
 impl ScoConnection {
@@ -35,6 +48,14 @@ impl ScoConnection {
             .as_handle_ref()
             .wait(zx::Signals::SOCKET_PEER_CLOSED, zx::Time::after(zx::Duration::from_nanos(0)))
             .is_ok()
+    }
+
+    #[cfg(test)]
+    pub fn build(params: bredr::ScoConnectionParameters) -> Self {
+        ScoConnection {
+            params: params.try_into().unwrap(),
+            socket: zx::Socket::create(zx::SocketOpts::empty()).unwrap().0,
+        }
     }
 }
 
@@ -94,10 +115,13 @@ impl ScoConnector {
                 connection,
                 params,
                 control_handle: _,
-            })) => connection
-                .socket
-                .map(|socket| ScoConnection { socket, params })
-                .ok_or(ScoConnectError::MissingSocket)?,
+            })) => {
+                let params = params.try_into().map_err(|_| ScoConnectError::ScoInvalidArguments)?;
+                connection
+                    .socket
+                    .map(|socket| ScoConnection { socket, params })
+                    .ok_or(ScoConnectError::MissingSocket)?
+            }
             Some(Ok(bredr::ScoConnectionReceiverRequest::Error { error, .. })) => {
                 return Err(error.into())
             }
@@ -128,6 +152,7 @@ impl ScoConnector {
                 client,
             )?;
             result = Self::await_sco_socket(&mut requests).await;
+            info!("Result of awaitng sco socket: {:?}", result);
             if result.is_ok() {
                 break;
             }
