@@ -181,20 +181,60 @@
             "selector": "bootstrap/driver_manager:root/nand:read_failure"
         },
         {
-          "event_codes": [
-            1
-          ],
-          "metric_id": 2010,
-          "metric_type": "Integer",
-          "selector": "bootstrap/driver_manager:root/ftl:nand.initial_bad_blocks"
+            "event_codes": [
+                1
+            ],
+            "metric_id": 2010,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/ftl:nand.initial_bad_blocks"
         },
         {
-          "event_codes": [
-            2
-          ],
-          "metric_id": 2010,
-          "metric_type": "Integer",
-          "selector": "bootstrap/driver_manager:root/ftl:nand.running_bad_blocks"
+            "event_codes": [
+                2
+            ],
+            "metric_id": 2010,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/ftl:nand.running_bad_blocks"
+        },
+        {
+            "event_codes": [
+                0
+            ],
+            "metric_id": 2011,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/ftl:nand.map_block_end_page_failure_reason.0"
+        },
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 2011,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/ftl:nand.map_block_end_page_failure_reason.1"
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 2011,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/ftl:nand.map_block_end_page_failure_reason.2"
+        },
+        {
+            "event_codes": [
+                3
+            ],
+            "metric_id": 2011,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/ftl:nand.map_block_end_page_failure_reason.3"
+        },
+        {
+            "event_codes": [
+                4
+            ],
+            "metric_id": 2011,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/ftl:nand.map_block_end_page_failure_reason.4"
         }
     ],
     "poll_rate_sec": 600,
