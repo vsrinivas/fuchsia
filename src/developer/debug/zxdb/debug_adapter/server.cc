@@ -31,12 +31,6 @@ Err DebugAdapterServer::Init() {
   }
 
   {
-    // Set SO_REUSEPORT so that subsequent binds succeeds.
-    int opt = 1;
-    setsockopt(server_socket_.get(), SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
-  }
-
-  {
     // Bind to local address.
     struct sockaddr_in6 addr;
     memset(&addr, 0, sizeof(addr));

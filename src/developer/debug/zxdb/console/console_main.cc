@@ -195,11 +195,6 @@ int ConsoleMain(int argc, const char* argv[]) {
       session.system().settings().SetBool(ClientSettings::System::kDebugMode, true);
     }
 
-    ConsoleImpl console(&session);
-    if (options.quit_agent_on_quit) {
-      session.system().settings().SetBool(ClientSettings::System::kQuitAgentOnExit, true);
-    }
-
     std::unique_ptr<DebugAdapterServer> debug_adapter;
     if (options.enable_debug_adapter) {
       int port = options.debug_adapter_port;
@@ -207,7 +202,14 @@ int ConsoleMain(int argc, const char* argv[]) {
       err = debug_adapter->Init();
       if (err.has_error()) {
         fprintf(stderr, "Failed to initialize debug adapter: %s\n", err.msg().c_str());
+        loop.Cleanup();
+        return EXIT_FAILURE;
       }
+    }
+
+    ConsoleImpl console(&session);
+    if (options.quit_agent_on_quit) {
+      session.system().settings().SetBool(ClientSettings::System::kQuitAgentOnExit, true);
     }
 
     SetupCommandLineOptions(options, &session);
