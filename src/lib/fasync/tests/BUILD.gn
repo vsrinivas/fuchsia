@@ -22,6 +22,7 @@ test("fasync-test") {
     "pending_task_tests.cc",
     "poll_tests.cc",
     "scheduler_tests.cc",
+    "single_threaded_executor_tests.cc",
     "suspended_task_tests.cc",
     "test_utils.h",
     "type_traits_tests.cc",
