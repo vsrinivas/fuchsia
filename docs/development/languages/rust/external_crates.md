@@ -22,9 +22,8 @@ Generally, adding or updating an external crate involves the following:
 -  Waiting to be granted OSRB approval.
 
    Warning: You must receive approval from the OSRB _before_ pushing a commit to
-   Gerrit that adds or updates an external crate. Do not request a code
-   review for adding or updating an external crate until you have approval
-   from the OSRB.
+   Gerrit that adds an external crate. Do not request a code review for adding an
+   external crate until you have approval from the OSRB.
 
 -  Uploading the change for code review.
 
@@ -122,8 +121,9 @@ To add an external crate, do the following:
 ## Updating an external crate
 
 Warning: You must receive approval from the OSRB _before_ pushing a commit to
-Gerrit that updates an external crate. Do not request a code
-review for updating an external crate until you have approval from the OSRB.
+Gerrit if updating an external crate changes the license or pulls in a new crate
+as a dependency. Do not request a code review until you have approval from the
+OSRB in these circumstances.
 
 To update an external crate, do the following:
 
