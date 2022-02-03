@@ -93,7 +93,9 @@ where
                                 panic!("unsupported request {:?}", r)
                             }
                         };
-                        let messages_gen = (0..).map(|v| fidl_fuchsia_logger::LogMessage {
+                        // NB: Start iterator at 1 so it matches debuglog
+                        // sequence numbers.
+                        let messages_gen = (1..).map(|v| fidl_fuchsia_logger::LogMessage {
                             pid: LOG_MSG_PID,
                             tid: LOG_MSG_TID,
                             time: zx::Duration::from_seconds(v).into_nanos(),
@@ -627,8 +629,6 @@ async fn can_discover(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
 
 #[fixture(with_netsvc_and_netstack_debuglog_port)]
 #[fuchsia_async::run_singlethreaded(test)]
-// TODO(https://fxbug.dev/92005): Re-enable this test when it's not flaky.
-#[ignore]
 async fn debuglog(sock: fuchsia_async::net::UdpSocket, _scope_id: u32) {
     #[derive(Clone)]
     enum Ack {
@@ -640,71 +640,71 @@ async fn debuglog(sock: fuchsia_async::net::UdpSocket, _scope_id: u32) {
     // The delay for retransmission is low on the first retransmission, which
     // should not make this test unnecessarily long, but we keep it to one
     // observation of that event.
-    let _: (fuchsia_async::net::UdpSocket, Option<u32>) = futures::stream::iter(
-        std::iter::repeat(Ack::Yes).take(10).chain(std::iter::once(Ack::No)).enumerate(),
-    )
-    .fold((sock, None), |(sock, seqno), (index, ack)| async move {
-        let mut buf = [0; BUFFER_SIZE];
-        let (n, addr) = sock.recv_from(&mut buf[..]).await.expect("recv_from failed");
-        let mut bv = &buf[..n];
-        let pkt = bv.parse::<debuglog::DebugLogPacket<_>>().expect("parse failed");
-
-        match ack {
-            Ack::Yes => {
-                let () = send_message(
-                    debuglog::AckPacketBuilder::new(pkt.seqno()).into_serializer(),
-                    &sock,
-                    addr,
-                )
-                .await;
-            }
-            Ack::No => (),
-        }
-
-        let seqno = match seqno {
-            None => pkt.seqno(),
-            Some(s) => {
-                if pkt.seqno() <= s {
-                    // Don't verify repeat or old packets.
-                    return (sock, Some(s));
-                }
-                let nxt = s + 1;
-                assert_eq!(pkt.seqno(), nxt);
-                nxt
-            }
-        };
-
-        let nodename = pkt.nodename();
-        assert!(nodename.starts_with("fuchsia-"), "bad nodename {}", nodename);
-        let msg: &str = pkt.data();
-        assert_eq!(
-            msg,
-            format!(
-                "[{:05}.000] {:05}.{:05} [{}] {}\n",
-                index, LOG_MSG_PID, LOG_MSG_TID, LOG_MSG_TAG, LOG_MSG_CONTENTS,
-            )
-        );
-
-        // Wait for a repeat of the packet if we didn't ack.
-        match ack {
-            Ack::No => {
-                // NB: we need to read into a new buffer because we use
-                // variables stored in the old one for comparison.
+    let _: (fuchsia_async::net::UdpSocket, Option<u32>) =
+        futures::stream::iter(std::iter::repeat(Ack::Yes).take(10).chain(std::iter::once(Ack::No)))
+            .fold((sock, None), |(sock, seqno), ack| async move {
                 let mut buf = [0; BUFFER_SIZE];
-                let (n, next_addr) = sock.recv_from(&mut buf[..]).await.expect("recv_from failed");
+                let (n, addr) = sock.recv_from(&mut buf[..]).await.expect("recv_from failed");
                 let mut bv = &buf[..n];
                 let pkt = bv.parse::<debuglog::DebugLogPacket<_>>().expect("parse failed");
-                assert_eq!(next_addr, addr);
-                assert_eq!(pkt.seqno(), seqno);
-                assert_eq!(pkt.nodename(), nodename);
-                assert_eq!(pkt.data(), msg);
-            }
-            Ack::Yes => (),
-        }
 
-        (sock, Some(seqno))
-    })
-    .await;
+                match ack {
+                    Ack::Yes => {
+                        let () = send_message(
+                            debuglog::AckPacketBuilder::new(pkt.seqno()).into_serializer(),
+                            &sock,
+                            addr,
+                        )
+                        .await;
+                    }
+                    Ack::No => (),
+                }
+
+                let seqno = match seqno {
+                    None => pkt.seqno(),
+                    Some(s) => {
+                        if pkt.seqno() <= s {
+                            // Don't verify repeat or old packets.
+                            return (sock, Some(s));
+                        }
+                        let nxt = s + 1;
+                        assert_eq!(pkt.seqno(), nxt);
+                        nxt
+                    }
+                };
+
+                let nodename = pkt.nodename();
+                assert!(nodename.starts_with("fuchsia-"), "bad nodename {}", nodename);
+                let msg: &str = pkt.data();
+                assert_eq!(
+                    msg,
+                    format!(
+                        "[{:05}.000] {:05}.{:05} [{}] {}\n",
+                        seqno, LOG_MSG_PID, LOG_MSG_TID, LOG_MSG_TAG, LOG_MSG_CONTENTS,
+                    )
+                );
+
+                // Wait for a repeat of the packet if we didn't ack.
+                match ack {
+                    Ack::No => {
+                        // NB: we need to read into a new buffer because we use
+                        // variables stored in the old one for comparison.
+                        let mut buf = [0; BUFFER_SIZE];
+                        let (n, next_addr) =
+                            sock.recv_from(&mut buf[..]).await.expect("recv_from failed");
+                        let mut bv = &buf[..n];
+                        let pkt = bv.parse::<debuglog::DebugLogPacket<_>>().expect("parse failed");
+                        assert_eq!(next_addr, addr);
+                        assert_eq!(pkt.seqno(), seqno);
+                        assert_eq!(pkt.nodename(), nodename);
+                        assert_eq!(pkt.data(), msg);
+                    }
+                    Ack::Yes => (),
+                }
+
+                (sock, Some(seqno))
+            })
+            .await;
 }
 
 #[fixture(with_netsvc_and_netstack)]
@@ -931,10 +931,17 @@ async fn pave(image_name: &str, sock: fuchsia_async::net::UdpSocket, scope_id: u
                         break (None, sock);
                     }
                     // If this is not an acknowledgement for the most recent
-                    // block, we must be seeing a retransmission for the
-                    // previous acknowledgement (can happen due to timing woes
-                    // in CQ).
-                    assert_eq!(ack.block(), index - WINDOW_SIZE);
+                    // block, we must be seeing either a retransmission of the
+                    // acknowledgement on the previous block, or an
+                    // acknowledgement within the current block if the server
+                    // observes a timeout waiting for the next block of data.
+                    let valid_range = (index - WINDOW_SIZE)..index;
+                    assert!(
+                        valid_range.contains(&ack.block()),
+                        "acked block {} out of range {:?}",
+                        ack.block(),
+                        valid_range
+                    );
                 }
             })
             .await;
