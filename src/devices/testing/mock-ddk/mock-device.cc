@@ -15,6 +15,10 @@ MockDevice::MockDevice(device_add_args_t* args, MockDevice* parent)
   if (args->str_props) {
     str_props_.insert(str_props_.begin(), args->str_props, args->str_props + args->str_prop_count);
   }
+
+  if (args->client_remote) {
+    client_remote_ = zx::channel(args->client_remote);
+  }
   inspect_ = zx::vmo(args->inspect_vmo);
 }
 
@@ -42,6 +46,7 @@ zx_status_t MockDevice::Create(device_add_args_t* args, MockDevice* parent, Mock
     parent->children().back()->metadata_[key] = value;
   }
   parent->children().back()->PropagateMetadata();
+
   return ZX_OK;
 }
 

@@ -53,6 +53,26 @@ TEST(MockDdk, InitOps) {
   EXPECT_EQ(ZX_OK, device->InitReplyCallStatus());
 }
 
+TEST(MockDdk, ClientRemote) {
+  constexpr zx_handle_t kFakeHandle = 4;
+  zx_protocol_device_t ops = {};
+  device_add_args_t device_args = {};
+  device_args.name = "test-driver";
+  device_args.ops = &ops;
+  device_args.client_remote = kFakeHandle;
+
+  zx_device_t* device;
+  auto parent = MockDevice::FakeRootParent();  // Hold on to the parent during the test.
+                                               // Releasing the parent will release all children.
+  EXPECT_OK(device_add_from_driver(nullptr, parent.get(), &device_args, &device));
+  zx::channel request1 = device->TakeClientRemote();
+  ASSERT_TRUE(request1.is_valid());
+  // That should have reset the handle stored by the device:
+  zx::channel request2 = device->TakeClientRemote();
+  ASSERT_FALSE(request2.is_valid());
+  EXPECT_EQ(request1.release(), kFakeHandle);
+}
+
 const std::array kProps = {
     zx_device_prop_t{0, 1, 2},
 };
