@@ -152,9 +152,10 @@ if (internal_access) {
   }
 }
 
-fuchsia_system_package("ath10k") {
-  deps = [ ":ath10k_driver" ]
+fuchsia_driver_package("ath10k") {
+  driver_components = [ ":ath10k_driver" ]
 
+  deps = []
   if (internal_access) {
     foreach(fw_file, all_fw_files) {
       deps += [

@@ -13,9 +13,10 @@ config_9364_path = "gt6853/goodix_cfg_group_fiti9364.bin"
 config_9365_path = "gt6853/goodix_cfg_group_fiti9365.bin"
 firmware_path = "gt6853/goodix_firmware.bin"
 
-fuchsia_system_package("gt6853") {
-  deps = [ ":gt6853-module" ]
+fuchsia_driver_package("gt6853") {
+  driver_components = [ ":gt6853-module" ]
 
+  deps = []
   if (internal_access) {
     deps += [
       ":config-7703",

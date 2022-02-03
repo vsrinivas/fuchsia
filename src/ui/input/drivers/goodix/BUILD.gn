@@ -71,9 +71,10 @@ if (internal_access) {
   }
 }
 
-fuchsia_system_package("goodix") {
-  deps = [ ":goodix-module" ]
+fuchsia_driver_package("goodix") {
+  driver_components = [ ":goodix-module" ]
 
+  deps = []
   if (internal_access) {
     deps += [ ":astro-firmware" ]
   }

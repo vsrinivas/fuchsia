@@ -42,9 +42,9 @@ fuchsia_driver_component("tpm-driver") {
   colocate = true
 }
 
-fuchsia_system_package("tpm-pkg") {
+fuchsia_driver_package("tpm-pkg") {
   package_name = "tpm"
-  deps = [ ":tpm-driver" ]
+  driver_components = [ ":tpm-driver" ]
 }
 
 test("tpm-driver-test-bin") {

@@ -44,8 +44,8 @@ fuchsia_driver_component("ssd1306_driver") {
   colocate = true
 }
 
-fuchsia_system_package("ssd1306") {
-  deps = [ ":ssd1306_driver" ]
+fuchsia_driver_package("ssd1306") {
+  driver_components = [ ":ssd1306_driver" ]
 }
 
 test("ssd1306-test") {

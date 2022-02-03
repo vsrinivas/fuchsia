@@ -60,10 +60,10 @@ fuchsia_driver_component("driver") {
   colocate = true
 }
 
-fuchsia_system_package("emulator") {
+fuchsia_driver_package("emulator") {
   testonly = true
 
-  deps = [ ":driver" ]
+  driver_components = [ ":driver" ]
 
   # This package is reachable from //src/connectivity/bluetooth
 }

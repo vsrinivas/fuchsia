@@ -113,10 +113,9 @@ template("ot_radio_driver") {
     }
   }
 
-  fuchsia_system_package("openthread-${driver_suffix}") {
-    # Fuchsia does not yet support loading drivers out of packages.
-
-    deps = [ ":ot-radio-${driver_suffix}" ]
+  fuchsia_driver_package("openthread-${driver_suffix}") {
+    driver_components = [ ":ot-radio-${driver_suffix}" ]
+    deps = []
     if (internal_access) {
       deps += [ ":ot-radio-firmware-${driver_suffix}" ]
     }

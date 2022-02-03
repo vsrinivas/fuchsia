@@ -54,8 +54,8 @@ fuchsia_driver_component("driver") {
   colocate = true
 }
 
-fuchsia_system_package("rndis-host") {
-  deps = [ ":driver" ]
+fuchsia_driver_package("rndis-host") {
+  driver_components = [ ":driver" ]
 }
 
 group("tests") {

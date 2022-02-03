@@ -59,9 +59,9 @@ fuchsia_driver_component("driver") {
   colocate = true
 }
 
-fuchsia_system_package("intel-spi-flash") {
+fuchsia_driver_package("intel-spi-flash") {
   package_name = "intel-spi-flash"
-  deps = [ ":driver" ]
+  driver_components = [ ":driver" ]
 }
 
 test("intel-spi-flash-test-bin") {

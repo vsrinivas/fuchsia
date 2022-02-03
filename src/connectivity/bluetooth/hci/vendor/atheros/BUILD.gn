@@ -74,11 +74,11 @@ if (internal_access) {
   }
 }
 
-fuchsia_system_package("atheros") {
-  deps = [ ":driver" ]
+fuchsia_driver_package("atheros") {
+  driver_components = [ ":driver" ]
 
   if (internal_access) {
-    deps += [ ":btatheros-firmware" ]
+    deps = [ ":btatheros-firmware" ]
   }
 
   # This package is reachable from //garnet/packages/prod:all

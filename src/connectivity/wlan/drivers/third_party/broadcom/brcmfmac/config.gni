@@ -55,15 +55,15 @@ template("brcmfmac_driver") {
   }
 
   # Driver package for the brcmfmac driver.
-  fuchsia_system_package(orig_target_name) {
+  fuchsia_driver_package(orig_target_name) {
     deps = _deps
-    deps += [ ":fuchsia_driver" ]
+    driver_components = [ ":fuchsia_driver" ]
     visibility = [ "*" ]
   }
 
-  fuchsia_system_package("test-${orig_target_name}") {
+  fuchsia_driver_package("test-${orig_target_name}") {
     deps = _deps
-    deps += [ ":test_fuchsia_driver" ]
+    driver_components = [ ":test_fuchsia_driver" ]
     visibility = [ "*" ]
   }
 }

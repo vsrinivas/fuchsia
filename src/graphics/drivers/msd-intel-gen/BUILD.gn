@@ -139,13 +139,13 @@ group("tests") {
   ]
 }
 
-fuchsia_system_package("msd-intel-gen") {
-  deps = [ ":msd_intel" ]
+fuchsia_driver_package("msd-intel-gen") {
+  driver_components = [ ":msd_intel" ]
 }
 
-fuchsia_system_package("msd-intel-gen-test") {
+fuchsia_driver_package("msd-intel-gen-test") {
   testonly = true
-  deps = [ ":msd_intel_test" ]
+  driver_components = [ ":msd_intel_test" ]
 }
 
 group("test-driver") {

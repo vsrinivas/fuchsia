@@ -52,9 +52,9 @@ fuchsia_driver_component("aml_mipicsi_driver") {
   colocate = true
 }
 
-fuchsia_system_package("driver_package") {
+fuchsia_driver_package("driver_package") {
   package_name = "aml-mipicsi"
-  deps = [ ":aml_mipicsi_driver" ]
+  driver_components = [ ":aml_mipicsi_driver" ]
 }
 
 group("aml_mipicsi") {

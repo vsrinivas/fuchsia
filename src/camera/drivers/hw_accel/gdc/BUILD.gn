@@ -81,8 +81,8 @@ fuchsia_driver_component("driver") {
   colocate = true
 }
 
-fuchsia_system_package("gdc") {
-  deps = [ ":driver" ]
+fuchsia_driver_package("gdc") {
+  driver_components = [ ":driver" ]
 }
 
 executable("gdc_task_unittest_bin") {

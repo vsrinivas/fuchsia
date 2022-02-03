@@ -48,9 +48,9 @@ fuchsia_driver_component("component") {
   colocate = true
 }
 
-fuchsia_system_package("pkg") {
+fuchsia_driver_package("pkg") {
   package_name = "{{PROJECT_NAME}}"
-  deps = [ ":component" ]
+  driver_components = [ ":component" ]
 }
 
 test("{{PROJECT_NAME}}-unit-tests") {

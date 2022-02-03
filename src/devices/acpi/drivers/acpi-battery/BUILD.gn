@@ -45,9 +45,8 @@ fuchsia_driver_component("component") {
   colocate = true
 }
 
-fuchsia_system_package("acpi-battery") {
-  deps = [ ":component" ]
-  # Remove the line below when this package is only used by the system image.
+fuchsia_driver_package("acpi-battery") {
+  driver_components = [ ":component" ]
 }
 
 test("acpi-battery-unit-tests") {

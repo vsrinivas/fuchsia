@@ -51,11 +51,9 @@ fuchsia_driver_component("component") {
   colocate = true
 }
 
-fuchsia_system_package("pkg") {
+fuchsia_driver_package("pkg") {
   package_name = "chromeos-acpi"
-  deps = [ ":component" ]
-
-  # Remove the line below when this package is only used by the system image.
+  driver_components = [ ":component" ]
 }
 
 test("chromeos-acpi-tests-bin") {

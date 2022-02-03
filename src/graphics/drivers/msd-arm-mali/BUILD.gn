@@ -90,13 +90,13 @@ group("msd-config") {
   deps = [ "//src/diagnostics/config/triage:mali-detect" ]
 }
 
-fuchsia_system_package("msd-arm-mali") {
-  deps = [ ":msd_arm" ]
+fuchsia_driver_package("msd-arm-mali") {
+  driver_components = [ ":msd_arm" ]
 }
 
-fuchsia_system_package("msd-arm-mali-test") {
+fuchsia_driver_package("msd-arm-mali-test") {
   testonly = true
-  deps = [ ":msd_arm_test" ]
+  driver_components = [ ":msd_arm_test" ]
 }
 
 group("test-driver") {

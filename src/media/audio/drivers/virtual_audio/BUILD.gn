@@ -6,8 +6,8 @@ import("//build/components.gni")
 import("//build/drivers.gni")
 import("//build/zbi/kernel_cmdline.gni")
 
-fuchsia_system_package("virtual_audio") {
-  deps = [ ":virtual_audio_driver" ]
+fuchsia_driver_package("virtual_audio") {
+  driver_components = [ ":virtual_audio_driver" ]
 }
 
 driver_bind_rules("virtual_audio_bind") {

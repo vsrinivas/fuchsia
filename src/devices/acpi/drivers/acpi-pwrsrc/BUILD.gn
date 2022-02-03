@@ -43,9 +43,8 @@ fuchsia_driver_component("component") {
   colocate = true
 }
 
-fuchsia_system_package("acpi-pwrsrc") {
-  deps = [ ":component" ]
-  # Remove the line below when this package is only used by the system image.
+fuchsia_driver_package("acpi-pwrsrc") {
+  driver_components = [ ":component" ]
 }
 
 test("acpi-pwrsrc-unit-tests") {

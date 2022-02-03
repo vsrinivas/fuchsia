@@ -79,9 +79,10 @@ if (internal_access) {
   }
 }
 
-fuchsia_system_package("intel") {
-  deps = [ ":driver" ]
+fuchsia_driver_package("intel") {
+  driver_components = [ ":driver" ]
 
+  deps = []
   if (internal_access) {
     deps += [ ":btintel-firmware($shlib_toolchain)" ]
   }

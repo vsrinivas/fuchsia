@@ -70,6 +70,6 @@ fuchsia_driver_component("wlanif_driver") {
   colocate = true
 }
 
-fuchsia_system_package("wlanif") {
-  deps = [ ":wlanif_driver" ]
+fuchsia_driver_package("wlanif") {
+  driver_components = [ ":wlanif_driver" ]
 }

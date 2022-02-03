@@ -92,8 +92,8 @@ fuchsia_unittest_package("goldfish-sync-device-test-package") {
   deps = [ ":goldfish-sync-device-test" ]
 }
 
-fuchsia_system_package("goldfish_sync") {
-  deps = [ ":goldfish_sync_driver" ]
+fuchsia_driver_package("goldfish_sync") {
+  driver_components = [ ":goldfish_sync_driver" ]
 }
 
 group("tests") {

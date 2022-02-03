@@ -76,8 +76,8 @@ fuchsia_driver_component("ge2d-driver") {
   colocate = true
 }
 
-fuchsia_system_package("ge2d") {
-  deps = [ ":ge2d-driver" ]
+fuchsia_driver_package("ge2d") {
+  driver_components = [ ":ge2d-driver" ]
 }
 
 source_set("ge2d_on_device_test") {

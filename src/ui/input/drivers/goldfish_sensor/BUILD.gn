@@ -64,8 +64,8 @@ fuchsia_driver_component("sensor_driver") {
   colocate = true
 }
 
-fuchsia_system_package("goldfish_sensor") {
-  deps = [ ":sensor_driver" ]
+fuchsia_driver_package("goldfish_sensor") {
+  driver_components = [ ":sensor_driver" ]
 }
 
 test("goldfish-sensor-unittest") {

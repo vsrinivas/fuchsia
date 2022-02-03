@@ -44,9 +44,9 @@ fuchsia_driver_component("cr50-spi-driver") {
   colocate = true
 }
 
-fuchsia_system_package("cr50-spi-pkg") {
+fuchsia_driver_package("cr50-spi-pkg") {
   package_name = "cr50-spi"
-  deps = [ ":cr50-spi-driver" ]
+  driver_components = [ ":cr50-spi-driver" ]
 }
 
 test("cr50-spi-test-bin") {

@@ -52,9 +52,9 @@ fuchsia_driver_component("component") {
   colocate = true
 }
 
-fuchsia_system_package("pkg") {
+fuchsia_driver_package("pkg") {
   package_name = "my-driver-cpp"
-  deps = [ ":component" ]
+  driver_components = [ ":component" ]
 }
 
 test("my-driver-cpp-unit-tests") {

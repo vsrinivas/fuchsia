@@ -95,9 +95,10 @@ template("camera_controller_driver") {
     }
   }
 
-  fuchsia_system_package(package_name) {
-    deps = [ ":${driver_component_target}" ]
+  fuchsia_driver_package(package_name) {
+    driver_components = [ ":${driver_component_target}" ]
 
+    deps = []
     if (defined(invoker.gdc_config_files)) {
       deps += [ ":firmware-configs-$package_name" ]
     }
