@@ -4,6 +4,35 @@
 
 use crate::prelude_internal::*;
 
+/// Functional equivalent of [`otsys::otIcmp6EchoMode`](crate::otsys::otIcmp6EchoMode).
+#[derive(Debug, Copy, Clone, Eq, Ord, PartialOrd, PartialEq, num_derive::FromPrimitive)]
+pub enum Icmp6EchoMode {
+    /// ICMPv6 Echo processing enabled for unicast and multicast requests.
+    HandleAll = otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_ALL as isize,
+
+    /// ICMPv6 Echo processing disabled.
+    HandleDisabled = otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_DISABLED as isize,
+
+    /// ICMPv6 Echo processing enabled only for multicast requests only.
+    HandleMulticastOnly = otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_MULTICAST_ONLY as isize,
+
+    /// ICMPv6 Echo processing enabled only for unicast requests only.
+    HandleUnicastOnly = otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_UNICAST_ONLY as isize,
+}
+
+impl From<otIcmp6EchoMode> for Icmp6EchoMode {
+    fn from(x: otIcmp6EchoMode) -> Self {
+        use num::FromPrimitive;
+        Self::from_u32(x).expect(format!("Unknown otIcmp6EchoMode value: {}", x).as_str())
+    }
+}
+
+impl From<Icmp6EchoMode> for otIcmp6EchoMode {
+    fn from(x: Icmp6EchoMode) -> Self {
+        x as otIcmp6EchoMode
+    }
+}
+
 /// Methods from the [OpenThread "IPv6" Module](https://openthread.io/reference/group/api-ip6).
 pub trait Ip6 {
     /// Functional equivalent of [`otsys::otIp6Send`](crate::otsys::otIp6Send).
@@ -67,6 +96,14 @@ pub trait Ip6 {
     /// Functional equivalent of
     /// [`otsys::otIp6SetSlaacEnabled`](crate::otsys::otIp6SetSlaacEnabled).
     fn ip6_set_slaac_enabled(&self, enabled: bool);
+
+    /// Functional equivalent of
+    /// [`otsys::otIcmp6GetEchoMode`](crate::otsys::otIcmp6GetEchoMode).
+    fn icmp6_get_echo_mode(&self) -> Icmp6EchoMode;
+
+    /// Functional equivalent of
+    /// [`otsys::otIcmp6SetEchoMode`](crate::otsys::otIcmp6SetEchoMode).
+    fn icmp6_set_echo_mode(&self, mode: Icmp6EchoMode);
 }
 
 impl<T: Ip6 + ot::Boxable> Ip6 for ot::Box<T> {
@@ -126,6 +163,14 @@ impl<T: Ip6 + ot::Boxable> Ip6 for ot::Box<T> {
 
     fn ip6_set_slaac_enabled(&self, enabled: bool) {
         self.as_ref().ip6_set_slaac_enabled(enabled);
+    }
+
+    fn icmp6_get_echo_mode(&self) -> Icmp6EchoMode {
+        self.as_ref().icmp6_get_echo_mode()
+    }
+
+    fn icmp6_set_echo_mode(&self, mode: Icmp6EchoMode) {
+        self.as_ref().icmp6_set_echo_mode(mode)
     }
 }
 
@@ -290,5 +335,13 @@ impl Ip6 for Instance {
 
     fn ip6_set_slaac_enabled(&self, enabled: bool) {
         unsafe { otIp6SetSlaacEnabled(self.as_ot_ptr(), enabled) }
+    }
+
+    fn icmp6_get_echo_mode(&self) -> Icmp6EchoMode {
+        unsafe { otIcmp6GetEchoMode(self.as_ot_ptr()) }.into()
+    }
+
+    fn icmp6_set_echo_mode(&self, mode: Icmp6EchoMode) {
+        unsafe { otIcmp6SetEchoMode(self.as_ot_ptr(), mode.into()) }
     }
 }

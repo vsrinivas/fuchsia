@@ -191,6 +191,9 @@ where
             // Make sure SLAAC addresses are turned on.
             driver_state.ot_instance.ip6_set_slaac_enabled(true);
 
+            // Turn off ICMPv6 ping auto-reply.
+            driver_state.ot_instance.icmp6_set_echo_mode(ot::Icmp6EchoMode::HandleDisabled);
+
             // Bring up the network interface.
             driver_state.ot_instance.ip6_set_enabled(true).context("ip6_set_enabled")?;
 
