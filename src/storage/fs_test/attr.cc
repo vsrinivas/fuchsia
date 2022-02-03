@@ -157,6 +157,7 @@ TEST_P(AttrTest, StatReturnsCorrectBlockSize) {
 
   char data = {'a'};
   ASSERT_EQ(write(fd, &data, 1), 1) << "Couldn't write a single byte to file";
+  ASSERT_EQ(fsync(fd), 0);
   ASSERT_EQ(fstat(fd, &buf), 0);
   ASSERT_GT(buf.st_blksize, 0) << "blksize should be greater than zero";
   ASSERT_EQ(buf.st_blksize % VNATTR_BLKSIZE, 0) << "blksize should be a multiple of VNATTR_BLKSIZE";

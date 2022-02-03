@@ -38,7 +38,7 @@ TEST_P(AccessTest, ReadOnlyFileIsImmutable) {
   fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT, 0644));
   ASSERT_TRUE(fd);
   const char buf[] = "Hello, World!\n";
-  ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
+  ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf))) << errno;
   ASSERT_EQ(close(fd.release()), 0);
 
   // Re-open as readonly

@@ -108,7 +108,7 @@ TEST_P(LseekTest, ZeroFill) {
   // errors as described below. In the absence of errors, or if error
   // detection is not performed, the write() function shall return zero
   // and have no other results."
-  ASSERT_EQ(write(fd.get(), str, 0), 0);
+  ASSERT_EQ(write(fd.get(), str, 0), 0) << errno;
   ASSERT_EQ(fstat(fd.get(), &st), 0);
   ASSERT_EQ(st.st_size, static_cast<off_t>(len));
 
