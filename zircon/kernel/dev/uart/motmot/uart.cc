@@ -315,7 +315,7 @@ void MotmotUartInitEarly(const dcfg_simple_t& config) {
   pdev_register_uart(&uart_ops);
 }
 
-void MotMotUartInitLate() {
+void MotmotUartInitLate() {
   // create circular buffer to hold received data
   uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
 
