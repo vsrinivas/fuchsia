@@ -362,8 +362,8 @@ mod tests {
     };
     use crate::audio::types::AudioStreamType;
     use crate::audio::utils::round_volume_level;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_settings_policy::{PolicyParameters, Volume};
-    use matches::assert_matches;
     use std::collections::{HashMap, HashSet};
     use std::convert::TryFrom;
 

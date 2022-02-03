@@ -16,7 +16,7 @@ use futures::StreamExt;
 
 use async_trait::async_trait;
 
-use matches::assert_matches;
+use assert_matches::assert_matches;
 
 use crate::base::{SettingType, UnknownInfo};
 use crate::handler::base::{
@@ -517,7 +517,7 @@ async fn inspect_catches_errors() {
         .send();
 
     let (payload, _) = receptor.next_payload().await.expect("should get payload");
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         payload,
         Payload::Setting(HandlerPayload::Response(Err(HandlerError::UnhandledType(
             SettingType::Unknown,
@@ -569,7 +569,7 @@ async fn inspect_errors_roll_after_limit() {
             .send();
 
         let (payload, _) = receptor.next_payload().await.expect("should get payload");
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             payload,
             Payload::Setting(HandlerPayload::Response(Err(HandlerError::UnhandledType(
                 SettingType::Unknown,
@@ -672,7 +672,7 @@ fn test_regeneration() {
     let _ = executor.wake_next_timer();
 
     futures::pin_mut!(done_rx);
-    matches::assert_matches!(executor.run_until_stalled(&mut done_rx), Poll::Ready(Ok(_)));
+    assert_matches::assert_matches!(executor.run_until_stalled(&mut done_rx), Poll::Ready(Ok(_)));
 
     let mut hit_teardown = false;
     loop {
@@ -841,7 +841,7 @@ fn test_retry() {
 
         let request = Request::Get;
         // Ensure subsequent request succeeds
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             get_response(
                 environment
                     .service_client

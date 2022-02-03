@@ -231,7 +231,7 @@ mod tests {
         super::*,
         crate::compile::compile,
         crate::features::FeatureSet,
-        matches::assert_matches,
+        assert_matches::assert_matches,
         serde_json::json,
         std::{fmt::Display, fs::File, io::Write},
         tempfile::TempDir,

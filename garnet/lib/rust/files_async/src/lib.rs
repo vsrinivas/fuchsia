@@ -548,7 +548,7 @@ mod tests {
         let second = dir_contains_with_timeout(&dir, "a", LONG_DURATION)
             .await
             .context("error checking dir contains a");
-        matches::assert_matches!((first, second), (Ok(false), Ok(true)));
+        assert_matches::assert_matches!((first, second), (Ok(false), Ok(true)));
     }
 
     #[fasync::run_singlethreaded(test)]

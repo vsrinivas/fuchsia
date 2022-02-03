@@ -313,9 +313,9 @@ mod tests {
     use {
         super::*,
         crate::{directory, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+        assert_matches::assert_matches,
         fidl_fidl_test_schema::{DataTable1, DataTable2},
         fuchsia_async as fasync,
-        matches::assert_matches,
         std::path::Path,
         tempfile::TempDir,
     };

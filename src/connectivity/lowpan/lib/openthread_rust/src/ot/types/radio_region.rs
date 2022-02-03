@@ -83,7 +83,7 @@ impl ToString for RadioRegion {
 mod tests {
     use super::*;
 
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_region_code() {

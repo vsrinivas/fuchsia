@@ -2630,9 +2630,9 @@ pub fn alias_or_path(alias: Option<&Path>, path: &Path) -> Path {
 mod tests {
     use super::*;
     use {
+        assert_matches::assert_matches,
         cm_json::{self, Error as JsonError},
         error::Error,
-        matches::assert_matches,
         serde_json::{self, json},
         serde_json5,
         std::path::Path,
@@ -3112,7 +3112,7 @@ mod tests {
         ; "when_args_conflicts"
     )]
     fn test_merge_from_program_error(mut some: Document, mut other: Document, field: &str) {
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             some.merge_from(&mut other, &path::Path::new("some/path")),
             Err(Error::Validate { schema_name: None, err, .. })
                 if err == format!("manifest include had a conflicting `program.{}`: some/path", field)
@@ -3185,7 +3185,7 @@ mod tests {
         ; "conflict third level keys"
     )]
     fn test_merge_from_facet_error(mut my: Document, mut other: Document, field: &str) {
-        matches::assert_matches!(
+        assert_matches::assert_matches!(
             my.merge_from(&mut other, &path::Path::new("some/path")),
             Err(Error::Validate { schema_name: None, err, .. })
                 if err == format!("manifest include had a conflicting `{}`: some/path", field)

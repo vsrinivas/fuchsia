@@ -16,7 +16,7 @@ use futures::lock::Mutex;
 use futures::StreamExt;
 use std::sync::Arc;
 
-use matches::assert_matches;
+use assert_matches::assert_matches;
 
 // Returns a registry populated with the AudioCore service.
 async fn create_service() -> Arc<Mutex<ServiceRegistry>> {

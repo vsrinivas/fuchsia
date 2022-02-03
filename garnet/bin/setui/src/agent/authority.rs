@@ -144,8 +144,8 @@ mod tests {
     use super::*;
     use crate::agent::Blueprint;
     use crate::message::message_hub::MessageHub;
+    use assert_matches::assert_matches;
     use fuchsia_async as fasync;
-    use matches::assert_matches;
 
     #[fasync::run_until_stalled(test)]
     async fn test_log() {

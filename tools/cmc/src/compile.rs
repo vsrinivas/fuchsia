@@ -102,10 +102,10 @@ macro_rules! test_compile_with_features {
 mod tests {
     use super::*;
     use crate::features::Feature;
+    use assert_matches::assert_matches;
     use fidl::encoding::decode_persistent;
     use fidl_fuchsia_component_decl as fdecl;
     use fidl_fuchsia_data as fdata;
-    use matches::assert_matches;
     use serde_json::json;
     use std::fs::File;
     use std::io::{self, Read, Write};

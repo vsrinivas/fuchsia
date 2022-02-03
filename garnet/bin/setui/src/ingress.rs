@@ -123,8 +123,8 @@ mod tests {
     use crate::message::base::MessengerType;
     use crate::message::MessageHubUtil;
     use crate::service;
+    use assert_matches::assert_matches;
     use fuchsia_component::server::ServiceFs;
-    use matches::assert_matches;
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_registration() {

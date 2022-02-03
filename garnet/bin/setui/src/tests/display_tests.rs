@@ -13,6 +13,7 @@ use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::test_failure_utils::create_test_env_with_failures;
 use crate::EnvironmentBuilder;
 use anyhow::{anyhow, Result};
+use assert_matches::assert_matches;
 use fidl::endpoints::{ProtocolMarker, ServerEnd};
 use fidl::Error::ClientChannelClosed;
 use fidl_fuchsia_settings::{
@@ -23,7 +24,6 @@ use fidl_fuchsia_settings::{
 use fuchsia_zircon::{self as zx, Status};
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
-use matches::assert_matches;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_display_test_environment";

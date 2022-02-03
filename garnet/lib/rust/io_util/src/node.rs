@@ -286,7 +286,10 @@ pub(crate) async fn verify_file_describe_event(node: FileProxy) -> Result<FilePr
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::OPEN_RIGHT_READABLE, fuchsia_async as fasync, matches::assert_matches};
+    use {
+        super::*, crate::OPEN_RIGHT_READABLE, assert_matches::assert_matches,
+        fuchsia_async as fasync,
+    };
 
     // open_in_namespace
 

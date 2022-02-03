@@ -559,7 +559,7 @@ impl FileReader for StdFs {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use test_util::lock_test_environment;
 
     #[test]

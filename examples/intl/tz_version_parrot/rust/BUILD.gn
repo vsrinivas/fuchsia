@@ -29,7 +29,7 @@ rustc_test("bin") {
     # [END icudata_library]
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:rust_icu_ucal",
   ]
 

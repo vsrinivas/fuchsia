@@ -166,8 +166,8 @@ mod tests {
         create_messenger_and_publisher, create_messenger_and_publisher_from_hub,
         create_receptor_for_setting_type,
     };
+    use assert_matches::assert_matches;
     use futures::StreamExt;
-    use matches::assert_matches;
 
     // Tests that the initialization lifespan is not handled.
     #[fuchsia_async::run_until_stalled(test)]

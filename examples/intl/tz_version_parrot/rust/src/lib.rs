@@ -4,9 +4,8 @@
 
 use {
     anyhow::{self, Error},
-    fuchsia_zircon as zx,
-    matches::assert_matches,
-    rust_icu_ucal as ucal,
+    assert_matches::assert_matches,
+    fuchsia_zircon as zx, rust_icu_ucal as ucal,
 };
 // [START imports]
 use icu_data::Loader;

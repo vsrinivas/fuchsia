@@ -111,7 +111,7 @@ mod tests {
     use {
         super::*,
         crate::file::{AsyncGetSizeExt as _, AsyncReadAtExt as _},
-        matches::assert_matches,
+        assert_matches::assert_matches,
         std::{cell::RefCell, convert::TryFrom as _, rc::Rc},
     };
 

@@ -12,7 +12,7 @@ use crate::message::base::{Audience, MessengerType};
 use crate::service::{self, Address};
 use crate::storage::{Payload, StorageInfo, StorageRequest, StorageResponse};
 use crate::EnvironmentBuilder;
-use matches::assert_matches;
+use assert_matches::assert_matches;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "storage_agent_test_environment";

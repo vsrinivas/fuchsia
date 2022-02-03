@@ -136,13 +136,13 @@ mod tests {
     use {
         super::*,
         crate::file,
+        assert_matches::assert_matches,
         fidl::endpoints,
         fidl_fuchsia_io::{FileMarker, FileRequest},
         fuchsia_async as fasync,
         futures::{
             future::poll_fn, io::AsyncReadExt as _, join, StreamExt as _, TryStreamExt as _,
         },
-        matches::assert_matches,
         tempfile::TempDir,
     };
 

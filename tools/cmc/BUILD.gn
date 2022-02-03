@@ -40,7 +40,7 @@ rustc_binary("cmc") {
 
   non_rust_deps = [ ":cmc_test_schemas" ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
 
   sources = [
     "src/compile.rs",

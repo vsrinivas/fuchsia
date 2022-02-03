@@ -518,8 +518,9 @@ fn compile(args: Args) -> Result<(), Error> {
 mod tests {
     use super::*;
     use {
-        fidl::encoding::decode_persistent, fidl_fuchsia_component_decl as fdecl,
-        fidl_fuchsia_io2 as fio2, matches::assert_matches, std::io::Read, tempfile::TempDir,
+        assert_matches::assert_matches, fidl::encoding::decode_persistent,
+        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io2 as fio2, std::io::Read,
+        tempfile::TempDir,
     };
 
     fn compile_str(input: &str) -> Result<component_internal::Config, Error> {

@@ -79,7 +79,7 @@ impl fmt::Display for Feature {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches};
 
     #[test]
     fn feature_is_parsed() {

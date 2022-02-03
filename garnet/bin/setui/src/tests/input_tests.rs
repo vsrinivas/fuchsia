@@ -24,6 +24,7 @@ use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::helpers::move_executor_forward;
 use crate::tests::input_test_environment::{TestInputEnvironment, TestInputEnvironmentBuilder};
 use crate::tests::test_failure_utils::create_test_env_with_failures;
+use assert_matches::assert_matches;
 use fidl::Error::ClientChannelClosed;
 use fidl_fuchsia_settings::{
     DeviceState as FidlDeviceState, DeviceType, InputMarker, InputProxy, InputSettings,
@@ -36,7 +37,6 @@ use futures::lock::Mutex;
 use futures::pin_mut;
 use futures::stream::StreamExt;
 use futures::task::Poll;
-use matches::assert_matches;
 use std::collections::HashMap;
 use std::sync::Arc;
 

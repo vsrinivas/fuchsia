@@ -439,7 +439,7 @@ impl ReportParser {
 /// This module is public to expose serialization functions to tests in other modules.
 #[cfg(test)]
 pub mod tests {
-    use {super::*, byteorder::WriteBytesExt, matches::assert_matches, std::io::Write};
+    use {super::*, assert_matches::assert_matches, byteorder::WriteBytesExt, std::io::Write};
 
     fn get_scalar_type(value: &Value) -> ScalarType {
         match *value {

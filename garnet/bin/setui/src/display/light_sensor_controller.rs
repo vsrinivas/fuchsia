@@ -259,11 +259,11 @@ mod tests {
     use crate::base::SettingType;
     use crate::display::light_sensor::testing;
     use crate::service_context::{ExternalServiceProxy, ServiceContext};
+    use assert_matches::assert_matches;
     use fidl_fuchsia_input_report::{InputReport, InputReportsReaderReadInputReportsResponder};
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use futures::channel::mpsc::{self, UnboundedSender};
-    use matches::assert_matches;
 
     type Notifier = UnboundedSender<SettingType>;
 

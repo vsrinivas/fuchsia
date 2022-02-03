@@ -28,9 +28,9 @@ use crate::service;
 use crate::service::TryFromWithClient;
 use crate::service_context::ServiceContext;
 use crate::tests::message_utils::verify_payload;
+use assert_matches::assert_matches;
 use fuchsia_async::Task;
 use futures::StreamExt;
-use matches::assert_matches;
 use std::collections::HashSet;
 use std::sync::Arc;
 

@@ -8,10 +8,10 @@ use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::service;
 use crate::tests::scaffold;
 use crate::EnvironmentBuilder;
+use assert_matches::assert_matches;
 use fuchsia_async as fasync;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
-use matches::assert_matches;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_event_test_environment";

@@ -271,13 +271,13 @@ pub async fn rename(dir: &DirectoryProxy, src: &str, dst: &str) -> Result<(), Re
 mod tests {
     use {
         super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_io as fio,
         fidl_fuchsia_io::{
             OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_async as fasync,
         futures::prelude::*,
-        matches::assert_matches,
         tempfile::TempDir,
         vfs::{
             directory::entry::DirectoryEntry,

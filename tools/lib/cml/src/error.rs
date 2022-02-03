@@ -218,8 +218,8 @@ impl TryFrom<serde_json5::Error> for Location {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use cm_types as cm;
-    use matches::assert_matches;
 
     #[test]
     fn test_syntax_error_message() {

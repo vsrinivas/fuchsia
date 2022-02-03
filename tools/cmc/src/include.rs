@@ -202,7 +202,7 @@ fn canonicalize_include(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use serde_json::json;
     use std::fmt::Display;
     use std::fs::File;

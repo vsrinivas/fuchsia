@@ -102,9 +102,9 @@ fn to_request(settings: KeyboardSettings) -> Result<Request, String> {
 mod tests {
     use super::*;
     use crate::job::{execution, work};
+    use assert_matches::assert_matches;
     use fidl_fuchsia_settings::KeyboardRequestStream;
     use futures::StreamExt;
-    use matches::assert_matches;
 
     #[test]
     fn test_request_from_settings_empty() {

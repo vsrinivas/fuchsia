@@ -1387,8 +1387,8 @@ impl<'a> fmt::Display for DependencyNode<'a> {
 mod tests {
     use super::*;
     use crate::error::Location;
+    use assert_matches::assert_matches;
     use lazy_static::lazy_static;
-    use matches::assert_matches;
     use serde_json::json;
     use std::io::Write;
     use tempfile::TempDir;

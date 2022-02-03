@@ -80,7 +80,7 @@ async fn test_watch_light_sensor_no_service_error() {
     let display_service = env.connect_to_protocol::<DisplayMarker>().unwrap();
     let light_sensor_watch_response = display_service.watch_light_sensor(TEST_DELTA).await;
 
-    matches::assert_matches!(
+    assert_matches::assert_matches!(
         light_sensor_watch_response,
         Err(ClientChannelClosed { status, .. }) if status == expected_error
     );

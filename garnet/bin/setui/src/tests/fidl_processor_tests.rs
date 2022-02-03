@@ -8,6 +8,7 @@ use crate::message::MessageHubUtil;
 use crate::service;
 use crate::ExitSender;
 use anyhow::format_err;
+use assert_matches::assert_matches;
 use fidl::endpoints::{ProtocolMarker, Request};
 use fidl_fuchsia_settings::{
     Error, PrivacyMarker, PrivacyProxy, PrivacyRequest, PrivacySetResult, PrivacySettings,
@@ -15,7 +16,6 @@ use fidl_fuchsia_settings::{
 use fuchsia_async::{Task, TestExecutor};
 use futures::task::Poll;
 use futures::{pin_mut, FutureExt};
-use matches::assert_matches;
 
 type RequestCallback<P> = Box<dyn Fn(Request<P>, ExitSender) -> RequestResultCreator<'static, P>>;
 

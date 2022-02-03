@@ -514,8 +514,8 @@ fn handle_generate(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use bind::compiler::{SymbolicInstruction, SymbolicInstructionInfo};
-    use matches::assert_matches;
     use std::collections::HashMap;
 
     fn get_test_generated_fidl(input: String) -> Vec<String> {

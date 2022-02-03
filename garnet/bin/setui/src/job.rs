@@ -500,7 +500,7 @@ mod tests {
     use crate::service::MessageHub;
     use crate::tests::scaffold::workload::Workload;
 
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use rand::Rng;
 
     #[test]

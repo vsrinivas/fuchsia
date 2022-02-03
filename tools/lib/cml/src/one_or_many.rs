@@ -168,7 +168,7 @@ impl<T> ExactSizeIterator for IntoIter<T> {}
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches};
+    use {super::*, assert_matches::assert_matches};
 
     #[test]
     fn test_iter_one() {

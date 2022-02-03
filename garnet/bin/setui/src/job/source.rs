@@ -311,8 +311,8 @@ mod tests {
     use crate::tests::scaffold::workload::{Sequential, StubWorkload, Workload};
     use rand::Rng;
 
+    use assert_matches::assert_matches;
     use futures::FutureExt;
-    use matches::assert_matches;
 
     #[test]
     fn test_id_generation() {

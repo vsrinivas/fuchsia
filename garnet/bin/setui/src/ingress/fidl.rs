@@ -283,11 +283,11 @@ impl Interface {
 
 #[cfg(test)]
 mod tests {
+    use assert_matches::assert_matches;
     use fidl_fuchsia_settings::{DoNotDisturbMarker, PrivacyMarker};
     use fuchsia_async as fasync;
     use fuchsia_component::server::ServiceFs;
     use futures::StreamExt;
-    use matches::assert_matches;
 
     use crate::base::{Dependency, Entity, SettingType};
     use crate::handler::base::{Payload, Request};

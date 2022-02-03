@@ -804,6 +804,7 @@ mod tests {
     use std::sync::Arc;
     use std::task::Poll;
 
+    use assert_matches::assert_matches;
     use fidl_fuchsia_stash::{
         FlushError, StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream,
     };
@@ -811,7 +812,6 @@ mod tests {
     use fuchsia_async::{TestExecutor, Time};
     use fuchsia_inspect::assert_data_tree;
     use futures::prelude::*;
-    use matches::assert_matches;
     use serde::{Deserialize, Serialize};
 
     use testing::*;

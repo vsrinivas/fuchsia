@@ -246,6 +246,7 @@ mod tests {
     use {
         super::*,
         crate::file::{self, AsyncReadAtExt},
+        assert_matches::assert_matches,
         fidl::endpoints,
         fidl_fuchsia_io::{FileMarker, FileRequest},
         fuchsia_async as fasync,
@@ -253,7 +254,6 @@ mod tests {
             future::{self, poll_fn},
             StreamExt as _, TryStreamExt as _,
         },
-        matches::assert_matches,
         std::io::Write,
         tempfile::{NamedTempFile, TempDir},
     };
