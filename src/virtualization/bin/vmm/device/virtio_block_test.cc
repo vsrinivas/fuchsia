@@ -3,21 +3,23 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
 #include <virtio/block.h>
 
+#include "fuchsia/logger/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioBlockUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
 static constexpr uint16_t kNumQueues = 1;
 static constexpr uint16_t kQueueSize = 16;
 static constexpr size_t kQueueDataSize = 10 * fuchsia::io::MAX_BUF;
@@ -26,15 +28,40 @@ static constexpr char kVirtioBlockId[] = "block-id";
 static constexpr size_t kNumSectors = 2;
 static constexpr uint8_t kSectorBytes[kNumSectors] = {0xab, 0xcd};
 
-class VirtioBlockTest : public TestWithDevice {
+using component_testing::ChildRef;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmRoot;
+using component_testing::Route;
+using RealmBuilder = component_testing::RealmBuilder;
+
+class VirtioBlockTest : public TestWithDeviceV2 {
  protected:
   VirtioBlockTest() : request_queue_(phys_mem_, kQueueDataSize * kNumQueues, kQueueSize) {}
 
   void SetUp() override {
-    // Launch device process.
-    fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status = LaunchDevice(kVirtioBlockUrl, request_queue_.end(), &start_info);
-    ASSERT_EQ(ZX_OK, status);
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
+    constexpr auto kComponentName = "virtio_block";
+
+    auto realm_builder = RealmBuilder::Create();
+    realm_builder.AddChild(kComponentName, kComponentUrl);
+
+    realm_builder
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::logger::LogSink::Name_},
+                                Protocol{fuchsia::tracing::provider::Registry::Name_},
+                            },
+                        .source = ParentRef(),
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::virtualization::hardware::VirtioBlock::Name_},
+                            },
+                        .source = ChildRef{kComponentName},
+                        .targets = {ParentRef()}});
+
+    realm_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
 
     // Setup block file.
     // Open the file twice; once to get a FilePtr to provide to the
@@ -44,17 +71,20 @@ class VirtioBlockTest : public TestWithDevice {
     fd_ = CreateBlockFile(path_template);
     ASSERT_TRUE(fd_);
     zx::channel client;
-    status = fdio_get_service_handle(fd_.release(), client.reset_and_get_address());
+    zx_status_t status = fdio_get_service_handle(fd_.release(), client.reset_and_get_address());
     ASSERT_EQ(ZX_OK, status);
     fd_ = fbl::unique_fd(open(path_template, O_RDWR));
     ASSERT_TRUE(fd_);
 
-    // Start device execution.
-    services_->Connect(block_.NewRequest());
-    RunLoopUntilIdle();
+    block_ = realm_->ConnectSync<fuchsia::virtualization::hardware::VirtioBlock>();
 
     uint64_t capacity;
     uint32_t block_size;
+
+    fuchsia::virtualization::hardware::StartInfo start_info;
+    status = MakeStartInfo(request_queue_.end(), &start_info);
+    ASSERT_EQ(ZX_OK, status);
+
     status = block_->Start(
         std::move(start_info), kVirtioBlockId, fuchsia::virtualization::BlockMode::READ_WRITE,
         fuchsia::virtualization::BlockFormat::FILE, std::move(client), &capacity, &block_size);
@@ -80,6 +110,7 @@ class VirtioBlockTest : public TestWithDevice {
   // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioBlockSyncPtr block_;
   VirtioQueueFake request_queue_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 
  private:
   fbl::unique_fd CreateBlockFile(char* path) {

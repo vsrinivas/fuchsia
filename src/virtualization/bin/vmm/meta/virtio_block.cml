@@ -1,0 +1,23 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/virtio_block",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.virtualization.hardware.VirtioBlock" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.virtualization.hardware.VirtioBlock" ],
+            from: "self",
+        },
+    ],
+}
