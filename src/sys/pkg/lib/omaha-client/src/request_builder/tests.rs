@@ -24,7 +24,11 @@ fn test_simple_request() {
 
     let intermediate = RequestBuilder::new(
         &config,
-        &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
+        &RequestParams {
+            source: InstallSource::OnDemand,
+            use_configured_proxies: false,
+            disable_updates: false,
+        },
     )
     .add_update_check(
         &App::builder("app id", [5, 6, 7, 8])
@@ -70,6 +74,62 @@ fn test_simple_request() {
     assert!(headers.contains(&(HEADER_INTERACTIVITY, "fg".to_string())));
 }
 
+/// Test that a request sets the updatedisabled field when configured to do so.
+#[test]
+fn test_updates_disabled_request() {
+    let config = config_generator();
+
+    let intermediate = RequestBuilder::new(
+        &config,
+        &RequestParams {
+            source: InstallSource::OnDemand,
+            use_configured_proxies: false,
+            disable_updates: true,
+        },
+    )
+    .add_update_check(
+        &App::builder("app id 1", [1, 2, 3, 4])
+            .with_fingerprint("fp")
+            .with_cohort(Cohort::new("some-channel"))
+            .build(),
+    )
+    .add_update_check(
+        &App::builder("app id 2", [5, 6, 7, 8]).with_cohort(Cohort::new("some-channel")).build(),
+    )
+    .session_id(GUID::from_u128(1))
+    .request_id(GUID::from_u128(2))
+    .build_intermediate();
+
+    // Assert that all the request fields are accurate (this is in their order of declaration)
+    let request = intermediate.body.request;
+    assert_eq!(request.protocol_version, "3.0");
+    assert_eq!(request.updater, config.updater.name);
+    assert_eq!(request.updater_version, config.updater.version.to_string());
+    assert_eq!(request.install_source, InstallSource::OnDemand);
+    assert_eq!(request.is_machine, true);
+    assert_eq!(request.session_id, Some(GUID::from_u128(1)));
+    assert_eq!(request.request_id, Some(GUID::from_u128(2)));
+
+    // Just test that the config OS object was passed through (as opposed to manually comparing
+    // all the fields)
+    assert_eq!(request.os, config.os);
+
+    // Validate that the App was added, with it's cohort and all of the other expected
+    // fields for an update check request.
+    let app = &request.apps[0];
+    assert_eq!(app.id, "app id 1");
+    assert_eq!(app.version, "1.2.3.4");
+    assert_eq!(app.fingerprint, Some("fp".to_string()));
+    assert_eq!(app.cohort, Some(Cohort::new("some-channel")));
+    assert_eq!(app.update_check, Some(UpdateCheck::disabled()));
+    assert!(app.events.is_empty());
+    assert_eq!(app.ping, None);
+
+    // Validate that the second App also has its update check disabled
+    let app = &request.apps[1];
+    assert_eq!(app.update_check, Some(UpdateCheck::disabled()));
+}
+
 /// Test that a request attaches the extras to the protocol App from the common App.
 #[test]
 fn test_app_includes_extras() {
@@ -77,7 +137,11 @@ fn test_app_includes_extras() {
 
     let intermediate = RequestBuilder::new(
         &config,
-        &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
+        &RequestParams {
+            source: InstallSource::OnDemand,
+            use_configured_proxies: false,
+            disable_updates: false,
+        },
     )
     .add_update_check(&App::builder("app id", [5, 6, 7, 8]).with_extra("key", "value").build())
     .build_intermediate();
@@ -100,7 +164,11 @@ fn test_single_request() {
 
     let (parts, body) = RequestBuilder::new(
         &config,
-        &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
+        &RequestParams {
+            source: InstallSource::OnDemand,
+            use_configured_proxies: false,
+            disable_updates: false,
+        },
     )
     .add_update_check(
         &App::builder("app id", [5, 6, 7, 8]).with_cohort(Cohort::new("some-channel")).build(),
@@ -167,7 +235,11 @@ fn test_simple_ping() {
 
     let intermediate = RequestBuilder::new(
         &config,
-        &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
+        &RequestParams {
+            source: InstallSource::ScheduledTask,
+            use_configured_proxies: false,
+            disable_updates: false,
+        },
     )
     .add_ping(
         &App::builder("ping app id", [6, 7, 8, 9])
@@ -205,7 +277,11 @@ fn test_simple_event() {
 
     let request = RequestBuilder::new(
         &config,
-        &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
+        &RequestParams {
+            source: InstallSource::ScheduledTask,
+            use_configured_proxies: false,
+            disable_updates: false,
+        },
     )
     .add_event(
         &App::builder("event app id", [6, 7, 8, 9])
@@ -246,7 +322,11 @@ fn test_multiple_events() {
     // Make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
         &config,
-        &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
+        &RequestParams {
+            source: InstallSource::ScheduledTask,
+            use_configured_proxies: false,
+            disable_updates: false,
+        },
     )
     .add_event(
         &app_1,
@@ -312,7 +392,11 @@ fn test_ping_added_to_first_app_update_entry() {
     // Now make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
         &config,
-        &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
+        &RequestParams {
+            source: InstallSource::ScheduledTask,
+            use_configured_proxies: false,
+            disable_updates: false,
+        },
     )
     .add_update_check(&app_1)
     .add_update_check(&app_2)
@@ -362,7 +446,11 @@ fn test_ping_added_to_second_app_update_entry() {
     // Now make the call to the RequestBuilder that is being tested.
     let builder = RequestBuilder::new(
         &config,
-        &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
+        &RequestParams {
+            source: InstallSource::ScheduledTask,
+            use_configured_proxies: false,
+            disable_updates: false,
+        },
     )
     .add_update_check(&app_1)
     .add_update_check(&app_2)
@@ -410,7 +498,11 @@ fn test_event_added_to_first_app_update_entry() {
     // Now make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
         &config,
-        &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
+        &RequestParams {
+            source: InstallSource::ScheduledTask,
+            use_configured_proxies: false,
+            disable_updates: false,
+        },
     )
     .add_update_check(&app_1)
     .add_update_check(&app_2)
@@ -466,7 +558,11 @@ fn test_event_added_to_second_app_update_entry() {
     // Now make the call to the RequestBuilder that is being tested.
     let builder = RequestBuilder::new(
         &config,
-        &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
+        &RequestParams {
+            source: InstallSource::ScheduledTask,
+            use_configured_proxies: false,
+            disable_updates: false,
+        },
     )
     .add_update_check(&app_1)
     .add_update_check(&app_2)

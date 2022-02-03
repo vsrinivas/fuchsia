@@ -101,6 +101,7 @@ impl Mounts {
 }
 struct Proxies {
     _cache: Arc<MockCache>,
+    config_optout: Arc<fuchsia_update_config_optout::Mock>,
     resolver: Arc<MockResolverService>,
     update_manager: ManagerProxy,
     channel_control: ChannelControlProxy,
@@ -167,7 +168,7 @@ impl TestEnvBuilder {
         fs.dir("config").add_remote("build-info", build_info);
 
         let server = OmahaServer::new(self.response);
-        let url = server.start().expect("start server");
+        let url = server.clone().start().expect("start server");
         mounts.write_url(url);
         mounts.write_appid("integration-test-appid");
         mounts.write_version(self.version);
@@ -204,6 +205,12 @@ impl TestEnvBuilder {
         let cache_clone = cache.clone();
         fs.dir("svc").add_fidl_service(move |stream: PackageCacheRequestStream| {
             fasync::Task::spawn(Arc::clone(&cache_clone).run_cache_service(stream)).detach()
+        });
+
+        let config_optout = Arc::new(fuchsia_update_config_optout::Mock::new());
+        fs.dir("svc").add_fidl_service({
+            let config_optout = Arc::clone(&config_optout);
+            move |stream| fasync::Task::spawn(Arc::clone(&config_optout).serve(stream)).detach()
         });
 
         let (send, reboot_called) = oneshot::channel();
@@ -420,6 +427,12 @@ impl TestEnvBuilder {
             })
             .unwrap()
             .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.config.OptOut"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![RouteEndpoint::component("omaha_client_service")],
+            })
+            .unwrap()
+            .add_route(CapabilityRoute {
                 capability: Capability::protocol("fuchsia.update.CommitStatusProvider"),
                 source: RouteEndpoint::component("system_update_committer"),
                 targets: vec![
@@ -549,12 +562,14 @@ impl TestEnvBuilder {
             _mounts: mounts,
             proxies: Proxies {
                 _cache: cache,
+                config_optout,
                 resolver,
                 update_manager,
                 channel_control,
                 commit_status_provider,
                 _verifier: verifier,
             },
+            server,
             reboot_called,
         }
     }
@@ -564,6 +579,7 @@ struct TestEnv {
     realm_instance: RealmInstance,
     _mounts: Mounts,
     proxies: Proxies,
+    server: OmahaServer,
     reboot_called: oneshot::Receiver<()>,
 }
 
@@ -629,15 +645,45 @@ struct MockCache;
 
 impl MockCache {
     fn new() -> Self {
-        Self {}
+        Self
     }
     async fn run_cache_service(self: Arc<Self>, mut stream: PackageCacheRequestStream) {
-        while let Some(event) = stream.try_next().await.unwrap() {
-            match event {
+        while let Some(request) = stream.try_next().await.unwrap() {
+            match request {
                 fidl_fuchsia_pkg::PackageCacheRequest::Sync { responder } => {
                     responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("unsupported PackageCache request: {:?}", other),
+            }
+        }
+    }
+}
+
+pub mod fuchsia_update_config_optout {
+    use super::*;
+    pub use fidl_fuchsia_update_config::OptOutPreference;
+    use fidl_fuchsia_update_config::{OptOutRequest, OptOutRequestStream};
+
+    #[derive(Debug)]
+    pub struct Mock(Mutex<OptOutPreference>);
+
+    impl Mock {
+        pub fn new() -> Self {
+            Self(Mutex::new(OptOutPreference::AllowAllUpdates))
+        }
+
+        pub fn set(&self, value: OptOutPreference) {
+            *self.0.lock() = value;
+        }
+
+        pub async fn serve(self: Arc<Self>, mut stream: OptOutRequestStream) {
+            while let Some(request) = stream.try_next().await.unwrap() {
+                match request {
+                    OptOutRequest::Get { responder } => {
+                        let value = *self.0.lock();
+                        responder.send(value).unwrap();
+                    }
+                }
             }
         }
     }
@@ -1098,6 +1144,19 @@ async fn do_failed_update_check(env: &TestEnv) {
     assert_matches!(stream.next().await, None);
 }
 
+async fn do_nop_update_check(env: &TestEnv) {
+    let mut stream = env.check_now().await;
+    expect_states(
+        &mut stream,
+        &[
+            State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
+            State::NoUpdateAvailable(NoUpdateAvailableData::EMPTY),
+        ],
+    )
+    .await;
+    assert_matches!(stream.next().await, None);
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_response() {
     let env = TestEnvBuilder::new().response(OmahaResponse::InvalidResponse).build().await;
@@ -1336,4 +1395,22 @@ async fn test_crash_report_consecutive_failed_update_checks() {
     assert_signature(recv.next().await.unwrap(), "fuchsia-5-consecutive-failed-update-checks");
     do_failed_update_check(&env).await;
     assert_signature(recv.next().await.unwrap(), "fuchsia-6-consecutive-failed-update-checks");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_update_check_sets_updatedisabled_when_opted_out() {
+    use mock_omaha_server::UpdateCheckAssertion;
+
+    let env = TestEnvBuilder::new().response(OmahaResponse::NoUpdate).build().await;
+
+    // The default is to enable updates.
+    env.server.set_update_check_assertion(Some(UpdateCheckAssertion::UpdatesEnabled));
+    do_nop_update_check(&env).await;
+
+    // The user preference is read for each update check.
+    env.server.set_update_check_assertion(Some(UpdateCheckAssertion::UpdatesDisabled));
+    env.proxies
+        .config_optout
+        .set(fuchsia_update_config_optout::OptOutPreference::AllowOnlySecurityUpdates);
+    do_nop_update_check(&env).await;
 }

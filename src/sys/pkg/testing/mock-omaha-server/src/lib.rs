@@ -13,38 +13,103 @@ use {
         service::{make_service_fn, service_fn},
         Body, Method, Request, Response, StatusCode,
     },
+    parking_lot::Mutex,
     serde_json::json,
     std::{
         convert::Infallible,
         net::{Ipv4Addr, SocketAddr},
         str::FromStr,
+        sync::Arc,
     },
 };
 
 #[derive(Copy, Clone, Debug)]
 pub enum OmahaResponse {
-    Update,
     NoUpdate,
+    Update,
     InvalidResponse,
     InvalidURL,
 }
 
 /// A mock Omaha server.
+#[derive(Clone, Debug)]
 pub struct OmahaServer {
+    inner: Arc<Mutex<Inner>>,
+}
+
+/// Shared state.
+#[derive(Clone, Debug)]
+struct Inner {
     response: OmahaResponse,
     merkle: Hash,
+    update_check: Option<UpdateCheckAssertion>,
+}
+
+#[derive(Debug)]
+pub struct OmahaServerBuilder {
+    inner: Inner,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum UpdateCheckAssertion {
+    UpdatesEnabled,
+    UpdatesDisabled,
+}
+
+impl OmahaServerBuilder {
+    /// Sets the server's response to update checks
+    pub fn response(mut self, response: OmahaResponse) -> Self {
+        self.inner.response = response;
+        self
+    }
+
+    /// Sets the merkle of the update package for an Update response
+    pub fn merkle(mut self, merkle: Hash) -> Self {
+        self.inner.merkle = merkle;
+        self
+    }
+
+    /// Sets the special assertion to make on all update check requests
+    pub fn update_check_assertion(mut self, value: Option<UpdateCheckAssertion>) -> Self {
+        self.inner.update_check = value;
+        self
+    }
+
+    /// Constructs the OmahaServer
+    pub fn build(self) -> OmahaServer {
+        OmahaServer { inner: Arc::new(Mutex::new(self.inner)) }
+    }
 }
 
 impl OmahaServer {
+    /// Returns an OmahaServer builder with the following defaults:
+    /// * response: NoUpdate
+    /// * merkle: 0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+    /// * no special request assertions beyond the defaults
+    pub fn builder() -> OmahaServerBuilder {
+        OmahaServerBuilder {
+            inner: Inner {
+                response: OmahaResponse::NoUpdate,
+                merkle: Hash::from_str(
+                    "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                )
+                .unwrap(),
+                update_check: None,
+            },
+        }
+    }
+
     pub fn new(response: OmahaResponse) -> Self {
-        let merkle =
-            Hash::from_str("deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
-                .unwrap();
-        OmahaServer::new_with_hash(response, merkle)
+        Self::builder().response(response).build()
     }
 
     pub fn new_with_hash(response: OmahaResponse, merkle: Hash) -> Self {
-        OmahaServer { response, merkle }
+        Self::builder().response(response).merkle(merkle).build()
+    }
+
+    /// Sets the special assertion to make on any future update check requests
+    pub fn set_update_check_assertion(&self, value: Option<UpdateCheckAssertion>) {
+        self.inner.lock().update_check = value;
     }
 
     /// Spawn the server on the current executor, returning the address of the server.
@@ -62,12 +127,15 @@ impl OmahaServer {
             )
         };
 
-        let response = self.response;
-        let merkle = self.merkle;
-        let make_svc = make_service_fn(move |_socket| async move {
-            Ok::<_, Infallible>(service_fn(move |req| {
-                handle_omaha_request(req, response, merkle.to_string())
-            }))
+        let inner = Arc::clone(&self.inner);
+        let make_svc = make_service_fn(move |_socket| {
+            let inner = Arc::clone(&inner);
+            async move {
+                Ok::<_, Infallible>(service_fn(move |req| {
+                    let inner = Arc::clone(&inner);
+                    async move { handle_omaha_request(req, &*inner).await }
+                }))
+            }
         });
 
         let server = Server::builder(from_stream(connections))
@@ -83,9 +151,10 @@ impl OmahaServer {
 
 async fn handle_omaha_request(
     req: Request<Body>,
-    response: OmahaResponse,
-    merkle: String,
+    inner: &Mutex<Inner>,
 ) -> Result<Response<Body>, Error> {
+    let inner = inner.lock().clone();
+
     assert_eq!(req.method(), Method::POST);
     assert_eq!(req.uri().query(), None);
 
@@ -107,10 +176,21 @@ async fn handle_omaha_request(
     let version = app.get("version").unwrap();
     assert_eq!(version, "0.1.2.3");
 
-    let package_name = format!("update?hash={}", merkle);
-    let is_update_check = app.get("updatecheck").is_some();
-    let app = if is_update_check {
-        let updatecheck = match response {
+    let package_name = format!("update?hash={}", inner.merkle);
+    let app = if let Some(update_check) = app.get("updatecheck") {
+        let updatedisabled =
+            update_check.get("updatedisabled").map(|v| v.as_bool().unwrap()).unwrap_or(false);
+        match inner.update_check {
+            Some(UpdateCheckAssertion::UpdatesEnabled) => {
+                assert!(!updatedisabled);
+            }
+            Some(UpdateCheckAssertion::UpdatesDisabled) => {
+                assert!(updatedisabled);
+            }
+            None => {}
+        }
+
+        let updatecheck = match inner.response {
             OmahaResponse::Update => json!({
                 "status": "ok",
                 "urls": {

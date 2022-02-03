@@ -19,6 +19,7 @@ rustc_test("driver") {
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
+    "//sdk/fidl/fuchsia.update.config:fuchsia.update.config-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
