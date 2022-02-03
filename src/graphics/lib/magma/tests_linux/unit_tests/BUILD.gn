@@ -58,3 +58,15 @@ executable("virtmagma_image_tests") {
     "//third_party/mesa/include:drm-uapi",
   ]
 }
+
+executable("virtmagma_unit_tests") {
+  testonly = true
+
+  sources = [ "virtmagma_unit_tests.cc" ]
+
+  deps = [
+    "//src/graphics/lib/magma/include/virtio",
+    "//src/graphics/lib/magma/src/libmagma_linux:virtmagma_headers",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}

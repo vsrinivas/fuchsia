@@ -102,6 +102,7 @@ romfs_image("extras") {
       "//src/graphics/lib/gbm:gbm_test(${linux_exe_toolchain})",
       "//src/graphics/lib/magma/tests/integration:virtmagma_conformance_tests(${linux_exe_toolchain})",
       "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_image_tests(${linux_exe_toolchain})",
+      "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests(${linux_exe_toolchain})",
       "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(${linux_exe_toolchain})",
       "//src/lib/vulkan:vulkaninfo(${linux_exe_toolchain})",
     ]
@@ -112,6 +113,7 @@ romfs_image("extras") {
       "${linux_exe_path}/cube-wayland",
       "${linux_exe_path}/vulkaninfo",
       "${linux_exe_path}/virtmagma_image_tests",
+      "${linux_exe_path}/virtmagma_unit_tests",
       "${linux_exe_path}/radix-sort-vk-bench",
       "${linux_exe_path}/spinel2-vk-bench",
       "${linux_exe_path}/bench-vk",
