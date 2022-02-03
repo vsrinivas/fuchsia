@@ -19,7 +19,7 @@ use {heck::SnakeCase, proc_macro::TokenStream, quote::format_ident, quote::quote
 /// use fidl_library_of_some_kind::DependentProtocolMarker;
 ///
 /// #[ffx_protocol(DependentProtocolMarker)]
-/// pub struct FooProtocl {}
+/// pub struct FooProtocol {}
 ///
 /// impl FooProtocol {
 ///
