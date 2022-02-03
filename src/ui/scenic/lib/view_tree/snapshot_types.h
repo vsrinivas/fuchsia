@@ -57,6 +57,9 @@ struct ViewNode {
   // Session name that created this view.
   std::string debug_name;
 
+  // fuchsia::ui::composition::ViewportProperties of the session that created this view.
+  fuchsia::ui::composition::ViewportProperties viewport_properties;
+
   bool operator==(const ViewNode& other) const {
     return parent == other.parent && bounding_box == other.bounding_box &&
            local_from_world_transform == other.local_from_world_transform &&

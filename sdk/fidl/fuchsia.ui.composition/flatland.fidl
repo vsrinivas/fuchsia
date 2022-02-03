@@ -169,6 +169,8 @@ protocol ChildViewWatcher {
 
 /// The properties of a Viewport as defined by the parent. This data, along with the set of attached
 /// Transforms, will be used to compute the LayoutInfo for the View of the Viewport.
+/// `ViewportProperties` must have `logical_size` set at least once. This is the initial size that
+/// will drive the layout of the child.
 type ViewportProperties = table {
     /// The size of the Viewport in logical pixels. This maps directly to the logical_size field in
     /// LayoutInfo.

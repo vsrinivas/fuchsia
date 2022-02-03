@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
@@ -18,6 +19,7 @@ namespace view_tree {
 namespace geometry_provider_manager::test {
 using fuog_ProviderPtr = fuchsia::ui::observation::geometry::ProviderPtr;
 using fuog_ProviderWatchResponse = fuchsia::ui::observation::geometry::ProviderWatchResponse;
+using fuc_ViewportProperties = fuchsia::ui::composition::ViewportProperties;
 const auto fuog_BUFFER_SIZE = fuchsia::ui::observation::geometry::BUFFER_SIZE;
 const auto fuog_MAX_VIEW_COUNT = fuchsia::ui::observation::geometry::MAX_VIEW_COUNT;
 
@@ -147,10 +149,11 @@ TEST_F(GeometryProviderManagerTest, WatchAfterProcessedWatch) {
 // returned and the old snapshots are discarded.
 TEST_F(GeometryProviderManagerTest, BufferOverflowTest) {
   std::optional<fuog_ProviderWatchResponse> client_result;
-  const uint32_t num_snapshots = 2 * fuog_BUFFER_SIZE;
+  const uint32_t num_snapshots = fuog_BUFFER_SIZE;
   const uint64_t num_nodes = 1;
 
   PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+  PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes + 1);
 
   client_->Watch([&client_result](auto response) { client_result = std::move(response); });
 
@@ -159,11 +162,13 @@ TEST_F(GeometryProviderManagerTest, BufferOverflowTest) {
   EXPECT_TRUE(client_.is_bound());
   ASSERT_TRUE(client_result.has_value());
 
-  // Client should receive the latest BUFFER_SIZE snapshot updates.
-  // TODO(fxbug.dev/87579): Update the unittest once the implementation of
-  // ExtractObservationSnapshot is completed to reflect only the latest snapshot are stored.
-  EXPECT_FALSE(client_result->is_complete());
-  EXPECT_EQ(client_result->updates().size(), fuog_BUFFER_SIZE);
+  // Client should receive the latest BUFFER_SIZE snapshot updates. The latest snapshots have
+  // |num_nodes|+1 view nodes.
+  ASSERT_TRUE(client_result->has_error());
+  EXPECT_TRUE(client_result->error().buffer_overflow());
+  for (auto& snapshot : client_result->updates()) {
+    EXPECT_EQ(snapshot.views().size(), num_nodes + 1);
+  }
 }
 
 // Clients registered with the protocol should be receiving updates even if one of the clients is
@@ -251,11 +256,8 @@ TEST_F(GeometryProviderManagerTest, ClientDoesNotReceiveViews_WhenViewsCountExce
   ASSERT_EQ(client_result->updates().size(), 1UL);
 
   // The client will not receive a views vector in the response as the size of the views vector
-  // would have exceeded fuog_MAX_VIEWS. |incomplete| is set to true to notify the client about the
-  // same.
+  // would have exceeded fuog_MAX_VIEWS.
   EXPECT_FALSE(client_result->updates()[0].has_views());
-  EXPECT_TRUE(client_result->updates()[0].has_incomplete());
-  EXPECT_TRUE(client_result->updates()[0].incomplete());
 }
 
 // A Watch() call should succeed when size of the response exceeds the maximum size of a message
@@ -277,7 +279,8 @@ TEST_F(GeometryProviderManagerTest, WatchShouldSucceed_WhenResponseSizeExceedsFI
 
     ASSERT_TRUE(client_result.has_value());
 
-    EXPECT_FALSE(client_result->is_complete());
+    ASSERT_TRUE(client_result->has_error());
+    EXPECT_TRUE(client_result->error().channel_overflow());
     EXPECT_LT(client_result->updates().size(), fuog_BUFFER_SIZE);
   }
   // The response should contain f.u.o.g.ViewTreeSnapshot generated from the most recent snapshot
@@ -312,11 +315,213 @@ TEST_F(GeometryProviderManagerTest, WatchShouldSucceed_WhenResponseSizeExceedsFI
     // from the latest snapshot to the client.
     ASSERT_TRUE(client_result.has_value());
 
-    EXPECT_FALSE(client_result->is_complete());
+    ASSERT_TRUE(client_result->has_error());
+    EXPECT_TRUE(client_result->error().channel_overflow());
     EXPECT_EQ(client_result->updates().size(), 1UL);
     EXPECT_EQ(client_result->updates()[0].views().size(), fuog_MAX_VIEW_COUNT - 100);
   }
 }
 
+// fuog_ViewDescriptor should accurately capture data from a view_tree::ViewNode. The test uses
+// the following three node topology:
+// node_a (root)
+//  |
+// node_b
+//  |
+// node_c
+TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
+  auto snapshot = std::make_shared<view_tree::Snapshot>();
+  zx_koid_t node_a_koid = 1, node_b_koid = 2, node_c_koid = 3;
+  auto node_a = ViewNode{.children = {node_b_koid}};
+  auto node_b = ViewNode{.parent = node_a_koid, .children = {node_c_koid}};
+  auto node_c = ViewNode{.parent = node_b_koid};
+
+  // Set up node_a.
+  {
+    const uint32_t width = 10, height = 10;
+    fuc_ViewportProperties properties;
+    properties.set_logical_size({width, height});
+    node_a.viewport_properties = std::move(properties);
+  }
+
+  // Set up node_b.
+  {
+    const uint32_t width = 5, height = 5;
+    fuc_ViewportProperties properties;
+    properties.set_logical_size({width, height});
+    node_b.viewport_properties = std::move(properties);
+  }
+
+  // Set up node_c.
+  {
+    const uint32_t width = 1, height = 1;
+    fuc_ViewportProperties properties;
+    properties.set_logical_size({width, height});
+    node_c.viewport_properties = std::move(properties);
+  }
+
+  snapshot->root = node_a_koid;
+  snapshot->view_tree.try_emplace(node_a_koid, std::move(node_a));
+  snapshot->view_tree.try_emplace(node_b_koid, std::move(node_b));
+  snapshot->view_tree.try_emplace(node_c_koid, std::move(node_c));
+
+  // Client should receive fuog_ViewDescriptor for every node in the view tree since the root node
+  // is the context view.
+  {
+    auto view_tree_snapshot = view_tree::GeometryProviderManager::ExtractObservationSnapshot(
+        /*context_view*/ node_a_koid, snapshot);
+
+    ASSERT_TRUE(view_tree_snapshot);
+    ASSERT_TRUE(view_tree_snapshot->has_views());
+    ASSERT_EQ(view_tree_snapshot->views().size(), 3UL);
+
+    // fuog_ViewDescriptor for node_a.
+    {
+      auto& vd = view_tree_snapshot->views()[0];
+
+      ASSERT_TRUE(vd.has_view_ref_koid());
+      EXPECT_EQ(vd.view_ref_koid(), node_a_koid);
+
+      ASSERT_TRUE(vd.has_layout());
+      auto& layout = vd.layout();
+      auto node_logical_width = static_cast<float>(
+          snapshot->view_tree[node_a_koid].viewport_properties.logical_size().width);
+      auto node_logical_height = static_cast<float>(
+          snapshot->view_tree[node_a_koid].viewport_properties.logical_size().height);
+
+      // Minimum coordinates for a layout should be its origin and maximum coordinates should be
+      // equal to the node's logical size.
+      EXPECT_FLOAT_EQ(layout.extent.min.x, 0.);
+      EXPECT_FLOAT_EQ(layout.extent.min.y, 0.);
+      EXPECT_FLOAT_EQ(layout.extent.max.x, node_logical_width);
+      EXPECT_FLOAT_EQ(layout.extent.max.y, node_logical_height);
+      EXPECT_THAT(layout.pixel_scale, testing::ElementsAre(1.f, 1.f));
+
+      ASSERT_TRUE(vd.has_extent_in_context());
+      auto& extent_in_context = vd.extent_in_context();
+
+      // For the context view, |extent_in_context| should be the same as its |layout|.
+      EXPECT_FLOAT_EQ(extent_in_context.origin.x, 0.);
+      EXPECT_FLOAT_EQ(extent_in_context.origin.y, 0.);
+      EXPECT_FLOAT_EQ(extent_in_context.width, node_logical_width);
+      EXPECT_FLOAT_EQ(extent_in_context.height, node_logical_height);
+      EXPECT_FLOAT_EQ(extent_in_context.angle, 0.);
+
+      ASSERT_TRUE(vd.has_extent_in_parent());
+      auto& extent_in_parent = vd.extent_in_parent();
+
+      // For the context view, |extent_in_parent| should be the same as its |layout|.
+      EXPECT_FLOAT_EQ(extent_in_parent.origin.x, 0.);
+      EXPECT_FLOAT_EQ(extent_in_parent.origin.y, 0.);
+      EXPECT_FLOAT_EQ(extent_in_parent.width, node_logical_width);
+      EXPECT_FLOAT_EQ(extent_in_parent.height, node_logical_height);
+      EXPECT_FLOAT_EQ(extent_in_parent.angle, 0.);
+
+      ASSERT_TRUE(vd.has_children());
+      EXPECT_THAT(vd.children(), testing::UnorderedElementsAre(static_cast<uint32_t>(node_b_koid)));
+    }
+
+    // fuog_ViewDescriptor for node_b.
+    {
+      auto& vd = view_tree_snapshot->views()[1];
+
+      ASSERT_TRUE(vd.has_view_ref_koid());
+      EXPECT_EQ(vd.view_ref_koid(), node_b_koid);
+
+      ASSERT_TRUE(vd.has_layout());
+      auto& layout = vd.layout();
+      auto node_logical_width = static_cast<float>(
+          snapshot->view_tree[node_b_koid].viewport_properties.logical_size().width);
+      auto node_logical_height = static_cast<float>(
+          snapshot->view_tree[node_b_koid].viewport_properties.logical_size().height);
+
+      EXPECT_FLOAT_EQ(layout.extent.min.x, 0.);
+      EXPECT_FLOAT_EQ(layout.extent.min.y, 0.);
+      EXPECT_FLOAT_EQ(layout.extent.max.x, node_logical_width);
+      EXPECT_FLOAT_EQ(layout.extent.max.y, node_logical_height);
+      EXPECT_THAT(layout.pixel_scale, testing::ElementsAre(1.f, 1.f));
+
+      ASSERT_TRUE(vd.has_extent_in_context());
+      auto& extent_in_context = vd.extent_in_context();
+
+      // As all the nodes in the view_tree have |local_from_world_transform| as identity matrix,
+      // |extent_in_context| and |extent_in_parent| will be the same as layout.
+      EXPECT_FLOAT_EQ(extent_in_context.origin.x, 0.);
+      EXPECT_FLOAT_EQ(extent_in_context.origin.y, 0.);
+      EXPECT_FLOAT_EQ(extent_in_context.width, node_logical_width);
+      EXPECT_FLOAT_EQ(extent_in_context.height, node_logical_height);
+      EXPECT_FLOAT_EQ(extent_in_context.angle, 0.);
+
+      ASSERT_TRUE(vd.has_extent_in_parent());
+      auto& extent_in_parent = vd.extent_in_parent();
+
+      EXPECT_FLOAT_EQ(extent_in_parent.origin.x, 0.);
+      EXPECT_FLOAT_EQ(extent_in_parent.origin.y, 0.);
+      EXPECT_FLOAT_EQ(extent_in_parent.width, node_logical_width);
+      EXPECT_FLOAT_EQ(extent_in_parent.height, node_logical_height);
+      EXPECT_FLOAT_EQ(extent_in_parent.angle, 0.);
+
+      ASSERT_TRUE(vd.has_children());
+      EXPECT_THAT(vd.children(), testing::UnorderedElementsAre(static_cast<uint32_t>(node_c_koid)));
+    }
+
+    // fuog_ViewDescriptor for node_c.
+    {
+      auto& vd = view_tree_snapshot->views()[2];
+
+      ASSERT_TRUE(vd.has_view_ref_koid());
+      EXPECT_EQ(vd.view_ref_koid(), node_c_koid);
+
+      ASSERT_TRUE(vd.has_layout());
+      auto& layout = vd.layout();
+      auto node_logical_width = static_cast<float>(
+          snapshot->view_tree[node_c_koid].viewport_properties.logical_size().width);
+      auto node_logical_height = static_cast<float>(
+          snapshot->view_tree[node_c_koid].viewport_properties.logical_size().height);
+
+      EXPECT_FLOAT_EQ(layout.extent.min.x, 0.);
+      EXPECT_FLOAT_EQ(layout.extent.min.y, 0.);
+      EXPECT_FLOAT_EQ(layout.extent.max.x, node_logical_width);
+      EXPECT_FLOAT_EQ(layout.extent.max.y, node_logical_height);
+      EXPECT_THAT(layout.pixel_scale, testing::ElementsAre(1.f, 1.f));
+
+      ASSERT_TRUE(vd.has_extent_in_context());
+      auto& extent_in_context = vd.extent_in_context();
+
+      EXPECT_FLOAT_EQ(extent_in_context.origin.x, 0.);
+      EXPECT_FLOAT_EQ(extent_in_context.origin.y, 0.);
+      EXPECT_FLOAT_EQ(extent_in_context.width, node_logical_width);
+      EXPECT_FLOAT_EQ(extent_in_context.height, node_logical_height);
+      EXPECT_FLOAT_EQ(extent_in_context.angle, 0.);
+
+      ASSERT_TRUE(vd.has_extent_in_parent());
+      auto& extent_in_parent = vd.extent_in_parent();
+
+      EXPECT_FLOAT_EQ(extent_in_parent.origin.x, 0.);
+      EXPECT_FLOAT_EQ(extent_in_parent.origin.y, 0.);
+      EXPECT_FLOAT_EQ(extent_in_parent.width, node_logical_width);
+      EXPECT_FLOAT_EQ(extent_in_parent.height, node_logical_height);
+      EXPECT_FLOAT_EQ(extent_in_parent.angle, 0.);
+
+      ASSERT_TRUE(vd.has_children());
+      EXPECT_TRUE(vd.children().empty());
+    }
+  }
+
+  // Client should receive fuog_ViewDescriptor for the context_view only as the context_view is a
+  // leaf node.
+  {
+    auto view_tree_snapshot = view_tree::GeometryProviderManager::ExtractObservationSnapshot(
+        /*context_view*/ node_c_koid, snapshot);
+
+    ASSERT_TRUE(view_tree_snapshot);
+    ASSERT_TRUE(view_tree_snapshot->has_views());
+    ASSERT_EQ(view_tree_snapshot->views().size(), 1UL);
+
+    auto& vd = view_tree_snapshot->views()[0];
+    ASSERT_TRUE(vd.has_view_ref_koid());
+    EXPECT_EQ(vd.view_ref_koid(), node_c_koid);
+  }
+}
 }  // namespace geometry_provider_manager::test
 }  // namespace view_tree

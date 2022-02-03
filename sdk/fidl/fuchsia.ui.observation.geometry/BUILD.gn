@@ -19,6 +19,7 @@ measure_tape("measure_tape_for_geometry") {
   target_types = [
     "fuchsia.ui.observation.geometry/ViewDescriptor",
     "fuchsia.ui.observation.geometry/ViewTreeSnapshot",
+    "fuchsia.ui.observation.geometry/Error",
   ]
   fidls = [
     ":fuchsia.ui.observation.geometry",

@@ -55,6 +55,7 @@ executable("geometry_provider_test_bin") {
     "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/scenic/lib/view_tree:geometry_provider",
     "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-testing",

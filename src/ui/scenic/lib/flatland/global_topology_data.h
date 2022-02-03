@@ -51,6 +51,10 @@ struct GlobalTopologyData {
   // Debug name for each transform handle, if present.
   std::unordered_map<TransformHandle, std::string> debug_names;
 
+  // |fuchsia::ui::composition::ViewportProperties| for each transform handle.
+  std::unordered_map<TransformHandle, fuchsia::ui::composition::ViewportProperties>
+      viewport_properties;
+
   // Computes the GlobalTopologyData consisting of all TransformHandles reachable from |root|.
   //
   // |root.GetInstanceId()| must be a key in |uber_structs|, and |root| must also be the first

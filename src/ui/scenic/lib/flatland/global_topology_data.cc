@@ -32,6 +32,7 @@ std::optional<zx_koid_t> GetViewRefKoid(
 }  // namespace
 
 namespace flatland {
+using fuc_ViewportProperties = fuchsia::ui::composition::ViewportProperties;
 
 // static
 GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
@@ -69,6 +70,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
   std::unordered_set<TransformHandle> live_transforms;
   std::unordered_map<TransformHandle, std::shared_ptr<const fuchsia::ui::views::ViewRef>> view_refs;
   std::unordered_map<TransformHandle, std::string> debug_names;
+  std::unordered_map<TransformHandle, fuc_ViewportProperties> viewport_properties;
 
   // If we don't have the root in the map, the topology will be empty.
   const auto root_uber_struct_kv = uber_structs.find(root.GetInstanceId());
@@ -196,6 +198,14 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
                           uber_structs.at(current_entry.handle.GetInstanceId())->debug_name);
     }
 
+    // For each view, save the ViewportProperties of its child instances.
+    for (auto& [child_handle, child_properties] :
+         uber_structs.at(current_entry.handle.GetInstanceId())->link_properties) {
+      fuc_ViewportProperties properties;
+      fidl::Clone(child_properties, &properties);
+      viewport_properties.try_emplace(child_handle, std::move(properties));
+    }
+
     // If this entry was the last child for the previous parent, pop that off the stack.
     if (!parent_counts.empty() && parent_counts.back().children_left == 0) {
       parent_counts.pop_back();
@@ -232,7 +242,8 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
           .parent_indices = std::move(parent_indices),
           .live_handles = std::move(live_transforms),
           .view_refs = std::move(view_refs),
-          .debug_names = std::move(debug_names)};
+          .debug_names = std::move(debug_names),
+          .viewport_properties = std::move(viewport_properties)};
 }
 
 view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
@@ -277,6 +288,11 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     if (data.debug_names.count(transform_handle) != 0)
       debug_name = data.debug_names.at(transform_handle);
 
+    fuc_ViewportProperties properties;
+    if (data.viewport_properties.count(transform_handle) != 0) {
+      fidl::Clone(data.viewport_properties.at(transform_handle), &properties);
+    }
+
     // Find the parent by looking upwards until a View is found. The root has no parent.
     // TODO(fxbug.dev/84196): Disallow anonymous views from having parents?
     zx_koid_t parent_koid = ZX_KOID_INVALID;
@@ -290,10 +306,12 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     }
 
     // TODO(fxbug.dev/82678): Add local_from_world_transform to the ViewNode.
-    view_tree.emplace(view_ref_koid, view_tree::ViewNode{.parent = parent_koid,
-                                                         .bounding_box = full_screen_bounding_box,
-                                                         .view_ref = view_ref,
-                                                         .debug_name = debug_name});
+    view_tree.emplace(view_ref_koid,
+                      view_tree::ViewNode{.parent = parent_koid,
+                                          .bounding_box = full_screen_bounding_box,
+                                          .view_ref = view_ref,
+                                          .debug_name = debug_name,
+                                          .viewport_properties = std::move(properties)});
   }
 
   // Fill in the children by deriving it from the parents of each node.

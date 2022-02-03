@@ -85,11 +85,9 @@ type ProviderWatchResponse = table {
     /// A list of most recent updates for a particular view.
     2: updates vector<ViewTreeSnapshot>:BUFFER_SIZE;
 
-    /// Set to true if every snapshot is present in the response, false if some were
-    /// dropped. Snapshots are dropped when the size of `updates` exceeds `BUFFER_SIZE`
-    /// or when the size of a `Watch` call's response exceeds the limit set by a FIDL
-    /// channel.
-    3: is_complete bool;
+    /// Only set if an error condition is detected. If unset, the client may assume
+    /// that updates has complete information over its epoch.
+    3: error Error;
 };
 
 /// A description of the context view and its descendant views, if any.
@@ -99,13 +97,26 @@ type ViewTreeSnapshot = table {
 
     /// The context view (at element 0) and a complete list of its descendant views.
     ///
-    /// If `MAX_VIEW_COUNT` is exceeded, this field is left empty. Instead, a boolean
-    /// (`incomplete`) is sent to the client indicating that the data is incomplete.
+    /// If `MAX_VIEW_COUNT` is exceeded, this field is not set, and an error is reported in
+    /// `Error`.
     2: views vector<ViewDescriptor>:MAX_VIEW_COUNT;
+};
 
-    /// True when the size of `views` is greater than `MAX_VIEW_COUNT`, and false
-    /// otherwise.
-    3: incomplete bool;
+// List of possible errors faced by a client during a `Watch` call.
+type Error = table {
+    /// Set to true when appending a `ViewTreeSnapshot` in `ProviderWatchResponse.updates`
+    /// would exceed the limit of the FIDL channel. That snapshot is dropped, along with
+    /// older snapshots.
+    1: channel_overflow bool;
+
+    /// Set to true when appending a `ViewTreeSnapshot` in `ProviderWatchResponse.updates`
+    /// would exceed `BUFFER_SIZE`. That snapshot is dropped, along with older snapshots.
+    2: buffer_overflow bool;
+
+    /// Set to true when the size of `views` in a `ViewTreeSnapshot` exceeds
+    /// `MAX_VIEW_COUNT`. We represent this situation in the `ViewTreeSnapshot` with an
+    /// unset `views` field.
+    3: views_overflow bool;
 };
 
 /// A view's bounding box, described in the view's own coordinate system.

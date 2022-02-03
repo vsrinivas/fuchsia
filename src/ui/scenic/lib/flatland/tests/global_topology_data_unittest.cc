@@ -34,6 +34,7 @@ void MakeLink(flatland::GlobalTopologyData::LinkTopologyMap& links, uint64_t ins
 
 namespace flatland {
 namespace test {
+using fuc_ViewportProperties = fuchsia::ui::composition::ViewportProperties;
 
 // This is a macro so that, if the various test macros fail, we get a line number associated with a
 // particular call in a unit test.
@@ -278,6 +279,7 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   auto [control_ref2, view_ref2] = scenic::ViewRefPair::New();
   const zx_koid_t view_ref1_koid = utils::ExtractKoid(view_ref1);
   const zx_koid_t view_ref2_koid = utils::ExtractKoid(view_ref2);
+  const uint32_t logical_size_width = 1, logical_size_height = 1;
 
   // Recreate the GlobalTopologyData from GlobalTopologyDataTest.GlobalTopologyIncompleteLink and
   // confirm that the correct ViewTreeSnapshot is generated.
@@ -294,6 +296,9 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
     uber_struct->local_topology = vectors[0];
     uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref1));
     uber_struct->debug_name = "test_instance_1";
+    fuc_ViewportProperties properties;
+    properties.set_logical_size({logical_size_width, logical_size_height});
+    uber_struct->link_properties.try_emplace(vectors[1][0].handle, std::move(properties));
     uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
   }
   {
@@ -354,6 +359,8 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
       EXPECT_THAT(node2.bounding_box.min, testing::ElementsAre(0, 0));
       EXPECT_THAT(node2.bounding_box.max, testing::ElementsAre(kWidth, kHeight));
       EXPECT_EQ(node2.debug_name, "test_instance_2");
+      EXPECT_EQ(node2.viewport_properties.logical_size().width, logical_size_width);
+      EXPECT_EQ(node2.viewport_properties.logical_size().height, logical_size_height);
     }
 
     EXPECT_TRUE(unconnected_views.empty());

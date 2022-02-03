@@ -46,14 +46,16 @@ std::shared_ptr<const view_tree::Snapshot> FourNodeSnapshot() {
 std::shared_ptr<const view_tree::Snapshot> SingleDepthViewTreeSnapshot(uint64_t total_nodes) {
   FX_DCHECK(total_nodes > 0) << "precondition";
   auto snapshot = std::make_shared<view_tree::Snapshot>();
-
+  const uint32_t width = 1, height = 1;
   snapshot->root = kNodeA;
   auto& view_tree = snapshot->view_tree;
   view_tree[kNodeA] = ViewNode{.parent = ZX_KOID_INVALID, .children = {}};
+  view_tree[kNodeA].viewport_properties.set_logical_size({width, height});
   for (zx_koid_t i = 0; i < total_nodes - 1; i++) {
     // The minimum node_id for a child can be 2 since node_id of the root is 1.
     view_tree[kNodeA].children.insert(i + 2);
     view_tree[i + 2] = ViewNode{.parent = kNodeA};
+    view_tree[i + 2].viewport_properties.set_logical_size({width, height});
   }
   return snapshot;
 }

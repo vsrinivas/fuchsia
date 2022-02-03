@@ -84,6 +84,9 @@ class GeometryProviderManager {
     // made after CloseChannel(), since they might be made on a destroyed object.
     void CloseChannel();
 
+    // Resets the state of an |endpoint_| for subsequent |Watch| calls.
+    void Reset();
+
     // Server-side endpoint.
     fidl::Binding<fuchsia::ui::observation::geometry::Provider> endpoint_;
 
@@ -104,7 +107,9 @@ class GeometryProviderManager {
     // responsible for removing the ProviderEndpoint from |endpoints_|.
     fit::function<void()> destroy_instance_function_;
 
-    bool old_snapshots_dropped_ = false;
+    // Errors faced while executing the |pending_callback_|. |error_| must be reset after
+    // |pending_callback_| is executed for subsequent |Watch| calls.
+    fuchsia::ui::observation::geometry::Error error_;
   };
 
   // Generates a fuchsia.ui.observation.geometry.ViewDescriptor from the |snapshot|'s view node by
