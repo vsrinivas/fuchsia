@@ -48,7 +48,7 @@ assemble_system("zedboot_assembly") {
     "kernel.enable-debugging-syscalls=true",
     "kernel.enable-serial-syscalls=true",
     "virtcon.colorscheme=special",
-    "virtcon.dpi=240,360,480",
+    "virtcon.dpi=160,240,360,480",
   ]
 
   bootfs_labels = [
