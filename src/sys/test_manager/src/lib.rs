@@ -69,6 +69,9 @@ mod diagnostics;
 mod error;
 mod facet;
 mod resolver;
+mod self_diagnostics;
+
+pub use self_diagnostics::RootInspectNode;
 
 pub const TEST_ROOT_REALM_NAME: &'static str = "test_root";
 const WRAPPER_REALM_NAME: &'static str = "test_wrapper";
@@ -206,18 +209,30 @@ struct TestRunBuilder {
 impl TestRunBuilder {
     async fn run_controller(
         controller: &mut RunControllerRequestStream,
-        run_task: fasync::Task<()>,
+        run_task: futures::future::RemoteHandle<()>,
         stop_sender: oneshot::Sender<()>,
         event_recv: mpsc::Receiver<RunEvent>,
+        inspect_node: &self_diagnostics::RunInspectNode,
     ) {
         let mut task = Some(run_task);
         let mut stop_sender = Some(stop_sender);
         let mut event_recv = event_recv.fuse();
 
+        let mut stop_or_kill_called = false;
+        let mut events_drained = false;
+        let mut events_sent_successfully = true;
+
         // no need to check controller error.
-        while let Ok(Some(request)) = controller.try_next().await {
+        loop {
+            inspect_node
+                .set_controller_state(self_diagnostics::RunControllerState::AwaitingRequest);
+            let request = match controller.try_next().await {
+                Ok(Some(request)) => request,
+                _ => break,
+            };
             match request {
                 RunControllerRequest::Stop { .. } => {
+                    stop_or_kill_called = true;
                     if let Some(stop_sender) = stop_sender.take() {
                         // no need to check error.
                         let _ = stop_sender.send(());
@@ -227,9 +242,9 @@ impl TestRunBuilder {
                     }
                 }
                 RunControllerRequest::Kill { .. } => {
-                    if let Some(task) = task.take() {
-                        task.cancel().await;
-                    }
+                    stop_or_kill_called = true;
+                    // dropping the remote handle cancels it.
+                    drop(task.take());
                     // after this all `senders` go away and subsequent GetEvent call will
                     // return rest of events and eventually a empty array and will close the
                     // connection after that.
@@ -238,6 +253,8 @@ impl TestRunBuilder {
                     let mut events = vec![];
                     // TODO(fxbug.dev/91553): This can block handling Stop and Kill requests if no
                     // events are available.
+                    inspect_node
+                        .set_controller_state(self_diagnostics::RunControllerState::AwaitingEvents);
                     if let Some(event) = event_recv.next().await {
                         events.push(event);
                         while events.len() < EVENTS_THRESHOLD {
@@ -248,15 +265,25 @@ impl TestRunBuilder {
                             }
                         }
                     }
+                    let no_events_left = events.is_empty();
+                    let response_err =
+                        responder.send(&mut events.into_iter().map(RunEvent::into)).is_err();
 
-                    let _ = responder.send(&mut events.into_iter().map(RunEvent::into));
+                    // Order setting these variables matters. Expected is for the client to receive at
+                    // least one event response. Client might send more, which is okay but we suppress
+                    // response errors after the first empty vec.
+                    if !events_drained && response_err {
+                        events_sent_successfully = false;
+                    }
+                    events_drained = no_events_left;
                 }
             }
         }
-
-        if let Some(task) = task.take() {
-            task.cancel().await;
-        }
+        inspect_node.set_controller_state(self_diagnostics::RunControllerState::Done {
+            stopped_or_killed: stop_or_kill_called,
+            events_drained,
+            events_sent_successfully,
+        });
     }
 
     async fn run(
@@ -265,6 +292,7 @@ impl TestRunBuilder {
         debug_controller: ftest_internal::DebugDataSetControllerProxy,
         debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
         test_map: Arc<TestMap>,
+        inspect_node: self_diagnostics::RunInspectNode,
     ) {
         let (stop_sender, mut stop_recv) = oneshot::channel::<()>();
         let (event_sender, event_recv) = mpsc::channel::<RunEvent>(16);
@@ -273,11 +301,14 @@ impl TestRunBuilder {
             debug_controller.take_event_stream(),
             debug_iterator,
             event_sender.clone(),
+            &inspect_node,
         );
+        let inspect_node_ref = &inspect_node;
 
         // Generate a random number in an attempt to prevent realm name collisions between runs.
         let run_id: u32 = rand::random();
         let run_suites_fut = async move {
+            inspect_node_ref.set_execution_state(self_diagnostics::RunExecutionState::Executing);
             // run test suites serially for now
             for (suite_idx, suite) in self.suites.into_iter().enumerate() {
                 // only check before running the test. We should complete the test run for
@@ -286,7 +317,15 @@ impl TestRunBuilder {
                     break;
                 }
                 let instance_name = format!("{:?}-{:?}", run_id, suite_idx);
-                run_single_suite(suite, &debug_controller, &instance_name, test_map.clone()).await;
+                let suite_inspect = inspect_node_ref.new_suite(&instance_name, &suite.test_url);
+                run_single_suite(
+                    suite,
+                    &debug_controller,
+                    &instance_name,
+                    test_map.clone(),
+                    suite_inspect,
+                )
+                .await;
             }
             debug_controller
                 .finish()
@@ -296,12 +335,25 @@ impl TestRunBuilder {
             let mut kernel_debug_tasks = vec![];
             kernel_debug_tasks.push(send_kernel_debug_data(event_sender.clone()));
             join_all(kernel_debug_tasks).await;
+            inspect_node_ref.set_execution_state(self_diagnostics::RunExecutionState::Complete);
         };
-        let task = fuchsia_async::Task::spawn(async move {
-            futures::future::join(debug_event_fut, run_suites_fut).await;
-        });
 
-        Self::run_controller(&mut controller, task, stop_sender, event_recv).await;
+        let (remote, remote_handle) = futures::future::join(debug_event_fut, run_suites_fut)
+            .map(|((), ())| ())
+            .remote_handle();
+
+        let ((), ()) = futures::future::join(
+            remote,
+            Self::run_controller(
+                &mut controller,
+                remote_handle,
+                stop_sender,
+                event_recv,
+                inspect_node_ref,
+            ),
+        )
+        .await;
+
         // Workaround to prevent zx_peer_closed error
         // TODO(fxbug.dev/87976) once fxbug.dev/87890 is fixed, the controller should be dropped
         // as soon as all events are drained.
@@ -318,12 +370,17 @@ async fn send_debug_data_if_produced(
     mut controller_events: ftest_internal::DebugDataSetControllerEventStream,
     debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
     mut event_sender: mpsc::Sender<RunEvent>,
+    inspect_node: &self_diagnostics::RunInspectNode,
 ) {
+    inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::PendingDebugDataProduced);
     match controller_events.next().await {
         Some(Ok(ftest_internal::DebugDataSetControllerEvent::OnDebugDataProduced {})) => {
             let _ = event_sender.send(RunEvent::debug_data(debug_iterator).into()).await;
+            inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::DebugDataProduced);
         }
-        Some(Err(_)) | None => (),
+        Some(Err(_)) | None => {
+            inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::NoDebugData);
+        }
     }
 }
 
@@ -905,6 +962,7 @@ async fn run_single_suite(
     debug_controller: &ftest_internal::DebugDataSetControllerProxy,
     instance_name: &str,
     test_map: Arc<TestMap>,
+    inspect_node: self_diagnostics::SuiteInspectNode,
 ) {
     let (mut sender, recv) = mpsc::channel(1024);
     let (stop_sender, stop_recv) = oneshot::channel::<()>();
@@ -915,6 +973,7 @@ async fn run_single_suite(
         suite;
 
     let run_test_fut = async {
+        inspect_node.set_execution_state(self_diagnostics::ExecutionState::GetFacets);
         let facets = match facet::get_suite_facets(&test_url, &resolver).await {
             Ok(facets) => facets,
             Err(e) => {
@@ -927,6 +986,7 @@ async fn run_single_suite(
         if let Err(e) = debug_controller.add_realm(realm_moniker_ref.as_str(), &test_url).await {
             warn!("Failed to add realm {} to debug data: {:?}", realm_moniker_ref.as_str(), e);
         }
+        inspect_node.set_execution_state(self_diagnostics::ExecutionState::Launch);
         match RunningSuite::launch(
             &test_url,
             facets,
@@ -938,8 +998,10 @@ async fn run_single_suite(
         .await
         {
             Ok(instance) => {
+                inspect_node.set_execution_state(self_diagnostics::ExecutionState::RunTests);
                 let instance_ref = maybe_instance.insert(instance);
                 instance_ref.run_tests(options, sender, stop_recv).await;
+                inspect_node.set_execution_state(self_diagnostics::ExecutionState::TestsDone);
             }
             Err(e) => {
                 let _ = debug_controller.remove_realm(realm_moniker_ref.as_str());
@@ -957,6 +1019,7 @@ async fn run_single_suite(
     }
 
     if let Some(instance) = maybe_instance.take() {
+        inspect_node.set_execution_state(self_diagnostics::ExecutionState::TearDown);
         const TEARDOWN_TIMEOUT: zx::Duration = zx::Duration::from_seconds(30);
 
         // TODO(fxbug.dev/92769) Remove timeout once component manager hangs are removed.
@@ -974,6 +1037,7 @@ async fn run_single_suite(
             }
         }
     }
+    inspect_node.set_execution_state(self_diagnostics::ExecutionState::Complete);
     // Workaround to prevent zx_peer_closed error
     // TODO(fxbug.dev/87976) once fxbug.dev/87890 is fixed, the controller should be dropped as soon as all
     // events are drained.
@@ -991,6 +1055,7 @@ pub async fn run_test_manager(
     resolver: Arc<ComponentResolverProxy>,
     debug_data_controller: Arc<ftest_internal::DebugDataControllerProxy>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
+    inspect_root: &self_diagnostics::RootInspectNode,
 ) -> Result<(), TestManagerError> {
     let mut builder = TestRunBuilder { suites: vec![] };
     while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
@@ -1035,7 +1100,11 @@ pub async fn run_test_manager(
                 let (debug_iterator, iterator_server) =
                     create_endpoints::<ftest_manager::DebugDataIteratorMarker>().unwrap();
                 debug_data_controller.new_set(iterator_server, set_controller_server).unwrap();
-                builder.run(controller, debug_set_controller, debug_iterator, test_map).await;
+                let run_inspect = inspect_root
+                    .new_run(&format!("run_{:?}", zx::Time::get_monotonic().into_nanos()));
+                builder
+                    .run(controller, debug_set_controller, debug_iterator, test_map, run_inspect)
+                    .await;
                 // clients should reconnect to run new tests.
                 break;
             }

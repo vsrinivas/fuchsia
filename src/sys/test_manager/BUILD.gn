@@ -67,6 +67,7 @@ rustc_library("lib") {
     "//src/lib/async-utils",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/hierarchy/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio",
     "//src/lib/fidl/rust/fidl",
@@ -107,6 +108,7 @@ rustc_library("lib") {
     "src/facet.rs",
     "src/lib.rs",
     "src/resolver.rs",
+    "src/self_diagnostics.rs",
   ]
 }
 
@@ -120,6 +122,8 @@ rustc_binary("bin") {
     ":lib",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.test.internal:fuchsia.test.internal-rustc",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

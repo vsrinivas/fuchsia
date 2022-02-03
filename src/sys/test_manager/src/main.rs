@@ -49,6 +49,9 @@ async fn main() -> Result<(), Error> {
     info!("started");
     let args: TestManagerArgs = std::env::args().try_into()?;
     let mut fs = ServiceFs::new();
+
+    inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
+
     let test_map = test_manager_lib::TestMap::new(zx::Duration::from_minutes(5));
     let test_map_clone = test_map.clone();
     let test_map_clone2 = test_map.clone();
@@ -65,12 +68,16 @@ async fn main() -> Result<(), Error> {
             .expect("Cannnot connect to debug data control"),
     );
     let resolver_clone = resolver.clone();
+    let root_inspect = Arc::new(test_manager_lib::RootInspectNode::new(
+        fuchsia_inspect::component::inspector().root(),
+    ));
     fs.dir("svc")
         .add_fidl_service(move |stream| {
             let test_map = test_map_clone2.clone();
             let routing_info_for_task = routing_info_clone.clone();
             let resolver = resolver.clone();
             let debug_data_controller = debug_data_controller.clone();
+            let root_inspect_clone = root_inspect.clone();
             fasync::Task::spawn(async move {
                 test_manager_lib::run_test_manager(
                     stream,
@@ -78,6 +85,7 @@ async fn main() -> Result<(), Error> {
                     resolver,
                     debug_data_controller,
                     routing_info_for_task,
+                    &*root_inspect_clone,
                 )
                 .await
                 .unwrap_or_else(|error| warn!(?error, "test manager returned error"))
