@@ -153,10 +153,7 @@ protocol RingBuffer {
     /// advances (and position notifications sent as needed) regardless of the number of active
     /// channels, including if no channels are active. This means that the format in the
     /// ring buffer is not changed.
-    /// By default all channels are active. Note that a ring buffer may be configured to only use
-    /// a subset of the channels via `PcmFormat`'s `channels_to_use_bitmask` which is independent
-    /// of this setting. Hence, if this ring buffer is only using a subset of channels per
-    /// `channels_to_use_bitmask`, activating via this bitmask won't override that setting.
+    /// By default all channels are active.
     /// If the driver does not support deactivating channels it must return `ZX_ERR_NOT_SUPPORTED`.
     /// If the mask is incorrect, i.e. enables channels outside the number of bits
     /// to use for a given `number_of_channels`, then the driver may return `ZX_ERR_INVALID_ARGS`.

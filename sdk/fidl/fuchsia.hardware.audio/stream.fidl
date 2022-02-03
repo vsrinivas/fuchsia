@@ -8,7 +8,6 @@ using zx;
 const UNIQUE_ID_SIZE uint32 = 16;
 const MAX_UI_STRING_SIZE uint32 = 256;
 const MAX_COUNT_CHANNELS_IN_RING_BUFFER uint32 = 64;
-const MAX_COUNT_CHANNELS_TO_USE uint32 = 64;
 const MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS uint32 = 64;
 const MAX_COUNT_CHANNEL_SETS uint32 = 64;
 const MAX_COUNT_SUPPORTED_SAMPLE_FORMATS uint32 = 3;
@@ -102,10 +101,6 @@ type Format = table {
 type PcmFormat = struct {
     /// Number of channels.
     number_of_channels uint8;
-
-    /// Which channels to use as a bitmask. Channels not set in the bitmask are ignored.
-    /// The least significant bit corresponds to index 0.
-    channels_to_use_bitmask uint64;
 
     /// The format of all samples.
     sample_format SampleFormat;

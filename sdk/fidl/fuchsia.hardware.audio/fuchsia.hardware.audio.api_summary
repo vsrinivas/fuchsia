@@ -137,7 +137,6 @@ union/member fuchsia.hardware.audio/Latency.latency_frames uint32
 union/member fuchsia.hardware.audio/Latency.latency_time int64
 flexible union fuchsia.hardware.audio/Latency
 const fuchsia.hardware.audio/MAX_COUNT_CHANNELS_IN_RING_BUFFER uint32 64
-const fuchsia.hardware.audio/MAX_COUNT_CHANNELS_TO_USE uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_CHANNEL_SETS uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_DAI_FORMATS uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_BITS_PER_SAMPLE uint32 8
@@ -159,7 +158,6 @@ const fuchsia.hardware.audio/MAX_DAI_UI_STRING_SIZE uint32 256
 const fuchsia.hardware.audio/MAX_STRING_SIZE uint32 256
 const fuchsia.hardware.audio/MAX_UI_STRING_SIZE uint32 256
 struct/member fuchsia.hardware.audio/PcmFormat.bytes_per_sample uint8
-struct/member fuchsia.hardware.audio/PcmFormat.channels_to_use_bitmask uint64
 struct/member fuchsia.hardware.audio/PcmFormat.frame_rate uint32
 struct/member fuchsia.hardware.audio/PcmFormat.number_of_channels uint8
 struct/member fuchsia.hardware.audio/PcmFormat.sample_format fuchsia.hardware.audio/SampleFormat

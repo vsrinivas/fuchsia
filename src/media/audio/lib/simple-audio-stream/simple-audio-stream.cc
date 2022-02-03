@@ -373,7 +373,6 @@ void SimpleAudioStream::CreateRingBuffer(
   req.frames_per_second = pcm_format.frame_rate;
   req.sample_format = sample_format;
   req.channels = static_cast<uint16_t>(pcm_format.number_of_channels);
-  req.channels_to_use_bitmask = pcm_format.channels_to_use_bitmask;
 
   // Actually attempt to change the format.
   auto result = ChangeFormat(req);

@@ -172,7 +172,6 @@ impl AudioControl for DaiAudioControl {
         };
         let pcm_format = PcmFormat {
             number_of_channels: 1,
-            channels_to_use_bitmask: 0x1,
             sample_format: audio::SampleFormat::PcmSigned,
             bytes_per_sample: 2,
             valid_bits_per_sample: 16,
@@ -278,7 +277,6 @@ mod test {
                     .as_ref()
                     .unwrap()
                     .len() as u8,
-                channels_to_use_bitmask: 0xffffffffu64,
                 sample_format: pcm_formats.sample_formats.as_ref().unwrap()[0],
                 bytes_per_sample: pcm_formats.bytes_per_sample.as_ref().unwrap()[0],
                 valid_bits_per_sample: pcm_formats.valid_bits_per_sample.as_ref().unwrap()[0],

@@ -63,7 +63,6 @@ class TestAudioStreamIn : public AudioStreamIn {
 audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   audio_fidl::wire::PcmFormat format;
   format.number_of_channels = 2;
-  format.channels_to_use_bitmask = 0x03;
   format.sample_format = audio_fidl::wire::SampleFormat::kPcmSigned;
   format.frame_rate = 48'000;
   format.bytes_per_sample = 2;
@@ -81,55 +80,6 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     pdev_.set_interrupt(0, std::move(irq));
 
     tester_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
-  }
-
-  void TestMasks(uint8_t number_of_channels, uint64_t channels_to_use_bitmask,
-                 uint8_t channels_mask, uint8_t mute_mask) {
-    auto metadata = GetDefaultMetadata();
-    metadata.number_of_channels = number_of_channels;
-    tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-
-    int step = 0;  // Track of the expected sequence of reads and writes.
-    mmio_.reg(0x000).SetReadCallback([]() -> uint32_t { return 0; });
-    mmio_.reg(0x000).SetWriteCallback([&step, &mute_mask](size_t value) {
-      if (step == 9) {
-        EXPECT_EQ(mute_mask << 20, value);
-      }
-      step++;
-    });
-
-    auto server = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
-    ASSERT_NOT_NULL(server);
-
-    fidl::WireSyncClient<audio_fidl::Device> client_wrap(tester_.FidlClient<audio_fidl::Device>());
-    fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap->GetChannel();
-    ASSERT_EQ(channel_wrap.status(), ZX_OK);
-
-    fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
-
-    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
-    pcm_format.channels_to_use_bitmask = channels_to_use_bitmask;
-    pcm_format.number_of_channels = number_of_channels;
-
-    fidl::Arena allocator;
-    audio_fidl::wire::Format format(allocator);
-    format.set_pcm_format(allocator, std::move(pcm_format));
-
-    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
-    ASSERT_OK(endpoints.status_value());
-    auto [local, remote] = *std::move(endpoints);
-
-    client->CreateRingBuffer(std::move(format), std::move(remote));
-
-    // To make sure we have initialized in the server make a sync call
-    // (we know the server is single threaded, initialization is completed if received a reply).
-    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
-    ASSERT_OK(props.status());
-
-    server->DdkAsyncRemove();
-    EXPECT_TRUE(tester_.Ok());
-    server->DdkRelease();
-    EXPECT_EQ(step, 13);
   }
 
   void TestRingBufferSize(uint8_t number_of_channels, uint32_t frames_req,
@@ -168,19 +118,6 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
   FakeMmio mmio_;
   fake_ddk::Bind tester_;
 };
-
-TEST_F(AudioStreamInTest, ChannelsToUseBitmaskAllOn) {
-  TestMasks(/*channels*/ 2, /*channels_to_use_bitmask*/ 3, /*channels_mask*/ 3, /*mute_mask*/ 0);
-}
-TEST_F(AudioStreamInTest, ChannelsToUseBitmaskLeftOn) {
-  TestMasks(/*channels*/ 2, /*channels_to_use_bitmask*/ 1, /*channels_mask*/ 3, /*mute_mask*/ 2);
-}
-TEST_F(AudioStreamInTest, ChannelsToUseBitmaskRightOn) {
-  TestMasks(/*channels*/ 2, /*channels_to_use_bitmask*/ 2, /*channels_mask*/ 3, /*mute_mask*/ 1);
-}
-TEST_F(AudioStreamInTest, ChannelsToUseBitmaskMoreThanNeeded) {
-  TestMasks(/*channels*/ 2, /*channels_to_use_bitmask*/ 0xff, /*channels_mask*/ 3, /*mute_mask*/ 0);
-}
 
 // With 16 bits samples, frame size is 2 x number of channels bytes.
 // Frames returned are rounded to HW buffer alignment (8 bytes) and frame size.

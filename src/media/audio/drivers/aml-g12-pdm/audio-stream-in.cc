@@ -183,12 +183,6 @@ zx_status_t AudioStreamIn::InitPDev() {
 void AudioStreamIn::InitHw() {
   // Enable first metadata_.number_of_channels channels.
   lib_->ConfigPdmIn(static_cast<uint8_t>((1 << metadata_.number_of_channels) - 1));
-  uint8_t mute_slots = 0;
-  // Set muted slots from channels_to_use_bitmask limited to channels in use.
-  if (channels_to_use_bitmask_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED)
-    mute_slots =
-        static_cast<uint8_t>(~channels_to_use_bitmask_ & ((1 << metadata_.number_of_channels) - 1));
-  lib_->SetMute(mute_slots);
   lib_->SetRate(frames_per_second_);
   lib_->Sync();
 }
@@ -204,7 +198,6 @@ zx_status_t AudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq& req)
     return ZX_ERR_INVALID_ARGS;
   }
   frames_per_second_ = req.frames_per_second;
-  channels_to_use_bitmask_ = req.channels_to_use_bitmask;
 
   InitHw();
 

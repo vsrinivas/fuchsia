@@ -97,8 +97,8 @@ void TestAudioInputRecord(audio::utils::AudioInput* input) {
   format.channels = 2;
   format.frame_rate = 48'000U;
   format.sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
-  input->SetFormat(format.frame_rate, format.channels, AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED,
-                   format.sample_format);
+  const uint64_t channels_to_use = (1 << format.channels) - 1;  // Enable all.
+  input->SetFormat(format.frame_rate, format.channels, channels_to_use, format.sample_format);
 
   // Record a small number of samples of audio.
   //

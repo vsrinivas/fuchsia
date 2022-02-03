@@ -23,7 +23,6 @@ namespace audio_fidl = fuchsia_hardware_audio;
 audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   audio_fidl::wire::PcmFormat format;
   format.number_of_channels = 2;
-  format.channels_to_use_bitmask = 0x03;
   format.sample_format = audio_fidl::wire::SampleFormat::kPcmSigned;
   format.frame_rate = 48000;
   format.bytes_per_sample = 2;
@@ -559,7 +558,6 @@ TEST_F(SimpleAudioTest, CreateRingBuffer2) {
 
   audio_fidl::wire::PcmFormat pcm_format;
   pcm_format.number_of_channels = 4;
-  pcm_format.channels_to_use_bitmask = 0x0f;
   pcm_format.sample_format = audio_fidl::wire::SampleFormat::kPcmUnsigned;
   pcm_format.frame_rate = 44100;
   pcm_format.bytes_per_sample = 4;

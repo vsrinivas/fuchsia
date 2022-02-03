@@ -238,7 +238,6 @@ mod tests {
 
     const SUPPORTED_PCM_FORMAT: PcmFormat = PcmFormat {
         number_of_channels: 1,
-        channels_to_use_bitmask: 1,
         sample_format: SampleFormat::PcmSigned,
         bytes_per_sample: 2,
         valid_bits_per_sample: 16,

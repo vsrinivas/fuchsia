@@ -391,14 +391,6 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
 
   auto req = format.pcm_format();
 
-  if (req.channels_to_use_bitmask != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED &&
-      req.channels_to_use_bitmask != ((1 << req.number_of_channels) - 1)) {
-    LOG(ERROR, "Unsupported format: Invalid channels to use bitmask (0x%lX)",
-        req.channels_to_use_bitmask);
-    completer.Close(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
   audio_sample_format_t sample_format =
       audio::utils::GetSampleFormat(req.valid_bits_per_sample, 8 * req.bytes_per_sample);
 

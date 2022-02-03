@@ -26,7 +26,6 @@ static constexpr uint32_t kTestFrameRate = 48'000;
 audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   audio_fidl::wire::PcmFormat format;
   format.number_of_channels = 2;
-  format.channels_to_use_bitmask = 0x03;
   format.sample_format = audio_fidl::wire::SampleFormat::kPcmSigned;
   format.frame_rate = kTestFrameRate;
   format.bytes_per_sample = 2;

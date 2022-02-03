@@ -71,7 +71,7 @@ class AmlG12TdmStream : public SimpleAudioStream {
   zx_status_t StartAllEnabledCodecs();
   zx_status_t UpdateHardwareSettings();
   virtual bool AllowNonContiguousRingBuffer() { return false; }
-  zx_status_t StartCodec(size_t index);
+  zx_status_t StartCodecIfEnabled(size_t index);
   int Thread();
 
   uint32_t us_per_notification_ = 0;
@@ -91,7 +91,6 @@ class AmlG12TdmStream : public SimpleAudioStream {
 
   zx::bti bti_;
   const ddk::GpioProtocolClient enable_gpio_;
-  uint64_t channels_to_use_ = std::numeric_limits<uint64_t>::max();  // Enable all.
   uint64_t active_channels_ = std::numeric_limits<uint64_t>::max();  // Enable all.
   bool override_mute_ = true;
   zx::interrupt irq_;

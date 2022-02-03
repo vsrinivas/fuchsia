@@ -587,7 +587,6 @@ mod tests {
         let format = Format {
             pcm_format: Some(fidl_fuchsia_hardware_audio::PcmFormat {
                 number_of_channels:      2u8,
-                channels_to_use_bitmask: 3u64,
                 sample_format:           SampleFormat::PcmSigned,
                 bytes_per_sample:        2u8,
                 valid_bits_per_sample:   16u8,
@@ -689,7 +688,6 @@ mod tests {
         let format = Format {
             pcm_format: Some(fidl_fuchsia_hardware_audio::PcmFormat {
                 number_of_channels:      2u8,
-                channels_to_use_bitmask: 3u64,
                 sample_format:           SampleFormat::PcmSigned,
                 bytes_per_sample:        2u8,
                 valid_bits_per_sample:   16u8,

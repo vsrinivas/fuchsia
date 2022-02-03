@@ -161,8 +161,7 @@ void TestBase::LogFormat(const fuchsia::hardware::audio::PcmFormat& format, std:
   FX_LOGS(WARNING) << tag << ": rate " << format.frame_rate << ", fmt "
                    << static_cast<int>(format.sample_format) << ", " << format.bytes_per_sample * 8u
                    << "b (" << static_cast<uint16_t>(format.valid_bits_per_sample)
-                   << " valid), chans " << static_cast<uint16_t>(format.number_of_channels)
-                   << " (bitmask 0x" << std::hex << format.channels_to_use_bitmask << ")";
+                   << " valid), chans " << static_cast<uint16_t>(format.number_of_channels);
 }
 
 void TestBase::ValidateGetFormats() {
@@ -288,7 +287,6 @@ void TestBase::SetMinMaxFormats() {
                                  min_format_.frame_rate) {
       min_format_ = {
           .number_of_channels = static_cast<uint8_t>(min_chans),
-          .channels_to_use_bitmask = 1u,
           .sample_format = sample_format,
           .bytes_per_sample = min_bytes_per_sample,
           .valid_bits_per_sample = min_valid_bits_per_sample,
@@ -301,7 +299,6 @@ void TestBase::SetMinMaxFormats() {
                                  max_format_.frame_rate) {
       max_format_ = {
           .number_of_channels = static_cast<uint8_t>(max_chans),
-          .channels_to_use_bitmask = (1u << max_chans) - 1u,
           .sample_format = sample_format,
           .bytes_per_sample = max_bytes_per_sample,
           .valid_bits_per_sample = max_valid_bits_per_sample,

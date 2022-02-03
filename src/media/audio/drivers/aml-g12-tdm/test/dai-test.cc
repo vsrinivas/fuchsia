@@ -25,7 +25,6 @@ namespace audio::aml_g12 {
 fuchsia_hardware_audio::wire::PcmFormat GetDefaultPcmFormat() {
   fuchsia_hardware_audio::wire::PcmFormat format;
   format.number_of_channels = 2;
-  format.channels_to_use_bitmask = 0x03;
   format.sample_format = fuchsia_hardware_audio::wire::SampleFormat::kPcmSigned;
   format.frame_rate = 48'000;
   format.bytes_per_sample = 2;
@@ -36,7 +35,6 @@ fuchsia_hardware_audio::wire::PcmFormat GetDefaultPcmFormat() {
 fuchsia_hardware_audio::wire::DaiFormat GetDefaultDaiFormat() {
   fuchsia_hardware_audio::wire::DaiFormat format;
   format.number_of_channels = 2;
-  format.channels_to_use_bitmask = 0x03;
   format.sample_format = fuchsia_hardware_audio::wire::DaiSampleFormat::kPcmSigned;
   format.frame_format.set_frame_format_standard(
       fuchsia_hardware_audio::wire::DaiFrameFormatStandard::kI2S);
@@ -448,7 +446,6 @@ TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
   // Create ring buffer, pick first ring buffer format and first DAI format.
   ::fuchsia::hardware::audio::DaiFormat dai_format = {};
   dai_format.number_of_channels = dai_formats.number_of_channels[0];
-  dai_format.channels_to_use_bitmask = (1 << dai_format.number_of_channels) - 1;  // Use all.
   dai_format.sample_format = dai_formats.sample_formats[0];
   dai_format.frame_format.set_frame_format_standard(
       dai_formats.frame_formats[0].frame_format_standard());
@@ -459,8 +456,6 @@ TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
   ::fuchsia::hardware::audio::Format ring_buffer_format = {};
   ring_buffer_format.mutable_pcm_format()->number_of_channels =
       pcm_formats.channel_sets()[0].attributes().size();
-  ring_buffer_format.mutable_pcm_format()->channels_to_use_bitmask =
-      (1 << ring_buffer_format.pcm_format().number_of_channels) - 1;  // Use all.
   ring_buffer_format.mutable_pcm_format()->sample_format = pcm_formats.sample_formats()[0];
   ring_buffer_format.mutable_pcm_format()->frame_rate = pcm_formats.frame_rates()[0];
   ring_buffer_format.mutable_pcm_format()->bytes_per_sample = pcm_formats.bytes_per_sample()[0];

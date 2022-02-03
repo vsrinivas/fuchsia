@@ -362,11 +362,7 @@ zx_status_t AmlG12TdmStream::UpdateHardwareSettings() {
   for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     dai_formats_[i].frame_rate = frame_rate_;
   }
-  uint64_t active_channels = active_channels_;
-  if (channels_to_use_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED) {
-    active_channels &= channels_to_use_;
-  }
-  status = aml_audio_->InitHW(metadata_, active_channels, frame_rate_);
+  status = aml_audio_->InitHW(metadata_, active_channels_, frame_rate_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to reinitialize the HW");
     return status;
@@ -405,7 +401,7 @@ zx_status_t AmlG12TdmStream::ChangeActiveChannels(uint64_t mask) {
     bool old_enabled = old_mask & codec_mask;
     if (enabled != old_enabled) {
       if (enabled) {
-        zx_status_t status = StartCodec(i);
+        zx_status_t status = StartCodecIfEnabled(i);
         if (status != ZX_OK) {
           return status;
         }
@@ -441,9 +437,7 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
       break;
     }
   }
-  if (!hardware_configured_ || req.frames_per_second != frame_rate_ ||
-      req.channels_to_use_bitmask != channels_to_use_) {
-    channels_to_use_ = req.channels_to_use_bitmask;
+  if (!hardware_configured_ || req.frames_per_second != frame_rate_) {
     frame_rate_ = req.frames_per_second;
     zx_status_t status = UpdateHardwareSettings();
     if (status != ZX_OK) {
@@ -541,21 +535,19 @@ zx_status_t AmlG12TdmStream::Start(uint64_t* out_start_time) {
   return ZX_OK;
 }
 
-zx_status_t AmlG12TdmStream::StartCodec(size_t index) {
+zx_status_t AmlG12TdmStream::StartCodecIfEnabled(size_t index) {
   if (!metadata_.codecs.ring_buffer_channels_to_use_bitmask[index]) {
     zxlogf(ERROR, "Codec %zu must configure ring_buffer_channels_to_use_bitmask", index);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // If:
-  // - The setting for channels_to_use_ is disabled or
-  // - The codecs ring_buffer_channels_to_use_bitmask intersects with channels_to_use_
-  // and:
-  // - The codecs ring_buffer_channels_to_use_bitmask intersects with active_channels_
-  // then start the codec.
-  if ((channels_to_use_ == AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED ||
-       channels_to_use_ & metadata_.codecs.ring_buffer_channels_to_use_bitmask[index]) &&
-      (active_channels_ & metadata_.codecs.ring_buffer_channels_to_use_bitmask[index])) {
+  // Enable codec depending on the mapping provided by metadata_
+  // metadata_.ring_buffer.number_of_channels are mapped into metadata_.codecs.number_of_codecs
+  // The active_channels_ bitmask defines which ring buffer channels corresponding codecs to start
+  // metadata_.codecs.ring_buffer_channels_to_use_bitmask[] specifies which channel in the ring
+  // buffer a codec is associated with. If the codecs ring_buffer_channels_to_use_bitmask intersects
+  // with active_channels_ then start the codec.
+  if (active_channels_ & metadata_.codecs.ring_buffer_channels_to_use_bitmask[index]) {
     zx_status_t status = codecs_[index].Start();
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to start the codec");
@@ -565,14 +557,9 @@ zx_status_t AmlG12TdmStream::StartCodec(size_t index) {
   return ZX_OK;
 }
 
-// Enable codecs depending on the mapping provided by metadata_
-// metadata_.ring_buffer.number_of_channels are mapped into metadata_.codecs.number_of_codecs
-// The channels_to_use_ bitmask defines which ring buffer channels corresponding codecs to start
-// metadata_.codecs.ring_buffer_channels_to_use_bitmask[] specifies which channel in the ring buffer
-// a codec is associated with.
 zx_status_t AmlG12TdmStream::StartAllEnabledCodecs() {
   for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
-    zx_status_t status = StartCodec(i);
+    zx_status_t status = StartCodecIfEnabled(i);
     if (status != ZX_OK) {
       return status;
     }

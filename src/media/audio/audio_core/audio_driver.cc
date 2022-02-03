@@ -390,7 +390,6 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
   fuchsia::hardware::audio::Format fidl_format = {};
   fuchsia::hardware::audio::PcmFormat pcm = {};
   pcm.number_of_channels = channels;
-  pcm.channels_to_use_bitmask = (1 << pcm.number_of_channels) - 1;  // Use all channels.
   pcm.bytes_per_sample = format.bytes_per_frame() / channels;
   pcm.valid_bits_per_sample = format.valid_bits_per_channel();
   pcm.frame_rate = frames_per_second;
