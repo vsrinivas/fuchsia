@@ -557,11 +557,34 @@ pub struct RealmBuilder {
 }
 
 impl RealmBuilder {
+    /// Creates a new, empty Realm Builder.
     pub async fn new() -> Result<Self, Error> {
-        Self::new_with_collection(DEFAULT_COLLECTION_NAME.to_string()).await
+        Self::create(DEFAULT_COLLECTION_NAME.to_string(), None).await
     }
 
-    pub async fn new_with_collection(collection_name: String) -> Result<Self, Error> {
+    /// Creates a new Realm Builder, and loads the contents of the manifest located at
+    /// `relative_url` into the realm.
+    pub async fn from_relative_url(relative_url: impl Into<String>) -> Result<Self, Error> {
+        Self::create(DEFAULT_COLLECTION_NAME.to_string(), Some(relative_url.into())).await
+    }
+
+    /// Creates a new Realm Builder, and loads the contents of the manifest located at
+    /// `relative_url` into the realm. When `RealmBuilder::build` is called, the realm will be
+    /// launched in the collection named `collection_name`.
+    pub async fn from_relative_url_with_collection(
+        relative_url: impl Into<String>,
+        collection_name: impl Into<String>,
+    ) -> Result<Self, Error> {
+        Self::create(collection_name.into(), Some(relative_url.into())).await
+    }
+
+    /// Creates a new, empty Realm Builder. When `RealmBuilder::build` is called, the realm will be
+    /// launched in the collection named `collection_name`.
+    pub async fn new_with_collection(collection_name: impl Into<String>) -> Result<Self, Error> {
+        Self::create(collection_name.into(), None).await
+    }
+
+    async fn create(collection_name: String, relative_url: Option<String>) -> Result<Self, Error> {
         let realm_proxy = fclient::connect_to_protocol::<fcomponent::RealmMarker>()
             .map_err(Error::ConnectToServer)?;
         let (exposed_dir_proxy, exposed_dir_server_end) =
@@ -594,18 +617,31 @@ impl RealmBuilder {
             create_proxy::<ftest::RealmMarker>().expect("failed to create channel pair");
         let (builder_proxy, builder_server_end) =
             create_proxy::<ftest::BuilderMarker>().expect("failed to create channel pair");
-        realm_builder_factory_proxy
-            .create(
-                ClientEnd::from(pkg_dir_proxy.into_channel().unwrap().into_zx_channel()),
-                realm_server_end,
-                builder_server_end,
-            )
-            .await?;
-
-        Self::new_with_proxies(realm_proxy, builder_proxy, collection_name)
+        match relative_url {
+            Some(relative_url) => {
+                realm_builder_factory_proxy
+                    .create_from_relative_url(
+                        ClientEnd::from(pkg_dir_proxy.into_channel().unwrap().into_zx_channel()),
+                        &relative_url,
+                        realm_server_end,
+                        builder_server_end,
+                    )
+                    .await??;
+            }
+            None => {
+                realm_builder_factory_proxy
+                    .create(
+                        ClientEnd::from(pkg_dir_proxy.into_channel().unwrap().into_zx_channel()),
+                        realm_server_end,
+                        builder_server_end,
+                    )
+                    .await?;
+            }
+        }
+        Self::build_struct(realm_proxy, builder_proxy, collection_name)
     }
 
-    fn new_with_proxies(
+    fn build_struct(
         realm_proxy: ftest::RealmProxy,
         builder_proxy: ftest::BuilderProxy,
         collection_name: String,
@@ -1632,7 +1668,7 @@ mod tests {
         });
 
         (
-            RealmBuilder::new_with_proxies(
+            RealmBuilder::build_struct(
                 realm_proxy,
                 builder_proxy,
                 crate::DEFAULT_COLLECTION_NAME.to_string(),

@@ -62,18 +62,13 @@ async fn main() {
 
     let execution_scope_clone = execution_scope.clone();
     fs.dir("svc").add_fidl_service(move |stream| {
-        let registry = registry.clone();
-        let runner = runner.clone();
-        let execution_scope_clone_2 = execution_scope_clone.clone();
+        let factory = RealmBuilderFactory::new(
+            registry.clone(),
+            runner.clone(),
+            execution_scope_clone.clone(),
+        );
         execution_scope_clone.spawn(async move {
-            if let Err(e) = handle_realm_builder_factory_stream(
-                stream,
-                registry,
-                runner,
-                execution_scope_clone_2,
-            )
-            .await
-            {
+            if let Err(e) = factory.handle_stream(stream).await {
                 error!("error encountered while running realm builder service: {:?}", e);
             }
         });
@@ -84,71 +79,142 @@ async fn main() {
     join!(execution_scope.wait(), fs.collect::<()>());
 }
 
-async fn handle_realm_builder_factory_stream(
-    mut stream: ftest::RealmBuilderFactoryRequestStream,
+struct RealmBuilderFactory {
     registry: Arc<resolver::Registry>,
     runner: Arc<runner::Runner>,
     execution_scope: ExecutionScope,
-) -> Result<(), anyhow::Error> {
-    while let Some(req) = stream.try_next().await? {
-        match req {
-            ftest::RealmBuilderFactoryRequest::Create {
-                pkg_dir_handle,
-                realm_server_end,
-                builder_server_end,
-                responder,
-            } => {
-                let new_realm = RealmNode2::new();
-                let pkg_dir = pkg_dir_handle
-                    .into_proxy()
-                    .context("failed to convert pkg_dir ClientEnd to proxy")?;
+}
 
-                let runner_proxy_placeholder = Arc::new(Mutex::new(None));
+impl RealmBuilderFactory {
+    fn new(
+        registry: Arc<resolver::Registry>,
+        runner: Arc<runner::Runner>,
+        execution_scope: ExecutionScope,
+    ) -> Self {
+        Self { registry, runner, execution_scope }
+    }
 
-                let realm_stream = realm_server_end
-                    .into_stream()
-                    .context("failed to convert realm_server_end to stream")?;
-
-                let realm_has_been_built = Arc::new(AtomicBool::new(false));
-
-                let realm = Realm {
-                    pkg_dir: Clone::clone(&pkg_dir),
-                    realm_node: new_realm.clone(),
-                    registry: registry.clone(),
-                    runner: runner.clone(),
-                    runner_proxy_placeholder: runner_proxy_placeholder.clone(),
-                    realm_path: vec![],
-                    execution_scope: execution_scope.clone(),
-                    realm_has_been_built: realm_has_been_built.clone(),
-                };
-
-                execution_scope.spawn(async move {
-                    if let Err(e) = realm.handle_stream(realm_stream).await {
-                        error!("error encountered while handling Realm requests: {:?}", e);
+    async fn handle_stream(
+        self,
+        mut stream: ftest::RealmBuilderFactoryRequestStream,
+    ) -> Result<(), anyhow::Error> {
+        while let Some(req) = stream.try_next().await? {
+            match req {
+                ftest::RealmBuilderFactoryRequest::CreateFromRelativeUrl {
+                    pkg_dir_handle,
+                    relative_url,
+                    realm_server_end,
+                    builder_server_end,
+                    responder,
+                } => {
+                    if !is_relative_url(&relative_url) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::UrlIsNotRelative))?;
+                        continue;
                     }
-                });
-
-                let builder_stream = builder_server_end
-                    .into_stream()
-                    .context("failed to convert builder_server_end to stream")?;
-
-                let builder = Builder {
-                    pkg_dir: Clone::clone(&pkg_dir),
-                    realm_node: new_realm.clone(),
-                    registry: registry.clone(),
-                    runner_proxy_placeholder: runner_proxy_placeholder.clone(),
-                    realm_has_been_built: realm_has_been_built,
-                };
-                execution_scope.spawn(async move {
-                    if let Err(e) = builder.handle_stream(builder_stream).await {
-                        error!("error encountered while handling Builder requests: {:?}", e);
-                    }
-                });
-                responder.send()?;
+                    let pkg_dir = match pkg_dir_handle
+                        .into_proxy()
+                        .context("failed to convert pkg_dir ClientEnd to proxy")
+                    {
+                        Ok(pkg_dir) => pkg_dir,
+                        Err(e) => {
+                            responder
+                                .send(&mut Err(ftest::RealmBuilderError2::InvalidPkgDirHandle))?;
+                            return Err(e);
+                        }
+                    };
+                    let realm_node = match RealmNode2::load_from_pkg(
+                        relative_url.clone(),
+                        Clone::clone(&pkg_dir),
+                    )
+                    .await
+                    {
+                        Ok(realm_node) => realm_node,
+                        Err(e) => {
+                            warn!("unable to load manifest at {:?}: {:?}", relative_url, e);
+                            responder.send(&mut Err(e.into()))?;
+                            continue;
+                        }
+                    };
+                    self.create_realm_and_builder(
+                        realm_node,
+                        pkg_dir,
+                        realm_server_end,
+                        builder_server_end,
+                    )?;
+                    responder.send(&mut Ok(()))?;
+                }
+                ftest::RealmBuilderFactoryRequest::Create {
+                    pkg_dir_handle,
+                    realm_server_end,
+                    builder_server_end,
+                    responder,
+                } => {
+                    let pkg_dir = pkg_dir_handle
+                        .into_proxy()
+                        .context("failed to convert pkg_dir ClientEnd to proxy")?;
+                    self.create_realm_and_builder(
+                        RealmNode2::new(),
+                        pkg_dir,
+                        realm_server_end,
+                        builder_server_end,
+                    )?;
+                    responder.send()?;
+                }
             }
         }
+        Ok(())
     }
-    Ok(())
+
+    fn create_realm_and_builder(
+        &self,
+        realm_node: RealmNode2,
+        pkg_dir: fio::DirectoryProxy,
+        realm_server_end: ServerEnd<ftest::RealmMarker>,
+        builder_server_end: ServerEnd<ftest::BuilderMarker>,
+    ) -> Result<(), anyhow::Error> {
+        let runner_proxy_placeholder = Arc::new(Mutex::new(None));
+
+        let realm_stream = realm_server_end
+            .into_stream()
+            .context("failed to convert realm_server_end to stream")?;
+
+        let realm_has_been_built = Arc::new(AtomicBool::new(false));
+
+        let realm = Realm {
+            pkg_dir: Clone::clone(&pkg_dir),
+            realm_node: realm_node.clone(),
+            registry: self.registry.clone(),
+            runner: self.runner.clone(),
+            runner_proxy_placeholder: runner_proxy_placeholder.clone(),
+            realm_path: vec![],
+            execution_scope: self.execution_scope.clone(),
+            realm_has_been_built: realm_has_been_built.clone(),
+        };
+
+        self.execution_scope.spawn(async move {
+            if let Err(e) = realm.handle_stream(realm_stream).await {
+                error!("error encountered while handling Realm requests: {:?}", e);
+            }
+        });
+
+        let builder_stream = builder_server_end
+            .into_stream()
+            .context("failed to convert builder_server_end to stream")?;
+
+        let builder = Builder {
+            pkg_dir: Clone::clone(&pkg_dir),
+            realm_node,
+            registry: self.registry.clone(),
+            runner_proxy_placeholder: runner_proxy_placeholder.clone(),
+            realm_has_been_built: realm_has_been_built,
+        };
+        self.execution_scope.spawn(async move {
+            if let Err(e) = builder.handle_stream(builder_stream).await {
+                error!("error encountered while handling Builder requests: {:?}", e);
+            }
+        });
+        Ok(())
+    }
 }
 
 struct Builder {

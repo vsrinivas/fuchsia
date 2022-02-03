@@ -62,14 +62,21 @@ enum/member fuchsia.component.test/RealmBuilderError2.IMMUTABLE_PROGRAM 15
 enum/member fuchsia.component.test/RealmBuilderError2.INVALID_CHILD_REALM_HANDLE 14
 enum/member fuchsia.component.test/RealmBuilderError2.INVALID_COMPONENT_DECL 2
 enum/member fuchsia.component.test/RealmBuilderError2.INVALID_MANIFEST_EXTENSION 1
+enum/member fuchsia.component.test/RealmBuilderError2.INVALID_PKG_DIR_HANDLE 17
 enum/member fuchsia.component.test/RealmBuilderError2.NO_SUCH_CHILD 3
 enum/member fuchsia.component.test/RealmBuilderError2.NO_SUCH_SOURCE 5
 enum/member fuchsia.component.test/RealmBuilderError2.NO_SUCH_TARGET 6
 enum/member fuchsia.component.test/RealmBuilderError2.SOURCE_AND_TARGET_MATCH 9
 enum/member fuchsia.component.test/RealmBuilderError2.TARGETS_EMPTY 8
+enum/member fuchsia.component.test/RealmBuilderError2.URL_IS_NOT_RELATIVE 16
 strict enum fuchsia.component.test/RealmBuilderError2 uint32
 protocol/member fuchsia.component.test/RealmBuilderFactory.Create(fuchsia.io/Directory pkg_dir_handle,server_end:fuchsia.component.test/Realm realm_server_end,server_end:fuchsia.component.test/Builder builder_server_end) -> ()
+protocol/member fuchsia.component.test/RealmBuilderFactory.CreateFromRelativeUrl(fuchsia.io/Directory pkg_dir_handle,string:4096 relative_url,server_end:fuchsia.component.test/Realm realm_server_end,server_end:fuchsia.component.test/Builder builder_server_end) -> (fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result result)
 protocol fuchsia.component.test/RealmBuilderFactory
+struct fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Response
+union/member fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result.err fuchsia.component.test/RealmBuilderError2
+union/member fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result.response fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Response
+strict union fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result
 struct fuchsia.component.test/Realm_AddChildFromDecl_Response
 union/member fuchsia.component.test/Realm_AddChildFromDecl_Result.err fuchsia.component.test/RealmBuilderError2
 union/member fuchsia.component.test/Realm_AddChildFromDecl_Result.response fuchsia.component.test/Realm_AddChildFromDecl_Response

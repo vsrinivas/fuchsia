@@ -5,7 +5,8 @@
 use {
     anyhow::{format_err, Error},
     assert_matches::assert_matches,
-    cm_rust, cm_types,
+    cm_rust::{self, FidlIntoNative},
+    cm_types,
     fidl_fidl_examples_routing_echo::{self as fecho, EchoMarker as EchoClientStatsMarker},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
     fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata,
@@ -36,6 +37,8 @@ const V1_ECHO_SERVER_URL: &'static str =
 const V2_ECHO_SERVER_ABSOLUTE_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_server.cm";
 const V2_ECHO_SERVER_RELATIVE_URL: &'static str = "#meta/echo_server.cm";
+
+const ECHO_REALM_RELATIVE_URL: &'static str = "#meta/echo_realm.cm";
 
 const DEFAULT_ECHO_STR: &'static str = "Hello Fuchsia!";
 
@@ -1463,6 +1466,59 @@ async fn read_only_directory() -> Result<(), Error> {
     let config_file_contents =
         io_util::read_file(&config_file).await.expect("failed to read config.txt");
     assert_eq!("b".to_string(), config_file_contents);
+
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn from_relative_url() -> Result<(), Error> {
+    let builder = RealmBuilder::from_relative_url(ECHO_REALM_RELATIVE_URL).await?;
+
+    let echo_client_decl_file =
+        io_util::open_file_in_namespace("/pkg/meta/echo_client.cm", io_util::OPEN_RIGHT_READABLE)?;
+    let echo_client_decl: fcdecl::Component =
+        io_util::read_file_fidl(&echo_client_decl_file).await?;
+
+    assert_eq!(
+        builder.get_component_decl("echo_client").await?,
+        echo_client_decl.fidl_into_native()
+    );
+
+    let echo_server_decl_file =
+        io_util::open_file_in_namespace("/pkg/meta/echo_server.cm", io_util::OPEN_RIGHT_READABLE)?;
+    let echo_server_decl: fcdecl::Component =
+        io_util::read_file_fidl(&echo_server_decl_file).await?;
+
+    assert_eq!(
+        builder.get_component_decl("echo_server").await?,
+        echo_server_decl.fidl_into_native()
+    );
+
+    let echo_realm_decl_file =
+        io_util::open_file_in_namespace("/pkg/meta/echo_realm.cm", io_util::OPEN_RIGHT_READABLE)?;
+    let mut echo_realm_decl: fcdecl::Component =
+        io_util::read_file_fidl(&echo_realm_decl_file).await?;
+
+    // The realm builder server removes these decls so it can manage them itself
+    echo_realm_decl.children = Some(vec![]);
+
+    assert_eq!(builder.get_realm_decl().await?, echo_realm_decl.fidl_into_native());
+
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn from_relative_url_invalid_manifest() -> Result<(), Error> {
+    // The file referenced here is intentionally not a component manifest
+    assert_matches!(
+        RealmBuilder::from_relative_url("#data/component_manager_realm_builder_config").await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::DeclReadError))
+    );
+
+    assert_matches!(
+        RealmBuilder::from_relative_url("#meta/does-not-exist.cm").await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::DeclNotFound))
+    );
 
     Ok(())
 }

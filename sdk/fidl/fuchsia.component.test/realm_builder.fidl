@@ -33,6 +33,16 @@ protocol RealmBuilderFactory {
         realm_server_end server_end:Realm;
         builder_server_end server_end:Builder;
     }) -> ();
+
+    /// Identical to `Create`, but instead of the realm being empty by default
+    /// it contains the contents of the manifest located at `relative_url`
+    /// within `pkg_dir_handle`.
+    CreateFromRelativeUrl(resource struct {
+        pkg_dir_handle client_end:fuchsia.io.Directory;
+        relative_url fuchsia.url.Url;
+        realm_server_end server_end:Realm;
+        builder_server_end server_end:Builder;
+    }) -> (struct {}) error RealmBuilderError2;
 };
 
 /// Errors that may be returned by the `Realm` and `Builder` protocols.
@@ -89,7 +99,7 @@ type RealmBuilderError2 = strict enum : uint32 {
     /// if an unsupported type is received.
     CAPABILITY_INVALID = 13;
 
-    /// The handle the client provided for the child realm is not usable
+    /// The handle the client provided for the child realm is not usable.
     INVALID_CHILD_REALM_HANDLE = 14;
 
     /// `ReplaceComponentDecl` was called on a legacy or local component with a
@@ -97,6 +107,14 @@ type RealmBuilderError2 = strict enum : uint32 {
     /// declaration. This could render a legacy or local component
     /// non-functional, and is disallowed.
     IMMUTABLE_PROGRAM = 15;
+
+    /// The URL provided to `RealmBuilderFactory.CreateFromRelativeURL` is not a
+    /// relative URL.
+    URL_IS_NOT_RELATIVE = 16;
+
+    /// The handle the client provided for the test's pkg directory is not
+    /// usable.
+    INVALID_PKG_DIR_HANDLE = 17;
 };
 
 protocol Builder {
