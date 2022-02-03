@@ -75,6 +75,13 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
     )
     .await
     .expect("wait for non loopback interface");
+
+    // TODO(https://fxbug.dev/92164): make orderly shutdown automatic or unnecessary.
+    //
+    // In the meantime, block on destruction of the test realm before we allow test interfaces to be
+    // cleaned up. This prevents test interfaces from being removed while NetCfg is still in the
+    // process of configuring them after adding them to the Netstack, which causes spurious errors.
+    realm.shutdown().await.expect("failed to shutdown realm");
 }
 
 /// Tests that stable interface name conflicts are handled gracefully.
