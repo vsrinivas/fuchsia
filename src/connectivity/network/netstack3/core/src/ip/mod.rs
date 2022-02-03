@@ -59,7 +59,7 @@ use crate::{
         path_mtu::{PmtuCache, PmtuHandler, PmtuTimerId},
         reassembly::{
             process_fragment, reassemble_packet, FragmentCacheKey, FragmentProcessingState,
-            IpLayerFragmentCache,
+            IpPacketFragmentCache,
         },
         socket::{IpSock, IpSockUpdate},
     },
@@ -423,7 +423,7 @@ impl Ipv4StateBuilder {
             inner: IpStateInner {
                 forward: self.forward,
                 table: ForwardingTable::default(),
-                fragment_cache: IpLayerFragmentCache::new(),
+                fragment_cache: IpPacketFragmentCache::default(),
                 pmtu_cache: PmtuCache::default(),
             },
             icmp: self.icmp.build(),
@@ -468,7 +468,7 @@ impl Ipv6StateBuilder {
             inner: IpStateInner {
                 forward: self.forward,
                 table: ForwardingTable::default(),
-                fragment_cache: IpLayerFragmentCache::new(),
+                fragment_cache: IpPacketFragmentCache::default(),
                 pmtu_cache: PmtuCache::default(),
             },
             icmp: self.icmp.build(),
@@ -498,7 +498,7 @@ pub(crate) struct Ipv6State<Instant: crate::Instant, D> {
 struct IpStateInner<I: Ip, Instant: crate::Instant> {
     forward: bool,
     table: ForwardingTable<I, DeviceId>,
-    fragment_cache: IpLayerFragmentCache<I>,
+    fragment_cache: IpPacketFragmentCache<I>,
     pmtu_cache: PmtuCache<I, Instant>,
 }
 
@@ -522,12 +522,12 @@ fn get_state_inner_mut<I: Ip, D: EventDispatcher>(
     return &mut state.ipv6.inner;
 }
 
-impl<I: Ip, D: EventDispatcher> StateContext<IpLayerFragmentCache<I>> for Ctx<D> {
-    fn get_state_with(&self, _id: ()) -> &IpLayerFragmentCache<I> {
+impl<I: Ip, D: EventDispatcher> StateContext<IpPacketFragmentCache<I>> for Ctx<D> {
+    fn get_state_with(&self, _id: ()) -> &IpPacketFragmentCache<I> {
         &get_state_inner(&self.state).fragment_cache
     }
 
-    fn get_state_mut_with(&mut self, _id: ()) -> &mut IpLayerFragmentCache<I> {
+    fn get_state_mut_with(&mut self, _id: ()) -> &mut IpPacketFragmentCache<I> {
         &mut get_state_inner_mut(&mut self.state).fragment_cache
     }
 }

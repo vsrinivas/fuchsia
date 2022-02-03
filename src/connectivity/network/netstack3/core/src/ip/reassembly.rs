@@ -30,7 +30,7 @@
 //! + 40 byte IPv6 header). If a link supports an MTU greater than the maximum
 //! size of a non-jumbogram packet, the packet should not be fragmented.
 
-use alloc::collections::HashMap;
+use alloc::collections::hash_map::{Entry, HashMap};
 use alloc::collections::{BTreeSet, BinaryHeap};
 use alloc::vec::Vec;
 use core::cmp::Ordering;
@@ -81,18 +81,20 @@ const MAX_FRAGMENT_CACHE_SIZE: usize = 4 * 1024 * 1024;
 
 /// The execution context for the fragment cache.
 pub(crate) trait FragmentContext<I: Ip>:
-    TimerContext<FragmentCacheKey<I::Addr>> + StateContext<IpLayerFragmentCache<I>>
+    TimerContext<FragmentCacheKey<I::Addr>> + StateContext<IpPacketFragmentCache<I>>
 {
 }
 
-impl<I: Ip, C: TimerContext<FragmentCacheKey<I::Addr>> + StateContext<IpLayerFragmentCache<I>>>
-    FragmentContext<I> for C
+impl<
+        I: Ip,
+        C: TimerContext<FragmentCacheKey<I::Addr>> + StateContext<IpPacketFragmentCache<I>>,
+    > FragmentContext<I> for C
 {
 }
 
 impl<A: IpAddress, C: FragmentContext<A::Version>> TimerHandler<FragmentCacheKey<A>> for C {
     fn handle_timer(&mut self, key: FragmentCacheKey<A>) {
-        self.get_state_mut().handle_reassembly_timer(key);
+        self.get_state_mut().handle_timer(key);
     }
 }
 
@@ -134,7 +136,7 @@ impl<B: ByteSlice> FragmentablePacket for Ipv6Packet<B> {
     }
 }
 
-/// Possible return values for [`IpLayerFragmentCache::process_fragment`].
+/// Possible return values for [`IpPacketFragmentCache::process_fragment`].
 #[derive(Debug)]
 pub(crate) enum FragmentProcessingState<B: ByteSlice, I: Ip> {
     /// The provided packet is not fragmented so no processing is required.
@@ -202,6 +204,16 @@ impl<A: IpAddress> FragmentCacheKey<A> {
     }
 }
 
+/// An inclusive-inclusive range of bytes within a reassembled packet.
+// NOTE: We use this instead of `std::ops::RangeInclusive` because the latter
+// provides getter methods which return references, and it adds a lot of
+// unnecessary dereferences.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+struct BlockRange {
+    start: u16,
+    end: u16,
+}
+
 /// Data required for fragmented packet reassembly.
 #[derive(Debug)]
 struct FragmentCacheData {
@@ -222,7 +234,7 @@ struct FragmentCacheData {
     //               will we get in practice though?
     // TODO(fxbug.dev/50830): O(n) complexity per fragment is a DDOS
     //              vulnerability: this should be refactored to be O(log(n)).
-    missing_blocks: BTreeSet<(u16, u16)>,
+    missing_blocks: BTreeSet<BlockRange>,
 
     /// Received fragment blocks.
     ///
@@ -251,11 +263,10 @@ struct FragmentCacheData {
     total_size: usize,
 }
 
-impl FragmentCacheData {
-    /// Create a new `FragmentCacheData` with all fragments marked as missing.
-    fn new() -> Self {
-        Self {
-            missing_blocks: core::iter::once((0, u16::MAX)).collect(),
+impl Default for FragmentCacheData {
+    fn default() -> FragmentCacheData {
+        FragmentCacheData {
+            missing_blocks: core::iter::once(BlockRange { start: 0, end: u16::MAX }).collect(),
             body_fragments: BinaryHeap::new(),
             header: None,
             total_size: 0,
@@ -263,57 +274,86 @@ impl FragmentCacheData {
     }
 }
 
-/// Structure to keep track of all fragments for a specific IP version, `I`.
-///
-/// The key for our hash map is a `FragmentCacheKey` with the associated data
-/// a `FragmentCacheData`.
-///
-/// See [`FragmentCacheKey`] and [`FragmentCacheData`].
-type FragmentCache<A> = HashMap<FragmentCacheKey<A>, FragmentCacheData>;
+impl FragmentCacheData {
+    /// Attempts to find a gap where `fragment_blocks_range` will fit in.
+    ///
+    /// Returns `Some(o)` if a valid gap is found where `o` is the gap's offset
+    /// range; otherwise, returns `None`. `fragment_blocks_range` is an
+    /// inclusive range of fragment block offsets.
+    fn find_gap(&self, fragment_blocks_range: BlockRange) -> Option<BlockRange> {
+        for potential_gap in self.missing_blocks.iter() {
+            if fragment_blocks_range.end < potential_gap.start
+                || fragment_blocks_range.start > potential_gap.end
+            {
+                // Either:
+                // - Our packet's ending offset is less than the start of
+                //   `potential_gap` so move on to the next gap. That is,
+                //   `fragment_blocks_range` ends before `potential_gap`.
+                // - Our packet's starting offset is more than `potential_gap`'s
+                //   ending offset so move on to the next gap. That is,
+                //   `fragment_blocks_range` starts after `potential_gap`.
+                continue;
+            }
 
-/// Type to process fragments and handle reassembly.
-///
-/// To keep track of partial fragments, we use a hash table. The key will be
-/// composed of the (remote) source address, (local) destination address and
-/// 32-bit identifier of a packet.
+            // Make sure that `fragment_blocks_range` belongs purely within
+            // `potential_gap`.
+            //
+            // If `fragment_blocks_range` does not fit purely within
+            // `potential_gap`, then at least one block in
+            // `fragment_blocks_range` overlaps with an already received block.
+            // We should never receive overlapping fragments from non-malicious
+            // nodes.
+            if (fragment_blocks_range.start < potential_gap.start)
+                || (fragment_blocks_range.end > potential_gap.end)
+            {
+                break;
+            }
+
+            // Found a gap where `fragment_blocks_range` fits in!
+            return Some(*potential_gap);
+        }
+
+        // Unable to find a valid gap so return `None`.
+        None
+    }
+}
+
+/// A cache of inbound IP packet fragments.
 #[derive(Debug)]
-pub(crate) struct IpLayerFragmentCache<I: Ip> {
-    cache: FragmentCache<I::Addr>,
-    cache_size: usize,
+pub(crate) struct IpPacketFragmentCache<I: Ip> {
+    cache: HashMap<FragmentCacheKey<I::Addr>, FragmentCacheData>,
+    size: usize,
     threshold: usize,
 }
 
-impl<I: Ip> IpLayerFragmentCache<I> {
-    pub(crate) fn new() -> Self {
-        IpLayerFragmentCache {
-            cache: FragmentCache::new(),
-            cache_size: 0,
-            threshold: MAX_FRAGMENT_CACHE_SIZE,
-        }
+impl<I: Ip> Default for IpPacketFragmentCache<I> {
+    fn default() -> IpPacketFragmentCache<I> {
+        IpPacketFragmentCache { cache: HashMap::new(), size: 0, threshold: MAX_FRAGMENT_CACHE_SIZE }
     }
+}
 
-    /// Handle a reassembly timer.
+impl<I: Ip> IpPacketFragmentCache<I> {
+    /// Handles a timer.
     ///
-    /// Removes reassembly data associated with a given `FragmentCacheKey`,
-    /// `key`.
-    fn handle_reassembly_timer(&mut self, key: FragmentCacheKey<I::Addr>) {
+    /// Removes reassembly data associated with `key`.
+    fn handle_timer(&mut self, key: FragmentCacheKey<I::Addr>) {
         // If a timer fired, the `key` must still exist in our fragment cache.
-        let _: FragmentCacheData = self.remove_data(&key);
+        assert_matches!(self.remove_data(&key), Some(_));
     }
 
-    fn above_cache_size_threshold(&self) -> bool {
-        self.cache_size >= self.threshold
+    fn above_size_threshold(&self) -> bool {
+        self.size >= self.threshold
     }
 
-    fn increment_cache_size(&mut self, sz: usize) {
-        assert!(!self.above_cache_size_threshold());
-        self.cache_size += sz;
+    fn increment_size(&mut self, sz: usize) {
+        assert!(!self.above_size_threshold());
+        self.size += sz;
     }
 
-    fn remove_data(&mut self, key: &FragmentCacheKey<I::Addr>) -> FragmentCacheData {
-        let data = self.cache.remove(key).unwrap();
-        self.cache_size -= data.total_size;
-        data
+    fn remove_data(&mut self, key: &FragmentCacheKey<I::Addr>) -> Option<FragmentCacheData> {
+        let data = self.cache.remove(key)?;
+        self.size -= data.total_size;
+        Some(data)
     }
 }
 
@@ -329,7 +369,7 @@ pub(crate) fn process_fragment<I: Ip, C: FragmentContext<I>, B: ByteSlice>(
 where
     <I as IpExtByteSlice<B>>::Packet: FragmentablePacket,
 {
-    if ctx.get_state_mut().above_cache_size_threshold() {
+    if ctx.get_state_mut().above_size_threshold() {
         return FragmentProcessingState::OutOfMemory;
     }
 
@@ -388,7 +428,7 @@ where
     let fragment_blocks_range =
         if let Ok(offset_end) = u16::try_from((offset as usize) + num_fragment_blocks - 1) {
             if offset_end <= MAX_FRAGMENT_BLOCKS {
-                (offset, offset_end)
+                BlockRange { start: offset, end: offset_end }
             } else {
                 return FragmentProcessingState::InvalidFragment;
             }
@@ -397,7 +437,7 @@ where
         };
 
     // Find the gap where `packet` belongs.
-    let found_gap = match find_gap(&fragment_data.missing_blocks, fragment_blocks_range) {
+    let found_gap = match fragment_data.find_gap(fragment_blocks_range) {
         // We did not find a potential gap `packet` fits in so some of the
         // fragment blocks in `packet` overlaps with fragment blocks we already
         // received.
@@ -426,8 +466,8 @@ where
             //               does not say we MUST, so we would not be violating
             //               the RFC if we don't check for this case and just
             //               drop the packet.
-            let _: FragmentCacheData = ctx.get_state_mut().remove_data(&key);
-            assert_ne!(ctx.cancel_timer(key), None);
+            assert_matches!(ctx.get_state_mut().remove_data(&key), Some(_));
+            assert_matches!(ctx.cancel_timer(key), Some(_));
 
             return FragmentProcessingState::InvalidFragment;
         }
@@ -452,8 +492,10 @@ where
     //
     //   Here we can see that with a `found_gap` of [2, 7], `packet` covers [4,
     //   7] but we are still missing [X, 3] so we create a new gap of [X, 3].
-    if found_gap.0 < fragment_blocks_range.0 {
-        assert!(fragment_data.missing_blocks.insert((found_gap.0, fragment_blocks_range.0 - 1)));
+    if found_gap.start < fragment_blocks_range.start {
+        assert!(fragment_data
+            .missing_blocks
+            .insert(BlockRange { start: found_gap.start, end: fragment_blocks_range.start - 1 }));
     }
 
     // If the received fragment blocks end before the end of `found_gap` and we
@@ -490,14 +532,16 @@ where
     //   value must be MAX because we should only ever not create a new gap
     //   where the end is MAX when we are processing a packet with the last
     //   fragment block.
-    if (found_gap.1 > fragment_blocks_range.1) && m_flag {
-        assert!(fragment_data.missing_blocks.insert((fragment_blocks_range.1 + 1, found_gap.1)));
+    if (found_gap.end > fragment_blocks_range.end) && m_flag {
+        assert!(fragment_data
+            .missing_blocks
+            .insert(BlockRange { start: fragment_blocks_range.end + 1, end: found_gap.end }));
     } else {
         // Make sure that if we are not adding a fragment after the packet, it
         // is because `packet` goes up to the `found_gap`'s end boundary, or
         // this is the last fragment. If it is the last fragment for a packet,
         // we make sure that `found_gap`'s end value is `core::u16::MAX`.
-        assert!(found_gap.1 == fragment_blocks_range.1 || !m_flag && found_gap.1 == u16::MAX);
+        assert!(found_gap.end == fragment_blocks_range.end || !m_flag && found_gap.end == u16::MAX);
     }
 
     let mut added_bytes = 0;
@@ -526,7 +570,7 @@ where
         FragmentProcessingState::NeedMoreFragments
     };
 
-    ctx.get_state_mut().increment_cache_size(added_bytes);
+    ctx.get_state_mut().increment_size(added_bytes);
     result
 }
 
@@ -556,33 +600,36 @@ pub(crate) fn reassemble_packet<
     key: &FragmentCacheKey<I::Addr>,
     buffer: BV,
 ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
-    // Get the fragment cache data.
-    let fragment_data = match ctx.get_state_mut().cache.get_mut(key) {
-        // Either there are no fragments for the given `key`, or we timed out
-        // and removed all fragment data for `key`.
-        None => return Err(FragmentReassemblyError::InvalidKey),
-        Some(d) => d,
+    let entry = match ctx.get_state_mut().cache.entry(*key) {
+        Entry::Occupied(entry) => entry,
+        Entry::Vacant(_) => return Err(FragmentReassemblyError::InvalidKey),
     };
 
     // Make sure we are not missing fragments.
-    if !fragment_data.missing_blocks.is_empty() {
+    if !entry.get().missing_blocks.is_empty() {
         return Err(FragmentReassemblyError::MissingFragments);
     }
+    // Remove the entry from the cache now that we've validated that we will
+    // be able to reassemble it.
+    let (_key, data) = entry.remove_entry();
+    ctx.get_state_mut().size -= data.total_size;
 
     // If we are not missing fragments, we must have header data.
-    assert_matches!(fragment_data.header, Some(_));
+    assert_matches!(data.header, Some(_));
 
     // Cancel the reassembly timer now that we know we have all the data
     // required for reassembly and are attempting to do so.
     assert_matches!(ctx.cancel_timer(*key), Some(_));
 
-    // Take the header and body fragments from the cache data and remove the
-    // cache data associated with `key` since it will no longer be needed.
-    let data = ctx.get_state_mut().remove_data(key);
-    let (header, body_fragments) = (data.header.unwrap(), data.body_fragments);
-
-    // Attempt to actually reassemble the packet.
-    reassemble_packet_helper::<B, BV, I>(buffer, header, body_fragments)
+    // TODO(https://github.com/rust-lang/rust/issues/59278): Use
+    // `BinaryHeap::into_iter_sorted`.
+    let body_fragments = data.body_fragments.into_sorted_vec().into_iter().map(|x| x.data);
+    <I as IpExtByteSlice<B>>::reassemble_fragmented_packet(
+        buffer,
+        data.header.unwrap(),
+        body_fragments,
+    )
+    .map_err(|_| FragmentReassemblyError::PacketParsingError)
 }
 
 /// Gets or creates a new entry in the cache for a given `key`.
@@ -602,76 +649,10 @@ fn get_or_create<I: Ip, C: FragmentContext<I>>(
         let _: Option<C::Instant> =
             ctx.schedule_timer(Duration::from_secs(REASSEMBLY_TIMEOUT_SECONDS), key);
     }
-    ctx.get_state_mut().cache.entry(key).or_insert_with(FragmentCacheData::new)
+    ctx.get_state_mut().cache.entry(key).or_insert_with(FragmentCacheData::default)
 }
 
-/// Attempts to find a gap where `fragment_blocks_range` will fit in.
-///
-/// Returns a `Some(o)` if a valid gap is found where `o` is the gap's offset
-/// range; otherwise, returns `None`. `fragment_blocks_range` is an inclusive
-/// range of fragment block offsets. `missing_blocks` is a list of
-/// non-overlapping inclusive ranges of fragment blocks still required before
-/// being ready to reassemble a packet.
-fn find_gap(
-    missing_blocks: &BTreeSet<(u16, u16)>,
-    fragment_blocks_range: (u16, u16),
-) -> Option<(u16, u16)> {
-    for potential_gap in missing_blocks.iter() {
-        if fragment_blocks_range.1 < potential_gap.0 || fragment_blocks_range.0 > potential_gap.1 {
-            // Either:
-            // - Our packet's ending offset is less than the start of
-            //   `potential_gap` so move on to the next gap. That is,
-            //   `fragment_blocks_range` ends before `potential_gap`.
-            // - Our packet's starting offset is more than `potential_gap`'s
-            //   ending offset so move on to the next gap. That is,
-            //   `fragment_blocks_range` starts after `potential_gap`.
-            continue;
-        }
-
-        // Make sure that `fragment_blocks_range` belongs purely within
-        // `potential_gap`.
-        //
-        // If `fragment_blocks_range` does not fit purely within
-        // `potential_gap`, then at least one block in `fragment_blocks_range`
-        // overlaps with an already received block. We should never receive
-        // overlapping fragments from non-malicious nodes.
-        if (fragment_blocks_range.0 < potential_gap.0)
-            || (fragment_blocks_range.1 > potential_gap.1)
-        {
-            break;
-        }
-
-        // Found a gap where `fragment_blocks_range` fits in!
-        return Some(*potential_gap);
-    }
-
-    // Unable to find a valid gap so return `None`.
-    None
-}
-
-/// Attempts to reassemble a packet.
-///
-/// Given a header buffer (`header`), body fragments (`body_fragments`), and a
-/// buffer where the packet will be reassembled into (`buffer`), reassemble and
-/// return a packet.
-// TODO(rheacock): the compiler thinks that `body_fragments` doesn't have to be
-// mutable, but it does. Thus we `allow(unused)` here.
-#[allow(unused)]
-fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
-    mut buffer: BV,
-    header: Vec<u8>,
-    mut body_fragments: BinaryHeap<PacketBodyFragment>,
-) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
-    // Parse the packet.
-
-    // TODO(https://github.com/rust-lang/rust/issues/59278): Use
-    // `BinaryHeap::into_iter_sorted`.
-    let body_fragments = body_fragments.into_sorted_vec().into_iter().map(|x| x.1);
-    <I as IpExtByteSlice<B>>::reassemble_fragmented_packet(buffer, header, body_fragments)
-        .map_err(|_| FragmentReassemblyError::PacketParsingError)
-}
-
-/// Get the header bytes for a packet.
+/// Gets the header bytes for a packet.
 #[specialize_ip]
 fn get_header<B: ByteSlice, I: Ip>(packet: &<I as IpExtByteSlice<B>>::Packet) -> Vec<u8> {
     #[ipv4]
@@ -690,32 +671,24 @@ fn get_header<B: ByteSlice, I: Ip>(packet: &<I as IpExtByteSlice<B>>::Packet) ->
 }
 
 /// A fragment of a packet's body.
-///
-/// The first value is the fragment offset, and the second value is the body
-/// data.
-#[derive(Debug, PartialEq, Eq)]
-struct PacketBodyFragment(i32, Vec<u8>);
+#[derive(Debug, PartialEq, Eq, Ord)]
+struct PacketBodyFragment {
+    offset: u16,
+    data: Vec<u8>,
+}
 
 impl PacketBodyFragment {
-    /// Construct a new `PacketBodyFragment` to be stored in a `BinaryHeap`.
+    /// Constructs a new `PacketBodyFragment` to be stored in a `BinaryHeap`.
     fn new(offset: u16, data: Vec<u8>) -> Self {
-        // We want a min heap but `BinaryHeap` is a max heap, so we multiple
-        // `offset` with -1.
-        PacketBodyFragment(-(i32::from(offset)), data)
+        PacketBodyFragment { offset, data }
     }
 }
 
-// Ordering of a `PacketBodyFragment` is only dependant on the fragment offset
-// value (first element in the tuple).
+// The ordering of a `PacketBodyFragment` is only dependant on the fragment
+// offset.
 impl PartialOrd for PacketBodyFragment {
     fn partial_cmp(&self, other: &PacketBodyFragment) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for PacketBodyFragment {
-    fn cmp(&self, other: &PacketBodyFragment) -> Ordering {
-        self.0.cmp(&other.0).reverse()
+        self.offset.partial_cmp(&other.offset)
     }
 }
 
@@ -736,26 +709,26 @@ mod tests {
     use crate::context::testutil::DummyTimerCtxExt;
     use crate::testutil::{TestIpExt, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6};
 
-    /// A dummy [`FragmentContext`] that stores an [`IpLayerFragmentCache`].
+    /// A dummy [`FragmentContext`] that stores an [`IpPacketFragmentCache`].
     struct DummyFragmentCtx<I: Ip> {
-        cache: IpLayerFragmentCache<I>,
+        cache: IpPacketFragmentCache<I>,
     }
 
     impl<I: Ip> Default for DummyFragmentCtx<I> {
         fn default() -> Self {
-            DummyFragmentCtx { cache: IpLayerFragmentCache::new() }
+            DummyFragmentCtx { cache: IpPacketFragmentCache::default() }
         }
     }
 
     type DummyCtx<I> =
         crate::context::testutil::DummyCtx<DummyFragmentCtx<I>, FragmentCacheKey<<I as Ip>::Addr>>;
 
-    impl<I: Ip> StateContext<IpLayerFragmentCache<I>> for DummyCtx<I> {
-        fn get_state_with(&self, _id: ()) -> &IpLayerFragmentCache<I> {
+    impl<I: Ip> StateContext<IpPacketFragmentCache<I>> for DummyCtx<I> {
+        fn get_state_with(&self, _id: ()) -> &IpPacketFragmentCache<I> {
             &self.get_ref().cache
         }
 
-        fn get_state_mut_with(&mut self, _id: ()) -> &mut IpLayerFragmentCache<I> {
+        fn get_state_mut_with(&mut self, _id: ()) -> &mut IpPacketFragmentCache<I> {
             &mut self.get_mut().cache
         }
     }
@@ -851,18 +824,18 @@ mod tests {
         )
     }
 
-    /// Validate that IpLayerFragmentCache has correct cache_size.
-    fn validate_cache_size<I: Ip>(cache: &IpLayerFragmentCache<I>) {
+    /// Validate that IpPacketFragmentCache has correct size.
+    fn validate_size<I: Ip>(cache: &IpPacketFragmentCache<I>) {
         let mut sz: usize = 0;
 
         for v in cache.cache.values() {
             sz += v.total_size;
         }
 
-        assert_eq!(sz, cache.cache_size);
+        assert_eq!(sz, cache.size);
     }
 
-    /// Process an IP fragment depending on the `Ip` `process_ip_fragment` is
+    /// Processes an IP fragment depending on the `Ip` `process_ip_fragment` is
     /// specialized with.
     ///
     /// See [`process_ipv4_fragment`] and [`process_ipv6_fragment`] which will
@@ -1122,7 +1095,7 @@ mod tests {
 
         // Make sure no timers in the dispatcher yet.
         assert_empty(ctx.timers().iter());
-        assert_eq!(ctx.get_state_mut().cache_size, 0);
+        assert_eq!(ctx.get_state_mut().size, 0);
 
         // Test that we properly reset fragment cache on timer.
 
@@ -1130,26 +1103,26 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
         // Make sure a timer got added.
         assert_eq!(ctx.timers().len(), 1);
-        validate_cache_size(ctx.get_state());
+        validate_size(ctx.get_state());
 
         // Process fragment #1
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 1, 3, ExpectedResult::NeedMore);
         // Make sure no new timers got added or fired.
         assert_eq!(ctx.timers().len(), 1);
-        validate_cache_size(ctx.get_state());
+        validate_size(ctx.get_state());
 
         // Process fragment #2
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 2, 3, ExpectedResult::Ready);
         // Make sure no new timers got added or fired.
         assert_eq!(ctx.timers().len(), 1);
-        validate_cache_size(ctx.get_state());
+        validate_size(ctx.get_state());
 
         // Trigger the timer (simulate a timer for the fragmented packet)
         assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
 
         // Make sure no other times exist..
         assert_empty(ctx.timers().iter());
-        assert_eq!(ctx.get_state_mut().cache_size, 0);
+        assert_eq!(ctx.get_state_mut().size, 0);
 
         // Attempt to reassemble the packet but get an error since the fragment
         // data would have been reset/cleared.
@@ -1173,21 +1146,21 @@ mod tests {
         let mut fragment_id = 0;
         const THRESHOLD: usize = 8196usize;
 
-        assert_eq!(ctx.get_state_mut().cache_size, 0);
+        assert_eq!(ctx.get_state_mut().size, 0);
         ctx.get_state_mut().threshold = THRESHOLD;
 
         // Test that when cache size exceeds the threshold, process_fragment
         // returns OOM.
 
-        while ctx.get_state_mut().cache_size < THRESHOLD {
+        while ctx.get_state_mut().size < THRESHOLD {
             process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
-            validate_cache_size(ctx.get_state());
+            validate_size(ctx.get_state());
             fragment_id += 1;
         }
 
         // Now that the cache is at or above the threshold, observe OOM.
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::OutOfMemory);
-        validate_cache_size(ctx.get_state());
+        validate_size(ctx.get_state());
 
         // Trigger the timers, which will clear the cache.
         let timers = ctx.trigger_timers_for(
@@ -1195,8 +1168,8 @@ mod tests {
             TimerHandler::handle_timer,
         );
         assert!(timers == 171 || timers == 293); // ipv4 || ipv6
-        assert_eq!(ctx.get_state_mut().cache_size, 0);
-        validate_cache_size(ctx.get_state());
+        assert_eq!(ctx.get_state_mut().size, 0);
+        validate_size(ctx.get_state());
 
         // Can process fragments again.
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
@@ -1221,7 +1194,7 @@ mod tests {
         let mut ctx = DummyCtx::default();
         let fragment_id = 0;
 
-        assert_eq!(ctx.get_state_mut().cache_size, 0);
+        assert_eq!(ctx.get_state_mut().size, 0);
         // Test that fragment bodies must be a multiple of
         // `FRAGMENT_BLOCK_SIZE`, except for the last fragment.
 
@@ -1262,7 +1235,7 @@ mod tests {
             fragment_id,
             35
         );
-        validate_cache_size(ctx.get_state());
+        validate_size(ctx.get_state());
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
         let packet =
@@ -1270,7 +1243,7 @@ mod tests {
         let mut expected_body: Vec<u8> = Vec::new();
         expected_body.extend(0..15);
         assert_eq!(packet.body(), &expected_body[..]);
-        assert_eq!(ctx.get_state_mut().cache_size, 0);
+        assert_eq!(ctx.get_state_mut().size, 0);
     }
 
     #[test]
@@ -1278,7 +1251,7 @@ mod tests {
         let mut ctx = DummyCtx::default();
         let fragment_id = 0;
 
-        assert_eq!(ctx.get_state_mut().cache_size, 0);
+        assert_eq!(ctx.get_state_mut().size, 0);
         // Test that fragment bodies must be a multiple of
         // `FRAGMENT_BLOCK_SIZE`, except for the last fragment.
 
@@ -1329,7 +1302,7 @@ mod tests {
             fragment_id,
             55
         );
-        validate_cache_size(ctx.get_state());
+        validate_size(ctx.get_state());
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
         let packet =
@@ -1337,7 +1310,7 @@ mod tests {
         let mut expected_body: Vec<u8> = Vec::new();
         expected_body.extend(0..15);
         assert_eq!(packet.body(), &expected_body[..]);
-        assert_eq!(ctx.get_state_mut().cache_size, 0);
+        assert_eq!(ctx.get_state_mut().size, 0);
     }
 
     #[ip_test]
