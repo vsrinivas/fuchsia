@@ -45,6 +45,9 @@ if (current_toolchain == default_toolchain) {
       outputs = [ kernel_version_string_file ]
       sources = [ "//.git/HEAD" ]
 
+      # The above makes it safe to ignore other .git/* accesses.
+      hermetic_action_ignored_prefixes = [ "//.git" ]
+
       # fxbug.dev/68558: git dirty check is incompatible with should_trace
       kernel_version_git_dirty_check =
           kernel_version_git_dirty_check && !build_should_trace_actions
