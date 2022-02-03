@@ -226,8 +226,6 @@
                     "/core",
                     "/core/appmgr",
                     "/core/pkg-cache",
-                    "/core/system-update-checker",
-                    "/core/system-updater",
                 ],
             },
             {
@@ -260,6 +258,7 @@
                     "/core",
                     "/core/appmgr",
                     "/core/system-updater",
+                    "/core/system-update-checker",
                 ],
             },
             {

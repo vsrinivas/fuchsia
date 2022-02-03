@@ -44,11 +44,10 @@
             to: "#system-update-checker",
         },
         {
-            directory: "pkgfs",
+            directory: "system",
             from: "parent",
             as: "pkgfs-system",
             to: "#system-update-checker",
-            subdir: "system",
         },
         {
             directory: "config-data",
