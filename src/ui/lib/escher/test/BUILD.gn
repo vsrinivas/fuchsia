@@ -172,9 +172,6 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
 
     if (is_host) {
       deps += [ "//src/ui/lib/escher/shaders:host_shader_data" ]
-
-      # TODO(fxbug.dev/59140): Fix the leaks and remove this.
-      deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
     }
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
