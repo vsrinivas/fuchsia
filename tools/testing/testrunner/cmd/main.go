@@ -531,6 +531,7 @@ func runAndOutputTests(
 
 func runMultipleTests(ctx context.Context, multiTests []testToRun, mt multiTester, globalOutDir string, outputs *testrunner.TestOutputs) error {
 	multiTestRunIndex := 0
+	skippedTests := 0
 	for len(multiTests) > 0 {
 		outDir := filepath.Join(globalOutDir, "ffx_tests", strconv.Itoa(multiTestRunIndex))
 
@@ -545,11 +546,22 @@ func runMultipleTests(ctx context.Context, multiTests []testToRun, mt multiTeste
 		}
 
 		retryTests := []testToRun{}
+		skippedTests = 0
 		for i, result := range testResults {
 			result.RunIndex = multiTestRunIndex
 			result.Affected = multiTests[i].Affected
-			if err := outputs.Record(ctx, *result); err != nil {
-				return err
+			if result.Result == runtests.TestSkipped {
+				// Skipped tests result from an issue with the test
+				// framework, so don't record them in the summary.json
+				// because there is nothing useful to report anyway
+				// since the test didn't run. However, keep track of
+				// the skipped tests to log an error that they never
+				// ran.
+				skippedTests++
+			} else {
+				if err := outputs.Record(ctx, *result); err != nil {
+					return err
+				}
 			}
 			multiTests[i].totalDuration += result.Duration()
 			if shouldKeepGoing(multiTests[i].Test, result, multiTests[i].totalDuration) {
@@ -558,6 +570,9 @@ func runMultipleTests(ctx context.Context, multiTests []testToRun, mt multiTeste
 		}
 		multiTestRunIndex++
 		multiTests = retryTests
+	}
+	if skippedTests > 0 {
+		logger.Errorf(ctx, "%s: %d total tests skipped", constants.SkippedRunningTestsMsg, skippedTests)
 	}
 	return nil
 }

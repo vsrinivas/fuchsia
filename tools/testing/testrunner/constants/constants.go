@@ -12,6 +12,8 @@ const (
 	// FailedToStartSerialTestMsg is logged if testrunner repeatedly fails to run a
 	// test over serial and gives up.
 	FailedToStartSerialTestMsg = "failed to start test over serial"
+	// SkippedRunningTestsMsg is logged if testrunner fails early and skips running some tests.
+	SkippedRunningTestsMsg = "skipped running some tests"
 
 	// A directory that will be automatically archived on completion of a task.
 	TestOutDirEnvKey = "FUCHSIA_TEST_OUTDIR"

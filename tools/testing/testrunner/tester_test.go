@@ -248,6 +248,11 @@ func TestFFXTester(t *testing.T) {
 			expectedResult: runtests.TestAborted,
 		},
 		{
+			name:           "ffx test skipped",
+			runV2:          true,
+			expectedResult: runtests.TestSkipped,
+		},
+		{
 			name:           "run multiple tests",
 			runV2:          true,
 			expectedResult: runtests.TestSuccess,
@@ -274,6 +279,8 @@ func TestFFXTester(t *testing.T) {
 				outcome = ffxutil.TestFailed
 			case runtests.TestAborted:
 				outcome = ffxutil.TestTimedOut
+			case runtests.TestSkipped:
+				outcome = ffxutil.TestNotStarted
 			}
 			ffx := &ffxutil.MockFFXInstance{TestOutcome: outcome}
 			tester := NewFFXTester(ffx, sshTester, "")

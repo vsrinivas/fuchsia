@@ -16,6 +16,7 @@ const (
 
 	// Test outcome values. This should match the list of values for the `outcome` field
 	// of the run summary at //src/sys/run_test_suite/directory/schema/suite_summary.schema.json
+	TestNotStarted   = "NOT_STARTED"
 	TestPassed       = "PASSED"
 	TestFailed       = "FAILED"
 	TestInconclusive = "INCONCLUSIVE"

@@ -520,6 +520,8 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 			testResult.Result = runtests.TestSuccess
 		case ffxutil.TestTimedOut:
 			testResult.Result = runtests.TestAborted
+		case ffxutil.TestNotStarted:
+			testResult.Result = runtests.TestSkipped
 		default:
 			testResult.Result = runtests.TestFailure
 		}

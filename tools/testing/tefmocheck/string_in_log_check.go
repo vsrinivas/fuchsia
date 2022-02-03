@@ -416,6 +416,11 @@ func infraToolLogChecks() []FailureModeCheck {
 			String: ffxutilconstants.CommandFailedMsg,
 			Type:   swarmingOutputType,
 		},
+		// This error happens when ffx test returns early and skips running some tests.
+		&stringInLogCheck{
+			String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.SkippedRunningTestsMsg),
+			Type:   swarmingOutputType,
+		},
 		// For fxbug.dev/56651.
 		// This error usually happens due to an SSH failure, so that error should take precedence.
 		&stringInLogCheck{
