@@ -243,6 +243,24 @@ zx_status_t NandDevice::WorkerThread() {
   return ZX_OK;
 }
 
+void NandDevice::Shutdown() {
+  // Signal the worker thread and wait for it to terminate.
+  {
+    fbl::AutoLock al(&lock_);
+    if (shutdown_) {
+      return;
+    }
+
+    shutdown_ = true;
+    worker_event_.Signal();
+  }
+  thrd_join(worker_thread_, nullptr);
+
+  // Error out all pending requests.
+  fbl::AutoLock al(&lock_);
+  txn_queue_.Release();
+}
+
 void NandDevice::NandQuery(nand_info_t* info_out, size_t* nand_op_size_out) {
   memcpy(info_out, &nand_info_, sizeof(*info_out));
   *nand_op_size_out = Transaction::OperationSize(sizeof(nand_operation_t));
@@ -286,8 +304,12 @@ void NandDevice::NandQueue(nand_operation_t* op, nand_queue_callback completion_
 
   // TODO: UPDATE STATS HERE.
   fbl::AutoLock al(&lock_);
-  txn_queue_.push(std::move(txn));
-  worker_event_.Signal();
+  if (shutdown_) {
+    txn.Complete(ZX_ERR_CANCELED);
+  } else {
+    txn_queue_.push(std::move(txn));
+    worker_event_.Signal();
+  }
 }
 
 zx_status_t NandDevice::NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
@@ -296,21 +318,17 @@ zx_status_t NandDevice::NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t 
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+void NandDevice::DdkSuspend(ddk::SuspendTxn txn) {
+  const uint8_t suspend_reason = txn.suspend_reason() & DEVICE_MASK_SUSPEND_REASON;
+  if (suspend_reason != DEVICE_SUSPEND_REASON_SUSPEND_RAM) {
+    Shutdown();
+  }
+  txn.Reply(ZX_OK, txn.requested_state());
+}
+
 void NandDevice::DdkRelease() { delete this; }
 
-NandDevice::~NandDevice() {
-  // Signal the worker thread and wait for it to terminate.
-  {
-    fbl::AutoLock al(&lock_);
-    shutdown_ = true;
-    worker_event_.Signal();
-  }
-  thrd_join(worker_thread_, nullptr);
-
-  // Error out all pending requests.
-  fbl::AutoLock al(&lock_);
-  txn_queue_.Release();
-}
+NandDevice::~NandDevice() { Shutdown(); }
 
 // static
 zx_status_t NandDevice::Create(void* ctx, zx_device_t* parent) {

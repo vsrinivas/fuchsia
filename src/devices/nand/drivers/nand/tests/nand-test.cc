@@ -928,4 +928,41 @@ TEST_F(NandDeviceTest, FetchFromCacheWithNullPayloads) {
   }
 }
 
+TEST_F(NandDeviceTest, OperationsCanceledAfterSuspend) {
+  ASSERT_EQ(device()->Bind(), ZX_OK);
+
+  Operation operation(op_size(), this);
+  ASSERT_TRUE(operation.SetVmo());
+
+  nand_operation_t* op = operation.GetOperation();
+  ASSERT_NOT_NULL(op);
+
+  op->rw.command = NAND_OP_READ;
+  op->rw.length = 2;
+  op->rw.offset_nand = 3;
+  ASSERT_TRUE(operation.SetVmo());
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+
+  EXPECT_EQ(raw_nand().last_op().type, OperationType::kRead);
+  EXPECT_EQ(raw_nand().last_op().nandpage, 4);
+
+  // Issue DdkSuspend and verify that errors are returned for subsequent operations.
+  ddk::SuspendTxn txn(device()->zxdev(), 0, false, DEVICE_SUSPEND_REASON_REBOOT);
+  device()->DdkSuspend(std::move(txn));
+  ddk().WaitUntilSuspend();
+
+  op->rw.command = NAND_OP_WRITE;
+  op->rw.length = 4;
+  op->rw.offset_nand = 5;
+  memset(operation.buffer(), kMagic, kPageSize * 5);
+  memset(operation.oob_buffer(), kOobMagic, kOobSize * 5);
+  device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+
+  ASSERT_TRUE(Wait());
+  EXPECT_EQ(operation.status(), ZX_ERR_CANCELED);
+}
+
 }  // namespace
