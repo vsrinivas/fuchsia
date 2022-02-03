@@ -32,7 +32,12 @@ zx_library("arch") {
     # The per-CPU subdirectory is a separate library() target but it shares
     # (and overrides) the <lib/arch/...> header name space and users of this
     # library need never realize it's distinct.
-    deps += [ zircon_cpu ]
+    deps = [ zircon_cpu ]
+    if (zircon_toolchain != false) {
+      public_configs = [ "$zircon_cpu:headers.config" ]
+    } else {
+      public_configs = [ "$zircon_cpu:$zircon_cpu.config" ]
+    }
     public_deps += [
       ":gen-arm64-sysreg-asm",
       ":gen-x86-msr-asm",

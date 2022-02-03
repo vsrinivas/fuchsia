@@ -14,6 +14,7 @@ test("thread-initial-state") {
   deps = [
     "//sdk/lib/fdio",
     "//src/zircon/lib/zircon",
+    "//zircon/kernel/lib/arch",
     "//zircon/system/ulib/zxtest",
   ]
 }
