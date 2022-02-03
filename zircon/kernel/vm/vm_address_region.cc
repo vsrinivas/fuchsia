@@ -480,8 +480,7 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
 
   constexpr uint kStartDepth = 1;
   uint depth = kStartDepth;
-  for (auto itr = subregions_.IncludeOrHigher(min_addr), end = subregions_.end();
-       itr != end && itr->base() < max_addr;) {
+  for (auto itr = subregions_.IncludeOrHigher(min_addr); itr.IsValid() && itr->base() < max_addr;) {
     DEBUG_ASSERT(itr->IsAliveLocked());
     auto curr = itr++;
     VmAddressRegion* up = curr->parent_;
@@ -511,12 +510,11 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
       if (!vmar->subregions_.IsEmpty()) {
         // If the sub-VMAR is not empty, iterate through its children.
         itr = vmar->subregions_.begin();
-        end = vmar->subregions_.end();
         depth++;
         continue;
       }
     }
-    if (depth > kStartDepth && itr == end) {
+    if (depth > kStartDepth && !itr.IsValid()) {
       AssertHeld(up->lock_ref());
       // If we are at a depth greater than the minimum, and have reached
       // the end of a sub-VMAR range, we ascend and continue iteration.
@@ -532,7 +530,6 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
         // break out of the loop.
         break;
       }
-      end = up->subregions_.end();
     }
   }
   return true;
