@@ -8,8 +8,10 @@ use parking_lot::{Mutex, RwLock};
 use std::ffi::CStr;
 use std::sync::Arc;
 
-use crate::fs::FileSystemHandle;
+use crate::device::{DeviceMode, DeviceRegistry};
+use crate::fs::{FileOps, FileSystemHandle, FsNode};
 use crate::task::*;
+use crate::types::{DeviceType, Errno, OpenFlags};
 
 #[cfg(test)]
 use std::ffi::CString;
@@ -46,6 +48,9 @@ pub struct Kernel {
     // Owned by selinux.rs
     pub selinux_fs: OnceCell<FileSystemHandle>,
 
+    /// The registry of device drivers.
+    pub device_registry: RwLock<DeviceRegistry>,
+
     /// The outgoing directory for the component that is being run. This is used to serve a
     /// `ViewProvider` on behalf of the component, if the component displays graphics.
     ///
@@ -70,6 +75,7 @@ impl Kernel {
             socket_fs: OnceCell::new(),
             sys_fs: OnceCell::new(),
             selinux_fs: OnceCell::new(),
+            device_registry: RwLock::new(DeviceRegistry::new_with_common_devices()),
             outgoing_dir: Mutex::new(None),
         })
     }
@@ -79,5 +85,17 @@ impl Kernel {
         Arc::new(
             Self::new(&CString::new("testing").unwrap()).expect("Failed to create test kernel."),
         )
+    }
+
+    /// Opens a device file (driver) identified by `dev`.
+    pub fn open_device(
+        &self,
+        node: &FsNode,
+        flags: OpenFlags,
+        dev: DeviceType,
+        mode: DeviceMode,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        let registry = self.device_registry.read();
+        registry.open_device(node, flags, dev, mode)
     }
 }

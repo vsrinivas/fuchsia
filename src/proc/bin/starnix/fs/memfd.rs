@@ -9,5 +9,5 @@ use crate::types::*;
 pub fn new_memfd(kernel: &Kernel, flags: OpenFlags) -> Result<FileHandle, Errno> {
     let fs = anon_fs(kernel);
     let node = fs.create_node(Box::new(VmoFileNode::new()?), FileMode::from_bits(0o600));
-    Ok(FileObject::new_anonymous(node.open(flags)?, node, flags))
+    Ok(FileObject::new_anonymous(node.open(kernel, flags)?, node, flags))
 }

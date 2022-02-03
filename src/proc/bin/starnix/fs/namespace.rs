@@ -236,8 +236,8 @@ impl NamespaceNode {
     /// This function is the primary way of instantiating FileObjects. Each
     /// FileObject records the NamespaceNode that created it in order to
     /// remember its path in the Namespace.
-    pub fn open(&self, flags: OpenFlags) -> Result<FileHandle, Errno> {
-        Ok(FileObject::new(self.entry.node.open(flags)?, self.clone(), flags))
+    pub fn open(&self, kernel: &Kernel, flags: OpenFlags) -> Result<FileHandle, Errno> {
+        Ok(FileObject::new(self.entry.node.open(kernel, flags)?, self.clone(), flags))
     }
 
     pub fn create_node(
@@ -569,12 +569,18 @@ mod test {
         let foofs1 = TmpFs::new();
         foo_dir.mount(WhatToMount::Fs(foofs1.clone()), MountFlags::empty())?;
         let mut context = LookupContext::default();
-        assert!(Arc::ptr_eq(&ns.root().lookup_child(&current_task, &mut context, b"foo")?.entry, foofs1.root()));
+        assert!(Arc::ptr_eq(
+            &ns.root().lookup_child(&current_task, &mut context, b"foo")?.entry,
+            foofs1.root()
+        ));
 
         let foofs2 = TmpFs::new();
         foo_dir.mount(WhatToMount::Fs(foofs2.clone()), MountFlags::empty())?;
         let mut context = LookupContext::default();
-        assert!(Arc::ptr_eq(&ns.root().lookup_child(&current_task, &mut context, b"foo")?.entry, foofs2.root()));
+        assert!(Arc::ptr_eq(
+            &ns.root().lookup_child(&current_task, &mut context, b"foo")?.entry,
+            foofs2.root()
+        ));
 
         Ok(())
     }

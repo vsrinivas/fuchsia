@@ -516,7 +516,7 @@ mod test {
 
     #[::fuchsia::test]
     async fn test_tree() -> Result<(), anyhow::Error> {
-        let (_kernel, current_task) = create_kernel_and_task();
+        let (kernel, current_task) = create_kernel_and_task();
         let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
         let root = io_util::directory::open_in_namespace("/pkg", rights)?;
         let fs = RemoteFs::new(root.into_channel().unwrap().into_zx_channel(), rights)?;
@@ -533,7 +533,7 @@ mod test {
         let mut context = LookupContext::default();
         let _test_file = root
             .lookup_child(&current_task, &mut context, b"bin/hello_starnix")?
-            .open(OpenFlags::RDONLY)?;
+            .open(&*kernel, OpenFlags::RDONLY)?;
         Ok(())
     }
 

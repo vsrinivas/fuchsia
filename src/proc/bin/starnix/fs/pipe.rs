@@ -241,7 +241,7 @@ pub fn new_pipe(kernel: &Kernel) -> Result<(FileHandle, FileHandle), Errno> {
     node.info_write().blksize = ATOMIC_IO_BYTES;
 
     let open = |flags: OpenFlags| {
-        Ok(FileObject::new_anonymous(node.open(flags)?, Arc::clone(&node), flags))
+        Ok(FileObject::new_anonymous(node.open(kernel, flags)?, Arc::clone(&node), flags))
     };
 
     Ok((open(OpenFlags::RDONLY)?, open(OpenFlags::WRONLY)?))

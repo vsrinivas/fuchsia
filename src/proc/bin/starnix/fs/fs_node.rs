@@ -7,7 +7,7 @@ use once_cell::sync::OnceCell;
 use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::{Arc, Weak};
 
-use crate::device::*;
+use crate::device::DeviceMode;
 use crate::error;
 use crate::fs::pipe::Pipe;
 use crate::fs::socket::*;
@@ -268,7 +268,7 @@ impl FsNode {
         &*self.ops.as_ref()
     }
 
-    pub fn open(&self, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+    pub fn open(&self, kernel: &Kernel, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         // If O_PATH is set, there is no need to create a real FileOps because
         // most file operations are disabled.
         if flags.contains(OpenFlags::PATH) {
@@ -283,8 +283,8 @@ impl FsNode {
         };
 
         match mode & FileMode::IFMT {
-            FileMode::IFCHR => open_character_device(rdev),
-            FileMode::IFBLK => open_block_device(rdev),
+            FileMode::IFCHR => kernel.open_device(self, flags, rdev, DeviceMode::Char),
+            FileMode::IFBLK => kernel.open_device(self, flags, rdev, DeviceMode::Block),
             FileMode::IFIFO => Ok(Pipe::open(self.fifo.as_ref().unwrap(), flags)),
             // UNIX domain sockets can't be opened.
             FileMode::IFSOCK => error!(ENXIO),
@@ -421,5 +421,41 @@ impl Drop for FsNode {
         if let Some(fs) = self.fs.upgrade() {
             fs.remove_node(self);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::*;
+
+    #[test]
+    fn open_device_file() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        // Create a device file that points to the `zero` device (which is automatically
+        // registered in the kernel).
+        current_task
+            .fs
+            .root
+            .create_node(b"zero", FileMode::IFCHR, DeviceType::ZERO)
+            .expect("create_node");
+
+        // Prepare the user buffer with some values other than the expected content (non-zero).
+        const CONTENT_LEN: usize = 10;
+        let address = map_memory(&current_task, UserAddress::default(), CONTENT_LEN as u64);
+        current_task.mm.write_memory(address, &[0xff; CONTENT_LEN]).expect("write memory");
+
+        // Read from the zero device.
+        let device_file =
+            current_task.open_file(b"zero", OpenFlags::RDONLY).expect("open device file");
+        device_file
+            .read(&current_task, &[UserBuffer { address, length: CONTENT_LEN }])
+            .expect("read from zero");
+
+        // Assert the contents.
+        let content = &mut [0xff; CONTENT_LEN];
+        current_task.mm.read_memory(address, content).expect("read memory");
+        assert_eq!(&[0; CONTENT_LEN], content);
     }
 }

@@ -4,23 +4,12 @@
 
 use fuchsia_zircon::cprng_draw;
 
+use crate::device::WithStaticDeviceId;
 use crate::error;
 use crate::fd_impl_nonblocking;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
-
-pub fn open_mem_device(minor: u32) -> Result<Box<dyn FileOps>, Errno> {
-    match minor {
-        DevNull::MINOR => Ok(Box::new(DevNull)),
-        DevZero::MINOR => Ok(Box::new(DevZero)),
-        DevFull::MINOR => Ok(Box::new(DevFull)),
-        DevRandom::MINOR => Ok(Box::new(DevRandom)),
-        DevRandom::URANDOM_MINOR => Ok(Box::new(DevRandom)),
-        DevKmsg::MINOR => Ok(Box::new(DevKmsg)),
-        _ => error!(ENODEV),
-    }
-}
 
 macro_rules! fd_impl_seekless {
     () => {
@@ -52,13 +41,22 @@ macro_rules! fd_impl_seekless {
     };
 }
 
+/// Implements the /dev/null driver.
 pub struct DevNull;
 
-impl DevNull {
-    const MINOR: u32 = 3;
+impl WithStaticDeviceId for DevNull {
+    const ID: DeviceType = DeviceType::NULL;
 }
 
-impl FileOps for DevNull {
+impl FsNodeOps for DevNull {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(DevNullFile))
+    }
+}
+
+struct DevNullFile;
+
+impl FileOps for DevNullFile {
     fd_impl_seekless!();
     fd_impl_nonblocking!();
 
@@ -83,13 +81,22 @@ impl FileOps for DevNull {
     }
 }
 
-struct DevZero;
+/// Implements the /dev/zero driver.
+pub struct DevZero;
 
-impl DevZero {
-    pub const MINOR: u32 = 5;
+impl WithStaticDeviceId for DevZero {
+    const ID: DeviceType = DeviceType::ZERO;
 }
 
-impl FileOps for DevZero {
+impl FsNodeOps for DevZero {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(DevZeroFile))
+    }
+}
+
+struct DevZeroFile;
+
+impl FileOps for DevZeroFile {
     fd_impl_seekless!();
     fd_impl_nonblocking!();
 
@@ -119,13 +126,22 @@ impl FileOps for DevZero {
     }
 }
 
-struct DevFull;
+/// Implements the /dev/full driver.
+pub struct DevFull;
 
-impl DevFull {
-    pub const MINOR: u32 = 7;
+impl WithStaticDeviceId for DevFull {
+    const ID: DeviceType = DeviceType::FULL;
 }
 
-impl FileOps for DevFull {
+impl FsNodeOps for DevFull {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(DevFullFile))
+    }
+}
+
+struct DevFullFile;
+
+impl FileOps for DevFullFile {
     fd_impl_seekless!();
     fd_impl_nonblocking!();
 
@@ -155,14 +171,35 @@ impl FileOps for DevFull {
     }
 }
 
-struct DevRandom;
+/// Implements the /dev/random driver.
+pub struct DevRandom;
 
-impl DevRandom {
-    pub const MINOR: u32 = 8;
-    pub const URANDOM_MINOR: u32 = 9;
+impl WithStaticDeviceId for DevRandom {
+    const ID: DeviceType = DeviceType::RANDOM;
 }
 
-impl FileOps for DevRandom {
+impl FsNodeOps for DevRandom {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(DevRandomFile))
+    }
+}
+
+/// Implements the /dev/urandom driver.
+pub struct DevURandom;
+
+impl WithStaticDeviceId for DevURandom {
+    const ID: DeviceType = DeviceType::URANDOM;
+}
+
+impl FsNodeOps for DevURandom {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(DevRandomFile))
+    }
+}
+
+struct DevRandomFile;
+
+impl FileOps for DevRandomFile {
     fd_impl_seekless!();
     fd_impl_nonblocking!();
 
@@ -193,13 +230,22 @@ impl FileOps for DevRandom {
     }
 }
 
-struct DevKmsg;
+/// Implements the /dev/kmsg driver.
+pub struct DevKmsg;
 
-impl DevKmsg {
-    pub const MINOR: u32 = 11;
+impl WithStaticDeviceId for DevKmsg {
+    const ID: DeviceType = DeviceType::KMSG;
 }
 
-impl FileOps for DevKmsg {
+impl FsNodeOps for DevKmsg {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(DevKmsgFile))
+    }
+}
+
+struct DevKmsgFile;
+
+impl FileOps for DevKmsgFile {
     fd_impl_seekless!();
     fd_impl_nonblocking!();
 
