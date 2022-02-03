@@ -328,7 +328,7 @@ async fn assert_seek_past_end_end_origin(root_dir: &DirectoryProxy, path: &str, 
 
 #[fuchsia::test]
 async fn get_buffer() {
-    for source in just_pkgfs_for_now().await {
+    for source in dirs_to_test().await {
         get_buffer_per_package_source(source).await
     }
 }
@@ -336,7 +336,7 @@ async fn get_buffer() {
 // Ported over version of TestMapFileForRead, TestMapFileForReadPrivate, TestMapFileForReadExact,
 // TestMapFilePrivateAndExact, TestMapFileForWrite, and TestMapFileForExec from pkgfs_test.go.
 async fn get_buffer_per_package_source(source: PackageSource) {
-    let root_dir = source.dir;
+    let root_dir = &source.dir;
 
     // For non-meta files, GetBuffer() calls with supported flags should succeed.
     for size in [0, 1, 4095, 4096, 4097] {
@@ -345,7 +345,7 @@ async fn get_buffer_per_package_source(source: PackageSource) {
                 continue;
             }
 
-            let file = open_file(&root_dir, &path, OPEN_RIGHT_READABLE).await.unwrap();
+            let file = open_file(root_dir, &path, OPEN_RIGHT_READABLE).await.unwrap();
 
             let _ = test_get_buffer_success(&file, VMO_FLAG_READ, size).await;
 
@@ -362,18 +362,18 @@ async fn get_buffer_per_package_source(source: PackageSource) {
     }
 
     // The empty blob will not return a vmo, failing calls to GetBuffer() with BAD_STATE.
-    let file = open_file(&root_dir, "file_0", OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, "file_0", OPEN_RIGHT_READABLE).await.unwrap();
     let (status, _buffer) = file.get_buffer(VMO_FLAG_READ).await.unwrap();
     assert_eq!(zx::Status::ok(status), Err(zx::Status::BAD_STATE));
 
     // For "meta as file", GetBuffer() should be unsupported.
-    let file = open_file(&root_dir, "meta", OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, "meta", OPEN_RIGHT_READABLE).await.unwrap();
     let (status, _buffer) = file.get_buffer(VMO_FLAG_READ).await.unwrap();
     assert_eq!(zx::Status::ok(status), Err(zx::Status::NOT_SUPPORTED));
 
     // For files NOT under meta, GetBuffer() calls with unsupported flags should successfully return
     // the FIDL call with a failure status.
-    let file = open_file(&root_dir, "file", OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, "file", OPEN_RIGHT_READABLE).await.unwrap();
     let (status, _buffer) = file.get_buffer(VMO_FLAG_EXEC).await.unwrap();
     assert_eq!(zx::Status::ok(status), Err(zx::Status::ACCESS_DENIED));
     let (status, _buffer) = file.get_buffer(VMO_FLAG_EXACT).await.unwrap();
@@ -383,12 +383,27 @@ async fn get_buffer_per_package_source(source: PackageSource) {
     let (status, _buffer) = file.get_buffer(VMO_FLAG_WRITE).await.unwrap();
     assert_eq!(zx::Status::ok(status), Err(zx::Status::ACCESS_DENIED));
 
-    // For files under meta, GetBuffer() calls with unsupported flags should fail the FIDL call
-    // because the file connection should terminate.
-    for flags in [VMO_FLAG_EXEC, VMO_FLAG_EXACT, VMO_FLAG_EXACT | VMO_FLAG_PRIVATE, VMO_FLAG_WRITE]
-    {
-        let file = open_file(&root_dir, "meta/file", OPEN_RIGHT_READABLE).await.unwrap();
-        assert_matches!(file.get_buffer(flags).await, Err(fidl::Error::ClientChannelClosed { .. }));
+    // files under `/meta` behave like content files for `GetBuffer()`
+    if !source.is_pkgdir() {
+        for flags in
+            [VMO_FLAG_EXEC, VMO_FLAG_EXACT, VMO_FLAG_EXACT | VMO_FLAG_PRIVATE, VMO_FLAG_WRITE]
+        {
+            let file = open_file(root_dir, "meta/file", OPEN_RIGHT_READABLE).await.unwrap();
+            assert_matches!(
+                file.get_buffer(flags).await,
+                Err(fidl::Error::ClientChannelClosed { .. })
+            );
+        }
+    } else {
+        let file = open_file(root_dir, "meta/file", OPEN_RIGHT_READABLE).await.unwrap();
+        let (status, _buffer) = file.get_buffer(VMO_FLAG_EXEC).await.unwrap();
+        assert_matches!(zx::Status::ok(status), Err(zx::Status::ACCESS_DENIED));
+        let (status, _buffer) = file.get_buffer(VMO_FLAG_EXACT).await.unwrap();
+        assert_eq!(zx::Status::ok(status), Err(zx::Status::NOT_SUPPORTED));
+        let (status, _buffer) = file.get_buffer(VMO_FLAG_PRIVATE | VMO_FLAG_EXACT).await.unwrap();
+        assert_eq!(zx::Status::ok(status), Err(zx::Status::INVALID_ARGS));
+        let (status, _buffer) = file.get_buffer(VMO_FLAG_WRITE).await.unwrap();
+        assert_eq!(zx::Status::ok(status), Err(zx::Status::ACCESS_DENIED));
     }
 }
 

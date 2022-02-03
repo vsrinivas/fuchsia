@@ -205,3 +205,11 @@ whereas pkgfs returns 0o755 for directories and 0o644 for files.
 
 blobfs allows `OPEN_FLAG_APPEND`, but pkgfs rejects the flag before forwarding
 the open.
+
+### files under `/meta` behave like content files for `GetBuffer()`
+
+package-directory responds to GetBuffer() calls with invalid flags on files
+under meta the same way as to calls on files not under meta.
+
+pkgfs closes the connection without responding when GetBuffer() is called with
+invalid flags on files under meta.
