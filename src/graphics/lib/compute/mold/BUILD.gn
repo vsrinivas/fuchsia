@@ -16,9 +16,6 @@ rustc_library("mold") {
     "//third_party/rust_crates:rustc-hash",
   ]
 
-  # TODO(fxbug.dev/56138): Fix the leaks and remove this.
-  test_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   configs += [ ":mold-performance" ]
 
   sources = [
