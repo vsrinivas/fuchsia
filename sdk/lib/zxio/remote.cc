@@ -376,6 +376,16 @@ fio::wire::NodeAttributes ToNodeAttributes(zxio_node_attributes_t attr,
   };
 }
 
+// POSIX expects EBADF for access denied errors which comes from ZX_ERR_BAD_STATE;
+// ZX_ERR_ACCESS_DENIED produces EACCES which should only be used for sockets.
+zx_status_t map_status(zx_status_t status) {
+  switch (status) {
+    case ZX_ERR_ACCESS_DENIED:
+      return ZX_ERR_BAD_HANDLE;
+  }
+  return status;
+}
+
 zx_status_t zxio_remote_close(zxio_t* io) {
   Remote rio(io);
   zx_status_t status = zxio_raw_remote_close(rio.control());
@@ -571,7 +581,7 @@ zx_status_t zxio_remote_readv(zxio_t* io, const zx_iovec_t* vector, size_t vecto
 
   Remote rio(io);
   if (rio.stream()->is_valid()) {
-    return rio.stream()->readv(0, vector, vector_count, out_actual);
+    return map_status(rio.stream()->readv(0, vector, vector_count, out_actual));
   }
 
   return zxio_remote_do_vector(
@@ -607,7 +617,7 @@ zx_status_t zxio_remote_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* 
 
   Remote rio(io);
   if (rio.stream()->is_valid()) {
-    return rio.stream()->readv_at(0, offset, vector, vector_count, out_actual);
+    return map_status(rio.stream()->readv_at(0, offset, vector, vector_count, out_actual));
   }
 
   return zxio_remote_do_vector(
@@ -643,7 +653,7 @@ zx_status_t zxio_remote_writev(zxio_t* io, const zx_iovec_t* vector, size_t vect
 
   Remote rio(io);
   if (rio.stream()->is_valid()) {
-    return rio.stream()->writev(0, vector, vector_count, out_actual);
+    return map_status(rio.stream()->writev(0, vector, vector_count, out_actual));
   }
 
   return zxio_remote_do_vector(
@@ -677,7 +687,7 @@ zx_status_t zxio_remote_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t*
 
   Remote rio(io);
   if (rio.stream()->is_valid()) {
-    return rio.stream()->writev_at(0, offset, vector, vector_count, out_actual);
+    return map_status(rio.stream()->writev_at(0, offset, vector, vector_count, out_actual));
   }
 
   return zxio_remote_do_vector(
