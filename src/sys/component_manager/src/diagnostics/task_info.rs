@@ -8,7 +8,6 @@ use {
         measurement::{Measurement, MeasurementsQueue},
         runtime_stats_source::RuntimeStatsSource,
     },
-    cm_moniker::InstancedExtendedMoniker,
     fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, HistogramProperty, UintLinearHistogramProperty},
     fuchsia_zircon as zx,
@@ -16,6 +15,7 @@ use {
     futures::{future::BoxFuture, lock::Mutex, FutureExt},
     injectable_time::{MonotonicTime, TimeSource},
     lazy_static::lazy_static,
+    moniker::ExtendedMoniker,
     std::{
         fmt::Debug,
         sync::{Arc, Weak},
@@ -30,7 +30,7 @@ lazy_static! {
 
 pub(crate) fn create_cpu_histogram(
     node: &inspect::Node,
-    moniker: &InstancedExtendedMoniker,
+    moniker: &ExtendedMoniker,
 ) -> inspect::UintLinearHistogramProperty {
     node.create_uint_linear_histogram(
         moniker.to_string_without_instances(),
@@ -551,7 +551,7 @@ mod tests {
         let clock = FakeTime::new();
         let histogram = create_cpu_histogram(
             &inspector.root(),
-            &InstancedExtendedMoniker::parse_string_without_instances("/foo").unwrap(),
+            &ExtendedMoniker::parse_string_without_instances("/foo").unwrap(),
         );
         //assert_data_tree!(            inspector,            root: {});
         let mut task = TaskInfo::try_from_internal(
@@ -614,7 +614,7 @@ mod tests {
         let clock = FakeTime::new();
         let histogram = create_cpu_histogram(
             &inspector.root(),
-            &InstancedExtendedMoniker::parse_string_without_instances("/foo").unwrap(),
+            &ExtendedMoniker::parse_string_without_instances("/foo").unwrap(),
         );
         let mut task = TaskInfo::try_from_internal(
             readings,
@@ -653,7 +653,7 @@ mod tests {
         let clock = FakeTime::new();
         let histogram = create_cpu_histogram(
             &inspector.root(),
-            &InstancedExtendedMoniker::parse_string_without_instances("/foo").unwrap(),
+            &ExtendedMoniker::parse_string_without_instances("/foo").unwrap(),
         );
         let mut task = TaskInfo::try_from_internal(
             readings,

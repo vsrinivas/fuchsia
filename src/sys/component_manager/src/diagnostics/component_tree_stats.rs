@@ -17,7 +17,6 @@ use {
         model::hooks::{Event, EventPayload, EventType, HasEventType, Hook, HooksRegistration},
     },
     async_trait::async_trait,
-    cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     fidl_fuchsia_diagnostics_types::Task as DiagnosticsTask,
     fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, HistogramProperty},
@@ -31,7 +30,7 @@ use {
     },
     injectable_time::MonotonicTime,
     log::warn,
-    moniker::AbsoluteMonikerBase,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
         collections::BTreeMap,
         fmt::Debug,
@@ -53,7 +52,7 @@ const MAX_INSPECT_SIZE : usize = 2 * 1024 * 1024 /* 2MB */;
 /// Provides stats for all components running in the system.
 pub struct ComponentTreeStats<T: RuntimeStatsSource + Debug> {
     /// Map from a moniker of a component running in the system to its stats.
-    tree: Mutex<BTreeMap<InstancedExtendedMoniker, Arc<Mutex<ComponentStats<T>>>>>,
+    tree: Mutex<BTreeMap<ExtendedMoniker, Arc<Mutex<ComponentStats<T>>>>>,
 
     /// Stores all the tasks we know about. This provides direct access for updating a task's
     /// children.
@@ -142,7 +141,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
     }
 
     /// Initializes a new component stats with the given task.
-    async fn track_ready(&self, moniker: InstancedExtendedMoniker, task: T) {
+    async fn track_ready(&self, moniker: ExtendedMoniker, task: T) {
         let histogram = create_cpu_histogram(&self.histograms_node, &moniker);
         if let Ok(task_info) = TaskInfo::try_from(task, Some(histogram)) {
             let koid = task_info.koid();
@@ -180,11 +179,10 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         let tree = self.tree.lock().await;
         for (moniker, stats) in tree.iter() {
             let stats_guard = stats.lock().await;
-            // TODO(fxbug.dev/73171): unify diagnostics and component manager monikers.
             let key = match moniker {
-                InstancedExtendedMoniker::ComponentManager => moniker.to_string(),
-                InstancedExtendedMoniker::ComponentInstance(m) => {
-                    if *m == InstancedAbsoluteMoniker::root() {
+                ExtendedMoniker::ComponentManager => moniker.to_string(),
+                ExtendedMoniker::ComponentInstance(m) => {
+                    if *m == AbsoluteMoniker::root() {
                         "<root>".to_string()
                     } else {
                         m.to_string_without_instances().replacen("/", "", 1)
@@ -261,23 +259,15 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         })
     }
 
-    async fn on_component_started<P, C>(
-        self: &Arc<Self>,
-        moniker: InstancedExtendedMoniker,
-        runtime: &P,
-    ) where
+    async fn on_component_started<P, C>(self: &Arc<Self>, moniker: AbsoluteMoniker, runtime: &P)
+    where
         P: DiagnosticsReceiverProvider<C, T>,
         C: RuntimeStatsContainer<T> + Send + Sync + 'static,
     {
-        let tree_guard = self.tree.lock().await;
-        if tree_guard.contains_key(&moniker) {
-            return;
-        }
-
         if let Some(receiver) = runtime.get_receiver().await {
             let task = fasync::Task::spawn(Self::diagnostics_waiter_task(
                 Arc::downgrade(&self),
-                moniker.clone(),
+                moniker.into(),
                 receiver,
             ));
             let _ = self.diagnostics_waiter_task_sender.unbounded_send(task);
@@ -286,7 +276,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
 
     async fn diagnostics_waiter_task<C>(
         weak_self: Weak<Self>,
-        moniker: InstancedExtendedMoniker,
+        moniker: ExtendedMoniker,
         receiver: oneshot::Receiver<C>,
     ) where
         C: RuntimeStatsContainer<T> + Send + Sync + 'static,
@@ -347,11 +337,8 @@ impl ComponentTreeStats<DiagnosticsTask> {
     pub async fn track_component_manager_stats(&self) {
         match fuchsia_runtime::job_default().duplicate_handle(zx::Rights::SAME_RIGHTS) {
             Ok(job) => {
-                self.track_ready(
-                    InstancedExtendedMoniker::ComponentManager,
-                    DiagnosticsTask::Job(job),
-                )
-                .await;
+                self.track_ready(ExtendedMoniker::ComponentManager, DiagnosticsTask::Job(job))
+                    .await;
             }
             Err(err) => warn!(
                 "Failed to duplicate component manager job. Not tracking its own stats: {:?}",
@@ -364,11 +351,10 @@ impl ComponentTreeStats<DiagnosticsTask> {
 #[async_trait]
 impl Hook for ComponentTreeStats<DiagnosticsTask> {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        let target_moniker: InstancedExtendedMoniker = event
+        let target_moniker = event
             .target_moniker
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?
-            .clone()
-            .into();
+            .to_partial();
         match event.event_type() {
             EventType::Started => {
                 if let Some(EventPayload::Started { runtime, .. }) = event.result.as_ref().ok() {
@@ -431,19 +417,19 @@ mod tests {
             diagnostics::testing::{FakeDiagnosticsContainer, FakeRuntime, FakeTask},
             model::testing::routing_test_helpers::RoutingTest,
         },
-        cm_moniker::InstancedAbsoluteMoniker,
         cm_rust_testing::ComponentDeclBuilder,
         diagnostics_hierarchy::DiagnosticsHierarchy,
         fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
         fuchsia_zircon::{AsHandleRef, DurationNum},
+        moniker::AbsoluteMoniker,
     };
 
     #[fuchsia::test]
     async fn components_are_deleted_when_all_tasks_are_gone() {
         let inspector = inspect::Inspector::new();
         let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
-        let moniker: InstancedAbsoluteMoniker = vec!["a:0"].into();
-        let moniker: InstancedExtendedMoniker = moniker.into();
+        let moniker: AbsoluteMoniker = vec!["a"].into();
+        let moniker: ExtendedMoniker = moniker.into();
         stats.track_ready(moniker.clone(), FakeTask::default()).await;
         for _ in 0..=COMPONENT_CPU_MAX_SAMPLES {
             stats.measure().await;
@@ -494,7 +480,7 @@ mod tests {
         let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
         stats
             .track_ready(
-                InstancedExtendedMoniker::ComponentInstance(vec!["a:0"].into()),
+                ExtendedMoniker::ComponentInstance(vec!["a"].into()),
                 FakeTask::new(
                     1,
                     vec![
@@ -514,7 +500,7 @@ mod tests {
             .await;
         stats
             .track_ready(
-                InstancedExtendedMoniker::ComponentInstance(vec!["b:0"].into()),
+                ExtendedMoniker::ComponentInstance(vec!["b"].into()),
                 FakeTask::new(
                     2,
                     vec![
@@ -555,7 +541,7 @@ mod tests {
         let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
         stats
             .track_ready(
-                InstancedExtendedMoniker::ComponentInstance(vec!["a:0"].into()),
+                ExtendedMoniker::ComponentInstance(vec!["a"].into()),
                 FakeTask::new(
                     1,
                     vec![
@@ -575,7 +561,7 @@ mod tests {
             .await;
         stats
             .track_ready(
-                InstancedExtendedMoniker::ComponentInstance(vec!["b:0"].into()),
+                ExtendedMoniker::ComponentInstance(vec!["b"].into()),
                 FakeTask::new(
                     2,
                     vec![
@@ -647,7 +633,7 @@ mod tests {
         let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
         stats
             .track_ready(
-                InstancedExtendedMoniker::ComponentInstance(vec!["a:0"].into()),
+                ExtendedMoniker::ComponentInstance(vec!["a"].into()),
                 FakeTask::new(
                     1,
                     vec![
@@ -787,21 +773,11 @@ mod tests {
         );
         let fake_runtime =
             FakeRuntime::new(FakeDiagnosticsContainer::new(parent_task.clone(), None));
-        stats
-            .on_component_started(
-                InstancedExtendedMoniker::ComponentInstance(vec!["parent:0"].into()),
-                &fake_runtime,
-            )
-            .await;
+        stats.on_component_started(AbsoluteMoniker::from(vec!["parent"]), &fake_runtime).await;
 
         let fake_runtime =
             FakeRuntime::new(FakeDiagnosticsContainer::new(component_task, Some(parent_task)));
-        stats
-            .on_component_started(
-                InstancedExtendedMoniker::ComponentInstance(vec!["child:0"].into()),
-                &fake_runtime,
-            )
-            .await;
+        stats.on_component_started(AbsoluteMoniker::from(vec!["child"]), &fake_runtime).await;
 
         // Wait for diagnostics data to be received since it's done in a non-blocking way on
         // started.
@@ -876,13 +852,10 @@ mod tests {
         let fake_parent_runtime =
             FakeRuntime::new(FakeDiagnosticsContainer::new(parent_task.clone(), None));
         stats
-            .on_component_started(
-                InstancedExtendedMoniker::ComponentInstance(vec!["parent:0"].into()),
-                &fake_parent_runtime,
-            )
+            .on_component_started(AbsoluteMoniker::from(vec!["parent"]), &fake_parent_runtime)
             .await;
 
-        let child_moniker = InstancedExtendedMoniker::ComponentInstance(vec!["child:0"].into());
+        let child_moniker = AbsoluteMoniker::from(vec!["child"]);
         let fake_runtime =
             FakeRuntime::new(FakeDiagnosticsContainer::new(component_task, Some(parent_task)));
         stats.on_component_started(child_moniker.clone(), &fake_runtime).await;
@@ -899,8 +872,10 @@ mod tests {
         assert_eq!(stats.tree.lock().await.len(), 2);
         assert_eq!(stats.tasks.lock().await.len(), 2);
 
+        let extended_moniker = child_moniker.into();
         // Mark as terminated, to simulate that the component completely stopped.
-        for task in stats.tree.lock().await.get(&child_moniker).unwrap().lock().await.tasks_mut() {
+        for task in stats.tree.lock().await.get(&extended_moniker).unwrap().lock().await.tasks_mut()
+        {
             task.lock().await.force_terminate().await;
         }
 
@@ -916,7 +891,7 @@ mod tests {
         stats.measure().await;
 
         // Child is gone and only the parent exists now.
-        assert!(stats.tree.lock().await.get(&child_moniker).is_none());
+        assert!(stats.tree.lock().await.get(&extended_moniker).is_none());
         assert_eq!(stats.tree.lock().await.len(), 1);
         assert_eq!(stats.tasks.lock().await.len(), 1);
     }
