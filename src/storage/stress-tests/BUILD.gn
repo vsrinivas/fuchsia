@@ -90,8 +90,7 @@ fuchsia_test_package("storage-stress-tests") {
     ":minfs-crash",
     ":minfs-no-crash",
 
-    # TODO(fxbug.dev/92435): Enable this variant.
-    #":fxfs-crash",
+    ":fxfs-crash",
     ":fxfs-no-crash",
   ]
   deps = [

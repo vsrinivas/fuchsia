@@ -45,7 +45,7 @@ use {
             transaction::{AssocObj, ExtentMutation, Mutation, Options, Transaction, TxnMutation},
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
-        round::round_down,
+        round::{round_down, round_up},
         serialized_types::{Version, Versioned, LATEST_VERSION},
         trace_duration,
     },
@@ -567,7 +567,10 @@ impl Journal {
             reader_checkpoint.version = LATEST_VERSION;
             inner.flushed_offset = reader_checkpoint.file_offset;
             inner.device_flushed_offset = device_flushed_offset;
-            inner.writer.seek(reader_checkpoint);
+            let mut writer_checkpoint = reader_checkpoint.clone();
+            writer_checkpoint.file_offset =
+                round_up(writer_checkpoint.file_offset, BLOCK_SIZE).unwrap();
+            inner.writer.seek(writer_checkpoint);
             inner.output_reset_version = true;
             if last_checkpoint.file_offset < inner.flushed_offset {
                 inner.discard_offset = Some(last_checkpoint.file_offset);

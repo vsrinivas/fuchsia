@@ -91,8 +91,14 @@ impl JournalWriter {
     ///
     /// Note that the Journal expects a 4-byte record version to be the first thing after a
     /// "RESET" event, which is generally the only time we would use seek.
+    ///
+    /// The offset of |checkpoint| must be block-aligned.  This is because the writer should never
+    /// be configured to start overwriting a partially written block -- doing so could leave
+    /// previously journaled data in an inconsistent state.  The writer must always start at a fresh
+    /// block, and a reset marker should be used to terminate the previous block.
     pub fn seek(&mut self, checkpoint: JournalCheckpoint) {
         assert!(self.buf.is_empty());
+        assert!(checkpoint.file_offset % self.block_size as u64 == 0);
         self.checkpoint = checkpoint;
         self.last_checksum = self.checkpoint.checksum;
     }
