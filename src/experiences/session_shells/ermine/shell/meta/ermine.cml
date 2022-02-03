@@ -8,6 +8,12 @@
     program: {
         data: "data/ermine",
     },
+    children: [
+        {
+            name: "chrome",
+            url: "fuchsia-pkg://fuchsia.com/chrome#meta/chrome.cm",
+        },
+    ],
     capabilities: [
         {
             protocol: [
@@ -23,7 +29,6 @@
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.element.Manager",
-                "fuchsia.element.Manager-chrome",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.fonts.Provider",
                 "fuchsia.hardware.power.statecontrol.Admin",
@@ -65,6 +70,63 @@
         {
             storage: "account",
             path: "/data",
+        },
+        {
+            protocol: "fuchsia.element.Manager",
+            from: "#chrome",
+            path: "/svc/fuchsia.element.Manager-chrome",
+        },
+    ],
+    offer: [
+        // Support Chrome as a static component.
+        {
+            protocol: [
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.fonts.Provider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#chrome",
+        },
+        {
+            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            from: "self",
+            to: "#chrome",
+            dependency: "weak",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: [ "#chrome" ],
+        },
+        {
+            storage: [
+                "cache",
+                "tmp",
+            ],
+            from: "parent",
+            to: "#chrome",
+        },
+        {
+            storage: "account",
+            from: "parent",
+            as: "data",
+            to: "#chrome",
         },
     ],
     expose: [
