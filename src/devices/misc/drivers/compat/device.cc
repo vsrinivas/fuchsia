@@ -221,7 +221,9 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
 
   children_.push_back(std::move(device));
 
-  *out = device_ptr->ZxDevice();
+  if (out) {
+    *out = device_ptr->ZxDevice();
+  }
   return ZX_OK;
 }
 

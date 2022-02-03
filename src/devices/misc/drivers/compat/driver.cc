@@ -348,11 +348,14 @@ void Driver::Log(FuchsiaLogSeverity severity, const char* tag, const char* file,
 }
 
 zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out) {
-  zx_status_t status = parent->Add(args, out);
+  zx_device_t* child;
+  zx_status_t status = parent->Add(args, &child);
   if (status != ZX_OK) {
     return status;
   }
-  zx_device_t* child = *out;
+  if (out) {
+    *out = child;
+  }
   std::string child_protocol = "device-" + std::to_string(next_device_id_);
   next_device_id_++;
 

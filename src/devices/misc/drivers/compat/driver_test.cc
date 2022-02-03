@@ -291,6 +291,16 @@ TEST_F(DriverTest, Start_MissingBindAndCreate) {
   EXPECT_EQ(nullptr, driver->Context());
 }
 
+TEST_F(DriverTest, Start_DeviceAddNull) {
+  zx_protocol_device_t ops{};
+  auto driver = StartDriver("/pkg/driver/v1_device_add_null_test.so", &ops);
+
+  // Verify that v1_test.so has added a child device.
+  EXPECT_FALSE(node().HasChildren());
+  ASSERT_TRUE(RunLoopUntilIdle());
+  EXPECT_TRUE(node().HasChildren());
+}
+
 TEST_F(DriverTest, Start_GetBufferFailed) {
   compat_file().SetStatus(ZX_ERR_UNAVAILABLE);
 
