@@ -25,7 +25,7 @@ typedef struct zx_service_ops {
   //
   // |ctx| is the pointer returned by |init|, if any.
   //
-  // |async| is the async dispatch on which the service provider should
+  // |dispatcher| is the async dispatch on which the service provider should
   // schedule its work. This dispatcher might be shared with other service
   // providers.
   //
