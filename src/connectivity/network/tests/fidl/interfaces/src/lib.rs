@@ -11,10 +11,13 @@ use fuchsia_async::TimeoutExt as _;
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 use itertools::Itertools as _;
-use net_declare::{fidl_ip, fidl_subnet, std_ip};
+use net_declare::{fidl_if_addr, fidl_ip, fidl_subnet, std_ip};
 use netemul::RealmUdpSocket as _;
-use netstack_testing_common::realms::{Netstack, Netstack2, NetstackVersion, TestSandboxExt as _};
 use netstack_testing_common::Result;
+use netstack_testing_common::{
+    interfaces::add_address_wait_assigned,
+    realms::{Netstack, Netstack2, NetstackVersion, TestSandboxExt as _},
+};
 use netstack_testing_macros::variants_test;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto as _;
@@ -137,23 +140,45 @@ async fn watcher_existing<N: Netstack>(name: &str) {
                 break;
             }
         }
-        eps.push(iface);
 
+        let addr = fidl_fuchsia_net::Ipv4Address { addr: [192, 168, idx.try_into().unwrap(), 1] };
+        let prefix_len = 24;
+        let if_addr =
+            fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                addr,
+                prefix_len,
+            });
+        // TODO(https://fxbug.dev/89901): Replace net/Subnet with net/InterfaceAddress.
         let mut addr = fidl_fuchsia_net::Subnet {
-            addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                addr: [192, 168, idx.try_into().unwrap(), 1],
-            }),
+            addr: fidl_fuchsia_net::IpAddress::Ipv4(addr),
             prefix_len: 24,
         };
         let expected =
             Expectation::Ethernet { id, addr, has_default_ipv4_route, has_default_ipv6_route };
         assert_eq!(expectations.insert(id, expected), None);
+        match N::VERSION {
+            NetstackVersion::Netstack2 => {
+                let address_state_provider = add_address_wait_assigned(
+                    iface.control(),
+                    if_addr,
+                    fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+                )
+                .await
+                .expect("add address");
+                let () = address_state_provider.detach().expect("detach address lifetime");
+            }
+            NetstackVersion::ProdNetstack2 => panic!("unexpected netstack version"),
+            NetstackVersion::Netstack3 => {
+                // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
+                let () = stack
+                    .add_interface_address(id, &mut addr)
+                    .await
+                    .squash_result()
+                    .expect("add interface address");
+            }
+        }
 
-        let () = stack
-            .add_interface_address(id, &mut addr)
-            .await
-            .squash_result()
-            .expect("add interface address");
+        eps.push(iface);
 
         if has_default_ipv4_route {
             stack
@@ -183,8 +208,12 @@ async fn watcher_existing<N: Netstack>(name: &str) {
     }
 
     // Netstack2 reports the loopback interface as NIC 1.
-    if N::VERSION == NetstackVersion::Netstack2 {
-        assert_eq!(expectations.insert(1, Expectation::Loopback(1)), None);
+    match N::VERSION {
+        NetstackVersion::Netstack2 => {
+            assert_eq!(expectations.insert(1, Expectation::Loopback(1)), None);
+        }
+        NetstackVersion::ProdNetstack2 => panic!("unexpected netstack version"),
+        NetstackVersion::Netstack3 => {}
     }
 
     let interfaces_state = realm
@@ -901,11 +930,28 @@ async fn test_watcher() {
     let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone());
     pin_utils::pin_mut!(stream);
 
-    // Add an address.
+    // Add an address and subnet route.
     let () = assert_blocked(&mut blocking_stream).await;
-    let mut subnet = fidl_subnet!("192.168.0.1/16");
-    let () =
-        stack.add_interface_address(id, &mut subnet).await.squash_result().expect("add address");
+    let mut if_addr = fidl_if_addr!("192.168.0.1/16");
+    // TODO(https://fxbug.dev/89901): Replace net/Subnet with net/InterfaceAddress.
+    let subnet = fidl_subnet!("192.168.0.1/16");
+    let _address_state_provider = add_address_wait_assigned(
+        dev.control(),
+        if_addr,
+        fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+    )
+    .await
+    .expect("add address");
+    let () = stack
+        .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+            subnet: fidl_fuchsia_net_ext::apply_subnet_mask(subnet),
+            device_id: dev.id(),
+            next_hop: None,
+            metric: 0,
+        })
+        .await
+        .squash_result()
+        .expect("add subnet route");
     let addresses_changed = |event| match event {
         fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
             id: Some(event_id),
@@ -969,8 +1015,13 @@ async fn test_watcher() {
 
     // Remove the added address.
     let () = assert_blocked(&mut blocking_stream).await;
-    let () =
-        stack.del_interface_address(id, &mut subnet).await.squash_result().expect("add address");
+    let was_removed = dev
+        .control()
+        .remove_address(&mut if_addr)
+        .await
+        .expect("remove address request")
+        .expect("remove address");
+    assert!(was_removed);
     assert_eq!(addresses_changed(next(&mut blocking_stream).await), ll_addrs);
     assert_eq!(addresses_changed(next(&mut stream).await), ll_addrs);
 
