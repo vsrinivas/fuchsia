@@ -152,15 +152,18 @@ void BtTransportUart::HciHandleClientChannel(zx::channel* chan, zx_signals_t pen
   uint32_t max_buf_size;
   BtHciPacketIndicator packet_type;
   bt_hci_snoop_type_t snoop_type;
+  const char* chan_name = nullptr;
 
   if (chan == &cmd_channel_) {
     max_buf_size = kCmdBufSize;
     packet_type = kHciCommand;
     snoop_type = BT_HCI_SNOOP_TYPE_CMD;
+    chan_name = "command";
   } else if (chan == &acl_channel_) {
     max_buf_size = kAclMaxFrameSize;
     packet_type = kHciAclData;
     snoop_type = BT_HCI_SNOOP_TYPE_ACL;
+    chan_name = "ACL";
   } else {
     // This should never happen, we only know about two packet types currently.
     ZX_ASSERT(false);
@@ -170,8 +173,7 @@ void BtTransportUart::HciHandleClientChannel(zx::channel* chan, zx_signals_t pen
   // Handle the read signal first.  If we are also peer closed, we want to make
   // sure that we have processed all of the pending messages before cleaning up.
   if (pending & ZX_CHANNEL_READABLE) {
-    zxlogf(TRACE, "received readable signal for %s channel",
-           chan == &cmd_channel_ ? "command" : "ACL");
+    zxlogf(TRACE, "received readable signal for %s channel", chan_name);
     uint32_t length = max_buf_size - 1;
     {
       std::lock_guard guard(mutex_);
@@ -186,9 +188,13 @@ void BtTransportUart::HciHandleClientChannel(zx::channel* chan, zx_signals_t pen
 
       status =
           zx_channel_read(chan->get(), 0, write_buffer_ + 1, nullptr, length, 0, &length, nullptr);
+      if (status == ZX_ERR_SHOULD_WAIT) {
+        zxlogf(WARNING, "ignoring ZX_ERR_SHOULD_WAIT when reading %s channel", chan_name);
+        return;
+      }
       if (status != ZX_OK) {
-        zxlogf(ERROR, "hci_read_thread: failed to read from %s channel %s",
-               (packet_type == kHciCommand) ? "CMD" : "ACL", zx_status_get_string(status));
+        zxlogf(ERROR, "hci_read_thread: failed to read from %s channel %s", chan_name,
+               zx_status_get_string(status));
         ChannelCleanupLocked(chan);
         return;
       }
@@ -203,8 +209,7 @@ void BtTransportUart::HciHandleClientChannel(zx::channel* chan, zx_signals_t pen
   }
 
   if (pending & ZX_CHANNEL_PEER_CLOSED) {
-    zxlogf(DEBUG, "received closed signal for %s channel",
-           chan == &cmd_channel_ ? "command" : "ACL");
+    zxlogf(DEBUG, "received closed signal for %s channel", chan_name);
     std::lock_guard guard(mutex_);
     ChannelCleanupLocked(chan);
   }
