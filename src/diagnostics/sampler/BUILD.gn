@@ -96,6 +96,7 @@ fuchsia_structured_config_values("sampler-test-config") {
 fuchsia_structured_config_rust_lib("sampler-config-lib") {
   cm_target = ":sampler-manifest"
   fidl_library_name = "cf.sc.internal.sampler"
+  with_inspect = true
 }
 
 fuchsia_package("sampler") {

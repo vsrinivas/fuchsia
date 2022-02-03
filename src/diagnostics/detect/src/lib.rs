@@ -16,7 +16,7 @@ use {
     fidl_fuchsia_feedback::MAX_CRASH_SIGNATURE_LENGTH,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_inspect::{self as inspect, health::Reporter, NumericProperty, Property},
+    fuchsia_inspect::{self as inspect, health::Reporter, NumericProperty},
     fuchsia_inspect_derive::{Inspect, WithInspect},
     fuchsia_zircon as zx,
     futures::StreamExt,
@@ -176,41 +176,19 @@ impl Stats {
     }
 }
 
-#[derive(Inspect, Default)]
-struct Config {
-    check_every_seconds: inspect::IntProperty,
-    config_file_count: inspect::UintProperty,
-    inspect_node: fuchsia_inspect::Node,
-}
-
-impl Config {
-    fn new() -> Self {
-        Self::default()
-    }
-
-    fn set(&self, values: ConfigValues) {
-        self.check_every_seconds.set(values.check_every.into_seconds());
-        self.config_file_count.set(values.config_file_count as u64);
-    }
-}
-
-struct ConfigValues {
-    check_every: zx::Duration,
-    config_file_count: usize,
-}
-
 pub async fn main() -> Result<(), Error> {
-    let manifest_config = ManifestConfig::from_args();
-
     let mut service_fs = ServiceFs::new();
     service_fs.take_and_serve_directory_handle()?;
-    inspect_runtime::serve(inspect::component::inspector(), &mut service_fs)?;
+    let inspector = inspect::component::inspector();
+    inspect_runtime::serve(inspector, &mut service_fs)?;
     fasync::Task::spawn(async move {
         service_fs.collect::<()>().await;
     })
     .detach();
 
-    let stats = Stats::new().with_inspect(inspect::component::inspector().root(), "stats")?;
+    let manifest_config = ManifestConfig::from_args().record_to_inspect(inspector.root());
+
+    let stats = Stats::new().with_inspect(inspector.root(), "stats")?;
     let mode = match manifest_config.test_only {
         true => Mode::Test,
         false => Mode::Production,
@@ -223,11 +201,6 @@ pub async fn main() -> Result<(), Error> {
     info!("Test mode: {:?}, program config: {:?}", mode, program_config);
     let configuration =
         on_error!(load_configuration_files(), "Error reading configuration files: {}")?;
-
-    let config_inspect =
-        Config::new().with_inspect(inspect::component::inspector().root(), "config")?;
-    config_inspect
-        .set(ConfigValues { check_every: check_every, config_file_count: configuration.len() });
 
     let triage_engine = on_error!(
         triage_shim::TriageLib::new(configuration),

@@ -29,7 +29,8 @@ pub async fn main() -> Result<(), Error> {
     // Serve inspect.
     let mut service_fs = ServiceFs::new();
     service_fs.take_and_serve_directory_handle()?;
-    inspect_runtime::serve(inspect::component::inspector(), &mut service_fs)?;
+    let inspector = inspect::component::inspector();
+    inspect_runtime::serve(inspector, &mut service_fs)?;
     fasync::Task::spawn(async move {
         service_fs.collect::<()>().await;
     })
@@ -38,10 +39,10 @@ pub async fn main() -> Result<(), Error> {
     // Starting service.
     inspect::component::health().set_starting_up();
 
-    let ManifestConfig { minimum_sample_rate_sec } = ManifestConfig::from_args();
+    let manifest_config = ManifestConfig::from_args().record_to_inspect(inspector.root());
 
     match config::SamplerConfig::from_directories(
-        minimum_sample_rate_sec,
+        manifest_config.minimum_sample_rate_sec,
         "/config/data/metrics", /* Sampler config */
         "/config/data/fire",    /* FIRE config */
     ) {
