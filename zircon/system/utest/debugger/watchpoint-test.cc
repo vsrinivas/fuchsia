@@ -34,7 +34,7 @@ std::atomic<bool> gWatchpointThreadShouldContinue;
 
 int watchpoint_function(void* user) {
   while (gWatchpointThreadShouldContinue) {
-    gVariableToChange++;
+    gVariableToChange = gVariableToChange + 1;
     zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
   }
 

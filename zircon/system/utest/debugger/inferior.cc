@@ -61,7 +61,7 @@ int __NO_INLINE test_segfault_doit1(int* p) {
     int n = crash_depth;
     int use_stack[n];
     memset(use_stack, 0x99, n * sizeof(int));
-    --crash_depth;
+    crash_depth = crash_depth - 1;
     return test_segfault_doit2(use_stack) + 99;
   }
   return test_segfault_leaf(leaf_stack_size, p) + 99;
