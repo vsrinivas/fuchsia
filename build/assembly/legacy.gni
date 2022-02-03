@@ -121,6 +121,21 @@ template("legacy_assembly_input_bundle") {
 
     binary_label = "//build/assembly/scripts:make_legacy_config"
 
+    # The contents of these folders is dynamic, and managed entirely by this
+    # action.  Further, this action will need to delete items from these
+    # directories that are not added back (on an incremental build, if an item
+    # is removed from one of these sets)
+    #
+    # These folders would grow in size forever, if it was not cleaned out on
+    # each incremental build.
+    hermetic_action_ignored_prefixes = [
+      "${files.assembly_input_bundle_dir}/packages",
+      "${files.assembly_input_bundle_dir}/blobs",
+      "${files.assembly_input_bundle_dir}/config_data",
+      "${files.assembly_input_bundle_dir}/bootfs",
+      "${files.assembly_input_bundle_dir}/kernel",
+    ]
+
     outputs = [
       files.assembly_input_bundle_config,
       files.assembly_input_bundle_manifest,
