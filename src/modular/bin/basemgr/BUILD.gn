@@ -157,15 +157,16 @@ fuchsia_unittest_component("session-context-impl-unittest") {
   deps = [ ":session_context_impl_unittest" ]
 }
 
-executable("basemgr_impl_unittest") {
+source_set("basemgr_impl_test_fixture") {
   testonly = true
-  sources = [ "basemgr_impl_unittest.cc" ]
-  deps = [
+  sources = [
+    "basemgr_impl_test_fixture.cc",
+    "basemgr_impl_test_fixture.h",
+  ]
+  public_deps = [
     ":basemgr_impl",
-    "//examples/fidl/fuchsia.examples",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
@@ -176,9 +177,32 @@ executable("basemgr_impl_unittest") {
   ]
 }
 
+executable("basemgr_impl_unittest") {
+  testonly = true
+  sources = [ "basemgr_impl_unittest.cc" ]
+  deps = [
+    ":basemgr_impl_test_fixture",
+    "//src/lib/files",
+  ]
+}
+
+executable("basemgr_v2_to_v1_unittest") {
+  testonly = true
+  sources = [ "basemgr_v2_to_v1_unittest.cc" ]
+  deps = [
+    ":basemgr_impl_test_fixture",
+    "//examples/fidl/fuchsia.examples",
+  ]
+}
+
 fuchsia_unittest_component("basemgr-impl-unittest") {
   manifest = "meta/basemgr-impl-unittest.cml"
   deps = [ ":basemgr_impl_unittest" ]
+}
+
+fuchsia_unittest_component("basemgr-v2-to-v1-unittest") {
+  manifest = "meta/basemgr-v2-to-v1-unittest.cml"
+  deps = [ ":basemgr_v2_to_v1_unittest" ]
 }
 
 executable("basemgr_non_hermetic_test") {
@@ -246,6 +270,7 @@ fuchsia_test_package("basemgr_unittests") {
   package_deps_for_infra_only = [ "//src/modular/bin/basemgr" ]
   test_components = [
     ":basemgr-impl-unittest",
+    ":basemgr-v2-to-v1-unittest",
     ":basemgr-non-hermetic-test",
     ":session-context-impl-unittest",
     ":bounded-inspect-list-node-unittest",

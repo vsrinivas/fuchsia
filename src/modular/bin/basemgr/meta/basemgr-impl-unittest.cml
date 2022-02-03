@@ -7,33 +7,11 @@
     program: {
         binary: "bin/basemgr_impl_unittest",
     },
-    children: [
-        {
-            name: "echo_v2_service",
-            url: "#meta/echo_server.cm",
-            startup: "eager",
-            on_terminate: "none",
-        },
-    ],
     use: [
         // AppClientBase creates and serves directories in /data
         {
             storage: "tmp",
             path: "/data",
-        },
-        {
-            protocol: "fuchsia.examples.Echo",
-            from: "#echo_v2_service",
-            path: "/svc_for_v1_sessionmgr/fuchsia.examples.Echo",
-        },
-    ],
-
-    // Capabilities required by components under test.
-    offer: [
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-            from: "parent",
-            to: "#echo_v2_service",
         },
     ],
 }
