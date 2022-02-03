@@ -11,3 +11,5 @@
 
 mod bindings;
 pub use bindings::*;
+
+pub mod spinel;

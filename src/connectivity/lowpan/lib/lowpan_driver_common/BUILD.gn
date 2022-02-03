@@ -26,6 +26,7 @@ rustc_library("lowpan_driver_common") {
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",
+    "//src/connectivity/lowpan/lib/openthread_sys",
     "//src/connectivity/lowpan/lib/spinel_pack",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

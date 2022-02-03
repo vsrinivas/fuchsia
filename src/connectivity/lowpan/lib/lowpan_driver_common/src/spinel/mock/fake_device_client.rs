@@ -685,8 +685,15 @@ impl FakeSpinelDevice {
             }
             Prop::Unknown(176) => {
                 // RCP API Version
-                spinel_write!(&mut response, "Ciii", frame.header, Cmd::PropValueIs, prop, 3)
-                    .unwrap();
+                spinel_write!(
+                    &mut response,
+                    "Ciii",
+                    frame.header,
+                    Cmd::PropValueIs,
+                    prop,
+                    openthread_sys::spinel::SPINEL_RCP_API_VERSION
+                )
+                .unwrap();
             }
             Prop::Phy(PropPhy::Unknown(0x120b)) => {
                 spinel_write!(&mut response, "Ciii", frame.header, Cmd::PropValueIs, prop, 0xFFFF)

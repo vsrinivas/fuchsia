@@ -10,6 +10,7 @@ rustc_library("openthread_sys") {
   sources = [
     "src/bindings.rs",
     "src/lib.rs",
+    "src/spinel.rs",
   ]
   with_unit_tests = false
 

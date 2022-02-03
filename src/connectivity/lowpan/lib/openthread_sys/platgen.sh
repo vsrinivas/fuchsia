@@ -15,7 +15,8 @@ FUCHSIA_DIR=${FUCHSIA_DIR-`pwd`/../../../../..}
 # If $RUST_BINDGEN isn't set, take a guess.
 RUST_BINDGEN=${RUST_BINDGEN-`which bindgen`}
 
-readonly OT_INCLUDE_DIR=${FUCHSIA_DIR}/third_party/openthread/include
+readonly OT_DIR=${FUCHSIA_DIR}/third_party/openthread
+readonly OT_INCLUDE_DIR=${OT_DIR}/include
 readonly PLATGEN_H=platgen.h
 readonly NULL=
 
@@ -48,9 +49,22 @@ $RUST_BINDGEN \
 	--allowlist-function "ot[A-Z].*" \
 	--allowlist-var "OT_[A-Z].*" \
 	--allowlist-var "OPENTHREAD_[A-Z].*" \
+	--allowlist-var "SPINEL_[A-Z].*" \
 	-- \
 	-D 'OPENTHREAD_CONFIG_FILE=<openthread-config-fuchsia.h>' \
 	-I "${OT_INCLUDE_DIR}" \
+	-I "${OT_DIR}" \
 	${NULL}
 
+$RUST_BINDGEN \
+	"${OT_DIR}/src/lib/spinel/spinel.h" \
+	-o src/spinel.rs \
+	--raw-line "${RAW_LINES}" \
+	--size_t-is-usize \
+	--no-layout-tests \
+	--with-derive-default \
+	--allowlist-var "SPINEL_[A-Z].*" \
+	${NULL}
+
+fx format-code
 
