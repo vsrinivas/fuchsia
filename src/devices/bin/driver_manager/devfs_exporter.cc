@@ -66,6 +66,7 @@ void DevfsExporter::Export(ExportRequestView request, ExportCompleter::Sync& com
          static_cast<int>(request->devfs_path.size()), request->devfs_path.data(),
          result.status_string());
     completer.ReplyError(result.error_value());
+    return;
   }
 
   ExportWatcher* export_ptr = result.value().get();

@@ -204,3 +204,31 @@ TEST(Devfs, ExportWatcher_Export) {
   result.value().reset();
   ASSERT_EQ(0, root_node.children.size_slow());
 }
+
+TEST(Devfs, ExportWatcherCreateFails) {
+  Devnode root_node("root");
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+
+  // Create a fake service at svc/test.
+  // Export the svc/test.
+  auto endpoints = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_OK(endpoints.status_value());
+  // Close the server end, so that the eventual call to Open() fails.
+  endpoints->server.Close(ZX_ERR_PEER_CLOSED);
+
+  driver_manager::DevfsExporter exporter(&root_node, loop.dispatcher());
+  auto exporter_endpoints = fidl::CreateEndpoints<fuchsia_device_fs::Exporter>();
+  ASSERT_OK(exporter_endpoints.status_value());
+
+  fidl::BindServer(loop.dispatcher(), std::move(exporter_endpoints->server), &exporter);
+
+  ASSERT_OK(loop.StartThread("export-watcher-test-thread"));
+
+  fidl::WireSyncClient<fuchsia_device_fs::Exporter> client(std::move(exporter_endpoints->client));
+
+  // ExportWatcher::Create will fail because we closed the server end of the channel.
+  auto result =
+      client->Export(std::move(endpoints->client), "svc/test", "one/two", ZX_PROTOCOL_BLOCK);
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->result.is_err());
+}
