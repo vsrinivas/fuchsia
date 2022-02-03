@@ -15,10 +15,13 @@ enum IncomingRequest {
 
 #[fuchsia::component]
 async fn main() {
-    let config = Config::from_args();
+    let mut fs = ServiceFs::new_local();
+    let inspector = fuchsia_inspect::component::inspector();
+    inspect_runtime::serve(inspector, &mut fs).unwrap();
+
+    let config = Config::from_args().record_to_inspect(inspector.root());
     let receiver_config = generated_to_puppet_defined(config);
 
-    let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingRequest::Puppet);
     fs.take_and_serve_directory_handle().unwrap();
     fs.for_each_concurrent(None, move |request: IncomingRequest| {

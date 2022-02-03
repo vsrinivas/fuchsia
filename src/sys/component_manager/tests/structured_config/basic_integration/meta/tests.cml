@@ -23,6 +23,7 @@
             rights: [ "r*" ],
             path: "/hub",
         },
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
     ],
     offer: [
         {

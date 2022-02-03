@@ -1,0 +1,151 @@
+use fidl::encoding::decode_persistent;
+use fidl_my_config_lib::Config as FidlConfig;
+use fuchsia_inspect::{ArithmeticArrayProperty, ArrayProperty, Node};
+use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
+use fuchsia_zircon as zx;
+pub struct Config {
+    pub my_flag: bool,
+    pub my_int16: i16,
+    pub my_int32: i32,
+    pub my_int64: i64,
+    pub my_int8: i8,
+    pub my_string: String,
+    pub my_uint16: u16,
+    pub my_uint32: u32,
+    pub my_uint64: u64,
+    pub my_uint8: u8,
+    pub my_vector_of_flag: Vec<bool>,
+    pub my_vector_of_int16: Vec<i16>,
+    pub my_vector_of_int32: Vec<i32>,
+    pub my_vector_of_int64: Vec<i64>,
+    pub my_vector_of_int8: Vec<i8>,
+    pub my_vector_of_string: Vec<String>,
+    pub my_vector_of_uint16: Vec<u16>,
+    pub my_vector_of_uint32: Vec<u32>,
+    pub my_vector_of_uint64: Vec<u64>,
+    pub my_vector_of_uint8: Vec<u8>,
+}
+impl Config {
+    pub fn from_args() -> Self {
+        let config_vmo: zx::Vmo = take_startup_handle(HandleInfo::new(HandleType::ConfigVmo, 0))
+            .expect("must have been provided with a config vmo")
+            .into();
+        let config_size =
+            config_vmo.get_content_size().expect("must be able to read config vmo content size");
+        assert_ne!(config_size, 0, "config vmo must be non-empty");
+        let mut config_bytes = Vec::new();
+        config_bytes.resize(config_size as usize, 0);
+        config_vmo.read(&mut config_bytes, 0).expect("must be able to read config vmo");
+        let checksum_length = u16::from_le_bytes([config_bytes[0], config_bytes[1]]) as usize;
+        let fidl_start = 2 + checksum_length;
+        let observed_checksum = &config_bytes[2..fidl_start];
+        let expected_checksum = vec![
+            0xcd, 0x57, 0xb2, 0xa2, 0x89, 0xbb, 0xb6, 0x11, 0xcf, 0x81, 0x50, 0xec, 0x06, 0xc5,
+            0x06, 0x4c, 0x7c, 0xae, 0x79, 0x0f, 0xaa, 0x73, 0x0b, 0x6f, 0xa1, 0x02, 0xc3, 0x53,
+            0x7b, 0x94, 0xee, 0x1a,
+        ];
+        assert_eq!(
+            observed_checksum, expected_checksum,
+            "checksum from config VMO does not match expected checksum"
+        );
+        let fidl_config: FidlConfig = decode_persistent(&config_bytes[fidl_start..])
+            .expect("must be able to parse bytes as config FIDL");
+        Self {
+            my_flag: fidl_config.my_flag,
+            my_int16: fidl_config.my_int16,
+            my_int32: fidl_config.my_int32,
+            my_int64: fidl_config.my_int64,
+            my_int8: fidl_config.my_int8,
+            my_string: fidl_config.my_string,
+            my_uint16: fidl_config.my_uint16,
+            my_uint32: fidl_config.my_uint32,
+            my_uint64: fidl_config.my_uint64,
+            my_uint8: fidl_config.my_uint8,
+            my_vector_of_flag: fidl_config.my_vector_of_flag,
+            my_vector_of_int16: fidl_config.my_vector_of_int16,
+            my_vector_of_int32: fidl_config.my_vector_of_int32,
+            my_vector_of_int64: fidl_config.my_vector_of_int64,
+            my_vector_of_int8: fidl_config.my_vector_of_int8,
+            my_vector_of_string: fidl_config.my_vector_of_string,
+            my_vector_of_uint16: fidl_config.my_vector_of_uint16,
+            my_vector_of_uint32: fidl_config.my_vector_of_uint32,
+            my_vector_of_uint64: fidl_config.my_vector_of_uint64,
+            my_vector_of_uint8: fidl_config.my_vector_of_uint8,
+        }
+    }
+    pub fn record_to_inspect(self, root_node: &Node) -> Self {
+        root_node.record_child("config", |inspector_node| {
+            inspector_node.record_bool("my_flag", self.my_flag);
+            inspector_node.record_int("my_int16", self.my_int16 as i64);
+            inspector_node.record_int("my_int32", self.my_int32 as i64);
+            inspector_node.record_int("my_int64", self.my_int64);
+            inspector_node.record_int("my_int8", self.my_int8 as i64);
+            inspector_node.record_string("my_string", &self.my_string);
+            inspector_node.record_uint("my_uint16", self.my_uint16 as u64);
+            inspector_node.record_uint("my_uint32", self.my_uint32 as u64);
+            inspector_node.record_uint("my_uint64", self.my_uint64);
+            inspector_node.record_uint("my_uint8", self.my_uint8 as u64);
+            let arr =
+                inspector_node.create_uint_array("my_vector_of_flag", self.my_vector_of_flag.len());
+            for i in 0..self.my_vector_of_flag.len() {
+                arr.add(i, self.my_vector_of_flag[i] as u64);
+            }
+            inspector_node.record(arr);
+            let arr = inspector_node
+                .create_int_array("my_vector_of_int16", self.my_vector_of_int16.len());
+            for i in 0..self.my_vector_of_int16.len() {
+                arr.add(i, self.my_vector_of_int16[i] as i64);
+            }
+            inspector_node.record(arr);
+            let arr = inspector_node
+                .create_int_array("my_vector_of_int32", self.my_vector_of_int32.len());
+            for i in 0..self.my_vector_of_int32.len() {
+                arr.add(i, self.my_vector_of_int32[i] as i64);
+            }
+            inspector_node.record(arr);
+            let arr = inspector_node
+                .create_int_array("my_vector_of_int64", self.my_vector_of_int64.len());
+            for i in 0..self.my_vector_of_int64.len() {
+                arr.add(i, self.my_vector_of_int64[i]);
+            }
+            inspector_node.record(arr);
+            let arr =
+                inspector_node.create_int_array("my_vector_of_int8", self.my_vector_of_int8.len());
+            for i in 0..self.my_vector_of_int8.len() {
+                arr.add(i, self.my_vector_of_int8[i] as i64);
+            }
+            inspector_node.record(arr);
+            let arr = inspector_node
+                .create_string_array("my_vector_of_string", self.my_vector_of_string.len());
+            for i in 0..self.my_vector_of_string.len() {
+                arr.set(i, &self.my_vector_of_string[i]);
+            }
+            inspector_node.record(arr);
+            let arr = inspector_node
+                .create_uint_array("my_vector_of_uint16", self.my_vector_of_uint16.len());
+            for i in 0..self.my_vector_of_uint16.len() {
+                arr.add(i, self.my_vector_of_uint16[i] as u64);
+            }
+            inspector_node.record(arr);
+            let arr = inspector_node
+                .create_uint_array("my_vector_of_uint32", self.my_vector_of_uint32.len());
+            for i in 0..self.my_vector_of_uint32.len() {
+                arr.add(i, self.my_vector_of_uint32[i] as u64);
+            }
+            inspector_node.record(arr);
+            let arr = inspector_node
+                .create_uint_array("my_vector_of_uint64", self.my_vector_of_uint64.len());
+            for i in 0..self.my_vector_of_uint64.len() {
+                arr.add(i, self.my_vector_of_uint64[i]);
+            }
+            inspector_node.record(arr);
+            let arr = inspector_node
+                .create_uint_array("my_vector_of_uint8", self.my_vector_of_uint8.len());
+            for i in 0..self.my_vector_of_uint8.len() {
+                arr.add(i, self.my_vector_of_uint8[i] as u64);
+            }
+            inspector_node.record(arr);
+        });
+        self
+    }
+}

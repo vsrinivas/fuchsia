@@ -206,6 +206,10 @@ template("rust_config_client_lib_source") {
       rebase_path("//rustfmt.toml", root_build_dir),
     ]
 
+    if (defined(invoker.with_inspect) && invoker.with_inspect) {
+      args += [ "--with-inspect" ]
+    }
+
     if (!defined(deps)) {
       deps = []
     }

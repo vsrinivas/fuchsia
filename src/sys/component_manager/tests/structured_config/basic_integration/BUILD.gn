@@ -16,6 +16,8 @@ rustc_test("test_bin") {
     "fidl:test.structuredconfig.receiver-rustc",
     "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",

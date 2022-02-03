@@ -185,11 +185,12 @@ server_mode_ bool;
         assert_eq!(observed_fidl_src, expected_fidl_src);
 
         let actual_rust_src =
-            rust::create_rust_wrapper(&decl, "cf.sc.internal".to_string()).unwrap();
+            rust::create_rust_wrapper(&decl, "cf.sc.internal".to_string(), true).unwrap();
 
         let expected_rust_src = quote! {
             use fidl_cf_sc_internal::Config as FidlConfig;
             use fidl::encoding::decode_persistent;
+            use fuchsia_inspect::{Node};
             use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
             use fuchsia_zircon as zx;
 
@@ -243,6 +244,21 @@ server_mode_ bool;
                         unsafe_: fidl_config.unsafe_,
                         server_mode_: fidl_config.server_mode_
                     }
+                }
+               pub fn record_to_inspect(self, root_node : & Node) -> Self {
+                    root_node.record_child("config", |inspector_node| {
+                        inspector_node.record_bool("snake_case_string", self.snake_case_string);
+                        inspector_node.record_bool("lowerCamelCaseString", self.lower_camel_case_string);
+                        inspector_node.record_bool("UpperCamelCaseString", self.upper_camel_case_string);
+                        inspector_node.record_bool("CONST_CASE", self.const_case);
+                        inspector_node.record_bool("stringThatHas02Digits", self.string_that_has02_digits);
+                        inspector_node.record_bool("mixedLowerCamel_snakeCaseString", self.mixed_lower_camel_snake_case_string);
+                        inspector_node.record_bool("MixedUpperCamel_SnakeCaseString", self.mixed_upper_camel_snake_case_string);
+                        inspector_node.record_bool("multiple__underscores", self.multiple__underscores);
+                        inspector_node.record_bool("unsafe", self.unsafe_);
+                        inspector_node.record_bool("ServerMode", self.server_mode_);
+                    });
+                    self
                 }
             }
         }.to_string();

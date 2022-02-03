@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use cm_rust::{ConfigChecksum, FidlIntoNative, ListValue, SingleValue, Value};
+use diagnostics_reader::{ArchiveReader, Inspect};
 use fidl::encoding::decode_persistent;
 use fidl_test_structuredconfig_receiver::{ConfigReceiverPuppetMarker, ReceiverConfig};
+use fuchsia_inspect::assert_data_tree;
 use std::fs::{read_dir, read_to_string};
 use std::path::Path;
 
@@ -89,6 +91,79 @@ async fn resolve_structured_config_in_child() {
         let value = read_to_string(file).unwrap();
         assert_eq!(value, expected_value);
     }
+
+    let inspector = ArchiveReader::new()
+        .add_selector("receiver:root")
+        .snapshot::<Inspect>()
+        .await
+        .unwrap()
+        .into_iter()
+        .next()
+        .and_then(|result| result.payload)
+        .unwrap();
+
+    assert_data_tree!(inspector, root: {
+        config: {
+            my_flag: expected_my_flag(),
+            my_uint8: 255u64,
+            my_uint16: 65535u64,
+            my_uint32: 4000000000u64,
+            my_uint64: 8000000000u64,
+            my_int8: -127i64,
+            my_int16: -32766i64,
+            my_int32: -2000000000i64,
+            my_int64: -4000000000i64,
+            my_string: "hello, world!",
+            my_vector_of_flag: vec![
+                1i64,
+                0i64
+            ],
+            my_vector_of_uint8: vec![
+                1i64,
+                2i64,
+                3i64,
+            ],
+            my_vector_of_uint16: vec![
+                2i64,
+                3i64,
+                4i64,
+            ],
+            my_vector_of_uint32: vec![
+                3i64,
+                4i64,
+                5i64,
+            ],
+            my_vector_of_uint64: vec![
+                4i64,
+                5i64,
+                6i64,
+            ],
+            my_vector_of_int8: vec![
+                -1i64,
+                -2i64,
+                3i64,
+            ],
+            my_vector_of_int16: vec![
+                -2i64,
+                -3i64,
+                4i64,
+            ],
+            my_vector_of_int32: vec![
+                -3i64,
+                -4i64,
+                5i64,
+            ],
+            my_vector_of_int64: vec![
+                -4i64,
+                -5i64,
+                6i64,
+            ],
+            my_vector_of_string: vec![
+                "hello, world!",
+                "hello, again!"
+            ]
+        }
+    })
 }
 
 #[fuchsia::test]

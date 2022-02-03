@@ -38,6 +38,10 @@ pub struct GenerateRustSource {
     /// path to rustfmt.toml configuration file
     #[argh(option)]
     rustfmt_config: PathBuf,
+
+    /// whether or not to include config values in inspect
+    #[argh(switch)]
+    with_inspect: bool,
 }
 
 impl GenerateRustSource {
@@ -52,9 +56,12 @@ impl GenerateRustSource {
             .as_ref()
             .ok_or_else(|| anyhow::format_err!("missing config declaration in manifest"))?;
 
-        let rust_contents =
-            config_client::rust::create_rust_wrapper(config_decl, self.fidl_library_name)
-                .context("creating rust wrapper")?;
+        let rust_contents = config_client::rust::create_rust_wrapper(
+            config_decl,
+            self.fidl_library_name,
+            self.with_inspect,
+        )
+        .context("creating rust wrapper")?;
 
         let formatted_rust_contents =
             format_source(self.rustfmt, self.rustfmt_config, rust_contents)?;
