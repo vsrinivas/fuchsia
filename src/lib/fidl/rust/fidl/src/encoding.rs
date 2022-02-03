@@ -2753,8 +2753,9 @@ pub fn encode_in_envelope(
                     let inline_size = x.inline_size(encoder.context);
                     if inline_size <= 4 {
                         let handles_before = encoder.handles.len();
+                        let mut padding = 0u32;
+                        padding.encode(encoder, offset, recursion_depth)?;
                         x.encode(encoder, offset, recursion_depth)?;
-                        encoder.padding(offset + inline_size, 4 - inline_size);
                         let mut handles_written = (encoder.handles.len() - handles_before) as u16;
                         handles_written.encode(encoder, offset + 4, recursion_depth)?;
                         let mut inline_marker = 1u16;
