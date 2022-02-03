@@ -11,7 +11,7 @@
 
 #include <fuzzer/FuzzedDataProvider.h>
 
-#include "ftl-shell.h"
+#include "src/devices/block/drivers/ftl/tests/ftl-shell.h"
 
 namespace {
 

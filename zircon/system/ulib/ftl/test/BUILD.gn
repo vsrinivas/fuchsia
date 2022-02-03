@@ -36,3 +36,21 @@ test("ftl-test") {
 fuchsia_unittest_package("ftl-library-test") {
   deps = [ ":ftl-test" ]
 }
+
+source_set("ftl-workload-fuzzer") {
+  sources = [ "ftl_workload_fuzzer.cc" ]
+  deps = [
+    "//src/devices/block/drivers/ftl/tests:shared",
+    "//zircon/system/ulib/ftl",
+    "//zircon/system/ulib/ftl:private_headers",
+  ]
+}
+
+source_set("ftl-read-write-fuzzer") {
+  sources = [ "ftl_read_write_fuzzer.cc" ]
+  deps = [
+    "//src/devices/block/drivers/ftl/tests:shared",
+    "//zircon/system/ulib/ftl",
+    "//zircon/system/ulib/ftl:private_headers",
+  ]
+}

@@ -426,7 +426,8 @@ int FtlnReport(void* vol, ui32 msg, ...) {
         FtlnStats(ftl);
         FtlnBlkStats(ftl);
       } else {
-        printf("FTL: total blocks: %u, free blocks: %u\n", ftl->num_blks, ftl->num_free_blks);
+        ftl->logger.info(__FILE__, __LINE__, "FTL: total blocks: %u, free blocks: %u\n",
+                         ftl->num_blks, ftl->num_free_blks);
       }
 
       // Return success.

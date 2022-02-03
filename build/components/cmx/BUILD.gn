@@ -212,6 +212,7 @@ group("cmx_allowlist") {
     "//src/storage/extractor/*",
     "//src/storage/fshost/*",
     "//src/storage/fuchsia-fatfs/*",
+    "//src/storage/fuzzers/*",
     "//src/storage/fvm/*",
     "//src/storage/lib/paver/*",
     "//src/storage/memfs/*",

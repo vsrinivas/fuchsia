@@ -1,0 +1,32 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/cpp_fuzzer.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":ftl-fuzzers" ]
+}
+
+group("fuzzers") {
+  testonly = true
+  deps = [ ":ftl-fuzzers" ]
+}
+
+fuzzer("ftl-workload-fuzzer") {
+  deps = [ "//zircon/system/ulib/ftl/test:ftl-workload-fuzzer" ]
+}
+
+fuzzer("ftl-read-write-fuzzer") {
+  deps = [ "//zircon/system/ulib/ftl/test:ftl-read-write-fuzzer" ]
+}
+
+fuzzer_package("ftl-fuzzers") {
+  cpp_fuzzers = [
+    ":ftl-workload-fuzzer",
+    ":ftl-read-write-fuzzer",
+  ]
+  fuzz_host = true
+}
