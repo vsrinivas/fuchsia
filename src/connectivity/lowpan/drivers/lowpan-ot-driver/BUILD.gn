@@ -89,6 +89,16 @@ fuchsia_package_with_single_component("lowpan-ot-driver") {
 fuchsia_unittest_package("lowpan-ot-driver-test") {
   manifest = "meta/lowpan-ot-driver-test.cmx"
   deps = [ ":bin_test" ]
+  test_specs = {
+    environments = [
+      {
+        dimensions = {
+          device_type = "QEMU"
+        }
+        tags = [ "flaky" ]  # fxbug.dev/92419
+      },
+    ]
+  }
 }
 
 config_data("config-default") {
