@@ -279,7 +279,6 @@ where
 /// Device information kept in [`DeviceInfo`].
 #[cfg_attr(test, derive(Debug))]
 pub struct CommonInfo {
-    path: String,
     client: eth::Client,
     mac: UnicastAddr<Mac>,
     mtu: u32,
@@ -290,7 +289,6 @@ pub struct CommonInfo {
 
 impl CommonInfo {
     pub fn new(
-        path: String,
         client: eth::Client,
         mac: UnicastAddr<Mac>,
         mtu: u32,
@@ -298,7 +296,7 @@ impl CommonInfo {
         admin_enabled: bool,
         phy_up: bool,
     ) -> Self {
-        Self { path, client, mac, mtu, features, admin_enabled, phy_up }
+        Self { client, mac, mtu, features, admin_enabled, phy_up }
     }
 }
 
@@ -329,10 +327,6 @@ where
 }
 
 impl<C> DeviceInfo<C, CommonInfo> {
-    pub fn path(&self) -> &String {
-        &self.info.path
-    }
-
     pub fn client(&self) -> &eth::Client {
         &self.info.client
     }

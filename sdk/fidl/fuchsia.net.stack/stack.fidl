@@ -4,7 +4,6 @@
 library fuchsia.net.stack;
 
 using fuchsia.hardware.ethernet;
-using fuchsia.net.interfaces;
 using fuchsia.net.name;
 using fuchsia.net;
 
@@ -56,62 +55,6 @@ protocol Stack {
     DelEthernetInterface(struct {
         id fuchsia.net.interface_id;
     }) -> (struct {}) error Error;
-
-    // TODO(https://fxbug.dev/75554): Migrate callers and remove this.
-    /// List all the interfaces available in the network stack.
-    @deprecated("Use fuchsia.net.interfaces/Watcher")
-    ListInterfaces() -> (struct {
-        ifs vector<@generated_name("InterfaceInfo") struct {
-            /// An opaque identifier for the interface, assigned by the stack. This
-            /// identifier will never be 0, and will not be reused even if the device is
-            /// removed and subsequently re-added. It is not stable across netstack
-            /// instances.
-            id fuchsia.net.interface_id;
-
-            /// All info of an interface except the interface name.
-            properties @generated_name("InterfaceProperties") struct {
-                /// Human-readable name of the interface. eg. eth001, wlanx35.
-                name fuchsia.net.interfaces.name;
-
-                /// The topological path to the device, representing a stable identifier
-                /// for the interface hardware.
-                topopath device_path;
-
-                /// An unstable file path corresponding to the interface. Used in
-                /// watching the creation and destruction of the interface, or in
-                /// accessing the interface using netdump.
-                filepath device_path;
-
-                /// The MAC address of the interface, if available.
-                mac box<fuchsia.hardware.ethernet.MacAddress>;
-
-                /// The maximum transmission unit for the interface in bytes.
-                mtu uint32;
-
-                /// The features present on the interface.
-                features fuchsia.hardware.ethernet.Features;
-
-                /// The administrative status of the interface.
-                administrative_status strict enum {
-                    /// The interface is administratively disabled.
-                    DISABLED = 1;
-                    /// The interface is administratively enabled.
-                    ENABLED = 2;
-                };
-
-                /// The physical link status of the interface.
-                physical_status strict enum {
-                    /// The link is not attached to the medium.
-                    DOWN = 1;
-                    /// The link is attached to the medium.
-                    UP = 2;
-                };
-
-                /// The list of addresses currently assigned to the interface.
-                addresses vector<fuchsia.net.Subnet>:MAX;
-            };
-        }>:255;
-    });
 
     /// Enable the interface. Packets may be processed by the stack after this
     /// call is processed.

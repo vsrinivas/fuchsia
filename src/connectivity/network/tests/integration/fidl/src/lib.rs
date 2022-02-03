@@ -4,8 +4,10 @@
 
 #![cfg(test)]
 
+use std::collections::HashMap;
+
 use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
-use fidl_fuchsia_net_stack as net_stack;
+use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
 use fidl_fuchsia_netemul as fnetemul;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
@@ -154,36 +156,8 @@ async fn test_no_duplicate_interface_names() {
 async fn add_ethernet_interface<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-        .expect("connect to protocol");
-    let device =
-        sandbox.create_endpoint::<netemul::Ethernet, _>(name).await.expect("create endpoint");
-
-    let iface = device.into_interface_in_realm(&realm).await.expect("add device");
-
-    let interface = stack
-        .list_interfaces()
-        .await
-        .expect("list interfaces")
-        .into_iter()
-        .find(|interface| interface.id == iface.id())
-        .expect("find added ethernet interface");
-    assert!(
-        !interface.properties.features.contains(fidl_fuchsia_hardware_ethernet::Features::LOOPBACK),
-        "unexpected interface features: ({:b}).contains({:b})",
-        interface.properties.features,
-        fidl_fuchsia_hardware_ethernet::Features::LOOPBACK
-    );
-    assert_eq!(interface.properties.physical_status, fidl_fuchsia_net_stack::PhysicalStatus::Down);
-}
-
-#[variants_test]
-async fn add_del_interface_address<N: Netstack>(name: &str) {
-    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+    let interfaces_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("connect to protocol");
     let device =
         sandbox.create_endpoint::<netemul::Ethernet, _>(name).await.expect("create endpoint");
@@ -191,19 +165,70 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
     let iface = device.into_interface_in_realm(&realm).await.expect("add device");
     let id = iface.id();
 
-    // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=20989#c5): netstack3 doesn't
-    // allow addresses to be added while link is down.
+    let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+            .expect("create event stream"),
+        HashMap::new(),
+    )
+    .await
+    .expect("fetch existing interfaces");
+    let fidl_fuchsia_net_interfaces_ext::Properties {
+        id: _,
+        name: _,
+        device_class,
+        online,
+        addresses: _,
+        has_default_ipv4_route: _,
+        has_default_ipv6_route: _,
+    } = interfaces.get(&id).expect("find added ethernet interface");
+    assert_eq!(
+        *device_class,
+        fidl_fuchsia_net_interfaces::DeviceClass::Device(
+            fidl_fuchsia_hardware_network::DeviceClass::Ethernet
+        )
+    );
+    assert!(!online);
+}
+
+#[variants_test]
+async fn add_del_interface_address<N: Netstack>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let stack =
+        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
+    let interfaces_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+    let device =
+        sandbox.create_endpoint::<netemul::Ethernet, _>(name).await.expect("create endpoint");
+
+    let iface = device.into_interface_in_realm(&realm).await.expect("add device");
+    let id = iface.id();
+
+    // TODO(https://fxbug.dev/20989#c5): netstack3 doesn't allow addresses to be added while
+    // link is down.
     let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
     let () = iface.set_link_up(true).await.expect("bring device up");
+    // TODO(https://fxbug.dev/60923): N3 doesn't implement watcher events past idle.
     loop {
-        let info = stack
-            .list_interfaces()
-            .await
-            .expect("list interfaces")
-            .into_iter()
-            .find(|interface| interface.id == id)
-            .expect("find added ethernet interface");
-        if info.properties.physical_status == net_stack::PhysicalStatus::Up {
+        let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
+            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+                .expect("create event stream"),
+            HashMap::new(),
+        )
+        .await
+        .expect("fetch existing interfaces");
+
+        let fidl_fuchsia_net_interfaces_ext::Properties {
+            id: _,
+            name: _,
+            device_class: _,
+            online,
+            addresses: _,
+            has_default_ipv4_route: _,
+            has_default_ipv6_route: _,
+        } = interfaces.get(&id).expect("find added ethernet interface");
+        if *online {
             break;
         }
     }
@@ -220,13 +245,13 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
         .add_interface_address(id, &mut interface_address)
         .await
         .expect("add_interface_address");
-    assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::AlreadyExists));
+    assert_eq!(res, Err(fnet_stack::Error::AlreadyExists));
 
     let res = stack
         .add_interface_address(id + 1, &mut interface_address)
         .await
         .expect("add_interface_address");
-    assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::NotFound));
+    assert_eq!(res, Err(fnet_stack::Error::NotFound));
 
     let error = stack
         .add_interface_address(
@@ -236,13 +261,10 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
         .await
         .expect("add_interface_address")
         .unwrap_err();
-    assert_eq!(error, fidl_fuchsia_net_stack::Error::InvalidArgs);
+    assert_eq!(error, fnet_stack::Error::InvalidArgs);
 
-    let interface_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
     let interface = fidl_fuchsia_net_interfaces_ext::existing(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
             .expect("create event stream"),
         fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
     )
@@ -266,7 +288,7 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
     assert_eq!(res, Ok(()));
 
     let interface = fidl_fuchsia_net_interfaces_ext::existing(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
             .expect("create watcher event stream"),
         fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
     )
@@ -290,14 +312,12 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
 async fn remove_interface_and_address<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-        .expect("connect to protocol");
+    let stack =
+        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
     // NB: A second channel is needed in order for the address removal
     // requests and the interface removal request to be served concurrently.
-    let stack2 = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-        .expect("connect to protocol");
+    let stack2 =
+        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
 
     let mut addresses = (0..32)
         .map(|i| fidl_fuchsia_net::Subnet {
@@ -325,7 +345,7 @@ async fn remove_interface_and_address<E: netemul::Endpoint>(name: &str) {
             futures::stream::iter(addresses.iter_mut()).for_each_concurrent(None, |addr| {
                 stack.del_interface_address(iface.id(), addr).map(|r| {
                     match r.expect("call del_interface_address") {
-                        Ok(()) | Err(fidl_fuchsia_net_stack::Error::NotFound) => {}
+                        Ok(()) | Err(fnet_stack::Error::NotFound) => {}
                         Err(e) => panic!("delete interface address error: {:?}", e),
                     }
                 })
@@ -365,7 +385,7 @@ async fn test_log_packets() {
         let realm = sandbox.create_realm(name, [netstack]).expect("create realm");
 
         let netstack_proxy =
-            realm.connect_to_protocol::<net_stack::LogMarker>().expect("connect to netstack");
+            realm.connect_to_protocol::<fnet_stack::LogMarker>().expect("connect to netstack");
         (realm, netstack_proxy)
     };
     let () = stack_log.set_log_packets(true).await.expect("enable packet logging");
@@ -415,9 +435,8 @@ async fn disable_interface_loopback() {
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-        .expect("connect to protocol");
+    let stack =
+        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -630,7 +649,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
 
     if let Some(config) = forwarding_config {
         let stack = realm
-            .connect_to_protocol::<net_stack::StackMarker>()
+            .connect_to_protocol::<fnet_stack::StackMarker>()
             .expect("error connecting to stack");
 
         match config {

@@ -5,7 +5,7 @@
 #![cfg(test)]
 
 use anyhow::Context as _;
-use fidl_fuchsia_net_stack as net_stack;
+use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
 use fuchsia_zircon as zx;
@@ -31,9 +31,8 @@ async fn watcher_existing<N: Netstack>(name: &str) {
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-        .expect("connect to protocol");
+    let stack =
+        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     enum Expectation {
@@ -108,6 +107,10 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         }
     }
 
+    let interfaces_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+
     let mut eps = Vec::new();
     let mut expectations = HashMap::new();
     for (idx, (has_default_ipv4_route, has_default_ipv6_route)) in
@@ -124,19 +127,30 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         let iface = ep.into_interface_in_realm(&realm).await.expect("add device to stack");
         let id = iface.id();
 
-        // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=20989#c5): netstack3 doesn't
-        // allow addresses to be added while link is down.
+        // TODO(https://fxbug.dev/20989#c5): netstack3 doesn't allow addresses to be added while
+        // link is down.
         let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
         let () = iface.set_link_up(true).await.expect("bring device up");
+        // TODO(https://fxbug.dev/60923): N3 doesn't implement watcher events past idle.
         loop {
-            let info = stack
-                .list_interfaces()
-                .await
-                .expect("list interfaces")
-                .into_iter()
-                .find(|interface| interface.id == id)
-                .expect("find added ethernet interface");
-            if info.properties.physical_status == net_stack::PhysicalStatus::Up {
+            let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
+                fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+                    .expect("create event stream"),
+                HashMap::new(),
+            )
+            .await
+            .expect("fetch existing interfaces");
+
+            let fidl_fuchsia_net_interfaces_ext::Properties {
+                id: _,
+                name: _,
+                device_class: _,
+                online,
+                addresses: _,
+                has_default_ipv4_route: _,
+                has_default_ipv6_route: _,
+            } = interfaces.get(&id).expect("find added ethernet interface");
+            if *online {
                 break;
             }
         }
@@ -182,7 +196,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
 
         if has_default_ipv4_route {
             stack
-                .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                .add_forwarding_entry(&mut fnet_stack::ForwardingEntry {
                     subnet: fidl_subnet!("0.0.0.0/0"),
                     device_id: id,
                     next_hop: None,
@@ -195,7 +209,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
 
         if has_default_ipv6_route {
             stack
-                .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                .add_forwarding_entry(&mut fnet_stack::ForwardingEntry {
                     subnet: fidl_subnet!("::/0"),
                     device_id: id,
                     next_hop: None,
@@ -216,9 +230,6 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         NetstackVersion::Netstack3 => {}
     }
 
-    let interfaces_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
     let mut interfaces = fidl_fuchsia_net_interfaces_ext::existing(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
             .expect("create event stream"),
@@ -297,9 +308,8 @@ async fn watcher_after_state_closed<N: Netstack>(name: &str) {
 async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-        .expect("connect to protocol");
+    let stack =
+        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
 
     let iface = device.into_interface_in_realm(&realm).await.expect("add device");
@@ -343,9 +353,8 @@ async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) {
 async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-        .expect("connect to protocol");
+    let stack =
+        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
 
     let iface = device.into_interface_in_realm(&realm).await.expect("add device");
@@ -712,9 +721,8 @@ async fn test_watcher() {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm =
         sandbox.create_netstack_realm::<Netstack2, _>("test_watcher").expect("create realm");
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-        .expect("connect to protocol");
+    let stack =
+        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -977,7 +985,7 @@ async fn test_watcher() {
 
     // Add a default route.
     let () = assert_blocked(&mut blocking_stream).await;
-    let mut default_v4_entry = fidl_fuchsia_net_stack::ForwardingEntry {
+    let mut default_v4_entry = fnet_stack::ForwardingEntry {
         subnet: fidl_subnet!("0.0.0.0/0"),
         device_id: 0,
         next_hop: Some(Box::new(fidl_ip!("192.168.255.254"))),

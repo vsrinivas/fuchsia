@@ -7,10 +7,7 @@ use std::ops::DerefMut as _;
 use super::{
     devices::{CommonInfo, Devices},
     ethernet_worker,
-    util::{
-        IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidl as _,
-        TryIntoFidlWithContext as _,
-    },
+    util::{IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidlWithContext as _},
     DeviceStatusNotifier, InterfaceControl as _, Lockable, LockableContext,
     MutableDeviceState as _,
 };
@@ -18,15 +15,14 @@ use super::{
 use fidl::prelude::*;
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack::{
-    self as fidl_net_stack, AdministrativeStatus, ForwardingEntry, InterfaceInfo,
-    InterfaceProperties, PhysicalStatus, StackRequest, StackRequestStream,
+    self as fidl_net_stack, ForwardingEntry, StackRequest, StackRequestStream,
 };
 use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
-use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr, Witness as _};
+use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_device_route, del_ip_addr, get_all_ip_addr_subnets,
-    get_all_routes, initialize_device, Ctx, EntryEither,
+    add_ip_addr_subnet, add_route, del_device_route, del_ip_addr, get_all_routes,
+    initialize_device, Ctx, EntryEither,
 };
 
 pub(crate) struct StackFidlWorker<C> {
@@ -68,12 +64,6 @@ where
                         responder_send!(
                             responder,
                             &mut worker.lock_worker().await.fidl_del_ethernet_interface(id)
-                        );
-                    }
-                    StackRequest::ListInterfaces { responder } => {
-                        responder_send!(
-                            responder,
-                            &mut worker.lock_worker().await.fidl_list_interfaces().iter_mut()
                         );
                     }
                     StackRequest::EnableInterface { id, responder } => {
@@ -174,7 +164,7 @@ where
 {
     async fn fidl_add_ethernet_interface(
         mut self,
-        topological_path: String,
+        _topological_path: String,
         device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
     ) -> Result<u64, fidl_net_stack::Error> {
         let (client, info) = ethernet_worker::setup_ethernet(
@@ -196,15 +186,7 @@ where
         // We do not support updating the device's mac-address, mtu, and
         // features during it's lifetime, their cached states are hence not
         // updated once initialized.
-        let comm_info = CommonInfo::new(
-            topological_path,
-            client,
-            mac_addr,
-            info.mtu,
-            info.features,
-            true,
-            online,
-        );
+        let comm_info = CommonInfo::new(client, mac_addr, info.mtu, info.features, true, online);
 
         let devices: &mut Devices = dispatcher.as_mut();
         let id = if online {
@@ -258,48 +240,6 @@ where
     C: LockableContext,
     C::Dispatcher: AsRef<Devices>,
 {
-    fn fidl_list_interfaces(self) -> Vec<fidl_net_stack::InterfaceInfo> {
-        let mut devices = Vec::new();
-        for device in self.ctx.dispatcher.as_ref().iter_devices() {
-            let mut addresses = Vec::new();
-            if let Some(core_id) = device.core_id() {
-                for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
-                    match addr.try_into_fidl() {
-                        Ok(addr) => addresses.push(addr),
-                        Err(e) => {
-                            error!("failed to map interface address/subnet into FIDL: {:?}", e)
-                        }
-                    }
-                }
-            };
-            devices.push(InterfaceInfo {
-                id: device.id(),
-                properties: InterfaceProperties {
-                    name: "[TBD]".to_owned(), // TODO(porce): Follow up to populate the name
-                    topopath: device.path().clone(),
-                    filepath: "[TBD]".to_owned(), // TODO(porce): Follow up to populate
-                    mac: Some(Box::new(fidl_fuchsia_hardware_ethernet::MacAddress {
-                        octets: device.mac().get().bytes(),
-                    })),
-                    mtu: device.mtu(),
-                    features: device.features(),
-                    administrative_status: if device.admin_enabled() {
-                        AdministrativeStatus::Enabled
-                    } else {
-                        AdministrativeStatus::Disabled
-                    },
-                    physical_status: if device.phy_up() {
-                        PhysicalStatus::Up
-                    } else {
-                        PhysicalStatus::Down
-                    },
-                    addresses, // TODO(gongt) Handle tentative IPv6 addresses
-                },
-            });
-        }
-        devices
-    }
-
     fn fidl_add_interface_address(
         mut self,
         id: u64,
