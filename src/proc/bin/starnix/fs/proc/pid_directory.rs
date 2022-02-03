@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::fs::*;
 use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::mode;
-use crate::task::{CurrentTask, EventHandler, Task, Waiter};
+use crate::task::{CurrentTask, Task};
 use crate::types::*;
 use crate::{
     errno, error, fd_impl_directory, fd_impl_nonblocking, fd_impl_seekable, fs_node_impl_symlink,

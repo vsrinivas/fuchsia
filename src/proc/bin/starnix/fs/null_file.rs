@@ -5,13 +5,10 @@
 use crate::error;
 use crate::fd_impl_nonblocking;
 use crate::fd_impl_nonseekable;
-use crate::fs::FdEvents;
 use crate::fs::FileObject;
 use crate::fs::FileOps;
-use crate::fs::SeekOrigin;
-use crate::task::{CurrentTask, EventHandler, Waiter};
+use crate::task::CurrentTask;
 use crate::types::*;
-use std::sync::Arc;
 
 /// A structure whose FileOps match the null file object.
 pub struct NullFile;

@@ -20,7 +20,7 @@ use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::logging::impossible_error;
 use crate::syscalls::*;
-use crate::task::{CurrentTask, EventHandler, Waiter};
+use crate::task::CurrentTask;
 use crate::types::*;
 
 #[derive(Clone)]

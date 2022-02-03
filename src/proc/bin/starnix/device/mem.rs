@@ -9,7 +9,6 @@ use crate::fd_impl_nonblocking;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
-use std::sync::Arc;
 
 pub fn open_mem_device(minor: u32) -> Result<Box<dyn FileOps>, Errno> {
     match minor {

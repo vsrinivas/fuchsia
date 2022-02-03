@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 mod device_type;
-mod errno;
 mod file_mode;
 mod mount_flags;
 mod open_flags;
@@ -14,6 +13,7 @@ mod user_address;
 mod user_buffer;
 
 pub mod as_any;
+pub mod errno;
 pub mod range_ext;
 pub mod uapi;
 

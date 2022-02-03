@@ -21,7 +21,6 @@ use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::mm::vmo::round_up_to_increment;
 use crate::syscalls::*;
-use crate::task::{EventHandler, Waiter};
 use crate::types::*;
 
 pub struct DmaBufNode {}

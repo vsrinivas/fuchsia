@@ -6,7 +6,6 @@ use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
 use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable, mode};
-use std::sync::Arc;
 
 struct SeLinuxFs;
 impl FileSystemOps for SeLinuxFs {}

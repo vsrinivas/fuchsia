@@ -148,30 +148,33 @@ macro_rules! fd_impl_nonseekable {
     () => {
         fn read_at(
             &self,
-            _file: &FileObject,
-            _current_task: &CurrentTask,
+            _file: &crate::fs::FileObject,
+            _current_task: &crate::task::CurrentTask,
             _offset: usize,
-            _data: &[UserBuffer],
-        ) -> Result<usize, Errno> {
-            error!(ESPIPE)
+            _data: &[crate::types::UserBuffer],
+        ) -> Result<usize, crate::types::Errno> {
+            use crate::types::errno::ESPIPE;
+            crate::error!(ESPIPE)
         }
         fn write_at(
             &self,
-            _file: &FileObject,
-            _current_task: &CurrentTask,
+            _file: &crate::fs::FileObject,
+            _current_task: &crate::task::CurrentTask,
             _offset: usize,
-            _data: &[UserBuffer],
-        ) -> Result<usize, Errno> {
-            error!(ESPIPE)
+            _data: &[crate::types::UserBuffer],
+        ) -> Result<usize, crate::types::Errno> {
+            use crate::types::errno::ESPIPE;
+            crate::error!(ESPIPE)
         }
         fn seek(
             &self,
-            _file: &FileObject,
-            _current_task: &CurrentTask,
-            _offset: off_t,
-            _whence: SeekOrigin,
-        ) -> Result<off_t, Errno> {
-            error!(ESPIPE)
+            _file: &crate::fs::FileObject,
+            _current_task: &crate::task::CurrentTask,
+            _offset: crate::types::off_t,
+            _whence: crate::fs::SeekOrigin,
+        ) -> Result<crate::types::off_t, crate::types::Errno> {
+            use crate::types::errno::ESPIPE;
+            crate::error!(ESPIPE)
         }
     };
 }
@@ -183,49 +186,50 @@ macro_rules! fd_impl_seekable {
     () => {
         fn read(
             &self,
-            file: &FileObject,
-            current_task: &CurrentTask,
-            data: &[UserBuffer],
-        ) -> Result<usize, Errno> {
+            file: &crate::fs::FileObject,
+            current_task: &crate::task::CurrentTask,
+            data: &[crate::types::UserBuffer],
+        ) -> Result<usize, crate::types::Errno> {
             let mut offset = file.offset.lock();
             let size = self.read_at(file, current_task, *offset as usize, data)?;
-            *offset += size as off_t;
+            *offset += size as crate::types::off_t;
             Ok(size)
         }
         fn write(
             &self,
-            file: &FileObject,
-            current_task: &CurrentTask,
-            data: &[UserBuffer],
-        ) -> Result<usize, Errno> {
+            file: &crate::fs::FileObject,
+            current_task: &crate::task::CurrentTask,
+            data: &[crate::types::UserBuffer],
+        ) -> Result<usize, crate::types::Errno> {
             let mut offset = file.offset.lock();
             if file.flags().contains(OpenFlags::APPEND) {
-                *offset = file.node().info().size as off_t;
+                *offset = file.node().info().size as crate::types::off_t;
             }
             let size = self.write_at(file, current_task, *offset as usize, data)?;
-            *offset += size as off_t;
+            *offset += size as crate::types::off_t;
             Ok(size)
         }
         fn seek(
             &self,
-            file: &FileObject,
-            _current_task: &CurrentTask,
-            offset: off_t,
-            whence: SeekOrigin,
-        ) -> Result<off_t, Errno> {
+            file: &crate::fs::FileObject,
+            _current_task: &crate::task::CurrentTask,
+            offset: crate::types::off_t,
+            whence: crate::fs::SeekOrigin,
+        ) -> Result<crate::types::off_t, crate::types::Errno> {
+            use crate::types::errno::EINVAL;
             let mut current_offset = file.offset.lock();
             let new_offset = match whence {
-                SeekOrigin::SET => Some(offset),
-                SeekOrigin::CUR => (*current_offset).checked_add(offset),
-                SeekOrigin::END => {
+                crate::fs::SeekOrigin::SET => Some(offset),
+                crate::fs::SeekOrigin::CUR => (*current_offset).checked_add(offset),
+                crate::fs::SeekOrigin::END => {
                     let stat = file.node().stat()?;
-                    offset.checked_add(stat.st_size as off_t)
+                    offset.checked_add(stat.st_size as crate::types::off_t)
                 }
             }
-            .ok_or(errno!(EINVAL))?;
+            .ok_or(crate::errno!(EINVAL))?;
 
             if new_offset < 0 {
-                return error!(EINVAL);
+                return crate::error!(EINVAL);
             }
 
             *current_offset = new_offset;
@@ -239,40 +243,44 @@ macro_rules! fd_impl_directory {
     () => {
         fn read(
             &self,
-            _file: &FileObject,
-            _current_task: &CurrentTask,
-            _data: &[UserBuffer],
-        ) -> Result<usize, Errno> {
-            error!(EISDIR)
+            _file: &crate::fs::FileObject,
+            _current_task: &crate::task::CurrentTask,
+            _data: &[crate::types::UserBuffer],
+        ) -> Result<usize, crate::types::Errno> {
+            use crate::types::errno::EISDIR;
+            crate::error!(EISDIR)
         }
 
         fn read_at(
             &self,
-            _file: &FileObject,
-            _current_task: &CurrentTask,
+            _file: &crate::fs::FileObject,
+            _current_task: &crate::task::CurrentTask,
             _offset: usize,
-            _data: &[UserBuffer],
-        ) -> Result<usize, Errno> {
-            error!(EISDIR)
+            _data: &[crate::types::UserBuffer],
+        ) -> Result<usize, crate::types::Errno> {
+            use crate::types::errno::EISDIR;
+            crate::error!(EISDIR)
         }
 
         fn write(
             &self,
-            _file: &FileObject,
-            _current_task: &CurrentTask,
-            _data: &[UserBuffer],
-        ) -> Result<usize, Errno> {
-            error!(EISDIR)
+            _file: &crate::fs::FileObject,
+            _current_task: &crate::task::CurrentTask,
+            _data: &[crate::types::UserBuffer],
+        ) -> Result<usize, crate::types::Errno> {
+            use crate::types::errno::EISDIR;
+            crate::error!(EISDIR)
         }
 
         fn write_at(
             &self,
-            _file: &FileObject,
-            _current_task: &CurrentTask,
+            _file: &crate::fs::FileObject,
+            _current_task: &crate::task::CurrentTask,
             _offset: usize,
-            _data: &[UserBuffer],
-        ) -> Result<usize, Errno> {
-            error!(EISDIR)
+            _data: &[crate::types::UserBuffer],
+        ) -> Result<usize, crate::types::Errno> {
+            use crate::types::errno::EISDIR;
+            crate::error!(EISDIR)
         }
     };
 }
@@ -282,16 +290,16 @@ macro_rules! fd_impl_nonblocking {
     () => {
         fn wait_async(
             &self,
-            _file: &FileObject,
-            _current_task: &CurrentTask,
-            _waiter: &Arc<Waiter>,
-            _events: FdEvents,
-            _handler: EventHandler,
+            _file: &crate::fs::FileObject,
+            _current_task: &crate::task::CurrentTask,
+            _waiter: &std::sync::Arc<crate::task::Waiter>,
+            _events: crate::fs::FdEvents,
+            _handler: crate::task::EventHandler,
         ) {
         }
 
-        fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
-            FdEvents::POLLIN | FdEvents::POLLOUT
+        fn query_events(&self, _current_task: &crate::task::CurrentTask) -> crate::fs::FdEvents {
+            crate::fs::FdEvents::POLLIN | crate::fs::FdEvents::POLLOUT
         }
     };
 }

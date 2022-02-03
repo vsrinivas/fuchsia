@@ -14,12 +14,11 @@ use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
 use crate::errno;
-use crate::error;
 use crate::fd_impl_directory;
 use crate::fd_impl_nonblocking;
 use crate::fs_node_impl_symlink;
 use crate::logging::impossible_error;
-use crate::task::{CurrentTask, EventHandler, Waiter};
+use crate::task::CurrentTask;
 use crate::types::*;
 
 pub struct ExtFilesystem {

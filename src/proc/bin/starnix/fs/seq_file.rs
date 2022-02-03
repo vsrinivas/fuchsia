@@ -146,8 +146,7 @@ mod test {
     use crate::mm::*;
     use crate::task::*;
     use crate::testing::*;
-    use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable};
-    use std::sync::Arc;
+    use crate::{fd_impl_nonblocking, fd_impl_seekable};
 
     use parking_lot::Mutex;
 

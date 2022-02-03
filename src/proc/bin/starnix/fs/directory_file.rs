@@ -12,7 +12,6 @@ use crate::fd_impl_directory;
 use crate::fd_impl_nonblocking;
 use crate::task::*;
 use crate::types::*;
-use std::sync::Arc;
 
 // TODO: It should be possible to replace all uses of ROMemoryDirectory with TmpfsDirectory +
 // MS_RDONLY (at which point MemoryDirectory would be a better name for it).

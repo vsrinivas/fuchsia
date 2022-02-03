@@ -18,7 +18,7 @@ use crate::fs::*;
 use crate::logging::*;
 use crate::mm::vmo::round_up_to_system_page_size;
 use crate::mm::FutexTable;
-use crate::task::{CurrentTask, EventHandler, Task, Waiter};
+use crate::task::{CurrentTask, Task};
 use crate::types::{range_ext::RangeExt, *};
 use crate::vmex_resource::VMEX_RESOURCE;
 use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable, mode, not_implemented};

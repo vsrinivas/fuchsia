@@ -7,12 +7,10 @@ use fuchsia_zircon as zx;
 
 use std::sync::Arc;
 
-use crate::errno;
-use crate::error;
 use crate::fd_impl_nonblocking;
 use crate::fd_impl_seekable;
 use crate::fs::*;
-use crate::task::{CurrentTask, EventHandler, Kernel, Waiter};
+use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
 
 pub struct BufferCollectionFile {
