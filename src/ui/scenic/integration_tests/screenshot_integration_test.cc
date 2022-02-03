@@ -126,11 +126,14 @@ class ScreenshotIntegrationTest : public gtest::TestWithEnvironmentFixture {
     }
     BlockingPresent(root_session_);
 
+    // Wait until we get the display size.
+    RunLoopUntil([this] { return display_width_ != 0 && display_height_ != 0; });
+
     // Set up the root graph.
     fidl::InterfacePtr<ChildViewWatcher> child_view_watcher2;
     auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
     ViewportProperties properties;
-    properties.set_logical_size({kDefaultSize, kDefaultSize});
+    properties.set_logical_size({display_width_, display_height_});
     const TransformId kRootTransform{.value = 1};
     const ContentId kRootContent{.value = 1};
     root_session_->CreateTransform(kRootTransform);
@@ -151,9 +154,6 @@ class ScreenshotIntegrationTest : public gtest::TestWithEnvironmentFixture {
     child_session_->CreateTransform(kChildRootTransform);
     child_session_->SetRootTransform(kChildRootTransform);
     BlockingPresent(child_session_);
-
-    // Wait until we get the display size.
-    RunLoopUntil([this] { return display_width_ != 0 && display_height_ != 0; });
 
     // Create Screenshot client.
     environment_->ConnectToService(screenshot_ptr_.NewRequest());
@@ -275,7 +275,6 @@ class ScreenshotIntegrationTest : public gtest::TestWithEnvironmentFixture {
     return buffer_collection_info;
   }
 
-  const uint32_t kDefaultSize = 1;
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
   uint32_t num_pixels_ = 0;

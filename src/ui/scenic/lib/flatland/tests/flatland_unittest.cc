@@ -1946,6 +1946,121 @@ TEST_F(FlatlandTest, ChildViewWatcherFailsInvalidLogicalSize) {
   }
 }
 
+TEST_F(FlatlandTest, ChildViewAutomaticallyClipsBounds) {
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
+
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
+
+  const ContentId kLinkId1 = {1};
+  ViewportProperties properties;
+  // Create the viewport and check the uberstruct for the clip bounds.
+  {
+    const int32_t kWidth = 300;
+    const int32_t kHeight = 500;
+    fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+    properties.set_logical_size({kWidth, kHeight});
+    flatland->CreateViewport(kLinkId1, std::move(parent_token), std::move(properties),
+                             child_view_watcher.NewRequest());
+    PRESENT(flatland, true);
+
+    auto maybe_transform = flatland->GetContentHandle(kLinkId1);
+    EXPECT_TRUE(maybe_transform);
+    auto transform = *maybe_transform;
+
+    auto uber_struct = GetUberStruct(flatland.get());
+    auto clip_itr = uber_struct->local_clip_regions.find(transform);
+    EXPECT_NE(clip_itr, uber_struct->local_clip_regions.end());
+
+    auto clip_region = clip_itr->second;
+    EXPECT_EQ(clip_region.x, 0);
+    EXPECT_EQ(clip_region.y, 0);
+    EXPECT_EQ(clip_region.width, kWidth);
+    EXPECT_EQ(clip_region.height, kHeight);
+  }
+
+  // Change the bounds via a call to |SetViewProperties| and make sure they've changed.
+  {
+    const int32_t kWidth = 900;
+    const int32_t kHeight = 700;
+    properties.set_logical_size({kWidth, kHeight});
+    flatland->SetViewportProperties(kLinkId1, std::move(properties));
+    PRESENT(flatland, true);
+
+    auto maybe_transform = flatland->GetContentHandle(kLinkId1);
+    EXPECT_TRUE(maybe_transform);
+    auto transform = *maybe_transform;
+
+    auto uber_struct = GetUberStruct(flatland.get());
+    auto clip_itr = uber_struct->local_clip_regions.find(transform);
+    EXPECT_NE(clip_itr, uber_struct->local_clip_regions.end());
+
+    auto clip_region = clip_itr->second;
+    EXPECT_EQ(clip_region.x, 0);
+    EXPECT_EQ(clip_region.y, 0);
+    EXPECT_EQ(clip_region.width, kWidth);
+    EXPECT_EQ(clip_region.height, kHeight);
+  }
+}
+
+TEST_F(FlatlandTest, ViewportClippingPersistsAcrossInstances) {
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
+
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
+
+  // Create and link the two instances.
+  const TransformId kId1 = {1};
+  parent->CreateTransform(kId1);
+  parent->SetRootTransform(kId1);
+
+  const ContentId kLinkId = {1};
+
+  fidl::InterfacePtr<ChildViewWatcher> parent_child_view_watcher;
+  ViewportProperties properties;
+  const int32_t kViewportWidth = 75;
+  const int32_t kViewportHeight = 325;
+  properties.set_logical_size({kViewportWidth, kViewportHeight});
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         parent_child_view_watcher.NewRequest());
+  parent->SetContent(kId1, kLinkId);
+
+  fidl::InterfacePtr<ParentViewportWatcher> child_parent_viewport_watcher;
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     child_parent_viewport_watcher.NewRequest());
+
+  PRESENT(parent, true);
+  PRESENT(child, true);
+
+  EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
+
+  // Calculate the global clip regions of the parent and child flatland instances, and ensure
+  // that the root of the child instance has a global clip region equivalent to that of the
+  // logical size of the parent viewport's properties.
+  const auto snapshot = uber_struct_system_->Snapshot();
+  const auto links = link_system_->GetResolvedTopologyLinks();
+  const auto link_system_id = link_system_->GetInstanceId();
+
+  const auto topology_data = flatland::GlobalTopologyData::ComputeGlobalTopologyData(
+      snapshot, links, link_system_id, parent->GetRoot());
+  const auto global_matrices = flatland::ComputeGlobalMatrices(
+      topology_data.topology_vector, topology_data.parent_indices, snapshot);
+
+  const auto global_clip_regions = ComputeGlobalTransformClipRegions(
+      topology_data.topology_vector, topology_data.parent_indices, global_matrices, snapshot);
+
+  auto child_root_handle = topology_data.topology_vector[3];
+  EXPECT_EQ(child->GetRoot(), child_root_handle);
+  auto child_root_clip = global_clip_regions[3];
+  EXPECT_EQ(child_root_clip.x, 0);
+  EXPECT_EQ(child_root_clip.x, 0);
+  EXPECT_EQ(child_root_clip.width, kViewportWidth);
+  EXPECT_EQ(child_root_clip.height, kViewportHeight);
+}
+
 TEST_F(FlatlandTest, ChildViewWatcherFailsIdCollision) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 

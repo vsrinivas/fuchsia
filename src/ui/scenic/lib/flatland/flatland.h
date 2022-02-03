@@ -224,6 +224,11 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   void RegisterViewBoundProtocols(fuchsia::ui::composition::ViewBoundProtocols protocols,
                                   zx_koid_t view_ref_koid);
 
+  // Sets clip bounds on the provided transform handle. Takes in TransformHandle and not
+  // TransformID as a parameter so that it can be applied to content transforms that do
+  // not have an external ID that they are mapped to.
+  void SetClipBoundaryInternal(TransformHandle handle, fuchsia::math::Rect bounds);
+
   // The dispatcher this Flatland instance is running on.
   async_dispatcher_t* dispatcher() const { return dispatcher_holder_->dispatcher(); }
   std::shared_ptr<utils::DispatcherHolder> dispatcher_holder_;

@@ -132,6 +132,12 @@ void FlatlandDisplay::SetContent(ViewportCreationToken token,
   auto uber_struct = std::make_unique<UberStruct>();
   uber_struct->local_topology = std::move(data.sorted_transforms);
   uber_struct->link_properties[child_link_.parent_viewport_watcher_handle] = std::move(properties);
+  uber_struct->local_clip_regions[child_link_.parent_viewport_watcher_handle] = {
+      .x = 0,
+      .y = 0,
+      .width = static_cast<int32_t>(display_->width_in_px()),
+      .height = static_cast<int32_t>(display_->height_in_px()),
+  };
 
   auto present_id = flatland_presenter_->RegisterPresent(session_id_, {});
   uber_struct_queue_->Push(present_id, std::move(uber_struct));

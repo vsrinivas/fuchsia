@@ -545,7 +545,7 @@ void Flatland::SetClipBounds(TransformId transform_id, fuchsia::math::Rect bound
 void Flatland::SetClipBoundary(TransformId transform_id,
                                std::unique_ptr<fuchsia::math::Rect> bounds_ptr) {
   if (transform_id.value == kInvalidId) {
-    error_reporter_->ERROR() << "SetClipBounds called with transform_id 0";
+    error_reporter_->ERROR() << "SetClipBoundary called with transform_id 0";
     ReportBadOperationError();
     return;
   }
@@ -553,7 +553,7 @@ void Flatland::SetClipBoundary(TransformId transform_id,
   auto transform_kv = transforms_.find(transform_id.value);
 
   if (transform_kv == transforms_.end()) {
-    error_reporter_->ERROR() << "SetClipBounds failed, transform_id " << transform_id.value
+    error_reporter_->ERROR() << "SetClipBoundary failed, transform_id " << transform_id.value
                              << " not found";
     ReportBadOperationError();
     return;
@@ -565,9 +565,12 @@ void Flatland::SetClipBoundary(TransformId transform_id,
     return;
   }
 
-  auto bounds = *bounds_ptr.get();
+  SetClipBoundaryInternal(transform_kv->second, *bounds_ptr.get());
+}
+
+void Flatland::SetClipBoundaryInternal(TransformHandle handle, fuchsia::math::Rect bounds) {
   if (bounds.width <= 0 || bounds.height <= 0) {
-    error_reporter_->ERROR() << "SetClipBounds failed, width/height must both be positive "
+    error_reporter_->ERROR() << "SetClipBoundary failed, width/height must both be positive "
                              << "(" << bounds.width << ", " << bounds.height << ")";
     ReportBadOperationError();
     return;
@@ -578,19 +581,19 @@ void Flatland::SetClipBoundary(TransformId transform_id,
   //    +Ensure+that+operations+on+signed+integers+do+not+result+in+overflow
   if (((bounds.x > 0) && (bounds.width > (INT_MAX - bounds.x))) ||
       ((bounds.x < 0) && (bounds.width < (INT_MIN - bounds.x)))) {
-    error_reporter_->ERROR() << "SetClipBounds failed, integer overflow on the X-axis.";
+    error_reporter_->ERROR() << "SetClipBoundary failed, integer overflow on the X-axis.";
     ReportBadOperationError();
     return;
   }
 
   if (((bounds.y > 0) && (bounds.height > (INT_MAX - bounds.y))) ||
       ((bounds.y < 0) && (bounds.height < (INT_MIN - bounds.y)))) {
-    error_reporter_->ERROR() << "SetClipBounds failed, integer overflow on the Y-axis.";
+    error_reporter_->ERROR() << "SetClipBoundary failed, integer overflow on the Y-axis.";
     ReportBadOperationError();
     return;
   }
 
-  clip_regions_[transform_kv->second] = bounds;
+  clip_regions_[handle] = bounds;
 }
 
 void Flatland::AddChild(TransformId parent_transform_id, TransformId child_transform_id) {
@@ -762,6 +765,13 @@ void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
   content_handles_[link_id.value] = link.parent_viewport_watcher_handle;
   child_links_[link.parent_viewport_watcher_handle] = {
       .link = std::move(link), .properties = std::move(properties), .size = std::move(size)};
+
+  // Set clip bounds on the transform associated with the viewport content.
+  SetClipBoundaryInternal(parent_viewport_watcher_handle,
+                          {.x = 0,
+                           .y = 0,
+                           .width = static_cast<int32_t>(size.width),
+                           .height = static_cast<int32_t>(size.height)});
 }
 
 void Flatland::CreateImage(ContentId image_id,
@@ -1174,8 +1184,14 @@ void Flatland::SetViewportProperties(ContentId link_id, ViewportProperties prope
     properties.set_logical_size(link_kv->second.properties.logical_size());
   }
 
-  FX_DCHECK(link_kv->second.link.importer.valid());
+  // Update the clip boundaries when the properties change.
+  SetClipBoundaryInternal(content_kv->second,
+                          {.x = 0,
+                           .y = 0,
+                           .width = static_cast<int32_t>(properties.logical_size().width),
+                           .height = static_cast<int32_t>(properties.logical_size().height)});
 
+  FX_DCHECK(link_kv->second.link.importer.valid());
   link_kv->second.properties = std::move(properties);
 }
 
