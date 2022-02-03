@@ -333,6 +333,310 @@ impl<I: Ip> Default for IpPacketFragmentCache<I> {
 }
 
 impl<I: Ip> IpPacketFragmentCache<I> {
+    /// Attempts to process a packet fragment.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the packet has no fragment data.
+    pub(crate) fn process_fragment<C: FragmentContext<I>, B: ByteSlice>(
+        ctx: &mut C,
+        packet: <I as IpExtByteSlice<B>>::Packet,
+    ) -> FragmentProcessingState<B, I>
+    where
+        <I as IpExtByteSlice<B>>::Packet: FragmentablePacket,
+    {
+        if ctx.get_state_mut().above_size_threshold() {
+            return FragmentProcessingState::OutOfMemory;
+        }
+
+        // Get the fragment data.
+        let (id, offset, m_flag) = packet.fragment_data();
+
+        // Check if `packet` is actually fragmented. We know it is not
+        // fragmented if the fragment offset is 0 (contains first fragment) and
+        // we have no more fragments. This means the first fragment is the only
+        // fragment, implying we have a full packet.
+        if offset == 0 && !m_flag {
+            return FragmentProcessingState::NotNeeded(packet);
+        }
+
+        // Make sure packet's body isn't empty. Since at this point we know that
+        // the packet is definitely fragmented (`offset` is not 0 or `m_flag` is
+        // `true`), we simply let the caller know we need more fragments. This
+        // should never happen, but just in case :).
+        if packet.body().is_empty() {
+            return FragmentProcessingState::NeedMoreFragments;
+        }
+
+        // Make sure body is a multiple of `FRAGMENT_BLOCK_SIZE` bytes, or
+        // `packet` contains the last fragment block which is allowed to be less
+        // than `FRAGMENT_BLOCK_SIZE` bytes.
+        if m_flag && (packet.body().len() % (FRAGMENT_BLOCK_SIZE as usize) != 0) {
+            return FragmentProcessingState::InvalidFragment;
+        }
+
+        // Key used to find this connection's fragment cache data.
+        let key = FragmentCacheKey::new(packet.src_ip(), packet.dst_ip(), id);
+
+        // Get (or create) the fragment cache data.
+        let fragment_data = Self::get_or_create(ctx, key);
+
+        // The number of fragment blocks `packet` contains.
+        //
+        // Note, we are calculating the ceiling of an integer division.
+        // Essentially:
+        //     ceil(packet.body.len() / FRAGMENT_BLOCK_SIZE)
+        //
+        // We need to calculate the ceiling of the division because the final
+        // fragment block for a reassembled packet is allowed to contain less
+        // than `FRAGMENT_BLOCK_SIZE` bytes.
+        //
+        // We know `packet.body().len() - 1` will never be less than 0 because
+        // we already made sure that `packet`'s body is not empty, and it is
+        // impossible to have a negative body size.
+        let num_fragment_blocks = 1 + ((packet.body().len() - 1) / (FRAGMENT_BLOCK_SIZE as usize));
+        assert!(num_fragment_blocks > 0);
+
+        // The range of fragment blocks `packet` contains.
+        //
+        // The maximum number of fragment blocks a reassembled packet is allowed
+        // to contain is `MAX_FRAGMENT_BLOCKS` so we make sure that the fragment
+        // we received does not violate this.
+        let fragment_blocks_range =
+            if let Ok(offset_end) = u16::try_from((offset as usize) + num_fragment_blocks - 1) {
+                if offset_end <= MAX_FRAGMENT_BLOCKS {
+                    BlockRange { start: offset, end: offset_end }
+                } else {
+                    return FragmentProcessingState::InvalidFragment;
+                }
+            } else {
+                return FragmentProcessingState::InvalidFragment;
+            };
+
+        // Find the gap where `packet` belongs.
+        let found_gap = match fragment_data.find_gap(fragment_blocks_range) {
+            // We did not find a potential gap `packet` fits in so some of the
+            // fragment blocks in `packet` overlaps with fragment blocks we
+            // already received.
+            None => {
+                // Drop all reassembly data as per RFC 8200 section 4.5 (IPv6).
+                // See RFC 5722 for more information.
+                //
+                // IPv4 (RFC 791) does not specify what to do for overlapped
+                // fragments. RFC 1858 section 4.2 outlines a way to prevent an
+                // overlapping fragment attack for IPv4, but this is primarily
+                // for IP filtering since "no standard requires that an
+                // overlap-safe reassemble algorithm be used" on hosts. In
+                // practice, non-malicious nodes should not intentionally send
+                // data for the same fragment block multiple times, so we will
+                // do the same thing as IPv6 in this case.
+                //
+                // TODO(ghanan): Check to see if the fragment block's data is
+                //               identical to already received data before
+                //               dropping the reassembly data as packets may be
+                //               duplicated in the network. Duplicate packets
+                //               which are also fragmented are probably rare, so
+                //               we should first determine if it is even
+                //               worthwhile to do this check first. Note, we can
+                //               choose to simply not do this check as RFC 8200
+                //               section 4.5 mentions an implementation *may
+                //               choose* to do this check. It does not say we
+                //               MUST, so we would not be violating the RFC if
+                //               we don't check for this case and just drop the
+                //               packet.
+                assert_matches!(ctx.get_state_mut().remove_data(&key), Some(_));
+                assert_matches!(ctx.cancel_timer(key), Some(_));
+
+                return FragmentProcessingState::InvalidFragment;
+            }
+            Some(f) => f,
+        };
+
+        // Remove `found_gap` since the gap as it exists will no longer be
+        // valid.
+        assert!(fragment_data.missing_blocks.remove(&found_gap));
+
+        // If the received fragment blocks start after the beginning of
+        // `found_gap`, create a new gap between the beginning of `found_gap`
+        // and the first fragment block contained in `packet`.
+        //
+        // Example:
+        //   `packet` w/ fragments [4, 7]
+        //                 |-----|-----|-----|-----|
+        //                    4     5     6     7
+        //
+        //   `found_gap` w/ fragments [X, 7] where 0 <= X < 4
+        //     |-----| ... |-----|-----|-----|-----|
+        //        X    ...    4     5     6     7
+        //
+        //   Here we can see that with a `found_gap` of [2, 7], `packet` covers
+        //   [4, 7] but we are still missing [X, 3] so we create a new gap of
+        //   [X, 3].
+        if found_gap.start < fragment_blocks_range.start {
+            assert!(fragment_data
+                .missing_blocks
+                .insert(BlockRange { start: found_gap.start, end: fragment_blocks_range.end - 1 }));
+        }
+
+        // If the received fragment blocks end before the end of `found_gap` and
+        // we expect more fragments, create a new gap between the last fragment
+        // block contained in `packet` and the end of `found_gap`.
+        //
+        // Example 1:
+        //   `packet` w/ fragments [4, 7] & m_flag = true
+        //     |-----|-----|-----|-----|
+        //        4     5     6     7
+        //
+        //   `found_gap` w/ fragments [4, Y] where 7 < Y <= `MAX_FRAGMENT_BLOCKS`.
+        //     |-----|-----|-----|-----| ... |-----|
+        //        4     5     6     7    ...    Y
+        //
+        //   Here we can see that with a `found_gap` of [4, Y], `packet` covers
+        //   [4, 7] but we still expect more fragment blocks after the blocks in
+        //   `packet` (as noted by `m_flag`) so we are still missing [8, Y] so
+        //   we create a new gap of [8, Y].
+        //
+        // Example 2:
+        //   `packet` w/ fragments [4, 7] & m_flag = false
+        //     |-----|-----|-----|-----|
+        //        4     5     6     7
+        //
+        //   `found_gap` w/ fragments [4, Y] where MAX = `MAX_FRAGMENT_BLOCKS`.
+        //     |-----|-----|-----|-----| ... |-----|
+        //        4     5     6     7    ...   MAX
+        //
+        //   Here we can see that with a `found_gap` of [4, MAX], `packet`
+        //   covers [4, 7] and we don't expect more fragment blocks after the
+        //   blocks in `packet` (as noted by `m_flag`) so we don't create a new
+        //   gap. Note, if we encounter a `packet` where `m_flag` is false,
+        //   `found_gap`'s end value must be MAX because we should only ever not
+        //   create a new gap where the end is MAX when we are processing a
+        //   packet with the last fragment block.
+        if (found_gap.end > fragment_blocks_range.end) && m_flag {
+            assert!(fragment_data
+                .missing_blocks
+                .insert(BlockRange { start: fragment_blocks_range.end + 1, end: found_gap.end }));
+        } else {
+            // Make sure that if we are not adding a fragment after the packet,
+            // it is because `packet` goes up to the `found_gap`'s end boundary,
+            // or this is the last fragment. If it is the last fragment for a
+            // packet, we make sure that `found_gap`'s end value is
+            // `core::u16::MAX`.
+            assert!(
+                found_gap.end == fragment_blocks_range.end || !m_flag && found_gap.end == u16::MAX
+            );
+        }
+
+        let mut added_bytes = 0;
+        // Get header buffer from `packet` if its fragment offset equals to 0.
+        if offset == 0 {
+            assert_eq!(fragment_data.header, None);
+            let header = get_header::<B, I>(&packet);
+            added_bytes = header.len();
+            fragment_data.header = Some(header);
+        }
+
+        // Add our `packet`'s body to the store of body fragments.
+        let mut body = Vec::with_capacity(packet.body().len());
+        body.extend_from_slice(packet.body());
+        added_bytes += body.len();
+        fragment_data.total_size += added_bytes;
+        fragment_data.body_fragments.push(PacketBodyFragment::new(offset, body));
+
+        // If we still have missing fragments, let the caller know that we are
+        // still waiting on some fragments. Otherwise, we let them know we are
+        // ready to reassemble and give them a key and the final packet length
+        // so they can allocate a sufficient buffer and call
+        // `reassemble_packet`.
+        let result = if fragment_data.missing_blocks.is_empty() {
+            FragmentProcessingState::Ready { key, packet_len: fragment_data.total_size }
+        } else {
+            FragmentProcessingState::NeedMoreFragments
+        };
+
+        ctx.get_state_mut().increment_size(added_bytes);
+        result
+    }
+
+    /// Attempts to reassemble a packet.
+    ///
+    /// Attempts to reassemble a packet associated with a given
+    /// `FragmentCacheKey`, `key`, and cancels the timer to reset reassembly
+    /// data. The caller is expected to allocate a buffer of sufficient size
+    /// (available from `process_fragment` when it returns a
+    /// `FragmentProcessingState::Ready` value) and provide it to
+    /// `reassemble_packet` as `buffer` where the packet will be reassembled
+    /// into.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the provided `buffer` does not have enough capacity for the
+    /// reassembled packet. Also panics if a different `ctx` is passed to
+    /// `reassemble_packet` from the one passed to `process_fragment` when
+    /// processing a packet with a given `key` as `reassemble_packet` will fail
+    /// to cancel the reassembly timer.
+    pub(crate) fn reassemble_packet<
+        C: FragmentContext<I>,
+        B: ByteSliceMut,
+        BV: BufferViewMut<B>,
+    >(
+        ctx: &mut C,
+        key: &FragmentCacheKey<I::Addr>,
+        buffer: BV,
+    ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
+        let entry = match ctx.get_state_mut().cache.entry(*key) {
+            Entry::Occupied(entry) => entry,
+            Entry::Vacant(_) => return Err(FragmentReassemblyError::InvalidKey),
+        };
+
+        // Make sure we are not missing fragments.
+        if !entry.get().missing_blocks.is_empty() {
+            return Err(FragmentReassemblyError::MissingFragments);
+        }
+        // Remove the entry from the cache now that we've validated that we will
+        // be able to reassemble it.
+        let (_key, data) = entry.remove_entry();
+        ctx.get_state_mut().size -= data.total_size;
+
+        // If we are not missing fragments, we must have header data.
+        assert_matches!(data.header, Some(_));
+
+        // Cancel the reassembly timer now that we know we have all the data
+        // required for reassembly and are attempting to do so.
+        assert_matches!(ctx.cancel_timer(*key), Some(_));
+
+        // TODO(https://github.com/rust-lang/rust/issues/59278): Use
+        // `BinaryHeap::into_iter_sorted`.
+        let body_fragments = data.body_fragments.into_sorted_vec().into_iter().map(|x| x.data);
+        <I as IpExtByteSlice<B>>::reassemble_fragmented_packet(
+            buffer,
+            data.header.unwrap(),
+            body_fragments,
+        )
+        .map_err(|_| FragmentReassemblyError::PacketParsingError)
+    }
+
+    /// Gets or creates a new entry in the cache for a given `key`.
+    ///
+    /// When a new entry is created, a re-assembly timer is scheduled.
+    fn get_or_create<C: FragmentContext<I>>(
+        ctx: &mut C,
+        key: FragmentCacheKey<I::Addr>,
+    ) -> &mut FragmentCacheData {
+        // NB: Nominally we'd do this in the `or_insert_with` closure below, but
+        // that doesn't work because we'd need overlapping mutable borrows of
+        // `ctx`.
+        if !ctx.get_state().cache.contains_key(&key) {
+            // We have no reassembly data yet so this fragment is the first one
+            // associated with the given `key`. Create a new entry in the hash
+            // table and schedule a timer to reset the entry after
+            // `REASSEMBLY_TIMEOUT_SECONDS` seconds.
+            let _: Option<C::Instant> =
+                ctx.schedule_timer(Duration::from_secs(REASSEMBLY_TIMEOUT_SECONDS), key);
+        }
+        ctx.get_state_mut().cache.entry(key).or_insert_with(FragmentCacheData::default)
+    }
+
     /// Handles a timer.
     ///
     /// Removes reassembly data associated with `key`.
@@ -355,301 +659,6 @@ impl<I: Ip> IpPacketFragmentCache<I> {
         self.size -= data.total_size;
         Some(data)
     }
-}
-
-/// Attempts to process a packet fragment.
-///
-/// # Panics
-///
-/// Panics if the packet has no fragment data.
-pub(crate) fn process_fragment<I: Ip, C: FragmentContext<I>, B: ByteSlice>(
-    ctx: &mut C,
-    packet: <I as IpExtByteSlice<B>>::Packet,
-) -> FragmentProcessingState<B, I>
-where
-    <I as IpExtByteSlice<B>>::Packet: FragmentablePacket,
-{
-    if ctx.get_state_mut().above_size_threshold() {
-        return FragmentProcessingState::OutOfMemory;
-    }
-
-    // Get the fragment data.
-    let (id, offset, m_flag) = packet.fragment_data();
-
-    // Check if `packet` is actually fragmented. We know it is not fragmented if
-    // the fragment offset is 0 (contains first fragment) and we have no more
-    // fragments. This means the first fragment is the only fragment, implying
-    // we have a full packet.
-    if offset == 0 && !m_flag {
-        return FragmentProcessingState::NotNeeded(packet);
-    }
-
-    // Make sure packet's body isn't empty. Since at this point we know that the
-    // packet is definitely fragmented (`offset` is not 0 or `m_flag` is
-    // `true`), we simply let the caller know we need more fragments. This
-    // should never happen, but just in case :).
-    if packet.body().is_empty() {
-        return FragmentProcessingState::NeedMoreFragments;
-    }
-
-    // Make sure body is a multiple of `FRAGMENT_BLOCK_SIZE` bytes, or `packet`
-    // contains the last fragment block which is allowed to be less than
-    // `FRAGMENT_BLOCK_SIZE` bytes.
-    if m_flag && (packet.body().len() % (FRAGMENT_BLOCK_SIZE as usize) != 0) {
-        return FragmentProcessingState::InvalidFragment;
-    }
-
-    // Key used to find this connection's fragment cache data.
-    let key = FragmentCacheKey::new(packet.src_ip(), packet.dst_ip(), id);
-
-    // Get (or create) the fragment cache data.
-    let fragment_data = get_or_create(ctx, key);
-
-    // The number of fragment blocks `packet` contains.
-    //
-    // Note, we are calculating the ceiling of an integer division. Essentially:
-    //     ceil(packet.body.len() / FRAGMENT_BLOCK_SIZE)
-    //
-    // We need to calculate the ceiling of the division because the final
-    // fragment block for a reassembled packet is allowed to contain less than
-    // `FRAGMENT_BLOCK_SIZE` bytes.
-    //
-    // We know `packet.body().len() - 1` will never be less than 0 because we
-    // already made sure that `packet`'s body is not empty, and it is impossible
-    // to have a negative body size.
-    let num_fragment_blocks = 1 + ((packet.body().len() - 1) / (FRAGMENT_BLOCK_SIZE as usize));
-    assert!(num_fragment_blocks > 0);
-
-    // The range of fragment blocks `packet` contains.
-    //
-    // The maximum number of fragment blocks a reassembled packet is allowed to
-    // contain is `MAX_FRAGMENT_BLOCKS` so we make sure that the fragment we
-    // received does not violate this.
-    let fragment_blocks_range =
-        if let Ok(offset_end) = u16::try_from((offset as usize) + num_fragment_blocks - 1) {
-            if offset_end <= MAX_FRAGMENT_BLOCKS {
-                BlockRange { start: offset, end: offset_end }
-            } else {
-                return FragmentProcessingState::InvalidFragment;
-            }
-        } else {
-            return FragmentProcessingState::InvalidFragment;
-        };
-
-    // Find the gap where `packet` belongs.
-    let found_gap = match fragment_data.find_gap(fragment_blocks_range) {
-        // We did not find a potential gap `packet` fits in so some of the
-        // fragment blocks in `packet` overlaps with fragment blocks we already
-        // received.
-        None => {
-            // Drop all reassembly data as per RFC 8200 section 4.5 (IPv6). See
-            // RFC 5722 for more information.
-            //
-            // IPv4 (RFC 791) does not specify what to do for overlapped
-            // fragments. RFC 1858 section 4.2 outlines a way to prevent an
-            // overlapping fragment attack for IPv4, but this is primarily for
-            // IP filtering since "no standard requires that an overlap-safe
-            // reassemble algorithm be used" on hosts. In practice,
-            // non-malicious nodes should not intentionally send data for the
-            // same fragment block multiple times, so we will do the same thing
-            // as IPv6 in this case.
-            //
-            // TODO(ghanan): Check to see if the fragment block's data is
-            //               identical to already received data before dropping
-            //               the reassembly data as packets may be duplicated in
-            //               the network. Duplicate packets which are also
-            //               fragmented are probably rare, so we should first
-            //               determine if it is even worthwhile to do this check
-            //               first. Note, we can choose to simply not do this
-            //               check as RFC 8200 section 4.5 mentions an
-            //               implementation *may choose* to do this check. It
-            //               does not say we MUST, so we would not be violating
-            //               the RFC if we don't check for this case and just
-            //               drop the packet.
-            assert_matches!(ctx.get_state_mut().remove_data(&key), Some(_));
-            assert_matches!(ctx.cancel_timer(key), Some(_));
-
-            return FragmentProcessingState::InvalidFragment;
-        }
-        Some(f) => f,
-    };
-
-    // Remove `found_gap` since the gap as it exists will no longer be valid.
-    assert!(fragment_data.missing_blocks.remove(&found_gap));
-
-    // If the received fragment blocks start after the beginning of `found_gap`,
-    // create a new gap between the beginning of `found_gap` and the first
-    // fragment block contained in `packet`.
-    //
-    // Example:
-    //   `packet` w/ fragments [4, 7]
-    //                 |-----|-----|-----|-----|
-    //                    4     5     6     7
-    //
-    //   `found_gap` w/ fragments [X, 7] where 0 <= X < 4
-    //     |-----| ... |-----|-----|-----|-----|
-    //        X    ...    4     5     6     7
-    //
-    //   Here we can see that with a `found_gap` of [2, 7], `packet` covers [4,
-    //   7] but we are still missing [X, 3] so we create a new gap of [X, 3].
-    if found_gap.start < fragment_blocks_range.start {
-        assert!(fragment_data
-            .missing_blocks
-            .insert(BlockRange { start: found_gap.start, end: fragment_blocks_range.start - 1 }));
-    }
-
-    // If the received fragment blocks end before the end of `found_gap` and we
-    // expect more fragments, create a new gap between the last fragment block
-    // contained in `packet` and the end of `found_gap`.
-    //
-    // Example 1:
-    //   `packet` w/ fragments [4, 7] & m_flag = true
-    //     |-----|-----|-----|-----|
-    //        4     5     6     7
-    //
-    //   `found_gap` w/ fragments [4, Y] where 7 < Y <= `MAX_FRAGMENT_BLOCKS`.
-    //     |-----|-----|-----|-----| ... |-----|
-    //        4     5     6     7    ...    Y
-    //
-    //   Here we can see that with a `found_gap` of [4, Y], `packet` covers [4,
-    //   7] but we still expect more fragment blocks after the blocks in
-    //   `packet` (as noted by `m_flag`) so we are still missing [8, Y] so we
-    //   create a new gap of [8, Y].
-    //
-    // Example 2:
-    //   `packet` w/ fragments [4, 7] & m_flag = false
-    //     |-----|-----|-----|-----|
-    //        4     5     6     7
-    //
-    //   `found_gap` w/ fragments [4, Y] where MAX = `MAX_FRAGMENT_BLOCKS`.
-    //     |-----|-----|-----|-----| ... |-----|
-    //        4     5     6     7    ...   MAX
-    //
-    //   Here we can see that with a `found_gap` of [4, MAX], `packet` covers
-    //   [4, 7] and we don't expect more fragment blocks after the blocks in
-    //   `packet` (as noted by `m_flag`) so we don't create a new gap. Note, if
-    //   we encounter a `packet` where `m_flag` is false, `found_gap`'s end
-    //   value must be MAX because we should only ever not create a new gap
-    //   where the end is MAX when we are processing a packet with the last
-    //   fragment block.
-    if (found_gap.end > fragment_blocks_range.end) && m_flag {
-        assert!(fragment_data
-            .missing_blocks
-            .insert(BlockRange { start: fragment_blocks_range.end + 1, end: found_gap.end }));
-    } else {
-        // Make sure that if we are not adding a fragment after the packet, it
-        // is because `packet` goes up to the `found_gap`'s end boundary, or
-        // this is the last fragment. If it is the last fragment for a packet,
-        // we make sure that `found_gap`'s end value is `core::u16::MAX`.
-        assert!(found_gap.end == fragment_blocks_range.end || !m_flag && found_gap.end == u16::MAX);
-    }
-
-    let mut added_bytes = 0;
-    // Get header buffer from `packet` if its fragment offset equals to 0.
-    if offset == 0 {
-        assert_eq!(fragment_data.header, None);
-        let header = get_header::<B, I>(&packet);
-        added_bytes = header.len();
-        fragment_data.header = Some(header);
-    }
-
-    // Add our `packet`'s body to the store of body fragments.
-    let mut body = Vec::with_capacity(packet.body().len());
-    body.extend_from_slice(packet.body());
-    added_bytes += body.len();
-    fragment_data.total_size += added_bytes;
-    fragment_data.body_fragments.push(PacketBodyFragment::new(offset, body));
-
-    // If we still have missing fragments, let the caller know that we are still
-    // waiting on some fragments. Otherwise, we let them know we are ready to
-    // reassemble and give them a key and the final packet length so they can
-    // allocate a sufficient buffer and call `reassemble_packet`.
-    let result = if fragment_data.missing_blocks.is_empty() {
-        FragmentProcessingState::Ready { key, packet_len: fragment_data.total_size }
-    } else {
-        FragmentProcessingState::NeedMoreFragments
-    };
-
-    ctx.get_state_mut().increment_size(added_bytes);
-    result
-}
-
-/// Attempts to reassemble a packet.
-///
-/// Attempts to reassemble a packet associated with a given `FragmentCacheKey`,
-/// `key`, and cancels the timer to reset reassembly data. The caller is
-/// expected to allocate a buffer of sufficient size (available from
-/// `process_fragment` when it returns a `FragmentProcessingState::Ready` value)
-/// and provide it to `reassemble_packet` as `buffer` where the packet will be
-/// reassembled into.
-///
-/// # Panics
-///
-/// Panics if the provided `buffer` does not have enough capacity for the
-/// reassembled packet. Also panics if a different `ctx` is passed to
-/// `reassemble_packet` from the one passed to `process_fragment` when
-/// processing a packet with a given `key` as `reassemble_packet` will fail to
-/// cancel the reassembly timer.
-pub(crate) fn reassemble_packet<
-    I: Ip,
-    C: FragmentContext<I>,
-    B: ByteSliceMut,
-    BV: BufferViewMut<B>,
->(
-    ctx: &mut C,
-    key: &FragmentCacheKey<I::Addr>,
-    buffer: BV,
-) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
-    let entry = match ctx.get_state_mut().cache.entry(*key) {
-        Entry::Occupied(entry) => entry,
-        Entry::Vacant(_) => return Err(FragmentReassemblyError::InvalidKey),
-    };
-
-    // Make sure we are not missing fragments.
-    if !entry.get().missing_blocks.is_empty() {
-        return Err(FragmentReassemblyError::MissingFragments);
-    }
-    // Remove the entry from the cache now that we've validated that we will
-    // be able to reassemble it.
-    let (_key, data) = entry.remove_entry();
-    ctx.get_state_mut().size -= data.total_size;
-
-    // If we are not missing fragments, we must have header data.
-    assert_matches!(data.header, Some(_));
-
-    // Cancel the reassembly timer now that we know we have all the data
-    // required for reassembly and are attempting to do so.
-    assert_matches!(ctx.cancel_timer(*key), Some(_));
-
-    // TODO(https://github.com/rust-lang/rust/issues/59278): Use
-    // `BinaryHeap::into_iter_sorted`.
-    let body_fragments = data.body_fragments.into_sorted_vec().into_iter().map(|x| x.data);
-    <I as IpExtByteSlice<B>>::reassemble_fragmented_packet(
-        buffer,
-        data.header.unwrap(),
-        body_fragments,
-    )
-    .map_err(|_| FragmentReassemblyError::PacketParsingError)
-}
-
-/// Gets or creates a new entry in the cache for a given `key`.
-///
-/// When a new entry is created, a re-assembly timer is scheduled.
-fn get_or_create<I: Ip, C: FragmentContext<I>>(
-    ctx: &mut C,
-    key: FragmentCacheKey<I::Addr>,
-) -> &mut FragmentCacheData {
-    // NB: Nominally we'd do this in the `or_insert_with` closure below, but that doesn't work
-    // because we'd need overlapping mutable borrows of `ctx`.
-    if !ctx.get_state().cache.contains_key(&key) {
-        // We have no reassembly data yet so this fragment is the first one
-        // associated with the given `key`. Create a new entry in the hash table
-        // and schedule a timer to reset the entry after
-        // `REASSEMBLY_TIMEOUT_SECONDS` seconds.
-        let _: Option<C::Instant> =
-            ctx.schedule_timer(Duration::from_secs(REASSEMBLY_TIMEOUT_SECONDS), key);
-    }
-    ctx.get_state_mut().cache.entry(key).or_insert_with(FragmentCacheData::default)
 }
 
 /// Gets the header bytes for a packet.
@@ -898,7 +907,7 @@ mod tests {
                 // We add 20 to the expected packet length because of the IPv4
                 // header.
                 let (key, packet_len) = assert_frag_proc_state_ready!(
-                    process_fragment::<Ipv4, _, &[u8]>(ctx, packet),
+                    IpPacketFragmentCache::<Ipv4>::process_fragment::<_, &[u8]>(ctx, packet),
                     DUMMY_CONFIG_V4.remote_ip.get(),
                     DUMMY_CONFIG_V4.local_ip.get(),
                     fragment_id,
@@ -909,7 +918,12 @@ mod tests {
                     let mut buffer: Vec<u8> = vec![0; packet_len];
                     let mut buffer = &mut buffer[..];
                     let packet =
-                        reassemble_packet::<Ipv4, _, &mut [u8], _>(ctx, &key, &mut buffer).unwrap();
+                        IpPacketFragmentCache::<Ipv4>::reassemble_packet::<_, &mut [u8], _>(
+                            ctx,
+                            &key,
+                            &mut buffer,
+                        )
+                        .unwrap();
                     let mut expected_body: Vec<u8> = Vec::new();
                     expected_body
                         .extend(body_offset..body_offset + fragment_count * FRAGMENT_BLOCK_SIZE);
@@ -917,13 +931,21 @@ mod tests {
                 }
             }
             ExpectedResult::NeedMore => {
-                assert_frag_proc_state_need_more!(process_fragment::<Ipv4, _, &[u8]>(ctx, packet));
+                assert_frag_proc_state_need_more!(
+                    IpPacketFragmentCache::<Ipv4>::process_fragment::<_, &[u8]>(ctx, packet)
+                );
             }
             ExpectedResult::Invalid => {
-                assert_frag_proc_state_invalid!(process_fragment::<Ipv4, _, &[u8]>(ctx, packet));
+                assert_frag_proc_state_invalid!(IpPacketFragmentCache::<Ipv4>::process_fragment::<
+                    _,
+                    &[u8],
+                >(ctx, packet));
             }
             ExpectedResult::OutOfMemory => {
-                assert_frag_proc_state_oom!(process_fragment::<Ipv4, _, &[u8]>(ctx, packet));
+                assert_frag_proc_state_oom!(IpPacketFragmentCache::<Ipv4>::process_fragment::<
+                    _,
+                    &[u8],
+                >(ctx, packet));
             }
         }
     }
@@ -974,7 +996,7 @@ mod tests {
                 // We add 20 to the expected packet length because of the IPv4
                 // header.
                 let (key, packet_len) = assert_frag_proc_state_ready!(
-                    process_fragment::<Ipv6, _, &[u8]>(ctx, packet),
+                    IpPacketFragmentCache::<Ipv6>::process_fragment::<_, &[u8]>(ctx, packet),
                     DUMMY_CONFIG_V6.remote_ip.get(),
                     DUMMY_CONFIG_V6.local_ip.get(),
                     fragment_id,
@@ -985,7 +1007,12 @@ mod tests {
                     let mut buffer: Vec<u8> = vec![0; packet_len];
                     let mut buffer = &mut buffer[..];
                     let packet =
-                        reassemble_packet::<Ipv6, _, &mut [u8], _>(ctx, &key, &mut buffer).unwrap();
+                        IpPacketFragmentCache::<Ipv6>::reassemble_packet::<_, &mut [u8], _>(
+                            ctx,
+                            &key,
+                            &mut buffer,
+                        )
+                        .unwrap();
                     let mut expected_body: Vec<u8> = Vec::new();
                     expected_body
                         .extend(body_offset..body_offset + fragment_count * FRAGMENT_BLOCK_SIZE);
@@ -993,13 +1020,21 @@ mod tests {
                 }
             }
             ExpectedResult::NeedMore => {
-                assert_frag_proc_state_need_more!(process_fragment::<Ipv6, _, &[u8]>(ctx, packet));
+                assert_frag_proc_state_need_more!(
+                    IpPacketFragmentCache::<Ipv6>::process_fragment::<_, &[u8]>(ctx, packet)
+                );
             }
             ExpectedResult::Invalid => {
-                assert_frag_proc_state_invalid!(process_fragment::<Ipv6, _, &[u8]>(ctx, packet));
+                assert_frag_proc_state_invalid!(IpPacketFragmentCache::<Ipv6>::process_fragment::<
+                    _,
+                    &[u8],
+                >(ctx, packet));
             }
             ExpectedResult::OutOfMemory => {
-                assert_frag_proc_state_oom!(process_fragment::<Ipv6, _, &[u8]>(ctx, packet));
+                assert_frag_proc_state_oom!(IpPacketFragmentCache::<Ipv6>::process_fragment::<
+                    _,
+                    &[u8],
+                >(ctx, packet));
             }
         }
     }
@@ -1017,7 +1052,7 @@ mod tests {
             Buf::new(body.to_vec(), ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         assert_matches::assert_matches!(
-            process_fragment::<Ipv4, _, &[u8]>(&mut ctx, packet),
+            IpPacketFragmentCache::<Ipv4>::process_fragment::< _, &[u8]>(&mut ctx, packet),
             FragmentProcessingState::NotNeeded(unfragmented) if unfragmented.body() == body
         );
     }
@@ -1037,7 +1072,7 @@ mod tests {
             Buf::new(vec![1, 2, 3, 4, 5], ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv6Packet<_>>().unwrap();
         assert_matches::assert_matches!(
-            process_fragment::<Ipv6, _, &[u8]>(&mut ctx, packet),
+            IpPacketFragmentCache::<Ipv6>::process_fragment::<_, &[u8]>(&mut ctx, packet),
             FragmentProcessingState::InvalidFragment
         );
     }
@@ -1082,7 +1117,12 @@ mod tests {
             fragment_id as u32,
         );
         assert_eq!(
-            reassemble_packet::<I, _, &mut [u8], _>(&mut ctx, &key, &mut buffer).unwrap_err(),
+            IpPacketFragmentCache::<I>::reassemble_packet::<_, &mut [u8], _>(
+                &mut ctx,
+                &key,
+                &mut buffer
+            )
+            .unwrap_err(),
             FragmentReassemblyError::MissingFragments,
         );
     }
@@ -1135,7 +1175,12 @@ mod tests {
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
         assert_eq!(
-            reassemble_packet::<I, _, &mut [u8], _>(&mut ctx, &key, &mut buffer).unwrap_err(),
+            IpPacketFragmentCache::<I>::reassemble_packet::<_, &mut [u8], _>(
+                &mut ctx,
+                &key,
+                &mut buffer
+            )
+            .unwrap_err(),
             FragmentReassemblyError::InvalidKey,
         );
     }
@@ -1213,7 +1258,9 @@ mod tests {
         body.extend(FRAGMENT_BLOCK_SIZE..FRAGMENT_BLOCK_SIZE * 2 - 1);
         let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
-        assert_frag_proc_state_invalid!(process_fragment::<Ipv4, _, &[u8]>(&mut ctx, packet));
+        assert_frag_proc_state_invalid!(
+            IpPacketFragmentCache::<Ipv4>::process_fragment::<_, &[u8]>(&mut ctx, packet)
+        );
 
         // Process fragment #1 (body size is not a multiple of
         // `FRAGMENT_BLOCK_SIZE` but more flag is `false`). The last fragment is
@@ -1229,7 +1276,7 @@ mod tests {
         let mut buffer = Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(
-            process_fragment::<Ipv4, _, &[u8]>(&mut ctx, packet),
+            IpPacketFragmentCache::<Ipv4>::process_fragment::<_, &[u8]>(&mut ctx, packet),
             DUMMY_CONFIG_V4.remote_ip.get(),
             DUMMY_CONFIG_V4.local_ip.get(),
             fragment_id,
@@ -1238,8 +1285,12 @@ mod tests {
         validate_size(ctx.get_state());
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
-        let packet =
-            reassemble_packet::<Ipv4, _, &mut [u8], _>(&mut ctx, &key, &mut buffer).unwrap();
+        let packet = IpPacketFragmentCache::<Ipv4>::reassemble_packet::<_, &mut [u8], _>(
+            &mut ctx,
+            &key,
+            &mut buffer,
+        )
+        .unwrap();
         let mut expected_body: Vec<u8> = Vec::new();
         expected_body.extend(0..15);
         assert_eq!(packet.body(), &expected_body[..]);
@@ -1275,7 +1326,9 @@ mod tests {
         bytes[4..6].copy_from_slice(&payload_len.to_be_bytes());
         let mut buf = Buf::new(bytes, ..);
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
-        assert_frag_proc_state_invalid!(process_fragment::<Ipv6, _, &[u8]>(&mut ctx, packet));
+        assert_frag_proc_state_invalid!(
+            IpPacketFragmentCache::<Ipv6>::process_fragment::<_, &[u8]>(&mut ctx, packet)
+        );
 
         // Process fragment #1 (body size is not a multiple of
         // `FRAGMENT_BLOCK_SIZE` but more flag is `false`). The last fragment is
@@ -1296,7 +1349,7 @@ mod tests {
         let mut buf = Buf::new(bytes, ..);
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(
-            process_fragment::<Ipv6, _, &[u8]>(&mut ctx, packet),
+            IpPacketFragmentCache::<Ipv6>::process_fragment::<_, &[u8]>(&mut ctx, packet),
             DUMMY_CONFIG_V6.remote_ip.get(),
             DUMMY_CONFIG_V6.local_ip.get(),
             fragment_id,
@@ -1305,8 +1358,12 @@ mod tests {
         validate_size(ctx.get_state());
         let mut buffer: Vec<u8> = vec![0; packet_len];
         let mut buffer = &mut buffer[..];
-        let packet =
-            reassemble_packet::<Ipv6, _, &mut [u8], _>(&mut ctx, &key, &mut buffer).unwrap();
+        let packet = IpPacketFragmentCache::<Ipv6>::reassemble_packet::<_, &mut [u8], _>(
+            &mut ctx,
+            &key,
+            &mut buffer,
+        )
+        .unwrap();
         let mut expected_body: Vec<u8> = Vec::new();
         expected_body.extend(0..15);
         assert_eq!(packet.body(), &expected_body[..]);

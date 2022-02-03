@@ -57,10 +57,7 @@ use crate::{
         },
         ipv6::Ipv6PacketAction,
         path_mtu::{PmtuCache, PmtuHandler, PmtuTimerId},
-        reassembly::{
-            process_fragment, reassemble_packet, FragmentCacheKey, FragmentProcessingState,
-            IpPacketFragmentCache,
-        },
+        reassembly::{FragmentCacheKey, FragmentProcessingState, IpPacketFragmentCache},
         socket::{IpSock, IpSockUpdate},
     },
     BufferDispatcher, Ctx, EventDispatcher, StackState, TimerId, TimerIdInner,
@@ -873,7 +870,7 @@ macro_rules! drop_packet_and_undo_parse {
 /// attempt to dispatch the packet.
 macro_rules! process_fragment {
     ($ctx:expr, $dispatch:ident, $device:expr, $frame_dst:expr, $buffer:expr, $packet:expr, $src_ip:expr, $dst_ip:expr, $ip:ident) => {{
-        match process_fragment::<$ip, _, &mut [u8]>($ctx, $packet) {
+        match IpPacketFragmentCache::<$ip>::process_fragment::<_, &mut [u8]>($ctx, $packet) {
             // Handle the packet right away since reassembly is not needed.
             FragmentProcessingState::NotNeeded(packet) => {
                 trace!("receive_ip_packet: not fragmented");
@@ -898,7 +895,7 @@ macro_rules! process_fragment {
                 let mut buffer = Buf::new(alloc::vec![0; packet_len], ..);
 
                 // Attempt to reassemble the packet.
-                match reassemble_packet::<$ip, _, _, _>($ctx, &key, buffer.buffer_view_mut()) {
+                match IpPacketFragmentCache::<$ip>::reassemble_packet::<_, _, _>($ctx, &key, buffer.buffer_view_mut()) {
                     // Successfully reassembled the packet, handle it.
                     Ok(packet) => {
                         trace!("receive_ip_packet: fragmented, reassembled packet: {:?}", packet);
