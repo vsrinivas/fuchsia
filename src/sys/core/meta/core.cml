@@ -652,6 +652,11 @@
             to: "#system-metrics-logger",
         },
         {
+            protocol: "fuchsia.process.Launcher",
+            from: "parent",
+            to: "#session-manager",
+        },
+        {
             protocol: "fuchsia.tracing.provider.Registry",
             from: "self",
             to: "#system-metrics-logger",
@@ -707,6 +712,7 @@
                 "#cobalt",
                 "#network",
                 "#pkg-resolver",
+                "#session-manager",
             ],
         },
         {
@@ -795,6 +801,8 @@
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.intl.TimeZones",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
                 "fuchsia.sys.Launcher",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",

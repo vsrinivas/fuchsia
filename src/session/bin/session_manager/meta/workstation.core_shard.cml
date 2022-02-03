@@ -70,7 +70,10 @@
             to: "#session-manager",
         },
         {
-            protocol: "fuchsia.net.interfaces.State",
+            protocol: [
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
+            ],
             from: "#network",
             to: "#session-manager",
         },
