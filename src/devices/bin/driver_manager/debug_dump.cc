@@ -163,11 +163,15 @@ void DebugDump::DumpBindingProperties(DumpBindingPropertiesRequestView request,
                                       DumpBindingPropertiesCompleter::Sync& completer) {
   VmoWriter writer{std::move(request->output)};
   DumpDeviceProps(&writer, coordinator_->root_device().get());
-  DumpDeviceProps(&writer, coordinator_->sys_device().get());
+  if (coordinator_->sys_device()) {
+    DumpDeviceProps(&writer, coordinator_->sys_device().get());
+  }
   completer.Reply(writer.status(), writer.written(), writer.available());
 }
 
 void DebugDump::DumpState(VmoWriter* vmo) const {
   DumpDevice(vmo, coordinator_->root_device().get(), 0);
-  DumpDevice(vmo, coordinator_->sys_device().get(), 1);
+  if (coordinator_->sys_device()) {
+    DumpDevice(vmo, coordinator_->sys_device().get(), 1);
+  }
 }
