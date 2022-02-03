@@ -58,9 +58,6 @@ executable("cmx_unittests") {
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
   ]
-
-  # TODO(fxbug.dev/46552): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuchsia_unittest_package("cmx_tests") {
