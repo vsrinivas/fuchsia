@@ -52,7 +52,7 @@ template("fuchsia_driver_package") {
       package_name = invoker.package_name
     }
 
-    driver_manifest_target = "${target_name}_driver_manifest"
+    driver_manifest_target = "${target_name}_driver_package_manifest"
     driver_manifest(driver_manifest_target) {
       forward_variables_from(invoker, [ "testonly" ])
       package_url = "fuchsia-pkg://fuchsia.com/${package_name}"
@@ -70,6 +70,7 @@ template("fuchsia_driver_package") {
       }
       deps += [ ":${driver_manifest_target}" ]
       deps += invoker.driver_components
+      is_driver_package = true
     }
   } else {
     group(target_name) {
