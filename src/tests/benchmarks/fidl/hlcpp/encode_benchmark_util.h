@@ -23,11 +23,11 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Encode.
 
     {
-      fidl::BodyEncoder enc(::fidl::internal::WireFormatVersion::kV1);
+      fidl::BodyEncoder enc(::fidl::internal::WireFormatVersion::kV2);
       auto offset = enc.Alloc(fidl::EncodingInlineSize<FidlType, fidl::BodyEncoder>(&enc));
       obj.Encode(&enc, offset);
       fidl::HLCPPOutgoingBody body = enc.GetBody();
-      ZX_ASSERT(ZX_OK == body.Validate(::fidl::internal::WireFormatVersion::kV1, FidlType::FidlType,
+      ZX_ASSERT(ZX_OK == body.Validate(::fidl::internal::WireFormatVersion::kV2, FidlType::FidlType,
                                        nullptr));
     }
 

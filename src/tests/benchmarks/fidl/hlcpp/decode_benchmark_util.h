@@ -13,7 +13,8 @@ namespace hlcpp_benchmarks {
 
 namespace {
 constexpr uint64_t kOrdinal = 1234;
-constexpr fidl_message_header_t kV1Header = {
+constexpr fidl_message_header_t kV2Header = {
+    .flags = {FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2},
     .magic_number = kFidlWireFormatMagicNumberInitial,
     .ordinal = kOrdinal,
 };
@@ -34,7 +35,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     // decode time.
     FidlType obj = builder();
 
-    fidl::BodyEncoder enc(::fidl::internal::WireFormatVersion::kV1);
+    fidl::BodyEncoder enc(::fidl::internal::WireFormatVersion::kV2);
     auto offset = enc.Alloc(EncodedSize<FidlType>);
     obj.Encode(&enc, offset);
     fidl::HLCPPOutgoingBody encode_body = enc.GetBody();
@@ -55,7 +56,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
           fidl::HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size()),
                                static_cast<uint32_t>(handle_infos.size())));
       const char* error_msg;
-      const auto metadata = fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV1Header);
+      const auto metadata = fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV2Header);
 
       ZX_ASSERT_MSG(ZX_OK == decode_body.Decode(metadata, FidlType::FidlType, &error_msg), "%s",
                     error_msg);

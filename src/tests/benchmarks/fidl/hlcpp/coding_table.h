@@ -11,7 +11,7 @@
 namespace hlcpp_benchmarks {
 
 template <typename FidlType>
-constexpr size_t EncodedSize = fidl::CodingTraits<FidlType>::inline_size_v1_no_ee;
+constexpr size_t EncodedSize = fidl::CodingTraits<FidlType>::inline_size_v2;
 
 }  // namespace hlcpp_benchmarks
 
