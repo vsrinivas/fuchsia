@@ -69,22 +69,6 @@ fn u32_to_ip_str(ip: u32) -> String {
     )
 }
 
-// only supports ipv4 now
-fn u32_to_netaddr(ip: u32, mask: u32) -> Result<Subnet, Error> {
-    let cidr = u32_to_cidr(mask)?;
-    Ok(Subnet {
-        addr: IpAddress::Ipv4(Ipv4Address {
-            addr: [
-                ((ip >> 24) & 0xFF) as u8,
-                ((ip >> 16) & 0xFF) as u8,
-                ((ip >> 8) & 0xFF) as u8,
-                (ip & 0xFF) as u8,
-            ],
-        }),
-        prefix_len: cidr,
-    })
-}
-
 async fn get_imei<'a>(
     _args: &'a [&'a str],
     ril_modem: &'a RadioInterfaceLayerProxy,
@@ -160,7 +144,6 @@ async fn handle_cmd(
                 match state.lock().file_ref {
                     Some(ref file_ref) => {
                         // Set up the netstack.
-                        // TODO not hardcode to iface 3
                         qmi::set_network_status(file_ref, true).await?;
                         let netstack = connect_to_protocol::<StackMarker>()?;
                         let old_netstack = connect_to_protocol::<NetstackMarker>()?;
@@ -168,33 +151,44 @@ async fn handle_cmd(
                         old_netstack.get_dhcp_client(3, server_end).await?.map_err(fuchsia_zircon::Status::from_raw)?;
                         client.stop().await?.map_err(fuchsia_zircon::Status::from_raw)?;
 
-                        let () = netstack
-                            .add_interface_address(
-                                3,
-                                &mut u32_to_netaddr(settings.ip_v4_addr, settings.ip_v4_subnet)?
-                            )
-                            .await
-                            .squash_result()?;
-                        let ip = settings.ip_v4_addr;
+                        let to_addr = |ip: u32| {
+                            Ipv4Address {
+                                addr: ip.to_be_bytes()
+                            }
+                        };
+                        let addr = to_addr(settings.ip_v4_addr);
+                        let prefix_len = u32_to_cidr(settings.ip_v4_subnet).context("compute subnet")?;
+                        {
+                            let debug_interfaces = connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()?;
+                            let (control, server_end) = fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                                .context("create admin control endpoints")?;
+                            // TODO not hardcode to iface 3
+                            let () = debug_interfaces.get_admin(3, server_end).context("send get admin request")?;
+                            let (address_state_provider, server_end) = fidl::endpoints::create_proxy()
+                                .context("create proxy")?;
+                            let mut addr = {
+                                fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                                    addr,
+                                    prefix_len,
+                                })
+                            };
+                            let () = control
+                                .add_address(
+                                    &mut addr,
+                                    fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+                                    server_end,
+                                )
+                                .context("call add address")?;
+                            let () = address_state_provider.detach().context("detach address lifetime")?;
+                        }
+
                         let () = netstack.add_forwarding_entry(&mut ForwardingEntry {
                             subnet: Subnet {
-                                addr: IpAddress::Ipv4(Ipv4Address{
-                                    addr: [
-                                        ((ip >> 24) & 0xFF) as u8,
-                                        ((ip >> 16) & 0xFF) as u8,
-                                        ((ip >> 8)  & 0xFF) as u8,
-                                        (ip & 0xFF) as u8]}),
-                                prefix_len: u32_to_cidr(settings.ip_v4_subnet)?
+                                addr: IpAddress::Ipv4(addr),
+                                prefix_len,
                             },
                             device_id: 0,
-                            next_hop: Some(Box::new(IpAddress::Ipv4(Ipv4Address{
-                                addr: [
-                                    ((settings.ip_v4_gateway >> 24) & 0xFF) as u8,
-                                    ((settings.ip_v4_gateway >> 16) & 0xFF) as u8,
-                                    ((settings.ip_v4_gateway >> 8)  & 0xFF) as u8,
-                                    (settings.ip_v4_gateway & 0xFF) as u8,
-                                ],
-                            }))),
+                            next_hop: Some(Box::new(IpAddress::Ipv4(to_addr(settings.ip_v4_gateway)))),
                             metric: 0,
                         }).await.squash_result()?;
                         Ok("connected".to_string())
