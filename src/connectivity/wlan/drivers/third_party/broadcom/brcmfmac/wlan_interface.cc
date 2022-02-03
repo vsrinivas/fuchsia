@@ -271,6 +271,13 @@ void WlanInterface::StartScan(const wlan_fullmac_scan_req_t* req) {
   }
 }
 
+void WlanInterface::ConnectReq(const wlan_fullmac_connect_req_t* req) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_connect_req(wdev_->netdev, req);
+  }
+}
+
 void WlanInterface::JoinReq(const wlan_fullmac_join_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {

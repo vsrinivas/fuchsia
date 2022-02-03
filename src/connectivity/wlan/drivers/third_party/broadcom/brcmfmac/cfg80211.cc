@@ -27,6 +27,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/zx/clock.h>
 #include <stdlib.h>
+#include <string.h>
 #include <threads.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -3418,6 +3419,20 @@ void brcmf_if_start_scan(net_device* ndev, const wlan_fullmac_scan_req_t* req) {
       BRCMF_INFO("Scan failed. Internal error: %d %s", result, zx_status_get_string(result));
       brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
   }
+}
+
+void brcmf_if_connect_req(net_device* ndev, const wlan_fullmac_connect_req_t* req) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping connect request");
+    return;
+  }
+
+  BRCMF_IFDBG(WLANIF, ndev, "Connect request from SME rejected: API not yet supported.");
+  wlan_fullmac_connect_confirm_t result;
+  result.result_code = STATUS_CODE_REFUSED_REASON_UNSPECIFIED;
+  memcpy(&result.peer_sta_address, &req->selected_bss.bssid, sizeof(result.peer_sta_address));
+  wlan_fullmac_impl_ifc_connect_conf(&ndev->if_proto, &result);
 }
 
 // Because brcm's join/assoc is handled in a single operation (BRCMF_C_SET_SSID), we save off the

@@ -60,6 +60,7 @@ class WlanInterface {
   void Stop();
   void Query(wlan_fullmac_query_info_t* info);
   void StartScan(const wlan_fullmac_scan_req_t* req);
+  void ConnectReq(const wlan_fullmac_connect_req_t* req);
   void JoinReq(const wlan_fullmac_join_req_t* req);
   void AuthReq(const wlan_fullmac_auth_req_t* req);
   void AuthResp(const wlan_fullmac_auth_resp_t* resp);

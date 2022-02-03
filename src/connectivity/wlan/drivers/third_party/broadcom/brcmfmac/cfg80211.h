@@ -545,6 +545,7 @@ zx_status_t brcmf_if_start(net_device* ndev, const wlan_fullmac_impl_ifc_protoco
 void brcmf_if_stop(net_device* ndev);
 void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info);
 void brcmf_if_start_scan(net_device* ndev, const wlan_fullmac_scan_req_t* req);
+void brcmf_if_connect_req(net_device* ndev, const wlan_fullmac_connect_req_t* req);
 void brcmf_if_join_req(net_device* ndev, const wlan_fullmac_join_req_t* req);
 void brcmf_if_auth_req(net_device* ndev, const wlan_fullmac_auth_req_t* req);
 void brcmf_if_auth_resp(net_device* ndev, const wlan_fullmac_auth_resp_t* ind);

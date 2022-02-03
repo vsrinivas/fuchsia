@@ -56,8 +56,34 @@ const WLAN_MSDU_MAX_LEN uint32 = 2304;
 /// section, but not in a dedicated section.
 const WLAN_IE_BODY_MAX_LEN uint32 = 255;
 
-const WLAN_VIE_MAX_LEN uint32 = 510; // max length for two elements (WPA and WSC)
+/// Max length for vendor IEs to be added to the association request. This is currently
+/// used for WPA.
+const WLAN_VIE_MAX_LEN uint32 = 510;
 const WLAN_MAX_OP_RATES uint32 = 12;
+
+type WlanFullmacConnectReq = struct {
+    selected_bss fuchsia.wlan.internal.BssDescription;
+    connect_failure_timeout uint32;
+
+    /// Additional parameters specific to the authentication exchange.
+    auth_type WlanAuthType;
+    // sae_password is ignored except when SAE_DRIVER_AUTH is enabled and the
+    // auth_type is SAE.
+    sae_password vector<uint8>:MAX;
+
+    /// Additional parameters specific to the association exchange.
+    rsne vector<uint8>:WLAN_IE_BODY_MAX_LEN;
+    vendor_ie vector<uint8>:WLAN_VIE_MAX_LEN;
+};
+
+type WlanFullmacConnectConfirm = struct {
+    peer_sta_address ieee80211.MacAddr;
+    result_code ieee80211.StatusCode;
+
+    // These fields are only valid if the result is success.
+    association_id uint16;
+    association_ies vector<uint8>:MAX;
+};
 
 type WlanFullmacJoinReq = struct {
     selected_bss fuchsia.wlan.internal.BssDescription;
@@ -663,6 +689,10 @@ protocol WlanFullmacImplIfc {
     OnScanEnd(struct {
         end WlanFullmacScanEnd;
     }) -> ();
+    ConnectConf(struct {
+        resp WlanFullmacConnectConfirm;
+    }) -> ();
+    // TODO(fxbug.dev/88275): Remove Join/Auth/Assoc when Connect is supported.
     JoinConf(struct {
         resp WlanFullmacJoinConfirm;
     }) -> ();
@@ -760,6 +790,10 @@ protocol WlanFullmacImpl {
     StartScan(struct {
         req WlanFullmacScanReq;
     }) -> ();
+    ConnectReq(struct {
+        req WlanFullmacConnectReq;
+    }) -> ();
+    // TODO(fxbug.dev/88275): Remove Join/Auth/Assoc when Connect is supported.
     JoinReq(struct {
         req WlanFullmacJoinReq;
     }) -> ();
