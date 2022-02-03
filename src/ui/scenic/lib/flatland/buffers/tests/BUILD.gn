@@ -13,9 +13,7 @@ executable("unittests") {
   testonly = true
   sources = [ "buffer_collection_unittest.cc" ]
 
-  # TODO(fxbug.dev/58615): Fix the leaks and remove this.
   deps = [
-    "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/flatland/buffers",
