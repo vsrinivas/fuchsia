@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"flag"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -29,10 +28,11 @@ import (
 )
 
 var (
-	instrumentedBinary = flag.String("instrumented-binary", "", "Path to the instrumented coverage test binary")
-	goldenCoverageFile = flag.String("golden-coverage-file", "", "Path to golden coverage file")
+	coverageTestBinary = flag.String("coverage-test-binary", "", "Path to the instrumented coverage test binary")
+	coverageTestName   = flag.String("coverage-test-name", "", "Name of coverage test")
+	goldenCoverageFile = flag.String("golden-coverage", "", "Path to golden coverage file")
+	llvmProfData       = flag.String("llvm-profdata", "", "Path to version of llvm-profdata tool")
 	llvmCov            = flag.String("llvm-cov", "", "Path to llvm-cov tool")
-	llvmProfData       = flag.String("llvm-profdata", "", "Path to llvm-profdata tool")
 )
 
 func TestCoverage(t *testing.T) {
@@ -49,8 +49,9 @@ func TestCoverage(t *testing.T) {
 	// Read SSH key which is required to run a test.
 	sshKeyFile := os.Getenv(constants.SSHKeyEnvKey)
 	testOutDir := t.TempDir()
+
 	// Create a new fuchsia tester that is responsible for executing the test.
-	// This is v2 test, which uses run-test-suite instead of runtests, so runtests=false.
+	// This is a v2 test, and it uses run-test-suite instead of runtests, so runtests=false.
 	// TODO(fxbug.dev/77634): When we start treating profiles as artifacts, start using ffx
 	// with testrunner.NewFFXTester().
 	tester, err := testrunner.NewFuchsiaSSHTester(ctx, addr, sshKeyFile, testOutDir, "", false)
@@ -60,20 +61,18 @@ func TestCoverage(t *testing.T) {
 
 	test := testsharder.Test{
 		Test: build.Test{
-			Name:       "fuchsia-pkg://fuchsia.com/coverage_test_package#meta/coverage_test_package.cm",
-			PackageURL: "fuchsia-pkg://fuchsia.com/coverage_test_package#meta/coverage_test_package.cm",
+			Name:       *coverageTestName,
+			PackageURL: *coverageTestName,
 		},
 		RunAlgorithm: testsharder.StopOnFailure,
 		Runs:         1,
 	}
-
 	// Run the test over SSH.
-	_, err = tester.Test(ctx, test, os.Stdout, os.Stdout, "unused-out-dir")
+	result, err := tester.Test(ctx, test, os.Stdout, os.Stdout, "unused-out-dir")
 	if err != nil {
 		t.Fatalf("failed to run the test: %s", err)
 	}
 
-	var sinks []runtests.DataSinkReference
 	// Create a test outputs object, responsible for producing TAP output,
 	// and recording data sinks.
 	outputs, err := testrunner.CreateTestOutputs(tap.NewProducer(io.Discard), testOutDir)
@@ -81,20 +80,24 @@ func TestCoverage(t *testing.T) {
 		t.Fatalf("failed to create test outputs: %s", err)
 	}
 
-	profileDir := filepath.Join(testOutDir, "v2/llvm-profile")
-	var files []os.FileInfo
+	// Record data sinks.
+	if err := outputs.Record(ctx, *result); err != nil {
+		t.Fatalf("failed to record data sinks: %s", err)
+	}
 
 	// Copy profiles to the host. There might be a delay between when the test finishes and
-	// data sinks including profiles are available on the target to copy. When that's the case, retry.
+	// data sinks including profiles are available on the target to copy. When that's the case,
+	// EnsureSinks() does not return an error, and it logs the message.
+	// Therefore, check whether v2 sinks directory exists to ensure copying is successful.
+	// When there is a delay, retry.
 	// TODO(fxbug.dev/77634): When we start treating profiles as artifacts, remove retry.
+	var sinks []runtests.DataSinkReference
 	err = retry.Retry(ctx, retry.NewConstantBackoff(5*time.Second), func() error {
-		err = tester.EnsureSinks(ctx, sinks, outputs)
-		if err != nil {
+		if err := tester.EnsureSinks(ctx, sinks, outputs); err != nil {
 			return err
 		}
-		// Read the directory that contains the copied profiles.
-		// If the directory does not exist yet, retry.
-		files, err = ioutil.ReadDir(profileDir)
+		v2SinksDir := filepath.Join(testOutDir, "v2")
+		_, err := os.ReadDir(v2SinksDir)
 		if err != nil {
 			return err
 		}
@@ -104,14 +107,18 @@ func TestCoverage(t *testing.T) {
 		t.Fatalf("failed to collect data sinks: %s", err)
 	}
 
-	// Find the raw profile.
+	// Find the raw profile that corresponds to the given coverage test name.
 	rawProfile := ""
-	for _, file := range files {
-		filePath := filepath.Join(profileDir, file.Name())
-		if filepath.Ext(filePath) == ".profraw" {
-			rawProfile = filePath
-			break
+	if len(outputs.Summary.Tests) != 1 {
+		t.Fatalf("failed to find the test in the outputs")
+	}
+	outputTest := outputs.Summary.Tests[0]
+	for _, sinks := range outputTest.DataSinks {
+		// There should be one sink per test.
+		if len(sinks) != 1 {
+			t.Fatalf("there should be one sink per test")
 		}
+		rawProfile = filepath.Join(testOutDir, sinks[0].File)
 	}
 	if rawProfile == "" {
 		t.Fatalf("failed to find a raw profile")
@@ -124,13 +131,12 @@ func TestCoverage(t *testing.T) {
 		rawProfile,
 	}
 	showCmd := exec.Command(*llvmProfData, args...)
-	err = showCmd.Run()
-	if err != nil {
-		t.Fatalf("profile is malformed: %s", err)
+	if err := showCmd.Run(); err != nil {
+		t.Fatalf("profile is malformed: %s: %s", rawProfile, err)
 	}
 
 	// Generate an indexed profile using llvm-profdata merge command.
-	indexedProfile := filepath.Join(profileDir, "coverage.profdata")
+	indexedProfile := filepath.Join(testOutDir, "coverage.profdata")
 	args = []string{
 		"merge",
 		rawProfile,
@@ -138,8 +144,7 @@ func TestCoverage(t *testing.T) {
 		indexedProfile,
 	}
 	mergeCmd := exec.Command(*llvmProfData, args...)
-	err = mergeCmd.Run()
-	if err != nil {
+	if err := mergeCmd.Run(); err != nil {
 		t.Fatalf("cannot create an indexed profile: %s", err)
 	}
 
@@ -149,7 +154,7 @@ func TestCoverage(t *testing.T) {
 		"-summary-only",
 		"-format=text",
 		"-instr-profile", indexedProfile,
-		*instrumentedBinary,
+		*coverageTestBinary,
 	}
 	exportCmd := exec.Command(*llvmCov, args...)
 	generatedCoverage, err := exportCmd.CombinedOutput()
@@ -157,9 +162,8 @@ func TestCoverage(t *testing.T) {
 		t.Fatalf("cannot export coverage: %s", err)
 	}
 	var generatedCoverageExport llvm.Export
-	err = json.Unmarshal(generatedCoverage, &generatedCoverageExport)
-	if err != nil {
-		t.Fatalf("cannot unmarshall generated coverage: %s", err)
+	if err := json.Unmarshal(generatedCoverage, &generatedCoverageExport); err != nil {
+		t.Fatalf("cannot unmarshal generated coverage: %s", err)
 	}
 
 	// Read golden coverage report.
@@ -168,14 +172,18 @@ func TestCoverage(t *testing.T) {
 		t.Fatalf("cannot find golden coverage report: %s", err)
 	}
 	var goldenCoverageExport llvm.Export
-	err = json.Unmarshal(goldenCoverage, &goldenCoverageExport)
-	if err != nil {
-		t.Fatalf("cannot unmarshall golden coverage: %s", err)
+	if err := json.Unmarshal(goldenCoverage, &goldenCoverageExport); err != nil {
+		t.Fatalf("cannot unmarshal golden coverage: %s", err)
 	}
 
 	// Compare the generated coverage report with a golden coverage report.
-	diff := cmp.Diff(generatedCoverageExport, goldenCoverageExport)
+	diff := cmp.Diff(goldenCoverageExport, generatedCoverageExport)
 	if diff != "" {
 		t.Fatalf("unexpected coverage (-golden-coverage +generated-coverage): %s", diff)
+	}
+
+	// Close recording of test outputs.
+	if err := outputs.Close(); err != nil {
+		t.Fatalf("failed to save test outputs: %s", err)
 	}
 }

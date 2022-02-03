@@ -3,7 +3,7 @@
         {
             "files": [
                 {
-                    "filename": "../../src/tests/coverage/coverage_test.cc",
+                    "filename": "../../src/tests/coverage/clang_coverage_test.cc",
                     "summary": {
                         "branches": {
                             "count": 6,

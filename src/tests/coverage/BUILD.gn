@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/zircon/c_utils.gni")
 
 group("tests") {
@@ -14,16 +15,19 @@ group("tests") {
   # This test uses instrumententation for coverage, and it is intentionally
   # disabled when sanitizer instrumentation is enabled.
   if (!is_asan) {
-    deps = [ ":coverage_tests($host_toolchain)" ]
+    deps = [
+      ":clang_coverage_tests($host_toolchain)",
+      ":rust_coverage_tests($host_toolchain)",
+    ]
   }
 }
 
-# Coverage test is compiled with coverage enabled.
+# Clang coverage test is compiled with coverage enabled.
 # It runs on the target, and generates an llvm-profile (.profraw file)
 # upon execution.
-executable("coverage_test_bin") {
-  sources = [ "coverage_test.cc" ]
+executable("clang_coverage_test_bin") {
   testonly = true
+  sources = [ "clang_coverage_test.cc" ]
   cflags = [
     "-fprofile-instr-generate",
     "-fcoverage-mapping",
@@ -31,25 +35,63 @@ executable("coverage_test_bin") {
   ldflags = cflags
 }
 
-fuchsia_unittest_package("coverage_test_package") {
-  manifest = "meta/coverage_test.cml"
-  deps = [ ":coverage_test_bin" ]
+fuchsia_unittest_package("clang_coverage_test_package") {
+  manifest = "meta/clang_coverage_test.cml"
+  deps = [ ":clang_coverage_test_bin" ]
 }
 
-coverage_test_rspfile = "$target_gen_dir/coverage_test_bin.rsp"
-link_output_rspfile("coverage_test_bin.rsp") {
+clang_coverage_test_rspfile = "$target_gen_dir/clang_coverage_test_bin.rsp"
+link_output_rspfile("clang_coverage_test_bin.rsp") {
   testonly = true
-  outputs = [ coverage_test_rspfile ]
-  deps = [ ":coverage_test_bin($target_toolchain)" ]
+  outputs = [ clang_coverage_test_rspfile ]
+  deps = [ ":clang_coverage_test_bin($target_toolchain)" ]
 }
 
-coverage_test_binary_path = "$target_out_dir/coverage_test_bin"
-action("copy_instrumented_binary") {
+clang_coverage_test_binary_path = "$target_out_dir/clang_coverage_test_bin"
+action("copy_clang_coverage_test_binary") {
   testonly = true
-  sources = [ coverage_test_rspfile ]
-  deps = [ ":coverage_test_bin.rsp" ]
-  script = "copy_instrumented_binary.py"
-  outputs = [ coverage_test_binary_path ]
+  sources = [ clang_coverage_test_rspfile ]
+  deps = [ ":clang_coverage_test_bin.rsp" ]
+  script = "copy_coverage_test_binary.py"
+  outputs = [ clang_coverage_test_binary_path ]
+  depfile = "${outputs[0]}.d"
+  args = [
+    "--input",
+    rebase_path(sources[0], root_build_dir),
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+    "--depfile",
+    rebase_path(depfile, root_build_dir),
+  ]
+}
+
+# Rust coverage test is compiled with coverage enabled.
+rustc_binary("rust_coverage_test_bin") {
+  testonly = true
+  source_root = "rust_coverage_test.rs"
+  sources = [ "rust_coverage_test.rs" ]
+  configs += [ "//build/config/rust:coverage" ]
+}
+
+fuchsia_unittest_package("rust_coverage_test_package") {
+  manifest = "meta/rust_coverage_test.cml"
+  deps = [ ":rust_coverage_test_bin" ]
+}
+
+rust_coverage_test_rspfile = "$target_gen_dir/rust_coverage_test_bin.rsp"
+link_output_rspfile("rust_coverage_test_bin.rsp") {
+  testonly = true
+  outputs = [ rust_coverage_test_rspfile ]
+  deps = [ ":rust_coverage_test_bin($target_toolchain)" ]
+}
+
+rust_coverage_test_binary_path = "$target_out_dir/rust_coverage_test_bin"
+action("copy_rust_coverage_test_binary") {
+  testonly = true
+  sources = [ rust_coverage_test_rspfile ]
+  deps = [ ":rust_coverage_test_bin.rsp" ]
+  script = "copy_coverage_test_binary.py"
+  outputs = [ rust_coverage_test_binary_path ]
   depfile = "${outputs[0]}.d"
   args = [
     "--input",
@@ -76,24 +118,36 @@ go_library("lib") {
 }
 
 if (is_host) {
-  host_test_data("test_deps") {
+  host_test_data("clang_coverage_test_deps") {
     sources = [
       "//prebuilt/third_party/clang/${host_platform}/bin/llvm-cov",
       "//prebuilt/third_party/clang/${host_platform}/bin/llvm-profdata",
-      "golden_coverage.json",
-      coverage_test_binary_path,
+      "clang_golden_coverage.json",
+      clang_coverage_test_binary_path,
     ]
 
-    deps = [ ":copy_instrumented_binary" ]
+    deps = [ ":copy_clang_coverage_test_binary" ]
+  }
+
+  host_test_data("rust_coverage_test_deps") {
+    sources = [
+      "//prebuilt/third_party/clang/${host_platform}/bin/llvm-cov",
+      "//prebuilt/third_party/rust/${host_platform}/bin/llvm-profdata",
+      "//prebuilt/third_party/rust/${host_platform}/lib",
+      "rust_golden_coverage.json",
+      rust_coverage_test_binary_path,
+    ]
+
+    deps = [ ":copy_rust_coverage_test_binary" ]
   }
 }
 
-go_test("coverage_tests") {
+go_test("clang_coverage_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/coverage" ]
   deps = [ ":lib" ]
   non_go_deps = [
-    ":coverage_test_package($target_toolchain)",
-    ":test_deps($host_toolchain)",
+    ":clang_coverage_test_deps($host_toolchain)",
+    ":clang_coverage_test_package($target_toolchain)",
   ]
 
   # Declare this test as a host-target interaction test, so that Fuchsia
@@ -101,6 +155,12 @@ go_test("coverage_tests") {
   if (is_host && target_cpu == "x64") {
     environments = [ emu_env ]
     args = [
+      "--coverage-test-binary",
+      rebase_path(clang_coverage_test_binary_path, root_build_dir),
+      "--coverage-test-name",
+      "fuchsia-pkg://fuchsia.com/clang_coverage_test_package#meta/clang_coverage_test_package.cm",
+      "--golden-coverage",
+      rebase_path("clang_golden_coverage.json", root_build_dir),
       "--llvm-profdata",
       rebase_path(
           "//prebuilt/third_party/clang/${host_platform}/bin/llvm-profdata",
@@ -108,10 +168,36 @@ go_test("coverage_tests") {
       "--llvm-cov",
       rebase_path("//prebuilt/third_party/clang/${host_platform}/bin/llvm-cov",
                   root_build_dir),
-      "--golden-coverage-file",
-      rebase_path("golden_coverage.json", root_build_dir),
-      "--instrumented-binary",
-      rebase_path(coverage_test_binary_path, root_build_dir),
+    ]
+  }
+}
+
+go_test("rust_coverage_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/coverage" ]
+  deps = [ ":lib" ]
+  non_go_deps = [
+    ":rust_coverage_test_deps($host_toolchain)",
+    ":rust_coverage_test_package($target_toolchain)",
+  ]
+
+  # Declare this test as a host-target interaction test, so that Fuchsia
+  # should be running in an emulator before this test starts on the host.
+  if (is_host && target_cpu == "x64") {
+    environments = [ emu_env ]
+    args = [
+      "--coverage-test-binary",
+      rebase_path(rust_coverage_test_binary_path, root_build_dir),
+      "--coverage-test-name",
+      "fuchsia-pkg://fuchsia.com/rust_coverage_test_package#meta/rust_coverage_test_package.cm",
+      "--golden-coverage",
+      rebase_path("rust_golden_coverage.json", root_build_dir),
+      "--llvm-cov",
+      rebase_path("//prebuilt/third_party/clang/${host_platform}/bin/llvm-cov",
+                  root_build_dir),
+      "--llvm-profdata",
+      rebase_path(
+          "//prebuilt/third_party/rust/${host_platform}/bin/llvm-profdata",
+          root_build_dir),
     ]
   }
 }
