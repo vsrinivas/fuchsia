@@ -881,6 +881,15 @@ struct iwl_mvm_low_latency_iter {
   bool result_per_band[WLAN_INFO_BAND_COUNT];
 };
 
+// How iwl_mvm_ll_iter() work with ieee80211_iterate_active_interfaces_atomic:
+//
+// The goal of the iterations is to mark iwl_mvm_low_latency_iter.result as true when there is at
+// least one vif with low latency state exists, and mark iwl_mvm_low_latency_iter.result_per_band[*]
+// as true when there is at least one vif with low latency state on this band exists. The assumption
+// is one band per vif here but not one vif per band, if there are multiple vifs on one band, the
+// low latency state of this band will be true if there is at least one true in the low latency
+// states of its vifs, the state will not be set back to false so it's not really depends on the
+// last iteration for each band.
 static void iwl_mvm_ll_iter(void* _data, struct iwl_mvm_vif* mvmvif) {
   struct iwl_mvm_low_latency_iter* result = _data;
   wlan_info_band_t band;
@@ -892,7 +901,7 @@ static void iwl_mvm_ll_iter(void* _data, struct iwl_mvm_vif* mvmvif) {
       return;
     }
 
-    band = mvmvif->phy_ctxt->chandef.cbw;
+    band = iwl_mvm_get_channel_band(mvmvif->phy_ctxt->chandef.primary);
     result->result_per_band[band] = true;
   }
 }
