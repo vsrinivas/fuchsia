@@ -10,6 +10,7 @@ import 'package:fuchsia_remote_debug_protocol/fuchsia_remote_debug_protocol.dart
     as frdp;
 import 'package:logging/logging.dart';
 import 'package:quiver/check.dart';
+import 'package:retry/retry.dart';
 import 'package:sl4f/sl4f.dart';
 
 String getVmServicePortFromInspectSnapshot(
@@ -56,6 +57,7 @@ class FlutterDriverConnector {
   final Sl4f _sl4f;
   final Inspect _inspect;
   final TcpProxyController _proxyController;
+  static const maxInspectSnapshotAttempts = 5;
 
   frdp.FuchsiaRemoteConnection _connection;
 
@@ -108,27 +110,37 @@ class FlutterDriverConnector {
     bool printCommunication = false,
     bool logCommunicationToFile = false,
   }) async {
-    final inspectSnapshot = await _inspect.snapshot(['$selector:root']);
-    final vmServicePort = getVmServicePortFromInspectSnapshot(inspectSnapshot);
-    if (vmServicePort == null) {
-      _logger.severe('Could not find the vm service port for $selector');
-      return null;
-    }
+    return retry(
+      () async {
+        final inspectSnapshot = await _inspect.snapshot(['$selector:root']);
+        if (inspectSnapshot == null || inspectSnapshot.isEmpty) {
+          throw Exception('Inspect Snapshot for $selector could not be found.');
+        }
+        final vmServicePort =
+            getVmServicePortFromInspectSnapshot(inspectSnapshot);
+        if (vmServicePort == null) {
+          _logger.severe('Could not find the vm service port for $selector');
+          return null;
+        }
 
-    final openPort = await _proxyController.openProxy(int.parse(vmServicePort));
-    final vmUri =
-        Uri(scheme: 'ws', host: _sl4f.ssh.target, port: openPort, path: '/ws');
+        final openPort =
+            await _proxyController.openProxy(int.parse(vmServicePort));
+        final vmUri = Uri(
+            scheme: 'ws', host: _sl4f.ssh.target, port: openPort, path: '/ws');
 
-    final dartVm = await frdp.DartVm.connect(vmUri);
-    final isolates = await dartVm.getMainIsolatesByPattern(namePattern);
-
-    return isolates == null || isolates.isEmpty
-        ? null
-        : FlutterDriver.connect(
-            dartVmServiceUrl: vmUri.toString(),
-            isolateNumber: isolates.first.number,
-            printCommunication: printCommunication,
-            logCommunicationToFile: logCommunicationToFile);
+        final dartVm = await frdp.DartVm.connect(vmUri);
+        final isolates = await dartVm.getMainIsolatesByPattern(namePattern);
+        return isolates == null || isolates.isEmpty
+            ? null
+            : FlutterDriver.connect(
+                dartVmServiceUrl: vmUri.toString(),
+                isolateNumber: isolates.first.number,
+                printCommunication: printCommunication,
+                logCommunicationToFile: logCommunicationToFile);
+      },
+      retryIf: (e) => e is Exception,
+      maxAttempts: maxInspectSnapshotAttempts,
+    );
   }
 
   /// Connects to [FlutterDriver] for an isolate that matches [namePattern].

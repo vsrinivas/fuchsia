@@ -17,5 +17,6 @@ dart_library("flutter_driver_sl4f") {
     "//third_party/dart-pkg/git/flutter/packages/fuchsia_remote_debug_protocol",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/quiver",
+    "//third_party/dart-pkg/pub/retry",
   ]
 }
