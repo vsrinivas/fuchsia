@@ -253,6 +253,11 @@ template("fuchsia_structured_config_rust_lib") {
       name = fidl_library_name
       compiled_manifest = compiled_manifest
       deps = [ "${invoker.cm_target}" ]
+
+      # prevent manifest from getting into package this way
+      metadata = {
+        distribution_entries_barrier = []
+      }
     }
 
     # generate the rust source
@@ -262,6 +267,11 @@ template("fuchsia_structured_config_rust_lib") {
       compiled_manifest = compiled_manifest
       with_inspect = with_inspect
       deps = [ "${invoker.cm_target}" ]
+
+      # prevent manifest from getting into package this way
+      metadata = {
+        distribution_entries_barrier = []
+      }
     }
   } else {
     group(fidl_source_target) {
