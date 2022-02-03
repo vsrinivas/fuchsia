@@ -1,6 +1,6 @@
 # Mock Piconet Server
 
-The Mock Piconet Server component is used in integration tests for the Bluetooth
+The Mock Piconet Server (MPS) component is used in integration tests for the Bluetooth
 [profiles](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/bluetooth/profiles/).
 
 The server manages a fake piconet of peers, and simulates the behavior of the
@@ -9,6 +9,7 @@ register mock peers in the piconet, launch profiles to test, and drive peer beha
 For RFCOMM connections, test writers should use the [RFCOMM component](../../profiles/bt-rfcomm) as an intermediary.
 
 The Mock Piconet Server currently supports integration tests written in both CFv1 and CFv2 frameworks.
+Integration test authors should use the CFv2 variant of the MPS.
 
 ## Build Configuration
 
@@ -21,11 +22,14 @@ to your `fx set`.
 
 To run the unit tests for the server: `fx test mock-piconet-server-tests`.
 
+The Mock Piconet Server is referenced using a [relative URL](https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0104_relative_urls).
+Make sure to include the MPS component in the `deps` of your integration test package.
+
 ## Library
 
 The Mock Piconet Server provides a client-facing library of utilities to launch and interact
 with the server.
-To use the tools provided in the library, add `//src/connectivity/bluetooth/testing/mock-piconet-server:lib` to the
+To use the tools provided in the library, add `//src/connectivity/bluetooth/testing/mock-piconet-server:lib_v2` to the
 `BUILD.gn` of your test component.
 
 ## Examples

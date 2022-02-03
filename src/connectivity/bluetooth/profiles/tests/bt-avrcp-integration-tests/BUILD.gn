@@ -50,7 +50,7 @@ fuchsia_test_package("bt-avrcp-integration-tests") {
 
   deps = [
     "//src/connectivity/bluetooth/profiles/bt-avrcp:component",
-    "//src/connectivity/bluetooth/testing/mock-piconet-server",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:component-v2",
   ]
 }
 

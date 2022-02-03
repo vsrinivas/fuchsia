@@ -73,7 +73,7 @@ fuchsia_test_package("bt-hfp-audio-gateway-integration-tests") {
     "//src/connectivity/bluetooth/testing/mock-a2dp-controller:mock-a2dp-controller",
 
     # Mock Piconet Server
-    "//src/connectivity/bluetooth/testing/mock-piconet-server",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:component-v2",
   ]
 }
 

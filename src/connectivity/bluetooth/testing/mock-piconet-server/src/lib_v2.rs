@@ -36,8 +36,7 @@ pub fn peer_observer_timeout() -> Duration {
     TIMEOUT_SECONDS.seconds()
 }
 
-static MOCK_PICONET_SERVER_URL_V2: &str =
-    "fuchsia-pkg://fuchsia.com/mock-piconet-server#meta/mock-piconet-server-v2.cm";
+static MOCK_PICONET_SERVER_URL_V2: &str = "#meta/mock-piconet-server-v2.cm";
 static PROFILE_INTERPOSER_PREFIX: &str = "profile-interposer";
 static BT_RFCOMM_PREFIX: &str = "bt-rfcomm";
 

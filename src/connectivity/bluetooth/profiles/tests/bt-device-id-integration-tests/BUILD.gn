@@ -47,7 +47,7 @@ fuchsia_test_package("bt-device-id-integration-tests") {
     "//src/connectivity/bluetooth/profiles/bt-device-id:component",
 
     # Mock Piconet Server component.
-    "//src/connectivity/bluetooth/testing/mock-piconet-server",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:component-v2",
   ]
 }
 

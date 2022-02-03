@@ -56,7 +56,10 @@ rustc_library("lib_v2") {
 
 fuchsia_unittest_package("mock-piconet-client-v2-tests") {
   manifest = "meta/mock-piconet-client-v2-tests.cml"
-  deps = [ ":lib_v2_test" ]
+  deps = [
+    ":component-v2",
+    ":lib_v2_test",
+  ]
 }
 
 rustc_binary("bin") {
