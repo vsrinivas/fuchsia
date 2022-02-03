@@ -42,7 +42,7 @@ use packet_formats::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::{
-    context::{CounterContext, FrameContext, StateContext, TimerContext, TimerHandler},
+    context::{CounterContext, FrameContext, StateContext, TimerContext},
     device::{DeviceId, FrameDestination},
     error::{ExistsError, NotFoundError},
     ip::{
@@ -558,8 +558,12 @@ impl IpLayerTimerId {
 /// Handle a timer event firing in the IP layer.
 pub(crate) fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: IpLayerTimerId) {
     match id {
-        IpLayerTimerId::ReassemblyTimeoutv4(key) => ctx.handle_timer(key),
-        IpLayerTimerId::ReassemblyTimeoutv6(key) => ctx.handle_timer(key),
+        IpLayerTimerId::ReassemblyTimeoutv4(key) => {
+            ctx.state.ipv4.inner.fragment_cache.handle_timer(key);
+        }
+        IpLayerTimerId::ReassemblyTimeoutv6(key) => {
+            ctx.state.ipv6.inner.fragment_cache.handle_timer(key);
+        }
         IpLayerTimerId::PmtuTimeout(IpVersion::V4) => {
             ctx.state
                 .ipv4
@@ -577,17 +581,17 @@ pub(crate) fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: IpLayerTime
     }
 }
 
-impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Ctx<D> {
+impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for D {
     fn schedule_timer_instant(
         &mut self,
         time: Self::Instant,
         key: FragmentCacheKey<A>,
     ) -> Option<Self::Instant> {
-        self.dispatcher.schedule_timer_instant(time, IpLayerTimerId::new_reassembly_timer_id(key))
+        self.schedule_timer_instant(time, IpLayerTimerId::new_reassembly_timer_id(key))
     }
 
     fn cancel_timer(&mut self, key: FragmentCacheKey<A>) -> Option<Self::Instant> {
-        self.dispatcher.cancel_timer(IpLayerTimerId::new_reassembly_timer_id(key))
+        self.cancel_timer(IpLayerTimerId::new_reassembly_timer_id(key))
     }
 
     // TODO(rheacock): the compiler thinks that `f` doesn't have to be mutable,
@@ -600,10 +604,10 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Ctx
             D: EventDispatcher,
             F: FnMut(&FragmentCacheKey<A>) -> bool,
         >(
-            ctx: &mut Ctx<D>,
+            ctx: &mut D,
             mut f: F,
         ) {
-            ctx.dispatcher.cancel_timers_with(|id| match id {
+            ctx.cancel_timers_with(|id| match id {
                 #[ipv4addr]
                 TimerId(TimerIdInner::IpLayer(IpLayerTimerId::ReassemblyTimeoutv4(key))) => f(key),
                 #[ipv6addr]
@@ -616,7 +620,7 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Ctx
     }
 
     fn scheduled_instant(&self, key: FragmentCacheKey<A>) -> Option<Self::Instant> {
-        self.dispatcher.scheduled_instant(IpLayerTimerId::new_reassembly_timer_id(key))
+        self.scheduled_instant(IpLayerTimerId::new_reassembly_timer_id(key))
     }
 }
 
@@ -870,7 +874,10 @@ macro_rules! drop_packet_and_undo_parse {
 /// attempt to dispatch the packet.
 macro_rules! process_fragment {
     ($ctx:expr, $dispatch:ident, $device:expr, $frame_dst:expr, $buffer:expr, $packet:expr, $src_ip:expr, $dst_ip:expr, $ip:ident) => {{
-        match IpPacketFragmentCache::<$ip>::process_fragment::<_, &mut [u8]>($ctx, $packet) {
+        match get_state_inner_mut::<$ip, _>(&mut $ctx.state)
+            .fragment_cache
+            .process_fragment::<_, &mut [u8]>(&mut $ctx.dispatcher, $packet)
+        {
             // Handle the packet right away since reassembly is not needed.
             FragmentProcessingState::NotNeeded(packet) => {
                 trace!("receive_ip_packet: not fragmented");
@@ -895,7 +902,10 @@ macro_rules! process_fragment {
                 let mut buffer = Buf::new(alloc::vec![0; packet_len], ..);
 
                 // Attempt to reassemble the packet.
-                match IpPacketFragmentCache::<$ip>::reassemble_packet::<_, _, _>($ctx, &key, buffer.buffer_view_mut()) {
+                match get_state_inner_mut::<$ip, _>(&mut $ctx.state)
+                    .fragment_cache
+                    .reassemble_packet(&mut $ctx.dispatcher, &key, buffer.buffer_view_mut())
+                {
                     // Successfully reassembled the packet, handle it.
                     Ok(packet) => {
                         trace!("receive_ip_packet: fragmented, reassembled packet: {:?}", packet);
@@ -1311,14 +1321,14 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                         "receive_ipv6_packet: handled IPv6 extension headers: handling fragmented packet"
                     );
 
-                    // Note, the `process_fragment` function (which is called by
-                    // the `process_fragment!` macro) could panic if the packet
-                    // does not have fragment data. However, we are guaranteed
-                    // that it will not panic for an IPv6 packet because the
-                    // fragment data is in an (optional) fragment extension
-                    // header which we attempt to handle by calling
-                    // `ipv6::handle_extension_headers`. We will only end up
-                    // here if its return value is
+                    // Note, the `IpPacketFragmentCache::process_fragment`
+                    // method (which is called by the `process_fragment!` macro)
+                    // could panic if the packet does not have fragment data.
+                    // However, we are guaranteed that it will not panic for an
+                    // IPv6 packet because the fragment data is in an (optional)
+                    // fragment extension header which we attempt to handle by
+                    // calling `ipv6::handle_extension_headers`. We will only
+                    // end up here if its return value is
                     // `Ipv6PacketAction::ProcessFragment` which is only
                     // possible when the packet has the fragment extension
                     // header (even if the fragment data has values that implies
