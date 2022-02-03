@@ -116,6 +116,11 @@ zx_status_t StreamDispatcher::WriteVector(VmAspace* current_aspace, user_in_iove
     return status;
   }
 
+  // Return early if writing zero bytes since we should not resize the VMO in that case.
+  if (total_capacity == 0) {
+    return ZX_OK;
+  }
+
   size_t length = 0u;
   uint64_t offset = 0u;
 
@@ -151,6 +156,11 @@ zx_status_t StreamDispatcher::WriteVectorAt(VmAspace* current_aspace, user_in_io
     return status;
   }
 
+  // Return early if writing zero bytes since we should not resize the VMO in that case.
+  if (total_capacity == 0) {
+    return ZX_OK;
+  }
+
   size_t requested_content_size = 0u;
   if (add_overflow(offset, total_capacity, &requested_content_size)) {
     return ZX_ERR_FILE_BIG;
@@ -175,6 +185,11 @@ zx_status_t StreamDispatcher::AppendVector(VmAspace* current_aspace, user_in_iov
   zx_status_t status = user_data.GetTotalCapacity(&total_capacity);
   if (status != ZX_OK) {
     return status;
+  }
+
+  // Return early if writing zero bytes since we should not resize the VMO in that case.
+  if (total_capacity == 0) {
+    return ZX_OK;
   }
 
   size_t length = 0u;
