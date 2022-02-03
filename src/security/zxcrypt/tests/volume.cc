@@ -289,6 +289,122 @@ void TestShredThroughDriverLocked(Volume::Version version, bool fvm) {
 }
 DEFINE_EACH_DEVICE(VolumeTest, TestShredThroughDriverLocked)
 
+void TestFormatAfterShredThroughDriverWhileSealed(Volume::Version version, bool fvm) {
+  TestDevice device;
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Create(kDeviceSize, kBlockSize, fvm, version));
+
+  zxcrypt::VolumeManager manager(device.parent(), device.devfs_root());
+  zx::channel chan;
+  ASSERT_OK(manager.OpenClient(zx::duration::infinite(), chan));
+
+  zxcrypt::EncryptedVolumeClient zxc_client(std::move(chan));
+  uint8_t slot = 0;
+  auto& key = device.key();
+
+  EXPECT_EQ(zxc_client.Format(key.get(), key.len(), slot), ZX_OK);
+
+  // We can unseal before Shred
+  EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_OK);
+  EXPECT_EQ(zxc_client.Seal(), ZX_OK);
+
+  // We cannot unseal after Shred
+  EXPECT_EQ(zxc_client.Shred(), ZX_OK);
+  EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_ERR_ACCESS_DENIED);
+
+  // We can format after Shred
+  EXPECT_EQ(zxc_client.Format(key.get(), key.len(), slot), ZX_OK);
+
+  // We can unseal after format after Shred
+  EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_OK);
+}
+DEFINE_EACH_DEVICE(VolumeTest, TestFormatAfterShredThroughDriverWhileSealed)
+
+void TestFormatAfterShredThroughDriverWhileUnsealed(Volume::Version version, bool fvm) {
+  TestDevice device;
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Create(kDeviceSize, kBlockSize, fvm, version));
+
+  zxcrypt::VolumeManager manager(device.parent(), device.devfs_root());
+  zx::channel chan;
+  ASSERT_OK(manager.OpenClient(zx::duration::infinite(), chan));
+
+  zxcrypt::EncryptedVolumeClient zxc_client(std::move(chan));
+  uint8_t slot = 0;
+  auto& key = device.key();
+
+  EXPECT_EQ(zxc_client.Format(key.get(), key.len(), slot), ZX_OK);
+
+  // We can Unseal before Shred
+  EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_OK);
+
+  // We can Shred while unsealed
+  EXPECT_EQ(zxc_client.Shred(), ZX_OK);
+
+  // We cannot format while still unsealed & shredded
+  EXPECT_EQ(zxc_client.Format(key.get(), key.len(), slot), ZX_ERR_BAD_STATE);
+
+  // We can seal, but cannot unseal
+  EXPECT_EQ(zxc_client.Seal(), ZX_OK);
+  EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_ERR_ACCESS_DENIED);
+
+  // We can format after sealing
+  EXPECT_EQ(zxc_client.Format(key.get(), key.len(), slot), ZX_OK);
+
+  // We can unseal after format
+  EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_OK);
+}
+DEFINE_EACH_DEVICE(VolumeTest, TestFormatAfterShredThroughDriverWhileUnsealed)
+
+void TestDriverStateTransitions(Volume::Version version, bool fvm) {
+  TestDevice device;
+  ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURE(device.Create(kDeviceSize, kBlockSize, fvm, version));
+
+  zxcrypt::VolumeManager manager(device.parent(), device.devfs_root());
+  zx::channel chan;
+  ASSERT_OK(manager.OpenClient(zx::duration::infinite(), chan));
+
+  zxcrypt::EncryptedVolumeClient zxc_client(std::move(chan));
+  uint8_t slot = 0;
+  auto& key = device.key();
+
+  // We believe we are in state kSealed.
+  // We cannot Seal.
+  EXPECT_EQ(zxc_client.Seal(), ZX_ERR_BAD_STATE);
+  // We can Shred(), which does not transition our state.
+  EXPECT_EQ(zxc_client.Shred(), ZX_OK);
+  // We can Format() again, which does not transition our state
+  EXPECT_EQ(zxc_client.Format(key.get(), key.len(), slot), ZX_OK);
+  // We can Unseal, which takes us to state kUnsealed.
+  EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_OK);
+
+  // We believe we are in state kUnsealed.
+  // We cannot Unseal() again; we are already unsealed.
+  EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_ERR_BAD_STATE);
+  // We cannot Format().
+  EXPECT_EQ(zxc_client.Format(key.get(), key.len(), slot), ZX_ERR_BAD_STATE);
+  // We can Seal() once, returning us to kSealed, but then can't Seal() again.
+  EXPECT_EQ(zxc_client.Seal(), ZX_OK);
+  EXPECT_EQ(zxc_client.Seal(), ZX_ERR_BAD_STATE);
+  // Return to kUnsealed once more by calling Unseal().
+  EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_OK);
+  // We can Shred(), which takes us to kUnsealedShredded
+  EXPECT_EQ(zxc_client.Shred(), ZX_OK);
+
+  // We believe we are in state kUnsealedShredded.
+  // We cannot Format() from kUnsealedShredded.
+  EXPECT_EQ(zxc_client.Format(key.get(), key.len(), slot), ZX_ERR_BAD_STATE);
+  // We cannot Unseal() from kUnsealedShredded.
+  EXPECT_EQ(zxc_client.Unseal(key.get(), key.len(), slot), ZX_ERR_BAD_STATE);
+  // We can Shred() again from kUnsealedShredded, which leaves us in the same
+  // state.
+  EXPECT_EQ(zxc_client.Shred(), ZX_OK);
+  // We can Seal(), which takes us back to kSealed()
+  EXPECT_EQ(zxc_client.Seal(), ZX_OK);
+}
+DEFINE_EACH_DEVICE(VolumeTest, TestDriverStateTransitions)
+
 constexpr uint64_t kFakeVolumeSize = 1 << 24;
 class TestVolume : public zxcrypt::Volume {
  public:

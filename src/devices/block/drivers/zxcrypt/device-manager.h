@@ -60,12 +60,28 @@ class DeviceManager final : public DeviceManagerType {
   void Shred(ShredRequestView request, ShredCompleter::Sync& completer) __TA_EXCLUDES(mtx_);
 
  private:
-  // Represents the state of this device.
+  // Represents the state of this device.  State transitions:
+  //
+  // kBinding is initial state
+  // kBinding -> kSealed on DdkAdd success
+  // kBinding -> kRemoved on DdkAdd failure
+  //
+  // kSealed -> kUnsealed if Unseal called with correct key
+  // kSealed -> kRemoved on DdkUnbind
+  //
+  // kUnsealed -> kSealed if Seal called
+  // kUnsealed -> kUnsealedShredded if Shred called
+  // kUnsealed -> kRemoved on DdkUnbind
+  //
+  // kUnsealedShredded -> kSealed if Seal called
+  // kUnsealedShredded -> kRemoved on DdkUnbind
+  //
+  // kRemoved is terminal
   enum State {
     kBinding,
     kSealed,
     kUnsealed,
-    kShredded,
+    kUnsealedShredded,
     kRemoved,
   };
 

@@ -68,7 +68,7 @@ zx_status_t DeviceManager::Bind() {
 
 void DeviceManager::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&mtx_);
-  ZX_ASSERT(state_ == kSealed || state_ == kUnsealed || state_ == kShredded);
+  ZX_ASSERT(state_ == kSealed || state_ == kUnsealed || state_ == kUnsealedShredded);
   state_ = kRemoved;
   txn.Reply();
 }
@@ -99,7 +99,7 @@ void DeviceManager::Seal(SealRequestView request, SealCompleter::Sync& completer
   zx_status_t rc;
   fbl::AutoLock lock(&mtx_);
 
-  if (state_ != kUnsealed && state_ != kShredded) {
+  if (state_ != kUnsealed && state_ != kUnsealedShredded) {
     zxlogf(ERROR, "can't seal zxcrypt, state=%d", state_);
     completer.Reply(ZX_ERR_BAD_STATE);
     return;
@@ -116,6 +116,12 @@ void DeviceManager::Seal(SealRequestView request, SealCompleter::Sync& completer
 
 void DeviceManager::Shred(ShredRequestView request, ShredCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
+
+  if (state_ != kSealed && state_ != kUnsealed && state_ != kUnsealedShredded) {
+    zxlogf(ERROR, "can't shred zxcrypt, state=%d", state_);
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
+  }
 
   // We want to shred the underlying volume, but if we have an unsealed device,
   // we don't mind letting it keep working for now.  Other parts of the system
@@ -138,7 +144,9 @@ void DeviceManager::Shred(ShredRequestView request, ShredCompleter::Sync& comple
     return;
   }
 
-  state_ = kShredded;
+  if (state_ == kUnsealed) {
+    state_ = kUnsealedShredded;
+  }
   completer.Reply(ZX_OK);
 }
 
