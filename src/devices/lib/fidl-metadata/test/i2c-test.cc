@@ -15,8 +15,9 @@ static void check_encodes(const cpp20::span<const fidl_metadata::i2c::Channel> i
   std::vector<uint8_t>& data = result.value();
 
   // Decode.
+  // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::DecodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> decoded(
-      fidl::internal::kLLCPPEncodedWireFormatVersion, data.data(), data.size());
+      fidl::internal::WireFormatVersion::kV1, data.data(), data.size());
   ASSERT_OK(decoded.status());
 
   auto metadata = decoded.PrimaryObject();

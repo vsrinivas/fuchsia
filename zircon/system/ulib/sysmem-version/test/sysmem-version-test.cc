@@ -59,7 +59,9 @@ class LinearSnap {
  private:
   explicit LinearSnap(FidlType&& to_move_in) {
     alignas(FIDL_ALIGNMENT) FidlType aligned = std::move(to_move_in);
-    fidl::UnownedEncodedMessage<FidlType> encoded(linear_data_, kMaxDataSize, &aligned);
+    // TODO(fxbug.dev/45252): Use FIDL at rest.
+    fidl::UnownedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV1,
+                                                  linear_data_, kMaxDataSize, &aligned);
     ZX_ASSERT(encoded.ok());
     fidl::OutgoingMessage& outgoing_message = encoded.GetOutgoingMessage();
     fidl::OutgoingMessage::CopiedBytes outgoing_message_bytes_(outgoing_message.CopyBytes());
@@ -77,7 +79,8 @@ class LinearSnap {
     snap_handles_count_ = outgoing_message.handle_actual();
     outgoing_to_incoming_result_.emplace(encoded.GetOutgoingMessage());
     ZX_ASSERT(outgoing_to_incoming_result_.value().ok());
-    decoded_.emplace(fidl::internal::kLLCPPEncodedWireFormatVersion,
+    // TODO(fxbug.dev/45252): Use FIDL at rest.
+    decoded_.emplace(fidl::internal::WireFormatVersion::kV1,
                      std::move(outgoing_to_incoming_result_.value().incoming_message()));
     ZX_ASSERT(decoded_.value().ok());
   }

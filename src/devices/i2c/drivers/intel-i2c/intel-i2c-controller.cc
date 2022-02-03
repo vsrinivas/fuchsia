@@ -782,8 +782,9 @@ zx_status_t IntelI2cController::AddSubordinates() {
     return (status == ZX_OK) ? ZX_ERR_INTERNAL : status;
   }
 
+  // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::DecodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> decoded(
-      fidl::internal::kLLCPPEncodedWireFormatVersion, buffer, metadata_size);
+      fidl::internal::WireFormatVersion::kV1, buffer, metadata_size);
   if (!decoded.ok()) {
     zxlogf(ERROR, "%s: Failed to deserialize metadata.", __func__);
     return decoded.status();

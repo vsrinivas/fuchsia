@@ -439,8 +439,9 @@ zx_status_t OpteeController::InitThreadPools() {
     return ZX_ERR_INTERNAL;
   }
 
+  // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::DecodedMessage<fuchsia_hardware_tee::wire::TeeMetadata> decoded(
-      fidl::internal::kLLCPPEncodedWireFormatVersion, buffer.get(), metadata_size);
+      fidl::internal::WireFormatVersion::kV1, buffer.get(), metadata_size);
   if (!decoded.ok()) {
     LOG(ERROR, "Failed to deserialize metadata.");
     return ZX_ERR_INTERNAL;

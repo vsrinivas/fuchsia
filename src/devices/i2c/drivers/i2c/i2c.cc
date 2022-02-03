@@ -137,7 +137,9 @@ void I2cDevice::AddChildren() {
     char name[20];
     snprintf(name, sizeof(name), "i2c-%u-%u", bus_id, address);
 
-    auto metadata = fidl::OwnedEncodedMessage<fidl_i2c::wire::I2CChannel>(&channel);
+    // TODO(fxbug.dev/45252): Use FIDL at rest.
+    auto metadata = fidl::OwnedEncodedMessage<fidl_i2c::wire::I2CChannel>(
+        fidl::internal::WireFormatVersion::kV1, &channel);
     if (!metadata.ok()) {
       zxlogf(ERROR, "failed to fidl-encode channel: %s", metadata.FormatDescription().data());
       return;

@@ -50,7 +50,8 @@ TEST(InlineXUnionInStruct, Success) {
     input.before = fidl::StringView::FromExternal(before);
     input.xu.set_su(fidl::ObjectView<llcpp_misc::wire::SimpleUnion>::FromExternal(&simple_union));
     input.after = fidl::StringView::FromExternal(after);
-    fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
+    fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
+        fidl::internal::WireFormatVersion::kV1, &input);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
@@ -101,7 +102,8 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     input.before = fidl::StringView::FromExternal(before);
     input.xu.set_i(integer);
     input.after = fidl::StringView::FromExternal(after);
-    fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
+    fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
+        fidl::internal::WireFormatVersion::kV1, &input);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
@@ -139,7 +141,8 @@ TEST(SampleXUnion, Success) {
   {
     llcpp_misc::wire::SampleXUnion xu;
     xu.set_i(integer);
-    fidl::OwnedEncodedMessage<llcpp_misc::wire::SampleXUnion> encoded(&xu);
+    fidl::OwnedEncodedMessage<llcpp_misc::wire::SampleXUnion> encoded(
+        fidl::internal::WireFormatVersion::kV1, &xu);
     ASSERT_TRUE(encoded.ok()) << encoded.FormatDescription();
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
@@ -164,7 +167,8 @@ TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
   std::string empty_str = "";
   input.before = fidl::StringView::FromExternal(empty_str);
   input.after = fidl::StringView::FromExternal(empty_str);
-  fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
+  fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
+      fidl::internal::WireFormatVersion::kV1, &input);
   EXPECT_FALSE(encoded.ok());
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
   EXPECT_EQ(std::string(encoded.lossy_description()), "non-nullable xunion is absent");
@@ -260,7 +264,8 @@ TEST(ComplexTable, SuccessEmpty) {
   {
     fidl::Arena allocator;
     llcpp_misc::wire::ComplexTable input(allocator);
-    fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(&input);
+    fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(
+        fidl::internal::WireFormatVersion::kV1, &input);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
@@ -362,7 +367,8 @@ TEST(ComplexTable, Success) {
     input.set_simple(allocator, std::move(simple_table))
         .set_u(allocator, std::move(xu))
         .set_strings(allocator, std::move(strings));
-    fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(&input);
+    fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(
+        fidl::internal::WireFormatVersion::kV1, &input);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
@@ -414,7 +420,8 @@ TEST(InputExceeds64KiB, EncodeUnsupported) {
                   "Need a reasonably sized last piece of data to make the whole message reliably "
                   "go over the 64 KiB limit.");
 
-    fidl::OwnedEncodedMessage<manual_conformance_large::wire::LargeTable> encoded{&table};
+    fidl::OwnedEncodedMessage<manual_conformance_large::wire::LargeTable> encoded{
+        fidl::internal::WireFormatVersion::kV1, &table};
     EXPECT_FALSE(encoded.ok());
     // TODO(fxbug.dev/74362): Consistently propagate ZX_ERR_BUFFER_TOO_SMALL.
     EXPECT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS);

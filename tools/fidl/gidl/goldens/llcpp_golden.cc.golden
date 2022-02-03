@@ -2161,7 +2161,7 @@ TEST(Conformance, GoldenStringWithMaxSize2_V1_Encode_Failure) {
 var1.s = "abc";
 
 	auto obj = std::move(var1);
-	EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure(&obj, ZX_ERR_INVALID_ARGS));
+	EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure(::fidl::internal::WireFormatVersion::kV1, &obj, ZX_ERR_INVALID_ARGS));
 }
 
 

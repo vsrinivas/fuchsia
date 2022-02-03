@@ -67,8 +67,9 @@ class TestDriver {
 
 zx_status_t test_driver_start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,
                               void** driver) {
-  fidl::DecodedMessage<fdf::wire::DriverStartArgs> decoded(
-      fidl::internal::kLLCPPEncodedWireFormatVersion, msg);
+  // TODO(fxbug.dev/45252): Use FIDL at rest.
+  fidl::DecodedMessage<fdf::wire::DriverStartArgs> decoded(fidl::internal::WireFormatVersion::kV1,
+                                                           msg);
   if (!decoded.ok()) {
     return decoded.status();
   }

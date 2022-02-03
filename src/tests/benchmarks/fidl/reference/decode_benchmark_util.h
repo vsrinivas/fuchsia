@@ -26,7 +26,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
 
   fidl::Arena<65536> allocator;
   FidlType aligned_value = builder(allocator);
-  fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
+  fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV1,
+                                              &aligned_value);
   ZX_ASSERT(encoded.ok());
 
   state->DeclareStep("Setup/WallTime");
@@ -49,7 +50,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   }
 
   // Reencode the decoded result and compare against the initial (expected) encode_result.
-  fidl::OwnedEncodedMessage<FidlType> reencoded(reinterpret_cast<FidlType*>(bytes.data()));
+  fidl::OwnedEncodedMessage<FidlType> reencoded(fidl::internal::WireFormatVersion::kV1,
+                                                reinterpret_cast<FidlType*>(bytes.data()));
   if (!reencoded.ok()) {
     std::cout << "fidl::Encode failed with error: " << reencoded.error() << std::endl;
     return false;

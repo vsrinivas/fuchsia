@@ -35,6 +35,8 @@ namespace fidl {
 
 namespace internal {
 
+constexpr WireFormatVersion kLLCPPWireFormatVersion = WireFormatVersion::kV2;
+
 // This is chosen for performance reasons. It should generally be the same as kIovecChunkSize in
 // the kernel.
 constexpr uint32_t IovecBufferSize = 16;
@@ -171,7 +173,13 @@ class OutgoingMessage : public ::fidl::Result {
   template <typename FidlType>
   void Encode(FidlType* data) {
     is_transactional_ = fidl::IsFidlMessage<FidlType>::value;
-    EncodeImpl(fidl::TypeTraits<FidlType>::kType, is_transactional(), data);
+    EncodeImpl(fidl::internal::WireFormatVersion::kV1, fidl::TypeTraits<FidlType>::kType, data);
+  }
+
+  template <typename FidlType>
+  void Encode(fidl::internal::WireFormatVersion wire_format_version, FidlType* data) {
+    is_transactional_ = fidl::IsFidlMessage<FidlType>::value;
+    EncodeImpl(wire_format_version, fidl::TypeTraits<FidlType>::kType, data);
   }
 
   // Various helper functions for writing to other channel-like types.
@@ -215,7 +223,8 @@ class OutgoingMessage : public ::fidl::Result {
   OutgoingMessage(fidl_outgoing_msg_t msg, uint32_t handle_capacity)
       : ::fidl::Result(::fidl::Result::Ok()), message_(msg), handle_capacity_(handle_capacity) {}
 
-  void EncodeImpl(const fidl_type_t* message_type, bool is_transactional, void* data);
+  void EncodeImpl(fidl::internal::WireFormatVersion wire_format_version,
+                  const fidl_type_t* message_type, void* data);
 
   uint32_t iovec_capacity() const { return iovec_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
@@ -271,8 +280,6 @@ namespace internal {
 
 template <typename T>
 class DecodedMessageBase;
-
-constexpr WireFormatVersion kLLCPPEncodedWireFormatVersion = WireFormatVersion::kV1;
 
 }  // namespace internal
 
@@ -637,7 +644,18 @@ class UnownedEncodedMessage final {
   UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size, FidlType* response)
       : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
                               backing_buffer_size, response) {}
+  UnownedEncodedMessage(fidl::internal::WireFormatVersion wire_format_version,
+                        uint8_t* backing_buffer, uint32_t backing_buffer_size, FidlType* response)
+      : UnownedEncodedMessage(wire_format_version, ::fidl::internal::IovecBufferSize,
+                              backing_buffer, backing_buffer_size, response) {}
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, FidlType* response)
+      : UnownedEncodedMessage(fidl::internal::kLLCPPWireFormatVersion, iovec_capacity,
+                              backing_buffer, backing_buffer_size, response) {
+    static_assert(IsFidlMessage<FidlType>::value);
+  }
+  UnownedEncodedMessage(fidl::internal::WireFormatVersion wire_format_version,
+                        uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, FidlType* response)
       : message_(::fidl::OutgoingMessage::CreateInternal(::fidl::OutgoingMessage::ConstructorArgs{
             .transport_vtable = &Transport::VTable,
@@ -649,9 +667,10 @@ class UnownedEncodedMessage final {
             .handle_capacity = kNumHandles,
             .backing_buffer = backing_buffer,
             .backing_buffer_capacity = backing_buffer_size,
-        })) {
+        })),
+        wire_format_version_(wire_format_version) {
     ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-    message_.Encode<FidlType>(response);
+    message_.Encode<FidlType>(wire_format_version, response);
   }
   UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
   UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -679,8 +698,9 @@ class UnownedEncodedMessage final {
       fidl::internal::ClampedHandleCount<FidlType, fidl::MessageDirection::kSending>();
   std::array<zx_handle_t, kNumHandles> handle_storage_;
   std::array<typename Transport::HandleMetadata, kNumHandles> handle_metadata_storage_;
-  ::fidl::internal::IovecBuffer iovecs_;
-  ::fidl::OutgoingMessage message_;
+  fidl::internal::IovecBuffer iovecs_;
+  fidl::OutgoingMessage message_;
+  fidl::internal::WireFormatVersion wire_format_version_;
 };
 
 // This class owns a message of |FidlType| and encodes the message automatically upon construction
@@ -691,10 +711,19 @@ class OwnedEncodedMessage final {
   explicit OwnedEncodedMessage(FidlType* response)
       : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()),
                  response) {}
+  explicit OwnedEncodedMessage(fidl::internal::WireFormatVersion wire_format_version,
+                               FidlType* response)
+      : message_(wire_format_version, 1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), response) {}
   // Internal constructor.
   explicit OwnedEncodedMessage(::fidl::internal::AllowUnownedInputRef allow_unowned,
                                FidlType* response)
       : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), response) {}
+  explicit OwnedEncodedMessage(::fidl::internal::AllowUnownedInputRef allow_unowned,
+                               fidl::internal::WireFormatVersion wire_format_version,
+                               FidlType* response)
+      : message_(wire_format_version, ::fidl::internal::IovecBufferSize, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), response) {}
   OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
   OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -777,7 +806,7 @@ class DecodedMessage<FidlType, Transport,
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
                  typename Transport::HandleMetadata* handle_metadata = nullptr,
                  uint32_t handle_actual = 0)
-      : Base(::fidl::internal::kLLCPPEncodedWireFormatVersion,
+      : Base(::fidl::internal::WireFormatVersion::kV1,
              ::fidl::IncomingMessage::Create(
                  bytes, byte_actual, handles, handle_metadata, handle_actual,
                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}

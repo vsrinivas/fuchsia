@@ -126,12 +126,15 @@ TEST_F(RegistersDeviceTest, EncodeDecodeTest) {
 
   auto metadata_original =
       registers::BuildMetadata(allocator_, std::move(mmio), std::move(registers));
-  fidl::OwnedEncodedMessage<Metadata> msg(&metadata_original);
+  // TODO(fxbug.dev/45252): Use FIDL at rest.
+  fidl::OwnedEncodedMessage<Metadata> msg(fidl::internal::WireFormatVersion::kV1,
+                                          &metadata_original);
   EXPECT_EQ(msg.GetOutgoingMessage().handle_actual(), 0);
   EXPECT_EQ(msg.GetOutgoingMessage().handles(), nullptr);
 
   auto converted = fidl::OutgoingToIncomingMessage(msg.GetOutgoingMessage());
-  auto metadata = fidl::DecodedMessage<Metadata>(fidl::internal::kLLCPPEncodedWireFormatVersion,
+  // TODO(fxbug.dev/45252): Use FIDL at rest.
+  auto metadata = fidl::DecodedMessage<Metadata>(fidl::internal::WireFormatVersion::kV1,
                                                  std::move(converted.incoming_message()));
   ASSERT_TRUE(metadata.ok(), "%s", metadata.FormatDescription().c_str());
   ASSERT_EQ(metadata.PrimaryObject()->mmio().count(), 3);
@@ -161,10 +164,12 @@ TEST_F(RegistersDeviceTest, EncodeDecodeTest) {
 }
 
 TEST_F(RegistersDeviceTest, InvalidDecodeTest) {
-  fidl::OwnedEncodedMessage<Metadata> msg(nullptr);
+  // TODO(fxbug.dev/45252): Use FIDL at rest.
+  fidl::OwnedEncodedMessage<Metadata> msg(fidl::internal::WireFormatVersion::kV1, nullptr);
   auto converted = fidl::OutgoingToIncomingMessage(msg.GetOutgoingMessage());
   ASSERT_TRUE(converted.ok());
-  auto metadata = fidl::DecodedMessage<Metadata>(fidl::internal::kLLCPPEncodedWireFormatVersion,
+  // TODO(fxbug.dev/45252): Use FIDL at rest.
+  auto metadata = fidl::DecodedMessage<Metadata>(fidl::internal::WireFormatVersion::kV1,
                                                  std::move(converted.incoming_message()));
   EXPECT_FALSE(metadata.ok());
 }

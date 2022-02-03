@@ -947,8 +947,9 @@ void LogicalBufferCollection::TryAllocate(std::vector<NodeProperties*> nodes) {
     return;
   }
   auto tmp_buffer_collection_info_before_population = clone_result.take_value();
+  // TODO(fxbug.dev/45252): Use FIDL at rest.
   linearized_buffer_collection_info_before_population_.emplace(
-      &tmp_buffer_collection_info_before_population);
+      fidl::internal::WireFormatVersion::kV1, &tmp_buffer_collection_info_before_population);
 
   fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t> result =
       Allocate(combined_constraints, &buffer_collection_info);
@@ -1140,9 +1141,10 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
   }
   auto tmp_unpopulated_buffer_collection_info = clone_result.take_value();
   // This could be big so use heap.
+  // TODO(fxbug.dev/45252): Use FIDL at rest.
   auto linearized_late_logical_allocation_buffer_collection_info =
       std::make_unique<fidl::OwnedEncodedMessage<fuchsia_sysmem2::wire::BufferCollectionInfo>>(
-          &tmp_unpopulated_buffer_collection_info);
+          fidl::internal::WireFormatVersion::kV1, &tmp_unpopulated_buffer_collection_info);
 
   fidl::OutgoingMessage& original_linear_buffer_collection_info =
       linearized_buffer_collection_info_before_population_->GetOutgoingMessage();

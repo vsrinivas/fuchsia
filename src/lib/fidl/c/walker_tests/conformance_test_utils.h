@@ -81,7 +81,7 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
                 "EncodeSuccess assumes non-transactional messages");
 
   // Linearize the built objects using LLCPP encode -> decode.
-  fidl::OwnedEncodedMessage<FidlType> llcpp_encoded(value);
+  fidl::OwnedEncodedMessage<FidlType> llcpp_encoded(fidl::internal::WireFormatVersion::kV1, value);
   auto& outgoing_msg = llcpp_encoded.GetOutgoingMessage();
   auto copied_bytes = outgoing_msg.CopyBytes();
   fidl::DecodedMessage<FidlType> llcpp_decoded(

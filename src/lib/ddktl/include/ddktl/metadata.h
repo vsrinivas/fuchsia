@@ -68,9 +68,9 @@ class DecodedMetadata {
  public:
   DecodedMetadata(std::vector<uint8_t> metadata_blob) {
     metadata_blob_ = metadata_blob;
-    decoded_ =
-        std::make_unique<fidl::DecodedMessage<T>>(fidl::internal::kLLCPPEncodedWireFormatVersion,
-                                                  metadata_blob_.data(), metadata_blob_.size());
+    // TODO(fxbug.dev/45252): Use FIDL at rest.
+    decoded_ = std::make_unique<fidl::DecodedMessage<T>>(
+        fidl::internal::WireFormatVersion::kV1, metadata_blob_.data(), metadata_blob_.size());
   }
 
   T* PrimaryObject() { return decoded_->PrimaryObject(); }

@@ -21,7 +21,7 @@ TEST(Encoded, CallerAllocateEncoded) {
       .ptr = fidl::ObjectView<fidl_linearized::wire::InnerStruct>::FromExternal(&inner)};
   uint8_t bytes[kSizeJustRight];
   fidl::UnownedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(
-      bytes, std::size(bytes), &input);
+      fidl::internal::WireFormatVersion::kV1, bytes, std::size(bytes), &input);
   EXPECT_TRUE(encoded.ok());
 
   auto message_bytes = encoded.GetOutgoingMessage().CopyBytes();
@@ -40,7 +40,7 @@ TEST(Encoded, BufferTooSmall) {
       .ptr = fidl::ObjectView<fidl_linearized::wire::InnerStruct>::FromExternal(&inner)};
   uint8_t bytes[kSizeTooSmall];
   fidl::UnownedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(
-      bytes, std::size(bytes), &input);
+      fidl::internal::WireFormatVersion::kV1, bytes, std::size(bytes), &input);
   // TODO(fxbug.dev/74362) This test and the EarlyCatch* version should use the same error.
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, encoded.status());
 }
@@ -53,7 +53,7 @@ TEST(Encoded, EarlyCatchBufferTooSmall) {
   FIDL_ALIGNDECL uint8_t bytes[kSizeTooSmall];
   constexpr size_t kEarlyCatchSizeTooSmall = 0;
   fidl::UnownedEncodedMessage<fidl_linearized::wire::FullyLinearizedStruct> encoded(
-      bytes, kEarlyCatchSizeTooSmall, &input);
+      fidl::internal::WireFormatVersion::kV1, bytes, kEarlyCatchSizeTooSmall, &input);
   // ZX_ERR_BUFFER_TOO_SMALL failures only happen when the buffer size is less than the inline size.
   // TODO(fxbug.dev/74362) This should use the same error as the non EarlyCatch* test.
   EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, encoded.status());

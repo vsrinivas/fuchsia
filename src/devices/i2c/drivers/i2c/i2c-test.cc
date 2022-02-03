@@ -36,7 +36,9 @@ class FakeI2cImpl : public DeviceType,
     auto channels_view = fidl::VectorView<fi2c::I2CChannel>::FromExternal(channels);
     metadata.set_channels(arena, channels_view);
 
-    fidl::OwnedEncodedMessage<fi2c::I2CBusMetadata> encoded(&metadata);
+    // TODO(fxbug.dev/45252): Use FIDL at rest.
+    fidl::OwnedEncodedMessage<fi2c::I2CBusMetadata> encoded(fidl::internal::WireFormatVersion::kV1,
+                                                            &metadata);
     ZX_ASSERT(encoded.ok());
     auto message = encoded.GetOutgoingMessage().CopyBytes();
     std::vector<uint8_t> bytes(message.size());

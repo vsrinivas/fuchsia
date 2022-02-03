@@ -97,7 +97,7 @@ TEST(Conformance, {{ .Name }}_Encode_Failure) {
 	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure(&obj, {{ .ErrorCode }}));
+	EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure({{ .WireFormatVersion }}, &obj, {{ .ErrorCode }}));
 	{{- if .HandleDefs }}
 	for (const auto handle : handle_defs) {
 		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
@@ -155,8 +155,8 @@ type decodeSuccessCase struct {
 }
 
 type encodeFailureCase struct {
-	Name, HandleDefs, ValueBuild, ValueVar, ErrorCode string
-	FuchsiaOnly                                       bool
+	Name, WireFormatVersion, HandleDefs, ValueBuild, ValueVar, ErrorCode string
+	FuchsiaOnly                                                          bool
 }
 
 type decodeFailureCase struct {
@@ -277,12 +277,13 @@ func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, schema gidlm
 		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
 		for _, wireFormat := range supportedEncodeFailureFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-				Name:        testCaseName(encodeFailure.Name, wireFormat),
-				HandleDefs:  handleDefs,
-				ValueBuild:  valueBuild,
-				ValueVar:    valueVar,
-				ErrorCode:   errorCode,
-				FuchsiaOnly: fuchsiaOnly,
+				Name:              testCaseName(encodeFailure.Name, wireFormat),
+				WireFormatVersion: wireFormatVersionName(wireFormat),
+				HandleDefs:        handleDefs,
+				ValueBuild:        valueBuild,
+				ValueVar:          valueVar,
+				ErrorCode:         errorCode,
+				FuchsiaOnly:       fuchsiaOnly,
 			})
 		}
 	}
