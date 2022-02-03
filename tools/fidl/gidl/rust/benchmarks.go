@@ -48,7 +48,7 @@ pub const BENCHMARKS: [(&'static str, fn(&mut Bencher)); {{ .NumBenchmarks }}] =
 {{- end }}
 ];
 
-const _V1_CONTEXT: &Context = &Context { wire_format_version: WireFormatVersion::V1 };
+const _V2_CONTEXT: &Context = &Context { wire_format_version: WireFormatVersion::V2 };
 
 {{ range .Benchmarks }}
 fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {
@@ -87,7 +87,7 @@ fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 		|value| {
 			{{- /* Encode to TLS buffers since that's what the bindings do in practice. */}}
 			with_tls_encode_buf(|bytes, handles| {
-				Encoder::encode_with_context(_V1_CONTEXT, bytes, handles, value).unwrap();
+				Encoder::encode_with_context(_V2_CONTEXT, bytes, handles, value).unwrap();
 				{{- /* Return the underlying heap storage of handles, since with_tls_encode_buf
 					clears it after calling this closure, which otherwise would close all the
 					handles. By returning the actual handles, we avoid including handle close
@@ -114,7 +114,7 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 			let mut bytes = Vec::<u8>::new();
 			let mut handles = Vec::<HandleDisposition<'static>>::new();
 			let original_value = &mut {{ .Value }};
-			Encoder::encode_with_context(_V1_CONTEXT, &mut bytes, &mut handles, original_value).unwrap();
+			Encoder::encode_with_context(_V2_CONTEXT, &mut bytes, &mut handles, original_value).unwrap();
 			let handle_infos : Vec::<HandleInfo> = handles.into_iter().map(|h| {
 				HandleInfo {
 					handle: match h.handle_op {
@@ -131,7 +131,7 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 		|(bytes, handle_infos, manually_drop_value)| {
 			// Cast &mut ManuallyDrop<T> to &mut T.
 			let value : &mut {{ .ValueType }} = unsafe { std::mem::transmute(manually_drop_value as *mut _) };
-			Decoder::decode_with_context(_V1_CONTEXT, bytes, handle_infos, value).unwrap();
+			Decoder::decode_with_context(_V2_CONTEXT, bytes, handle_infos, value).unwrap();
 			// Count the drop time in the benchmark.
 			unsafe { ManuallyDrop::drop(manually_drop_value) };
 		},
