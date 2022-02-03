@@ -40,7 +40,7 @@ impl EventSource {
                         }
                     }
                     Err(err) => {
-                        tracing::error!(?err, "Failed to interpret event");
+                        warn!(?err, "Failed to interpret event");
                     }
                 },
                 other => {
