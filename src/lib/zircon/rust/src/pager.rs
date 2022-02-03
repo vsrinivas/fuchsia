@@ -29,6 +29,7 @@ bitflags! {
 
 pub enum PagerOp {
     Fail(Status),
+    Dirty,
 }
 
 impl Pager {
@@ -99,6 +100,7 @@ impl Pager {
     ) -> Result<(), Status> {
         let (op, data) = match op {
             PagerOp::Fail(status) => (sys::ZX_PAGER_OP_FAIL, status.into_raw() as u64),
+            PagerOp::Dirty => (sys::ZX_PAGER_OP_DIRTY, 0),
         };
         let status = unsafe {
             sys::zx_pager_op_range(

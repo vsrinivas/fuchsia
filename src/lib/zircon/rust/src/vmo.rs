@@ -192,6 +192,7 @@ bitflags! {
     #[repr(transparent)]
     pub struct VmoOptions: u32 {
         const RESIZABLE = sys::ZX_VMO_RESIZABLE;
+        const TRAP_DIRTY = sys::ZX_VMO_TRAP_DIRTY;
     }
 }
 

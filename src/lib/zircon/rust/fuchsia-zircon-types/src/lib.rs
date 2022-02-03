@@ -111,6 +111,8 @@ multiconst!(zx_rights_t, [
 
 multiconst!(u32, [
     ZX_VMO_RESIZABLE = 1 << 1;
+    ZX_VMO_DISCARDABLE = 1 << 2;
+    ZX_VMO_TRAP_DIRTY = 1 << 3;
 ]);
 
 multiconst!(u32, [
@@ -801,12 +803,14 @@ pub struct zx_packet_page_request_t {
 pub enum zx_page_request_command_t {
     ZX_PAGER_VMO_READ = 0x0000,
     ZX_PAGER_VMO_COMPLETE = 0x0001,
+    ZX_PAGER_VMO_DIRTY = 0x0002,
     #[doc(hidden)]
     __Nonexhaustive,
 }
 
 multiconst!(u32, [
     ZX_PAGER_OP_FAIL = 1;
+    ZX_PAGER_OP_DIRTY = 2;
 ]);
 
 pub type zx_excp_type_t = u32;
