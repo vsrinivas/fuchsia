@@ -379,9 +379,12 @@ impl FlatlandViewStrategy {
                 loop {
                     let result = view_ref_focused_proxy.watch().await;
                     match result {
-                        Ok(_) => {
+                        Ok(msg) => {
                             view_ref_focused_sender
-                                .unbounded_send(MessageInternal::Focus(view_key))
+                                .unbounded_send(MessageInternal::Focus(
+                                    view_key,
+                                    msg.focused.unwrap_or(false),
+                                ))
                                 .expect("failed to send MessageInternal.");
                         }
                         Err(fidl::Error::ClientChannelClosed { .. }) => {

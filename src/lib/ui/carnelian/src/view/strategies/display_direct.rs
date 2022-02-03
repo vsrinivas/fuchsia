@@ -183,7 +183,7 @@ impl DisplayDirectViewStrategy {
 
         let key = display.display_id as ViewKey;
         app_sender.unbounded_send(MessageInternal::Render(key)).expect("unbounded_send");
-        app_sender.unbounded_send(MessageInternal::Focus(key)).expect("unbounded_send");
+        app_sender.unbounded_send(MessageInternal::Focus(key, true)).expect("unbounded_send");
 
         Ok(Box::new(Self {
             display,

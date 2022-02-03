@@ -328,7 +328,7 @@ pub(crate) enum MessageInternal {
     SizeChanged(ViewKey, Size),
     ScenicPresentSubmitted(ViewKey, fidl_fuchsia_scenic_scheduling::FuturePresentationTimes),
     ScenicPresentDone(ViewKey, fidl_fuchsia_scenic_scheduling::FramePresentedInfo),
-    Focus(ViewKey),
+    Focus(ViewKey, bool),
     CloseView(ViewKey),
     RequestRender(ViewKey),
     Render(ViewKey),
@@ -426,9 +426,9 @@ impl App {
                 let view = self.get_view(view_id).context("ScenicPresentDone")?;
                 view.present_done(info);
             }
-            MessageInternal::Focus(view_id) => {
+            MessageInternal::Focus(view_id, focused) => {
                 let view = self.get_view(view_id).context("Focus")?;
-                view.focus(true);
+                view.focus(focused);
             }
             MessageInternal::RequestRender(view_id) => {
                 let view = self.get_view(view_id).context("RequestRender")?;
