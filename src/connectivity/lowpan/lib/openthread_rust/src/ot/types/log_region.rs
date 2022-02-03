@@ -15,6 +15,7 @@ pub enum LogRegion {
     NetData = otLogRegion_OT_LOG_REGION_NET_DATA as isize,
     Icmp = otLogRegion_OT_LOG_REGION_ICMP as isize,
     Ip6 = otLogRegion_OT_LOG_REGION_IP6 as isize,
+    Tcp = otLogRegion_OT_LOG_REGION_TCP as isize,
     Mac = otLogRegion_OT_LOG_REGION_MAC as isize,
     Mem = otLogRegion_OT_LOG_REGION_MEM as isize,
     Ncp = otLogRegion_OT_LOG_REGION_NCP as isize,

@@ -38,7 +38,7 @@ pub trait Thread {
     /// Functional equivalent of
     /// [`otsys::otThreadGetNetworkKey`](crate::otsys::otThreadGetNetworkKey).
     #[must_use]
-    fn get_network_key(&self) -> &NetworkKey;
+    fn get_network_key(&self) -> NetworkKey;
 
     /// Functional equivalent of
     /// [`otsys::otThreadSetNetworkKey`](crate::otsys::otThreadSetNetworkKey).
@@ -143,7 +143,7 @@ impl<T: Thread + Boxable> Thread for ot::Box<T> {
     fn get_child_info_by_id(&self, child_id: u16) -> Result<otChildInfo> {
         self.as_ref().get_child_info_by_id(child_id)
     }
-    fn get_network_key(&self) -> &NetworkKey {
+    fn get_network_key(&self) -> NetworkKey {
         self.as_ref().get_network_key()
     }
 
@@ -238,8 +238,10 @@ impl Thread for Instance {
         Ok(ret)
     }
 
-    fn get_network_key(&self) -> &NetworkKey {
-        unsafe { NetworkKey::ref_from_ot_ptr(otThreadGetNetworkKey(self.as_ot_ptr())) }.unwrap()
+    fn get_network_key(&self) -> NetworkKey {
+        let mut ret = NetworkKey::default();
+        unsafe { otThreadGetNetworkKey(self.as_ot_ptr(), ret.as_ot_mut_ptr()) }
+        ret
     }
 
     fn set_network_key(&self, key: &NetworkKey) -> Result {

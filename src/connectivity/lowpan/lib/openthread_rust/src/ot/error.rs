@@ -74,6 +74,7 @@ pub enum Error {
     Duplicated = otError_OT_ERROR_DUPLICATED as isize,
     Failed = otError_OT_ERROR_FAILED as isize,
     Fcs = otError_OT_ERROR_FCS as isize,
+    Rejected = otError_OT_ERROR_REJECTED as isize,
     Generic = otError_OT_ERROR_GENERIC as isize,
     InvalidArgs = otError_OT_ERROR_INVALID_ARGS as isize,
     InvalidCommand = otError_OT_ERROR_INVALID_COMMAND as isize,

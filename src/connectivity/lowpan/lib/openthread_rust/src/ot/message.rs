@@ -42,6 +42,32 @@ impl Priority {
     }
 }
 
+impl From<otMessagePriority> for Priority {
+    fn from(x: otMessagePriority) -> Self {
+        use num::FromPrimitive;
+        Self::from_u32(x).expect(format!("Unknown otMessagePriority value: {}", x).as_str())
+    }
+}
+
+impl From<Priority> for otMessagePriority {
+    fn from(x: Priority) -> Self {
+        x.as_ot_message_priority()
+    }
+}
+
+impl From<u8> for Priority {
+    fn from(x: u8) -> Self {
+        use num::FromPrimitive;
+        Self::from_u8(x).expect(format!("Unknown otMessagePriority value: {}", x).as_str())
+    }
+}
+
+impl From<Priority> for u8 {
+    fn from(x: Priority) -> Self {
+        x.try_into().unwrap()
+    }
+}
+
 /// Message Settings.
 /// Functional equivalent of `otsys::otMessageSettings`.
 #[derive(Debug, Clone)]
@@ -60,7 +86,7 @@ impl Default for Settings {
     fn default() -> Self {
         Settings(otMessageSettings {
             mLinkSecurityEnabled: true,
-            mPriority: otMessagePriority_OT_MESSAGE_PRIORITY_NORMAL,
+            mPriority: Priority::Normal.into(),
         })
     }
 }
@@ -68,7 +94,7 @@ impl Default for Settings {
 impl Settings {
     /// Returns settings with the priority set as indicated.
     pub fn set_priority(mut self, priority: Priority) -> Self {
-        self.0.mPriority = priority.as_ot_message_priority();
+        self.0.mPriority = priority.into();
         self
     }
 
