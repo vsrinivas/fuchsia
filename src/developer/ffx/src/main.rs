@@ -50,6 +50,7 @@ fn open_target_with_fut<'a>(
     target: Option<String>,
     is_default_target: bool,
     daemon_proxy: DaemonProxy,
+    target_timeout: Duration,
 ) -> Result<(TargetHandleProxy, impl Future<Output = Result<()>> + 'a)> {
     let (tc_proxy, tc_server_end) = create_proxy::<TargetCollectionMarker>()?;
     let (target_proxy, target_server_end) = create_proxy::<TargetHandleMarker>()?;
@@ -63,13 +64,20 @@ fn open_target_with_fut<'a>(
     };
     let t_clone = target.clone();
     let target_handle_fut = async move {
-        tc_proxy
-            .open_target(
-                TargetQuery { string_matcher: t_clone, ..TargetQuery::EMPTY },
+        timeout(
+            target_timeout,
+            tc_proxy.open_target(
+                TargetQuery { string_matcher: t_clone.clone(), ..TargetQuery::EMPTY },
                 target_server_end,
-            )
-            .await?
-            .map_err(|err| FfxError::OpenTargetError { err, target, is_default_target })?;
+            ),
+        )
+        .await
+        .map_err(|_| FfxError::DaemonError {
+            err: DaemonError::Timeout,
+            target: t_clone,
+            is_default_target,
+        })??
+        .map_err(|err| FfxError::OpenTargetError { err, target, is_default_target })?;
         Result::<()>::Ok(())
     };
     let fut = async move {
@@ -86,8 +94,12 @@ impl Injection {
         let target = app.target().await?;
         let proxy_timeout = proxy_timeout().await?;
         let is_default_target = app.target.is_none();
-        let (target_proxy, target_proxy_fut) =
-            open_target_with_fut(target.clone(), is_default_target, daemon_proxy.clone())?;
+        let (target_proxy, target_proxy_fut) = open_target_with_fut(
+            target.clone(),
+            is_default_target,
+            daemon_proxy.clone(),
+            proxy_timeout.clone(),
+        )?;
         let mut target_proxy_fut = target_proxy_fut.boxed_local().fuse();
         let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
         let mut open_remote_control_fut =
@@ -124,8 +136,12 @@ impl Injector for Injection {
         let app: Ffx = argh::from_env();
         let target = app.target().await?;
         let is_default_target = app.target.is_none();
-        let (target_proxy, target_proxy_fut) =
-            open_target_with_fut(target.clone(), is_default_target, daemon_proxy.clone())?;
+        let (target_proxy, target_proxy_fut) = open_target_with_fut(
+            target.clone(),
+            is_default_target,
+            daemon_proxy.clone(),
+            proxy_timeout().await?,
+        )?;
         target_proxy_fut.await?;
         let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
         target_proxy.open_fastboot(fastboot_server_end)?;
@@ -137,8 +153,12 @@ impl Injector for Injection {
         let target = app.target().await?;
         let is_default_target = app.target.is_none();
         let daemon_proxy = self.daemon_factory().await?;
-        let (target_proxy, target_proxy_fut) =
-            open_target_with_fut(target.clone(), is_default_target, daemon_proxy.clone())?;
+        let (target_proxy, target_proxy_fut) = open_target_with_fut(
+            target.clone(),
+            is_default_target,
+            daemon_proxy.clone(),
+            proxy_timeout().await?,
+        )?;
         target_proxy_fut.await?;
         Ok(target_proxy)
     }
