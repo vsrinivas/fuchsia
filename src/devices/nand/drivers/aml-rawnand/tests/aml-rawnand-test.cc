@@ -831,6 +831,24 @@ TEST(AmlRawNand, SuspendReleasesAllPins) {
   EXPECT_EQ(bti_info.pmo_count, 0);
 }
 
+TEST(AmlRawNand, OperationsCanceledAfterSuspend) {
+  fake_ddk::Bind ddk;
+  auto nand = FakeAmlRawNand::Create();
+
+  nand->ExpectReadWriteCommand(kDefaultWriteCommand, FakeAmlRawNand::kNoRandomSeed);
+  std::vector<uint8_t> data(kTestNandWriteSize);
+  EXPECT_OK(
+      nand->RawNandWritePageHwecc(data.data(), kTestNandWriteSize, nullptr, 0, kFirstNonBl2Page));
+
+  ddk::SuspendTxn txn(nand->zxdev(), 0, false, DEVICE_SUSPEND_REASON_REBOOT);
+  nand->DdkSuspend(std::move(txn));
+  ddk.WaitUntilSuspend();
+
+  EXPECT_EQ(
+      nand->RawNandWritePageHwecc(data.data(), kTestNandWriteSize, nullptr, 0, kFirstNonBl2Page),
+      ZX_ERR_CANCELED);
+}
+
 }  // namespace
 
 }  // namespace amlrawnand

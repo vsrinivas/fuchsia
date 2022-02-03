@@ -536,11 +536,16 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, uint8_t* data, 
     ecc_pagesize = kPage0EccPageSize;
     ecc_pages = kPage0NumEccPages;
   }
+
+  fbl::AutoLock lock(&mutex_);
+  if (shutdown_) {
+    return ZX_ERR_CANCELED;
+  }
+
   // Send the page address into the controller.
   onfi_->OnfiCommand(NAND_CMD_READ0, 0x00, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
                      (controller_params_.options & NAND_BUSWIDTH_16));
 
-  fbl::AutoLock lock(&mutex_);
   if (zx_status_t status = AmlRawNandAllocBufs(); status != ZX_OK)
     return status;
 
@@ -631,6 +636,10 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const uint8_t* data, size_t data_s
   }
 
   fbl::AutoLock lock(&mutex_);
+  if (shutdown_) {
+    return ZX_ERR_CANCELED;
+  }
+
   if (zx_status_t status = AmlRawNandAllocBufs(); status != ZX_OK)
     return status;
 
@@ -695,6 +704,12 @@ zx_status_t AmlRawNand::RawNandEraseBlock(uint32_t nand_page) {
            erasesize_pages_);
     return ZX_ERR_INVALID_ARGS;
   }
+
+  fbl::AutoLock lock(&mutex_);
+  if (shutdown_) {
+    return ZX_ERR_CANCELED;
+  }
+
   onfi_->OnfiCommand(NAND_CMD_ERASE1, -1, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
                      (controller_params_.options & NAND_BUSWIDTH_16));
   onfi_->OnfiCommand(NAND_CMD_ERASE2, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
@@ -934,11 +949,13 @@ void AmlRawNand::DdkUnbind(ddk::UnbindTxn txn) {
 }
 
 void AmlRawNand::DdkSuspend(ddk::SuspendTxn txn) {
-  {
+  const uint8_t suspend_reason = txn.suspend_reason() & DEVICE_MASK_SUSPEND_REASON;
+  if (suspend_reason != DEVICE_SUSPEND_REASON_SUSPEND_RAM) {
     fbl::AutoLock lock(&mutex_);
+    shutdown_ = true;
     buffers_.reset();
   }
-  txn.Reply(ZX_OK, 0);
+  txn.Reply(ZX_OK, txn.requested_state());
 }
 
 zx_status_t AmlRawNand::Init() {
