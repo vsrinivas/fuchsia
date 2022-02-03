@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Run, inspect and debug
-### Deprecated, please use "fx debug"
+### Deprecated, please use "ffx debug connect"
 
-echo "This command is deprecated. Please use \"fx debug\" instead."
+echo "This command is deprecated. Please use \"ffx debug connect\" instead."
 exit 1

@@ -45,6 +45,8 @@ fx-config-read
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/debug-agent.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/symbol-index.sh || exit $?
 
+fx-info "Consider running \`ffx debug connect\` instead. \"fx debug\" will eventually be deprecated."
+
 # Defaults.
 port=
 core=
