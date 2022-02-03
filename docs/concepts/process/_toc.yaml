@@ -6,12 +6,18 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Overview"
+  path: /docs/concepts/process/overview.md
+  status: experimental
 - title: "Core libraries"
   path: /docs/concepts/process/core_libraries.md
 - title: "Namespaces"
   path: /docs/concepts/process/namespaces.md
 - title: "Sandboxing"
   path: /docs/concepts/process/sandboxing.md
+- title: "Jobs"
+  path: /docs/concepts/process/jobs.md
+  status: experimental
 - title: "Booting"
   section:
   - title: "Bootsvc"
