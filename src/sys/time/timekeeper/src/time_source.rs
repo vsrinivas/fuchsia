@@ -80,7 +80,7 @@ impl PushTimeSource {
         PushTimeSource { component }
     }
 
-    /// Returns a stream of time output and status change events recieved using the supplied
+    /// Returns a stream of time output and status change events received using the supplied
     /// `PushSourceProxy`, retaining the optional `App` for the same lifetime.
     fn events_from_proxy(app: Option<App>, proxy: PushSourceProxy) -> PushTimeSourceEventStream {
         // Store the App in a tuple with the PushSourceProxy to ensure it remains in scope.
@@ -308,10 +308,19 @@ mod test {
         });
 
         let mut events = PushTimeSource::events_from_proxy(None, proxy);
-        // Note we rely on the ordering of stream::Select to return the first status before the
-        // first sample.
-        assert_eq!(events.next().await.unwrap().unwrap(), *STATUS_EVENT_1);
-        assert_eq!(events.next().await.unwrap().unwrap(), *SAMPLE_EVENT_1);
+        // We expect to receive both events but the ordering is not deterministic.
+        let event1 = events.next().await.unwrap().unwrap();
+        let event2 = events.next().await.unwrap().unwrap();
+        match event1 {
+            Event::StatusChange { status: _ } => {
+                assert_eq!(event1, *STATUS_EVENT_1);
+                assert_eq!(event2, *SAMPLE_EVENT_1);
+            }
+            Event::Sample(_) => {
+                assert_eq!(event1, *SAMPLE_EVENT_1);
+                assert_eq!(event2, *STATUS_EVENT_1);
+            }
+        }
     }
 
     #[fuchsia::test]
