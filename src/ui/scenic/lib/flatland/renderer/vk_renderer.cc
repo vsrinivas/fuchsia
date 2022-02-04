@@ -4,6 +4,9 @@
 
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 
+#include <lib/async/cpp/wait.h>
+#include <lib/async/default.h>
+
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/impl/naive_image.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
@@ -533,6 +536,17 @@ void VkRenderer::Render(const ImageMetadata& render_target,
     TRACE_FLOW_BEGIN("gfx", "semaphore", koid_info.koid);
 
     semaphores.emplace_back(sema);
+
+    // TODO(fxbug.dev/93069): Semaphore lifetime should be guaranteed by Escher. This wait is a
+    // workaround for the issue where we destroy semaphores before they are signalled.
+    auto wait = std::make_shared<async::WaitOnce>(fence_original.get(), ZX_EVENT_SIGNALED,
+                                                  ZX_WAIT_ASYNC_TIMESTAMP);
+    zx_status_t wait_status =
+        wait->Begin(async_get_default_dispatcher(),
+                    [copy_ref = wait, sema](async_dispatcher_t*, async::WaitOnce*, zx_status_t,
+                                            const zx_packet_signal_t*) {
+                      // Let these fall out of scope.
+                    });
   }
 
   // Submit the commands and wait for them to finish.
