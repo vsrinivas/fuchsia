@@ -41,7 +41,7 @@
 //     BakerDevice(zx_device_t* parent)
 //         : BakerDeviceType(parent) {}
 //
-//     void BakerRegister(const cookie_maker_protocol_t* intf);
+//     void BakerRegister(const cookie_maker_protocol_t* intf, const cookie_jarrer_protocol_t* jar);
 //
 //     void BakerDeRegister();
 //
@@ -122,6 +122,65 @@ private:
     cookie_maker_protocol_ops_t* ops_;
     void* ctx_;
 };
+// An interface for storing cookies.
+
+template <typename D>
+class CookieJarrerProtocol : public internal::base_mixin {
+public:
+    CookieJarrerProtocol() {
+        internal::CheckCookieJarrerProtocolSubclass<D>();
+        cookie_jarrer_protocol_ops_.place = CookieJarrerPlace;
+        cookie_jarrer_protocol_ops_.take = CookieJarrerTake;
+    }
+
+protected:
+    cookie_jarrer_protocol_ops_t cookie_jarrer_protocol_ops_ = {};
+
+private:
+    // Place a cookie in the named jar. If no jar with the supplied name exists, one is created.
+    static void CookieJarrerPlace(void* ctx, const char* name) {
+        static_cast<D*>(ctx)->CookieJarrerPlace(name);
+    }
+    // Who took a cookie from the cookie jar?
+    static cookie_kind_t CookieJarrerTake(void* ctx, const char* name) {
+        auto ret = static_cast<D*>(ctx)->CookieJarrerTake(name);
+        return ret;
+    }
+};
+
+class CookieJarrerProtocolClient {
+public:
+    CookieJarrerProtocolClient()
+        : ops_(nullptr), ctx_(nullptr) {}
+    CookieJarrerProtocolClient(const cookie_jarrer_protocol_t* proto)
+        : ops_(proto->ops), ctx_(proto->ctx) {}
+
+    void GetProto(cookie_jarrer_protocol_t* proto) const {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
+    }
+    bool is_valid() const {
+        return ops_ != nullptr;
+    }
+    void clear() {
+        ctx_ = nullptr;
+        ops_ = nullptr;
+    }
+
+    // Place a cookie in the named jar. If no jar with the supplied name exists, one is created.
+    void Place(const char* name) const {
+        ops_->place(ctx_, name);
+    }
+
+    // Who took a cookie from the cookie jar?
+    cookie_kind_t Take(const char* name) const {
+        return ops_->take(ctx_, name);
+    }
+
+private:
+    cookie_jarrer_protocol_ops_t* ops_;
+    void* ctx_;
+};
 // Protocol for a baker who outsources all of it's baking duties to others.
 
 template <typename D, typename Base = internal::base_mixin>
@@ -145,9 +204,10 @@ protected:
     baker_protocol_ops_t baker_protocol_ops_ = {};
 
 private:
-    // Registers a cookie maker device which the baker can use.
-    static void BakerRegister(void* ctx, const cookie_maker_protocol_t* intf) {
-        static_cast<D*>(ctx)->BakerRegister(intf);
+    // Registers a cookie maker device which the baker can use, and a cookie jar into
+    // which they can place their completed cookies.
+    static void BakerRegister(void* ctx, const cookie_maker_protocol_t* intf, const cookie_jarrer_protocol_t* jar) {
+        static_cast<D*>(ctx)->BakerRegister(intf, jar);
     }
     // De-registers a cookie maker device when it's no longer available.
     static void BakerDeRegister(void* ctx) {
@@ -226,14 +286,20 @@ public:
         ops_ = nullptr;
     }
 
-    // Registers a cookie maker device which the baker can use.
-    void Register(void* intf_ctx, cookie_maker_protocol_ops_t* intf_ops) const {
+    // Registers a cookie maker device which the baker can use, and a cookie jar into
+    // which they can place their completed cookies.
+    void Register(void* intf_ctx, cookie_maker_protocol_ops_t* intf_ops, void* jar_ctx, cookie_jarrer_protocol_ops_t* jar_ops) const {
         const cookie_maker_protocol_t intf2 = {
             .ops = intf_ops,
             .ctx = intf_ctx,
         };
         const cookie_maker_protocol_t* intf = &intf2;
-        ops_->register(ctx_, intf);
+        const cookie_jarrer_protocol_t jar2 = {
+            .ops = jar_ops,
+            .ctx = jar_ctx,
+        };
+        const cookie_jarrer_protocol_t* jar = &jar2;
+        ops_->register(ctx_, intf, jar);
     }
 
     // De-registers a cookie maker device when it's no longer available.

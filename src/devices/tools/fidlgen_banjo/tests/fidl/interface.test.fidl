@@ -15,6 +15,12 @@ type CookieKind = strict enum {
     Snickerdoodle = 2;
 };
 
+/// To do things to a cookie jar, we need to know which jar we are doing them to.
+type CookieJarArgs = struct {
+    /// To whom does this jar belong?
+    name string:100;
+};
+
 /// An interface for a device that's able to create and deliver cookies!
 @transport("Banjo")
 @banjo_layout("ddk-interface")
@@ -44,16 +50,28 @@ protocol CookieMaker {
     });
 };
 
+/// An interface for storing cookies.
+@transport("Banjo")
+@banjo_layout("ddk-interface")
+protocol CookieJarrer {
+    /// Place a cookie in the named jar. If no jar with the supplied name exists, one is created.
+    Place(CookieJarArgs);
+    /// Who took a cookie from the cookie jar?
+    Take(CookieJarArgs) -> (struct {
+        cookie CookieKind;
+    });
+};
+
 /// Protocol for a baker who outsources all of it's baking duties to others.
 @transport("Banjo")
 @banjo_layout("ddk-protocol")
 protocol Baker {
-    /// Registers a cookie maker device which the baker can use.
+    /// Registers a cookie maker device which the baker can use, and a cookie jar into
+    /// which they can place their completed cookies.
     Register(resource struct {
         intf client_end:CookieMaker;
+        jar client_end:CookieJarrer;
     }) -> ();
     /// De-registers a cookie maker device when it's no longer available.
     DeRegister() -> ();
 };
-
-// TODO(fxbug.dev/88344): Add test case for methods with named payloads

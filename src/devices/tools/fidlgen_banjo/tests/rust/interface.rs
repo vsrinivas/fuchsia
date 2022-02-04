@@ -10,6 +10,11 @@
 use fuchsia_zircon_types as zircon_types;
 
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CookieJarArgs {
+    pub name: [u8; 100 as usize],
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

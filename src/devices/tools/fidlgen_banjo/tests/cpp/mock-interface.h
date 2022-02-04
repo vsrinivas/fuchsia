@@ -37,8 +37,8 @@ public:
 
     const baker_protocol_t* GetProto() const { return &proto_; }
 
-    virtual MockBaker& ExpectRegister(cookie_maker_protocol_t intf) {
-        mock_register_.ExpectCall(intf);
+    virtual MockBaker& ExpectRegister(cookie_maker_protocol_t intf, cookie_jarrer_protocol_t jar) {
+        mock_register_.ExpectCall(intf, jar);
         return *this;
     }
 
@@ -52,19 +52,19 @@ public:
         mock_de_register_.VerifyAndClear();
     }
 
-    virtual void BakerRegister(void* intf_ctx, cookie_maker_protocol_ops_t* intf_ops) {
-        mock_register_.Call(cookie_maker_protocol_t{intf_ops, intf_ctx});
+    virtual void BakerRegister(void* intf_ctx, cookie_maker_protocol_ops_t* intf_ops, void* jar_ctx, cookie_jarrer_protocol_ops_t* jar_ops) {
+        mock_register_.Call(cookie_maker_protocol_t{intf_ops, intf_ctx}, cookie_jarrer_protocol_t{jar_ops, jar_ctx});
     }
 
     virtual void BakerDeRegister() {
         mock_de_register_.Call();
     }
 
-    mock_function::MockFunction<void, cookie_maker_protocol_t>& mock_register() { return mock_register_; }
+    mock_function::MockFunction<void, cookie_maker_protocol_t, cookie_jarrer_protocol_t>& mock_register() { return mock_register_; }
     mock_function::MockFunction<void>& mock_de_register() { return mock_de_register_; }
 
 protected:
-    mock_function::MockFunction<void, cookie_maker_protocol_t> mock_register_;
+    mock_function::MockFunction<void, cookie_maker_protocol_t, cookie_jarrer_protocol_t> mock_register_;
     mock_function::MockFunction<void> mock_de_register_;
 
 private:
