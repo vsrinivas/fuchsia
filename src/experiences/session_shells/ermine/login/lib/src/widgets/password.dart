@@ -50,6 +50,7 @@ class Password extends StatelessWidget {
                       SizedBox(
                         width: kOobeBodyFieldWidth,
                         child: TextFormField(
+                          key: ValueKey('password1'),
                           autofocus: true,
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           controller: _passwordController,
@@ -73,6 +74,7 @@ class Password extends StatelessWidget {
                       SizedBox(
                         width: kOobeBodyFieldWidth,
                         child: TextFormField(
+                          key: ValueKey('password2'),
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           controller: _confirmPasswordController,
                           obscureText: !_showPassword.value,
@@ -142,6 +144,7 @@ class Password extends StatelessWidget {
                     SizedBox(width: 24),
                     // Set password button.
                     ElevatedButton(
+                      key: ValueKey('setPassword'),
                       onPressed: () => _validate() && !oobe.wait
                           ? oobe.setPassword(_confirmPasswordController.text)
                           : null,
