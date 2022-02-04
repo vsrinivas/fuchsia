@@ -82,7 +82,13 @@ def main():
             'inspect/client.shard.cml',
             'syslog/client.shard.cml',
         ]
-        manifest['use'] = [{'protocol': "fuchsia.device.fs.Exporter"}]
+        manifest['use'] = [
+            {
+                'protocol': "fuchsia.device.fs.Exporter"
+            }, {
+                'protocol': "fuchsia.boot.Items"
+            }
+        ]
     else:
         manifest["program"]["binary"] = program
 
