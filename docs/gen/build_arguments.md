@@ -3622,7 +3622,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"XHDM0Huh8jRjuKNf1m2SujHPNLdwb3ffnqZWbFUIaLwC"`
+**Current value (from the default):** `"beE1WRS4PXPkuCWWs-RB23ZnZ5xJ3SOjpmT4k-KBGEsC"`
 
 From //build/rust/config.gni:30
 
@@ -3938,7 +3938,7 @@ This feature is still WIP but you can turn it on at your own risk.
 
 **Current value (from the default):** `false`
 
-From //src/experiences/session_shells/ermine/login/BUILD.gn:13
+From //src/experiences/session_shells/ermine/login/BUILD.gn:14
 
 ### sysmgr_golden_warn_override
 Used by config_package().
