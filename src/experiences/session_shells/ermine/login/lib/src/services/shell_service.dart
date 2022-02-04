@@ -21,7 +21,6 @@ import 'package:zircon/zircon.dart';
 /// Defines a service to launch and support Ermine user shell.
 class ShellService {
   late final StreamSubscription<bool> _focusSubscription;
-  late final VoidCallback onShellReady;
   late final VoidCallback onShellExit;
   late final bool _useFlatland;
   _ErmineViewConnection? _ermine;
@@ -50,7 +49,6 @@ class ShellService {
     assert(_ermine == null, 'Instance of ermine shell already exists.');
     _ermine = _ErmineViewConnection(
       useFlatland: _useFlatland,
-      onReady: onShellReady,
       onExit: onShellExit,
     );
     return _ermine!.fuchsiaViewConnection;
@@ -70,16 +68,11 @@ class ShellService {
 
 class _ErmineViewConnection {
   final bool useFlatland;
-  final VoidCallback onReady;
   final VoidCallback onExit;
   late final FuchsiaViewConnection fuchsiaViewConnection;
   bool _focusRequested = false;
 
-  _ErmineViewConnection({
-    required this.useFlatland,
-    required this.onReady,
-    required this.onExit,
-  }) {
+  _ErmineViewConnection({required this.useFlatland, required this.onExit}) {
     // Connect to the Realm.
     final realm = RealmProxy();
     Incoming.fromSvcPath().connectToService(realm);
@@ -151,7 +144,6 @@ class _ErmineViewConnection {
     if (state == true && !_focusRequested) {
       _focusRequested = true;
       setFocus();
-      onReady();
     }
   }
 }

@@ -38,8 +38,8 @@ class AuthService {
     // Connect to AccountManager and get list of all account ids.
     Incoming.fromSvcPath().connectToService(_accountManager);
     _accountManager.getAccountIds().then((ids) {
-      _accountIds.addAll(ids);
       runInAction(() => _ready.value = true);
+      _accountIds.addAll(ids);
       if (ids.length > 1) {
         log.shout(
             'Multiple (${ids.length}) accounts found, will use the first.');

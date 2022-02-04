@@ -8,7 +8,6 @@ import 'dart:ui';
 
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/services.dart';
-import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
@@ -48,12 +47,7 @@ class OobeStateImpl with Disposable implements OobeState {
   })  : componentContext = ComponentContext.create(),
         _localeStream = channelService.stream.asObservable() {
     privacyPolicy = privacyConsentService.privacyPolicy;
-    shellService
-      ..onShellReady = _onErmineShellReady
-      ..onShellExit = _onErmineShellExit;
-    deviceService
-      ..onInspect = _onInspect
-      ..serve(componentContext);
+    shellService.onShellExit = _onErmineShellExit;
 
     // Create a directory that will host the account_data directory. This is needed
     // because the root directories are expected to exist at the time of serving.
@@ -383,18 +377,11 @@ class OobeStateImpl with Disposable implements OobeState {
   @override
   void factoryReset() => authService.factoryReset();
 
-  bool _ermineReady = false;
-  void _onErmineShellReady() {
-    _ermineReady = true;
-  }
-
   void _onErmineShellExit() {
-    _ermineReady = false;
-
-    runInAction(() => _loginDone.value = false);
-
     // Define a local method to run after logout below.
     void postLogout() {
+      runInAction(() => _loginDone.value = false);
+
       // If OOBE is disabled, perform empty password re-login.
       if (!launchOobe) {
         _performNullLogin().then((_) {
@@ -432,18 +419,6 @@ class OobeStateImpl with Disposable implements OobeState {
     } catch (e) {
       log.shout('Account found: ${authService.hasAccount}.'
           ' Caught exception during authentication: $e');
-    }
-  }
-
-  void _onInspect(Node node) {
-    node.boolProperty('ready')!.setValue(ready);
-    node.boolProperty('launchOOBE')!.setValue(launchOobe);
-    node.boolProperty('ermineReady')!.setValue(_ermineReady);
-    node.boolProperty('authenticated')!.setValue(loginDone);
-    if (hasAccount) {
-      node.stringProperty('screen')!.setValue('login');
-    } else {
-      node.stringProperty('screen')!.setValue(screen.name);
     }
   }
 }

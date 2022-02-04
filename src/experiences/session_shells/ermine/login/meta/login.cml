@@ -1,7 +1,5 @@
 {
     include: [
-        "//sdk/lib/inspect/client.shard.cml",
-
         // Enable system logging.
         "syslog/client.shard.cml",
     ],

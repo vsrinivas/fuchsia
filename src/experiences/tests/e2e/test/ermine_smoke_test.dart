@@ -5,7 +5,6 @@
 // ignore_for_file: import_of_legacy_library_into_null_safe
 
 @Retry(2)
-@Timeout(Duration(minutes: 2))
 
 import 'package:ermine_driver/ermine_driver.dart';
 import 'package:fidl_fuchsia_input/fidl_async.dart';
@@ -69,19 +68,5 @@ void main() {
     await ermine.driver.waitUntilNoTransientCallbacks();
     await ermine.waitForAction('close');
     expect(await ermine.isStopped(terminalUrl), isTrue);
-
-    // Get the current value of dark mode.
-    bool darkMode = (await ermine.snapshot).darkMode;
-
-    // Toggle it.
-    await ermine.driver.tap(find.byValueKey('darkMode'));
-    expect((await ermine.snapshot).darkMode, !darkMode);
-
-    // Logout from ermine.
-    print('Logging out and back in');
-    await ermine.logoutAndLogin();
-
-    // Dark mode toggle should have persisted across auth flows.
-    expect((await ermine.snapshot).darkMode, !darkMode);
-  }, timeout: Timeout(Duration(minutes: 2)));
+  });
 }

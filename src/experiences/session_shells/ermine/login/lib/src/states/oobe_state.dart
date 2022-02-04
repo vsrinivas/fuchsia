@@ -16,7 +16,7 @@ import 'package:login/src/states/oobe_state_impl.dart';
 /// The oobe screens the user navigates through.
 // TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
 // finalized.
-enum OobeScreen { /* channel,  dataSharing, sshKeys,*/ password, done }
+enum OobeScreen { channel, /* dataSharing, */ sshKeys, password, done }
 
 /// The screens the user navigates through to add SSH keys.
 enum SshScreen { add, confirm, error, exit }

@@ -6,7 +6,6 @@ import("//build/config.gni")
 import("//build/dart/dart_library.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_component.gni")
-import("//build/testing/flutter_driver.gni")
 
 declare_args() {
   # TODO(http://fxb/85576): Whether or not to launch OOBE workflow on startup.
@@ -18,10 +17,7 @@ dart_library("lib") {
   package_name = "login"
   null_safe = true
 
-  entrypoints = [
-    "main.dart",
-    "test_main.dart",
-  ]
+  entrypoints = [ "main.dart" ]
 
   services = [
     "src/services/auth_service.dart",
@@ -54,7 +50,6 @@ dart_library("lib") {
 
   deps = [
     "//sdk/dart/fidl",
-    "//sdk/dart/fuchsia_inspect",
     "//sdk/dart/fuchsia_internationalization_flutter",
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_scenic_flutter",
@@ -82,7 +77,6 @@ dart_library("lib") {
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/utils:ermine_utils",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
-    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/async",
@@ -93,12 +87,7 @@ dart_library("lib") {
 }
 
 flutter_component("component") {
-  if (flutter_driver_enabled) {
-    main_dart = "test_main.dart"
-  } else {
-    main_dart = "main.dart"
-  }
-
+  main_dart = "main.dart"
   component_name = "login"
 
   manifest = "meta/login.cml"

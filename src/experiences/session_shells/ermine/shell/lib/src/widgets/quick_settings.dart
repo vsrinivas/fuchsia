@@ -135,7 +135,6 @@ class _ListSettings extends StatelessWidget {
               children: [
                 // Switch Theme
                 SwitchListTile(
-                  key: ValueKey('darkMode'),
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
                   secondary: Icon(Icons.dark_mode),
                   title: Text(Strings.darkMode),

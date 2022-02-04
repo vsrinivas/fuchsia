@@ -55,7 +55,6 @@ class Ready extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   OutlinedButton(
-                    key: ValueKey('startWorkstation'),
                     autofocus: true,
                     onPressed: oobe.finish,
                     child: Text(Strings.startWorkstation.toUpperCase()),

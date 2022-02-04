@@ -406,8 +406,9 @@ class AppStateImpl with Disposable implements AppState {
       defaultAction: Strings.logout,
       onAction: (action) {
         if (action == Strings.logout) {
-          dispose();
           startupService.logout();
+          // Clean up.
+          dispose();
         }
       },
     ));
@@ -684,7 +685,6 @@ class AppStateImpl with Disposable implements AppState {
     data['sideBarVisible'] = sideBarVisible;
     data['overlaysVisible'] = overlaysVisible;
     data['lastAction'] = shortcutsService.lastShortcutAction;
-    data['darkMode'] = hasDarkTheme;
 
     // Number of running component views.
     data['numViews'] = views.length;
