@@ -22,6 +22,7 @@ const SYSLOG_FILE: &str = "syslog.txt";
 const REPORT_FILE: &str = "report.txt";
 const RESTRICTED_LOG_FILE: &str = "restricted_logs.txt";
 const CUSTOM_ARTIFACT_DIRECTORY: &str = "custom";
+const DEBUG_ARTIFACT_DIRECTORY: &str = "debug";
 
 const TEST_SUMMARY_TMP_FILE: &str = ".test_summary_tmp.json";
 
@@ -380,6 +381,7 @@ fn artifact_dir_name(entity_id: &EntityId) -> PathBuf {
 fn prefix_for_directory_type(artifact_type: &DirectoryArtifactType) -> &'static str {
     match artifact_type {
         DirectoryArtifactType::Custom => CUSTOM_ARTIFACT_DIRECTORY,
+        DirectoryArtifactType::Debug => DEBUG_ARTIFACT_DIRECTORY,
     }
 }
 
@@ -395,6 +397,9 @@ fn filename_for_type(artifact_type: &directory::ArtifactType) -> &'static str {
         directory::ArtifactType::RestrictedLog => RESTRICTED_LOG_FILE,
         directory::ArtifactType::Report => REPORT_FILE,
         directory::ArtifactType::Custom => unreachable!("Custom artifact is not a file"),
+        directory::ArtifactType::Debug => {
+            unreachable!("Debug artifacts must be placed in a directory")
+        }
     }
 }
 

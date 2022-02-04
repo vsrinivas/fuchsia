@@ -266,7 +266,10 @@ pub enum ArtifactType {
 /// An enumeration of different known artifact types consisting of multiple files.
 #[derive(Clone, Copy, Debug)]
 pub enum DirectoryArtifactType {
+    /// An arbitrary set of custom files stored by the test in a directory.
     Custom,
+    /// A collection of debug files. For example: coverage and profiling.
+    Debug,
 }
 
 /// Common outcome type for test results, suites, and test cases.
@@ -342,6 +345,7 @@ impl Into<test_output_directory::ArtifactType> for DirectoryArtifactType {
     fn into(self) -> test_output_directory::ArtifactType {
         match self {
             Self::Custom => test_output_directory::ArtifactType::Custom,
+            Self::Debug => test_output_directory::ArtifactType::Debug,
         }
     }
 }

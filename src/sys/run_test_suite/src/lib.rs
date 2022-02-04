@@ -11,12 +11,13 @@ use {
         RunBuilderProxy, SuiteArtifact, SuiteStopped,
     },
     fuchsia_async as fasync,
-    futures::{channel::mpsc, prelude::*, stream::FuturesUnordered, StreamExt},
-    log::{error, warn},
+    futures::{channel::mpsc, future::join_all, prelude::*, stream::FuturesUnordered, StreamExt},
+    log::{debug, error, warn},
     std::collections::{HashMap, HashSet, VecDeque},
     std::convert::TryInto,
     std::fmt,
     std::io::Write,
+    std::path::PathBuf,
     std::sync::Arc,
 };
 
@@ -707,6 +708,65 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                     // TODO(fxbug.dev/91151): Add support for RunStarted and RunStopped when test_manager sends them.
                     Some(ftest_manager::RunEventPayload::Artifact(artifact)) => {
                         match artifact {
+                            ftest_manager::Artifact::DebugData(iterator) => {
+                                let iterator = iterator.into_proxy().unwrap();
+                                let output_directory = run_reporter
+                                    .new_directory_artifact(
+                                        &DirectoryArtifactType::Debug,
+                                        None, /* moniker */
+                                    )
+                                    .await?;
+
+                                const PIPELINED_REQUESTS: usize = 16;
+                                let unprocessed_data_stream =
+                                    futures::stream::repeat_with(move || iterator.get_next())
+                                        .buffered(PIPELINED_REQUESTS);
+                                let terminated_event_stream = unprocessed_data_stream
+                                    .take_until_stop_after(|result| match &result {
+                                        Ok(events) => events.is_empty(),
+                                        _ => true,
+                                    });
+
+                                let data_futs = terminated_event_stream
+                                    .map(|result| match result {
+                                        Ok(vals) => vals,
+                                        Err(e) => {
+                                            warn!("Request failure: {:?}", e);
+                                            vec![]
+                                        }
+                                    })
+                                    .map(futures::stream::iter)
+                                    .flatten()
+                                    .map(|debug_data| {
+                                        let output = debug_data
+                                            .name
+                                            .as_ref()
+                                            .ok_or_else(|| anyhow!("Missing profile name"))
+                                            .and_then(|name| {
+                                                output_directory
+                                                    .new_file(&PathBuf::from(name))
+                                                    .map_err(anyhow::Error::from)
+                                            });
+                                        async move {
+                                            let mut output = output?;
+                                            let file = debug_data
+                                                .file
+                                                .ok_or_else(|| {
+                                                    anyhow!("Missing profile file handle")
+                                                })?
+                                                .into_proxy()?;
+                                            debug!(
+                                                "Reading run profile \"{}\"",
+                                                debug_data.name.unwrap_or_default()
+                                            );
+                                            read_file_to_writer(&file, &mut output).await
+                                        }
+                                    })
+                                    .collect::<Vec<_>>()
+                                    .await;
+                                join_all(data_futs).await;
+                                debug!("All profiles downloaded");
+                            }
                             ftest_manager::Artifact::Custom(val) => {
                                 if let Some(ftest_manager::DirectoryAndToken {
                                     directory,
@@ -927,7 +987,7 @@ mod test {
     use assert_matches::assert_matches;
     use fidl::endpoints::{create_proxy_and_stream, ServerEnd};
     use fuchsia_zircon as zx;
-    use futures::future::join;
+    use futures::future::{join, join3};
     use maplit::hashmap;
     use output::EntityId;
     use vfs::{
@@ -1358,5 +1418,84 @@ mod test {
         assert_eq!(run.report.outcome, Some(output::ReportedOutcome::Error));
         assert!(run.report.is_finished);
         assert!(run.report.started_time.is_some());
+    }
+
+    #[fuchsia::test]
+    async fn single_run_debug_data() {
+        let (builder_proxy, run_builder_stream) =
+            create_proxy_and_stream::<ftest_manager::RunBuilderMarker>()
+                .expect("create builder proxy");
+
+        let reporter = InMemoryReporter::new();
+        let run_reporter = RunReporter::new(reporter.clone());
+        let run_fut = call_run_tests(ParamsForRunTests {
+            builder_proxy,
+            test_params: vec![TestParams {
+                test_url: "fuchsia-pkg://fuchsia.com/nothing#meta/nothing.cm".to_string(),
+                ..TestParams::default()
+            }],
+            run_reporter,
+        });
+
+        let dir = pseudo_directory! {
+            "test_file.profraw" => read_only_static("Not a real profile"),
+        };
+
+        let (file_client, file_service) =
+            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::FileMarker>().unwrap();
+        let scope = ExecutionScope::new();
+        dir.open(
+            scope,
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            fidl_fuchsia_io::MODE_TYPE_FILE,
+            vfs::path::Path::validate_and_split("test_file.profraw").unwrap(),
+            ServerEnd::new(file_service.into_channel()),
+        );
+
+        let (debug_client, debug_service) =
+            fidl::endpoints::create_endpoints::<ftest_manager::DebugDataIteratorMarker>().unwrap();
+        let debug_data_fut = async move {
+            let mut service = debug_service.into_stream().unwrap();
+            let mut data = vec![ftest_manager::DebugData {
+                name: Some("test_file.profraw".to_string()),
+                file: Some(file_client),
+                ..ftest_manager::DebugData::EMPTY
+            }];
+            while let Ok(Some(request)) = service.try_next().await {
+                match request {
+                    ftest_manager::DebugDataIteratorRequest::GetNext { responder, .. } => {
+                        let _ = responder.send(&mut data.drain(0..));
+                    }
+                }
+            }
+        };
+        let events = vec![ftest_manager::RunEvent {
+            payload: Some(ftest_manager::RunEventPayload::Artifact(
+                ftest_manager::Artifact::DebugData(debug_client),
+            )),
+            ..ftest_manager::RunEvent::EMPTY
+        }];
+
+        let fake_fut = fake_running_all_suites_and_return_run_events(
+            run_builder_stream,
+            hashmap! {
+
+                "fuchsia-pkg://fuchsia.com/nothing#meta/nothing.cm" => create_empty_suite_events(),
+            },
+            events,
+        );
+
+        assert_eq!(join3(run_fut, debug_data_fut, fake_fut).await.0, Outcome::Passed);
+
+        let reports = reporter.get_reports();
+        assert_eq!(2usize, reports.len());
+        let run = reports.iter().find(|e| e.id == EntityId::TestRun).expect("find run report");
+        assert_eq!(1usize, run.report.directories.len());
+        let dir = &run.report.directories[0];
+        let files = dir.1.files.lock();
+        assert_eq!(1usize, files.len());
+        let (name, file) = &files[0];
+        assert_eq!(name.to_string_lossy(), "test_file.profraw".to_string());
+        assert_eq!(file.get_contents(), b"Not a real profile");
     }
 }
