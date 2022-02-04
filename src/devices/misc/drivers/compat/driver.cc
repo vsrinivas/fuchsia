@@ -117,8 +117,14 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
     return serve.take_error();
   }
 
-  auto root_resource = driver::Connect<fboot::RootResource>(ns_, dispatcher_)
-                           .and_then(fit::bind_member<&Driver::GetRootResource>(this));
+  auto root_resource =
+      driver::Connect<fboot::RootResource>(ns_, dispatcher_)
+          .and_then(fit::bind_member<&Driver::GetRootResource>(this))
+          .or_else([this](zx_status_t& status) {
+            FDF_LOG(WARNING, "Failed to get root resource: %s", zx_status_get_string(status));
+            FDF_LOG(WARNING, "Assuming test environment and continuing");
+            return error(status);
+          });
   auto loader_vmo = driver::Connect<fio::File>(ns_, dispatcher_, kLibDriverPath, kOpenFlags)
                         .and_then(fit::bind_member<&Driver::GetBuffer>(this));
   auto driver_vmo = driver::Connect<fio::File>(ns_, dispatcher_, driver_path, kOpenFlags)
@@ -137,11 +143,9 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
 promise<zx::resource, zx_status_t> Driver::GetRootResource(
     const fidl::WireSharedClient<fboot::RootResource>& root_resource) {
   bridge<zx::resource, zx_status_t> bridge;
-  auto callback = [this, completer = std::move(bridge.completer)](
+  auto callback = [completer = std::move(bridge.completer)](
                       fidl::WireUnownedResult<fboot::RootResource::Get>& result) mutable {
     if (!result.ok()) {
-      FDF_LOG(WARNING, "Failed to get root resource: %s", result.FormatDescription().data());
-      FDF_LOG(WARNING, "Assuming test environment and continuing");
       completer.complete_error(result.status());
       return;
     }
@@ -382,6 +386,7 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
             FDF_LOG(ERROR, "Failed Export to devfs: %s", zx_status_get_string(status));
             return ok();
           })
+          .wrap_with(child->scope())
           .wrap_with(scope_);
   executor_.schedule_task(std::move(task));
 

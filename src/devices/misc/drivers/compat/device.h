@@ -60,6 +60,8 @@ class Device : public std::enable_shared_from_this<Device> {
   std::string_view topological_path() const { return topological_path_; }
   void set_topological_path(std::string path) { topological_path_ = std::move(path); }
 
+  fpromise::scope& scope() { return scope_; }
+
  private:
   using Metadata = std::vector<uint8_t>;
 
