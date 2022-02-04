@@ -93,18 +93,7 @@ int Mem(const fxl::CommandLine& command_line) {
     return EXIT_FAILURE;
   }
 
-  if (command_line.HasOption("print")) {
-    Capture capture;
-    auto s = Capture::GetCapture(&capture, capture_state, VMO);
-    if (s != ZX_OK) {
-      std::cerr << "Error getting capture: " << zx_status_get_string(s);
-      return EXIT_FAILURE;
-    }
-    printer.PrintCapture(capture);
-    return EXIT_SUCCESS;
-  }
-
-  if (command_line.HasOption("output")) {
+  if (command_line.HasOption("output") || command_line.HasOption("print")) {
     zx_koid_t pid = 0;
     std::string pid_value;
     if (command_line.GetOptionValue("pid", &pid_value)) {
@@ -135,6 +124,11 @@ int Mem(const fxl::CommandLine& command_line) {
         Digester digester(GetBucketMatchesFromConfig());
         Digest d(capture, &digester);
         printer.OutputDigest(d);
+      } else if (command_line.HasOption("print")) {
+        printer.PrintCapture(capture);
+        if (repeat != 0) {
+          std::cout << std::endl;
+        }
       } else {
         printer.OutputSummary(Summary(capture, &namer), UNSORTED, pid);
       }
