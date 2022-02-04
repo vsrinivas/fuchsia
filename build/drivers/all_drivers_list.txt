@@ -191,6 +191,8 @@
 //src/devices/tests/bind-test-v2:bind-test-driver-v2-driver
 //src/devices/tests/compat/leaf:driver
 //src/devices/tests/compat/root:driver
+//src/devices/tests/composite:leaf_driver
+//src/devices/tests/composite:root_driver
 //src/devices/tests/composite-driver-v1/test-root:driver
 //src/devices/tests/composite-driver-v1:driver
 //src/devices/tests/ddk-environment-test:ddk-environment-test-driver
