@@ -3,6 +3,14 @@
 // found in the LICENSE file.
 library zx;
 
+type GetStuffRequestArgs = struct {
+    an_input int32;
+    input2 int32;
+};
+type GetStuffResponseArgs = struct {
+    status status;
+};
+
 @transport("Syscall")
 protocol Couple {
     /// This does a single thing.
@@ -13,10 +21,5 @@ protocol Couple {
     });
 
     /// Does great stuff.
-    GetStuff(struct {
-        an_input int32;
-        input2 int32;
-    }) -> (struct {
-        status status;
-    });
+    GetStuff(GetStuffRequestArgs) -> (GetStuffResponseArgs);
 };
