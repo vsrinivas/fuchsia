@@ -125,11 +125,10 @@ template("dart_test") {
 
   _copy_target_name = "${target_name}_copy"
   copy(_copy_target_name) {
-    sources = [ "$dart_sdk/bin/dart" ]
+    sources = [ prebuilt_dart ]
     outputs = [ _dart_binary ]
     deps = dart_sdk_deps
   }
-  _sdk_deps = [ ":$_copy_target_name" ]
 
   # Creates a snapshot file, which allows the test to be invoked hermetically.
   _snapshot = "$target_gen_dir/${target_name}.snapshot"
@@ -146,12 +145,12 @@ template("dart_test") {
     # Dart writes absolute paths to depfiles, convert them to relative.
     # See more information in https://fxbug.dev/75451.
     script = "//build/depfile_path_to_relative.py"
-    inputs = [ _dart_binary ]
+    inputs = [ prebuilt_dart ]
 
     args = [
       "--depfile=" + rebase_path(depfile, root_build_dir),
       "--",
-      rebase_path(_dart_binary, root_build_dir),
+      rebase_path(prebuilt_dart, root_build_dir),
       "--verbosity=warning",
       "--snapshot=" + rebase_path(_snapshot, root_build_dir),
       "--snapshot-depfile=" + rebase_path(depfile, root_build_dir),
@@ -160,10 +159,10 @@ template("dart_test") {
       rebase_path(_grouped_main_file, root_build_dir),
     ]
 
-    deps = _sdk_deps + [
-             ":$_dart_library_target_name",
-             ":$_test_grouping_target_name",
-           ]
+    deps = [
+      ":$_dart_library_target_name",
+      ":$_test_grouping_target_name",
+    ]
     testonly = true
   }
 
@@ -254,10 +253,11 @@ template("dart_test") {
       ]
     }
 
-    deps = _sdk_deps + [
-             ":$_snapshot_target_name",
-             ":$_spec_target_name",
-           ]
+    deps = [
+      ":$_copy_target_name",
+      ":$_snapshot_target_name",
+      ":$_spec_target_name",
+    ]
     testonly = true
   }
 }

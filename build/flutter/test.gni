@@ -222,8 +222,8 @@ if (current_toolchain == dart_toolchain) {
     _dart_binary = "$_data_dir/dart"
     copy(_copy_target_name) {
       sources = [
-        "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/dart",
         "//prebuilt/third_party/flutter/$host_cpu/deps/icudtl.dat",
+        prebuilt_dart,
       ]
       outputs = [ "$_data_dir/{{source_file_part}}" ]
     }

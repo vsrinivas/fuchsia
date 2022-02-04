@@ -69,7 +69,7 @@ template("fidl_dart") {
     if (host_cpu == target_cpu) {
       args += [
         "--dart",
-        rebase_path("$dart_sdk/bin/dart", root_build_dir),
+        rebase_path(prebuilt_dart, root_build_dir),
       ]
       deps += dart_sdk_deps
     }

@@ -43,7 +43,7 @@ if (is_host) {
 
   golden_test("fidlgen_dart_golden_tests") {
     goldens_dir = "goldens"
-    reformat_goldens_bin = "${dart_sdk}/bin/dart"
+    reformat_goldens_bin = prebuilt_dart
     reformat_goldens_args = [
       "format",
       "-o",

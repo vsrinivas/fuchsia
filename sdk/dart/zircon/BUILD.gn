@@ -19,7 +19,7 @@ action("generate_zircon_constants") {
     "//zircon/system/public/zircon/errors.h",
     "//zircon/system/public/zircon/rights.h",
     "//zircon/system/public/zircon/types.h",
-    "${dart_sdk}/bin/dart",
+    prebuilt_dart,
   ]
   _output = "$_zircon_lib_dir/src/constants.dart"
   outputs = [ _output ]
@@ -37,7 +37,7 @@ action("generate_zircon_constants") {
     "--types",
     rebase_path("//zircon/system/public/zircon/types.h", root_build_dir),
     "--dart",
-    rebase_path("${dart_sdk}/bin/dart", root_build_dir),
+    rebase_path(prebuilt_dart, root_build_dir),
     "--dart-constants",
     rebase_path(_output, root_build_dir),
   ]
