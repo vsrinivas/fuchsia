@@ -15,9 +15,9 @@ use {
 pub struct Version {
     /// Major version indicates structural layout/encoding changes.
     pub major: u16,
-    // TODO(ripper): Before we use minor versions we must resolve how to represent
-    // multiple minor versions or ensure that after a major bump we reset the minor to
-    // zero, etc. For now, we include it for encoding stability but it is currently unused.
+    /// Minor version indicates forwards compatible changes.
+    /// e.g. The addition of a layer-file index, bloom filters, file attributes or posix
+    /// features where reversion to a previous minor will simply lead to loss of these features.
     pub minor: u16,
 }
 impl std::fmt::Display for Version {

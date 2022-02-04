@@ -140,8 +140,6 @@ impl ObjectHandle for FakeObjectHandle {
     }
 
     fn block_size(&self) -> u64 {
-        // TODO(ripper): Allocator block_size() returns usize but everything elses seems to use
-        // u64. We should standardize on one.
         self.allocator.block_size().try_into().unwrap()
     }
 
