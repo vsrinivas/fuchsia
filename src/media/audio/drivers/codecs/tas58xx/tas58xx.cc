@@ -97,6 +97,9 @@ zx_status_t Tas58xx::Start() {
   if (status != ZX_OK) {
     return status;
   }
+  // Per datasheet, 5ms "for device settle down" after kRegDeviceCtrl2 is set to
+  // kRegDeviceCtrl2BitsHiZ before it is set to kRegDeviceCtrl2BitsPlay during startup.
+  zx::nanosleep(zx::deadline_after(zx::msec(5)));
   return UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsPlay);
 }
 
@@ -143,7 +146,7 @@ zx_status_t Tas58xx::Reset() {
 
     // Per datasheet, 5ms "for device settle down" after kRegDeviceCtrl2 is set to
     // kRegDeviceCtrl2BitsHiZ before it is set to kRegDeviceCtrl2BitsPlay during startup.
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+    zx::nanosleep(zx::deadline_after(zx::msec(5)));
 
     const uint8_t kDefaultsEnd[][2] = {
         {kRegSelectPage, 0x00},
@@ -384,9 +387,10 @@ zx::status<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {
       return zx::error(status);
     }
   }
-  // No turn off/on delay in the datasheet. Only 5ms after going to HiZ when starting up.
-  // Hence we don't set turn_on_delay and turn_off_delay values.
-  return zx::ok(CodecFormatInfo{});
+  // Datasheet specifies 5ms when going from HiZ to Play, we do this during turning on (Start).
+  CodecFormatInfo info = {};
+  info.set_turn_on_delay(zx::msec(5).get());
+  return zx::ok(std::move(info));
 }
 
 GainFormat Tas58xx::GetGainFormat() {

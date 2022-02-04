@@ -55,7 +55,11 @@ TEST(Tas58xxTest, GoodSetDai) {
     mock_i2c.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
     auto formats = client.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+    auto codec_format_info = client.SetDaiFormat(std::move(format));
+    // 5ms turn on delay expected.
+    ASSERT_OK(codec_format_info.status_value());
+    EXPECT_EQ(zx::msec(5).get(), codec_format_info->turn_on_delay());
+    EXPECT_FALSE(codec_format_info->has_turn_off_delay());
   }
 
   // One channel is ok.
