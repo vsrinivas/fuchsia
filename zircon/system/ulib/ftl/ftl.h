@@ -159,6 +159,8 @@ typedef enum {
 // Counters exported through |FS_COUNTERS|.
 typedef struct FtlCounters {
   uint32_t wear_count;
+  uint32_t initial_bad_blocks;
+  uint32_t running_bad_blocks;
 } FtlCounters;
 
 // NDM Partition Information.
@@ -261,6 +263,10 @@ typedef struct {
 typedef struct {
   uint32_t num_blocks;
 
+  // Number of each kind of bad blocks.
+  uint32_t initial_bad_blocks;
+  uint32_t running_bad_blocks;
+
   // Percentage of space that is dirty from the total available. [0, 100).
   // Calculated as 100 x (1 - free_pages / volume_size - used_pages).
   uint32_t garbage_level;
@@ -347,6 +353,8 @@ void* ndmAddVolFTL(NDM ndm, uint32_t part_no, FtlNdmVol* ftl, XfsVol* fs);
 // Driver Test/Special Routines.
 int ndmExtractBBL(NDM ndm);
 int ndmInsertBBL(NDM ndm);
+uint32_t ndmInitialBadBlocks(NDM ndm);
+uint32_t ndmRunningBadBlocks(NDM ndm);
 int NdmDvrTestAdd(const NDMDrvr* dev);
 FtlWearData FtlnGetWearData(void* ftl);
 

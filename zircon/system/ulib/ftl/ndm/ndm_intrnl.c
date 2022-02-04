@@ -2054,6 +2054,22 @@ int ndmInsertBBL(NDM ndm) {
 }
 #endif  // BBL_INSERT_INC
 
+// ndmInitialBadBlocks: Returns the number of initial bad blocks
+//
+//      Inputs: ndm = pointer to NDM control block
+//
+//     Returns: The number of initial bad blocks
+//
+ui32 ndmInitialBadBlocks(NDM ndm) { return ndm->num_bad_blks - ndm->num_rbb; }
+
+// ndmInitBadBlocks: Returns the number of running bad blocks
+//
+//      Inputs: ndm = pointer to NDM control block
+//
+//     Returns: The number of running bad blocks
+//
+ui32 ndmRunningBadBlocks(NDM ndm) { return ndm->num_rbb; }
+
 #if INC_FTL_NDM_MLC
 // ndmPastPrevPair: Starting at specified page number, find first page
 //              that has no earlier paired page

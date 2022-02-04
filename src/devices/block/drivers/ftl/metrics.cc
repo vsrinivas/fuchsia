@@ -114,6 +114,8 @@ std::vector<std::string> Metrics::GetPropertyNames<inspect::UintProperty>() {
     }
   }
   property_names.push_back("nand.erase_block.max_wear");
+  property_names.push_back("nand.initial_bad_blocks");
+  property_names.push_back("nand.running_bad_blocks");
   return property_names;
 }
 
@@ -136,6 +138,8 @@ Metrics::Metrics()
       flush_(MakePropertyForBlockOperation(root_, BlockOperationType::kFlush)),
       trim_(MakePropertyForBlockOperation(root_, BlockOperationType::kTrim)) {
   max_wear_ = root_.CreateUint("nand.erase_block.max_wear", 0);
+  initial_bad_blocks_ = root_.CreateUint("nand.initial_bad_blocks", 0);
+  running_bad_blocks_ = root_.CreateUint("nand.running_bad_blocks", 0);
 }
 
 }  // namespace ftl

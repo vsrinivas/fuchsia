@@ -105,6 +105,8 @@ zx_status_t VolumeImpl::GetStats(Stats* stats) {
   }
   stats->ram_used = buffer.ndm.ram_used;
   stats->wear_count = buffer.ndm.wear_count;
+  stats->initial_bad_blocks = buffer.initial_bad_blocks;
+  stats->running_bad_blocks = buffer.running_bad_blocks;
   stats->garbage_level = buffer.garbage_level;
   memcpy(stats->wear_histogram, buffer.wear_histogram, sizeof(stats->wear_histogram));
   stats->num_blocks = buffer.num_blocks;
@@ -117,6 +119,8 @@ zx_status_t VolumeImpl::GetCounters(Counters* counters) {
     return ZX_ERR_BAD_STATE;
   }
   counters->wear_count = ftl_counters.wear_count;
+  counters->initial_bad_blocks = ftl_counters.initial_bad_blocks;
+  counters->running_bad_blocks = ftl_counters.running_bad_blocks;
   return ZX_OK;
 }
 

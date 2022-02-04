@@ -279,6 +279,8 @@ bool BlockDevice::InitFtl() {
   if (volume_->GetStats(&stats) == ZX_OK) {
     zxlogf(INFO, "FTL: Wear count: %u, Garbage level: %d%%", stats.wear_count, stats.garbage_level);
     metrics_.max_wear().Set(stats.wear_count);
+    metrics_.initial_bad_blocks().Set(stats.initial_bad_blocks);
+    metrics_.running_bad_blocks().Set(stats.running_bad_blocks);
   }
 
   zxlogf(INFO, "FTL: InitFtl ok");
@@ -380,6 +382,8 @@ int BlockDevice::WorkerThread() {
     Volume::Counters counters;
     if (volume_->GetCounters(&counters) == ZX_OK) {
       metrics_.max_wear().Set(counters.wear_count);
+      metrics_.initial_bad_blocks().Set(counters.initial_bad_blocks);
+      metrics_.running_bad_blocks().Set(counters.running_bad_blocks);
     }
 
     // Update all counters and rates for the supported operation type.
