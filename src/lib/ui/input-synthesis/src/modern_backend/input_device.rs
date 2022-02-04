@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_input_report::{
         ConsumerControlButton, ConsumerControlInputReport, ContactInputReport, DeviceDescriptor,
         InputDeviceRequest, InputDeviceRequestStream, InputReport, InputReportsReaderMarker,
-        KeyboardInputReport, TouchInputReport, TOUCH_MAX_CONTACTS,
+        KeyboardInputReport, MouseInputReport, TouchInputReport, TOUCH_MAX_CONTACTS,
     },
     fidl_fuchsia_ui_input::{KeyboardReport, Touch},
     futures::{future, pin_mut, StreamExt, TryFutureExt},
@@ -136,6 +136,29 @@ impl synthesizer::InputDevice for self::InputDevice {
             },
             time,
         )
+    }
+
+    fn mouse(
+        &mut self,
+        movement: Option<(u32, u32)>,
+        pressed_buttons: Vec<synthesizer::MouseButton>,
+        time: u64,
+    ) -> Result<(), Error> {
+        let (rel_x, rel_y) = match movement {
+            Some((x, y)) => (Some(x as i64), Some(y as i64)),
+            None => (None, None),
+        };
+        self.reports.push(InputReport {
+            event_time: Some(i64::try_from(time).context("converting time to i64")?),
+            mouse: Some(MouseInputReport {
+                movement_x: rel_x,
+                movement_y: rel_y,
+                pressed_buttons: Some(pressed_buttons.into_iter().map(Into::into).collect()),
+                ..MouseInputReport::EMPTY
+            }),
+            ..InputReport::EMPTY
+        });
+        Ok(())
     }
 
     /// Returns a `Future` which resolves when all `InputReport`s for this device
@@ -865,6 +888,76 @@ mod tests {
                 ),
                 Err(_)
             );
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn mouse_generates_empty_mouse_input_report() -> Result<(), Error> {
+            let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.mouse(None, vec![], DEFAULT_REPORT_TIMESTAMP)?;
+
+            let input_reports = get_input_reports(input_device, input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    mouse: Some(MouseInputReport {
+                        pressed_buttons: Some(vec![]),
+                        ..MouseInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn mouse_generates_full_mouse_input_report() -> Result<(), Error> {
+            let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.mouse(Some((10, 15)), vec![1, 2, 3], DEFAULT_REPORT_TIMESTAMP)?;
+
+            let input_reports = get_input_reports(input_device, input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    mouse: Some(MouseInputReport {
+                        movement_x: Some(10),
+                        movement_y: Some(15),
+                        pressed_buttons: Some(vec![1, 2, 3]),
+                        ..MouseInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn mouse_generates_partial_mouse_input_report() -> Result<(), Error> {
+            let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.mouse(Some((10, 15)), vec![], DEFAULT_REPORT_TIMESTAMP)?;
+
+            let input_reports = get_input_reports(input_device, input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    mouse: Some(MouseInputReport {
+                        movement_x: Some(10),
+                        movement_y: Some(15),
+                        pressed_buttons: Some(vec![]),
+                        ..MouseInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
         }
     }
 

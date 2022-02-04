@@ -24,6 +24,7 @@ pub trait InputDeviceRegistry {
     ) -> Result<Box<dyn InputDevice>, Error>;
     fn add_keyboard_device(&mut self) -> Result<Box<dyn InputDevice>, Error>;
     fn add_media_buttons_device(&mut self) -> Result<Box<dyn InputDevice>, Error>;
+    fn add_mouse_device(&mut self, width: u32, height: u32) -> Result<Box<dyn InputDevice>, Error>;
 }
 
 // Abstracts over the various interactions that a user might have with an input device.
@@ -49,6 +50,14 @@ pub trait InputDevice {
     fn key_press_usage(&mut self, usage: Option<u32>, time: u64) -> Result<(), Error>;
     fn tap(&mut self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error>;
     fn multi_finger_tap(&mut self, fingers: Option<Vec<Touch>>, time: u64) -> Result<(), Error>;
+
+    /// Sends a mouse report with the specified relative cursor movement and buttons pressed.
+    fn mouse(
+        &mut self,
+        movement: Option<(u32, u32)>,
+        pressed_buttons: Vec<MouseButton>,
+        time: u64,
+    ) -> Result<(), Error>;
 
     // Returns a `Future` which resolves when all input reports for this device
     // have been sent to the FIDL peer, or when an error occurs.
@@ -561,6 +570,22 @@ pub(crate) async fn multi_finger_swipe(
     input_device.serve_reports().await
 }
 
+/// The buttons supported by `mouse_event()`.
+pub type MouseButton = u8;
+
+/// Sends a mouse buttons report with the specified relative movement and buttons pressed.
+pub async fn mouse_event<I: IntoIterator<Item = MouseButton>>(
+    movement: Option<(u32, u32)>,
+    pressed_buttons: I,
+    width: u32,
+    height: u32,
+    registry: &mut dyn InputDeviceRegistry,
+) -> Result<(), Error> {
+    let mut input_device = registry.add_mouse_device(width, height)?;
+    input_device.mouse(movement, pressed_buttons.into_iter().collect(), monotonic_nanos()?)?;
+    input_device.serve_reports().await
+}
+
 #[cfg(test)]
 mod tests {
     use {super::*, anyhow::Context as _, fuchsia_async as fasync, serde::Deserialize};
@@ -657,12 +682,14 @@ mod tests {
         use {
             super::*,
             fidl::endpoints,
+            fidl_fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS,
             fidl_fuchsia_ui_input::{
                 InputDeviceMarker, InputDeviceProxy as FidlInputDeviceProxy, InputDeviceRequest,
                 InputDeviceRequestStream, InputReport, KeyboardReport, MediaButtonsReport,
-                TouchscreenReport,
+                MouseReport, TouchscreenReport,
             },
             futures::stream::StreamExt,
+            std::{collections::HashSet, iter::FromIterator},
         };
 
         // Like `InputReport`, but with the `Box`-ed items inlined.
@@ -671,6 +698,7 @@ mod tests {
             keyboard: Option<KeyboardReport>,
             media_buttons: Option<MediaButtonsReport>,
             touchscreen: Option<TouchscreenReport>,
+            mouse: Option<MouseReport>,
         }
 
         impl InlineInputReport {
@@ -680,6 +708,7 @@ mod tests {
                     keyboard: input_report.keyboard.map(|boxed| *boxed),
                     media_buttons: input_report.media_buttons.map(|boxed| *boxed),
                     touchscreen: input_report.touchscreen.map(|boxed| *boxed),
+                    mouse: input_report.mouse.map(|boxed| *boxed),
                 }
             }
         }
@@ -705,6 +734,14 @@ mod tests {
             }
 
             fn add_media_buttons_device(&mut self) -> Result<Box<dyn InputDevice>, Error> {
+                self.add_device()
+            }
+
+            fn add_mouse_device(
+                &mut self,
+                _width: u32,
+                _height: u32,
+            ) -> Result<Box<dyn InputDevice>, Error> {
                 self.add_device()
             }
         }
@@ -739,6 +776,30 @@ mod tests {
                 self.event_stream = Some(event_stream);
                 Ok(Box::new(FakeInputDevice::new(proxy)))
             }
+        }
+
+        /// Returns a u32 representation of `buttons`, where each u8 of `buttons` is an id of a button and
+        /// indicates the position of a bit to set.
+        ///
+        /// This supports hashsets containing numbers from 1 to fidl_input_report::MOUSE_MAX_NUM_BUTTONS.
+        ///
+        /// # Parameters
+        /// - `buttons`: The hashset containing the position of bits to be set.
+        ///
+        /// # Example
+        /// ```
+        /// let bits = get_u32_from_buttons(&HashSet::from_iter(vec![1, 3, 5]).into_iter());
+        /// assert_eq!(bits, 21 /* ...00010101 */)
+        /// ```
+        pub fn get_u32_from_buttons(buttons: &HashSet<MouseButton>) -> u32 {
+            let mut bits: u32 = 0;
+            for button in buttons {
+                if *button > 0 && *button <= MOUSE_MAX_NUM_BUTTONS as u8 {
+                    bits = ((1 as u32) << *button - 1) | bits;
+                }
+            }
+
+            bits
         }
 
         // Provides an `impl InputDevice` which forwards requests to a `FidlInputDeviceProxy`.
@@ -842,6 +903,38 @@ mod tests {
                                 None => vec![],
                             },
                         })),
+                        sensor: None,
+                        trace_id: 0,
+                    })
+                    .map_err(Into::into)
+            }
+
+            fn mouse(
+                &mut self,
+                movement: Option<(u32, u32)>,
+                pressed_buttons: Vec<MouseButton>,
+                time: u64,
+            ) -> Result<(), Error> {
+                let (rel_x, rel_y) = match movement {
+                    Some((x, y)) => (x as i32, y as i32),
+                    None => (0, 0),
+                };
+                self.fidl_proxy
+                    .dispatch_report(&mut InputReport {
+                        event_time: time,
+                        keyboard: None,
+                        media_buttons: None,
+                        mouse: Some(Box::new(MouseReport {
+                            rel_x,
+                            rel_y,
+                            rel_hscroll: 0,
+                            rel_vscroll: 0,
+                            pressed_buttons: get_u32_from_buttons(&HashSet::from_iter(
+                                pressed_buttons.into_iter(),
+                            )),
+                        })),
+                        stylus: None,
+                        touchscreen: None,
                         sensor: None,
                         trace_id: 0,
                     })
@@ -1262,6 +1355,23 @@ mod tests {
         }
 
         #[fasync::run_singlethreaded(test)]
+        async fn mouse_event_report() -> Result<(), Error> {
+            let mut fake_event_listener = FakeInputDeviceRegistry::new();
+            mouse_event(Some((10, 15)), vec![], 1000, 1000, &mut fake_event_listener).await?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, mouse),
+                [Ok(Some(MouseReport {
+                    rel_x: 10,
+                    rel_y: 15,
+                    pressed_buttons: 0,
+                    rel_hscroll: 0,
+                    rel_vscroll: 0
+                })),]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_singlethreaded(test)]
         async fn events_use_monotonic_time() -> Result<(), Error> {
             let mut fake_event_listener = FakeInputDeviceRegistry::new();
             let synthesis_start_time = monotonic_nanos()?;
@@ -1323,6 +1433,7 @@ mod tests {
             Keyboard,
             MediaButtons,
             Touchscreen,
+            Mouse,
         }
 
         // An `impl InputDeviceRegistry` which provides access to the `DeviceType`s which have been
@@ -1346,6 +1457,14 @@ mod tests {
 
             fn add_media_buttons_device(&mut self) -> Result<Box<dyn InputDevice>, Error> {
                 self.add_device(DeviceType::MediaButtons)
+            }
+
+            fn add_mouse_device(
+                &mut self,
+                _width: u32,
+                _height: u32,
+            ) -> Result<Box<dyn InputDevice>, Error> {
+                self.add_device(DeviceType::Mouse)
             }
         }
 
@@ -1400,6 +1519,15 @@ mod tests {
             fn multi_finger_tap(
                 &mut self,
                 _fingers: Option<Vec<Touch>>,
+                _time: u64,
+            ) -> Result<(), Error> {
+                Ok(())
+            }
+
+            fn mouse(
+                &mut self,
+                _movement: Option<(u32, u32)>,
+                _pressed_buttons: Vec<MouseButton>,
                 _time: u64,
             ) -> Result<(), Error> {
                 Ok(())
@@ -1473,6 +1601,14 @@ mod tests {
             )
             .await?;
             assert_matches!(registry.device_types.as_slice(), [DeviceType::Touchscreen]);
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn mouse_event_registers_mouse_device() -> Result<(), Error> {
+            let mut registry = FakeInputDeviceRegistry::new();
+            mouse_event(Some((0, 0)), vec![], 1000, 1000, &mut registry).await?;
+            assert_matches!(registry.device_types.as_slice(), [DeviceType::Mouse]);
             Ok(())
         }
     }

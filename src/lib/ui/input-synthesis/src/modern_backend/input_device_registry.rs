@@ -11,8 +11,8 @@ use {
     fidl_fuchsia_input_report::{
         Axis, ConsumerControlButton, ConsumerControlDescriptor, ConsumerControlInputDescriptor,
         ContactInputDescriptor, DeviceDescriptor, InputDeviceMarker, KeyboardDescriptor,
-        KeyboardInputDescriptor, Range, TouchDescriptor, TouchInputDescriptor, TouchType, Unit,
-        UnitType,
+        KeyboardInputDescriptor, MouseDescriptor, MouseInputDescriptor, Range, TouchDescriptor,
+        TouchInputDescriptor, TouchType, Unit, UnitType,
     },
     std::convert::TryFrom,
 };
@@ -110,6 +110,35 @@ impl synthesizer::InputDeviceRegistry for self::InputDeviceRegistry {
             ..DeviceDescriptor::EMPTY
         })
     }
+
+    fn add_mouse_device(
+        &mut self,
+        width: u32,
+        height: u32,
+    ) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
+        self.add_device(DeviceDescriptor {
+            mouse: Some(MouseDescriptor {
+                input: Some(MouseInputDescriptor {
+                    movement_x: Some(Axis {
+                        range: Range { min: 0, max: i64::from(width) },
+                        unit: Unit { type_: UnitType::Other, exponent: 0 },
+                    }),
+                    movement_y: Some(Axis {
+                        range: Range { min: 0, max: i64::from(height) },
+                        unit: Unit { type_: UnitType::Other, exponent: 0 },
+                    }),
+                    scroll_v: None,
+                    scroll_h: None,
+                    buttons: Some(vec![0, 1, 2]),
+                    position_x: None,
+                    position_y: None,
+                    ..MouseInputDescriptor::EMPTY
+                }),
+                ..MouseDescriptor::EMPTY
+            }),
+            ..DeviceDescriptor::EMPTY
+        })
+    }
 }
 
 impl InputDeviceRegistry {
@@ -149,6 +178,8 @@ mod tests {
     #[test_case(&super::InputDeviceRegistry::add_media_buttons_device; "media_button_device")]
     #[test_case(&|registry| InputDeviceRegistry::add_touchscreen_device(registry, 640, 480);
                 "touchscreen_device")]
+    #[test_case(&|registry| InputDeviceRegistry::add_mouse_device(registry, 640, 480);
+                "mouse_device")]
     fn add_device_invokes_fidl_register_method_exactly_once(
         add_device_method: &dyn Fn(
             &mut super::InputDeviceRegistry,
@@ -186,6 +217,14 @@ mod tests {
                     }),
                     .. });
                 "touchscreen_device")]
+    #[test_case(&|registry| InputDeviceRegistry::add_mouse_device(registry, 640, 480) =>
+                matches Ok(DeviceDescriptor {
+                    mouse: Some(MouseDescriptor {
+                        input: Some(MouseInputDescriptor { .. }),
+                        ..
+                    }),
+                    .. });
+                "mouse_device")]
     fn add_device_registers_correct_device_type(
         add_device_method: &dyn Fn(
             &mut super::InputDeviceRegistry,

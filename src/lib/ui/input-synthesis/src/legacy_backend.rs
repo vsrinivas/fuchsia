@@ -65,6 +65,16 @@ impl synthesizer::InputDeviceRegistry for self::InputDeviceRegistry {
                 | fidl_fuchsia_ui_input::VOLUME_UP,
         }))
     }
+
+    fn add_mouse_device(
+        &mut self,
+        _width: u32,
+        _height: u32,
+    ) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
+        unimplemented!(
+            "Mouse device is not supported for tests requiring input via Root Presenter."
+        )
+    }
 }
 
 impl InputDeviceRegistry {
@@ -157,6 +167,17 @@ impl synthesizer::InputDevice for self::InputDevice {
         self.fidl_proxy
             .dispatch_report(&mut self::multi_finger_tap(fingers, time))
             .map_err(Into::into)
+    }
+
+    fn mouse(
+        &mut self,
+        _movement: Option<(u32, u32)>,
+        _pressed_buttons: Vec<synthesizer::MouseButton>,
+        _time: u64,
+    ) -> Result<(), Error> {
+        unimplemented!(
+            "Mouse input injection is not supported for tests requiring input via Root Presenter."
+        )
     }
 
     async fn serve_reports(self: Box<Self>) -> Result<(), Error> {
@@ -586,6 +607,20 @@ mod tests {
             })] if **report == TouchscreenReport { touches: vec![] }
         );
         Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    #[should_panic(
+        expected = "not implemented: Mouse input injection is not supported for tests requiring input via Root Presenter."
+    )]
+    // TODO(https://fxbug.dev/88496): delete the below
+    #[cfg_attr(feature = "variant_asan", ignore)]
+    async fn mouse_is_not_implemented() {
+        let (fidl_proxy, _request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()
+                .expect("Failed to create InputDeviceProxy.");
+        let mut input_device = InputDevice { fidl_proxy };
+        let _ = input_device.mouse(Some((10, 15)), vec![1, 2, 3], 200);
     }
 
     #[test]
