@@ -647,6 +647,8 @@ pub fn sys_getsockopt(
     let opt_value = match level {
         SOL_SOCKET => match optname {
             SO_TYPE => socket.socket_type.as_raw().to_ne_bytes().to_vec(),
+            // TODO(tbodt): Update when internet sockets exist
+            SO_DOMAIN => AF_UNIX.to_ne_bytes().to_vec(),
             SO_PEERCRED => socket
                 .peer_cred()
                 .unwrap_or(ucred { pid: 0, uid: uid_t::MAX, gid: gid_t::MAX })
