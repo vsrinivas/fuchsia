@@ -34,22 +34,25 @@ class WithParamInterface {
   static internal::TestFactory CreateFactory(fit::function<const ParamType&()> value_getter) {
     return [value_getter = std::move(value_getter)](
                internal::TestDriver* driver) mutable -> std::unique_ptr<TestImpl> {
+      TestImpl::param_.emplace(value_getter());
       std::unique_ptr<TestImpl> test = TestImpl::template Create<TestImpl>(driver);
-      test->param_.emplace(value_getter());
       return std::move(test);
     };
   }
 
   virtual ~WithParamInterface() = default;
 
-  const ParamType& GetParam() const { return param_.value(); }
+  const ParamType& GetParam() const { return WithParamInterface<T>::param_.value(); }
 
  protected:
   WithParamInterface() = default;
 
  private:
-  std::optional<ParamType> param_;
+  static std::optional<ParamType> param_;
 };
+
+template <typename T>
+std::optional<T> WithParamInterface<T>::param_ = std::nullopt;
 
 // Interface for Value Parameterized tests. This class also captures the type
 // of the parameter and provides storage for such parameter type. This follows gTest interface

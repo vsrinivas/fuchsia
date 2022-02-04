@@ -105,4 +105,25 @@ INSTANTIATE_TEST_SUITE_P(
                                        "<", ">", ",",
                                        "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cmx"),
                       ::zxtest::Bool()));
+
+class ConstructorTestParent : public zxtest::TestWithParam<int> {
+ public:
+  ConstructorTestParent(int val) : val_(val) {}
+
+ protected:
+  const int val_;
+};
+
+class ConstructorTestChild : public ConstructorTestParent {
+ public:
+  ConstructorTestChild() : ConstructorTestParent(GetParam()) {}
+};
+
+TEST_P(ConstructorTestChild, BasicTest) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS, "Should have passed.");
+  EXPECT_EQ(2, val_);
+  TEST_CHECKPOINT();
+}
+
+INSTANTIATE_TEST_SUITE_P(Prefix, ConstructorTestChild, ::zxtest::Values(2));
 }  // namespace
