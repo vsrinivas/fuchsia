@@ -12,3 +12,8 @@ pub fn fake_inspect_tree() -> (Arc<inspect::WlanstackTree>, mpsc::Receiver<Strin
     let inspector = Inspector::new();
     (Arc::new(inspect::WlanstackTree::new(inspector, sender)), receiver)
 }
+
+pub fn create_inspect_persistence_channel() -> (mpsc::Sender<String>, mpsc::Receiver<String>) {
+    const DEFAULT_BUFFER_SIZE: usize = 100; // arbitrary value
+    mpsc::channel(DEFAULT_BUFFER_SIZE)
+}

@@ -32,7 +32,9 @@ use {
     },
     anyhow::{bail, format_err, Context as _},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_inspect_contrib::auto_persist::{self, AutoPersist},
+    fuchsia_zircon as zx,
     futures::channel::{mpsc, oneshot},
     ieee80211::{Bssid, Ssid},
     log::{error, info, warn},
@@ -176,6 +178,7 @@ pub struct ClientSme {
     state: Option<ClientState>,
     scan_sched: ScanScheduler<Responder<Result<Vec<ScanResult>, fidl_mlme::ScanResultCode>>>,
     wmm_status_responders: Vec<Responder<fidl_sme::ClientSmeWmmStatusResult>>,
+    auto_persist_last_pulse: AutoPersist<()>,
     context: Context,
 }
 
@@ -443,6 +446,7 @@ impl ClientSme {
         info: fidl_mlme::DeviceInfo,
         iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
         hasher: WlanHasher,
+        persistence_req_sender: auto_persist::PersistenceReqSender,
         is_softmac: bool,
     ) -> (Self, MlmeStream, InfoStream, TimeStream) {
         let device_info = Arc::new(info);
@@ -452,6 +456,13 @@ impl ClientSme {
         let inspect = Arc::new(inspect::SmeTree::new(&iface_tree_holder.node, hasher));
         iface_tree_holder.add_iface_subtree(inspect.clone());
         timer.schedule(event::InspectPulseCheck);
+        timer.schedule(event::InspectPulsePersist);
+        let mut auto_persist_last_pulse =
+            AutoPersist::new((), "wlanstack-last-pulse", persistence_req_sender);
+        {
+            // Request auto-persistence of pulse once on startup
+            let _guard = auto_persist_last_pulse.get_mut();
+        }
 
         (
             ClientSme {
@@ -461,6 +472,7 @@ impl ClientSme {
                     Responder<Result<Vec<ScanResult>, fidl_mlme::ScanResultCode>>,
                 >>::new(Arc::clone(&device_info)),
                 wmm_status_responders: vec![],
+                auto_persist_last_pulse,
                 context: Context {
                     mlme_sink: MlmeSink::new(mlme_sink),
                     device_info,
@@ -665,6 +677,15 @@ impl super::Station for ClientSme {
             Event::InspectPulseCheck(..) => {
                 self.context.mlme_sink.send(MlmeRequest::WmmStatusReq);
                 self.context.timer.schedule(event::InspectPulseCheck);
+                state
+            }
+            Event::InspectPulsePersist(..) => {
+                // Auto persist based on a timer to avoid log spam. The default approach is
+                // is to wrap AutoPersist around the Inspect PulseNode, but because the pulse
+                // is updated every second (due to SignalIndication event), we'd send a request
+                // to persistence service which'd log every second that it's queued until backoff.
+                let _guard = self.auto_persist_last_pulse.get_mut();
+                self.context.timer.schedule(event::InspectPulsePersist);
                 state
             }
         });
@@ -1123,11 +1144,14 @@ mod tests {
         let _executor = fuchsia_async::TestExecutor::new();
         let inspector = finspect::Inspector::new();
         let sme_root_node = inspector.root().create_child("sme");
+        let (persistence_req_sender, _persistence_receiver) =
+            test_utils::create_inspect_persistence_channel();
         let (mut sme, mut mlme_stream, _info_stream, _time_stream) = ClientSme::new(
             ClientConfig::from_config(SmeConfig::default().with_wep(), false),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
             WlanHasher::new(DUMMY_HASH_KEY),
+            persistence_req_sender,
             true, // is_softmac
         );
         assert_eq!(ClientSmeStatus::Idle, sme.status());
@@ -1738,6 +1762,47 @@ mod tests {
         assert_eq!(receiver.try_recv(), Ok(Some(Err(zx::sys::ZX_ERR_IO))));
     }
 
+    #[test]
+    fn test_inspect_pulse_persist() {
+        let _executor = fuchsia_async::TestExecutor::new();
+        let inspector = finspect::Inspector::new();
+        let sme_root_node = inspector.root().create_child("sme");
+        let (persistence_req_sender, mut persistence_receiver) =
+            test_utils::create_inspect_persistence_channel();
+        let (mut sme, _mlme_stream, _info_stream, mut time_stream) = ClientSme::new(
+            ClientConfig::from_config(SmeConfig::default().with_wep(), false),
+            test_utils::fake_device_info(CLIENT_ADDR),
+            Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
+            WlanHasher::new(DUMMY_HASH_KEY),
+            persistence_req_sender,
+            true, // is_softmac
+        );
+        assert_eq!(ClientSmeStatus::Idle, sme.status());
+
+        // Verify we request persistence on startup
+        assert_variant!(persistence_receiver.try_next(), Ok(Some(tag)) => {
+            assert_eq!(&tag, "wlanstack-last-pulse");
+        });
+
+        let mut persist_event = None;
+        while let Ok(Some((_timeout, timed_event))) = time_stream.try_next() {
+            match timed_event.event {
+                Event::InspectPulsePersist(..) => {
+                    persist_event = Some(timed_event);
+                    break;
+                }
+                _ => (),
+            }
+        }
+        assert!(persist_event.is_some());
+        sme.on_timeout(persist_event.unwrap());
+
+        // Verify we request persistence again on timeout
+        assert_variant!(persistence_receiver.try_next(), Ok(Some(tag)) => {
+            assert_eq!(&tag, "wlanstack-last-pulse");
+        });
+    }
+
     fn assert_no_join(mlme_stream: &mut mpsc::UnboundedReceiver<MlmeRequest>) {
         loop {
             match mlme_stream.try_next() {
@@ -1773,11 +1838,14 @@ mod tests {
     fn create_sme(_exec: &fasync::TestExecutor) -> (ClientSme, MlmeStream, InfoStream, TimeStream) {
         let inspector = finspect::Inspector::new();
         let sme_root_node = inspector.root().create_child("sme");
+        let (persistence_req_sender, _persistence_receiver) =
+            test_utils::create_inspect_persistence_channel();
         ClientSme::new(
             ClientConfig::default(),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
             WlanHasher::new(DUMMY_HASH_KEY),
+            persistence_req_sender,
             true, // is_softmac
         )
     }

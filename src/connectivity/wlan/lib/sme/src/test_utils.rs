@@ -5,6 +5,7 @@
 use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
+    futures::channel::mpsc,
     ieee80211::MacAddr,
     std::convert::TryInto,
     wlan_common::{
@@ -236,4 +237,9 @@ pub fn fake_2ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
         ht_cap: None,
         vht_cap: None,
     }
+}
+
+pub fn create_inspect_persistence_channel() -> (mpsc::Sender<String>, mpsc::Receiver<String>) {
+    const DEFAULT_BUFFER_SIZE: usize = 100; // arbitrary value
+    mpsc::channel(DEFAULT_BUFFER_SIZE)
 }

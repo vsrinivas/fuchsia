@@ -12,6 +12,7 @@ pub const ESTABLISHING_RSNA_TIMEOUT_SECONDS: i64 = 3;
 pub const KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS: i64 = 200;
 pub const CONNECTION_PING_TIMEOUT_MINUTES: i64 = 1;
 pub const INSPECT_PULSE_CHECK_MINUTES: i64 = 1;
+pub const INSPECT_PULSE_PERSIST_MINUTES: i64 = 5;
 pub const SAE_RETRANSMISSION_TIMEOUT_MILLIS: i64 = 200;
 
 #[derive(Debug, Clone)]
@@ -20,6 +21,8 @@ pub enum Event {
     KeyFrameExchangeTimeout(KeyFrameExchangeTimeout),
     ConnectionPing(ConnectionPingInfo),
     InspectPulseCheck(InspectPulseCheck),
+    /// From startup, periodically schedule an event to persist the Inspect pulse data
+    InspectPulsePersist(InspectPulsePersist),
     SaeTimeout(SaeTimeout),
 }
 impl From<EstablishingRsnaTimeout> for Event {
@@ -35,6 +38,11 @@ impl From<KeyFrameExchangeTimeout> for Event {
 impl From<InspectPulseCheck> for Event {
     fn from(this: InspectPulseCheck) -> Self {
         Event::InspectPulseCheck(this)
+    }
+}
+impl From<InspectPulsePersist> for Event {
+    fn from(this: InspectPulsePersist) -> Self {
+        Event::InspectPulsePersist(this)
     }
 }
 impl From<SaeTimeout> for Event {
@@ -67,6 +75,14 @@ pub struct InspectPulseCheck;
 impl TimeoutDuration for InspectPulseCheck {
     fn timeout_duration(&self) -> zx::Duration {
         INSPECT_PULSE_CHECK_MINUTES.minutes()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InspectPulsePersist;
+impl TimeoutDuration for InspectPulsePersist {
+    fn timeout_duration(&self) -> zx::Duration {
+        INSPECT_PULSE_PERSIST_MINUTES.minutes()
     }
 }
 

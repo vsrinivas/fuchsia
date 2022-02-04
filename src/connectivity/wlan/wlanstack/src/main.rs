@@ -77,7 +77,8 @@ async fn main() -> Result<(), Error> {
     let (persistence_req_sender, persistence_req_forwarder_fut) =
         auto_persist::create_persistence_req_sender(persistence_proxy);
 
-    let inspect_tree = Arc::new(inspect::WlanstackTree::new(inspector, persistence_req_sender));
+    let inspect_tree =
+        Arc::new(inspect::WlanstackTree::new(inspector, persistence_req_sender.clone()));
     fs.dir("svc").add_fidl_service(IncomingServices::Device);
 
     let ifaces = IfaceMap::new();
@@ -113,8 +114,16 @@ async fn main() -> Result<(), Error> {
         fidl_fuchsia_wlan_device_service::DeviceMonitorMarker,
     >()
     .context("Failed to connect to DeviceMonitor.")?;
-    let serve_fidl_fut =
-        serve_fidl(cfg, fs, ifaces, inspect_tree, cobalt_sender, cobalt_1dot1_proxy, dev_monitor);
+    let serve_fidl_fut = serve_fidl(
+        cfg,
+        fs,
+        ifaces,
+        inspect_tree,
+        cobalt_sender,
+        cobalt_1dot1_proxy,
+        dev_monitor,
+        persistence_req_sender,
+    );
 
     let ((), (), (), ()) = try_join4(
         serve_fidl_fut,
@@ -139,6 +148,7 @@ async fn serve_fidl(
     cobalt_sender: CobaltSender,
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
+    persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     let iface_counter = Arc::new(service::IfaceCounter::new());
@@ -151,6 +161,7 @@ async fn serve_fidl(
         let inspect_tree = inspect_tree.clone();
         let iface_counter = iface_counter.clone();
         let dev_monitor_proxy = dev_monitor_proxy.clone();
+        let persistence_req_sender = persistence_req_sender.clone();
         async move {
             match s {
                 IncomingServices::Device(stream) => {
@@ -163,6 +174,7 @@ async fn serve_fidl(
                         cobalt_sender,
                         cobalt_1dot1_proxy,
                         dev_monitor_proxy,
+                        persistence_req_sender,
                     )
                     .unwrap_or_else(|e| println!("{:?}", e))
                     .await

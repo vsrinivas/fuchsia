@@ -9,7 +9,7 @@ use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MinstrelStatsResponse};
 use fuchsia_async as fasync;
 use fuchsia_cobalt::{self, CobaltSender};
-use fuchsia_inspect_contrib::inspect_log;
+use fuchsia_inspect_contrib::{auto_persist, inspect_log};
 use fuchsia_zircon as zx;
 use futures::{future::BoxFuture, prelude::*};
 use log::{error, info, warn};
@@ -44,6 +44,7 @@ pub async fn serve_device_requests(
     cobalt_sender: CobaltSender,
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
+    persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<(), anyhow::Error> {
     while let Some(req) = req_stream.try_next().await.context("error running DeviceService")? {
         // Note that errors from responder.send() are propagated intentionally.
@@ -69,6 +70,7 @@ pub async fn serve_device_requests(
                     &cobalt_sender,
                     cobalt_1dot1_proxy.clone(),
                     dev_monitor_proxy.clone(),
+                    persistence_req_sender.clone(),
                 )
                 .await;
                 responder.send(add_iface_result.status, add_iface_result.iface_id.as_mut())?;
@@ -327,6 +329,7 @@ async fn add_iface(
     cobalt_sender: &CobaltSender,
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
+    persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> AddIfaceResult {
     // Utilize the provided MLME channel to construct a future to serve the SME.
     let mlme_channel = match fasync::Channel::from_channel(req.iface.into_channel()) {
@@ -360,6 +363,7 @@ async fn add_iface(
         cobalt_1dot1_proxy,
         device_info,
         dev_monitor_proxy,
+        persistence_req_sender,
     ) {
         Ok(fut) => fut,
         Err(e) => return AddIfaceResult::from_error(e, zx::sys::ZX_ERR_INTERNAL),
@@ -608,6 +612,8 @@ mod tests {
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceMonitor proxy");
         let cfg = ServiceCfg { wep_supported: false, wpa1_supported: false };
+        let (persistence_req_sender, _persistence_stream) =
+            test_helper::create_inspect_persistence_channel();
 
         // Construct the request.
         let (mlme_channel, mlme_receiver) =
@@ -624,6 +630,7 @@ mod tests {
             &cobalt_sender,
             cobalt_1dot1_proxy,
             dev_monitor_proxy,
+            persistence_req_sender,
         );
         pin_mut!(fut);
 
@@ -662,6 +669,8 @@ mod tests {
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceMonitor proxy");
         let cfg = ServiceCfg { wep_supported: false, wpa1_supported: false };
+        let (persistence_req_sender, _persistence_stream) =
+            test_helper::create_inspect_persistence_channel();
 
         // Construct the request.
         let (mlme_channel, mlme_receiver) =
@@ -681,6 +690,7 @@ mod tests {
             &cobalt_sender,
             cobalt_1dot1_proxy,
             dev_monitor_proxy,
+            persistence_req_sender,
         );
         pin_mut!(fut);
 
@@ -709,6 +719,8 @@ mod tests {
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceMonitor proxy");
         let cfg = ServiceCfg { wep_supported: false, wpa1_supported: false };
+        let (persistence_req_sender, _persistence_stream) =
+            test_helper::create_inspect_persistence_channel();
 
         // Construct the request.
         let (mlme_channel, mlme_receiver) =
@@ -726,6 +738,7 @@ mod tests {
             &cobalt_sender,
             cobalt_1dot1_proxy,
             dev_monitor_proxy,
+            persistence_req_sender,
         );
         pin_mut!(fut);
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -885,6 +898,8 @@ mod tests {
         let (dev_svc_proxy, dev_svc_req_stream) =
             create_proxy_and_stream::<fidl_svc::DeviceServiceMarker>()
                 .expect("failed to create DeviceService proxy");
+        let (persistence_req_sender, _persistence_stream) =
+            test_helper::create_inspect_persistence_channel();
         let mut test_fut = Box::pin(serve_device_requests(
             iface_counter,
             cfg,
@@ -894,6 +909,7 @@ mod tests {
             cobalt_sender,
             cobalt_1dot1_proxy,
             dev_monitor_proxy,
+            persistence_req_sender,
         ));
         assert_variant!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
 

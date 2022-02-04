@@ -9,6 +9,7 @@ use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use fuchsia_async as fasync;
+use fuchsia_inspect_contrib::auto_persist;
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::channel::mpsc;
 use futures::{prelude::*, select, stream::FuturesUnordered};
@@ -49,6 +50,7 @@ pub async fn serve<S>(
     inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
+    persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<(), anyhow::Error>
 where
     S: Stream<Item = StatsRequest> + Unpin,
@@ -61,7 +63,7 @@ where
     let cfg = client_sme::ClientConfig::from_config(cfg, wpa3_supported);
     let is_softmac = device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac);
     let (sme, mlme_stream, info_stream, time_stream) =
-        Sme::new(cfg, device_info, iface_tree_holder, hasher, is_softmac);
+        Sme::new(cfg, device_info, iface_tree_holder, hasher, persistence_req_sender, is_softmac);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
         proxy,

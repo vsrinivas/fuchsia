@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Error},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_cobalt::CobaltSender,
-    fuchsia_inspect_contrib::inspect_log,
+    fuchsia_inspect_contrib::{auto_persist, inspect_log},
     futures::{
         channel::mpsc,
         future::{Future, FutureExt, FutureObj},
@@ -108,6 +108,7 @@ pub fn create_and_serve_sme(
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     device_info: fidl_mlme::DeviceInfo,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
+    persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let event_stream = mlme_proxy.take_event_stream();
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
@@ -123,6 +124,7 @@ pub fn create_and_serve_sme(
         inspect_tree.clone(),
         iface_tree_holder.clone(),
         inspect_tree.hasher.clone(),
+        persistence_req_sender,
         shutdown_receiver,
     );
 
@@ -182,6 +184,7 @@ fn create_sme<S>(
     inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
+    persistence_req_sender: auto_persist::PersistenceReqSender,
     mut shutdown_receiver: mpsc::Receiver<()>,
 ) -> (SmeServer, impl Future<Output = Result<(), Error>>)
 where
@@ -203,6 +206,7 @@ where
                 inspect_tree,
                 iface_tree_holder,
                 hasher,
+                persistence_req_sender,
             );
             (SmeServer::Client(sender), FutureObj::new(Box::new(fut)))
         }
@@ -273,6 +277,8 @@ mod tests {
         let (dev_monitor_proxy, _) =
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceMonitor proxy");
+        let (persistence_req_sender, _persistence_stream) =
+            test_helper::create_inspect_persistence_channel();
 
         // Assert that the IfaceMap is initially empty.
         assert!(iface_map.get(&5).is_none());
@@ -289,6 +295,7 @@ mod tests {
             cobalt_1dot1_proxy,
             fake_device_info(),
             dev_monitor_proxy,
+            persistence_req_sender,
         )
         .expect("failed to create SME");
 
@@ -365,6 +372,8 @@ mod tests {
         let mut dev_monitor_stream = dev_monitor_server
             .into_stream()
             .expect("failed to create DeviceMonitor request stream");
+        let (persistence_req_sender, _persistence_stream) =
+            test_helper::create_inspect_persistence_channel();
 
         // Assert that the IfaceMap is initially empty.
         assert!(iface_map.get(&5).is_none());
@@ -381,6 +390,7 @@ mod tests {
             cobalt_1dot1_proxy,
             fake_device_info(),
             dev_monitor_proxy,
+            persistence_req_sender,
         )
         .expect("failed to create SME");
 
