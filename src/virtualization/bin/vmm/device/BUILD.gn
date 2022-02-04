@@ -204,9 +204,27 @@ executable("virtio_console_bin") {
   deps = [ ":virtio" ]
 }
 
-fuchsia_package_with_single_component("virtio_console") {
+# TODO(fxbug.dev/72386)
+# CFv2 migration in progress
+# v2 component is being used in device tests
+# v1 component is being used in prod code
+fuchsia_package("virtio_console") {
+  deps = [
+    ":virtio_console_v1",
+    ":virtio_console_v2",
+  ]
+}
+
+fuchsia_component("virtio_console_v2") {
+  manifest = "../meta/virtio_console.cml"
+  deps = [ ":virtio_console_bin" ]
+  component_name = "virtio_console"
+}
+
+fuchsia_component("virtio_console_v1") {
   manifest = "../meta/virtio_console.cmx"
   deps = [ ":virtio_console_bin" ]
+  component_name = "virtio_console"
 }
 
 executable("virtio_input_bin") {

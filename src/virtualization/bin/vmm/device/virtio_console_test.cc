@@ -2,33 +2,62 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+
+#include "fuchsia/logger/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioConsoleUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cmx";
 static constexpr uint16_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 16;
 
-class VirtioConsoleTest : public TestWithDevice {
+using component_testing::ChildRef;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmBuilder;
+using component_testing::RealmRoot;
+using component_testing::Route;
+
+class VirtioConsoleTest : public TestWithDeviceV2 {
  protected:
   VirtioConsoleTest()
       : rx_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
         tx_queue_(phys_mem_, rx_queue_.end(), kQueueSize) {}
 
   void SetUp() override {
-    // Launch device process.
+    constexpr auto kComponentUrl =
+        "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
+    constexpr auto kComponentName = "virtio_console";
+
+    auto realm_builder = RealmBuilder::Create();
+    realm_builder.AddChild(kComponentName, kComponentUrl);
+
+    realm_builder
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::logger::LogSink::Name_},
+                                Protocol{fuchsia::tracing::provider::Registry::Name_},
+                            },
+                        .source = ParentRef(),
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::virtualization::hardware::VirtioConsole::Name_},
+                            },
+                        .source = ChildRef{kComponentName},
+                        .targets = {ParentRef()}});
+
+    realm_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
+    console_ = realm_->ConnectSync<fuchsia::virtualization::hardware::VirtioConsole>();
+
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status = LaunchDevice(kVirtioConsoleUrl, tx_queue_.end(), &start_info);
+    zx_status_t status = MakeStartInfo(tx_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
     // Setup console socket.
     status = zx::socket::create(ZX_SOCKET_STREAM, &socket_, &remote_socket_);
     ASSERT_EQ(ZX_OK, status);
-
-    // Start device execution.
-    services_->Connect(console_.NewRequest());
-    RunLoopUntilIdle();
 
     status = console_->Start(std::move(start_info), std::move(remote_socket_));
     ASSERT_EQ(ZX_OK, status);
@@ -54,6 +83,7 @@ class VirtioConsoleTest : public TestWithDevice {
   VirtioQueueFake tx_queue_;
   zx::socket socket_;
   zx::socket remote_socket_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
 TEST_F(VirtioConsoleTest, Receive) {
