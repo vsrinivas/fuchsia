@@ -15,21 +15,21 @@
     },
     children: [
         {
-            name: "hlcpp",
+            name: "go",
             url: "#meta/server.cm",
         },
     ],
     use: [
         {
             protocol: "fidl.dynsuite.Entry",
-            from: "#hlcpp",
+            from: "#go",
         },
     ],
     offer: [
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
-            to: "#hlcpp",
+            to: "#go",
         },
     ],
 }
