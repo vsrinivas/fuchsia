@@ -7,9 +7,8 @@
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fuchsia/hardware/goldfish/addressspace/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo-mock.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fake-bti/bti.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fake_ddk/fidl-helper.h>
 #include <lib/mmio-ptr/fake.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
@@ -25,6 +24,8 @@
 #include <vector>
 
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace goldfish {
 
@@ -98,64 +99,13 @@ class VmoMapping {
   void* ptr_ = nullptr;
 };
 
-struct ProtocolDeviceOps {
-  const zx_protocol_device_t* ops = nullptr;
-  void* ctx = nullptr;
-};
-
-// Create our own fake_ddk Bind class. The Binder will have multiple devices
-// added (AddressSpaceDevice and AddressSpaceChildDevice). Each device will
-// have its own FIDL messenger bound to the remote channel.
-class Binder : public fake_ddk::Bind {
- public:
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    zx_status_t status;
-
-    if (args && args->ops) {
-      if (args->ops->message) {
-        // We use parent device as a key to find device
-        // FIDL messengers device tree.
-        fidl_messengers_[parent] = std::make_unique<fake_ddk::FidlMessenger>();
-        auto* fidl = fidl_messengers_[parent].get();
-
-        std::optional<zx::channel> remote_channel = std::nullopt;
-        if (args->client_remote) {
-          remote_channel = zx::channel(args->client_remote);
-        }
-
-        if ((status = fidl->SetMessageOp(args->ctx, args->ops->message,
-                                         std::move(remote_channel))) < 0) {
-          return status;
-        }
-      }
-    }
-
-    *out = fake_ddk::kFakeDevice;
-    add_called_ = true;
-
-    last_ops_.ctx = args->ctx;
-    last_ops_.ops = args->ops;
-    return ZX_OK;
-  }
-
-  ProtocolDeviceOps GetLastDeviceOps() { return last_ops_; }
-
-  const zx::channel& GetFidlChannel(zx_device_t* parent) const {
-    return fidl_messengers_.at(parent)->local();
-  }
-
- private:
-  std::map</*parent*/ zx_device_t*, std::unique_ptr<fake_ddk::FidlMessenger>> fidl_messengers_;
-  ProtocolDeviceOps last_ops_;
-};
-
 }  // namespace
 
 class AddressSpaceDeviceTest : public zxtest::Test {
  public:
   // |zxtest::Test|
   void SetUp() override {
+    fake_root_ = MockDevice::FakeRootParent();
     zx::bti out_bti;
     ASSERT_OK(fake_bti_create(out_bti.reset_and_get_address()));
 
@@ -179,19 +129,19 @@ class AddressSpaceDeviceTest : public zxtest::Test {
                                 .size = kAreaSize,
                                 .handle = vmo_area.release()});
 
-    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[1], 1);
-    fragments[0].name = "pci";
-    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        .id = ZX_PROTOCOL_PCI,
-        .proto = {.ops = mock_pci_.GetProto()->ops, .ctx = mock_pci_.GetProto()->ctx},
-    });
+    fake_root_->AddProtocol(ZX_PROTOCOL_PCI, mock_pci_.GetProto()->ops, mock_pci_.GetProto()->ctx,
+                            "pci");
 
-    ddk_.SetFragments(std::move(fragments));
-    dut_ = std::make_unique<AddressSpaceDevice>(fake_ddk::FakeParent());
+    std::unique_ptr<AddressSpaceDevice> dut(new AddressSpaceDevice(fake_root_.get()));
+    ASSERT_OK(dut->Bind());
+    dut_ = dut.release();
   }
 
   // |zxtest::Test|
-  void TearDown() override {}
+  void TearDown() override {
+    device_async_remove(dut_->zxdev());
+    ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(fake_root_.get()));
+  }
 
   std::unique_ptr<VmoMapping> MapControlRegisters() const {
     return std::make_unique<VmoMapping>(vmo_control_, /*size=*/sizeof(Registers), /*offset=*/0);
@@ -204,29 +154,18 @@ class AddressSpaceDeviceTest : public zxtest::Test {
 
  protected:
   ddk::MockPci mock_pci_;
-  Binder ddk_;
-  std::unique_ptr<AddressSpaceDevice> dut_;
-  ProtocolDeviceOps child_device_ops_;
-
+  std::shared_ptr<MockDevice> fake_root_;
+  AddressSpaceDevice* dut_;
   zx::vmo vmo_control_;
 };
 
 TEST_F(AddressSpaceDeviceTest, Bind) {
-  ASSERT_OK(dut_->Bind());
-
-  {
-    auto mapped = MapControlRegisters();
-    Registers* ctrl_regs = reinterpret_cast<Registers*>(mapped->ptr());
-    ASSERT_NE(ctrl_regs->guest_page_size, 0u);
-  }
-
-  dut_->DdkAsyncRemove();
-  EXPECT_TRUE(ddk_.Ok());
+  auto mapped = MapControlRegisters();
+  Registers* ctrl_regs = reinterpret_cast<Registers*>(mapped->ptr());
+  ASSERT_NE(ctrl_regs->guest_page_size, 0u);
 }
 
 TEST_F(AddressSpaceDeviceTest, BlockAllocation) {
-  ASSERT_OK(dut_->Bind());
-
   size_t current_offset = 0u;
   const std::vector<uint64_t> kAllocSizes = {1024u, 2048u, 3072u, 4096u};
 
@@ -260,14 +199,9 @@ TEST_F(AddressSpaceDeviceTest, BlockAllocation) {
     EXPECT_EQ(current_offset, static_cast<uint64_t>(ctrl_regs->block_offset_low) |
                                   (static_cast<uint64_t>(ctrl_regs->block_offset_high) << 32));
   }
-
-  dut_->DdkAsyncRemove();
-  EXPECT_TRUE(ddk_.Ok());
 }
 
 TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
-  ASSERT_OK(dut_->Bind());
-
   auto mapped = MapControlRegisters();
   Registers* ctrl_regs = reinterpret_cast<Registers*>(mapped->ptr());
 
@@ -284,13 +218,23 @@ TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
   // Create device.
   ASSERT_OK(dut_->GoldfishAddressSpaceOpenChildDriver(ADDRESS_SPACE_CHILD_DRIVER_TYPE_DEFAULT,
                                                       endpoints->server.TakeChannel()));
-  child_device_ops_ = ddk_.GetLastDeviceOps();
-  ASSERT_TRUE(child_device_ops_.ops->release);
   Flush(ctrl_regs);
   EXPECT_EQ(ctrl_regs->handle, kChildDriverHandle);
 
   // Test availability of the FIDL channel communication.
   auto client = fidl::BindSyncClient(std::move(endpoints->client));
+
+  // Bind server side:
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  ASSERT_OK(loop.StartThread("child_driver_thread"));
+  auto child = dut_->zxdev()->GetLatestChild();
+  auto child_dev = child->GetDeviceContext<goldfish::AddressSpaceChildDriver>();
+  ASSERT_NE(child, nullptr);
+  auto binding =
+      fidl::BindServer(loop.dispatcher(),
+                       fidl::ServerEnd<fuchsia_hardware_goldfish::AddressSpaceChildDriver>(
+                           std::move(child->TakeClientRemote())),
+                       child_dev);
 
   // Set up return status and offset on the mock PCI device
   // to accept AllocateBlock() calls.
@@ -311,11 +255,6 @@ TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
   auto result_dealloc = client->DeallocateBlock(paddr);
   EXPECT_TRUE(result_dealloc.ok());
   EXPECT_EQ(result_dealloc.value().res, ZX_OK);
-
-  dut_->DdkAsyncRemove();
-  EXPECT_TRUE(ddk_.Ok());
-
-  child_device_ops_.ops->release(child_device_ops_.ctx);
 }
 
 }  // namespace goldfish
