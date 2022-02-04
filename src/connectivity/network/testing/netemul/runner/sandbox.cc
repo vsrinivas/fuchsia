@@ -642,8 +642,8 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(const ConfiguringEnvironmentPtr
                          const fpromise::result<zx::socket, SandboxResult>&) {});
       })
       .and_then([this, &guest](zx::socket& socket) -> PromiseResult {
-        // Wait until the guest's serial console becomes usable to ensure that the guest has
-        // finished booting.
+        // Wait until the guest's serial console becomes stable to ensure the guest is mostly done
+        // booting.
         GuestConsole serial(std::make_unique<ZxSocket>(std::move(socket)));
         {
           zx_status_t status = serial.Start(zx::time::infinite());
@@ -654,8 +654,16 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(const ConfiguringEnvironmentPtr
         }
 
         if (IsLinuxGuest(guest)) {
+          // Wait till we know there is a pty listening for input.
+          zx_status_t status = serial.RepeatCommandTillSuccess(
+              "echo guest ready", "$", "guest ready", zx::time::infinite(), zx::sec(1));
+          if (status != ZX_OK) {
+            return fpromise::error(
+                SandboxResult(SandboxResult::Status::SETUP_FAILED,
+                              "Could not communicate with guest over serial connection"));
+          }
           // Wait until guest_interaction_daemon is running.
-          zx_status_t status = serial.ExecuteBlocking(
+          status = serial.ExecuteBlocking(
               "journalctl -f --no-tail -u guest_interaction_daemon | grep -m1 Listening", "$",
               zx::time::infinite(), nullptr);
           if (status != ZX_OK) {

@@ -90,6 +90,10 @@ void GuestInteractionTest::SetUp() {
       GuestConsole serial(std::make_unique<ZxSocket>(std::move(result.response().socket)));
       ASSERT_OK(serial.Start(zx::time::infinite()));
 
+      // Make sure the pty is running and that the guest will receive our commands.
+      ASSERT_OK(serial.RepeatCommandTillSuccess("echo guest ready", "$", "guest ready",
+                                                zx::time::infinite(), zx::sec(1)));
+
       // Wait until guest_interaction_daemon is running.
       ASSERT_OK(serial.ExecuteBlocking(
           "journalctl -f --no-tail -u guest_interaction_daemon | grep -m1 Listening", "$",
