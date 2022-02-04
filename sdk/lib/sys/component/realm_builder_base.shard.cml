@@ -1,0 +1,66 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    collections: [
+        {
+            name: "realm_builder",
+            environment: "#realm_builder_env",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#realm_builder_server" ],
+        },
+
+        // [START collection_offers]
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: [ "#realm_builder" ],
+        },
+
+        // [END collection_offers]
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            from: "parent",
+            to: [ "#realm_builder_server" ],
+        },
+    ],
+    environments: [
+        {
+            name: "realm_builder_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "realm_builder",
+                    from: "#realm_builder_server",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "realm_builder_resolver",
+                    from: "#realm_builder_server",
+                    scheme: "realm-builder",
+                },
+            ],
+        },
+    ],
+}
