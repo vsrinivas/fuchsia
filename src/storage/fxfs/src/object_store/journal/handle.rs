@@ -119,8 +119,15 @@ impl ObjectHandle for Handle {
     fn get_size(&self) -> u64 {
         self.size
     }
-    fn set_trace(&self, value: bool) {
-        self.trace.store(value, Ordering::Relaxed);
+    fn set_trace(&self, trace: bool) {
+        let old_value = self.trace.swap(trace, Ordering::Relaxed);
+        if trace != old_value {
+            log::info!(
+                "JH {} tracing {}",
+                self.object_id,
+                if trace { "enabled" } else { "disabled" },
+            );
+        }
     }
 }
 

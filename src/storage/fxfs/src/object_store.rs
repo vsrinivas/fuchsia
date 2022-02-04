@@ -433,12 +433,14 @@ impl ObjectStore {
     }
 
     pub fn set_trace(&self, trace: bool) {
-        log::info!(
-            "OS {} tracing {}",
-            self.store_object_id(),
-            if trace { "enabled" } else { "disabled" },
-        );
-        self.trace.store(trace, Ordering::Relaxed);
+        let old_value = self.trace.swap(trace, Ordering::Relaxed);
+        if trace != old_value {
+            log::info!(
+                "OS {} tracing {}",
+                self.store_object_id(),
+                if trace { "enabled" } else { "disabled" },
+            );
+        }
     }
 
     pub fn is_root(&self) -> bool {

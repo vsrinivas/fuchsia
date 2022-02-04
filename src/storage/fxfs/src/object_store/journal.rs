@@ -244,8 +244,10 @@ impl Journal {
     }
 
     pub fn set_trace(&self, trace: bool) {
-        log::info!("J tracing {}", if trace { "enabled" } else { "disabled" },);
-        self.trace.store(trace, Ordering::Relaxed);
+        let old_value = self.trace.swap(trace, Ordering::Relaxed);
+        if trace != old_value {
+            log::info!("J tracing {}", if trace { "enabled" } else { "disabled" },);
+        }
     }
 
     pub fn journal_file_offset(&self) -> u64 {
