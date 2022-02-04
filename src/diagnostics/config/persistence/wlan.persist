@@ -57,4 +57,48 @@
             'INSPECT:core/wlanstack:root/device_events:*',
         ],
     },
+    {
+        tag: 'wlancfg-client-stats-counters',
+        service_name: 'wlan',
+        max_bytes: 1200,
+        min_seconds_between_fetch: 60,
+        selectors: [
+            'INSPECT:core/wlancfg:root/client_stats/1d_counters',
+            'INSPECT:core/wlancfg:root/client_stats/1d_counters:*',
+            'INSPECT:core/wlancfg:root/client_stats/7d_counters',
+            'INSPECT:core/wlancfg:root/client_stats/7d_counters:*',
+            'INSPECT:core/wlancfg:root/client_stats:get_iface_stats_fail_count',
+            'INSPECT:core/wlancfg:root/client_stats:is_driver_unresponsive',
+        ],
+    },
+    {
+        tag: 'wlancfg-connect-events',
+        service_name: 'wlan',
+        max_bytes: 1200,
+        min_seconds_between_fetch: 60,
+        selectors: [
+            'INSPECT:core/wlancfg:root/client_stats/connect_events',
+            'INSPECT:core/wlancfg:root/client_stats/connect_events:*',
+        ],
+    },
+    {
+        tag: 'wlancfg-disconnect-events',
+        service_name: 'wlan',
+        max_bytes: 8000,
+        min_seconds_between_fetch: 60,
+        selectors: [
+            'INSPECT:core/wlancfg:root/client_stats/disconnect_events',
+            'INSPECT:core/wlancfg:root/client_stats/disconnect_events:*',
+        ],
+    },
+    {
+        tag: 'wlancfg-network-selection',
+        service_name: 'wlan',
+        max_bytes: 20000,
+        min_seconds_between_fetch: 60,
+        selectors: [
+            'INSPECT:core/wlancfg:root/network_selector/network_selection',
+            'INSPECT:core/wlancfg:root/network_selector/network_selection:*',
+        ],
+    },
 ]
