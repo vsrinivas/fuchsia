@@ -25,6 +25,7 @@ inheritance_with_recursive_decl.go.golden
 nullable.go.golden
 padding.go.golden
 placement_of_attributes.go.golden
+protocol_payloads.go.golden
 protocol_request.go.golden
 protocols.go.golden
 request_flexible_envelope.go.golden

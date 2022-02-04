@@ -1181,19 +1181,24 @@ func Compile(r fidlgen.Root) Root {
 	}
 
 	for _, v := range r.Structs {
-		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+		if _, ok := mbtn[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = v
-		} else {
-			c.Root.Structs = append(c.Root.Structs, c.compileStruct(v))
+			if v.IsAnonymous() {
+				continue
+			}
 		}
+		c.Root.Structs = append(c.Root.Structs, c.compileStruct(v))
+
 	}
 
 	for _, v := range r.ExternalStructs {
-		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+		if _, ok := mbtn[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = v
-		} else {
-			c.Root.ExternalStructs = append(c.Root.ExternalStructs, c.compileStruct(v))
+			if v.IsAnonymous() {
+				continue
+			}
 		}
+		c.Root.ExternalStructs = append(c.Root.ExternalStructs, c.compileStruct(v))
 	}
 
 	for _, v := range r.Tables {

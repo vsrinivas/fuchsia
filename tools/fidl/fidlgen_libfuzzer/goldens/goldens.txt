@@ -62,6 +62,10 @@ placement_of_attributes.cc.golden
 placement_of_attributes.h.golden
 placement_of_attributes_decode_encode.cc.golden
 placement_of_attributes_decode_encode.h.golden
+protocol_payloads.cc.golden
+protocol_payloads.h.golden
+protocol_payloads_decode_encode.cc.golden
+protocol_payloads_decode_encode.h.golden
 protocol_request.cc.golden
 protocol_request.h.golden
 protocol_request_decode_encode.cc.golden

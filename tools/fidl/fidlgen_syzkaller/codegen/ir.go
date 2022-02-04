@@ -659,10 +659,12 @@ func compile(fidlData fidlgen.Root) Root {
 	}
 
 	for _, v := range fidlData.Structs {
-		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+		if _, ok := mbtn[v.Name]; ok {
 			v := v
 			c.messageBodyStructs[v.Name] = &v
-			continue
+			if v.IsAnonymous() {
+				continue
+			}
 		}
 		c.structs[v.Name] = v
 
@@ -684,8 +686,7 @@ func compile(fidlData fidlgen.Root) Root {
 	}
 
 	for _, v := range fidlData.ExternalStructs {
-		// TODO(fxbug.dev/7704) remove once anonymous structs are supported
-		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+		if _, ok := mbtn[v.Name]; ok {
 			v := v
 			c.messageBodyStructs[v.Name] = &v
 		}

@@ -1100,20 +1100,24 @@ func Compile(fidlData fidlgen.Root) Root {
 	for _, v := range fidlData.Structs {
 		// TODO(fxbug.dev/56727) Consider filtering out structs that are not used because they are
 		// only referenced by channel transports.
-		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+		if _, ok := mbtn[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = c.compileStruct(v)
-		} else {
-			r.Structs = append(r.Structs, c.compileStruct(v))
+			if v.IsAnonymous() {
+				continue
+			}
 		}
+		r.Structs = append(r.Structs, c.compileStruct(v))
 	}
 	for _, v := range fidlData.ExternalStructs {
 		// TODO(fxbug.dev/56727) Consider filtering out structs that are not used because they are
 		// only referenced by channel transports.
-		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+		if _, ok := mbtn[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = c.compileStruct(v)
-		} else {
-			r.ExternalStructs = append(r.ExternalStructs, c.compileStruct(v))
+			if v.IsAnonymous() {
+				continue
+			}
 		}
+		r.ExternalStructs = append(r.ExternalStructs, c.compileStruct(v))
 	}
 	for _, v := range fidlData.Unions {
 		r.Unions = append(r.Unions, c.compileUnion(v))

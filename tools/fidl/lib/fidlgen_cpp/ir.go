@@ -669,18 +669,22 @@ func compile(r fidlgen.Root) *Root {
 
 	for _, v := range r.Structs {
 		anonMessageBody := false
-		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+		if _, ok := mbtn[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = v
-			anonMessageBody = true
+			if v.IsAnonymous() {
+				anonMessageBody = true
+			}
 		}
 		decls[v.Name] = c.compileStruct(v, anonMessageBody)
 	}
 
 	for _, v := range r.ExternalStructs {
 		anonMessageBody := false
-		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+		if _, ok := mbtn[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = v
-			anonMessageBody = true
+			if v.IsAnonymous() {
+				anonMessageBody = true
+			}
 		}
 		extDecls[v.Name] = c.compileStruct(v, anonMessageBody)
 	}

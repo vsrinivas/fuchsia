@@ -52,6 +52,8 @@ padding_async.dart.golden
 padding_test.dart.golden
 placement_of_attributes_async.dart.golden
 placement_of_attributes_test.dart.golden
+protocol_payloads_async.dart.golden
+protocol_payloads_test.dart.golden
 protocol_request_async.dart.golden
 protocol_request_test.dart.golden
 protocols_async.dart.golden

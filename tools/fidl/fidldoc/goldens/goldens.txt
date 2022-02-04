@@ -28,6 +28,7 @@ inheritance_with_recursive_decl.md.golden
 nullable.md.golden
 padding.md.golden
 placement_of_attributes.md.golden
+protocol_payloads.md.golden
 protocol_request.md.golden
 protocols.md.golden
 request_flexible_envelope.md.golden

@@ -25,6 +25,7 @@ inheritance_with_recursive_decl.rs.golden
 nullable.rs.golden
 padding.rs.golden
 placement_of_attributes.rs.golden
+protocol_payloads.rs.golden
 protocol_request.rs.golden
 protocols.rs.golden
 request_flexible_envelope.rs.golden

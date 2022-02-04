@@ -227,7 +227,7 @@ func (r *Root) findStruct(eci EncodedCompoundIdentifier, canBeExternal bool) *St
 	}
 	if canBeExternal {
 		for i := range r.ExternalStructs {
-			if r.Structs[i].ECI == eci {
+			if r.ExternalStructs[i].ECI == eci {
 				return &r.ExternalStructs[i]
 			}
 		}
@@ -1337,6 +1337,9 @@ func (c *compiler) fillDerives(ir *Root) {
 	for _, v := range ir.Structs {
 		dc.fillDerivesForECI(v.ECI)
 	}
+	for _, v := range ir.ExternalStructs {
+		dc.fillDerivesForECI(v.ECI)
+	}
 	for _, v := range ir.Unions {
 		dc.fillDerivesForECI(v.ECI)
 	}
@@ -1590,19 +1593,23 @@ func Compile(r fidlgen.Root) Root {
 	}
 
 	for _, v := range r.Structs {
-		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+		if _, ok := mbtn[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = v
-		} else {
-			root.Structs = append(root.Structs, c.compileStruct(v))
+			if v.IsAnonymous() {
+				continue
+			}
 		}
+		root.Structs = append(root.Structs, c.compileStruct(v))
 	}
 
 	for _, v := range r.ExternalStructs {
-		if _, ok := mbtn[v.Name]; ok && v.IsAnonymous() {
+		if _, ok := mbtn[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = v
-		} else {
-			root.ExternalStructs = append(root.ExternalStructs, c.compileStruct(v))
+			if v.IsAnonymous() {
+				continue
+			}
 		}
+		root.ExternalStructs = append(root.ExternalStructs, c.compileStruct(v))
 	}
 
 	for _, v := range r.Tables {

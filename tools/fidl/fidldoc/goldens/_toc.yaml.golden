@@ -59,6 +59,8 @@ toc:
     path: /test.padding
   - title: test.placementofattributes
     path: /test.placementofattributes
+  - title: test.protocolpayloads
+    path: /test.protocolpayloads
   - title: test.protocolrequest
     path: /test.protocolrequest
   - title: test.protocols
