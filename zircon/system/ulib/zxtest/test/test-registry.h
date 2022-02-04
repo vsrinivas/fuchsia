@@ -24,6 +24,8 @@ class TestDriverStub final : public internal::TestDriver {
 
   void Skip() final {}
 
+  bool IsSkipped() const final { return false; }
+
   bool Continue() const final { return should_continue_; }
 
   void NotifyFail() { should_continue_ = false; }

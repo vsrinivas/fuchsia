@@ -26,6 +26,9 @@ class TestDriver {
   // Called when a test is skipped.
   virtual void Skip() = 0;
 
+  // Called to check if the test has been skipped.
+  virtual bool IsSkipped() const = 0;
+
   // Return true if the test is allowed to continue execution.
   virtual bool Continue() const = 0;
 

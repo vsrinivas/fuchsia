@@ -42,6 +42,9 @@ class Test : private internal::TestInternal {
   // Executed the current test instance.
   virtual void Run();
 
+  // Check if this test has been skipped.
+  virtual bool IsSkipped();
+
  private:
   // Actual test implementation.
   virtual void TestBody() = 0;

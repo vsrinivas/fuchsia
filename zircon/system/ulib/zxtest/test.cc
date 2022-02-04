@@ -21,4 +21,9 @@ void Test::Run() {
   TearDown();
 }
 
+bool Test::IsSkipped() {
+  ZX_DEBUG_ASSERT_MSG(driver_ != nullptr, "Runner must set the test driver.");
+  return driver_->IsSkipped();
+}
+
 }  // namespace zxtest

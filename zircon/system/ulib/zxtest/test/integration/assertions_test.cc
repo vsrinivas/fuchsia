@@ -1100,7 +1100,8 @@ TEST(ZxTestAssertionTest, AssertSkip) {
 TEST(ZxTestAssertionTest, AssertNotSkipped) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS | NOT_SKIPPED,
                    "Test should not appear to be skipped.");
-  EXPECT_FALSE(LIB_ZXTEST_IS_SKIPPED);
+  EXPECT_EQ(LIB_ZXTEST_IS_SKIPPED, IsSkipped());
+  EXPECT_FALSE(IsSkipped());
   TEST_CHECKPOINT();
 }
 
@@ -1123,7 +1124,11 @@ void gets_skipped() { ZXTEST_SKIP(); }
 
 TEST(ZxTestAssertionTest, AssertSkipped) {
   gets_skipped();
-  ZX_ASSERT_MSG(LIB_ZXTEST_IS_SKIPPED, "Test should have been skipped.");
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS | SKIPPED,
+                   "LIB_ZXTEST_IS_SKIPPED and IsSkipped() should have the same value.");
+  EXPECT_EQ(LIB_ZXTEST_IS_SKIPPED, IsSkipped());
+  TEST_CHECKPOINT();
+  ZX_ASSERT_MSG(IsSkipped(), "Test should have been skipped.");
 }
 
 TEST(ZxTestAssertionTest, AssertEvaluationIsFirstStatement) {
