@@ -84,8 +84,17 @@ Optimizing without data is useless at best and dangerous at worst. When
 designing optimizations (e.g. performance, binary size), we follow the data.
 
 For example, [RFC-0032: Efficient envelopes][rfc-0032] was initially accepted,
-but later rejected. In hindsight, it should never have been accepted because
-there was no data to back it up.
+but later rejected. In hindsight, at the time it should not have been accepted
+because there was no data to back it up. Later, it was re-proposed and accepted
+as [RFC-0113: Efficient envelopes][rfc-0113] after there was data demonstrating
+a significant performance improvement.
+
+Similarly, there was significant momentum behind using a sparser representation
+of table data. However, after investigation, there was an unfavorable tradeoff
+between design complexity and performance that led to a decision to not move
+forward (see [RFC-0116: Sparser Tables][rfc-0116]). Without a significant
+prototyping and data-gathering phase, sparser tables would likely have been
+adopted and negatively impacted Fuchsia.
 
 ## No breakage at a distance
 
@@ -110,6 +119,12 @@ and resource types][lang-resource]. One motivation for this was providing the
 > For example, adding a field to a table is normally safe, but adding a handle
 > field would become source-breaking &mdash; not only for that table, but for
 > all types transitively containing it.
+
+[RFC-0149: FIDL encode validation not mandatory][rfc-0149] also touches upon
+this topic. It breaks down the classes of breakages that can occur and moves
+the decision of whether to perform encode-side validation to bindings. This
+allows there to be a more fine-grained discussion of the pros and cons of
+overhead from encode-side validation vs the risk of breakage at a distance.
 
 ## Liberal syntax, idiomatic style
 
@@ -213,4 +228,7 @@ FIDL too closely to the Zircon channel transport.
 [rfc-0057]: /docs/contribute/governance/rfcs/0057_default_no_handles.md
 [rfc-0061-pros-and-cons]: /docs/contribute/governance/rfcs/0061_extensible_unions.md#pros-and-cons
 [rfc-0062]: /docs/contribute/governance/rfcs/0062_method_impossible.md
+[rfc-0113]: /docs/contribute/governance/rfcs/0113_efficient_envelopes.md
+[rfc-0116]: /docs/contribute/governance/rfcs/0116_fidl_sparser_tables.md
 [rfc-0131]: /docs/contribute/governance/rfcs/0131_fidl_wire_format_principles.md
+[rfc-0149]: /docs/contribute/governance/rfcs/0149_fidl_encode_validation_not_mandatory.md
