@@ -481,6 +481,22 @@ struct ManagedRealm {
     devfs: Arc<SimpleMutableDir>,
 }
 
+fn with_responder_ignoring_peer_closed<R, F>(r: R, f: F) -> Result<(), fidl::Error>
+where
+    R: fidl::endpoints::Responder,
+    F: FnOnce(R) -> Result<(), fidl::Error>,
+{
+    match f(r) {
+        Ok(()) => Ok(()),
+        // If the client closed the channel, log a warning and do not propagate the error.
+        Err(e) if e.is_closed() => {
+            warn!("client closed managed realm channel with request(s) in flight: {:?}", e);
+            Ok(())
+        }
+        Err(e) => Err(e),
+    }
+}
+
 impl ManagedRealm {
     async fn run_service(self) -> Result {
         let Self { server_end, realm, devfs } = self;
@@ -489,8 +505,8 @@ impl ManagedRealm {
             match request {
                 ManagedRealmRequest::GetMoniker { responder } => {
                     let moniker = format!("{}:{}", REALM_COLLECTION_NAME, realm.root.child_name());
-                    let () =
-                        responder.send(&moniker).context("responding to GetMoniker request")?;
+                    with_responder_ignoring_peer_closed(responder, |r| r.send(&moniker))
+                        .context("responding to GetMoniker request")?;
                 }
                 ManagedRealmRequest::ConnectToProtocol {
                     protocol_name,
@@ -592,9 +608,10 @@ impl ManagedRealm {
                         response
                     })()
                     .await;
-                    let () = responder
-                        .send(&mut response.map_err(zx::Status::into_raw))
-                        .context("responding to AddDevice request")?;
+                    with_responder_ignoring_peer_closed(responder, |r| {
+                        r.send(&mut response.map_err(zx::Status::into_raw))
+                    })
+                    .context("responding to AddDevice request")?;
                 }
                 ManagedRealmRequest::RemoveDevice { path, responder } => {
                     let devfs = devfs.clone();
@@ -641,9 +658,10 @@ impl ManagedRealm {
                         response
                     })()
                     .await;
-                    let () = responder
-                        .send(&mut response.map_err(zx::Status::into_raw))
-                        .context("responding to RemoveDevice request")?;
+                    with_responder_ignoring_peer_closed(responder, |r| {
+                        r.send(&mut response.map_err(zx::Status::into_raw))
+                    })
+                    .context("responding to RemoveDevice request")?;
                 }
                 ManagedRealmRequest::StopChildComponent { child_name, responder } => {
                     let realm_ref = &realm;
@@ -699,9 +717,10 @@ impl ManagedRealm {
                         Ok(())
                     }
                     .await;
-                    let () = responder
-                        .send(&mut response.map_err(zx::Status::into_raw))
-                        .context("responding to StopChildComponent request")?;
+                    with_responder_ignoring_peer_closed(responder, |r| {
+                        r.send(&mut response.map_err(zx::Status::into_raw))
+                    })
+                    .context("responding to StopChildComponent request")?;
                 }
                 ManagedRealmRequest::Shutdown { control_handle } => {
                     let () = realm.destroy().await.context("destroy realm")?;
