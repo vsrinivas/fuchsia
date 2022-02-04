@@ -169,18 +169,19 @@ PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
   };
 
   // Add or remove the address from the interface.
+  // TODO(https://fxbug.dev/92768): Migrate to fuchsia.net.interfaces.admin/Control.
   std::optional<fuchsia::net::stack::Error> error;
   if (add) {
-    fuchsia::net::stack::Stack_AddInterfaceAddress_Result result;
-    status =
-        net_stack_sync_ptr->AddInterfaceAddress(interface_id.value(), std::move(subnet), &result);
+    fuchsia::net::stack::Stack_AddInterfaceAddressDeprecated_Result result;
+    status = net_stack_sync_ptr->AddInterfaceAddressDeprecated(interface_id.value(),
+                                                               std::move(subnet), &result);
     if (status == ZX_OK && result.is_err()) {
       error = result.err();
     }
   } else {
-    fuchsia::net::stack::Stack_DelInterfaceAddress_Result result;
-    status =
-        net_stack_sync_ptr->DelInterfaceAddress(interface_id.value(), std::move(subnet), &result);
+    fuchsia::net::stack::Stack_DelInterfaceAddressDeprecated_Result result;
+    status = net_stack_sync_ptr->DelInterfaceAddressDeprecated(interface_id.value(),
+                                                               std::move(subnet), &result);
     if (status == ZX_OK && result.is_err()) {
       error = result.err();
     }

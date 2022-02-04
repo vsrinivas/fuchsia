@@ -993,7 +993,7 @@ func TestStaticIPConfiguration(t *testing.T) {
 
 			name := ifs.ns.name(ifs.nicid)
 			result := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr)
-			if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
+			if result != stack.StackAddInterfaceAddressDeprecatedResultWithResponse(stack.StackAddInterfaceAddressDeprecatedResponse{}) {
 				t.Fatalf("got ns.addInterfaceAddr(%d, %#v) = %#v, want = Response()", ifs.nicid, ifAddr, result)
 			}
 
@@ -1217,12 +1217,12 @@ func TestListInterfaceAddresses(t *testing.T) {
 					PrefixLen: uint8(addr.PrefixLen),
 				}
 
-				result, err := ni.AddInterfaceAddress(context.Background(), uint64(ifState.nicid), ifAddr)
+				result, err := ni.AddInterfaceAddressDeprecated(context.Background(), uint64(ifState.nicid), ifAddr)
 				if err != nil {
-					t.Fatalf("ni.AddInterfaceAddress(%d, %#v): %s", ifState.nicid, ifAddr, err)
+					t.Fatalf("ni.AddInterfaceAddressDeprecated(%d, %#v): %s", ifState.nicid, ifAddr, err)
 				}
-				if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
-					t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
+				if result != stack.StackAddInterfaceAddressDeprecatedResultWithResponse(stack.StackAddInterfaceAddressDeprecatedResponse{}) {
+					t.Fatalf("got ni.AddInterfaceAddressDeprecated(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 				}
 				expectDad := header.IsV6UnicastAddress(addr.Address)
 				clock.Advance(dadResolutionTimeout)
@@ -1255,12 +1255,12 @@ func TestListInterfaceAddresses(t *testing.T) {
 					PrefixLen: uint8(addr.PrefixLen),
 				}
 
-				result, err := ni.DelInterfaceAddress(context.Background(), uint64(ifState.nicid), ifAddr)
+				result, err := ni.DelInterfaceAddressDeprecated(context.Background(), uint64(ifState.nicid), ifAddr)
 				if err != nil {
-					t.Fatalf("ni.DelInterfaceAddress(%d, %#v): %s", ifState.nicid, ifAddr, err)
+					t.Fatalf("ni.DelInterfaceAddressDeprecated(%d, %#v): %s", ifState.nicid, ifAddr, err)
 				}
-				if result != stack.StackDelInterfaceAddressResultWithResponse(stack.StackDelInterfaceAddressResponse{}) {
-					t.Fatalf("got ni.DelInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
+				if result != stack.StackDelInterfaceAddressDeprecatedResultWithResponse(stack.StackDelInterfaceAddressDeprecatedResponse{}) {
+					t.Fatalf("got ni.DelInterfaceAddressDeprecated(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 				}
 
 				// Remove address from list.
@@ -1296,12 +1296,12 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 		PrefixLen: uint8(addr.PrefixLen),
 	}
 
-	result, err := ni.AddInterfaceAddress(context.Background(), uint64(ifState.nicid), ifAddr)
+	result, err := ni.AddInterfaceAddressDeprecated(context.Background(), uint64(ifState.nicid), ifAddr)
 	if err != nil {
-		t.Fatalf("ni.AddInterfaceAddress(%d, %#v): %s", ifState.nicid, ifAddr, err)
+		t.Fatalf("ni.AddInterfaceAddressDeprecated(%d, %#v): %s", ifState.nicid, ifAddr, err)
 	}
-	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
-		t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
+	if result != stack.StackAddInterfaceAddressDeprecatedResultWithResponse(stack.StackAddInterfaceAddressDeprecatedResponse{}) {
+		t.Fatalf("got ni.AddInterfaceAddressDeprecated(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 	}
 
 	wantAddrs := append(initialAddrs, addr)
@@ -1312,12 +1312,12 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 	addr.PrefixLen *= 2
 	ifAddr.PrefixLen *= 2
 
-	result, err = ni.AddInterfaceAddress(context.Background(), uint64(ifState.nicid), ifAddr)
+	result, err = ni.AddInterfaceAddressDeprecated(context.Background(), uint64(ifState.nicid), ifAddr)
 	if err != nil {
-		t.Fatalf("ni.AddInterfaceAddress(%d, %#v): %s", ifState.nicid, ifAddr, err)
+		t.Fatalf("ni.AddInterfaceAddressDeprecated(%d, %#v): %s", ifState.nicid, ifAddr, err)
 	}
-	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
-		t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
+	if result != stack.StackAddInterfaceAddressDeprecatedResultWithResponse(stack.StackAddInterfaceAddressDeprecatedResponse{}) {
+		t.Fatalf("got ni.AddInterfaceAddressDeprecated(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 	}
 
 	wantAddrs = append(initialAddrs, addr)

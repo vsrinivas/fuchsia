@@ -185,7 +185,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
             NetstackVersion::Netstack3 => {
                 // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
                 let () = stack
-                    .add_interface_address(id, &mut addr)
+                    .add_interface_address_deprecated(id, &mut addr)
                     .await
                     .squash_result()
                     .expect("add interface address");

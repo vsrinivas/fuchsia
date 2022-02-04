@@ -214,9 +214,11 @@ impl NetworkInterface for TunNetworkInterface {
             addr: fnetext::IpAddress(addr.addr.into()).into(),
             prefix_len: addr.prefix_len,
         };
+        // TODO(https://fxbug.dev/92368): Replace this with Control.AddAddress. That API does not
+        // accept an IPv6 prefix and does not add a subnet route.
         self.stack_sync
             .lock()
-            .add_interface_address(self.id, &mut addr, zx::Time::INFINITE)
+            .add_interface_address_deprecated(self.id, &mut addr, zx::Time::INFINITE)
             .squash_result()?;
         fx_log_info!("TunNetworkInterface: Successfully added address {:?}", addr);
         Ok(())
@@ -228,9 +230,11 @@ impl NetworkInterface for TunNetworkInterface {
             addr: fnetext::IpAddress(addr.addr.into()).into(),
             prefix_len: addr.prefix_len,
         };
+        // TODO(https://fxbug.dev/92368): Replace this with Control.RemoveAddress. That API does not
+        // accept an IPv6 prefix and does not remove the subnet route if one exists.
         self.stack_sync
             .lock()
-            .del_interface_address(self.id, &mut addr, zx::Time::INFINITE)
+            .del_interface_address_deprecated(self.id, &mut addr, zx::Time::INFINITE)
             .squash_result()?;
         fx_log_info!("TunNetworkInterface: Successfully removed address {:?}", addr);
         Ok(())

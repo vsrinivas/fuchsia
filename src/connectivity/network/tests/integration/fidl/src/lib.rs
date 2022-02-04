@@ -193,7 +193,7 @@ async fn add_ethernet_interface<N: Netstack>(name: &str) {
 }
 
 #[variants_test]
-async fn add_del_interface_address<N: Netstack>(name: &str) {
+async fn add_del_interface_address_deprecated<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let stack =
@@ -237,31 +237,31 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
 
     let mut interface_address = fidl_subnet!("1.1.1.1/32");
     let res = stack
-        .add_interface_address(id, &mut interface_address)
+        .add_interface_address_deprecated(id, &mut interface_address)
         .await
-        .expect("add_interface_address");
+        .expect("add_interface_address_deprecated");
     assert_eq!(res, Ok(()));
 
     // Should be an error the second time.
     let res = stack
-        .add_interface_address(id, &mut interface_address)
+        .add_interface_address_deprecated(id, &mut interface_address)
         .await
-        .expect("add_interface_address");
+        .expect("add_interface_address_deprecated");
     assert_eq!(res, Err(fnet_stack::Error::AlreadyExists));
 
     let res = stack
-        .add_interface_address(id + 1, &mut interface_address)
+        .add_interface_address_deprecated(id + 1, &mut interface_address)
         .await
-        .expect("add_interface_address");
+        .expect("add_interface_address_deprecated");
     assert_eq!(res, Err(fnet_stack::Error::NotFound));
 
     let error = stack
-        .add_interface_address(
+        .add_interface_address_deprecated(
             id,
             &mut fidl_fuchsia_net::Subnet { prefix_len: 43, ..interface_address },
         )
         .await
-        .expect("add_interface_address")
+        .expect("add_interface_address_deprecated")
         .unwrap_err();
     assert_eq!(error, fnet_stack::Error::InvalidArgs);
 
@@ -284,9 +284,9 @@ async fn add_del_interface_address<N: Netstack>(name: &str) {
     );
 
     let res = stack
-        .del_interface_address(id, &mut interface_address)
+        .del_interface_address_deprecated(id, &mut interface_address)
         .await
-        .expect("del_interface_address");
+        .expect("del_interface_address_deprecated");
     assert_eq!(res, Ok(()));
 
     let interface = fidl_fuchsia_net_interfaces_ext::existing(
@@ -338,7 +338,7 @@ async fn remove_interface_and_address<E: netemul::Endpoint>(name: &str) {
         futures::stream::iter(addresses.iter_mut())
             .for_each_concurrent(None, |addr| {
                 stack
-                    .add_interface_address(iface.id(), addr)
+                    .add_interface_address_deprecated(iface.id(), addr)
                     .map(|r| r.expect("call add_interface_address"))
                     .map(|r| r.expect("add interface address"))
             })
@@ -348,8 +348,8 @@ async fn remove_interface_and_address<E: netemul::Endpoint>(name: &str) {
         // will be handled concurrently with interface removal.
         let remove_addr_fut =
             futures::stream::iter(addresses.iter_mut()).for_each_concurrent(None, |addr| {
-                stack.del_interface_address(iface.id(), addr).map(|r| {
-                    match r.expect("call del_interface_address") {
+                stack.del_interface_address_deprecated(iface.id(), addr).map(|r| {
+                    match r.expect("call del_interface_address_deprecated") {
                         Ok(()) | Err(fnet_stack::Error::NotFound) => {}
                         Err(e) => panic!("delete interface address error: {:?}", e),
                     }
@@ -504,7 +504,7 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
 
     let del_addr = |mut addr| async move {
         stack
-            .del_interface_address(loopback_id, &mut addr)
+            .del_interface_address_deprecated(loopback_id, &mut addr)
             .await
             .expect("del_interface_address")
             .expect("expected to remove address")
@@ -516,7 +516,7 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
     const NEW_IPV6_ADDRESS: fidl_fuchsia_net::Subnet = fidl_subnet!("a::1/64");
     let add_addr = |mut addr| async move {
         stack
-            .add_interface_address(loopback_id, &mut addr)
+            .add_interface_address_deprecated(loopback_id, &mut addr)
             .await
             .expect("add_interface_address")
             .expect("expected to add address")

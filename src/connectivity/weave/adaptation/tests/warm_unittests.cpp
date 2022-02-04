@@ -248,8 +248,8 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
  private:
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
-  void AddInterfaceAddress(uint64_t nicid, ::fuchsia::net::Subnet subnet,
-                           AddInterfaceAddressCallback callback) override {
+  void AddInterfaceAddressDeprecated(uint64_t nicid, ::fuchsia::net::Subnet subnet,
+                                     AddInterfaceAddressDeprecatedCallback callback) override {
     // Confirm that the configured address is a V6 address.
     ASSERT_TRUE(subnet.addr.is_ipv6());
 
@@ -257,7 +257,7 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
                            [&](const OwnedInterface& interface) { return nicid == interface.id; });
     if (it == interfaces_.end()) {
-      callback(fuchsia::net::stack::Stack_AddInterfaceAddress_Result::WithErr(
+      callback(fuchsia::net::stack::Stack_AddInterfaceAddressDeprecated_Result::WithErr(
           fuchsia::net::stack::Error::NOT_FOUND));
       return;
     }
@@ -267,20 +267,20 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
         it->ipv6addrs.begin(), it->ipv6addrs.end(),
         [&](const fuchsia::net::Subnet& ipv6) { return CompareIpAddress(subnet.addr, ipv6.addr); });
     if (addr_it != it->ipv6addrs.end()) {
-      callback(fuchsia::net::stack::Stack_AddInterfaceAddress_Result::WithErr(
+      callback(fuchsia::net::stack::Stack_AddInterfaceAddressDeprecated_Result::WithErr(
           fuchsia::net::stack::Error::ALREADY_EXISTS));
       return;
     }
 
     it->ipv6addrs.push_back(std::move(subnet));
-    callback(fuchsia::net::stack::Stack_AddInterfaceAddress_Result::WithResponse({}));
+    callback(fuchsia::net::stack::Stack_AddInterfaceAddressDeprecated_Result::WithResponse({}));
   }
 
-  void DelInterfaceAddress(uint64_t nicid, ::fuchsia::net::Subnet subnet,
-                           DelInterfaceAddressCallback callback) override {
+  void DelInterfaceAddressDeprecated(uint64_t nicid, ::fuchsia::net::Subnet subnet,
+                                     DelInterfaceAddressDeprecatedCallback callback) override {
     // If forced, return INTERNAL.
     if (del_interface_address_internal_error_) {
-      callback(fuchsia::net::stack::Stack_DelInterfaceAddress_Result::WithErr(
+      callback(fuchsia::net::stack::Stack_DelInterfaceAddressDeprecated_Result::WithErr(
           fuchsia::net::stack::Error::INTERNAL));
       return;
     }
@@ -289,7 +289,7 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
                            [&](const OwnedInterface& interface) { return nicid == interface.id; });
     if (it == interfaces_.end()) {
-      callback(fuchsia::net::stack::Stack_DelInterfaceAddress_Result::WithErr(
+      callback(fuchsia::net::stack::Stack_DelInterfaceAddressDeprecated_Result::WithErr(
           fuchsia::net::stack::Error::NOT_FOUND));
       return;
     }
@@ -298,12 +298,12 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
         it->ipv6addrs.begin(), it->ipv6addrs.end(),
         [&](const fuchsia::net::Subnet& ipv6) { return CompareIpAddress(subnet.addr, ipv6.addr); });
     if (addr_it == it->ipv6addrs.end()) {
-      callback(fuchsia::net::stack::Stack_DelInterfaceAddress_Result::WithErr(
+      callback(fuchsia::net::stack::Stack_DelInterfaceAddressDeprecated_Result::WithErr(
           fuchsia::net::stack::Error::NOT_FOUND));
       return;
     }
     it->ipv6addrs.erase(addr_it, it->ipv6addrs.end());
-    callback(fuchsia::net::stack::Stack_DelInterfaceAddress_Result::WithResponse({}));
+    callback(fuchsia::net::stack::Stack_DelInterfaceAddressDeprecated_Result::WithResponse({}));
   }
 
   // fuchsia::net::stack::Stack interface definitions.
@@ -352,8 +352,8 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
  public:
   // Mutators, accessors, and helpers for tests.
 
-  // Force DelInterfaceAddress to return an INTERNAL error.
-  void SetDelInterfaceAddressInternalError(bool enable) {
+  // Force DelInterfaceAddressDeprecated to return an INTERNAL error.
+  void SetDelInterfaceAddressDeprecatedInternalError(bool enable) {
     del_interface_address_internal_error_ = enable;
   }
 
@@ -662,7 +662,7 @@ TEST_F(WarmTest, RemoveAddressInternalError) {
   EXPECT_TRUE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 
   // Attempt to remove the address, but simulate an UNKNOWN_ERROR.
-  fake_net_stack().SetDelInterfaceAddressInternalError(true);
+  fake_net_stack().SetDelInterfaceAddressDeprecatedInternalError(true);
   result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
   EXPECT_EQ(result, kPlatformResultFailure);
 
@@ -672,7 +672,7 @@ TEST_F(WarmTest, RemoveAddressInternalError) {
   EXPECT_TRUE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 
   // Attempt to remove the address, after recovering from UNKNOWN_ERROR.
-  fake_net_stack().SetDelInterfaceAddressInternalError(false);
+  fake_net_stack().SetDelInterfaceAddressDeprecatedInternalError(false);
   result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
   EXPECT_EQ(result, kPlatformResultSuccess);
 

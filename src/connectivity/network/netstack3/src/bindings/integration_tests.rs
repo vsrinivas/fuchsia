@@ -707,7 +707,7 @@ async fn configure_endpoint_address(
 ) -> Result<(), Error> {
     // add address:
     let () = cli
-        .add_interface_address(if_id, &mut addr.into_fidl())
+        .add_interface_address_deprecated(if_id, &mut addr.into_fidl())
         .await
         .squash_result()
         .context("Add interface address")?;
@@ -997,7 +997,7 @@ async fn test_phy_admin_interface_state_interaction() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_add_del_interface_address() {
+async fn test_add_del_interface_address_deprecated() {
     let mut t = TestSetupBuilder::new()
         .add_endpoint()
         .add_stack(StackSetupBuilder::new().add_endpoint(1, None))
@@ -1016,7 +1016,7 @@ async fn test_add_del_interface_address() {
     {
         // The first IP address added should succeed.
         let () = stack
-            .add_interface_address(if_id, addr)
+            .add_interface_address_deprecated(if_id, addr)
             .await
             .squash_result()
             .expect("Add interface address should succeed");
@@ -1025,7 +1025,7 @@ async fn test_add_del_interface_address() {
 
         // Adding the same IP address again should fail with already exists.
         let err = stack
-            .add_interface_address(if_id, addr)
+            .add_interface_address_deprecated(if_id, addr)
             .await
             .expect("Add interface address FIDL call should succeed")
             .expect_err("Adding same address should fail");
@@ -1033,7 +1033,7 @@ async fn test_add_del_interface_address() {
 
         // Deleting an IP address that exists should succeed.
         let () = stack
-            .del_interface_address(if_id, addr)
+            .del_interface_address_deprecated(if_id, addr)
             .await
             .squash_result()
             .expect("Delete interface address succeeds");
@@ -1042,7 +1042,7 @@ async fn test_add_del_interface_address() {
 
         // Deleting an IP address that doesn't exist should fail with not found.
         let err = stack
-            .del_interface_address(if_id, addr)
+            .del_interface_address_deprecated(if_id, addr)
             .await
             .expect("Delete interface address FIDL call should succeed")
             .expect_err("Deleting non-existent address should fail");

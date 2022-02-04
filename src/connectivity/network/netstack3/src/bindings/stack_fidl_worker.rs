@@ -78,13 +78,13 @@ where
                             &mut worker.lock_worker().await.fidl_disable_interface(id)
                         );
                     }
-                    StackRequest::AddInterfaceAddress { id, addr, responder } => {
+                    StackRequest::AddInterfaceAddressDeprecated { id, addr, responder } => {
                         responder_send!(
                             responder,
                             &mut worker.lock_worker().await.fidl_add_interface_address(id, addr)
                         );
                     }
-                    StackRequest::DelInterfaceAddress { id, addr, responder } => {
+                    StackRequest::DelInterfaceAddressDeprecated { id, addr, responder } => {
                         responder_send!(
                             responder,
                             &mut worker.lock_worker().await.fidl_del_interface_address(id, addr)

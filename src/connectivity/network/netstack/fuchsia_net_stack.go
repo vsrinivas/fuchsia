@@ -88,8 +88,8 @@ func (ns *Netstack) disableInterface(id uint64) stack.StackDisableInterfaceResul
 	return result
 }
 
-func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAddInterfaceAddressResult {
-	var result stack.StackAddInterfaceAddressResult
+func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAddInterfaceAddressDeprecatedResult {
+	var result stack.StackAddInterfaceAddressDeprecatedResult
 
 	protocolAddr := fidlconv.ToTCPIPProtocolAddress(ifAddr)
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
@@ -99,7 +99,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAd
 
 	switch status := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr, true /* addRoute */); status {
 	case zx.ErrOk:
-		result.SetResponse(stack.StackAddInterfaceAddressResponse{})
+		result.SetResponse(stack.StackAddInterfaceAddressDeprecatedResponse{})
 		return result
 	case zx.ErrNotFound:
 		result.SetErr(stack.ErrorNotFound)
@@ -113,20 +113,20 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAd
 	}
 }
 
-func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackDelInterfaceAddressResult {
+func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackDelInterfaceAddressDeprecatedResult {
 	protocolAddr := fidlconv.ToTCPIPProtocolAddress(ifAddr)
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
-		return stack.StackDelInterfaceAddressResultWithErr(stack.ErrorInvalidArgs)
+		return stack.StackDelInterfaceAddressDeprecatedResultWithErr(stack.ErrorInvalidArgs)
 	}
 
 	switch status := ns.removeInterfaceAddress(tcpip.NICID(id), protocolAddr, true /* removeRoute */); status {
 	case zx.ErrOk:
-		return stack.StackDelInterfaceAddressResultWithResponse(stack.StackDelInterfaceAddressResponse{})
+		return stack.StackDelInterfaceAddressDeprecatedResultWithResponse(stack.StackDelInterfaceAddressDeprecatedResponse{})
 	case zx.ErrNotFound:
-		return stack.StackDelInterfaceAddressResultWithErr(stack.ErrorNotFound)
+		return stack.StackDelInterfaceAddressDeprecatedResultWithErr(stack.ErrorNotFound)
 	default:
 		_ = syslog.Errorf("(*Netstack).delInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, status)
-		return stack.StackDelInterfaceAddressResultWithErr(stack.ErrorInternal)
+		return stack.StackDelInterfaceAddressDeprecatedResultWithErr(stack.ErrorInternal)
 	}
 }
 
@@ -244,11 +244,11 @@ func (ni *stackImpl) DisableInterface(_ fidl.Context, id uint64) (stack.StackDis
 	return ni.ns.disableInterface(id), nil
 }
 
-func (ni *stackImpl) AddInterfaceAddress(_ fidl.Context, id uint64, addr net.Subnet) (stack.StackAddInterfaceAddressResult, error) {
+func (ni *stackImpl) AddInterfaceAddressDeprecated(_ fidl.Context, id uint64, addr net.Subnet) (stack.StackAddInterfaceAddressDeprecatedResult, error) {
 	return ni.ns.addInterfaceAddr(id, addr), nil
 }
 
-func (ni *stackImpl) DelInterfaceAddress(_ fidl.Context, id uint64, addr net.Subnet) (stack.StackDelInterfaceAddressResult, error) {
+func (ni *stackImpl) DelInterfaceAddressDeprecated(_ fidl.Context, id uint64, addr net.Subnet) (stack.StackDelInterfaceAddressDeprecatedResult, error) {
 	return ni.ns.delInterfaceAddr(id, addr), nil
 }
 
