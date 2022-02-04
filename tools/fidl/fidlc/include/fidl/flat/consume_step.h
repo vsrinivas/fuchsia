@@ -65,7 +65,7 @@ class ConsumeStep : public StepBase {
                        std::unique_ptr<Constant>* out_constant);
   void ConsumeLiteralConstant(raw::LiteralConstant* raw_constant,
                               std::unique_ptr<LiteralConstant>* out_constant);
-  bool ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
+  bool ConsumeParameterList(SourceSpan method_name, const std::shared_ptr<NamingContext>& context,
                             std::unique_ptr<raw::ParameterList> parameter_layout,
                             bool is_request_or_response,
                             std::unique_ptr<TypeConstructor>* out_payload);

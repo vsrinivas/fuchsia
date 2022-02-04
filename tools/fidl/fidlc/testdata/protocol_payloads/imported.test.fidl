@@ -1,0 +1,13 @@
+library test.protocolpayloads.imported;
+
+type ImportStructPayload = struct {
+    a int32;
+};
+
+protocol ComposedProtocol {
+    OneWayComposed(ImportStructPayload);
+    TwoWayComposed(ImportStructPayload) -> (ImportStructPayload);
+    TwoWayComposedWithError(ImportStructPayload) -> (ImportStructPayload) error uint32;
+    -> OnComposed(ImportStructPayload);
+    -> OnComposedWithError(ImportStructPayload) error uint32;
+};

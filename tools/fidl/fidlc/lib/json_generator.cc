@@ -910,11 +910,8 @@ void JSONGenerator::GenerateExternalDeclarationsMember(const flat::Library* libr
 
 namespace {
 
-// Return all externall defined structs used by method payloads defined in this library. Such
-// structs may enter this library by being used as the payload definitions for composed
-// methods
-// TODO(fxbug.dev/88344): Also add support for non-composed named payload definitions, like:
-//  Foo(external.Bar) -> (external.Baz);
+// Return all externally defined structs used by method payloads defined in this library. Such
+// structs may enter this library by being used as the payload definitions for composed methods.
 std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
   // Use the comparator below to ensure deterministic output when this set is converted into a
   // vector at the end of this function.
@@ -940,15 +937,14 @@ std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
 
         // Make sure this is actually an externally defined struct before proceeding.
-        if (id->name.library() == library)
-          continue;
+        if (id->name.library() != library) {
+          // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+          auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+          external_structs.insert(as_struct);
+        }
 
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        external_structs.insert(as_struct);
-
-        // This struct is actually wrapping an error union, so export the success variant struct
-        // as well.
+        // This struct is actually wrapping an error union, so check to see if the success variant
+        // struct should be exported as well.
         if (method->has_error) {
           auto response_struct = static_cast<const flat::Struct*>(id->type_decl);
           const auto* result_union_type =
@@ -959,12 +955,16 @@ std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
           const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
               result_union->members[0].maybe_used->type_ctor->type);
 
-          // TODO(fxbug.dev/74683): Assumption that this is a struct, whereas this
+          // TODO(fxbug.dev/88343): Assumption that this is a struct, whereas this
           // will be relaxed to also allow a union or table.
           assert(success_variant_type->type_decl->kind == flat::Decl::Kind::kStruct);
           const auto* success_variant_struct =
               static_cast<const flat::Struct*>(success_variant_type->type_decl);
-          external_structs.insert(success_variant_struct);
+
+          // Make sure this is actually an externally defined struct before proceeding.
+          if (success_variant_type->name.library() != library) {
+            external_structs.insert(success_variant_struct);
+          }
         }
       }
     }

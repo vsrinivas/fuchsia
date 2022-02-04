@@ -151,9 +151,6 @@ constexpr ErrorDef ErrUnknownAttributeOnStrictEnumMember(
 constexpr ErrorDef ErrUnknownAttributeOnMultipleEnumMembers(
     "the @unknown attribute can be only applied to one enum member.");
 constexpr ErrorDef ErrComposingNonProtocol("This declaration is not a protocol");
-constexpr ErrorDef ErrNamedParameterListTypesNotYetSupported(
-    "using named types in this position is not yet allowed, use `struct { ... }` instead "
-    "(http://fxbug.dev/76349)");
 constexpr ErrorDef<const flat::Decl *> ErrInvalidParameterListType(
     "'{}' cannot be used as a parameter list");
 constexpr ErrorDef<const flat::Decl *> ErrNotYetSupportedParameterListType(

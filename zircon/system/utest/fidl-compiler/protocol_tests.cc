@@ -533,7 +533,7 @@ protocol MyProtocol {
 // TODO(fxbug.dev/76349): using empty structs as request/response payloads is
 //  only supported in the new syntax. Until this is supported, we throw a user
 //  facing error instead.
-TEST(NewSyntaxTests, BadProtocolMethodEmptyRequestStruct) {
+TEST(NewSyntaxTests, BadMethodEmptyRequestStruct) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -544,46 +544,141 @@ protocol MyProtocol {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
 }
 
-// TODO(fxbug.dev/76349): Support named types for requests.
-TEST(ProtocolTests, BadProtocolMethodNamedTypeRequest) {
+TEST(ProtocolTests, GoodMethodNamedTypeRequest) {
   TestLibrary library(R"FIDL(
 library example;
 
-type MyStruct = struct {};
+type MyStruct = struct{
+  a bool;
+};
 
 protocol MyProtocol {
-    MyMethod(MyStruct) -> ();
+    MyMethodOneWay(MyStruct);
+    MyMethodTwoWay(MyStruct) -> ();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNamedParameterListTypesNotYetSupported);
+  ASSERT_COMPILED(library);
 }
 
-// TODO(fxbug.dev/76349): Support named types for requests.
-TEST(ProtocolTests, BadProtocolMethodNamedTypeResponse) {
+TEST(ProtocolTests, GoodMethodNamedTypeResponse) {
   TestLibrary library(R"FIDL(
 library example;
 
-type MyStruct = struct {};
+type MyStruct = struct{
+  a bool;
+};
 
 protocol MyProtocol {
-    MyMethod() -> (MyStruct);
+  MyMethod(MyStruct) -> (MyStruct);
+    -> OnMyEvent(MyStruct);
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNamedParameterListTypesNotYetSupported);
+  ASSERT_COMPILED(library);
 }
 
-// TODO(fxbug.dev/76349): Support named types for requests.
-TEST(ProtocolTests, BadProtocolMethodNamedTypeResultPayload) {
+TEST(ProtocolTests, GoodMethodNamedTypeResultPayload) {
   TestLibrary library(R"FIDL(
 library example;
 
-type MyStruct = struct {};
+type MyStruct = struct{
+  a bool;
+};
 
 protocol MyProtocol {
-    MyMethod() -> (MyStruct) error uint32;
+  MyMethod(MyStruct) -> (MyStruct) error uint32;
+  -> OnMyEvent(MyStruct) error uint32;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNamedParameterListTypesNotYetSupported);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, BadMethodNamedInvalidHandle) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type obj_type = strict enum : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+type rights = strict bits : uint32 {
+    TRANSFER = 1;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        subtype obj_type;
+        rights rights;
+    };
+};
+
+protocol MyProtocol {
+    MyMethod(handle);
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "handle");
+}
+
+TEST(ProtocolTests, BadMethodNamedInvalidAlias) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type obj_type = strict enum : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+type rights = strict bits : uint32 {
+    TRANSFER = 1;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        subtype obj_type;
+        rights rights;
+    };
+};
+
+alias MyPrim = bool;
+alias MyHandle = handle;
+
+protocol MyProtocol {
+    MyMethod(MyPrim) -> (MyHandle);
+};
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrInvalidParameterListType,
+                                      fidl::ErrInvalidParameterListType);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyPrim");
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "MyHandle");
+}
+
+TEST(ProtocolTests, BadMethodNamedInvalidKind) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyOtherProtocol {
+  MyOtherMethod();
+};
+
+service MyService {
+  my_other_protocol client_end:MyOtherProtocol;
+};
+
+protocol MyProtocol {
+    MyMethod(MyOtherProtocol) -> (MyService);
+};
+)FIDL");
+  TestLibrary& library_ref = (library);
+  ASSERT_FALSE(library_ref.Compile());
+
+  ASSERT_ERR(library.errors()[0], fidl::ErrCannotUseProtocol);
+  ASSERT_ERR(library.errors()[1], fidl::ErrInvalidParameterListType);
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "MyOtherProtocol");
+
+  ASSERT_ERR(library.errors()[2], fidl::ErrCannotUseService);
+  ASSERT_ERR(library.errors()[3], fidl::ErrInvalidParameterListType);
+  ASSERT_SUBSTR(library.errors()[3]->msg.c_str(), "MyService");
 }
 
 }  // namespace

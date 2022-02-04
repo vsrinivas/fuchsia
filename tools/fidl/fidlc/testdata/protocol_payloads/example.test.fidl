@@ -1,0 +1,56 @@
+library test.protocolpayloads;
+
+using test.protocolpayloads.imported as imp;
+
+type LocalStructPayload = struct {
+    a uint32;
+    b uint32;
+};
+
+protocol MainProtocol {
+    // Tests composition of protocols with named payloads defined in the imported library.
+    compose imp.ComposedProtocol;
+
+    // Tests named payloads defined locally.
+    OneWayLocal(LocalStructPayload);
+    TwoWayLocal(LocalStructPayload) -> (LocalStructPayload);
+    TwoWayLocalWithError(LocalStructPayload) -> (LocalStructPayload) error uint32;
+    -> OnLocal(LocalStructPayload);
+    -> OnLocalWithError(LocalStructPayload) error uint32;
+
+    // Tests named payloads imported from another library.
+    OneWayImport(imp.ImportStructPayload);
+    TwoWayImport(imp.ImportStructPayload) -> (imp.ImportStructPayload);
+    TwoWayImportWithError(imp.ImportStructPayload) -> (imp.ImportStructPayload) error uint32;
+    -> OnImport(imp.ImportStructPayload);
+    -> OnImportWithError(imp.ImportStructPayload) error uint32;
+
+    // These methods are included so that we can have an anonymous reference point in generated
+    // bindings.
+    OneWayAnon(struct {
+        a uint32;
+        b uint32;
+    });
+    TwoWayAnon(struct {
+        a uint32;
+        b uint32;
+    }) -> (struct {
+        a uint32;
+        b uint32;
+    });
+    TwoWayAnonWithError(struct {
+        a uint32;
+        b uint32;
+    }) -> (struct {
+        a uint32;
+        b uint32;
+    }) error uint32;
+    -> OnAnon(struct {
+        a uint32;
+        b uint32;
+    });
+    -> OnAnonWithError(struct {
+        a uint32;
+        b uint32;
+    }) error uint32;
+};

@@ -496,6 +496,8 @@ void ConsumeStep::ConsumeProtocolDeclaration(
 
       std::shared_ptr<NamingContext> result_context, success_variant_context, err_variant_context;
       if (has_error) {
+        // TODO(fxbug.dev/88343): update this comment once top-level union support is added, and
+        //  the outer-most struct below is no longer used.
         // The error syntax for protocol P and method M desugars to the following type:
         //
         // // the "response"
@@ -564,8 +566,8 @@ void ConsumeStep::ConsumeProtocolDeclaration(
                                           std::move(composed_protocols), std::move(methods)));
 }
 
-bool ConsumeStep::ConsumeParameterList(SourceSpan method_name,
-                                       std::shared_ptr<NamingContext> context,
+bool ConsumeStep::ConsumeParameterList(const SourceSpan method_name,
+                                       const std::shared_ptr<NamingContext>& context,
                                        std::unique_ptr<raw::ParameterList> parameter_layout,
                                        bool is_request_or_response,
                                        std::unique_ptr<TypeConstructor>* out_payload) {
@@ -581,38 +583,11 @@ bool ConsumeStep::ConsumeParameterList(SourceSpan method_name,
     return true;
   }
 
-  SourceSpan raw_type_ctor_span = parameter_layout->type_ctor->span();
   std::unique_ptr<TypeConstructor> type_ctor;
   Decl* inline_decl = nullptr;
   if (!ConsumeTypeConstructor(std::move(parameter_layout->type_ctor), context,
                               /*raw_attribute_list=*/nullptr, &type_ctor, &inline_decl))
     return false;
-
-  if (!inline_decl) {
-    // TODO(fxbug.dev/76349): Support named types here.
-    return Fail(ErrNamedParameterListTypesNotYetSupported, raw_type_ctor_span);
-  }
-
-  switch (inline_decl->kind) {
-    case Decl::Kind::kStruct: {
-      auto struct_decl = static_cast<Struct*>(inline_decl);
-      if (is_request_or_response && struct_decl->members.empty()) {
-        return Fail(ErrEmptyPayloadStructs, method_name, method_name.data());
-      }
-      break;
-    }
-    case Decl::Kind::kBits:
-    case Decl::Kind::kEnum: {
-      return Fail(ErrInvalidParameterListType, method_name, inline_decl);
-    }
-    case Decl::Kind::kTable:
-    case Decl::Kind::kUnion: {
-      return Fail(ErrNotYetSupportedParameterListType, method_name, inline_decl);
-    }
-    default: {
-      assert(false && "unexpected decl kind");
-    }
-  }
 
   *out_payload = std::move(type_ctor);
   return true;

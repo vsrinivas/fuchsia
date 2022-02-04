@@ -1034,6 +1034,35 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
 
   CheckScopes(protocol_declaration, CheckScopes);
 
+  // Ensure that the method's type constructors for request/response payloads actually exist, and
+  // are the right kind of layout.
+  auto CheckPayloadDeclKind = [this](const SourceSpan& method_name, const Decl* decl,
+                                     bool empty_payload_allowed) -> void {
+    switch (decl->kind) {
+      case Decl::Kind::kStruct: {
+        auto struct_decl = static_cast<const Struct*>(decl);
+        if (!empty_payload_allowed && struct_decl->members.empty()) {
+          Fail(ErrEmptyPayloadStructs, method_name, method_name.data());
+        }
+        break;
+      }
+      case Decl::Kind::kBits:
+      case Decl::Kind::kEnum: {
+        Fail(ErrInvalidParameterListType, method_name, decl);
+        break;
+      }
+      case Decl::Kind::kTable:
+      case Decl::Kind::kUnion: {
+        Fail(ErrNotYetSupportedParameterListType, method_name, decl);
+        break;
+      }
+      default: {
+        Fail(ErrInvalidParameterListType, method_name, decl);
+        break;
+      }
+    }
+  };
+
   // Ensure that structs used as message payloads do not have default values.
   auto CheckNoDefaultMembers = [this](const Decl* decl) -> void {
     switch (decl->kind) {
@@ -1065,6 +1094,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
       }
       CompileDecl(decl);
       CheckNoDefaultMembers(decl);
+      CheckPayloadDeclKind(method.name, decl, false);
     }
     if (method.maybe_response != nullptr) {
       const Name name = method.maybe_response->name;
@@ -1090,10 +1120,13 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
         const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
             result_union->members[0].maybe_used->type_ctor->type);
 
-        assert(success_variant_type != nullptr);
-        CheckNoDefaultMembers(success_variant_type->type_decl);
+        if (success_variant_type != nullptr) {
+          CheckNoDefaultMembers(success_variant_type->type_decl);
+          CheckPayloadDeclKind(method.name, success_variant_type->type_decl, true);
+        }
       } else {
         CheckNoDefaultMembers(decl);
+        CheckPayloadDeclKind(method.name, decl, false);
       }
     }
   }

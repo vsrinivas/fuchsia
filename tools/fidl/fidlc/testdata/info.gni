@@ -306,6 +306,23 @@ fidl_testdata_info = [
     ]
   },
   {
+    name = "protocol_payloads"
+    target =
+        "//tools/fidl/fidlc/testdata/protocol_payloads:test.protocolpayloads"
+
+    # TODO(fxbug.dev/88344): No backend support yet
+    denylist = [
+      "fidldoc",
+      "fidlgen_dart",
+      "fidlgen_go",
+      "fidlgen_hlcpp",
+      "fidlgen_libfuzzer",
+      "fidlgen_llcpp",
+      "fidlgen_rust",
+      "fidlgen_syzkaller",
+    ]
+  },
+  {
     name = "protocol_request"
     target = "//tools/fidl/fidlc/testdata:test.protocolrequest"
     build_denylist = [

@@ -54,6 +54,8 @@ padding.json.golden
 padding.tables.c.golden
 placement_of_attributes.json.golden
 placement_of_attributes.tables.c.golden
+protocol_payloads.json.golden
+protocol_payloads.tables.c.golden
 protocol_request.json.golden
 protocol_request.tables.c.golden
 protocols.json.golden
