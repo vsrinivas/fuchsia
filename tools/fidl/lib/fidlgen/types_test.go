@@ -303,11 +303,16 @@ func TestCanUnmarshalSignedEnums(t *testing.T) {
 		t.Fatalf("unexpected number of enum declarations")
 	}
 
+	// RawUnknownValue has an unexported type; reflect into it to compare.
+	opt := cmp.Exporter(func(t reflect.Type) bool {
+		return t == reflect.TypeOf(fidlgen.Enum{}.RawUnknownValue)
+	})
+
 	for i, actual := range root.Enums {
 		// Sanitize Location and NamindContext values, as they're not relevant here.
 		actual.Layout.Decl.Location = fidlgen.Location{}
 		actual.Layout.NamingContext = nil
-		if !reflect.DeepEqual(actual, expected[i]) {
+		if diff := cmp.Diff(actual, expected[i], opt); len(diff) > 0 {
 			t.Errorf("\nexpected: %#v\nactual: %#v\n", expected[i], actual)
 		}
 	}
@@ -444,7 +449,7 @@ func TestCanUnmarshalBits(t *testing.T) {
 		// Sanitize Location and NamindContext values, as they're not relevant here.
 		actual.Layout.Decl.Location = fidlgen.Location{}
 		actual.Layout.NamingContext = nil
-		if !reflect.DeepEqual(actual, expected[i]) {
+		if diff := cmp.Diff(actual, expected[i]); len(diff) > 0 {
 			t.Errorf("\nexpected: %#v\nactual: %#v\n", expected[i], actual)
 		}
 	}
@@ -500,7 +505,7 @@ func TestCanUnmarshalLocation(t *testing.T) {
 		actual.Location.Filename = ""
 		actual.Value = fidlgen.Constant{}
 		actual.Type = fidlgen.Type{}
-		if !reflect.DeepEqual(actual, expected[i]) {
+		if diff := cmp.Diff(actual, expected[i]); len(diff) > 0 {
 			t.Errorf("\nexpected: %#v\nactual: %#v\n", expected[i], actual)
 		}
 	}
@@ -605,7 +610,7 @@ func TestCanUnmarshalTypeAliases(t *testing.T) {
 
 	for i, actual := range root.TypeAliases {
 		actual.Decl = fidlgen.Decl{} // Does not matter for the purpose of this comparison.
-		if !reflect.DeepEqual(actual, expected[i]) {
+		if diff := cmp.Diff(actual, expected[i]); len(diff) > 0 {
 			t.Errorf("\nexpected: %#v\nactual: %#v", expected[i], actual)
 		}
 	}
