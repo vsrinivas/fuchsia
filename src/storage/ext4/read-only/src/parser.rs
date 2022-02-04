@@ -36,9 +36,9 @@ use {
     crate::{
         readers::Reader,
         structs::{
-            BlockGroupDesc32, DirEntry2, EntryType, Extent, ExtentHeader, ExtentIndex,
-            ExtentTreeNode, INode, InvalidAddressErrorType, ParseToStruct, ParsingError,
-            SuperBlock, FIRST_BG_PADDING, MIN_EXT4_SIZE, ROOT_INODE_NUM,
+            BlockGroupDesc32, DirEntry2, DirEntryHeader, EntryType, Extent, ExtentHeader,
+            ExtentIndex, ExtentTreeNode, INode, InvalidAddressErrorType, ParseToStruct,
+            ParsingError, SuperBlock, FIRST_BG_PADDING, MIN_EXT4_SIZE, ROOT_INODE_NUM,
         },
     },
     once_cell::sync::OnceCell,
@@ -234,20 +234,31 @@ impl<T: 'static + Reader> Parser<T> {
         // remaining space of the block.
         for block_index in 0..extent.e_len.get() {
             let mut dir_entry_offset = 0u64;
-            while (dir_entry_offset + size_of::<DirEntry2>() as u64) < block_size {
+            while (dir_entry_offset + size_of::<DirEntryHeader>() as u64) < block_size {
                 let offset =
                     dir_entry_offset + target_block_offset + (block_index as u64 * block_size);
 
-                let de = DirEntry2::from_reader_with_offset(
+                let de_header = DirEntryHeader::from_reader_with_offset(
                     self.reader.clone(),
                     offset,
                     ParsingError::InvalidDirEntry2(offset),
+                )?;
+                let mut de = DirEntry2 {
+                    e2d_ino: de_header.e2d_ino,
+                    e2d_reclen: de_header.e2d_reclen,
+                    e2d_namlen: de_header.e2d_namlen,
+                    e2d_type: de_header.e2d_type,
+                    e2d_name: [0u8; 255],
+                };
+                self.reader.read(
+                    offset + size_of::<DirEntryHeader>() as u64,
+                    &mut de.e2d_name[..de.e2d_namlen as usize],
                 )?;
 
                 dir_entry_offset += de.e2d_reclen.get() as u64;
 
                 if de.e2d_ino.get() != 0 {
-                    entries.push(de);
+                    entries.push(Arc::new(de));
                 }
             }
         }
@@ -515,8 +526,8 @@ impl<T: 'static + Reader> Parser<T> {
 mod tests {
     use {
         crate::{parser::Parser, readers::VecReader, structs::EntryType},
-        sha2::{Digest, Sha256},
         maplit::hashmap,
+        sha2::{Digest, Sha256},
         std::{
             collections::{HashMap, HashSet},
             fs,
@@ -650,6 +661,17 @@ mod tests {
         },
         vec!["inner", "lost+found"];
         "fs with a single directory")]
+    #[test_case(
+        "/pkg/data/longdir.img",
+        {
+            let mut hash = HashMap::new();
+            for i in 1...1000 {
+                hash.insert(i.to_string(), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_string());
+            }
+            hash
+        },
+        vec!["lost+found"];
+        "fs with many entries in a directory")]
     fn check_data(
         ext4_path: &str,
         mut file_hashes: HashMap<String, String>,

@@ -50,6 +50,7 @@ resource("test-images") {
   sources = [
     "test_files/1file.img",
     "test_files/extents.img",
+    "test_files/longdir.img",
     "test_files/nest.img",
   ]
   outputs = [ "data/{{source_file_part}}" ]

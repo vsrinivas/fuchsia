@@ -105,7 +105,7 @@ pub struct Extent {
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
 assert_eq_size!(Extent, [u8; 12]);
 
-#[derive(FromBytes, Unaligned, std::fmt::Debug)]
+#[derive(std::fmt::Debug)]
 #[repr(C)]
 pub struct DirEntry2 {
     /// INode number of entry
@@ -116,15 +116,25 @@ pub struct DirEntry2 {
     pub e2d_namlen: u8,
     /// File type of this entry.
     pub e2d_type: u8,
-
-    // TODO(vfcc): Actual size varies by e2d_reclen.
-    // For now, we will read the max length and ignore the trailing bytes.
     /// Name of the entry.
     pub e2d_name: [u8; 255],
 }
+
+#[derive(FromBytes, Unaligned, std::fmt::Debug)]
+#[repr(C)]
+pub struct DirEntryHeader {
+    /// INode number of entry
+    pub e2d_ino: LEU32,
+    /// Length of this record.
+    pub e2d_reclen: LEU16,
+    /// Length of string in `e2d_name`.
+    pub e2d_namlen: u8,
+    /// File type of this entry.
+    pub e2d_type: u8,
+}
 // Make sure our struct's size matches the Ext4 spec.
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
-assert_eq_size!(DirEntry2, [u8; 263]);
+assert_eq_size!(DirEntryHeader, [u8; 8]);
 
 #[derive(FromBytes, Unaligned)]
 #[repr(C)]
