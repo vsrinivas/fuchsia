@@ -32,6 +32,7 @@ mod thermal_limiter;
 mod thermal_load_driver;
 mod thermal_policy;
 mod thermal_shutdown;
+mod thermal_state_handler;
 
 #[cfg(test)]
 mod test;

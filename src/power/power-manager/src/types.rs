@@ -78,6 +78,9 @@ define_unit!(Milliseconds, i64);
 // thermal_limiter crate.
 define_unit!(ThermalLoad, u32);
 
+// An unsigned integer that a thermal client has defined in their thermal configuration.
+define_unit!(ThermalState, u32);
+
 // Normalized performance units. The normalization is chosen such that 1 NormPerf is equivalent to a
 // performance scale of 1.0 with respect to the Fuchsia kernel scheduler. In particular, this means
 // that the wrapped f64 is appropriate for conversion to zx_cpu_performance_scale_t.

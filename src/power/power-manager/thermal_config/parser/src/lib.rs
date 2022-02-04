@@ -93,8 +93,10 @@ impl ThermalConfig {
     /// Creates a new, empty ThermalConfig instance.
     ///
     /// An empty ThermalConfig instance corresponds to the case where no client has specified a
-    /// thermal trip point configuration, which may be useful as a default in the event of a missing
-    /// or invalid JSON configuration file.
+    /// thermal trip point configuration.
+    ///
+    /// Note: this is only intended for use in tests. However, it isn't marked as cfg(test) so that
+    /// code outside of the library can use it in their tests as well.
     pub fn new() -> Self {
         Self { clients: HashMap::new() }
     }
@@ -138,6 +140,10 @@ impl ThermalConfig {
     /// Gets the ClientConfig instance for the specified client.
     pub fn get_client_config(&self, client: &String) -> Option<&ClientConfig> {
         self.clients.get(client)
+    }
+
+    pub fn into_iter(self) -> impl Iterator<Item = (String, ClientConfig)> {
+        self.clients.into_iter()
     }
 }
 
@@ -246,8 +252,8 @@ impl ClientConfig {
     }
 
     /// Gets the thermal states that make up this client configuration.
-    pub fn get_thermal_states(&self) -> &Vec<StateConfig> {
-        &self.0
+    pub fn into_thermal_states(self) -> Vec<StateConfig> {
+        self.0
     }
 }
 

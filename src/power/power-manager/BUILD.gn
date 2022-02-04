@@ -34,6 +34,7 @@ rustc_binary("bin") {
 
   deps = [
     ":power_manager_metrics_rustlib",
+    "thermal_config/parser",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
@@ -116,6 +117,7 @@ rustc_binary("bin") {
     "src/thermal_load_driver.rs",
     "src/thermal_policy.rs",
     "src/thermal_shutdown.rs",
+    "src/thermal_state_handler.rs",
     "src/types.rs",
     "src/utils.rs",
   ]
