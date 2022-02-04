@@ -113,6 +113,46 @@
       "metric_type": "Occurrence",
       "event_codes": [3, 4],
       "use_legacy_cobalt": true
+    },
+    {
+        "event_codes": [],
+        "metric_id": 2006,
+        "metric_type": "IntHistogram",
+        "selector": "bootstrap/driver_manager:root/nand:read_ecc_bit_flips"
+    },
+    {
+        "event_codes": [],
+        "metric_id": 2007,
+        "metric_type": "IntHistogram",
+        "selector": "bootstrap/driver_manager:root/nand:read_attempts"
+    },
+    {
+        "event_codes": [],
+        "metric_id": 2008,
+        "metric_type": "Occurrence",
+        "selector": "bootstrap/driver_manager:root/nand:read_internal_failure"
+    },
+    {
+        "event_codes": [],
+        "metric_id": 2009,
+        "metric_type": "Occurrence",
+        "selector": "bootstrap/driver_manager:root/nand:read_failure"
+    },
+    {
+      "event_codes": [
+        1
+      ],
+      "metric_id": 2010,
+      "metric_type": "Integer",
+      "selector": "bootstrap/driver_manager:root/ftl:nand.initial_bad_blocks"
+    },
+    {
+      "event_codes": [
+        2
+      ],
+      "metric_id": 2010,
+      "metric_type": "Integer",
+      "selector": "bootstrap/driver_manager:root/ftl:nand.running_bad_blocks"
     }
   ]
 }
