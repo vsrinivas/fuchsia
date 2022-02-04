@@ -51,6 +51,40 @@ impl ops::Sub<i32> for SeqNum {
     }
 }
 
+impl ops::Add<u32> for SeqNum {
+    type Output = SeqNum;
+
+    fn add(self, rhs: u32) -> Self::Output {
+        // Proof that the following `as` coercion is sound:
+        // Rust uses 2's complement for signed integers [1], so a signed 32 bit
+        // integer (rhs as i32) with bit pattern b_0....b_31 has value
+        //     -b_0 * 2^31 + b_1 * 2^30 + .. + b_i * 2^(31-i) + b_0
+        // Compared to its unsigned interpretation (rhs):
+        //     b_0 * 2^31 + b_1 * 2^30 + .. + b_i * 2^(31-i) + b_0
+        // The difference is 2 * b_0 * 2^31 = b_0 * 2^32. Because the sequence
+        // number space wraps around at 2^32, the difference between the two
+        // interpretations is:
+        //     (b_0 * 2^32) mod 2^32 == 0.
+        // [1]: https://doc.rust-lang.org/reference/types/numeric.html
+        self + (rhs as i32)
+    }
+}
+
+impl ops::Add<usize> for SeqNum {
+    type Output = SeqNum;
+
+    fn add(self, rhs: usize) -> Self::Output {
+        // The following `as` coercion is sound because:
+        // 1. if `u32` is wider than `usize`, the unsigned extension will
+        //    result in the same number.
+        // 2. if `usize` is wider than `u32`, then `rhs` can be written as
+        //    `A * 2 ^ 32 + B`. Because of the wrapping nature of sequnce
+        //    numbers, the effect of adding `rhs` is the same as adding `B`
+        //    which is the number after the truncation, i.e., `rhs as u32`.
+        self + (rhs as u32)
+    }
+}
+
 impl ops::Sub for SeqNum {
     type Output = i32;
 
@@ -88,13 +122,14 @@ impl SeqNum {
     ///
     /// Please refer to [`SeqNum`] for the defined order.
     pub(crate) fn after(self, other: SeqNum) -> bool {
-        other.before(self)
+        self - other > 0
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::SeqNum;
+    use crate::transport::tcp::segment::MAX_PAYLOAD_AND_CONTROL_LEN;
     use proptest::{
         arbitrary::any,
         proptest,
@@ -102,9 +137,6 @@ mod tests {
         test_runner::Config,
     };
     use proptest_support::failed_seeds;
-
-    // Per https://tools.ietf.org/html/rfc7323#section-2.3: max window < 2^30
-    const MAX_TCP_WINDOW: i32 = i32::pow(2, 30) - 1;
 
     fn arb_seqnum() -> impl Strategy<Value = SeqNum> {
         any::<u32>().prop_map(SeqNum::from)
@@ -114,9 +146,9 @@ mod tests {
     // This triple is used to verify that transitivity holds.
     fn arb_seqnum_trans_tripple() -> impl Strategy<Value = (SeqNum, SeqNum, SeqNum)> {
         arb_seqnum().prop_flat_map(|a| {
-            (1..=MAX_TCP_WINDOW).prop_flat_map(move |diff_a_b| {
+            (1..=MAX_PAYLOAD_AND_CONTROL_LEN).prop_flat_map(move |diff_a_b| {
                 let b = a + diff_a_b;
-                (1..=MAX_TCP_WINDOW - diff_a_b).prop_flat_map(move |diff_b_c| {
+                (1..=MAX_PAYLOAD_AND_CONTROL_LEN - diff_a_b).prop_flat_map(move |diff_b_c| {
                     let c = b + diff_b_c;
                     (Just(a), Just(b), Just(c))
                 })
@@ -151,22 +183,22 @@ mod tests {
         }
 
         #[test]
-        fn seqnum_add_positive_greater(a in arb_seqnum(), b in 1..MAX_TCP_WINDOW) {
+        fn seqnum_add_positive_greater(a in arb_seqnum(), b in 1..=i32::MAX) {
             assert!(a.before(a + b))
         }
 
         #[test]
-        fn seqnum_add_negative_smaller(a in arb_seqnum(), b in -MAX_TCP_WINDOW..-1) {
+        fn seqnum_add_negative_smaller(a in arb_seqnum(), b in i32::MIN..=-1) {
             assert!(a.after(a + b))
         }
 
         #[test]
-        fn seqnum_sub_positive_smaller(a in arb_seqnum(), b in 1..MAX_TCP_WINDOW) {
+        fn seqnum_sub_positive_smaller(a in arb_seqnum(), b in 1..=i32::MAX) {
             assert!(a.after(a - b))
         }
 
         #[test]
-        fn seqnum_sub_negative_greater(a in arb_seqnum(), b in -MAX_TCP_WINDOW..-1) {
+        fn seqnum_sub_negative_greater(a in arb_seqnum(), b in i32::MIN..=-1) {
             assert!(a.before(a - b))
         }
 
@@ -178,6 +210,12 @@ mod tests {
         #[test]
         fn seqnum_before_after_inverse(a in arb_seqnum(), b in arb_seqnum()) {
             assert_eq!(a.after(b), b.before(a))
+        }
+
+        #[test]
+        fn seqnum_wraps_around_at_max_length(a in arb_seqnum()) {
+            assert!(a.before(a + MAX_PAYLOAD_AND_CONTROL_LEN));
+            assert!(a.after(a + MAX_PAYLOAD_AND_CONTROL_LEN + 1));
         }
     }
 }

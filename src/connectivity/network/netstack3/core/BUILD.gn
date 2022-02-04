@@ -44,7 +44,9 @@ lib_sources = [
   "src/testutil.rs",
   "src/transport/mod.rs",
   "src/transport/tcp/mod.rs",
+  "src/transport/tcp/segment.rs",
   "src/transport/tcp/seqnum.rs",
+  "src/transport/tcp/state.rs",
   "src/transport/udp.rs",
 ]
 
