@@ -61,3 +61,14 @@ func ObjectAttrs(ctx context.Context, obj *storage.ObjectHandle) (*storage.Objec
 	})
 	return objAttrs, err
 }
+
+// NewObjectReader gets a reader for the given object, with retries.
+func NewObjectReader(ctx context.Context, obj *storage.ObjectHandle) (*storage.Reader, error) {
+	var reader *storage.Reader
+	err := Retry(ctx, func() error {
+		var err error
+		reader, err = obj.NewReader(ctx)
+		return err
+	})
+	return reader, err
+}

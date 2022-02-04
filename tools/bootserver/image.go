@@ -121,9 +121,9 @@ func getUncompressedReader(obj *storage.ObjectHandle) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("failed to get attrs for %q from GCS: %v", obj.ObjectName(), err)
 	}
 	if objAttrs.ContentEncoding != "gzip" {
-		return obj.NewReader(ctx)
+		return gcsutil.NewObjectReader(ctx, obj)
 	}
-	r, err := obj.ReadCompressed(true).NewReader(ctx)
+	r, err := gcsutil.NewObjectReader(ctx, obj.ReadCompressed(true))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %q from GCS: %v", obj.ObjectName(), err)
 	}
