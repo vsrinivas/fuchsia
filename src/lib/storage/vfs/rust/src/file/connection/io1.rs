@@ -17,9 +17,9 @@ use {
     anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
-        NodeMarker, SeekOrigin, VmoFlags, INO_UNKNOWN, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        FileMarker, FileRequest, FileRequestStream, NodeAttributes, NodeMarker, SeekOrigin,
+        VmoFlags, INO_UNKNOWN, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::{
         self as zx,
@@ -137,6 +137,18 @@ impl<T: 'static + File> FileConnection<T> {
             }
         }
 
+        let info = if flags & OPEN_FLAG_DESCRIBE != 0 {
+            match file.describe(flags) {
+                Ok(info) => Some(info),
+                Err(status) => {
+                    send_on_open_with_error(flags, server_end, status);
+                    return;
+                }
+            }
+        } else {
+            None
+        };
+
         let (requests, control_handle) =
             match ServerEnd::<FileMarker>::new(server_end.into_channel())
                 .into_stream_and_control_handle()
@@ -149,8 +161,7 @@ impl<T: 'static + File> FileConnection<T> {
                 }
             };
 
-        if flags & OPEN_FLAG_DESCRIBE != 0 {
-            let mut info = NodeInfo::File(FileObject { event: None, stream: None });
+        if let Some(mut info) = info {
             match control_handle.send_on_open_(zx::Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return,
@@ -225,8 +236,7 @@ impl<T: 'static + File> FileConnection<T> {
             }
             FileRequest::Describe { responder } => {
                 fuchsia_trace::duration!("storage", "File::Describe");
-                let mut info = NodeInfo::File(FileObject { event: None, stream: None });
-                responder.send(&mut info)?;
+                responder.send(&mut self.file.describe(self.flags)?)?;
             }
             FileRequest::Sync { responder } => {
                 fuchsia_trace::duration!("storage", "File::Sync");
@@ -582,8 +592,8 @@ mod tests {
         assert_matches::assert_matches,
         async_trait::async_trait,
         fidl_fuchsia_io::{
-            FileEvent, FileInfo, FileProxy, NodeInfo, Representation, CLONE_FLAG_SAME_RIGHTS,
-            MODE_TYPE_FILE, NODE_ATTRIBUTE_FLAG_CREATION_TIME,
+            FileEvent, FileInfo, FileObject, FileProxy, NodeInfo, Representation,
+            CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_FILE, NODE_ATTRIBUTE_FLAG_CREATION_TIME,
             NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME, VMO_FLAG_EXEC, VMO_FLAG_READ,
         },
         fuchsia_async as fasync, fuchsia_zircon as zx,

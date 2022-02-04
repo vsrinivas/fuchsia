@@ -6,7 +6,7 @@
 use {
     crate::directory::entry::DirectoryEntry,
     async_trait::async_trait,
-    fidl_fuchsia_io::{FilesystemInfo, NodeAttributes},
+    fidl_fuchsia_io::{FileObject, FilesystemInfo, NodeAttributes, NodeInfo},
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon::Status,
 };
@@ -84,5 +84,10 @@ pub trait File: Sync + Send + DirectoryEntry {
     /// Returns information about the filesystem.
     fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
         Err(Status::NOT_SUPPORTED)
+    }
+
+    /// Describes the underlying object.  Defaults to a simple file.
+    fn describe(&self, _connection_flags: u32) -> Result<NodeInfo, Status> {
+        Ok(NodeInfo::File(FileObject { event: None, stream: None }))
     }
 }
