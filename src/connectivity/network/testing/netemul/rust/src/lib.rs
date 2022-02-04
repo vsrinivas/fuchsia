@@ -13,8 +13,11 @@ use std::path::{Path, PathBuf};
 use fidl_fuchsia_hardware_ethernet as fethernet;
 use fidl_fuchsia_hardware_network as fnetwork;
 use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
+use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
@@ -381,10 +384,10 @@ impl<'a> TestRealm<'a> {
         let interface_state = self
             .connect_to_protocol::<fnet_interfaces::StateMarker>()
             .context("failed to connect to fuchsia.net.interfaces/State")?;
-        let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
-            &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface.id()),
-            |&fidl_fuchsia_net_interfaces_ext::Properties { online, .. }| {
+        let () = fnet_interfaces_ext::wait_interface_with_id(
+            fnet_interfaces_ext::event_stream_from_state(&interface_state)?,
+            &mut fnet_interfaces_ext::InterfaceState::Unknown(interface.id()),
+            |&fnet_interfaces_ext::Properties { online, .. }| {
                 // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
                 online.then(|| ())
             },
@@ -429,8 +432,8 @@ impl<'a> TestRealm<'a> {
     /// `fuchsia.posix.socket/Provider` in this realm.
     pub async fn datagram_socket(
         &self,
-        domain: fidl_fuchsia_posix_socket::Domain,
-        proto: fidl_fuchsia_posix_socket::DatagramSocketProtocol,
+        domain: fposix_socket::Domain,
+        proto: fposix_socket::DatagramSocketProtocol,
     ) -> Result<socket2::Socket> {
         let socket_provider = self
             .connect_to_protocol::<fposix_socket::ProviderMarker>()
@@ -449,8 +452,8 @@ impl<'a> TestRealm<'a> {
     /// `fuchsia.posix.socket/Provider` in this realm.
     pub async fn stream_socket(
         &self,
-        domain: fidl_fuchsia_posix_socket::Domain,
-        proto: fidl_fuchsia_posix_socket::StreamSocketProtocol,
+        domain: fposix_socket::Domain,
+        proto: fposix_socket::StreamSocketProtocol,
     ) -> Result<socket2::Socket> {
         let socket_provider = self
             .connect_to_protocol::<fposix_socket::ProviderMarker>()
@@ -482,10 +485,7 @@ impl<'a> TestRealm<'a> {
     /// Constructs an ICMP socket.
     pub async fn icmp_socket<Ip: ping::IpExt>(&self) -> Result<fuchsia_async::net::DatagramSocket> {
         let sock = self
-            .datagram_socket(
-                Ip::DOMAIN_FIDL,
-                fidl_fuchsia_posix_socket::DatagramSocketProtocol::IcmpEcho,
-            )
+            .datagram_socket(Ip::DOMAIN_FIDL, fposix_socket::DatagramSocketProtocol::IcmpEcho)
             .await
             .context("failed to create ICMP datagram socket")?;
         fuchsia_async::net::DatagramSocket::new_from_socket(sock)
@@ -796,15 +796,12 @@ impl<'a> TestEndpoint<'a> {
         name: Option<impl Into<Cow<'a, str>>>,
     ) -> Result<(
         u64,
-        fidl_fuchsia_net_interfaces_ext::admin::Control,
-        Option<fidl_fuchsia_net_interfaces_admin::DeviceControlProxy>,
+        fnet_interfaces_ext::admin::Control,
+        Option<fnet_interfaces_admin::DeviceControlProxy>,
     )> {
         let name = name.map(|n| {
-            truncate_dropping_front(
-                n.into(),
-                fidl_fuchsia_net_interfaces::INTERFACE_NAME_LENGTH.into(),
-            )
-            .to_string()
+            truncate_dropping_front(n.into(), fnet_interfaces::INTERFACE_NAME_LENGTH.into())
+                .to_string()
         });
         match self.get_device().await.context("get_device failed")? {
             fnetemul_network::DeviceConnection::Ethernet(eth) => {
@@ -843,39 +840,37 @@ impl<'a> TestEndpoint<'a> {
                     }
                 };
                 let debug = realm
-                    .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
+                    .connect_to_protocol::<fnet_debug::InterfacesMarker>()
                     .context("connect to protocol")?;
-                let (control, server_end) =
-                    fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
-                        .context("create endpoints")?;
+                let (control, server_end) = fnet_interfaces_ext::admin::Control::create_endpoints()
+                    .context("create endpoints")?;
                 let () = debug.get_admin(id, server_end).context("get admin")?;
                 Ok((id, control, None))
             }
             fnetemul_network::DeviceConnection::NetworkDevice(netdevice) => {
                 let (device, mut port_id) = to_netdevice_inner(netdevice).await?;
                 let installer = realm
-                    .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
+                    .connect_to_protocol::<fnet_interfaces_admin::InstallerMarker>()
                     .context("connect to protocol")?;
                 let device_control = {
                     let (control, server_end) = fidl::endpoints::create_proxy::<
-                        fidl_fuchsia_net_interfaces_admin::DeviceControlMarker,
+                        fnet_interfaces_admin::DeviceControlMarker,
                     >()
                     .context("create proxy")?;
                     let () =
                         installer.install_device(device, server_end).context("install device")?;
                     control
                 };
-                let (control, server_end) =
-                    fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
-                        .context("create endpoints")?;
+                let (control, server_end) = fnet_interfaces_ext::admin::Control::create_endpoints()
+                    .context("create endpoints")?;
                 let () = device_control
                     .create_interface(
                         &mut port_id,
                         server_end,
-                        fidl_fuchsia_net_interfaces_admin::Options {
+                        fnet_interfaces_admin::Options {
                             name,
                             metric: None,
-                            ..fidl_fuchsia_net_interfaces_admin::Options::EMPTY
+                            ..fnet_interfaces_admin::Options::EMPTY
                         },
                     )
                     .context("create interface")?;
@@ -929,8 +924,8 @@ pub struct TestInterface<'a> {
     stack: fnet_stack::StackProxy,
     netstack: fnetstack::NetstackProxy,
     interface_state: fnet_interfaces::StateProxy,
-    control: fidl_fuchsia_net_interfaces_ext::admin::Control,
-    device_control: Option<fidl_fuchsia_net_interfaces_admin::DeviceControlProxy>,
+    control: fnet_interfaces_ext::admin::Control,
+    device_control: Option<fnet_interfaces_admin::DeviceControlProxy>,
 }
 
 impl<'a> std::fmt::Debug for TestInterface<'a> {
@@ -971,7 +966,7 @@ impl<'a> TestInterface<'a> {
     }
 
     /// Returns the interface's control handle.
-    pub fn control(&self) -> &fidl_fuchsia_net_interfaces_ext::admin::Control {
+    pub fn control(&self) -> &fnet_interfaces_ext::admin::Control {
         &self.control
     }
 
@@ -1008,26 +1003,26 @@ impl<'a> TestInterface<'a> {
     }
 
     /// Gets the interface's properties.
-    async fn get_properties(&self) -> Result<fidl_fuchsia_net_interfaces_ext::Properties> {
-        let properties = fidl_fuchsia_net_interfaces_ext::existing(
-            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&self.interface_state)?,
-            fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(self.id),
+    async fn get_properties(&self) -> Result<fnet_interfaces_ext::Properties> {
+        let properties = fnet_interfaces_ext::existing(
+            fnet_interfaces_ext::event_stream_from_state(&self.interface_state)?,
+            fnet_interfaces_ext::InterfaceState::Unknown(self.id),
         )
         .await
         .context("failed to get existing interfaces")?;
         match properties {
-            fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id) => Err(anyhow::anyhow!(
+            fnet_interfaces_ext::InterfaceState::Unknown(id) => Err(anyhow::anyhow!(
                 "could not find interface {} for endpoint {}",
                 id,
                 self.endpoint.name
             )),
-            fidl_fuchsia_net_interfaces_ext::InterfaceState::Known(properties) => Ok(properties),
+            fnet_interfaces_ext::InterfaceState::Known(properties) => Ok(properties),
         }
     }
 
     /// Gets the interface's addresses.
-    pub async fn get_addrs(&self) -> Result<Vec<fidl_fuchsia_net_interfaces_ext::Address>> {
-        let fidl_fuchsia_net_interfaces_ext::Properties {
+    pub async fn get_addrs(&self) -> Result<Vec<fnet_interfaces_ext::Address>> {
+        let fnet_interfaces_ext::Properties {
             addresses,
             id: _,
             name: _,
@@ -1040,13 +1035,13 @@ impl<'a> TestInterface<'a> {
     }
 
     /// Gets a fuchsia.net.interfaces/Watcher proxy.
-    pub fn get_interfaces_watcher(&self) -> Result<fidl_fuchsia_net_interfaces::WatcherProxy> {
+    pub fn get_interfaces_watcher(&self) -> Result<fnet_interfaces::WatcherProxy> {
         let (watcher, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
+            fidl::endpoints::create_proxy::<fnet_interfaces::WatcherMarker>()
                 .context("failed to create fuchsia.net.interfaces/Watcher proxy")?;
         let () = self
             .interface_state
-            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server_end)
+            .get_watcher(fnet_interfaces::WatcherOptions::EMPTY, server_end)
             .context("failed to create interface property watcher")?;
         Ok(watcher)
     }
@@ -1102,8 +1097,8 @@ impl<'a> TestInterface<'a> {
         self,
     ) -> (
         fnetemul_network::EndpointProxy,
-        fidl_fuchsia_net_interfaces_ext::admin::Control,
-        Option<fidl_fuchsia_net_interfaces_admin::DeviceControlProxy>,
+        fnet_interfaces_ext::admin::Control,
+        Option<fnet_interfaces_admin::DeviceControlProxy>,
     ) {
         let Self {
             endpoint: TestEndpoint { endpoint, name: _, _sandbox: _ },
@@ -1119,10 +1114,10 @@ impl<'a> TestInterface<'a> {
 }
 
 /// Get the [`socket2::Domain`] for `addr`.
-fn get_socket2_domain(addr: &std::net::SocketAddr) -> fidl_fuchsia_posix_socket::Domain {
+fn get_socket2_domain(addr: &std::net::SocketAddr) -> fposix_socket::Domain {
     let domain = match addr {
-        std::net::SocketAddr::V4(_) => fidl_fuchsia_posix_socket::Domain::Ipv4,
-        std::net::SocketAddr::V6(_) => fidl_fuchsia_posix_socket::Domain::Ipv6,
+        std::net::SocketAddr::V4(_) => fposix_socket::Domain::Ipv4,
+        std::net::SocketAddr::V6(_) => fposix_socket::Domain::Ipv6,
     };
 
     domain
@@ -1146,7 +1141,7 @@ impl RealmUdpSocket for std::net::UdpSocket {
             let sock = realm
                 .datagram_socket(
                     get_socket2_domain(&addr),
-                    fidl_fuchsia_posix_socket::DatagramSocketProtocol::Udp,
+                    fposix_socket::DatagramSocketProtocol::Udp,
                 )
                 .await
                 .context("failed to create socket")?;
@@ -1202,10 +1197,7 @@ impl RealmTcpListener for std::net::TcpListener {
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
         async move {
             let sock = realm
-                .stream_socket(
-                    get_socket2_domain(&addr),
-                    fidl_fuchsia_posix_socket::StreamSocketProtocol::Tcp,
-                )
+                .stream_socket(get_socket2_domain(&addr), fposix_socket::StreamSocketProtocol::Tcp)
                 .await
                 .context("failed to create server socket")?;
             let () = setup(&sock)?;
@@ -1255,10 +1247,7 @@ impl RealmTcpStream for fuchsia_async::net::TcpStream {
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
         async move {
             let sock = realm
-                .stream_socket(
-                    get_socket2_domain(&addr),
-                    fidl_fuchsia_posix_socket::StreamSocketProtocol::Tcp,
-                )
+                .stream_socket(get_socket2_domain(&addr), fposix_socket::StreamSocketProtocol::Tcp)
                 .await
                 .context("failed to create socket")?;
 
