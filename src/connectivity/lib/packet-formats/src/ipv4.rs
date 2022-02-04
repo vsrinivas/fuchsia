@@ -27,7 +27,7 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{IpParseError, IpParseResult, ParseError};
-use crate::ip::{IpProto, Ipv4Proto, Ipv6Proto};
+use crate::ip::{IpProto, Ipv4Proto, Ipv6Proto, Nat64Error, Nat64TranslationResult};
 use crate::ipv6::Ipv6PacketBuilder;
 use crate::tcp::{TcpParseArgs, TcpSegment};
 use crate::udp::{UdpPacket, UdpParseArgs};
@@ -137,26 +137,6 @@ impl HeaderPrefix {
         // - 8` bits, not by an extra `FLAGS_OFFSET` bits.
         self.flags_frag_off[0] & (1 << ((FLAGS_OFFSET - 8) + MF_FLAG_OFFSET)) > 0
     }
-}
-
-/// An error encountered during NAT64 translation performed by
-/// [`Ipv4Packet::nat64_translate`].
-#[derive(Debug)]
-pub enum Nat64Error {
-    /// Support not yet implemented in the library.
-    NotImplemented,
-}
-
-/// The result of NAT64 translation performed by
-/// [`Ipv4Packet::nat64_translate`].
-#[derive(Debug)]
-pub enum Nat64TranslationResult<S, E> {
-    /// Forward the packet encoded in `S`.
-    Forward(S),
-    /// Silently drop the packet.
-    Drop,
-    /// An error was encountered.
-    Err(E),
 }
 
 /// Provides common access to IPv4 header fields.

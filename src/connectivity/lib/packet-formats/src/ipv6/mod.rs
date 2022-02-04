@@ -17,18 +17,23 @@ use core::fmt::{self, Debug, Formatter};
 use core::ops::Range;
 
 use log::debug;
-use net_types::ip::{Ipv6, Ipv6Addr, Ipv6SourceAddr};
+use net_types::ip::{Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr};
 use packet::records::{AlignedRecordSequenceBuilder, Records, RecordsRaw};
 use packet::{
-    BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
-    ParsablePacket, ParseMetadata, SerializeBuffer,
+    BufferProvider, BufferView, BufferViewMut, EmptyBuf, FromRaw, InnerPacketBuilder, MaybeParsed,
+    NestedPacketBuilder, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
+    SerializeBuffer, SerializeError, Serializer, TargetBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{IpParseError, IpParseErrorAction, IpParseResult, ParseError};
 use crate::icmp::Icmpv6ParameterProblemCode;
+use crate::ip::{IpProto, Ipv4Proto, Nat64Error, Nat64TranslationResult};
 use crate::ip::{Ipv6ExtHdrType, Ipv6Proto};
+use crate::ipv4::{Ipv4PacketBuilder, HDR_PREFIX_LEN};
 use crate::ipv6::ext_hdrs::{HopByHopOption, HopByHopOptionData};
+use crate::tcp::{TcpParseArgs, TcpSegment};
+use crate::udp::{UdpPacket, UdpParseArgs};
 use crate::U16;
 
 use ext_hdrs::{
@@ -519,6 +524,15 @@ impl<B: ByteSlice> Ipv6Packet<B> {
         self.fixed_hdr.bytes().len() + self.extension_hdrs.bytes().len()
     }
 
+    fn fragment_header_present(&self) -> bool {
+        for ext_hdr in self.extension_hdrs.iter() {
+            if matches!(ext_hdr.data(), Ipv6ExtensionHeaderData::Fragment { .. }) {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Construct a builder with the same contents as this packet.
     pub fn builder(&self) -> Ipv6PacketBuilder {
         Ipv6PacketBuilder {
@@ -529,6 +543,220 @@ impl<B: ByteSlice> Ipv6Packet<B> {
             proto: self.proto(),
             src_ip: self.src_ip(),
             dst_ip: self.dst_ip(),
+        }
+    }
+
+    /// Performs the header translation part of NAT64 as described in [RFC
+    /// 7915].
+    ///
+    /// `nat64_translate` follows the rules described in RFC 7915 to construct
+    /// the IPv4 equivalent of this IPv6 packet. If the payload is a TCP segment
+    /// or a UDP packet, its checksum will be updated. If the payload is an
+    /// ICMPv6 packet, it will be converted to the equivalent ICMPv4 packet. For
+    /// all other payloads, the payload will be unchanged, and the IP header will
+    /// be translated. On success, a [`Serializer`] is returned which describes
+    /// the new packet to be sent.
+    ///
+    /// Note that the IPv4 TTL/IPv6 Hop Limit field is not modified. It is the
+    /// caller's responsibility to decrement and process this field per RFC
+    /// 7915.
+    ///
+    /// In some cases, the packet has no IPv4 equivalent, in which case the
+    /// value [`Nat64TranslationResult::Drop`] will be returned, instructing the
+    /// caller to silently drop the packet.
+    ///
+    /// # Errors
+    ///
+    /// `nat64_translate` will return an error if support has not yet been
+    /// implemented for translating a particular IP protocol.
+    ///
+    /// [RFC 7915]: https://datatracker.ietf.org/doc/html/rfc7915
+    pub fn nat64_translate(
+        &self,
+        v4_src_addr: Ipv4Addr,
+        v4_dst_addr: Ipv4Addr,
+    ) -> Nat64TranslationResult<impl Serializer<Buffer = EmptyBuf> + Debug + '_, Nat64Error> {
+        // A single `Serializer` type so that all possible return values from
+        // this function have the same type.
+        #[derive(Debug)]
+        enum Nat64Serializer<T, U, O> {
+            Tcp(T),
+            Udp(U),
+            Other(O),
+        }
+
+        impl<T, U, O> Serializer for Nat64Serializer<T, U, O>
+        where
+            T: Serializer<Buffer = EmptyBuf>,
+            U: Serializer<Buffer = EmptyBuf>,
+            O: Serializer<Buffer = EmptyBuf>,
+        {
+            type Buffer = EmptyBuf;
+            fn serialize<B, PB, P>(
+                self,
+                outer: PB,
+                provider: P,
+            ) -> Result<B, (SerializeError<P::Error>, Self)>
+            where
+                B: TargetBuffer,
+                PB: NestedPacketBuilder,
+                P: BufferProvider<Self::Buffer, B>,
+            {
+                match self {
+                    Nat64Serializer::Tcp(serializer) => serializer
+                        .serialize(outer, provider)
+                        .map_err(|(err, ser)| (err, Nat64Serializer::Tcp(ser))),
+                    Nat64Serializer::Udp(serializer) => serializer
+                        .serialize(outer, provider)
+                        .map_err(|(err, ser)| (err, Nat64Serializer::Udp(ser))),
+                    Nat64Serializer::Other(serializer) => serializer
+                        .serialize(outer, provider)
+                        .map_err(|(err, ser)| (err, Nat64Serializer::Other(ser))),
+                }
+            }
+        }
+
+        // TODO(https://fxbug.dev/92381): Add support for fragmented packets
+        // forwarding.
+        if self.fragment_header_present() {
+            return Nat64TranslationResult::Err(Nat64Error::NotImplemented);
+        }
+
+        let v4_builder = |v4_proto| {
+            let mut builder =
+                Ipv4PacketBuilder::new(v4_src_addr, v4_dst_addr, self.hop_limit(), v4_proto);
+            builder.dscp(self.ds());
+            builder.ecn(self.ecn());
+
+            // The IPv4 header length is 20 bytes (so IHL field value is 5), as
+            // no header options are present in translated IPv4 packet.
+            // As per RFC 7915 Section 5.1:
+            //  "Internet Header Length:  5 (no IPv4 options)"
+            const IPV4_HEADER_LEN_BYTES: usize = HDR_PREFIX_LEN;
+
+            // As per RFC 7915 Section 5.1,
+            //    "Flags:  The More Fragments flag is set to zero.  The Don't Fragment
+            //        (DF) flag is set as follows: If the size of the translated IPv4
+            //        packet is less than or equal to 1260 bytes, it is set to zero;
+            //        otherwise, it is set to one."
+            builder.df_flag(self.body().len() + IPV4_HEADER_LEN_BYTES > 1260);
+
+            // TODO(https://fxbug.dev/92381): This needs an update once
+            // we don't return early for fragment_header_present case.
+            builder.fragment_offset(0);
+            builder.mf_flag(false);
+
+            builder
+        };
+
+        match self.proto() {
+            Ipv6Proto::Proto(IpProto::Tcp) => {
+                let v4_pkt_builder = v4_builder(Ipv4Proto::Proto(IpProto::Tcp));
+                let args = TcpParseArgs::new(self.src_ip(), self.dst_ip());
+                // TODO(https://fxbug.dev/92701): We're doing roughly similar work
+                // in valid/invalid parsing case. Remove match statement and
+                // update the checksum in place without needing to parse the TCP
+                // segment once we have ability to update the checksum.
+                match TcpSegment::parse(&mut self.body.as_bytes(), args) {
+                    Ok(tcp) => {
+                        // Creating a new tcp_serializer for IPv6 packet from
+                        // the existing one ensures that checksum is
+                        // updated due to changed IP addresses.
+                        let tcp_serializer =
+                            Nat64Serializer::Tcp(tcp.into_serializer(v4_src_addr, v4_dst_addr));
+                        Nat64TranslationResult::Forward(tcp_serializer.encapsulate(v4_pkt_builder))
+                    }
+                    Err(msg) => {
+                        debug!("Parsing of TCP segment failed: {:?}", msg);
+
+                        // This means we can't create a TCP segment builder with
+                        // updated checksum. Parsing may fail due to a variety of
+                        // reasons, including incorrect checksum in incoming packet.
+                        // We should still return a packet with IP payload copied
+                        // as is from IPv6 to IPv4. This handling is similar to
+                        // the handling of the case with unsupported protocol type
+                        // as done in `Ipv6Proto::Other(val)` case below. The similar
+                        // reasoning from RFC appiles here as well.
+                        let common_serializer =
+                            Nat64Serializer::Other(self.body().into_serializer());
+                        Nat64TranslationResult::Forward(
+                            common_serializer.encapsulate(v4_pkt_builder),
+                        )
+                    }
+                }
+            }
+
+            // TODO(https://fxbug.dev/92701): We're doing roughly similar work
+            // in valid/invalid parsing case. Remove match statement and
+            // update the checksum in place without needing to parse the UDP segment
+            // once we have ability to update checksum.
+            Ipv6Proto::Proto(IpProto::Udp) => {
+                let v4_pkt_builder = v4_builder(Ipv4Proto::Proto(IpProto::Udp));
+                let args = UdpParseArgs::new(self.src_ip(), self.dst_ip());
+                match UdpPacket::parse(&mut self.body.as_bytes(), args) {
+                    Ok(udp) => {
+                        // Creating a new udp_serializer for IPv6 packet from
+                        // the existing one ensures that checksum is
+                        // updated due to changed IP addresses.
+                        let udp_serializer =
+                            Nat64Serializer::Udp(udp.into_serializer(v4_src_addr, v4_dst_addr));
+                        Nat64TranslationResult::Forward(udp_serializer.encapsulate(v4_pkt_builder))
+                    }
+                    Err(msg) => {
+                        debug!("Parsing of UDP packet failed: {:?}", msg);
+
+                        // This means we can't create a UDP packet builder with
+                        // updated checksum. Parsing may fail due to a variety of
+                        // reasons, including incorrect checksum in incoming packet.
+                        // We should still return a packet with IP payload copied
+                        // as is from IPv6 to IPv4. This handling is similar to
+                        // the handling of the case with unsupported protocol type
+                        // as done in `Ipv6Proto::Other(val)` case below. The similar
+                        // reasoning from RFC appiles here as well.
+
+                        let common_serializer =
+                            Nat64Serializer::Other(self.body().into_serializer());
+                        Nat64TranslationResult::Forward(
+                            common_serializer.encapsulate(v4_pkt_builder),
+                        )
+                    }
+                }
+            }
+
+            // TODO(https://fxbug.dev/92383): Implement ICMP packet translation
+            // support here.
+            Ipv6Proto::Icmpv6 => Nat64TranslationResult::Err(Nat64Error::NotImplemented),
+
+            // For all other protocols, an IPv4 packet must be forwarded even if
+            // the transport layer checksum update is not implemented.
+            // As per RFC 7915 Section 5.1,
+            //     "Protocol:
+            //       ...
+            //
+            //       For the first 'next header' that does not match one of the cases
+            //       above, its Next Header value (which contains the transport
+            //       protocol number) is copied to the protocol field in the IPv4
+            //       header.  This means that all transport protocols are translated.
+            //
+            //       Note:  Some translated protocols will fail at the receiver for
+            //          various reasons: some are known to fail when translated (e.g.,
+            //          IPsec Authentication Header (51)), and others will fail
+            //          checksum validation if the address translation is not checksum
+            //          neutral [RFC6052] and the translator does not update the
+            //          transport protocol's checksum (because the translator doesn't
+            //          support recalculating the checksum for that transport protocol;
+            //          see Section 5.5)."
+            Ipv6Proto::Other(val) => {
+                let v4_pkt_builder = v4_builder(Ipv4Proto::Other(val));
+                let common_serializer = Nat64Serializer::Other(self.body().into_serializer());
+                Nat64TranslationResult::Forward(common_serializer.encapsulate(v4_pkt_builder))
+            }
+
+            Ipv6Proto::NoNextHeader => {
+                let v4_pkt_builder = v4_builder(Ipv4Proto::Other(Ipv6Proto::NoNextHeader.into()));
+                let common_serializer = Nat64Serializer::Other(self.body().into_serializer());
+                Nat64TranslationResult::Forward(common_serializer.encapsulate(v4_pkt_builder))
+            }
         }
     }
 }
@@ -965,6 +1193,8 @@ pub(crate) fn reassemble_fragmented_packet<
 
 #[cfg(test)]
 mod tests {
+    use assert_matches::assert_matches;
+    use packet::FragmentedBuffer;
     use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
 
     use crate::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
@@ -978,6 +1208,9 @@ mod tests {
         Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
     const DEFAULT_DST_IP: Ipv6Addr =
         Ipv6Addr::from_bytes([17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
+
+    const DEFAULT_V4_SRC_IP: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
+    const DEFAULT_V4_DST_IP: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
 
     #[test]
     fn test_parse_serialize_full_tcp() {
@@ -1849,5 +2082,208 @@ mod tests {
                 assert_eq!(x + (8 - x % 8), y);
             }
         }
+    }
+
+    fn create_ipv4_and_ipv6_builders(
+        proto_v4: Ipv4Proto,
+        proto_v6: Ipv6Proto,
+    ) -> (Ipv4PacketBuilder, Ipv6PacketBuilder) {
+        const IP_DSCP: u8 = 0x12;
+        const IP_ECN: u8 = 3;
+        const IP_TTL: u8 = 64;
+
+        let mut ipv4_builder =
+            Ipv4PacketBuilder::new(DEFAULT_V4_SRC_IP, DEFAULT_V4_DST_IP, IP_TTL, proto_v4);
+        ipv4_builder.dscp(IP_DSCP);
+        ipv4_builder.ecn(IP_ECN);
+        ipv4_builder.df_flag(false);
+        ipv4_builder.mf_flag(false);
+        ipv4_builder.fragment_offset(0);
+
+        let mut ipv6_builder =
+            Ipv6PacketBuilder::new(DEFAULT_SRC_IP, DEFAULT_DST_IP, IP_TTL, proto_v6);
+        ipv6_builder.ds(IP_DSCP);
+        ipv6_builder.ecn(IP_ECN);
+        ipv6_builder.flowlabel(0x456);
+
+        (ipv4_builder, ipv6_builder)
+    }
+
+    fn create_tcp_ipv4_and_ipv6_pkt(
+    ) -> (packet::Either<EmptyBuf, Buf<Vec<u8>>>, packet::Either<EmptyBuf, Buf<Vec<u8>>>) {
+        use crate::tcp::TcpSegmentBuilder;
+        use std::num::NonZeroU16;
+
+        let tcp_src_port: NonZeroU16 = NonZeroU16::new(20).unwrap();
+        let tcp_dst_port: NonZeroU16 = NonZeroU16::new(30).unwrap();
+        const TCP_SEQ_NUM: u32 = 4321;
+        const TCP_ACK_NUM: Option<u32> = Some(1234);
+        const TCP_WINDOW_SIZE: u16 = 12345;
+        const PAYLOAD: [u8; 10] = [0, 1, 2, 3, 3, 4, 5, 7, 8, 9];
+
+        let (ipv4_builder, ipv6_builder) =
+            create_ipv4_and_ipv6_builders(IpProto::Tcp.into(), IpProto::Tcp.into());
+
+        let tcp_builder = TcpSegmentBuilder::new(
+            DEFAULT_V4_SRC_IP,
+            DEFAULT_V4_DST_IP,
+            tcp_src_port,
+            tcp_dst_port,
+            TCP_SEQ_NUM,
+            TCP_ACK_NUM,
+            TCP_WINDOW_SIZE,
+        );
+
+        let v4_pkt_buf = (&PAYLOAD)
+            .into_serializer()
+            .encapsulate(tcp_builder)
+            .encapsulate(ipv4_builder)
+            .serialize_vec_outer()
+            .expect("Failed to serialize to v4_pkt_buf");
+
+        let v6_tcp_builder = TcpSegmentBuilder::new(
+            DEFAULT_SRC_IP,
+            DEFAULT_DST_IP,
+            tcp_src_port,
+            tcp_dst_port,
+            TCP_SEQ_NUM,
+            TCP_ACK_NUM,
+            TCP_WINDOW_SIZE,
+        );
+
+        let v6_pkt_buf = (&PAYLOAD)
+            .into_serializer()
+            .encapsulate(v6_tcp_builder)
+            .encapsulate(ipv6_builder)
+            .serialize_vec_outer()
+            .expect("Failed to serialize to v4_pkt_buf");
+
+        (v4_pkt_buf, v6_pkt_buf)
+    }
+
+    #[test]
+    fn test_nat64_translate_tcp() {
+        let (expected_v4_pkt_buf, mut v6_pkt_buf) = create_tcp_ipv4_and_ipv6_pkt();
+
+        let parsed_v6_packet =
+            v6_pkt_buf.parse::<Ipv6Packet<_>>().expect("Failed to parse v6_pkt_buf");
+        let nat64_translation_result =
+            parsed_v6_packet.nat64_translate(DEFAULT_V4_SRC_IP, DEFAULT_V4_DST_IP);
+
+        let serializable_pkt =
+            assert_matches!(nat64_translation_result, Nat64TranslationResult::Forward(s) => s);
+
+        let translated_v4_pkt_buf = serializable_pkt
+            .serialize_vec_outer()
+            .expect("Failed to serialize to translated_v4_pkt_buf");
+
+        assert_eq!(
+            expected_v4_pkt_buf.to_flattened_vec(),
+            translated_v4_pkt_buf.to_flattened_vec()
+        );
+    }
+
+    fn create_udp_ipv4_and_ipv6_pkt(
+    ) -> (packet::Either<EmptyBuf, Buf<Vec<u8>>>, packet::Either<EmptyBuf, Buf<Vec<u8>>>) {
+        use crate::udp::UdpPacketBuilder;
+        use std::num::NonZeroU16;
+
+        let udp_src_port: NonZeroU16 = NonZeroU16::new(35000).unwrap();
+        let udp_dst_port: NonZeroU16 = NonZeroU16::new(53).unwrap();
+        const PAYLOAD: [u8; 10] = [0, 1, 2, 3, 3, 4, 5, 7, 8, 9];
+
+        let (ipv4_builder, ipv6_builder) =
+            create_ipv4_and_ipv6_builders(IpProto::Udp.into(), IpProto::Udp.into());
+
+        let v4_udp_builder = UdpPacketBuilder::new(
+            DEFAULT_V4_SRC_IP,
+            DEFAULT_V4_DST_IP,
+            Some(udp_src_port),
+            udp_dst_port,
+        );
+
+        let v4_pkt_buf = (&PAYLOAD)
+            .into_serializer()
+            .encapsulate(v4_udp_builder)
+            .encapsulate(ipv4_builder)
+            .serialize_vec_outer()
+            .expect("Unable to serialize to v4_pkt_buf");
+
+        let v6_udp_builder =
+            UdpPacketBuilder::new(DEFAULT_SRC_IP, DEFAULT_DST_IP, Some(udp_src_port), udp_dst_port);
+
+        let v6_pkt_buf = (&PAYLOAD)
+            .into_serializer()
+            .encapsulate(v6_udp_builder)
+            .encapsulate(ipv6_builder)
+            .serialize_vec_outer()
+            .expect("Unable to serialize to v6_pkt_buf");
+
+        (v4_pkt_buf, v6_pkt_buf)
+    }
+
+    #[test]
+    fn test_nat64_translate_udp() {
+        let (expected_v4_pkt_buf, mut v6_pkt_buf) = create_udp_ipv4_and_ipv6_pkt();
+
+        let parsed_v6_packet =
+            v6_pkt_buf.parse::<Ipv6Packet<_>>().expect("Unable to parse Ipv6Packet");
+        let nat64_translation_result =
+            parsed_v6_packet.nat64_translate(DEFAULT_V4_SRC_IP, DEFAULT_V4_DST_IP);
+
+        let serializable_pkt = assert_matches!(nat64_translation_result,
+                                               Nat64TranslationResult::Forward(s) => s);
+
+        let translated_v4_pkt_buf = serializable_pkt
+            .serialize_vec_outer()
+            .expect("Unable to serialize to translated_v4_pkt_buf");
+
+        assert_eq!(
+            expected_v4_pkt_buf.to_flattened_vec(),
+            translated_v4_pkt_buf.to_flattened_vec()
+        );
+    }
+
+    #[test]
+    fn test_nat64_translate_non_tcp_udp_icmp() {
+        const PAYLOAD: [u8; 10] = [0, 1, 2, 3, 3, 4, 5, 7, 8, 9];
+
+        let (ipv4_builder, ipv6_builder) =
+            create_ipv4_and_ipv6_builders(Ipv4Proto::Other(59), Ipv6Proto::Other(59));
+
+        let expected_v4_pkt_buf = (&PAYLOAD)
+            .into_serializer()
+            .encapsulate(ipv4_builder)
+            .serialize_vec_outer()
+            .expect("Unable to serialize to expected_v4_pkt_buf");
+
+        let mut v6_pkt_buf = (&PAYLOAD)
+            .into_serializer()
+            .encapsulate(ipv6_builder)
+            .serialize_vec_outer()
+            .expect("Unable to serialize to v6_pkt_buf");
+
+        let translated_v4_pkt_buf = {
+            let parsed_v6_packet = v6_pkt_buf
+                .parse::<Ipv6Packet<_>>()
+                .expect("Unable to serialize to translated_v4_pkt_buf");
+
+            let nat64_translation_result =
+                parsed_v6_packet.nat64_translate(DEFAULT_V4_SRC_IP, DEFAULT_V4_DST_IP);
+
+            let serializable_pkt = assert_matches!(nat64_translation_result,
+                                                   Nat64TranslationResult::Forward(s) => s);
+
+            let translated_buf = serializable_pkt
+                .serialize_vec_outer()
+                .expect("Unable to serialize to translated_buf");
+
+            translated_buf
+        };
+
+        assert_eq!(
+            expected_v4_pkt_buf.to_flattened_vec(),
+            translated_v4_pkt_buf.to_flattened_vec()
+        );
     }
 }

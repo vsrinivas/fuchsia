@@ -75,6 +75,24 @@ impl IpExt for Ipv6 {
     type Proto = Ipv6Proto;
 }
 
+/// An error encountered during NAT64 translation.
+#[derive(Debug)]
+pub enum Nat64Error {
+    /// Support not yet implemented in the library.
+    NotImplemented,
+}
+
+/// The result of NAT64 translation.
+#[derive(Debug)]
+pub enum Nat64TranslationResult<S, E> {
+    /// Forward the packet encoded in `S`.
+    Forward(S),
+    /// Silently drop the packet.
+    Drop,
+    /// An error was encountered.
+    Err(E),
+}
+
 /// An extension trait to the `IpExt` trait adding an associated `Packet` type.
 ///
 /// `IpExtByteSlice` extends the `IpExt` trait, adding an associated `Packet`

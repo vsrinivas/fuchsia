@@ -23,6 +23,7 @@ rustc_library("packet-formats") {
     "//src/lib/network/packet",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:arrayvec",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:nonzero_ext",
     "//third_party/rust_crates:thiserror",
