@@ -225,7 +225,6 @@ async fn add_enabled_interface_to_realm<'a>(
     realm: &'a netemul::TestRealm<'a>,
 ) -> netemul::TestInterface<'a> {
     let interface = add_interface_to_system_netstack(mac_address, name, sandbox, realm).await;
-    interface.enable_interface().await.expect("failed to enable interface on system netstack");
     add_interface_to_devfs(name, interface.endpoint(), realm).await;
     interface
 }
@@ -1037,7 +1036,9 @@ async fn ping(
     if disable_target_interface {
         // Disable the target interface and wait for it to achieve the disabled
         // state.
-        target_ep.disable_interface().await.expect("disable_interface failed for target interface");
+        let did_disable =
+            target_ep.control().disable().await.expect("send disable").expect("disable interface");
+        assert!(did_disable);
         let state_proxy = target_realm
             .connect_to_protocol::<fnet_interfaces::StateMarker>()
             .expect("failed to connect to state");

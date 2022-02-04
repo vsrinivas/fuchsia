@@ -377,7 +377,17 @@ impl<'a> TestRealm<'a> {
             }
             InterfaceConfig::None => (),
         };
-        let () = interface.enable_interface().await.context("failed to enable interface")?;
+        let _did_enable: bool = interface
+            .control()
+            .enable()
+            .await
+            .map_err(anyhow::Error::new)
+            .and_then(|res| {
+                res.map_err(|e: fnet_interfaces_admin::ControlEnableError| {
+                    anyhow::anyhow!("{:?}", e)
+                })
+            })
+            .context("failed to enable interface")?;
 
         // Wait for Netstack to observe interface up so callers can safely
         // assume the state of the world on return.
@@ -968,24 +978,6 @@ impl<'a> TestInterface<'a> {
     /// Returns the interface's control handle.
     pub fn control(&self) -> &fnet_interfaces_ext::admin::Control {
         &self.control
-    }
-
-    /// Enable interface.
-    ///
-    /// Equivalent to `stack.enable_interface(test_interface.id())`.
-    pub async fn enable_interface(&self) -> Result<()> {
-        self.stack.enable_interface(self.id).await.squash_result().with_context(|| {
-            format!("stack.enable_interface for endpoint {} failed", self.endpoint.name)
-        })
-    }
-
-    /// Disable interface.
-    ///
-    /// Equivalent to `stack.disable_interface(test_interface.id())`.
-    pub async fn disable_interface(&self) -> Result<()> {
-        self.stack.disable_interface(self.id).await.squash_result().with_context(|| {
-            format!("stack.disable_interface for endpoint {} failed", self.endpoint.name)
-        })
     }
 
     /// Add interface address.

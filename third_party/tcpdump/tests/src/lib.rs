@@ -325,15 +325,6 @@ async fn bridged_packet_test<E: netemul::Endpoint>(name: &str) {
             fnetstack::Result_::Nicid(id) => id,
         };
 
-        let stack = realm
-            .connect_to_protocol::<fnet_stack::StackMarker>()
-            .expect("failed to connect to stack");
-        let () = stack
-            .enable_interface(bridge_id.into())
-            .await
-            .expect("error calling enable_interface")
-            .expect("error enabling bridge interface");
-
         let debug = realm
             .connect_to_protocol::<fnet_debug::InterfacesMarker>()
             .expect("failed to connect to debug interfaces protocol");
@@ -346,6 +337,9 @@ async fn bridged_packet_test<E: netemul::Endpoint>(name: &str) {
                 .expect("error getting bridge interface control");
             fnet_interfaces_ext::admin::Control::new(client_end)
         };
+        let did_enable =
+            bridge_interface_control.enable().await.expect("send enable").expect("enable");
+        assert!(did_enable);
         let address_state_provider = interfaces::add_address_wait_assigned(
             &bridge_interface_control,
             fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
@@ -359,6 +353,9 @@ async fn bridged_packet_test<E: netemul::Endpoint>(name: &str) {
         let () = address_state_provider
             .detach()
             .expect("failed to detach from bridge interface address state provider");
+        let stack = realm
+            .connect_to_protocol::<fnet_stack::StackMarker>()
+            .expect("failed to connect to stack");
         let () = stack
             .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
                 subnet: fnet::Subnet {

@@ -345,15 +345,14 @@ async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) {
 async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
-    let stack =
-        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
 
     let iface = device.into_interface_in_realm(&realm).await.expect("add device");
     let id = iface.id();
 
     if enabled {
-        let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
+        let did_enable = iface.control().enable().await.expect("send enable").expect("enable");
+        assert!(did_enable);
     }
 
     let interface_state = realm
@@ -427,7 +426,8 @@ async fn test_down_close_race<E: netemul::Endpoint>(name: &str) {
             .await
             .expect("add endpoint to Netstack");
 
-        let () = dev.enable_interface().await.expect("enable interface");
+        let did_enable = dev.control().enable().await.expect("send enable").expect("enable");
+        assert!(did_enable);
         let () = dev.start_dhcp().await.expect("start DHCP");
         let () = dev.set_link_up(true).await.expect("bring device up");
 
@@ -500,7 +500,8 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) {
             .await
             .expect("add endpoint to Netstack");
 
-        let () = dev.enable_interface().await.expect("enable interface");
+        let did_enable = dev.control().enable().await.expect("send enable").expect("enable");
+        assert!(did_enable);
         let () = dev.set_link_up(true).await.expect("bring device up");
         let () = dev.add_ip_addr(DEVICE_ADDRESS).await.expect("add address");
 
@@ -620,7 +621,10 @@ async fn test_watcher_race() {
         // when reporting events.
         let ((), (), ()) = futures::future::join3(
             ep.set_link_up(true).map(|r| r.expect("bring link up")),
-            ep.enable_interface().map(|r| r.expect("enable interface")),
+            async {
+                let did_enable = ep.control().enable().await.expect("send enable").expect("enable");
+                assert!(did_enable);
+            },
             ep.add_ip_addr(ADDR).map(|r| r.expect("add address")),
         )
         .await;
@@ -813,7 +817,8 @@ async fn test_watcher() {
 
     // Set the link to up.
     let () = assert_blocked(&mut blocking_stream).await;
-    let () = dev.enable_interface().await.expect("bring device up");
+    let did_enable = dev.control().enable().await.expect("send enable").expect("enable");
+    assert!(did_enable);
     // NB The following fold function is necessary because IPv6 link-local addresses are configured
     // when the interface is brought up (and removed when the interface is brought down) such
     // that the ordering or the number of events that reports the changes in the online and

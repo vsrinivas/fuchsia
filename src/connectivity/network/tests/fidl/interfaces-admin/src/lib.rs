@@ -221,7 +221,8 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
     let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
     let id = interface.id();
 
-    let () = interface.enable_interface().await.expect("enable interface");
+    let did_enable = interface.control().enable().await.expect("send enable").expect("enable");
+    assert!(did_enable);
     let () = interface.set_link_up(true).await.expect("bring device up");
 
     let debug_control = realm
@@ -343,7 +344,8 @@ async fn add_address_offline<E: netemul::Endpoint>(name: &str) {
     .await
     .expect("wait for UNAVAILABLE address assignment state");
 
-    let () = interface.enable_interface().await.expect("enable interface");
+    let did_enable = interface.control().enable().await.expect("send enable").expect("enable");
+    assert!(did_enable);
     let () = interface.set_link_up(true).await.expect("bring device up");
 
     let () = fidl_fuchsia_net_interfaces_ext::admin::wait_assignment_state(

@@ -686,7 +686,8 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         .expect("DAD should have succeeded");
 
         // Disable the interface, ensure that the address becomes unavailable.
-        let () = iface.disable_interface().await.expect("failed to disable interface");
+        let did_disable = iface.control().disable().await.expect("send disable").expect("disable");
+        assert!(did_disable);
 
         let state_stream = fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(
             address_state_provider.clone(),
@@ -721,7 +722,8 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
     .expect("DAD should have succeeded");
 
     // Re-enable the interface, DAD should run.
-    let () = iface.enable_interface().await.expect("failed to enable interface");
+    let did_enable = iface.control().enable().await.expect("send enable").expect("enable");
+    assert!(did_enable);
 
     expect_dad_neighbor_solicitation(&fake_ep).await;
 

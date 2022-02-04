@@ -607,10 +607,20 @@ async fn disable_interface_loopback<N: Netstack>(name: &str) {
         ))) => ()
     );
 
-    let () = exec_fidl!(stack.disable_interface(loopback_id), "disable interface").unwrap();
-
     match N::VERSION {
         NetstackVersion::Netstack2 => {
+            let debug = realm
+                .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
+                .expect("connect to protocol");
+
+            let (control, server_end) =
+                fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                    .expect("create proxy");
+            let () = debug.get_admin(loopback_id, server_end).expect("get admin");
+
+            let did_disable = control.disable().await.expect("send disable").expect("disable");
+            assert!(did_disable);
+
             let () = assert_matches::assert_matches!(stream.try_next().await,
                 Ok(Some(fidl_fuchsia_net_interfaces::Event::Changed(
                     fidl_fuchsia_net_interfaces::Properties {
@@ -622,6 +632,9 @@ async fn disable_interface_loopback<N: Netstack>(name: &str) {
             );
         }
         NetstackVersion::Netstack3 => {
+            // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
+            let () = exec_fidl!(stack.disable_interface(loopback_id), "disable interface").unwrap();
+
             // TODO(https://fxbug.dev/75553): Wait for changed event instead of
             // creating a new watcher.
             let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)

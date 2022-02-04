@@ -249,11 +249,6 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
                     })
                     .expect("failed to create bridge");
                 bridge = Some(bridge_id);
-                let () = switch_stack
-                    .enable_interface(bridge_id.into())
-                    .await
-                    .expect("error calling enable_interface(bridge)")
-                    .expect("error response from enable_interface(bridge)");
                 let (switch_interface_control, server_end) = fidl::endpoints::create_proxy::<
                     fidl_fuchsia_net_interfaces_admin::ControlMarker,
                 >()
@@ -263,6 +258,9 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
                     .expect("FIDL error initializing bridge interface control");
                 let switch_interface_control =
                     fidl_fuchsia_net_interfaces_ext::admin::Control::new(switch_interface_control);
+                let did_enable =
+                    switch_interface_control.enable().await.expect("send enable").expect("enable");
+                assert!(did_enable);
                 let address_state_provider = interfaces::add_address_wait_assigned(
                     &switch_interface_control,
                     fidl_fuchsia_net::InterfaceAddress::Ipv4(
@@ -301,14 +299,12 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
             Step::Reenable(id) => {
                 let Host { switch_if, realm: _, _net, host_if: _ } =
                     ports.get(&id).expect("port to reenable doesn't exist");
-                let () = switch_if
-                    .disable_interface()
-                    .await
-                    .expect("failed to disable bridged interface");
-                let () = switch_if
-                    .enable_interface()
-                    .await
-                    .expect("failed to reenable bridged interface");
+                let did_disable =
+                    switch_if.control().disable().await.expect("send disable").expect("disable");
+                assert!(did_disable);
+                let did_enable =
+                    switch_if.control().enable().await.expect("send enable").expect("enable");
+                assert!(did_enable);
             }
             Step::FlapLink(id) => {
                 let Host { switch_if, realm: _, _net, host_if: _ } =
@@ -423,7 +419,8 @@ async fn test_remove_bridge_interface_disabled<E: netemul::Endpoint>(name: &str)
         .expect("failed to create bridge");
 
     // Disable the attached interface.
-    let () = switch_if.disable_interface().await.expect("failed to disable bridged interface");
+    let did_disable = switch_if.control().disable().await.expect("send disable").expect("disable");
+    assert!(did_disable);
 
     // Destroy the bridge.
     let () = switch_stack
@@ -462,7 +459,8 @@ async fn test_remove_bridge_interface_disabled<E: netemul::Endpoint>(name: &str)
     );
 
     // Enable the detached interface.
-    let () = switch_if.enable_interface().await.expect("failed to enable bridged interface");
+    let did_enable = switch_if.control().enable().await.expect("send enable").expect("enable");
+    assert!(did_enable);
 
     // Pings should work now.
     let switch_node = ping_helper::Node::new_with_v4_and_v6_link_local(&switch_realm, &switch_if)

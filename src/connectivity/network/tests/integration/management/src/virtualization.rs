@@ -342,13 +342,17 @@ async fn virtualization<E: netemul::Endpoint>(name: &str, sub_name: &str, steps:
             Step::DisableUpstream => {
                 let (interface, _): (_, bool) =
                     upstream_if.take().expect("upstream to disable not present");
-                let () = interface.disable_interface().await.expect("disable upstream interface");
+                let did_disable =
+                    interface.control().disable().await.expect("send disable").expect("disable");
+                assert!(did_disable);
                 upstream_if = Some((interface, false));
             }
             Step::EnableUpstream => {
                 let (interface, _): (_, bool) =
                     upstream_if.take().expect("upstream to enable not present");
-                let () = interface.enable_interface().await.expect("enable upstream interface");
+                let did_enable =
+                    interface.control().enable().await.expect("send enable").expect("enable");
+                assert!(did_enable);
                 upstream_if = Some((interface, true));
             }
             Step::AddNetwork(network) => {
