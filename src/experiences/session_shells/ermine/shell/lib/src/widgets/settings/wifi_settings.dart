@@ -47,9 +47,21 @@ class WiFiSettings extends StatelessWidget {
                         itemCount: savedNetworks.length,
                         itemBuilder: (context, index) {
                           final networkName = savedNetworks[index].name;
+                          bool currentNetwork =
+                              networkName == state.currentNetwork;
                           final networkIcon = savedNetworks[index].icon;
                           final networkCompatible =
                               savedNetworks[index].compatible;
+                          final networkHasFailedCredentials =
+                              savedNetworks[index].credentialsFailed;
+                          // Add 'connnected' or 'credentials failed' subtitle if applicable
+                          String? networkSubtitle;
+                          if (currentNetwork) {
+                            networkSubtitle = Strings.connected;
+                          }
+                          if (networkHasFailedCredentials) {
+                            networkSubtitle = Strings.incorrectPassword;
+                          }
                           return ListTile(
                             title: Text(networkName,
                                 maxLines: 1,
@@ -77,8 +89,8 @@ class WiFiSettings extends StatelessWidget {
                               onSelected: state.removeNetwork,
                               tooltip: Strings.forget,
                             ),
-                            subtitle: networkName == state.currentNetwork
-                                ? Text(Strings.connected)
+                            subtitle: networkSubtitle != null
+                                ? Text(networkSubtitle)
                                 : null,
                           );
                         }),

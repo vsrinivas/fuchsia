@@ -1155,6 +1155,11 @@ class Strings {
         name: 'connected',
         desc: 'The label for "Connected" text field.',
       );
+  static String get incorrectPassword => Intl.message(
+        'Incorrect Password',
+        name: 'incorrect password',
+        desc: 'The label for "Incorrect Password" text field.',
+      );
 
   /// Lookup message given it's name.
   static String? lookup(String name) {

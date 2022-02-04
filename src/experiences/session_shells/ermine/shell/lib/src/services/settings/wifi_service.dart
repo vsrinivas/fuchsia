@@ -37,6 +37,7 @@ class WiFiService implements TaskService {
   NetworkInformation _targetNetwork = NetworkInformation();
   final _savedNetworks = <policy.NetworkConfig>{};
   bool _clientConnectionsEnabled = false;
+  final _networksWithFailedCredentials = <policy.NetworkConfig>{};
 
   WiFiService();
 
@@ -44,7 +45,8 @@ class WiFiService implements TaskService {
   Future<void> start() async {
     _clientProvider = policy.ClientProviderProxy();
     _clientController = policy.ClientControllerProxy();
-    _monitor = ClientStateUpdatesMonitor(onChanged);
+    _monitor = ClientStateUpdatesMonitor(
+        onChanged, _pollNetworksWithFailedCredentials);
 
     Incoming.fromSvcPath().connectToService(_clientProvider);
 
@@ -214,7 +216,19 @@ class WiFiService implements TaskService {
 
   bool get connectionsEnabled => _monitor.connectionsEnabled();
 
-  bool get incorrectPassword => _monitor.incorrectPassword();
+  void _pollNetworksWithFailedCredentials(List<policy.NetworkIdentifier>? ids) {
+    if (ids == null) {
+      return;
+    }
+    for (var id in ids) {
+      final foundNetwork = _savedNetworks.firstWhereOrNull((savedNetwork) =>
+          listEquals(savedNetwork.id?.ssid, id.ssid) &&
+          savedNetwork.id?.type == id.type);
+      if (foundNetwork != null) {
+        _networksWithFailedCredentials.add(foundNetwork);
+      }
+    }
+  }
 
   Future<void> getSavedNetworks() async {
     _savedNetworksSubscription = () async {
@@ -253,6 +267,10 @@ class WiFiService implements TaskService {
 
         // Refresh list of saved networks
         await getSavedNetworks();
+
+        _networksWithFailedCredentials.removeWhere((networkConfig) =>
+            listEquals(networkConfig.id?.ssid, foundNetwork.id?.ssid) &&
+            networkConfig.id?.type == foundNetwork.id?.type);
       }()
           .asStream()
           .listen((_) {});
@@ -270,7 +288,8 @@ class WiFiService implements TaskService {
       Set<policy.NetworkConfig> networks) {
     var networkInformationList = <NetworkInformation>[];
     for (var network in networks) {
-      networkInformationList.add(NetworkInformation.fromNetworkConfig(network));
+      networkInformationList.add(NetworkInformation.fromNetworkConfig(
+          network, _networksWithFailedCredentials));
     }
     return networkInformationList;
   }
@@ -280,8 +299,11 @@ class ClientStateUpdatesMonitor extends policy.ClientStateUpdates {
   final _binding = policy.ClientStateUpdatesBinding();
   policy.ClientStateSummary? _summary;
   late final VoidCallback _onChanged;
+  late final void Function(List<policy.NetworkIdentifier>?)
+      _pollNetworksWithFailedCredentials;
 
-  ClientStateUpdatesMonitor(this._onChanged);
+  ClientStateUpdatesMonitor(
+      this._onChanged, this._pollNetworksWithFailedCredentials);
 
   InterfaceHandle<policy.ClientStateUpdates> getInterfaceHandle() =>
       _binding.wrap(this);
@@ -303,16 +325,20 @@ class ClientStateUpdatesMonitor extends policy.ClientStateUpdates {
     return foundNetwork == null ? '' : utf8.decode(foundNetwork);
   }
 
-  // TODO(fxb/79855): ensure that failed password status is for target network
-  bool incorrectPassword() {
-    return _summary?.networks?.firstWhereOrNull((network) =>
-            network.status == policy.DisconnectStatus.credentialsFailed) !=
-        null;
+  // Check for failed credentials and poll networks with failed credentials
+  void _checkForFailedCredentials() {
+    var foundNetworks = _summary?.networks?.where((network) =>
+        network.status == policy.DisconnectStatus.credentialsFailed);
+    var networkIDs = foundNetworks?.map((network) => network.id!).toList();
+    if (networkIDs != null && networkIDs.isNotEmpty) {
+      _pollNetworksWithFailedCredentials(networkIDs);
+    }
   }
 
   @override
   Future<void> onClientStateUpdate(policy.ClientStateSummary summary) async {
     _summary = summary;
+    _checkForFailedCredentials();
     _onChanged();
   }
 }
@@ -327,17 +353,31 @@ class NetworkInformation {
   bool _compatible = false;
   // Security type of network
   policy.SecurityType? _securityType;
+  // If network has a failed connection attempt due to bad credentials
+  // Only set true if failed credentials found
+  bool credentialsFailed = false;
 
   NetworkInformation();
 
   // Constructor for network config
-  NetworkInformation.fromNetworkConfig(policy.NetworkConfig networkConfig) {
+  NetworkInformation.fromNetworkConfig(policy.NetworkConfig networkConfig,
+      [Set<policy.NetworkConfig> networksWithFailedCredentials = const {}]) {
     _ssid = networkConfig.id?.ssid;
     _name = networkConfig.id?.ssid.toList() != null
         ? utf8.decode(networkConfig.id!.ssid.toList())
         : null;
     _compatible = true;
     _securityType = networkConfig.id?.type;
+    if (networksWithFailedCredentials.isNotEmpty) {
+      if (networksWithFailedCredentials
+              .map((networkConfig) => networkConfig.id!)
+              .firstWhereOrNull((networkIdentifier) =>
+                  listEquals(networkIdentifier.ssid, _ssid) &&
+                  networkIdentifier.type == _securityType) !=
+          null) {
+        credentialsFailed = true;
+      }
+    }
   }
 
   // Constructor for scan result
