@@ -1,0 +1,48 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/ui/tests/integration_input_tests/meta/scenic-test-realm.cml",
+    ],
+    children: [
+        {
+            name: "input-pipeline",
+            url: "#meta/wrapped-input-pipeline.cm",
+        },
+        {
+            name: "root_presenter",
+            url: "#meta/wrapped-root-presenter.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.ui.scenic.Scenic" ],
+            from: "#scenic",
+            to: [ "#root_presenter" ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#scenic",
+            to: [ "#input-pipeline" ],
+        },
+        {
+            protocol: [ "fuchsia.ui.pointerinjector.configuration.Setup" ],
+            from: "#root_presenter",
+            to: [ "#input-pipeline" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
+            from: "#input-pipeline",
+        },
+        {
+            protocol: [ "fuchsia.ui.policy.Presenter" ],
+            from: "#root_presenter",
+        },
+    ],
+}

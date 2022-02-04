@@ -51,6 +51,31 @@ fuchsia_component("wrapped-root-presenter") {
   deps = [ "//src/ui/bin/root_presenter:component_v1_for_test" ]
 }
 
+fuchsia_component("wrapped-hdcp") {
+  testonly = true
+  manifest = "meta/wrapped-hdcp.cml"
+  deps = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
+}
+
+fuchsia_component("wrapped-input-pipeline") {
+  testonly = true
+  manifest = "meta/wrapped-input-pipeline.cml"
+  deps = [ "//src/ui/bin/input-pipeline:component-for-test" ]
+}
+
+# scenic-test-realm is a realm replicating the scenic setup that
+# can be stenciled out in tests, and amended to fit.
+fuchsia_component("scenic-test-realm") {
+  testonly = true
+  manifest = "meta/scenic-test-realm.cml"
+  deps = [
+    ":scenic-for-test",
+    ":wrapped-hdcp",
+    "//examples/fidl/rust/server:echo-server",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+  ]
+}
+
 # workstation-test-realm is a realm replicating the workstation UI setup that
 # can be stenciled out in tests, and amended to fit.
 # TODO(92183): The realm definition is still under construction.
@@ -59,12 +84,25 @@ fuchsia_component("workstation-test-realm") {
   manifest = "meta/workstation-test-realm.cml"
   deps = [
     ":scenic-for-test",
+    ":scenic-test-realm",
     ":wrapped-root-presenter",
     ":wrapped-text-manager",
     "//examples/fidl/rust/server:echo-server",
-    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/lib/ui/input-synthesis:input-synthesis-component",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/bin/text:text_manager_comp",
+  ]
+}
+
+# input-pipeline-test-realm is a realm replicating the input UI setup that
+# can be stenciled out in tests, and amended to fit.
+fuchsia_component("input-pipeline-test-realm") {
+  testonly = true
+  manifest = "meta/input-pipeline-test-realm.cml"
+  deps = [
+    ":scenic-test-realm",
+    ":wrapped-input-pipeline",
+    ":wrapped-root-presenter",
+    "//examples/fidl/rust/server:echo-server",
   ]
 }

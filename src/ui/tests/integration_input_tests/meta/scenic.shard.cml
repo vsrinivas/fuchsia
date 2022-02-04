@@ -1,0 +1,91 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "fake_display_provider",
+            url: "#meta/wrapped-hdcp.cm",
+        },
+        {
+            name: "mock_cobalt",
+            url: "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cm",
+        },
+        {
+            name: "scenic",
+            url: "#meta/scenic.cm",
+
+            // Known missing capabilities:
+            //
+            // fuchsia.stash.Store: we may find that we need to add this to
+            // ensure that Scenic behaves sensibly.
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#fake_display_provider",
+                "#mock_cobalt",
+                "#scenic",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#fake_display_provider" ],
+        },
+        {
+            protocol: [ "fuchsia.hardware.display.Provider" ],
+            from: "#fake_display_provider",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#mock_cobalt",
+            to: [ "#scenic" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#mock_cobalt",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.FlatlandDisplay",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "#scenic",
+        },
+    ],
+}

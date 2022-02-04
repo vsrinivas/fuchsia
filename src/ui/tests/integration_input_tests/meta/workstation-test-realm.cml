@@ -14,26 +14,9 @@
 // Feel free to add the components that you need but aren't here yet.
 {
     include: [
-        "sys/component/realm_builder.shard.cml",
-        "syslog/client.shard.cml",
+        "//src/ui/tests/integration_input_tests/meta/scenic-test-realm.cml",
     ],
-    program: {
-        runner: "elf",
-
-        // A fake binary to allow realm startup, as the `program.binary`
-        // property is required in a manifest.  This is not a CF bug. Rather,
-        // we are using the manifest in a somewhat unconventional way.
-        binary: "bin/fidl_echo_rust_server",
-    },
     children: [
-        {
-            name: "fake_display_provider",
-            url: "#meta/hdcp.cm",
-        },
-        {
-            name: "mock_cobalt",
-            url: "#meta/mock_cobalt.cm",
-        },
         {
             name: "text_manager",
             url: "#meta/wrapped-text-manager.cm",
@@ -42,15 +25,6 @@
             //
             // fuchsia.settings.Keyboard: this is provided by SetUI, perhaps
             // we should add it in.
-        },
-        {
-            name: "scenic",
-            url: "#meta/scenic.cm",
-
-            // Known missing capabilities:
-            //
-            // fuchsia.stash.Store: we may find that we need to add this to
-            // ensure that Scenic behaves sensibly.
         },
         {
             name: "scene_manager",
@@ -78,44 +52,10 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
-                "#fake_display_provider",
                 "#input_synthesis",
-                "#mock_cobalt",
                 "#scene_manager",
-                "#scenic",
                 "#text_manager",
             ],
-        },
-        {
-            protocol: [
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-
-                // ?? Is this correct?
-                "fuchsia.ui.keyboard.focus.Controller",
-                "fuchsia.vulkan.loader.Loader",
-            ],
-            from: "parent",
-            to: [ "#scenic" ],
-        },
-        {
-            protocol: [
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "parent",
-            to: [ "#fake_display_provider" ],
-        },
-        {
-            protocol: [ "fuchsia.hardware.display.Provider" ],
-            from: "#fake_display_provider",
-            to: [ "#scenic" ],
-        },
-        {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
-            from: "#mock_cobalt",
-            to: [ "#scenic" ],
         },
         {
             protocol: [
@@ -158,14 +98,6 @@
         },
         {
             protocol: [
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.scenic.Scenic",
-            ],
-            from: "#scenic",
-        },
-        {
-            protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
                 "fuchsia.session.scene.Manager",
             ],
@@ -177,10 +109,6 @@
                 "fuchsia.ui.input3.Keyboard",
             ],
             from: "#text_manager",
-        },
-        {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
-            from: "#mock_cobalt",
         },
     ],
 }

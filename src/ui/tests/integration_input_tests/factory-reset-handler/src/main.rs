@@ -30,22 +30,17 @@ async fn assemble_realm(
     let b = RealmBuilder::new().await.expect("Failed to create RealmBuilder");
 
     // Declare packaged components.
-    let scenic = PackagedComponent::new_from_legacy_url(
-        "scenic",
-        "fuchsia-pkg://fuchsia.com/factory-reset-handler-test#meta/scenic.cmx",
+    let scenic_test_realm = PackagedComponent::new_from_modern_url(
+        "scenic-test-realm",
+        "fuchsia-pkg://fuchsia.com/factory-reset-handler-test#meta/scenic-test-realm.cm",
     );
-    let display_provider =
-        PackagedComponent::new_from_modern_url("fake_display_provider", "#meta/hdcp.cm");
-    let cobalt = PackagedComponent::new_from_modern_url("mock_cobalt", "#meta/mock_cobalt.cm");
     let input_pipeline = PackagedComponent::new_from_legacy_url(
         "input_pipeline",
         "fuchsia-pkg://fuchsia.com/factory-reset-handler-test#meta/input-pipeline.cmx",
     );
 
     // Add packaged components and mocks to the test realm.
-    b.add(&scenic).await;
-    b.add(&display_provider).await;
-    b.add(&cobalt).await;
+    b.add(&scenic_test_realm).await;
     b.add(&input_pipeline).await;
     b.add(&sound_player_mock).await;
     b.add(&pointer_injector_mock).await;
@@ -54,25 +49,20 @@ async fn assemble_realm(
     // Allow Scenic to access the capabilities it needs. Capabilities that can't
     // be run hermetically are routed from the parent realm. The remainder are
     // routed from peers.
-    b.route_from_parent::<fidl_fuchsia_tracing_provider::RegistryMarker>(&scenic).await;
-    b.route_from_parent::<fidl_fuchsia_sysmem::AllocatorMarker>(&scenic).await;
-    b.route_from_parent::<fidl_fuchsia_vulkan_loader::LoaderMarker>(&scenic).await;
-    b.route_from_parent::<fidl_fuchsia_scheduler::ProfileProviderMarker>(&scenic).await;
-    b.route_to_peer::<fidl_fuchsia_hardware_display::ProviderMarker>(&display_provider, &scenic)
-        .await;
-    b.route_to_peer::<fidl_fuchsia_cobalt::LoggerFactoryMarker>(&cobalt, &scenic).await;
-
-    // Allow the display provider to access the capabilities it needs. None of these
-    // capabilities can be run hermetically, so they are all routed from the parent
-    // realm.
-    b.route_from_parent::<fidl_fuchsia_tracing_provider::RegistryMarker>(&display_provider).await;
-    b.route_from_parent::<fidl_fuchsia_sysmem::AllocatorMarker>(&display_provider).await;
+    b.route_from_parent::<fidl_fuchsia_tracing_provider::RegistryMarker>(&scenic_test_realm).await;
+    b.route_from_parent::<fidl_fuchsia_sysmem::AllocatorMarker>(&scenic_test_realm).await;
+    b.route_from_parent::<fidl_fuchsia_vulkan_loader::LoaderMarker>(&scenic_test_realm).await;
+    b.route_from_parent::<fidl_fuchsia_scheduler::ProfileProviderMarker>(&scenic_test_realm).await;
 
     // Allow the input pipeline to access the capabilities it needs. All of these
     // capabilities are run hermetically, so they are all routed from peers.
-    b.route_to_peer::<fidl_fuchsia_ui_scenic::ScenicMarker>(&scenic, &input_pipeline).await;
-    b.route_to_peer::<fidl_fuchsia_ui_pointerinjector::RegistryMarker>(&scenic, &input_pipeline)
+    b.route_to_peer::<fidl_fuchsia_ui_scenic::ScenicMarker>(&scenic_test_realm, &input_pipeline)
         .await;
+    b.route_to_peer::<fidl_fuchsia_ui_pointerinjector::RegistryMarker>(
+        &scenic_test_realm,
+        &input_pipeline,
+    )
+    .await;
     b.route_to_peer::<fidl_fuchsia_media_sounds::PlayerMarker>(&sound_player_mock, &input_pipeline)
         .await;
     b.route_to_peer::<fidl_fuchsia_ui_pointerinjector_configuration::SetupMarker>(

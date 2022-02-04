@@ -91,7 +91,7 @@ fuchsia_test_package("factory-reset-handler-test") {
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
     "//src/ui/bin/input-pipeline:component-for-test",
-    "//src/ui/scenic:component",
+    "//src/ui/tests/integration_input_tests:scenic-test-realm",
   ]
   test_specs = {
     environments = [

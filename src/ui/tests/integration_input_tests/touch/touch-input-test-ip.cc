@@ -6,7 +6,6 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
-#include <fuchsia/hardware/display/cpp/fidl.h>
 #include <fuchsia/input/injection/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
@@ -19,8 +18,6 @@
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/pointerinjector/configuration/cpp/fidl.h>
-#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
@@ -31,8 +28,6 @@
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -142,83 +137,10 @@ constexpr zx::duration kTimeout = zx::min(5);
 // long as it differs from the ZX_CLOCK_MONOTONIC=0 defined by Zircon.
 using time_utc = zx::basic_time<1>;
 
-constexpr auto kRootPresenter = "root_presenter";
-constexpr auto kInputPipeline = "input-pipeline";
-constexpr auto kScenic = "scenic";
-constexpr auto kMockCobalt = "cobalt";
-constexpr auto kHdcp = "hdcp";
+constexpr auto kInputTestRealm = "input-pipeline-test-realm";
 constexpr auto kMockResponseListener = "response_listener";
 
 enum class TapLocation { kTopLeft, kTopRight };
-
-// Components used by all tests. These will be installed as direct children of
-// the root component of the realm. In v2, every protocol must be *explicitly*
-// routed from one source to a target. In this case, these base components
-// provide capabilities to be used either by the client components, e.g. OneFlutter,
-// created below, or by this component. Note, that when I refer to "this component",
-// I'm referring to the test suite, which is itself a component.
-void AddBaseComponents(RealmBuilder* realm_builder) {
-  realm_builder->AddLegacyChild(
-      kRootPresenter, "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/root_presenter.cmx");
-  realm_builder->AddLegacyChild(
-      kInputPipeline, "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/input-pipeline.cmx");
-  realm_builder->AddLegacyChild(kScenic,
-                                "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/scenic.cmx");
-  realm_builder->AddLegacyChild(kMockCobalt,
-                                "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx");
-  realm_builder->AddLegacyChild(
-      kHdcp, "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx");
-}
-
-void AddBaseRoutes(RealmBuilder* realm_builder) {
-  // Capabilities routed from test_manager to components in realm.
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::vulkan::loader::Loader::Name_}},
-                                .source = ParentRef(),
-                                .targets = {ChildRef{kScenic}}});
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::scheduler::ProfileProvider::Name_}},
-            .source = ParentRef(),
-            .targets = {ChildRef{kScenic}}});
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
-                                .source = ParentRef(),
-                                .targets = {ChildRef{kScenic}, ChildRef{kHdcp}}});
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
-            .source = ParentRef(),
-            .targets = {ChildRef{kScenic}, ChildRef{kHdcp}}});
-
-  // Capabilities routed between siblings in realm.
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
-                                .source = ChildRef{kMockCobalt},
-                                .targets = {ChildRef{kScenic}}});
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::hardware::display::Provider::Name_}},
-            .source = ChildRef{kHdcp},
-            .targets = {ChildRef{kScenic}}});
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                .source = ChildRef{kScenic},
-                                .targets = {ChildRef{kInputPipeline}, ChildRef{kRootPresenter}}});
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::ui::pointerinjector::Registry::Name_}},
-            .source = ChildRef{kScenic},
-            .targets = {ChildRef{kInputPipeline}}});
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::ui::pointerinjector::configuration::Setup::Name_}},
-            .source = ChildRef{kRootPresenter},
-            .targets = {ChildRef{kInputPipeline}}});
-
-  // Capabilities routed up to test driver (this component).
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::input::injection::InputDeviceRegistry::Name_}},
-            .source = ChildRef{kInputPipeline},
-            .targets = {ParentRef()}});
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::policy::Presenter::Name_}},
-                                .source = ChildRef{kRootPresenter},
-                                .targets = {ParentRef()}});
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                .source = ChildRef{kScenic},
-                                .targets = {ParentRef()}});
-}
 
 // Combines all vectors in `vecs` into one.
 template <typename T>
@@ -559,16 +481,33 @@ class TouchInputBase : public gtest::RealLoopFixture {
     response_listener_ = std::make_unique<ResponseListenerServer>(dispatcher());
     builder()->AddLocalChild(kMockResponseListener, response_listener_.get());
 
-    // Add all components shared by each test to the realm.
-    AddBaseComponents(builder());
+    // Add static test realm as a component to the realm.
+    builder()->AddChild(
+        kInputTestRealm,
+        "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/input-pipeline-test-realm.cm");
 
     // Add components specific for this test case to the realm.
     for (const auto& [name, component] : components) {
       builder()->AddLegacyChild(name, component);
     }
 
-    // Add the necessary routing for each of the base components added above.
-    AddBaseRoutes(builder());
+    // Capabilities routed from test_manager to components in static test realm.
+    builder()->AddRoute(
+        Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
+                               Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                               Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                               Protocol{fuchsia::sysmem::Allocator::Name_},
+                               Protocol{fuchsia::tracing::provider::Registry::Name_}},
+              .source = ParentRef(),
+              .targets = {ChildRef{kInputTestRealm}}});
+
+    // Capabilities routed from static test realm up to test driver (this component).
+    builder()->AddRoute(
+        Route{.capabilities = {Protocol{fuchsia::input::injection::InputDeviceRegistry::Name_},
+                               Protocol{fuchsia::ui::policy::Presenter::Name_},
+                               Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+              .source = ChildRef{kInputTestRealm},
+              .targets = {ParentRef()}});
 
     // Add the necessary routing for each of the extra components added above.
     for (const auto& route : routes) {
@@ -643,7 +582,7 @@ class FlutterInputTestIp : public TouchInputBase {
              .source = ChildRef{kMockResponseListener},
              .targets = {target}},
             {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-             .source = ChildRef{kScenic},
+             .source = ChildRef{kInputTestRealm},
              .targets = {target}},
             {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
              .source = ParentRef(),
@@ -695,7 +634,7 @@ class GfxInputTestIp : public TouchInputBase {
          .source = ChildRef{kMockResponseListener},
          .targets = {ChildRef{kCppGfxClient}}},
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ChildRef{kScenic},
+         .source = ChildRef{kInputTestRealm},
          .targets = {ChildRef{kCppGfxClient}}},
         {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
          .source = ParentRef(),
@@ -854,13 +793,13 @@ class WebEngineTestIp : public TouchInputBase {
          .source = ParentRef(),
          .targets = {ChildRef{kFontsProvider}, ChildRef{kSemanticsManager}}},
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ChildRef{kScenic},
+         .source = ChildRef{kInputTestRealm},
          .targets = {ChildRef{kSemanticsManager}}},
         {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
          .source = ParentRef(),
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
-         .source = ChildRef{kMockCobalt},
+         .source = ChildRef{kInputTestRealm},
          .targets = {ChildRef{kMemoryPressureProvider}}},
         {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
          .source = ParentRef(),
@@ -878,7 +817,7 @@ class WebEngineTestIp : public TouchInputBase {
          .source = ParentRef(),
          .targets = {ChildRef{kMemoryPressureProvider}}},
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ChildRef{kScenic},
+         .source = ChildRef{kInputTestRealm},
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
          .source = ChildRef{kNetstack},
@@ -984,7 +923,7 @@ class EmbeddingFlutterTestIp {
          .source = ChildRef{kMockResponseListener},
          .targets = {ChildRef{kEmbeddingFlutter}}},
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ChildRef{kScenic},
+         .source = ChildRef{kInputTestRealm},
          .targets = {ChildRef{kEmbeddingFlutter}}},
 
         // Needed to launch Embedded Client.

@@ -1,0 +1,17 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+
+        // A fake binary to allow realm startup, as the `program.binary`
+        // property is required in a manifest.  This is not a CF bug. Rather,
+        // we are using the manifest in a somewhat unconventional way.
+        binary: "bin/fidl_echo_rust_server",
+    },
+}

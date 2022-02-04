@@ -138,6 +138,7 @@ fuchsia_test_package("text-input-test") {
     "//src/ui/bin/scene_manager:scene_manager_component",
     "//src/ui/bin/text:text_manager_comp",
     "//src/ui/tests/integration_input_tests:scenic-for-test",
+    "//src/ui/tests/integration_input_tests:scenic-test-realm",
     "//src/ui/tests/integration_input_tests:workstation-test-realm",
     "//src/ui/tests/integration_input_tests:wrapped-text-manager",
   ]

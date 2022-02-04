@@ -94,7 +94,7 @@ fuchsia_test_package("touch-input-test") {
     ":touch-input-test-display_rotation",
     "//src/connectivity/network/netstack:component-legacy",
     "//src/ui/bin/root_presenter:component_v1_for_test",
-    "//src/ui/scenic:component",
+    "//src/ui/tests/integration_input_tests:scenic-test-realm",
   ]
   test_specs = {
     environments = [
@@ -187,6 +187,8 @@ fuchsia_test_package("touch-input-test-ip") {
     "//src/ui/bin/input-pipeline:component-for-test",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/scenic:component",
+    "//src/ui/tests/integration_input_tests:input-pipeline-test-realm",
+    "//src/ui/tests/integration_input_tests:scenic-test-realm",
   ]
   test_specs = {
     environments = [
