@@ -38,8 +38,12 @@ pub(crate) struct DriverArgs {
     #[argh(option, long = "name", description = "name of interface")]
     pub name: Option<String>,
 
-    #[argh(option, long = "log-level", description = "logging level")]
-    pub log_level: Option<LogLevel>,
+    #[argh(
+        option,
+        long = "verbosity",
+        description = "verbosity, larger number means more logging"
+    )]
+    pub verbosity: Option<i32>,
 
     #[argh(
         option,
@@ -159,6 +163,12 @@ impl Config {
         if let Some(tmp) = args.name {
             fx_log_info!("cmdline overriding name from {:?} to {:?}", self.name, tmp);
             self.name = tmp;
+        }
+
+        if let Some(x) = args.verbosity {
+            let severity = fuchsia_syslog::get_severity_from_verbosity(x);
+            fx_log_info!("cmdline log verbosity set to {:?}", x);
+            self.log_level = severity;
         }
 
         if let Some(tmp) = args.ot_radio_path {
