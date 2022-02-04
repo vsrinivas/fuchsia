@@ -1086,14 +1086,14 @@ class TestRegion : public fbl::RefCounted<TestRegion>,
   size_t size_;
 };
 
-void insert_region(RegionList<TestRegion>* regions, vaddr_t base, size_t size) {
+static void insert_region(RegionList<TestRegion>* regions, vaddr_t base, size_t size) {
   fbl::AllocChecker ac;
   auto test_region = fbl::AdoptRef(new (&ac) TestRegion(base, size));
   ASSERT(ac.check());
   regions->InsertRegion(ktl::move(test_region));
 }
 
-bool remove_region(RegionList<TestRegion>* regions, vaddr_t base) {
+static bool remove_region(RegionList<TestRegion>* regions, vaddr_t base) {
   auto region = regions->FindRegion(base);
   if (region == nullptr) {
     return false;

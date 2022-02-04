@@ -476,7 +476,7 @@ static int cmd_crash_user_execute(int argc, const cmd_args* argv, uint32_t flags
 }
 
 // Marked with NO_ASAN because this will be called with a pointer to user memory.
-NO_ASAN uint8_t read_byte(const uint8_t* p) { return *p; }
+NO_ASAN static uint8_t read_byte(const uint8_t* p) { return *p; }
 
 static int cmd_crash_user_read(int argc, const cmd_args* argv, uint32_t flags) {
   // TODO(fxbug.dev/59284): Once we support PAN enable this for arm64.

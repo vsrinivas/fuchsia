@@ -18,6 +18,7 @@
 #include <platform.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/errors.h>
 
 #include <new>
 
@@ -43,7 +44,6 @@
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_physical.h>
-#include <zircon/errors.h>
 
 #define LOCAL_TRACE 0
 
@@ -194,7 +194,7 @@ static void arm64_perfmon_clear_overflow_indicators() {
   __arm_wsr64("pmovsclr_el0", perfmon_counter_status_bits);
 }
 
-size_t get_max_space_needed_for_all_records(PerfmonState* state) {
+static size_t get_max_space_needed_for_all_records(PerfmonState* state) {
   size_t num_events = (state->num_used_programmable + state->num_used_fixed);
   return (sizeof(perfmon::TimeRecord) + num_events * kMaxEventRecordSize);
 }
@@ -740,7 +740,7 @@ static void arm64_perfmon_stop_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALY
   arm64_perfmon_clear_overflow_indicators();
 }
 
-void arch_perfmon_stop_locked() TA_REQ(PerfmonLock::Get()) {
+static void arch_perfmon_stop_locked() TA_REQ(PerfmonLock::Get()) {
   if (!perfmon_supported) {
     // Nothing to do.
     return;

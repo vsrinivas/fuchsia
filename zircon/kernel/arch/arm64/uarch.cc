@@ -6,19 +6,21 @@
 
 // Microarchitecture-specific workarounds and optimizations
 
+#include "arch/arm64/uarch.h"
+
 #include <arch/arm64/mp.h>
 #include <dev/psci.h>
 
 bool arm64_uarch_needs_spectre_v2_mitigation() {
   switch (arm64_read_percpu_ptr()->microarch) {
-  case ARM_CORTEX_A57:
-  case ARM_CORTEX_A72:
-  case ARM_CORTEX_A73:
-  case ARM_CORTEX_A75:
-  case CAVIUM_CN99XX:
-    return true;
-  default:
-    return false;
+    case ARM_CORTEX_A57:
+    case ARM_CORTEX_A72:
+    case ARM_CORTEX_A73:
+    case ARM_CORTEX_A75:
+    case CAVIUM_CN99XX:
+      return true;
+    default:
+      return false;
   }
 }
 

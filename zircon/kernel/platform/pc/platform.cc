@@ -194,7 +194,7 @@ static void platform_ensure_display_memtype(uint level) {
 }
 LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM + 1)
 
-void platform_init_crashlog(void) {
+static void platform_init_crashlog(void) {
   // Nothing to do if we have already selected a crashlog implementation.
   if (PlatformCrashlog::HasNonTrivialImpl()) {
     return;

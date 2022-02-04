@@ -149,11 +149,11 @@ static uint64_t raw_ticks_to_ticks_offset{0};
 
 #define LOCAL_TRACE 0
 
-zx_ticks_t current_ticks_rdtsc(void) { return _rdtsc(); }
+static zx_ticks_t current_ticks_rdtsc(void) { return _rdtsc(); }
 
-zx_ticks_t current_ticks_hpet(void) { return hpet_get_value(); }
+static zx_ticks_t current_ticks_hpet(void) { return hpet_get_value(); }
 
-zx_ticks_t current_ticks_pit(void) { return pit_ticks; }
+static zx_ticks_t current_ticks_pit(void) { return pit_ticks; }
 
 zx_ticks_t platform_current_raw_ticks() {
   // Directly call the ticks functions to avoid the cost of a virtual (indirect) call.
@@ -185,8 +185,6 @@ zx_ticks_t platform_get_raw_ticks_to_ticks_offset() {
   // time comes.
   return raw_ticks_to_ticks_offset;
 }
-
-const affine::Ratio& rdtsc_to_nanos() { return rdtsc_ticks_to_clock_monotonic; }
 
 zx_duration_t convert_raw_tsc_duration_to_nanoseconds(int64_t duration) {
   return rdtsc_ticks_to_clock_monotonic.Scale(duration);

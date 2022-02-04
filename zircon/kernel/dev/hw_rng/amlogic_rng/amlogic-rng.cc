@@ -9,6 +9,7 @@
 
 #include <arch/arm64/periphmap.h>
 #include <dev/hw_rng.h>
+#include <dev/hw_rng/amlogic_rng/init.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
 #include <kernel/thread.h>

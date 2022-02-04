@@ -480,6 +480,8 @@ extern "C" void arm64_sync_exception(iframe_t* iframe, uint exception_flags, uin
 }
 
 /* called from assembly */
+extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags);
+
 extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
   LTRACEF("iframe %p, flags %#x\n", iframe, exception_flags);
   bool is_user = exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL;
@@ -514,6 +516,8 @@ extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
 }
 
 /* called from assembly */
+extern "C" void arm64_invalid_exception(iframe_t* iframe, unsigned int which);
+
 extern "C" void arm64_invalid_exception(iframe_t* iframe, unsigned int which) {
   platform_panic_start();
 

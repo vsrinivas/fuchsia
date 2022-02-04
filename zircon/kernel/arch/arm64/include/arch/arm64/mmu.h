@@ -432,6 +432,8 @@ const uint16_t MMU_ARM64_MAX_USER_ASID_16 = (1u << 16) - 1;
 
 pte_t* arm64_get_kernel_ptable();
 
+extern "C" zx_status_t arm64_boot_map(pte_t* kernel_table0, const vaddr_t vaddr,
+                                      const paddr_t paddr, const size_t len, const pte_t flags);
 zx_status_t arm64_boot_map_v(const vaddr_t vaddr, const paddr_t paddr, const size_t len,
                              const pte_t flags);
 

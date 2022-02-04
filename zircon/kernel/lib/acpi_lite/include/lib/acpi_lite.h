@@ -115,7 +115,7 @@ uint8_t AcpiChecksum(const void* _buf, size_t len);
 // Validate the RSDT / XSDT tables.
 zx::status<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa,
                                          size_t* num_tables);
-zx::status<const AcpiXsdt*> ValidateXsdt(PhysMemReader& reader, uint32_t rsdt_pa,
+zx::status<const AcpiXsdt*> ValidateXsdt(PhysMemReader& reader, uint64_t xsdt_pa,
                                          size_t* num_tables);
 
 }  // namespace acpi_lite

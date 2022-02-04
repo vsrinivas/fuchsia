@@ -23,6 +23,8 @@
 #include <pretty/cpp/sizes.h>
 #include <vm/fault.h>
 
+namespace {
+
 using pretty::FormattedBytes;
 
 // Machinery to walk over a job tree and run a callback on each process.
@@ -43,7 +45,7 @@ class ProcessWalker final : public JobEnumerator {
 };
 
 template <typename ProcessCallbackType>
-static ProcessWalker<ProcessCallbackType> MakeProcessWalker(ProcessCallbackType cb) {
+ProcessWalker<ProcessCallbackType> MakeProcessWalker(ProcessCallbackType cb) {
   return ProcessWalker<ProcessCallbackType>(cb);
 }
 
@@ -65,11 +67,11 @@ class JobWalker final : public JobEnumerator {
 };
 
 template <typename JobCallbackType>
-static JobWalker<JobCallbackType> MakeJobWalker(JobCallbackType cb) {
+JobWalker<JobCallbackType> MakeJobWalker(JobCallbackType cb) {
   return JobWalker<JobCallbackType>(cb);
 }
 
-static void DumpProcessListKeyMap() {
+void DumpProcessListKeyMap() {
   printf("id  : process id number\n");
   printf("#h  : total number of handles\n");
   printf("#jb : number of job handles\n");
@@ -86,7 +88,7 @@ static void DumpProcessListKeyMap() {
   printf("#?? : number of all other handle types\n");
 }
 
-static const char* ObjectTypeToString(zx_obj_type_t type) {
+const char* ObjectTypeToString(zx_obj_type_t type) {
   switch (type) {
     case ZX_OBJ_TYPE_PROCESS:
       return "process";
@@ -146,7 +148,7 @@ static const char* ObjectTypeToString(zx_obj_type_t type) {
 // Returns the count of a process's handles. For each handle, the corresponding
 // zx_obj_type_t-indexed element of |handle_types| is incremented.
 using HandleTypeCounts = ktl::span<uint32_t, ZX_OBJ_TYPE_UPPER_BOUND>;
-static uint32_t BuildHandleStats(const ProcessDispatcher& pd, HandleTypeCounts handle_types) {
+uint32_t BuildHandleStats(const ProcessDispatcher& pd, HandleTypeCounts handle_types) {
   uint32_t total = 0;
   pd.handle_table().ForEachHandle(
       [&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
@@ -160,7 +162,7 @@ static uint32_t BuildHandleStats(const ProcessDispatcher& pd, HandleTypeCounts h
 
 // Counts the process's handles by type and formats them into the provided
 // buffer as strings.
-static void FormatHandleTypeCount(const ProcessDispatcher& pd, char* buf, size_t buf_len) {
+void FormatHandleTypeCount(const ProcessDispatcher& pd, char* buf, size_t buf_len) {
   uint32_t types[ZX_OBJ_TYPE_UPPER_BOUND] = {0};
   uint32_t handle_count = BuildHandleStats(pd, types);
 
@@ -249,9 +251,9 @@ void DumpAllChannels() {
   GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
 }
 
-static const char kRightsHeader[] =
+const char kRightsHeader[] =
     "dup tr r w x map gpr spr enm des spo gpo sig sigp wt ins mj mp mt ap ms";
-static void DumpHandleRightsKeyMap() {
+void DumpHandleRightsKeyMap() {
   printf("dup : ZX_RIGHT_DUPLICATE\n");
   printf("tr  : ZX_RIGHT_TRANSFER\n");
   printf("r   : ZX_RIGHT_READ\n");
@@ -275,11 +277,9 @@ static void DumpHandleRightsKeyMap() {
   printf("ms  : ZX_RIGHT_MANAGE_SOCKET\n");
 }
 
-static bool HasRights(zx_rights_t rights, zx_rights_t desired) {
-  return (rights & desired) == desired;
-}
+bool HasRights(zx_rights_t rights, zx_rights_t desired) { return (rights & desired) == desired; }
 
-static void FormatHandleRightsMask(zx_rights_t rights, char* buf, size_t buf_len) {
+void FormatHandleRightsMask(zx_rights_t rights, char* buf, size_t buf_len) {
   snprintf(buf, buf_len,
            "%3d %2d %1d %1d %1d %3d %3d %3d %3d %3d %3d %3d %3d %4d %2d %3d %2d %2d %2d %2d %2d",
            HasRights(rights, ZX_RIGHT_DUPLICATE), HasRights(rights, ZX_RIGHT_TRANSFER),
@@ -362,6 +362,8 @@ void DumpHandlesForKoid(zx_koid_t id) {
   }
 }
 
+}  // namespace
+
 void ktrace_report_live_processes() {
   auto walker = MakeProcessWalker([](ProcessDispatcher* process) {
     char name[ZX_MAX_NAME_LEN];
@@ -371,9 +373,11 @@ void ktrace_report_live_processes() {
   GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
 }
 
+namespace {
+
 // Returns a string representation of VMO-related rights.
-static constexpr size_t kRightsStrLen = 8;
-static const char* VmoRightsToString(uint32_t rights, char str[kRightsStrLen]) {
+constexpr size_t kRightsStrLen = 8;
+const char* VmoRightsToString(uint32_t rights, char str[kRightsStrLen]) {
   char* c = str;
   *c++ = (rights & ZX_RIGHT_READ) ? 'r' : '-';
   *c++ = (rights & ZX_RIGHT_WRITE) ? 'w' : '-';
@@ -387,13 +391,13 @@ static const char* VmoRightsToString(uint32_t rights, char str[kRightsStrLen]) {
 
 // Prints a header for the columns printed by DumpVmObject.
 // If |handles| is true, the dumped objects are expected to have handle info.
-static void PrintVmoDumpHeader(bool handles) {
+void PrintVmoDumpHeader(bool handles) {
   printf("%s koid obj                parent #chld #map #shr    size   alloc name\n",
          handles ? "      handle rights " : "           -      - ");
 }
 
-static void DumpVmObject(const VmObject& vmo, pretty::SizeUnit format_unit, zx_handle_t handle,
-                         uint32_t rights, zx_koid_t koid) {
+void DumpVmObject(const VmObject& vmo, pretty::SizeUnit format_unit, zx_handle_t handle,
+                  uint32_t rights, zx_koid_t koid) {
   char handle_str[11];
   if (handle != ZX_HANDLE_INVALID) {
     snprintf(handle_str, sizeof(handle_str), "%u", static_cast<uint32_t>(handle));
@@ -459,7 +463,7 @@ static void DumpVmObject(const VmObject& vmo, pretty::SizeUnit format_unit, zx_h
 // - VMOs that userspace has handles to but does not map
 // - VMOs that are mapped only into kernel space
 // - Kernel-only, unmapped VMOs that have no handles
-static void DumpAllVmObjects(bool hidden_only, pretty::SizeUnit format_unit) {
+void DumpAllVmObjects(bool hidden_only, pretty::SizeUnit format_unit) {
   if (hidden_only) {
     printf("\"Hidden\" VMOs, oldest to newest:\n");
   } else {
@@ -481,7 +485,6 @@ static void DumpAllVmObjects(bool hidden_only, pretty::SizeUnit format_unit) {
   PrintVmoDumpHeader(/* handles */ false);
 }
 
-namespace {
 // Dumps VMOs under a VmAspace.
 class AspaceVmoDumper final : public VmEnumerator {
  public:
@@ -543,8 +546,6 @@ void DumpProcessVmObjects(zx_koid_t id, pretty::SizeUnit format_unit) {
   PrintVmoDumpHeader(/* handles */ false);
 }
 
-}  // namespace
-
 void KillProcess(zx_koid_t id) {
   // search the process list and send a kill if found
   auto pd = ProcessDispatcher::LookupProcessById(id);
@@ -557,7 +558,6 @@ void KillProcess(zx_koid_t id) {
   pd->Kill(ZX_TASK_RETCODE_SYSCALL_KILL);
 }
 
-namespace {
 // Counts memory usage under a VmAspace.
 class VmCounter final : public VmEnumerator {
  public:
@@ -579,6 +579,7 @@ class VmCounter final : public VmEnumerator {
 
   VmAspace::vm_usage_t usage = {};
 };
+
 }  // namespace
 
 zx_status_t VmAspace::GetMemoryUsage(vm_usage_t* usage) {
@@ -592,6 +593,7 @@ zx_status_t VmAspace::GetMemoryUsage(vm_usage_t* usage) {
 }
 
 namespace {
+
 unsigned int arch_mmu_flags_to_vm_flags(unsigned int arch_mmu_flags) {
   if (arch_mmu_flags & ARCH_MMU_FLAG_INVALID) {
     return 0;
@@ -836,6 +838,7 @@ class VmMapBuilder final : public RestartableVmEnumerator<zx_info_maps_t, VmMapB
   }
   const user_out_ptr<zx_info_maps_t> entries_;
 };
+
 }  // namespace
 
 // NOTE: Code outside of the syscall layer should not typically know about
@@ -874,6 +877,7 @@ zx_status_t GetVmAspaceMaps(VmAspace* current_aspace, fbl::RefPtr<VmAspace> targ
 }
 
 namespace {
+
 // Builds a list of all VMOs mapped into a VmAspace.
 class AspaceVmoEnumerator final
     : public RestartableVmEnumerator<zx_info_vmo_t, AspaceVmoEnumerator, false,
@@ -903,6 +907,7 @@ class AspaceVmoEnumerator final
   }
   VmoInfoWriter& vmos_;
 };
+
 }  // namespace
 
 // NOTE: Code outside of the syscall layer should not typically know about
@@ -967,6 +972,8 @@ zx_status_t GetProcessVmos(ProcessDispatcher* process, VmoInfoWriter& vmos, size
   return ZX_OK;
 }
 
+namespace {
+
 void DumpProcessAddressSpace(zx_koid_t id) {
   auto pd = ProcessDispatcher::LookupProcessById(id);
   if (!pd) {
@@ -978,7 +985,7 @@ void DumpProcessAddressSpace(zx_koid_t id) {
 }
 
 // Dumps an address space based on the arg.
-static void DumpAddressSpace(const cmd_args* arg) {
+void DumpAddressSpace(const cmd_args* arg) {
   if (strncmp(arg->str, "kernel", strlen(arg->str)) == 0) {
     // The arg is a prefix of "kernel".
     VmAspace::kernel_aspace()->Dump(true);
@@ -987,18 +994,18 @@ static void DumpAddressSpace(const cmd_args* arg) {
   }
 }
 
-static void DumpHandleTable() {
+void DumpHandleTable() {
   printf("outstanding handles: %zu\n", Handle::diagnostics::OutstandingHandles());
   Handle::diagnostics::DumpTableInfo();
 }
 
-static size_t mwd_limit = 32 * 256;
-static bool mwd_running;
+size_t mwd_limit = 32 * 256;
+bool mwd_running;
 
-static size_t hwd_limit = 1024;
-static bool hwd_running;
+size_t hwd_limit = 1024;
+bool hwd_running;
 
-static int hwd_thread(void* arg) {
+int hwd_thread(void* arg) {
   static size_t previous_handle_count = 0u;
 
   for (;;) {
@@ -1031,14 +1038,14 @@ void DumpProcessMemoryUsage(const char* prefix, size_t min_pages) {
   GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
 }
 
-static int mwd_thread(void* arg) {
+int mwd_thread(void* arg) {
   for (;;) {
     Thread::Current::SleepRelative(ZX_SEC(1));
     DumpProcessMemoryUsage("MemoryHog! ", mwd_limit);
   }
 }
 
-static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
+int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
   int rc = 0;
 
   if (argc < 2) {
@@ -1150,6 +1157,8 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
   }
   return rc;
 }
+
+}  // namespace
 
 STATIC_COMMAND_START
 STATIC_COMMAND("zx", "kernel object diagnostics", &cmd_diagnostics)

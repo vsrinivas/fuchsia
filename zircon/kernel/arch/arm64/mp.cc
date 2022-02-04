@@ -4,6 +4,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+
 #include <assert.h>
 #include <platform.h>
 #include <trace.h>
@@ -12,6 +13,7 @@
 
 #include <arch/mp.h>
 #include <arch/ops.h>
+#include <arch/quirks.h>
 #include <dev/interrupt.h>
 #include <kernel/cpu.h>
 #include <kernel/event.h>

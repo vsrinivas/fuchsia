@@ -15,13 +15,12 @@
 #include <arch/x86/cpuid_test_data.h>
 
 namespace {
+
 using cpu_id::CpuId;
 using cpu_id::Features;
 using cpu_id::ManufacturerInfo;
 using cpu_id::ProcessorId;
 using cpu_id::Registers;
-
-}  // namespace
 
 bool test_intel_feature_flags() {
   BEGIN_TEST;
@@ -181,6 +180,8 @@ bool test_amd_processor_id() {
   END_TEST;
 }
 
+}  // namespace
+
 UNITTEST_START_TESTCASE(cpuid_tests)
 UNITTEST("Parse feature flags from static Intel data.", test_intel_feature_flags)
 UNITTEST("Parse feature flags from static AMD data.", test_amd_feature_flags)
@@ -191,4 +192,5 @@ UNITTEST("Parse manufacturer info from Intel static data.", test_intel_manufactu
 UNITTEST("Parse manufacturer info from AMD static data.", test_amd_manufacturer_info)
 UNITTEST("Parse processor id from Intel static data.", test_intel_processor_id)
 UNITTEST("Parse processor id from AMD static data.", test_amd_processor_id)
+UNITTEST("Parse processor id from Eve static data.", test_eve_processor_id)
 UNITTEST_END_TESTCASE(cpuid_tests, "cpuid", "Test parsing of cpuid values.")

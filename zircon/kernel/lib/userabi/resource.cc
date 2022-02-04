@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/userabi/userboot_internal.h>
 #include <zircon/assert.h>
 
 #include <ktl/move.h>

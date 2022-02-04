@@ -661,7 +661,7 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
   }
 }
 
-zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
+static zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
   if ((local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_ONESHOT &&
       (local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_PERIODIC) {
     return 0;

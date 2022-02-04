@@ -574,7 +574,7 @@ static unsigned x86_perfmon_lookup_fixed_counter(PmuEventId id) {
   }
 }
 
-size_t get_max_space_needed_for_all_records(PerfmonState* state) {
+static size_t get_max_space_needed_for_all_records(PerfmonState* state) {
   size_t num_events = (state->num_used_programmable + state->num_used_fixed + state->num_used_misc);
   size_t space_needed = (sizeof(perfmon::TimeRecord) + num_events * kMaxEventRecordSize);
   if (state->request_lbr_record)
@@ -1614,7 +1614,7 @@ static void x86_perfmon_stop_cpu_task(void* raw_context) {
   x86_perfmon_lbr_clear();
 }
 
-void arch_perfmon_stop_locked() TA_REQ(PerfmonLock::Get()) {
+static void arch_perfmon_stop_locked() TA_REQ(PerfmonLock::Get()) {
   if (!perfmon_supported) {
     // Nothing to do.
     return;

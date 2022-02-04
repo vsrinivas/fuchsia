@@ -260,6 +260,8 @@ bool TestHandlerAllocationAlignment() TA_NO_THREAD_SAFETY_ANALYSIS {
   END_TEST;
 }
 
+namespace {
+
 bool TestPvEoi() {
   BEGIN_TEST;
 
@@ -300,6 +302,8 @@ bool TestPvEoi() {
 
   END_TEST;
 }
+
+}  // namespace
 
 UNITTEST_START_TESTCASE(pc_interrupt_tests)
 UNITTEST("RegisterInterruptHandler", TestRegisterInterruptHandler)

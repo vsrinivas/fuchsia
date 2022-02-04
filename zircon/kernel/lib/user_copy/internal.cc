@@ -4,9 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/user_copy/internal.h>
+#include <sys/types.h>
+
 #include <fbl/conditional_select_nospec.h>
 #include <fbl/confine_array_index.h>
-#include <sys/types.h>
 
 namespace internal {
 

@@ -31,8 +31,8 @@
 #include <ktl/unique_ptr.h>
 
 #include "../../lib/syscalls/system_priv.h"
+#include "amd.h"
 
-extern void x86_amd_set_lfence_serializing(const cpu_id::CpuId*, MsrAccess*);
 extern char __x86_indirect_thunk_r11;
 extern char interrupt_non_nmi_maybe_mds_buff_overwrite;
 extern char interrupt_nmi_maybe_mds_buff_overwrite;

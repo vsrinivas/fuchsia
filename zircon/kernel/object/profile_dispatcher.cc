@@ -31,7 +31,7 @@ static zx_status_t parse_cpu_mask(const zx_cpu_set_t& set, cpu_mask_t* result) {
   return ZX_OK;
 }
 
-zx_status_t validate_profile(const zx_profile_info_t& info) {
+static zx_status_t validate_profile(const zx_profile_info_t& info) {
   uint32_t flags = info.flags;
 
   // Ensure at least one flag has been set.

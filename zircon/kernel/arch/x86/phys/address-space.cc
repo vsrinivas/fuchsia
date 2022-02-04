@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "address-space.h"
+
 #include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/system.h>
 #include <lib/memalloc/pool.h>

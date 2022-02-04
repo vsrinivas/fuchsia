@@ -302,6 +302,7 @@ if (is_kernel) {
   config("warnings") {
     cflags = [
       "-Wformat=2",
+      "-Wmissing-declarations",
       "-Wvla",
     ]
 

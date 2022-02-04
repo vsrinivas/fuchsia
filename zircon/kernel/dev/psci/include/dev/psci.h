@@ -61,6 +61,7 @@
 void PsciInit(const dcfg_arm_psci_driver_t& config);
 
 uint32_t psci_get_version();
+uint32_t psci_get_feature(uint32_t psci_call);
 
 /* powers down the calling cpu - only returns if call fails */
 uint32_t psci_cpu_off();

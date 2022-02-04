@@ -245,6 +245,7 @@ static void x86_tlb_invalidate_page(const X86PageTableBase* pt, PendingTlbInvali
   pending->clear();
 }
 
+#if 0  // TODO(mcgrathr): remove this if it isn't going to be used
 bool x86_enable_pcid() {
   DEBUG_ASSERT(arch_ints_disabled());
   if (!g_x86_feature_pcid_good) {
@@ -254,6 +255,7 @@ bool x86_enable_pcid() {
   arch::X86Cr4::Read().set_pcide(true).Write();
   return true;
 }
+#endif
 
 bool X86PageTableMmu::check_paddr(paddr_t paddr) { return x86_mmu_check_paddr(paddr); }
 

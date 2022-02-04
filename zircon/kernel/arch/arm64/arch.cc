@@ -293,6 +293,8 @@ void arch_enter_uspace(iframe_t* iframe) {
 }
 
 // called from assembly.
+extern "C" void arm64_secondary_entry();
+
 extern "C" void arm64_secondary_entry() {
   arm64_cpu_early_init();
 

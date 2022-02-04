@@ -13,6 +13,7 @@
 
 #include <arch/arm64/periphmap.h>
 #include <arch/arm64/smccc.h>
+#include <dev/hdcp/amlogic_s912/init.h>
 #include <dev/interrupt.h>
 #include <kernel/thread.h>
 

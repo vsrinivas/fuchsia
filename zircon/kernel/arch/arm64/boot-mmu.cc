@@ -44,23 +44,6 @@ static size_t vaddr_to_l3_index(uintptr_t addr) {
   return (addr >> MMU_LX_X(MMU_KERNEL_PAGE_SIZE_SHIFT, 3)) & (MMU_KERNEL_PAGE_TABLE_ENTRIES - 1);
 }
 
-// called from start.S to grab another page to back a page table from the boot allocator
-__NO_SAFESTACK
-extern "C" pte_t* boot_alloc_ptable() {
-  // allocate a page out of the boot allocator, asking for a physical address
-  pte_t* ptr = reinterpret_cast<pte_t*>(boot_alloc_page_phys());
-
-  // avoid using memset, since this relies on dc zva instruction, which isn't set up at
-  // this point in the boot process
-  // use a volatile pointer to make sure
-  volatile pte_t* vptr = ptr;
-  for (auto i = 0; i < MMU_KERNEL_PAGE_TABLE_ENTRIES; i++) {
-    vptr[i] = 0;
-  }
-
-  return ptr;
-}
-
 // inner mapping routine passed two helper routines
 __NO_SAFESTACK
 static inline zx_status_t _arm64_boot_map(pte_t* kernel_table0, const vaddr_t vaddr,

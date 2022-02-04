@@ -345,6 +345,7 @@ struct test_case_element {
 bool unittest_testcase(const char* name, const test_case_element*, size_t n);
 
 #define UNITTEST_START_TESTCASE(global_id) \
+  bool global_id();                        \
   bool global_id() {                       \
     const test_case_element cases[] = {
 // The assembly silliness is to prevent the compiler from deciding it

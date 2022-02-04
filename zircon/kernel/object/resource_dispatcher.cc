@@ -35,7 +35,7 @@ KCOUNTER(dispatcher_resource_destroy_count, "dispatcher.resource.destroy")
 
 constexpr size_t kFlagLen = 6;
 // Utility function to format the flags into a user-readable string.
-void flags_to_string(uint32_t flags, char str[kFlagLen]) {
+static void flags_to_string(uint32_t flags, char str[kFlagLen]) {
   memset(str, 0, kFlagLen);
   uint8_t pos = 0;
   if (flags & ZX_RSRC_FLAG_EXCLUSIVE) {

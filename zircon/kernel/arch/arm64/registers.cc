@@ -330,7 +330,7 @@ void arm64_print_debug_registers(const arm64_debug_state_t* debug_state) {
   }
 }
 
-void print_mdscr() {
+void arm64_print_mdscr() {
   uint32_t mdscr = __arm_rsr("mdscr_el1");
   printf(
       "SS=%d, ERR=%d, TDCC=%d, KDE=%d, HDE=%d, MDE=%d, RAZ/WI=%d, "

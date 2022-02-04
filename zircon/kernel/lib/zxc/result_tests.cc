@@ -12,6 +12,8 @@
 #include <stddef.h>
 #include <string.h>
 
+namespace {
+
 zx::status<size_t> StringLength(const char* string) {
   if (string == nullptr) {
     return zx::error_status(ZX_ERR_INVALID_ARGS);
@@ -40,6 +42,8 @@ bool result_test() {
 
   END_TEST;
 }
+
+}  // namespace
 
 UNITTEST_START_TESTCASE(result_tests)
 UNITTEST("result", result_test)

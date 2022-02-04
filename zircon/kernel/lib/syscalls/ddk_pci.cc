@@ -801,12 +801,6 @@ zx_status_t sys_pci_cfg_pio_rw(zx_handle_t handle, uint8_t bus, uint8_t dev, uin
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-// zx_status_t zx_pci_get_nth_device
-zx_status_t sys_pci_get_nth_device(zx_handle_t, uint32_t, user_inout_ptr<zx_pcie_device_info_t>,
-                                   user_out_handle*) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 // zx_status_t zx_pci_enable_bus_master
 zx_status_t sys_pci_enable_bus_master(zx_handle_t, uint32_t) { return ZX_ERR_NOT_SUPPORTED; }
 

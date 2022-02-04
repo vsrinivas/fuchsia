@@ -970,7 +970,8 @@ NO_ASAN void* cmpct_alloc(size_t size) {
   return result;
 }
 
-NO_ASAN void cmpct_free_internal(void* payload, header_t* header) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static void cmpct_free_internal(void* payload, header_t* header)
+    TA_REQ(TheHeapLock::Get()) {
   ZX_DEBUG_ASSERT(!is_tagged_as_free(header));  // Double free!
   ZX_ASSERT_MSG(header->size > sizeof(header_t), "got %lu min %lu", header->size, sizeof(header_t));
 
@@ -1104,9 +1105,7 @@ NO_ASAN void* cmpct_memalign(size_t alignment, size_t size) {
   return payload;
 }
 
-void cmpct_set_fill_on_alloc_threshold(size_t size) {
-  g_fill_on_alloc_threshold = size;
-}
+void cmpct_set_fill_on_alloc_threshold(size_t size) { g_fill_on_alloc_threshold = size; }
 
 void cmpct_init(void) {
   LTRACE_ENTRY;

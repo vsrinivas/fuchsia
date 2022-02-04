@@ -91,14 +91,16 @@ static ktl::atomic<int> panic_started;
 static ktl::atomic<int> halted;
 
 namespace {
+
 lazy_init::LazyInit<RamMappableCrashlog, lazy_init::CheckType::None,
                     lazy_init::Destructor::Disabled>
     ram_mappable_crashlog;
-}
 
 zbitl::Image<ktl::span<ktl::byte>> GetMexecDataImage() {
   return zbitl::Image(ktl::span<ktl::byte>{mexec_data_zbi, sizeof(mexec_data_zbi)});
 }
+
+}  // namespace
 
 static void halt_other_cpus(void) {
   if (halted.exchange(1) == 0) {
@@ -389,7 +391,7 @@ static void allocate_persistent_ram(paddr_t pa, size_t length) {
 }
 
 // Called during platform_init_early.
-void ProcessPhysHandoff() {
+static void ProcessPhysHandoff() {
   if (gPhysHandoff->nvram) {
     const zbi_nvram_t& nvram = gPhysHandoff->nvram.value();
     dprintf(INFO, "boot reserve NVRAM range: phys base %#" PRIx64 " length %#" PRIx64 "\n",

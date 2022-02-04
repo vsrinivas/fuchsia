@@ -294,7 +294,7 @@ static bool test_large_region_unmap() {
 }
 
 static list_node node = LIST_INITIAL_VALUE(node);
-zx_status_t test_page_alloc_fn(uint unused, vm_page** p, paddr_t* pa) {
+static zx_status_t test_page_alloc_fn(uint unused, vm_page** p, paddr_t* pa) {
   if (list_is_empty(&node)) {
     return ZX_ERR_NO_MEMORY;
   }

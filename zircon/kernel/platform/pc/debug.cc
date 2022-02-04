@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "debug.h"
+#include "platform/pc/debug.h"
 
 #include <bits.h>
 #include <lib/arch/intrin.h>

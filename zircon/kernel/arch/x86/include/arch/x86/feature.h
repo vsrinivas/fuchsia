@@ -326,4 +326,7 @@ bool x86_intel_idle_state_may_empty_rsb(X86IdleState*);
 bool x86_intel_check_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, zx_iovec_t patch);
 void x86_intel_load_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, zx_iovec_t patch);
 
+// Called from assembly.
+extern "C" void x86_cpu_maybe_l1d_flush(zx_status_t syscall_return);
+
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_FEATURE_H_

@@ -24,6 +24,7 @@
 #include <vm/vm_object_paged.h>
 
 namespace {
+
 bool MsiIsSupportedTrue() { return true; }
 zx_status_t MsiAllocate(uint requested_irqs, bool /*unused*/, bool /*unused*/,
                         msi_block_t* out_block) {
@@ -46,7 +47,7 @@ zx_status_t MsiAllocateAssert(uint32_t /* unused */, bool /* unused */, bool /* 
 }
 
 void MsiFreeAssert(msi_block_t* /* unused */) { assert(false); }
-}  // namespace
+
 const uint32_t kVectorMax = 256u;
 
 zx_status_t create_allocation(fbl::RefPtr<MsiAllocation>* alloc, uint32_t cnt) {
@@ -97,7 +98,7 @@ zx_status_t create_valid_msi_vmo(fbl::RefPtr<VmObject>* out_vmo,
   return ZX_OK;
 }
 
-static bool allocation_creation_and_info_test() {
+bool allocation_creation_and_info_test() {
   BEGIN_TEST;
 
   const uint32_t test_irq_cnt = 8;
@@ -119,7 +120,7 @@ static bool allocation_creation_and_info_test() {
   END_TEST;
 }
 
-static bool allocation_irq_count_test() {
+bool allocation_irq_count_test() {
   BEGIN_TEST;
 
   ResourceDispatcher::ResourceStorage rsrc_storage;
@@ -145,7 +146,7 @@ static bool allocation_irq_count_test() {
   END_TEST;
 }
 
-static bool allocation_reservation_test() {
+bool allocation_reservation_test() {
   BEGIN_TEST;
 
   fbl::RefPtr<MsiAllocation> alloc;
@@ -161,7 +162,7 @@ static bool allocation_reservation_test() {
   END_TEST;
 }
 
-static bool allocation_support_test() {
+bool allocation_support_test() {
   BEGIN_TEST;
 
   {
@@ -175,10 +176,10 @@ static bool allocation_support_test() {
 
 // Use a static var for tracking calls rather than a lambda to avoid storage issues with lambda
 // captures and function pointers without having to increase complexity in the dispatcher.
-static uint32_t register_call_count = 0;
+uint32_t register_call_count = 0;
 void register_fn(const msi_block_t*, uint, int_handler, void*) { register_call_count++; }
 
-static bool interrupt_duplication_test() {
+bool interrupt_duplication_test() {
   BEGIN_TEST;
   fbl::RefPtr<MsiAllocation> alloc;
   ASSERT_EQ(ZX_OK, create_allocation(&alloc, MsiAllocation::kMsiAllocationCountMax));
@@ -204,7 +205,7 @@ static bool interrupt_duplication_test() {
   END_TEST;
 }
 
-static bool interrupt_vmo_test() {
+bool interrupt_vmo_test() {
   BEGIN_TEST;
   register_call_count = 0;
   fbl::RefPtr<MsiAllocation> alloc;
@@ -250,7 +251,7 @@ static bool interrupt_vmo_test() {
   END_TEST;
 }
 
-static bool interrupt_creation_mask_test() {
+bool interrupt_creation_mask_test() {
   BEGIN_TEST;
   fbl::RefPtr<MsiAllocation> alloc;
   ASSERT_EQ(ZX_OK, create_allocation(&alloc, MsiAllocation::kMsiAllocationCountMax));
@@ -329,7 +330,7 @@ static bool interrupt_creation_mask_test() {
   END_TEST;
 }
 
-static bool out_of_order_ownership_test() {
+bool out_of_order_ownership_test() {
   BEGIN_TEST;
   KernelHandle<InterruptDispatcher> interrupt1, interrupt2;
   fbl::RefPtr<VmObject> vmo;
@@ -353,6 +354,8 @@ static bool out_of_order_ownership_test() {
 
   END_TEST;
 }
+
+}  // namespace
 
 UNITTEST_START_TESTCASE(msi_object)
 UNITTEST("Test that Create() and get_info() operate properly", allocation_creation_and_info_test)

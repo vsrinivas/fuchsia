@@ -8,6 +8,8 @@
 
 #include <lib/unittest/unittest.h>
 
+namespace {
+
 bool test_gic_translator_translate() {
   BEGIN_TEST;
 
@@ -71,6 +73,8 @@ bool test_determine_local_mask() {
 
   END_TEST;
 }
+
+}  // namespace
 
 UNITTEST_START_TESTCASE(gicv2_tests)
 UNITTEST("Set and lookup translations.", test_gic_translator_translate)

@@ -142,6 +142,28 @@ zx::status<zx_paddr_t> FindRsdpPc(PhysMemReader& reader) {
 }
 #endif
 
+zx::status<RootSystemTableDetails> FindRootTables(PhysMemReader& physmem_reader,
+                                                  zx_paddr_t rsdp_pa) {
+  // If the user gave us an explicit RSDP, just use that directly.
+  if (rsdp_pa != 0) {
+    return ParseRsdp(physmem_reader, rsdp_pa);
+  }
+
+  // Otherwise, attempt to find it in a platform-specific way.
+#if defined(__x86_64__) || defined(__i386__)
+  {
+    zx::status<zx_paddr_t> result = FindRsdpPc(physmem_reader);
+    if (result.is_ok()) {
+      LOG_DEBUG("ACPI LITE: Found RSDP at physical address %#" PRIxPTR ".\n", result.value());
+      return ParseRsdp(physmem_reader, result.value());
+    }
+    LOG_INFO("ACPI LITE: Couldn't find ACPI RSDP in BIOS area\n");
+  }
+#endif
+
+  return zx::error(ZX_ERR_NOT_FOUND);
+}
+
 }  // namespace
 
 bool AcpiChecksumValid(const void* buf, size_t len) {
@@ -271,28 +293,6 @@ const AcpiSdtHeader* GetTableBySignature(const AcpiParserInterface& parser, Acpi
   }
 
   return nullptr;
-}
-
-zx::status<RootSystemTableDetails> FindRootTables(PhysMemReader& physmem_reader,
-                                                  zx_paddr_t rsdp_pa) {
-  // If the user gave us an explicit RSDP, just use that directly.
-  if (rsdp_pa != 0) {
-    return ParseRsdp(physmem_reader, rsdp_pa);
-  }
-
-  // Otherwise, attempt to find it in a platform-specific way.
-#if defined(__x86_64__) || defined(__i386__)
-  {
-    zx::status<zx_paddr_t> result = FindRsdpPc(physmem_reader);
-    if (result.is_ok()) {
-      LOG_DEBUG("ACPI LITE: Found RSDP at physical address %#" PRIxPTR ".\n", result.value());
-      return ParseRsdp(physmem_reader, result.value());
-    }
-    LOG_INFO("ACPI LITE: Couldn't find ACPI RSDP in BIOS area\n");
-  }
-#endif
-
-  return zx::error(ZX_ERR_NOT_FOUND);
 }
 
 zx::status<AcpiParser> AcpiParser::Init(PhysMemReader& physmem_reader, zx_paddr_t rsdp_pa) {

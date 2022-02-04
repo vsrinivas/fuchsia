@@ -724,7 +724,7 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
   return ZX_OK;
 }
 
-void ktrace_init(unsigned level) {
+static void ktrace_init(unsigned level) {
   // There's no utility in setting up the singleton ktrace instance if there are
   // no syscalls to access it. See zircon/kernel/syscalls/debug.cc for the
   // corresponding syscalls. Note that because KTRACE_STATE grpmask starts at 0

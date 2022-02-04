@@ -27,21 +27,29 @@ std::string ArgumentExpr(const StructMember& arg) {
 bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
   CopyrightHeaderWithCppComments(writer);
 
-  writer->Puts("extern \"C\" {\n");
+  writer->Puts("extern \"C\" {\n\n");
 
   constexpr const char indent[] = "    ";
   for (const auto& syscall : library.syscalls()) {
     if (syscall->HasAttribute("vdsocall")) {
       continue;
     }
-    writer->Printf("syscall_result wrapper_%s(", syscall->name().c_str());
-    for (const auto& arg : syscall->kernel_arguments()) {
-      writer->Printf("SafeSyscallArgument<%s>::RawType %s, ", GetCUserModeName(arg.type()).c_str(),
-                     arg.name().c_str());
-    }
-    writer->Puts("uint64_t pc) {\n");
+
+    auto write_prototype = [&]() {
+      writer->Printf("syscall_result wrapper_%s(", syscall->name().c_str());
+      for (const auto& arg : syscall->kernel_arguments()) {
+        writer->Printf("SafeSyscallArgument<%s>::RawType %s, ",
+                       GetCUserModeName(arg.type()).c_str(), arg.name().c_str());
+      }
+      writer->Puts("uint64_t pc)");
+    };
+
+    write_prototype();
+    writer->Printf(";\n");
+
+    write_prototype();
     writer->Printf(
-        "%sreturn do_syscall(ZX_SYS_%s, pc, &VDso::ValidSyscallPC::%s, [&](ProcessDispatcher* "
+        " {\n%sreturn do_syscall(ZX_SYS_%s, pc, &VDso::ValidSyscallPC::%s, [&](ProcessDispatcher* "
         "current_process) -> uint64_t {\n",
         indent, syscall->name().c_str(), syscall->name().c_str());
 
@@ -115,7 +123,7 @@ bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
     }
 
     writer->Printf("%s});\n", indent);
-    writer->Puts("}\n");
+    writer->Puts("}\n\n");
   }
 
   writer->Puts("}\n");

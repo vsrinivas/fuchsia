@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "amd.h"
+
 #include <arch/x86.h>
 #include <arch/x86/cpuid.h>
 #include <arch/x86/feature.h>
