@@ -851,7 +851,6 @@ def main():
         # relevant changes to git. However fully predicting what files will be
         # accessed by certain git commands used in the build is not viable, it's
         # not necessarily stable and doesn't make a good contract.
-        os.path.join(src_root, "integration", ".git/"),
         os.path.join(src_root, "third_party", "mesa", ".git/"),
         os.path.join(src_root, "third_party", "glslang", ".git/"),
         os.path.join(src_root, "third_party", "spirv-tools", ".git/"),
@@ -890,7 +889,8 @@ def main():
     # Ignored prefixes are to be given relative to the root_build_dir (since
     # that is the only rebase_path() option from GN that can be used.
     for prefix in args.ignore_prefix:
-        ignored_prefixes.add(os.path.normpath(os.path.join(os.getcwd(), prefix)))
+        ignored_prefixes.add(
+            os.path.normpath(os.path.join(os.getcwd(), prefix)))
     ignored_suffixes = {
         # TODO(jayzhuang): Figure out whether `.dart_tool/package_config.json`
         # should be included in inputs.

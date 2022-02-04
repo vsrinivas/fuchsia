@@ -23,10 +23,6 @@ INTEGRATION="$1"
 OUTPUT_FILE="$2"
 # A path to populate with the latest commit date as seconds since unix epoch.
 UNIX_OUTPUT_FILE="$3"
-# A path to populate the depfile used by Ninja to know about implicit
-# dependencies for the generated files. See https://fxbug.dev/77607 for
-# context.
-DEP_FILE="$4"
 
 # Remove trailing slash
 INTEGRATION="${INTEGRATION%/}"
@@ -46,10 +42,4 @@ LATEST_UNIX_OUTPUT=$(GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.
 if [[ ! -r "$OUTPUT_FILE" ]] || [[ "$(<"$OUTPUT_FILE")" != "$LATEST_OUTPUT" ]]; then
   echo "${LATEST_OUTPUT}" > "${OUTPUT_FILE}"
   echo "${LATEST_UNIX_OUTPUT}" > "${UNIX_OUTPUT_FILE}"
-fi
-if [[ -n "${DEP_FILE}" ]]; then
-  cat > "${DEP_FILE}" <<EOF
-${OUTPUT_FILE}: ${INTEGRATION}/.git/HEAD ${INTEGRATION}/.git/index
-${UNIX_OUTPUT_FILE}: ${INTEGRATION}/.git/HEAD ${INTEGRATION}/.git/index
-EOF
 fi
