@@ -35,6 +35,7 @@ pub type socklen_t = ::c_uint;
 pub type sa_family_t = u16;
 pub type pthread_t = ::c_uint;
 pub type pthread_key_t = ::c_uint;
+pub type thread_t = ::c_uint;
 pub type blksize_t = ::c_int;
 pub type nl_item = ::c_int;
 pub type mqd_t = *mut ::c_void;
@@ -266,6 +267,13 @@ s! {
         pub f_fstr: [::c_char; 32]
     }
 
+    pub struct sendfilevec_t {
+        pub sfv_fd: ::c_int,
+        pub sfv_flag: ::c_uint,
+        pub sfv_off: ::off_t,
+        pub sfv_len: ::size_t,
+    }
+
     pub struct sched_param {
         pub sched_priority: ::c_int,
         sched_pad: [::c_int; 8]
@@ -418,6 +426,14 @@ s! {
         pub esterror: i32,
     }
 
+    pub struct mmapobj_result_t {
+        pub mr_addr: ::caddr_t,
+        pub mr_msize: ::size_t,
+        pub mr_fize: ::size_t,
+        pub mr_offset: ::size_t,
+        pub mr_prot: ::c_uint,
+        pub mr_flags: ::c_uint,
+    }
 }
 
 s_no_extra_traits! {
@@ -501,6 +517,18 @@ s_no_extra_traits! {
         pub ss_sp: *mut ::c_void,
         pub sigev_notify_attributes: *const ::pthread_attr_t,
         __sigev_pad2: ::c_int,
+    }
+
+    #[cfg(libc_union)]
+    pub union pad128_t {
+        pub _q: ::c_double,
+        pub _l: [i32; 4],
+    }
+
+    #[cfg(libc_union)]
+    pub union upad128_t {
+        pub _q: ::c_double,
+        pub _l: [u32; 4],
     }
 }
 
@@ -827,6 +855,68 @@ cfg_if! {
             }
         }
 
+        #[cfg(libc_union)]
+        impl PartialEq for pad128_t {
+            fn eq(&self, other: &pad128_t) -> bool {
+                unsafe {
+                self._q == other._q ||
+                    self._l == other._l
+                }
+            }
+        }
+        #[cfg(libc_union)]
+        impl Eq for pad128_t {}
+        #[cfg(libc_union)]
+        impl ::fmt::Debug for pad128_t {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                unsafe {
+                f.debug_struct("pad128_t")
+                    .field("_q", &{self._q})
+                    .field("_l", &{self._l})
+                    .finish()
+                }
+            }
+        }
+        #[cfg(libc_union)]
+        impl ::hash::Hash for pad128_t {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                unsafe {
+                state.write_i64(self._q as i64);
+                self._l.hash(state);
+                }
+            }
+        }
+        #[cfg(libc_union)]
+        impl PartialEq for upad128_t {
+            fn eq(&self, other: &upad128_t) -> bool {
+                unsafe {
+                self._q == other._q ||
+                    self._l == other._l
+                }
+            }
+        }
+        #[cfg(libc_union)]
+        impl Eq for upad128_t {}
+        #[cfg(libc_union)]
+        impl ::fmt::Debug for upad128_t {
+            fn fmt(&self, f: &mut ::fmt::Formatter) -> ::fmt::Result {
+                unsafe {
+                f.debug_struct("upad128_t")
+                    .field("_q", &{self._q})
+                    .field("_l", &{self._l})
+                    .finish()
+                }
+            }
+        }
+        #[cfg(libc_union)]
+        impl ::hash::Hash for upad128_t {
+            fn hash<H: ::hash::Hasher>(&self, state: &mut H) {
+                unsafe {
+                state.write_i64(self._q as i64);
+                self._l.hash(state);
+                }
+            }
+        }
     }
 }
 
@@ -1117,6 +1207,11 @@ pub const P_CTID: idtype_t = 13;
 pub const P_CPUID: idtype_t = 14;
 pub const P_PSETID: idtype_t = 15;
 
+pub const PBIND_NONE: ::processorid_t = -1;
+pub const PBIND_QUERY: ::processorid_t = -2;
+pub const PBIND_HARD: ::processorid_t = -3;
+pub const PBIND_SOFT: ::processorid_t = -4;
+
 pub const PS_NONE: ::c_int = -1;
 pub const PS_QUERY: ::c_int = -2;
 pub const PS_MYID: ::c_int = -3;
@@ -1153,6 +1248,11 @@ pub const MCL_FUTURE: ::c_int = 0x0002;
 pub const MS_SYNC: ::c_int = 0x0004;
 pub const MS_ASYNC: ::c_int = 0x0001;
 pub const MS_INVALIDATE: ::c_int = 0x0002;
+
+pub const MMOBJ_PADDING: ::c_uint = 0x10000;
+pub const MMOBJ_INTERPRET: ::c_uint = 0x20000;
+pub const MR_PADDING: ::c_uint = 0x1;
+pub const MR_HDR_ELF: ::c_uint = 0x2;
 
 pub const EPERM: ::c_int = 1;
 pub const ENOENT: ::c_int = 2;
@@ -1895,6 +1995,18 @@ pub const TIOCMGET: ::c_int = tIOC | 29;
 pub const TIOCREMOTE: ::c_int = tIOC | 30;
 pub const TIOCSIGNAL: ::c_int = tIOC | 31;
 
+pub const TIOCM_LE: ::c_int = 0o0001;
+pub const TIOCM_DTR: ::c_int = 0o0002;
+pub const TIOCM_RTS: ::c_int = 0o0004;
+pub const TIOCM_ST: ::c_int = 0o0010;
+pub const TIOCM_SR: ::c_int = 0o0020;
+pub const TIOCM_CTS: ::c_int = 0o0040;
+pub const TIOCM_CAR: ::c_int = 0o0100;
+pub const TIOCM_CD: ::c_int = TIOCM_CAR;
+pub const TIOCM_RNG: ::c_int = 0o0200;
+pub const TIOCM_RI: ::c_int = TIOCM_RNG;
+pub const TIOCM_DSR: ::c_int = 0o0400;
+
 pub const EPOLLIN: ::c_int = 0x1;
 pub const EPOLLPRI: ::c_int = 0x2;
 pub const EPOLLOUT: ::c_int = 0x4;
@@ -2113,6 +2225,23 @@ pub const SCHED_IA: ::c_int = 4;
 pub const SCHED_FSS: ::c_int = 5;
 pub const SCHED_FX: ::c_int = 6;
 
+// sys/priv.h
+pub const PRIV_DEBUG: ::c_uint = 0x0001;
+pub const PRIV_AWARE: ::c_uint = 0x0002;
+pub const PRIV_AWARE_INHERIT: ::c_uint = 0x0004;
+pub const __PROC_PROTECT: ::c_uint = 0x0008;
+pub const NET_MAC_AWARE: ::c_uint = 0x0010;
+pub const NET_MAC_AWARE_INHERIT: ::c_uint = 0x0020;
+pub const PRIV_AWARE_RESET: ::c_uint = 0x0040;
+pub const PRIV_XPOLICY: ::c_uint = 0x0080;
+pub const PRIV_PFEXEC: ::c_uint = 0x0100;
+pub const PRIV_USER: ::c_uint = PRIV_DEBUG
+    | NET_MAC_AWARE
+    | NET_MAC_AWARE_INHERIT
+    | PRIV_XPOLICY
+    | PRIV_AWARE_RESET
+    | PRIV_PFEXEC;
+
 // As per sys/socket.h, header alignment must be 8 bytes on SPARC
 // and 4 bytes everywhere else:
 #[cfg(target_arch = "sparc64")]
@@ -2231,6 +2360,10 @@ safe_f! {
     pub {const} fn WCOREDUMP(status: ::c_int) -> bool {
         (status & 0x80) != 0
     }
+
+    pub {const} fn MR_GET_TYPE(flags: ::c_uint) -> ::c_uint {
+        flags & 0x0000ffff
+    }
 }
 
 extern "C" {
@@ -2337,6 +2470,8 @@ extern "C" {
         lock: *mut pthread_mutex_t,
         abstime: *const ::timespec,
     ) -> ::c_int;
+    pub fn pthread_getname_np(tid: ::pthread_t, name: *mut ::c_char, len: ::size_t) -> ::c_int;
+    pub fn pthread_setname_np(tid: ::pthread_t, name: *const ::c_char) -> ::c_int;
     pub fn waitid(idtype: idtype_t, id: id_t, infop: *mut ::siginfo_t, options: ::c_int)
         -> ::c_int;
 
@@ -2514,6 +2649,7 @@ extern "C" {
         buflen: ::size_t,
         result: *mut *mut ::group,
     ) -> ::c_int;
+    pub fn thr_self() -> ::thread_t;
     pub fn pthread_sigmask(how: ::c_int, set: *const sigset_t, oldset: *mut sigset_t) -> ::c_int;
     pub fn sem_open(name: *const ::c_char, oflag: ::c_int, ...) -> *mut sem_t;
     pub fn getgrnam(name: *const ::c_char) -> *mut ::group;
@@ -2678,6 +2814,44 @@ extern "C" {
 
     pub fn gethostid() -> ::c_long;
     pub fn sethostid(hostid: ::c_long) -> ::c_int;
+
+    pub fn getpflags(flags: ::c_uint) -> ::c_uint;
+    pub fn setpflags(flags: ::c_uint, value: ::c_uint) -> ::c_int;
+
+    pub fn sendfile(out_fd: ::c_int, in_fd: ::c_int, off: *mut ::off_t, len: ::size_t)
+        -> ::ssize_t;
+    pub fn sendfilev(
+        fildes: ::c_int,
+        vec: *const sendfilevec_t,
+        sfvcnt: ::c_int,
+        xferred: *mut ::size_t,
+    ) -> ::ssize_t;
+    pub fn getpagesize() -> ::c_int;
+    pub fn getpagesizes(pagesize: *mut ::size_t, nelem: ::c_int) -> ::c_int;
+    pub fn mmapobj(
+        fd: ::c_int,
+        flags: ::c_uint,
+        storage: *mut mmapobj_result_t,
+        elements: *mut ::c_uint,
+        arg: *mut ::c_void,
+    ) -> ::c_int;
+    pub fn meminfo(
+        inaddr: *const u64,
+        addr_count: ::c_int,
+        info_req: *const ::c_uint,
+        info_count: ::c_int,
+        outdata: *mut u64,
+        validity: *mut ::c_uint,
+    ) -> ::c_int;
+
+    pub fn strcasecmp_l(s1: *const ::c_char, s2: *const ::c_char, loc: ::locale_t) -> ::c_int;
+    pub fn strncasecmp_l(
+        s1: *const ::c_char,
+        s2: *const ::c_char,
+        n: ::size_t,
+        loc: ::locale_t,
+    ) -> ::c_int;
+    pub fn strsep(string: *mut *mut ::c_char, delim: *const ::c_char) -> *mut ::c_char;
 }
 
 mod compat;
@@ -2692,5 +2866,12 @@ cfg_if! {
         pub use self::solaris::*;
     } else {
         // Unknown target_os
+    }
+}
+
+cfg_if! {
+    if #[cfg(target_arch = "x86_64")] {
+        mod x86_64;
+        pub use self::x86_64::*;
     }
 }

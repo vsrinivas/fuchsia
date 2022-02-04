@@ -108,7 +108,7 @@ itertools = "0.10"
 itoa = "0.4"
 json5format = "0.2.4"
 lazy_static = "1.4"
-libc = "0.2.101"
+libc = "0.2.116"
 libm = "0.2.1"
 linked-hash-map = "0.5.3"
 log = { version = "0.4.11", features = ["std"] }
@@ -162,7 +162,7 @@ serde_json5 = { path = "mirrors/serde_json5" }
 serde_repr = "0.1.7"
 sha2 = "0.9"
 slab = "0.4"
-socket2 = { version = "0.4.0", features = ["all"] }
+socket2 = { version = "0.4.4", features = ["all"] }
 splines = "2.2.0"
 static_assertions = "1.1.0"
 streaming-stats = "0.2.3"
@@ -425,10 +425,20 @@ rustflags = ["--cfg=httparse_simd"]
 [gn.package.js-sys."0.3.39"]
 env_vars = [ "CARGO_PKG_NAME=js-sys", "CARGO_PKG_VERSION=0.3.39", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/js-sys" ]
 
-[gn.package.libc."0.2.101"]
-rustflags = ["--cfg=libc_priv_mod_use", "--cfg=libc_union", "--cfg=libc_const_size_of", "--cfg=libc_align", "--cfg=libc_core_cvoid", "--cfg=libc_packedN", "--cfg=libc_cfg_target_vendor"]
+[gn.package.libc."0.2.116"]
+rustflags = [
+  "--cfg=libc_priv_mod_use",
+  "--cfg=libc_union",
+  "--cfg=libc_const_size_of",
+  "--cfg=libc_align",
+  "--cfg=libc_core_cvoid",
+  "--cfg=libc_packedN",
+  "--cfg=libc_cfg_target_vendor",
+  "--cfg=libc_non_exhaustive",
+  "--cfg=libc_ptr_addr_of",
+ ]
 
-[gn.package.libc."0.2.101".platform."cfg(target_os = \"freebsd\")"]
+[gn.package.libc."0.2.116".platform."cfg(target_os = \"freebsd\")"]
 rustflags = ["--cfg=freebsd11"]
 
 [gn.package.log."0.4.11"]

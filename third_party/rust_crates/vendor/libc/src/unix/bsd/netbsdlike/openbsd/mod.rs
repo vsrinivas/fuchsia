@@ -48,6 +48,12 @@ cfg_if! {
 }
 
 s! {
+    pub struct ip_mreqn {
+        pub imr_multiaddr: in_addr,
+        pub imr_address: in_addr,
+        pub imr_ifindex: ::c_int,
+    }
+
     pub struct glob_t {
         pub gl_pathc:   ::size_t,
         pub gl_matchc:  ::size_t,
@@ -207,6 +213,12 @@ s! {
         pub sin_port: ::in_port_t,
         pub sin_addr: ::in_addr,
         pub sin_zero: [i8; 8],
+    }
+
+    pub struct splice {
+        pub sp_fd: ::c_int,
+        pub sp_max: ::off_t,
+        pub sp_idle: ::timeval,
     }
 
     pub struct kevent {
@@ -400,6 +412,16 @@ s! {
         pub kve_advice: ::c_int,
         pub kve_inheritance: ::c_int,
         pub kve_flags: u8,
+    }
+
+    pub struct ptrace_state {
+        pub pe_report_event: ::c_int,
+        pub pe_other_pid: ::pid_t,
+        pub pe_tid: ::pid_t,
+    }
+
+    pub struct ptrace_thread_state {
+        pub pts_tid: ::pid_t,
     }
 }
 
@@ -1163,7 +1185,9 @@ pub const EV_DISPATCH: u16 = 0x80;
 pub const EV_FLAG1: u16 = 0x2000;
 pub const EV_ERROR: u16 = 0x4000;
 pub const EV_EOF: u16 = 0x8000;
-pub const EV_SYSFLAGS: u16 = 0xf000;
+
+#[deprecated(since = "0.2.113", note = "Not stable across OS versions")]
+pub const EV_SYSFLAGS: u16 = 0xf800;
 
 pub const NOTE_LOWAT: u32 = 0x00000001;
 pub const NOTE_EOF: u32 = 0x00000002;
@@ -1185,6 +1209,14 @@ pub const NOTE_TRACKERR: u32 = 0x00000002;
 pub const NOTE_CHILD: u32 = 0x00000004;
 
 pub const TMP_MAX: ::c_uint = 0x7fffffff;
+
+pub const AI_PASSIVE: ::c_int = 1;
+pub const AI_CANONNAME: ::c_int = 2;
+pub const AI_NUMERICHOST: ::c_int = 4;
+pub const AI_EXT: ::c_int = 8;
+pub const AI_NUMERICSERV: ::c_int = 16;
+pub const AI_FQDN: ::c_int = 32;
+pub const AI_ADDRCONFIG: ::c_int = 64;
 
 pub const NI_NUMERICHOST: ::c_int = 1;
 pub const NI_NUMERICSERV: ::c_int = 2;
@@ -1420,6 +1452,11 @@ pub const PTHREAD_STACK_MIN: ::size_t = 1_usize << _MAX_PAGE_SHIFT;
 pub const MINSIGSTKSZ: ::size_t = 3_usize << _MAX_PAGE_SHIFT;
 pub const SIGSTKSZ: ::size_t = MINSIGSTKSZ + (1_usize << _MAX_PAGE_SHIFT) * 4;
 
+pub const PT_SET_EVENT_MASK: ::c_int = 12;
+pub const PT_GET_EVENT_MASK: ::c_int = 13;
+pub const PT_GET_PROCESS_STATE: ::c_int = 14;
+pub const PT_GET_THREAD_FIRST: ::c_int = 15;
+pub const PT_GET_THREAD_NEXT: ::c_int = 16;
 pub const PT_FIRSTMACH: ::c_int = 32;
 
 pub const SOCK_CLOEXEC: ::c_int = 0x8000;
@@ -1527,6 +1564,8 @@ extern "C" {
         servlen: ::size_t,
         flags: ::c_int,
     ) -> ::c_int;
+    pub fn getresgid(rgid: *mut ::gid_t, egid: *mut ::gid_t, sgid: *mut ::gid_t) -> ::c_int;
+    pub fn getresuid(ruid: *mut ::uid_t, euid: *mut ::uid_t, suid: *mut ::uid_t) -> ::c_int;
     pub fn kevent(
         kq: ::c_int,
         changelist: *const ::kevent,
@@ -1536,6 +1575,7 @@ extern "C" {
         timeout: *const ::timespec,
     ) -> ::c_int;
     pub fn mprotect(addr: *mut ::c_void, len: ::size_t, prot: ::c_int) -> ::c_int;
+    pub fn getthrid() -> ::pid_t;
     pub fn pthread_attr_getguardsize(
         attr: *const ::pthread_attr_t,
         guardsize: *mut ::size_t,
@@ -1546,6 +1586,7 @@ extern "C" {
         stacksize: *mut ::size_t,
     ) -> ::c_int;
     pub fn pthread_main_np() -> ::c_int;
+    pub fn pthread_get_name_np(tid: ::pthread_t, name: *mut ::c_char, len: ::size_t);
     pub fn pthread_set_name_np(tid: ::pthread_t, name: *const ::c_char);
     pub fn pthread_stackseg_np(thread: ::pthread_t, sinfo: *mut ::stack_t) -> ::c_int;
 
@@ -1561,6 +1602,7 @@ extern "C" {
     pub fn setresgid(rgid: ::gid_t, egid: ::gid_t, sgid: ::gid_t) -> ::c_int;
     pub fn setresuid(ruid: ::uid_t, euid: ::uid_t, suid: ::uid_t) -> ::c_int;
     pub fn ptrace(request: ::c_int, pid: ::pid_t, addr: caddr_t, data: ::c_int) -> ::c_int;
+    pub fn utrace(label: *const ::c_char, addr: *const ::c_void, len: ::size_t) -> ::c_int;
     pub fn memmem(
         haystack: *const ::c_void,
         haystacklen: ::size_t,
@@ -1587,6 +1629,26 @@ extern "C" {
     pub fn explicit_bzero(s: *mut ::c_void, len: ::size_t);
 
     pub fn setproctitle(fmt: *const ::c_char, ...);
+
+    pub fn freezero(ptr: *mut ::c_void, size: ::size_t);
+    pub fn malloc_conceal(size: ::size_t) -> *mut ::c_void;
+    pub fn calloc_conceal(nmemb: ::size_t, size: ::size_t) -> *mut ::c_void;
+}
+
+#[link(name = "execinfo")]
+extern "C" {
+    pub fn backtrace(addrlist: *mut *mut ::c_void, len: ::size_t) -> ::size_t;
+    pub fn backtrace_symbols(addrlist: *const *mut ::c_void, len: ::size_t) -> *mut *mut ::c_char;
+    pub fn backtrace_symbols_fd(
+        addrlist: *const *mut ::c_void,
+        len: ::size_t,
+        fd: ::c_int,
+    ) -> ::c_int;
+    pub fn backtrace_symbols_fmt(
+        addrlist: *const *mut ::c_void,
+        len: ::size_t,
+        fmt: *const ::c_char,
+    ) -> *mut *mut ::c_char;
 }
 
 cfg_if! {
@@ -1600,18 +1662,33 @@ cfg_if! {
 }
 
 cfg_if! {
-    if #[cfg(target_arch = "x86")] {
+    if #[cfg(target_arch = "aarch64")] {
+        mod aarch64;
+        pub use self::aarch64::*;
+    } else if #[cfg(target_arch = "arm")] {
+        mod arm;
+        pub use self::arm::*;
+    } else if #[cfg(target_arch = "mips64")] {
+        mod mips64;
+        pub use self::mips64::*;
+    } else if #[cfg(target_arch = "powerpc")] {
+        mod powerpc;
+        pub use self::powerpc::*;
+    } else if #[cfg(target_arch = "powerpc64")] {
+        mod powerpc64;
+        pub use self::powerpc64::*;
+    } else if #[cfg(target_arch = "riscv64")] {
+        mod riscv64;
+        pub use self::riscv64::*;
+    } else if #[cfg(target_arch = "sparc64")] {
+        mod sparc64;
+        pub use self::sparc64::*;
+    } else if #[cfg(target_arch = "x86")] {
         mod x86;
         pub use self::x86::*;
     } else if #[cfg(target_arch = "x86_64")] {
         mod x86_64;
         pub use self::x86_64::*;
-    } else if #[cfg(target_arch = "aarch64")] {
-        mod aarch64;
-        pub use self::aarch64::*;
-    } else if #[cfg(target_arch = "sparc64")] {
-        mod sparc64;
-        pub use self::sparc64::*;
     } else {
         // Unknown target_arch
     }

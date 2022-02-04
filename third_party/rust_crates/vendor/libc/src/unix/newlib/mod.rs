@@ -15,13 +15,28 @@ pub type off_t = i64;
 pub type pthread_t = ::c_ulong;
 pub type pthread_key_t = ::c_uint;
 pub type rlim_t = u32;
-pub type sa_family_t = u8;
+
+cfg_if! {
+    if #[cfg(target_os = "horizon")] {
+        pub type sa_family_t = u16;
+    } else {
+        pub type sa_family_t = u8;
+    }
+}
+
 pub type socklen_t = u32;
 pub type speed_t = u32;
 pub type suseconds_t = i32;
 pub type tcflag_t = ::c_uint;
-pub type time_t = i32;
 pub type useconds_t = u32;
+
+cfg_if! {
+    if #[cfg(target_os = "horizon")] {
+        pub type time_t = ::c_longlong;
+    } else {
+        pub type time_t = i32;
+    }
+}
 
 s! {
     // The order of the `ai_addr` field in this struct is crucial
@@ -477,7 +492,13 @@ pub const SO_SNDLOWAT: ::c_int = 0x1003;
 pub const SO_RCVLOWAT: ::c_int = 0x1004;
 pub const SO_SNDTIMEO: ::c_int = 0x1005;
 pub const SO_RCVTIMEO: ::c_int = 0x1006;
-pub const SO_ERROR: ::c_int = 0x1007;
+cfg_if! {
+    if #[cfg(target_os = "horizon")] {
+        pub const SO_ERROR: ::c_int = 0x1009;
+    } else {
+        pub const SO_ERROR: ::c_int = 0x1007;
+    }
+}
 pub const SO_TYPE: ::c_int = 0x1008;
 
 pub const SOCK_CLOEXEC: ::c_int = O_CLOEXEC;
@@ -512,7 +533,13 @@ pub const TCP_KEEPIDLE: ::c_int = 256;
 pub const TCP_KEEPINTVL: ::c_int = 512;
 pub const TCP_KEEPCNT: ::c_int = 1024;
 
-pub const IP_TOS: ::c_int = 3;
+cfg_if! {
+    if #[cfg(target_os = "horizon")] {
+        pub const IP_TOS: ::c_int = 7;
+    } else {
+        pub const IP_TOS: ::c_int = 3;
+    }
+}
 pub const IP_TTL: ::c_int = 8;
 pub const IP_MULTICAST_IF: ::c_int = 9;
 pub const IP_MULTICAST_TTL: ::c_int = 10;
@@ -611,10 +638,12 @@ extern "C" {
         target_arch = "powerpc",
         target_vendor = "nintendo"
     )))]
+    #[cfg_attr(target_os = "espidf", link_name = "lwip_bind")]
     pub fn bind(fd: ::c_int, addr: *const sockaddr, len: socklen_t) -> ::c_int;
     pub fn clock_settime(clock_id: ::clockid_t, tp: *const ::timespec) -> ::c_int;
     pub fn clock_gettime(clock_id: ::clockid_t, tp: *mut ::timespec) -> ::c_int;
     pub fn clock_getres(clock_id: ::clockid_t, res: *mut ::timespec) -> ::c_int;
+    #[cfg_attr(target_os = "espidf", link_name = "lwip_close")]
     pub fn closesocket(sockfd: ::c_int) -> ::c_int;
     pub fn ioctl(fd: ::c_int, request: ::c_ulong, ...) -> ::c_int;
     #[cfg(not(all(
@@ -622,6 +651,7 @@ extern "C" {
         target_arch = "powerpc",
         target_vendor = "nintendo"
     )))]
+    #[cfg_attr(target_os = "espidf", link_name = "lwip_recvfrom")]
     pub fn recvfrom(
         fd: ::c_int,
         buf: *mut ::c_void,
@@ -703,6 +733,9 @@ cfg_if! {
     if #[cfg(target_os = "espidf")] {
         mod espidf;
         pub use self::espidf::*;
+    } else if #[cfg(target_os = "horizon")] {
+        mod horizon;
+        pub use self::horizon::*;
     } else if #[cfg(target_arch = "arm")] {
         mod arm;
         pub use self::arm::*;

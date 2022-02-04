@@ -625,6 +625,7 @@ pub const SYS_pwritev2: ::c_long = 4000 + 362;
 pub const SYS_pkey_mprotect: ::c_long = 4000 + 363;
 pub const SYS_pkey_alloc: ::c_long = 4000 + 364;
 pub const SYS_pkey_free: ::c_long = 4000 + 365;
+pub const SYS_clone3: ::c_long = 4000 + 435;
 
 #[link(name = "util")]
 extern "C" {
@@ -636,7 +637,6 @@ extern "C" {
         newp: *mut ::c_void,
         newlen: ::size_t,
     ) -> ::c_int;
-    pub fn ioctl(fd: ::c_int, request: ::c_ulong, ...) -> ::c_int;
     pub fn glob64(
         pattern: *const ::c_char,
         flags: ::c_int,

@@ -12,35 +12,89 @@ use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH_u;
 /// The address of a socket.
 ///
 /// `SockAddr`s may be constructed directly to and from the standard library
-/// `SocketAddr`, `SocketAddrV4`, and `SocketAddrV6` types.
+/// [`SocketAddr`], [`SocketAddrV4`], and [`SocketAddrV6`] types.
 pub struct SockAddr {
     storage: sockaddr_storage,
     len: socklen_t,
 }
 
+#[allow(clippy::len_without_is_empty)]
 impl SockAddr {
+    /// Create a `SockAddr` from the underlying storage and its length.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure that the address family and length match the type of
+    /// storage address. For example if `storage.ss_family` is set to `AF_INET`
+    /// the `storage` must be initialised as `sockaddr_in`, setting the content
+    /// and length appropriately.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> std::io::Result<()> {
+    /// # #[cfg(unix)] {
+    /// use std::io;
+    /// use std::mem;
+    /// use std::os::unix::io::AsRawFd;
+    ///
+    /// use socket2::{SockAddr, Socket, Domain, Type};
+    ///
+    /// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
+    ///
+    /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
+    /// let mut addr_storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+    /// let mut len = mem::size_of_val(&addr_storage) as libc::socklen_t;
+    ///
+    /// // The `getsockname(2)` system call will intiliase `storage` for
+    /// // us, setting `len` to the correct length.
+    /// let res = unsafe {
+    ///     libc::getsockname(
+    ///         socket.as_raw_fd(),
+    ///         (&mut addr_storage as *mut libc::sockaddr_storage).cast(),
+    ///         &mut len,
+    ///     )
+    /// };
+    /// if res == -1 {
+    ///     return Err(io::Error::last_os_error());
+    /// }
+    ///
+    /// let address = unsafe { SockAddr::new(addr_storage, len) };
+    /// # drop(address);
+    /// # }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub const unsafe fn new(storage: sockaddr_storage, len: socklen_t) -> SockAddr {
+        SockAddr { storage, len }
+    }
+
     /// Initialise a `SockAddr` by calling the function `init`.
     ///
     /// The type of the address storage and length passed to the function `init`
     /// is OS/architecture specific.
     ///
+    /// The address is zeroed before `init` is called and is thus valid to
+    /// dereference and read from. The length initialised to the maximum length
+    /// of the storage.
+    ///
     /// # Safety
     ///
-    /// Caller must initialise the provided address storage and set the length
-    /// properly. The address is zeroed before `init` is called and is thus
-    /// valid to dereference and read from. The length initialised to the
-    /// maximum length of the storage.
+    /// Caller must ensure that the address family and length match the type of
+    /// storage address. For example if `storage.ss_family` is set to `AF_INET`
+    /// the `storage` must be initialised as `sockaddr_in`, setting the content
+    /// and length appropriately.
     ///
     /// # Examples
     ///
-    #[cfg_attr(unix, doc = "```")]
-    #[cfg_attr(not(unix), doc = "```ignore")]
+    /// ```
+    /// # fn main() -> std::io::Result<()> {
+    /// # #[cfg(unix)] {
     /// use std::io;
     /// use std::os::unix::io::AsRawFd;
     ///
     /// use socket2::{SockAddr, Socket, Domain, Type};
     ///
-    /// # fn main() -> io::Result<()> {
     /// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
     ///
     /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
@@ -56,6 +110,7 @@ impl SockAddr {
     ///     })
     /// }?;
     /// # drop(address);
+    /// # }
     /// # Ok(())
     /// # }
     /// ```
@@ -136,7 +191,7 @@ impl SockAddr {
         }
     }
 
-    /// Returns this address as a `SocketAddrV4` if it is in the `AF_INET`
+    /// Returns this address as a [`SocketAddrV4`] if it is in the `AF_INET`
     /// family.
     pub fn as_socket_ipv4(&self) -> Option<SocketAddrV4> {
         match self.as_socket() {
@@ -145,7 +200,7 @@ impl SockAddr {
         }
     }
 
-    /// Returns this address as a `SocketAddrV6` if it is in the `AF_INET6`
+    /// Returns this address as a [`SocketAddrV6`] if it is in the `AF_INET6`
     /// family.
     pub fn as_socket_ipv6(&self) -> Option<SocketAddrV6> {
         match self.as_socket() {
@@ -169,7 +224,7 @@ impl From<SocketAddrV4> for SockAddr {
         let sockaddr_in = sockaddr_in {
             sin_family: AF_INET as sa_family_t,
             sin_port: addr.port().to_be(),
-            sin_addr: crate::sys::to_in_addr(&addr.ip()),
+            sin_addr: crate::sys::to_in_addr(addr.ip()),
             sin_zero: Default::default(),
             #[cfg(any(
                 target_os = "dragonfly",

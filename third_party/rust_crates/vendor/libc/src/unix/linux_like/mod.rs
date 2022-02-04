@@ -25,6 +25,12 @@ s! {
         pub imr_interface: in_addr,
     }
 
+    pub struct ip_mreqn {
+        pub imr_multiaddr: in_addr,
+        pub imr_address: in_addr,
+        pub imr_ifindex: ::c_int,
+    }
+
     pub struct ip_mreq_source {
         pub imr_multiaddr: in_addr,
         pub imr_interface: in_addr,
@@ -877,6 +883,8 @@ pub const IPPROTO_MH: ::c_int = 135;
 pub const IPPROTO_UDPLITE: ::c_int = 136;
 /// raw IP packet
 pub const IPPROTO_RAW: ::c_int = 255;
+pub const IPPROTO_BEETPH: ::c_int = 94;
+pub const IPPROTO_MPLS: ::c_int = 137;
 
 pub const MCAST_EXCLUDE: ::c_int = 0;
 pub const MCAST_INCLUDE: ::c_int = 1;
@@ -913,6 +921,7 @@ pub const IPV6_JOIN_ANYCAST: ::c_int = 27;
 pub const IPV6_LEAVE_ANYCAST: ::c_int = 28;
 pub const IPV6_IPSEC_POLICY: ::c_int = 34;
 pub const IPV6_XFRM_POLICY: ::c_int = 35;
+pub const IPV6_HDRINCL: ::c_int = 36;
 pub const IPV6_RECVPKTINFO: ::c_int = 49;
 pub const IPV6_PKTINFO: ::c_int = 50;
 pub const IPV6_RECVHOPLIMIT: ::c_int = 51;
@@ -948,6 +957,8 @@ pub const IPV6_PMTUDISC_DONT: ::c_int = 0;
 pub const IPV6_PMTUDISC_WANT: ::c_int = 1;
 pub const IPV6_PMTUDISC_DO: ::c_int = 2;
 pub const IPV6_PMTUDISC_PROBE: ::c_int = 3;
+pub const IPV6_PMTUDISC_INTERFACE: ::c_int = 4;
+pub const IPV6_PMTUDISC_OMIT: ::c_int = 5;
 
 pub const TCP_NODELAY: ::c_int = 1;
 pub const TCP_MAXSEG: ::c_int = 2;
@@ -1023,21 +1034,27 @@ pub const FD_SETSIZE: usize = 1024;
 pub const EPOLLIN: ::c_int = 0x1;
 pub const EPOLLPRI: ::c_int = 0x2;
 pub const EPOLLOUT: ::c_int = 0x4;
+pub const EPOLLERR: ::c_int = 0x8;
+pub const EPOLLHUP: ::c_int = 0x10;
 pub const EPOLLRDNORM: ::c_int = 0x40;
 pub const EPOLLRDBAND: ::c_int = 0x80;
 pub const EPOLLWRNORM: ::c_int = 0x100;
 pub const EPOLLWRBAND: ::c_int = 0x200;
 pub const EPOLLMSG: ::c_int = 0x400;
-pub const EPOLLERR: ::c_int = 0x8;
-pub const EPOLLHUP: ::c_int = 0x10;
+pub const EPOLLRDHUP: ::c_int = 0x2000;
+pub const EPOLLEXCLUSIVE: ::c_int = 0x10000000;
+pub const EPOLLWAKEUP: ::c_int = 0x20000000;
+pub const EPOLLONESHOT: ::c_int = 0x40000000;
 pub const EPOLLET: ::c_int = 0x80000000;
 
 pub const EPOLL_CTL_ADD: ::c_int = 1;
 pub const EPOLL_CTL_MOD: ::c_int = 3;
 pub const EPOLL_CTL_DEL: ::c_int = 2;
 
+pub const MNT_FORCE: ::c_int = 0x1;
 pub const MNT_DETACH: ::c_int = 0x2;
 pub const MNT_EXPIRE: ::c_int = 0x4;
+pub const UMOUNT_NOFOLLOW: ::c_int = 0x8;
 
 pub const Q_GETFMT: ::c_int = 0x800004;
 pub const Q_GETINFO: ::c_int = 0x800005;
@@ -1052,8 +1069,6 @@ pub const QIF_LIMITS: u32 = 5;
 pub const QIF_USAGE: u32 = 10;
 pub const QIF_TIMES: u32 = 48;
 pub const QIF_ALL: u32 = 63;
-
-pub const MNT_FORCE: ::c_int = 0x1;
 
 pub const Q_SYNC: ::c_int = 0x800001;
 pub const Q_QUOTAON: ::c_int = 0x800002;
@@ -1117,6 +1132,7 @@ pub const CLONE_CHILD_CLEARTID: ::c_int = 0x200000;
 pub const CLONE_DETACHED: ::c_int = 0x400000;
 pub const CLONE_UNTRACED: ::c_int = 0x800000;
 pub const CLONE_CHILD_SETTID: ::c_int = 0x01000000;
+pub const CLONE_NEWCGROUP: ::c_int = 0x02000000;
 pub const CLONE_NEWUTS: ::c_int = 0x04000000;
 pub const CLONE_NEWIPC: ::c_int = 0x08000000;
 pub const CLONE_NEWUSER: ::c_int = 0x10000000;
@@ -1132,11 +1148,15 @@ pub const WCONTINUED: ::c_int = 0x00000008;
 pub const WNOWAIT: ::c_int = 0x01000000;
 
 // Options for personality(2).
+pub const ADDR_NO_RANDOMIZE: ::c_int = 0x0040000;
 pub const MMAP_PAGE_ZERO: ::c_int = 0x0100000;
+pub const ADDR_COMPAT_LAYOUT: ::c_int = 0x0200000;
+pub const READ_IMPLIES_EXEC: ::c_int = 0x0400000;
 pub const ADDR_LIMIT_32BIT: ::c_int = 0x0800000;
 pub const SHORT_INODE: ::c_int = 0x1000000;
 pub const WHOLE_SECONDS: ::c_int = 0x2000000;
 pub const STICKY_TIMEOUTS: ::c_int = 0x4000000;
+pub const ADDR_LIMIT_3GB: ::c_int = 0x8000000;
 
 // Options set using PTRACE_SETOPTIONS.
 pub const PTRACE_O_TRACESYSGOOD: ::c_int = 0x00000001;
@@ -1147,6 +1167,9 @@ pub const PTRACE_O_TRACEEXEC: ::c_int = 0x00000010;
 pub const PTRACE_O_TRACEVFORKDONE: ::c_int = 0x00000020;
 pub const PTRACE_O_TRACEEXIT: ::c_int = 0x00000040;
 pub const PTRACE_O_TRACESECCOMP: ::c_int = 0x00000080;
+pub const PTRACE_O_SUSPEND_SECCOMP: ::c_int = 0x00200000;
+pub const PTRACE_O_EXITKILL: ::c_int = 0x00100000;
+pub const PTRACE_O_MASK: ::c_int = 0x003000ff;
 
 // Wait extended result codes for the above trace options.
 pub const PTRACE_EVENT_FORK: ::c_int = 1;
@@ -1221,6 +1244,10 @@ pub const POLLHUP: ::c_short = 0x10;
 pub const POLLNVAL: ::c_short = 0x20;
 pub const POLLRDNORM: ::c_short = 0x040;
 pub const POLLRDBAND: ::c_short = 0x080;
+#[cfg(not(any(target_arch = "sparc", target_arch = "sparc64")))]
+pub const POLLRDHUP: ::c_short = 0x2000;
+#[cfg(any(target_arch = "sparc", target_arch = "sparc64"))]
+pub const POLLRDHUP: ::c_short = 0x800;
 
 pub const IPTOS_LOWDELAY: u8 = 0x10;
 pub const IPTOS_THROUGHPUT: u8 = 0x08;
@@ -1345,20 +1372,114 @@ pub const ARPHRD_VOID: u16 = 0xFFFF;
 pub const ARPHRD_NONE: u16 = 0xFFFE;
 
 cfg_if! {
-    if #[cfg(not(target_env = "uclibc"))] {
-        pub const IPPROTO_BEETPH: ::c_int = 94;
-        pub const IPPROTO_MPLS: ::c_int = 137;
-        pub const IPV6_HDRINCL: ::c_int = 36;
-        pub const IPV6_PMTUDISC_INTERFACE: ::c_int = 4;
-        pub const IPV6_PMTUDISC_OMIT: ::c_int = 5;
-        pub const CLONE_NEWCGROUP: ::c_int = 0x02000000;
-        pub const ADDR_NO_RANDOMIZE: ::c_int = 0x0040000;
-        pub const ADDR_COMPAT_LAYOUT: ::c_int = 0x0200000;
-        pub const READ_IMPLIES_EXEC: ::c_int = 0x0400000;
-        pub const ADDR_LIMIT_3GB: ::c_int = 0x8000000;
-        pub const PTRACE_O_EXITKILL: ::c_int = 0x00100000;
-        pub const PTRACE_O_SUSPEND_SECCOMP: ::c_int = 0x00200000;
-        pub const PTRACE_O_MASK: ::c_int = 0x003000ff;
+    if #[cfg(target_os = "emscripten")] {
+        // Emscripten does not define any `*_SUPER_MAGIC` constants.
+    } else if #[cfg(not(target_arch = "s390x"))] {
+        pub const ADFS_SUPER_MAGIC: ::c_long = 0x0000adf5;
+        pub const AFFS_SUPER_MAGIC: ::c_long = 0x0000adff;
+        pub const AFS_SUPER_MAGIC: ::c_long = 0x5346414f;
+        pub const AUTOFS_SUPER_MAGIC: ::c_long = 0x0187;
+        pub const BPF_FS_MAGIC: ::c_long = 0xcafe4a11;
+        pub const BTRFS_SUPER_MAGIC: ::c_long = 0x9123683e;
+        pub const CGROUP2_SUPER_MAGIC: ::c_long = 0x63677270;
+        pub const CGROUP_SUPER_MAGIC: ::c_long = 0x27e0eb;
+        pub const CODA_SUPER_MAGIC: ::c_long = 0x73757245;
+        pub const CRAMFS_MAGIC: ::c_long = 0x28cd3d45;
+        pub const DEBUGFS_MAGIC: ::c_long = 0x64626720;
+        pub const DEVPTS_SUPER_MAGIC: ::c_long = 0x1cd1;
+        pub const ECRYPTFS_SUPER_MAGIC: ::c_long = 0xf15f;
+        pub const EFS_SUPER_MAGIC: ::c_long = 0x00414a53;
+        pub const EXT2_SUPER_MAGIC: ::c_long = 0x0000ef53;
+        pub const EXT3_SUPER_MAGIC: ::c_long = 0x0000ef53;
+        pub const EXT4_SUPER_MAGIC: ::c_long = 0x0000ef53;
+        pub const F2FS_SUPER_MAGIC: ::c_long = 0xf2f52010;
+        pub const FUSE_SUPER_MAGIC: ::c_long = 0x65735546;
+        pub const FUTEXFS_SUPER_MAGIC: ::c_long = 0xbad1dea;
+        pub const HOSTFS_SUPER_MAGIC: ::c_long = 0x00c0ffee;
+        pub const HPFS_SUPER_MAGIC: ::c_long = 0xf995e849;
+        pub const HUGETLBFS_MAGIC: ::c_long = 0x958458f6;
+        pub const ISOFS_SUPER_MAGIC: ::c_long = 0x00009660;
+        pub const JFFS2_SUPER_MAGIC: ::c_long = 0x000072b6;
+        pub const MINIX2_SUPER_MAGIC2: ::c_long = 0x00002478;
+        pub const MINIX2_SUPER_MAGIC: ::c_long = 0x00002468;
+        pub const MINIX3_SUPER_MAGIC: ::c_long = 0x4d5a;
+        pub const MINIX_SUPER_MAGIC2: ::c_long = 0x0000138f;
+        pub const MINIX_SUPER_MAGIC: ::c_long = 0x0000137f;
+        pub const MSDOS_SUPER_MAGIC: ::c_long = 0x00004d44;
+        pub const NCP_SUPER_MAGIC: ::c_long = 0x0000564c;
+        pub const NFS_SUPER_MAGIC: ::c_long = 0x00006969;
+        pub const NILFS_SUPER_MAGIC: ::c_long = 0x3434;
+        pub const OCFS2_SUPER_MAGIC: ::c_long = 0x7461636f;
+        pub const OPENPROM_SUPER_MAGIC: ::c_long = 0x00009fa1;
+        pub const OVERLAYFS_SUPER_MAGIC: ::c_long = 0x794c7630;
+        pub const PROC_SUPER_MAGIC: ::c_long = 0x00009fa0;
+        pub const QNX4_SUPER_MAGIC: ::c_long = 0x0000002f;
+        pub const QNX6_SUPER_MAGIC: ::c_long = 0x68191122;
+        pub const RDTGROUP_SUPER_MAGIC: ::c_long = 0x7655821;
+        pub const REISERFS_SUPER_MAGIC: ::c_long = 0x52654973;
+        pub const SECURITYFS_MAGIC: ::c_long = 0x73636673;
+        pub const SELINUX_MAGIC: ::c_long = 0xf97cff8c;
+        pub const SMACK_MAGIC: ::c_long = 0x43415d53;
+        pub const SMB_SUPER_MAGIC: ::c_long = 0x0000517b;
+        pub const SYSFS_MAGIC: ::c_long = 0x62656572;
+        pub const TMPFS_MAGIC: ::c_long = 0x01021994;
+        pub const TRACEFS_MAGIC: ::c_long = 0x74726163;
+        pub const UDF_SUPER_MAGIC: ::c_long = 0x15013346;
+        pub const USBDEVICE_SUPER_MAGIC: ::c_long = 0x00009fa2;
+        pub const XENFS_SUPER_MAGIC: ::c_long = 0xabba1974;
+    } else if #[cfg(target_arch = "s390x")] {
+        pub const ADFS_SUPER_MAGIC: ::c_uint = 0x0000adf5;
+        pub const AFFS_SUPER_MAGIC: ::c_uint = 0x0000adff;
+        pub const AFS_SUPER_MAGIC: ::c_uint = 0x5346414f;
+        pub const AUTOFS_SUPER_MAGIC: ::c_uint = 0x0187;
+        pub const BPF_FS_MAGIC: ::c_uint = 0xcafe4a11;
+        pub const BTRFS_SUPER_MAGIC: ::c_uint = 0x9123683e;
+        pub const CGROUP2_SUPER_MAGIC: ::c_uint = 0x63677270;
+        pub const CGROUP_SUPER_MAGIC: ::c_uint = 0x27e0eb;
+        pub const CODA_SUPER_MAGIC: ::c_uint = 0x73757245;
+        pub const CRAMFS_MAGIC: ::c_uint = 0x28cd3d45;
+        pub const DEBUGFS_MAGIC: ::c_uint = 0x64626720;
+        pub const DEVPTS_SUPER_MAGIC: ::c_uint = 0x1cd1;
+        pub const ECRYPTFS_SUPER_MAGIC: ::c_uint = 0xf15f;
+        pub const EFS_SUPER_MAGIC: ::c_uint = 0x00414a53;
+        pub const EXT2_SUPER_MAGIC: ::c_uint = 0x0000ef53;
+        pub const EXT3_SUPER_MAGIC: ::c_uint = 0x0000ef53;
+        pub const EXT4_SUPER_MAGIC: ::c_uint = 0x0000ef53;
+        pub const F2FS_SUPER_MAGIC: ::c_uint = 0xf2f52010;
+        pub const FUSE_SUPER_MAGIC: ::c_uint = 0x65735546;
+        pub const FUTEXFS_SUPER_MAGIC: ::c_uint = 0xbad1dea;
+        pub const HOSTFS_SUPER_MAGIC: ::c_uint = 0x00c0ffee;
+        pub const HPFS_SUPER_MAGIC: ::c_uint = 0xf995e849;
+        pub const HUGETLBFS_MAGIC: ::c_uint = 0x958458f6;
+        pub const ISOFS_SUPER_MAGIC: ::c_uint = 0x00009660;
+        pub const JFFS2_SUPER_MAGIC: ::c_uint = 0x000072b6;
+        pub const MINIX2_SUPER_MAGIC2: ::c_uint = 0x00002478;
+        pub const MINIX2_SUPER_MAGIC: ::c_uint = 0x00002468;
+        pub const MINIX3_SUPER_MAGIC: ::c_uint = 0x4d5a;
+        pub const MINIX_SUPER_MAGIC2: ::c_uint = 0x0000138f;
+        pub const MINIX_SUPER_MAGIC: ::c_uint = 0x0000137f;
+        pub const MSDOS_SUPER_MAGIC: ::c_uint = 0x00004d44;
+        pub const NCP_SUPER_MAGIC: ::c_uint = 0x0000564c;
+        pub const NFS_SUPER_MAGIC: ::c_uint = 0x00006969;
+        pub const NILFS_SUPER_MAGIC: ::c_uint = 0x3434;
+        pub const OCFS2_SUPER_MAGIC: ::c_uint = 0x7461636f;
+        pub const OPENPROM_SUPER_MAGIC: ::c_uint = 0x00009fa1;
+        pub const OVERLAYFS_SUPER_MAGIC: ::c_uint = 0x794c7630;
+        pub const PROC_SUPER_MAGIC: ::c_uint = 0x00009fa0;
+        pub const QNX4_SUPER_MAGIC: ::c_uint = 0x0000002f;
+        pub const QNX6_SUPER_MAGIC: ::c_uint = 0x68191122;
+        pub const RDTGROUP_SUPER_MAGIC: ::c_uint = 0x7655821;
+        pub const REISERFS_SUPER_MAGIC: ::c_uint = 0x52654973;
+        pub const SECURITYFS_MAGIC: ::c_uint = 0x73636673;
+        pub const SELINUX_MAGIC: ::c_uint = 0xf97cff8c;
+        pub const SMACK_MAGIC: ::c_uint = 0x43415d53;
+        pub const SMB_SUPER_MAGIC: ::c_uint = 0x0000517b;
+        pub const SYSFS_MAGIC: ::c_uint = 0x62656572;
+        pub const TMPFS_MAGIC: ::c_uint = 0x01021994;
+        pub const TRACEFS_MAGIC: ::c_uint = 0x74726163;
+        pub const UDF_SUPER_MAGIC: ::c_uint = 0x15013346;
+        pub const USBDEVICE_SUPER_MAGIC: ::c_uint = 0x00009fa2;
+        pub const XENFS_SUPER_MAGIC: ::c_uint = 0xabba1974;
     }
 }
 

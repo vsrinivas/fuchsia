@@ -1,3 +1,5 @@
+use super::{Send, Sync};
+
 pub use ffi::c_void;
 
 pub type c_char = i8;
@@ -37,6 +39,14 @@ pub type blkcnt_t = i64;
 pub type nfds_t = c_ulong;
 pub type wchar_t = i32;
 
+s_no_extra_traits! {
+    #[repr(align(16))]
+    #[allow(missing_debug_implementations)]
+    pub struct max_align_t {
+        priv_: [f64; 4]
+    }
+}
+
 pub type __wasi_rights_t = u64;
 
 #[allow(missing_copy_implementations)]
@@ -50,6 +60,16 @@ pub enum DIR {}
 pub enum __locale_struct {}
 
 pub type locale_t = *mut __locale_struct;
+
+s_paren! {
+    // in wasi-libc clockid_t is const struct __clockid* (where __clockid is an opaque struct),
+    // but that's an implementation detail that we don't want to have to deal with
+    #[repr(transparent)]
+    pub struct clockid_t(*const u8);
+}
+
+unsafe impl Send for clockid_t {}
+unsafe impl Sync for clockid_t {}
 
 s! {
     #[repr(align(8))]
@@ -342,9 +362,21 @@ pub const _SC_PAGE_SIZE: ::c_int = _SC_PAGESIZE;
 pub const _SC_IOV_MAX: c_int = 60;
 pub const _SC_SYMLOOP_MAX: c_int = 173;
 
+pub static CLOCK_MONOTONIC: clockid_t = unsafe { clockid_t(ptr_addr_of!(_CLOCK_MONOTONIC)) };
+pub static CLOCK_PROCESS_CPUTIME_ID: clockid_t =
+    unsafe { clockid_t(ptr_addr_of!(_CLOCK_PROCESS_CPUTIME_ID)) };
+pub static CLOCK_REALTIME: clockid_t = unsafe { clockid_t(ptr_addr_of!(_CLOCK_REALTIME)) };
+pub static CLOCK_THREAD_CPUTIME_ID: clockid_t =
+    unsafe { clockid_t(ptr_addr_of!(_CLOCK_THREAD_CPUTIME_ID)) };
+
 #[cfg_attr(
     feature = "rustc-dep-of-std",
-    link(name = "c", kind = "static", cfg(target_feature = "crt-static"))
+    link(
+        name = "c",
+        kind = "static",
+        modifiers = "-bundle",
+        cfg(target_feature = "crt-static")
+    )
 )]
 #[cfg_attr(
     feature = "rustc-dep-of-std",
@@ -417,15 +449,14 @@ extern "C" {
     pub fn asctime_r(a: *const tm, b: *mut c_char) -> *mut c_char;
     pub fn ctime_r(a: *const time_t, b: *mut c_char) -> *mut c_char;
 
+    static _CLOCK_MONOTONIC: u8;
+    static _CLOCK_PROCESS_CPUTIME_ID: u8;
+    static _CLOCK_REALTIME: u8;
+    static _CLOCK_THREAD_CPUTIME_ID: u8;
     pub fn nanosleep(a: *const timespec, b: *mut timespec) -> c_int;
-    // pub fn clock_getres(a: clockid_t, b: *mut timespec) -> c_int;
-    // pub fn clock_gettime(a: clockid_t, b: *mut timespec) -> c_int;
-    // pub fn clock_nanosleep(
-    //     a: clockid_t,
-    //     a2: c_int,
-    //     b: *const timespec,
-    //     c: *mut timespec,
-    // ) -> c_int;
+    pub fn clock_getres(a: clockid_t, b: *mut timespec) -> c_int;
+    pub fn clock_gettime(a: clockid_t, b: *mut timespec) -> c_int;
+    pub fn clock_nanosleep(a: clockid_t, a2: c_int, b: *const timespec, c: *mut timespec) -> c_int;
 
     pub fn isalnum(c: c_int) -> c_int;
     pub fn isalpha(c: c_int) -> c_int;
@@ -623,6 +654,8 @@ extern "C" {
     pub fn newlocale(mask: ::c_int, locale: *const ::c_char, base: ::locale_t) -> ::locale_t;
     pub fn uselocale(loc: ::locale_t) -> ::locale_t;
     pub fn sched_yield() -> ::c_int;
+    pub fn getcwd(buf: *mut c_char, size: ::size_t) -> *mut c_char;
+    pub fn chdir(dir: *const c_char) -> ::c_int;
 
     pub fn __wasilibc_register_preopened_fd(fd: c_int, path: *const c_char) -> c_int;
     pub fn __wasilibc_fd_renumber(fd: c_int, newfd: c_int) -> c_int;

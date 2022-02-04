@@ -27,6 +27,8 @@ pub type wchar_t = u16;
 
 pub type clock_t = i32;
 
+pub type errno_t = ::c_int;
+
 cfg_if! {
     if #[cfg(all(target_arch = "x86", target_env = "gnu"))] {
         pub type time_t = i32;
@@ -317,6 +319,8 @@ extern "C" {
     pub fn feof(stream: *mut FILE) -> c_int;
     pub fn ferror(stream: *mut FILE) -> c_int;
     pub fn perror(s: *const c_char);
+    pub fn printf(format: *const c_char, ...) -> ::c_int;
+    pub fn fprintf(stream: *mut FILE, format: *const c_char, ...) -> ::c_int;
     pub fn atoi(s: *const c_char) -> c_int;
     pub fn strtod(s: *const c_char, endp: *mut *mut c_char) -> c_double;
     pub fn strtof(s: *const c_char, endp: *mut *mut c_char) -> c_float;
@@ -372,6 +376,8 @@ extern "C" {
 
     #[link_name = "_gmtime64_s"]
     pub fn gmtime_s(destTime: *mut tm, srcTime: *const time_t) -> ::c_int;
+    #[link_name = "_localtime64_s"]
+    pub fn localtime_s(tmDest: *mut tm, sourceTime: *const time_t) -> ::errno_t;
     #[link_name = "_time64"]
     pub fn time(destTime: *mut time_t) -> time_t;
     #[link_name = "_chmod"]

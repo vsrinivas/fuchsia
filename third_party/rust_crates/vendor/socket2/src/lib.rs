@@ -34,9 +34,9 @@
 //! // Create a TCP listener bound to two addresses.
 //! let socket = Socket::new(Domain::IPV6, Type::STREAM, None)?;
 //!
+//! socket.set_only_v6(false)?;
 //! let address: SocketAddr = "[::1]:12345".parse().unwrap();
 //! socket.bind(&address.into())?;
-//! socket.set_only_v6(false)?;
 //! socket.listen(128)?;
 //!
 //! let listener: TcpListener = socket.into();
@@ -119,18 +119,27 @@ mod sockaddr;
 mod socket;
 mod sockref;
 
-#[cfg(unix)]
-#[path = "sys/unix.rs"]
+#[cfg_attr(unix, path = "sys/unix.rs")]
+#[cfg_attr(windows, path = "sys/windows.rs")]
 mod sys;
-#[cfg(windows)]
-#[path = "sys/windows.rs"]
-mod sys;
+
+#[cfg(not(any(windows, unix)))]
+compile_error!("Socket2 doesn't support the compile target");
 
 use sys::c_int;
 
 pub use sockaddr::SockAddr;
 pub use socket::Socket;
 pub use sockref::SockRef;
+
+#[cfg(not(any(
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "solaris",
+)))]
+pub use socket::InterfaceIndexOrAddress;
 
 /// Specification of the communication domain for a socket.
 ///
@@ -197,10 +206,12 @@ impl Type {
 
     /// Type corresponding to `SOCK_SEQPACKET`.
     #[cfg(feature = "all")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all")))]
     pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
     /// Type corresponding to `SOCK_RAW`.
     #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(target_os = "redox")))))]
     pub const RAW: Type = Type(sys::SOCK_RAW);
 }
 
@@ -256,6 +267,7 @@ impl From<Protocol> for c_int {
 ///
 /// Flags provide additional information about incoming messages.
 #[cfg(not(target_os = "redox"))]
+#[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct RecvFlags(c_int);
 
@@ -278,10 +290,6 @@ impl RecvFlags {
 /// [`IoSliceMut`]: std::io::IoSliceMut
 #[repr(transparent)]
 pub struct MaybeUninitSlice<'a>(sys::MaybeUninitSlice<'a>);
-
-unsafe impl<'a> Send for MaybeUninitSlice<'a> {}
-
-unsafe impl<'a> Sync for MaybeUninitSlice<'a> {}
 
 impl<'a> fmt::Debug for MaybeUninitSlice<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -320,7 +328,9 @@ impl<'a> DerefMut for MaybeUninitSlice<'a> {
 #[derive(Debug, Clone)]
 pub struct TcpKeepalive {
     time: Option<Duration>,
+    #[cfg(not(any(target_os = "redox", target_os = "solaris")))]
     interval: Option<Duration>,
+    #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "windows")))]
     retries: Option<u32>,
 }
 
@@ -329,7 +339,9 @@ impl TcpKeepalive {
     pub const fn new() -> TcpKeepalive {
         TcpKeepalive {
             time: None,
+            #[cfg(not(any(target_os = "redox", target_os = "solaris")))]
             interval: None,
+            #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "windows")))]
             retries: None,
         }
     }
@@ -337,10 +349,11 @@ impl TcpKeepalive {
     /// Set the amount of time after which TCP keepalive probes will be sent on
     /// idle connections.
     ///
-    /// This will set the value of `SO_KEEPALIVE` on OpenBSD and Haiku,
-    /// `TCP_KEEPALIVE` on macOS and iOS, and `TCP_KEEPIDLE` on all other Unix
-    /// operating systems. On Windows, this sets the value of the
-    /// `tcp_keepalive` struct's `keepalivetime` field.
+    /// This will set `TCP_KEEPALIVE` on macOS and iOS, and
+    /// `TCP_KEEPIDLE` on all other Unix operating systems, except
+    /// OpenBSD and Haiku which don't support any way to set this
+    /// option. On Windows, this sets the value of the `tcp_keepalive`
+    /// struct's `keepalivetime` field.
     ///
     /// Some platforms specify this value in seconds, so sub-second
     /// specifications may be omitted.
@@ -361,6 +374,7 @@ impl TcpKeepalive {
     #[cfg(all(
         feature = "all",
         any(
+            target_os = "dragonfly",
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "linux",
@@ -369,6 +383,20 @@ impl TcpKeepalive {
             windows,
         )
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "netbsd",
+                target_vendor = "apple",
+                windows,
+            )
+        )))
+    )]
     pub const fn with_interval(self, interval: Duration) -> Self {
         Self {
             interval: Some(interval),
@@ -383,6 +411,8 @@ impl TcpKeepalive {
     #[cfg(all(
         feature = "all",
         any(
+            doc,
+            target_os = "dragonfly",
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "linux",
@@ -390,6 +420,19 @@ impl TcpKeepalive {
             target_vendor = "apple",
         )
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "netbsd",
+                target_vendor = "apple",
+            )
+        )))
+    )]
     pub const fn with_retries(self, retries: u32) -> Self {
         Self {
             retries: Some(retries),

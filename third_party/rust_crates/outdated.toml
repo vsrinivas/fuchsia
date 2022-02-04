@@ -39,7 +39,6 @@ skip_updating = [
     "hyper-rustls",
     "itertools",
     "itoa",
-    "libc",
     "linked-hash-map",
     "lipsum",
     "log",
