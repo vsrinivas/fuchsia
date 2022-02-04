@@ -337,6 +337,10 @@ mod test {
             self.seal_call_counter.increment();
             self.seal_behavior.clone().map_err(|err_factory| err_factory())
         }
+
+        async fn shred(&self) -> Result<(), DiskError> {
+            unimplemented!("shred should not be called");
+        }
     }
 
     async fn directory_exists<EB: EncryptedBlockDevice, M: Minfs>(

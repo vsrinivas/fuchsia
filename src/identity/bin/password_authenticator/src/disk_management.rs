@@ -8,7 +8,7 @@ use {
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_hardware_block::BlockMarker,
-    fidl_fuchsia_hardware_block_encrypted::DeviceManagerMarker,
+    fidl_fuchsia_hardware_block_encrypted::{DeviceManagerMarker, DeviceManagerProxy},
     fidl_fuchsia_hardware_block_partition::{PartitionMarker, PartitionProxyInterface},
     fidl_fuchsia_identity_account as faccount,
     fidl_fuchsia_io::{
@@ -60,6 +60,8 @@ pub enum DiskError {
     FailedToUnsealZxcrypt(#[source] zx::Status),
     #[error("Failed to seal zxcrypt block device: {0}")]
     FailedToSealZxcrypt(#[source] zx::Status),
+    #[error("Failed to shred zxcrypt block device: {0}")]
+    FailedToShredZxcrypt(#[source] zx::Status),
     #[error("Failed to format minfs: {0}")]
     MinfsFormatError(#[from] fs::CommandError),
     #[error("Failed to serve minfs: {0}")]
@@ -237,6 +239,11 @@ pub trait EncryptedBlockDevice: Send + 'static {
     /// Re-encrypts the block device using the given key, wiping out any previous zxcrypt volumes.
     /// The key must be 256 bits long.
     async fn format(&self, key: &Key) -> Result<(), DiskError>;
+
+    /// Destroy the contents of the block device by destroying wrapped keys stored in all copies of
+    /// the superblock. After calling `shred()`, subsequent `unseal()` calls will fail until the
+    /// device is `format()`ed again.
+    async fn shred(&self) -> Result<(), DiskError>;
 }
 
 #[async_trait]
@@ -394,19 +401,26 @@ impl Partition for DevBlockPartition {
 /// The production implementation of [`EncryptedBlockDevice`].
 pub struct EncryptedDevBlockDevice(DirectoryProxy);
 
+fn get_device_manager_proxy(
+    dev_block_device: &EncryptedDevBlockDevice,
+) -> Result<DeviceManagerProxy, DiskError> {
+    let (device_manager_proxy, server_end) =
+        fidl::endpoints::create_proxy::<DeviceManagerMarker>()?;
+    dev_block_device.0.open(
+        OPEN_RW,
+        MODE_TYPE_SERVICE,
+        "zxcrypt",
+        ServerEnd::new(server_end.into_channel()),
+    )?;
+    Ok(device_manager_proxy)
+}
+
 #[async_trait]
 impl EncryptedBlockDevice for EncryptedDevBlockDevice {
     type BlockDevice = DevBlockDevice;
 
     async fn unseal(&self, key: &Key) -> Result<Self::BlockDevice, DiskError> {
-        let (device_manager_proxy, server_end) =
-            fidl::endpoints::create_proxy::<DeviceManagerMarker>()?;
-        self.0.open(
-            OPEN_RW,
-            MODE_TYPE_SERVICE,
-            "zxcrypt",
-            ServerEnd::new(server_end.into_channel()),
-        )?;
+        let device_manager_proxy = get_device_manager_proxy(self)?;
         zx::Status::ok(device_manager_proxy.unseal(key, 0).await?)
             .map_err(DiskError::FailedToUnsealZxcrypt)?;
 
@@ -427,30 +441,23 @@ impl EncryptedBlockDevice for EncryptedDevBlockDevice {
     }
 
     async fn seal(&self) -> Result<(), DiskError> {
-        let (device_manager_proxy, server_end) =
-            fidl::endpoints::create_proxy::<DeviceManagerMarker>()?;
-        self.0.open(
-            OPEN_RW,
-            MODE_TYPE_SERVICE,
-            "zxcrypt",
-            ServerEnd::new(server_end.into_channel()),
-        )?;
+        let device_manager_proxy = get_device_manager_proxy(self)?;
         zx::Status::ok(device_manager_proxy.seal().await?)
             .map_err(DiskError::FailedToSealZxcrypt)?;
         Ok(())
     }
 
     async fn format(&self, key: &Key) -> Result<(), DiskError> {
-        let (device_manager_proxy, server_end) =
-            fidl::endpoints::create_proxy::<DeviceManagerMarker>()?;
-        self.0.open(
-            OPEN_RW,
-            MODE_TYPE_SERVICE,
-            "zxcrypt",
-            ServerEnd::new(server_end.into_channel()),
-        )?;
+        let device_manager_proxy = get_device_manager_proxy(self)?;
         zx::Status::ok(device_manager_proxy.format(key, 0).await?)
             .map_err(DiskError::FailedToFormatZxcrypt)?;
+        Ok(())
+    }
+
+    async fn shred(&self) -> Result<(), DiskError> {
+        let device_manager_proxy = get_device_manager_proxy(self)?;
+        zx::Status::ok(device_manager_proxy.shred().await?)
+            .map_err(DiskError::FailedToShredZxcrypt)?;
         Ok(())
     }
 }
@@ -547,7 +554,8 @@ pub mod test {
         fidl_test_identity::{
             MockPartitionMarker, MockPartitionRequest, MockPartitionRequestStream,
         },
-        futures::future::BoxFuture,
+        futures::{future::BoxFuture, lock::Mutex},
+        std::cell::Cell,
         std::sync::Arc,
         vfs::{
             directory::{
@@ -719,16 +727,29 @@ pub mod test {
         }
     }
 
+    #[derive(Copy, Clone, Debug)]
+    enum MockZxcryptBlockState {
+        Unformatted,
+        Sealed,
+        Unsealed,
+        UnsealedShredded,
+        Shredded,
+    }
+
     /// A mock zxcrypt block device, serving a stream of [`DeviceManagerRequest`].
     /// The block device takes a pseudo-directory in which it populates the "unsealed" entry
     /// when the device is unsealed.
     struct MockZxcryptBlock {
         unsealed_contents: Arc<simple::Simple>,
+        state: Arc<Mutex<Cell<MockZxcryptBlockState>>>,
     }
 
     impl MockZxcryptBlock {
         fn new(unsealed_contents: Arc<simple::Simple>) -> MockZxcryptBlock {
-            MockZxcryptBlock { unsealed_contents }
+            MockZxcryptBlock {
+                unsealed_contents,
+                state: Arc::new(Mutex::new(Cell::new(MockZxcryptBlockState::Unformatted))),
+            }
         }
 
         async fn handle_requests_for_stream(
@@ -741,6 +762,18 @@ pub mod test {
                 match request {
                     DeviceManagerRequest::Format { key: _, slot, responder } => {
                         assert_eq!(slot, 0, "key slot must be 0");
+                        let s = self.state.lock().await;
+                        assert!(
+                            matches!(
+                                s.get(),
+                                MockZxcryptBlockState::Unformatted
+                                    | MockZxcryptBlockState::Shredded
+                                    | MockZxcryptBlockState::Sealed
+                            ),
+                            "{:?}",
+                            s.get()
+                        );
+                        s.replace(MockZxcryptBlockState::Sealed);
                         responder
                             .send(zx::Status::OK.into_raw())
                             .expect("failed to send DeviceManager.Format response");
@@ -749,22 +782,71 @@ pub mod test {
                     DeviceManagerRequest::Unseal { key: _, slot, responder } => {
                         assert_eq!(slot, 0, "key slot must be 0");
 
+                        let s = self.state.lock().await;
+                        assert!(matches!(s.get(), MockZxcryptBlockState::Sealed), "{:?}", s.get());
+
                         let unsealed_dir = pseudo_directory! {
                             "block" => pseudo_directory! {},
                         };
                         self.unsealed_contents
                             .add_entry("unsealed", unsealed_dir)
                             .expect("failed to add unsealed dir");
+                        s.replace(MockZxcryptBlockState::Unsealed);
                         responder
                             .send(zx::Status::OK.into_raw())
                             .expect("failed to send DeviceManager.Unseal response");
                     }
-                    req => {
-                        error!("{:?} is not implemented for this mock", req);
-                        unimplemented!("DeviceManager request is not implemented for this mock");
+
+                    DeviceManagerRequest::Seal { responder } => {
+                        let s = self.state.lock().await;
+                        assert!(
+                            matches!(
+                                s.get(),
+                                MockZxcryptBlockState::Unsealed
+                                    | MockZxcryptBlockState::UnsealedShredded
+                            ),
+                            "{:?}",
+                            s.get()
+                        );
+
+                        self.unsealed_contents
+                            .remove_entry("unsealed", true)
+                            .expect("failed to remove unsealed dir");
+                        let next_state = match s.get() {
+                            MockZxcryptBlockState::Unsealed => MockZxcryptBlockState::Sealed,
+                            MockZxcryptBlockState::UnsealedShredded => {
+                                MockZxcryptBlockState::Shredded
+                            }
+                            _ => unreachable!(),
+                        };
+                        s.replace(next_state);
+                        responder
+                            .send(zx::Status::OK.into_raw())
+                            .expect("failed to send DeviceManager.Seal response");
+                    }
+
+                    DeviceManagerRequest::Shred { responder } => {
+                        let s = self.state.lock().await;
+                        let next_state = match s.get() {
+                            MockZxcryptBlockState::Unformatted
+                            | MockZxcryptBlockState::Sealed
+                            | MockZxcryptBlockState::Shredded => MockZxcryptBlockState::Shredded,
+                            MockZxcryptBlockState::Unsealed
+                            | MockZxcryptBlockState::UnsealedShredded => {
+                                MockZxcryptBlockState::UnsealedShredded
+                            }
+                        };
+                        s.replace(next_state);
+                        responder
+                            .send(zx::Status::OK.into_raw())
+                            .expect("failed to send DeviceManager.Shred response");
                     }
                 }
             }
+        }
+
+        async fn state(&self) -> MockZxcryptBlockState {
+            self.state.lock().await.get()
         }
     }
 
@@ -1002,14 +1084,17 @@ pub mod test {
     async fn format_zxcrypt_device() {
         let scope = ExecutionScope::new();
         let zxcrypt_dir = simple::simple();
+        let arc_mock_zxcrypt_block = Arc::new(MockZxcryptBlock::new(zxcrypt_dir.clone()));
+        let arc_mock_zxcrypt_block_clone = arc_mock_zxcrypt_block.clone();
+
         // We only need to serve the relevant zxcrypt directories for this test.
         let mock_encrypted_block_dir = pseudo_directory! {
             "zxcrypt" => DirectoryOrService::new(
                 zxcrypt_dir.clone(),
                 vfs::service::host(move |stream| {
-                    let zxcrypt_dir = zxcrypt_dir.clone();
+                    let arc_mock_zxcrypt_block_clone_inner = arc_mock_zxcrypt_block.clone();
                     async move {
-                        Arc::new(MockZxcryptBlock::new(zxcrypt_dir))
+                        arc_mock_zxcrypt_block_clone_inner
                             .handle_requests_for_stream(stream).await
                     }
                 })
@@ -1022,7 +1107,74 @@ pub mod test {
         let encrypted_block_device =
             EncryptedDevBlockDevice(serve_mock_devfs(&scope, mock_encrypted_block_dir));
         encrypted_block_device.format(&key).await.expect("format");
+
+        let state = arc_mock_zxcrypt_block_clone.state().await;
+        assert!(matches!(state, MockZxcryptBlockState::Sealed), "{:?}", state);
+
         let _ = encrypted_block_device.unseal(&key).await.expect("unseal");
+
+        let state = arc_mock_zxcrypt_block_clone.state().await;
+        assert!(matches!(state, MockZxcryptBlockState::Unsealed), "{:?}", state);
+
+        scope.shutdown();
+        scope.wait().await;
+    }
+
+    #[fuchsia::test]
+    async fn shred_zxcrypt_device() {
+        let scope = ExecutionScope::new();
+        let zxcrypt_dir = simple::simple();
+
+        let arc_mock_zxcrypt_block = Arc::new(MockZxcryptBlock::new(zxcrypt_dir.clone()));
+        let arc_mock_zxcrypt_block_clone = arc_mock_zxcrypt_block.clone();
+
+        let mock_encrypted_block_dir = pseudo_directory! {
+            "zxcrypt" => DirectoryOrService::new(
+                zxcrypt_dir.clone(),
+                vfs::service::host(move |stream| {
+                    let arc_mock_zxcrypt_block_clone_inner = arc_mock_zxcrypt_block.clone();
+                    async move {
+                        arc_mock_zxcrypt_block_clone_inner
+                            .handle_requests_for_stream(stream).await
+                    }
+                })
+            ),
+        };
+
+        // Build a zxcrypt block device that points to our mock zxcrypt driver node, emulating
+        // bind_to_encrypted_block.
+        let key = Box::new(INSECURE_EMPTY_KEY.clone());
+        let encrypted_block_device =
+            EncryptedDevBlockDevice(serve_mock_devfs(&scope, mock_encrypted_block_dir));
+
+        // Format and unseal the device.
+        encrypted_block_device.format(&key).await.expect("format");
+        let state = arc_mock_zxcrypt_block_clone.state().await;
+        assert!(matches!(state, MockZxcryptBlockState::Sealed), "{:?}", state);
+
+        let _ = encrypted_block_device.unseal(&key).await.expect("unseal");
+        let state = arc_mock_zxcrypt_block_clone.state().await;
+        assert!(matches!(state, MockZxcryptBlockState::Unsealed), "{:?}", state);
+
+        // Verify that we can also shred the device
+        let _ = encrypted_block_device.shred().await.expect("shred");
+        let state = arc_mock_zxcrypt_block_clone.state().await;
+        assert!(matches!(state, MockZxcryptBlockState::UnsealedShredded), "{:?}", state);
+
+        // And then seal it again
+        let _ = encrypted_block_device.seal().await.expect("seal");
+        let state = arc_mock_zxcrypt_block_clone.state().await;
+        assert!(matches!(state, MockZxcryptBlockState::Shredded), "{:?}", state);
+
+        // And format it again
+        encrypted_block_device.format(&key).await.expect("format");
+        let state = arc_mock_zxcrypt_block_clone.state().await;
+        assert!(matches!(state, MockZxcryptBlockState::Sealed), "{:?}", state);
+
+        // And shred it from Sealed
+        let _ = encrypted_block_device.shred().await.expect("shred");
+        let state = arc_mock_zxcrypt_block_clone.state().await;
+        assert!(matches!(state, MockZxcryptBlockState::Shredded), "{:?}", state);
 
         scope.shutdown();
         scope.wait().await;

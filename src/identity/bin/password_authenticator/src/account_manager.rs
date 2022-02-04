@@ -138,8 +138,8 @@ where
                 let mut resp = Err(faccount::Error::UnsupportedOperation);
                 responder.send(&mut resp).context("sending RegisterAccountListener response")?;
             }
-            AccountManagerRequest::RemoveAccount { id: _, force: _, responder } => {
-                let mut resp = Err(faccount::Error::UnsupportedOperation);
+            AccountManagerRequest::RemoveAccount { id, force, responder } => {
+                let mut resp = self.remove_account(id, force).await;
                 responder.send(&mut resp).context("sending RemoveAccount response")?;
             }
             AccountManagerRequest::ProvisionNewAccount {
@@ -521,6 +521,98 @@ where
         Ok(id)
     }
 
+    async fn remove_account(&self, id: AccountId, _force: bool) -> Result<(), faccount::Error> {
+        // To remove an account, we need to:
+        // 1. lock the account, if it was unlocked
+        // 2. remove the metadata from the account metadata store
+        // 3. (best effort) shred the backing volume
+        // 4. mark the account as fully removed (and thus eligible to be provisioned again)
+        //
+        // We hold the accounts lock throughout, since it will exclude concurrent access to both
+        // the accounts hashmap and our direct access to the zxcrypt partition.
+
+        // step 1: lock the account if it was unlocked.
+        // If we can't lock the account, fail the request.  If it wasn't in memory, then by
+        // construction it is not unlocked, and it's safe to proceed.
+        let mut accounts_locked = self.accounts.lock().await;
+        match accounts_locked.get(&id) {
+            Some(AccountState::Provisioning(_)) => {
+                warn!(
+                    "remove_account: can't remove account ID {} still in Provisioning state",
+                    &id
+                );
+                Err(faccount::Error::FailedPrecondition)?
+            }
+            Some(AccountState::Provisioned(account)) => {
+                // Try to lock the Account.  (If it wasn't in
+                // self.accounts, we're not serving any requests for it.)
+                let res = account.clone().lock().await;
+                res.map_err(|err| {
+                    error!("remove_account: could not lock account ID {}: {:?}", id, err);
+                    faccount::Error::Internal
+                })?;
+            }
+            None => {
+                // The account had no previous state, so we don't need to lock it.
+            }
+        }
+        accounts_locked.remove(&id);
+
+        // step 2: remove the metadata from the account metadata store
+        // By now we have guaranteed that the Account is either explicitly locked, or implicitly
+        // was never unlocked.  We still hold the accounts lock, preventing that state from
+        // changing.  It is thus safe to destroy the account metadata.
+
+        // Remove the account from the account metadata store.  Once this completes, the account
+        // removal is guaranteed to have succeeded -- everything after that is best-effort cleanup.
+        let mut ams_locked = self.account_metadata_store.lock().await;
+        ams_locked.remove(&id).await.map_err(|err| {
+            error!("remove_account: couldn't remove account metadata for account ID {}", &id);
+            err
+        })?;
+        drop(ams_locked);
+
+        // step 3: (best effort) shred the backing volume
+        // Try to shred the backing volume, waiting for completion, but ignoring errors.
+        // The metadata removal is sufficient to make the volume no longer unsealable, so we
+        // should not return a failure if we make it to here.  We should block though, because if
+        // we return before we've shredded the volume, a client could race with itself.
+        match self.find_account_partition().await {
+            Some(block_device) => {
+                match self.disk_manager.bind_to_encrypted_block(block_device).await {
+                    Ok(encrypted_block) => {
+                        let shred_res = encrypted_block.shred().await.map_err(|err| {
+                            warn!(
+                                "remove_account: couldn't shred encrypted block device: {} \
+                                    (ignored)",
+                                err
+                            );
+                        });
+                        // Ignore the result.
+                        drop(shred_res);
+                    }
+                    Err(err) => {
+                        // Ignore the failure.
+                        warn!(
+                            "remove_account: couldn't bind zxcrypt driver to encrypted block \
+                            device: {} (ignored)",
+                            err
+                        );
+                    }
+                }
+            }
+            None => {
+                warn!("remove_account: couldn't find account partition, carrying on anyway");
+            }
+        }
+
+        // step 4: mark the account as fully removed (and thus eligible to be provisioned again)
+        // Mark that we've finished deprovisioning this user by releasing the self.accounts lock
+        // and returning success.
+        drop(accounts_locked);
+        Ok(())
+    }
+
     #[cfg(test)]
     async fn lock_account(&self, id: AccountId) {
         let mut accounts_locked = self.accounts.lock().await;
@@ -728,6 +820,8 @@ mod test {
         format_behavior: Result<(), fn() -> DiskError>,
         // What behavior the encrypted block device should have when unseal is attempted.
         unseal_behavior: UnsealBehavior,
+        // Whether the block encrypted block device can be shredded successfully
+        shred_behavior: Result<(), fn() -> DiskError>,
     }
 
     #[async_trait]
@@ -754,6 +848,10 @@ mod test {
 
         async fn seal(&self) -> Result<(), DiskError> {
             Ok(())
+        }
+
+        async fn shred(&self) -> Result<(), DiskError> {
+            self.shred_behavior.clone().map_err(|err_factory| err_factory())
         }
     }
 
@@ -827,6 +925,7 @@ mod test {
                             DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)
                         }),
                     })),
+                    shred_behavior: Ok(()),
                 }),
             },
         }
@@ -852,6 +951,34 @@ mod test {
                             }),
                         }),
                     )),
+                    shred_behavior: Ok(()),
+                }),
+            },
+        }
+    }
+
+    // Create a partition whose GUID and label match the account partition,
+    // and whose block device has a zxcrypt header, and which, if told to shred, will
+    // fail with an IO error
+    fn make_formatted_account_partition_fail_shred(accepted_key: Key) -> MockPartition {
+        let acceptable_keys = vec![accepted_key];
+        MockPartition {
+            guid_behavior: Ok(Match::Any),
+            label_behavior: Ok(Match::Any),
+            block: MockBlockDevice {
+                zxcrypt_header_behavior: Ok(Match::Any),
+                bind_behavior: Ok(MockEncryptedBlockDevice {
+                    format_behavior: Ok(()),
+                    unseal_behavior: UnsealBehavior::AcceptExactKeys((
+                        acceptable_keys,
+                        Box::new(MockBlockDevice {
+                            zxcrypt_header_behavior: Ok(Match::None),
+                            bind_behavior: Err(|| {
+                                DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)
+                            }),
+                        }),
+                    )),
+                    shred_behavior: Err(|| DiskError::FailedToShredZxcrypt(Status::IO)),
                 }),
             },
         }
@@ -875,6 +1002,7 @@ mod test {
                             DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)
                         }),
                     })),
+                    shred_behavior: Ok(()),
                 }),
             },
         }
@@ -1311,6 +1439,7 @@ mod test {
                     unseal_behavior: UnsealBehavior::RejectWithError(|| {
                         DiskError::FailedToUnsealZxcrypt(Status::IO)
                     }),
+                    shred_behavior: Ok(()),
                 }),
             },
         });
@@ -1336,6 +1465,7 @@ mod test {
                     unseal_behavior: UnsealBehavior::RejectWithError(|| {
                         DiskError::FailedToUnsealZxcrypt(Status::IO)
                     }),
+                    shred_behavior: Ok(()),
                 }),
             },
         });
@@ -1500,5 +1630,102 @@ mod test {
             .await
             .expect("get_data_directory FIDL")
             .expect("get_data_directory");
+    }
+
+    #[fuchsia::test]
+    async fn test_remove_account_okay() {
+        let disk_manager = MockDiskManager::new()
+            .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
+        let account_metadata_store =
+            MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
+
+        let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");
+        assert_eq!(account_ids_before, vec![GLOBAL_ACCOUNT_ID]);
+
+        account_manager.remove_account(GLOBAL_ACCOUNT_ID, true).await.expect("remove_account");
+
+        let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+        assert_eq!(account_ids, Vec::<u64>::new());
+    }
+
+    #[fuchsia::test]
+    async fn test_remove_account_while_unlocked_okay() {
+        let disk_manager = MockDiskManager::new()
+            .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
+        let account_metadata_store =
+            MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
+
+        let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account_manager
+            .get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server_end)
+            .await
+            .expect("get_account");
+
+        let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account
+            .get_data_directory(server_end)
+            .await
+            .expect("get_data_directory FIDL")
+            .expect("get_data_directory");
+
+        account_manager.remove_account(GLOBAL_ACCOUNT_ID, true).await.expect("remove_account");
+
+        // Expect actions on account to fail since the account should have been locked
+        let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
+        let _ = account
+            .get_data_directory(server_end)
+            .await
+            .expect_err("get_data_directory should fail");
+
+        let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+        assert_eq!(account_ids, Vec::<u64>::new());
+    }
+
+    #[fuchsia::test]
+    async fn test_remove_account_bind_zxcrypt_fails_but_remove_account_succeeds() {
+        let disk_manager = MockDiskManager::new().with_partition(MockPartition {
+            guid_behavior: Ok(Match::None),
+            label_behavior: Ok(Match::Any),
+            block: MockBlockDevice {
+                zxcrypt_header_behavior: Ok(Match::Any),
+                bind_behavior: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
+            },
+        });
+        let account_metadata_store =
+            MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
+
+        let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");
+        assert_eq!(account_ids_before, vec![GLOBAL_ACCOUNT_ID]);
+
+        account_manager.remove_account(GLOBAL_ACCOUNT_ID, true).await.expect("remove_account");
+
+        let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+        assert_eq!(account_ids, Vec::<u64>::new());
+    }
+
+    #[fuchsia::test]
+    async fn test_remove_account_shred_fails_but_remove_account_succeeds() {
+        // Shredding the account partition is opportunistic but not required for us to return
+        // success from remove_account.  Removal of the account metadata is sufficient.
+        let disk_manager = MockDiskManager::new()
+            .with_partition(make_formatted_account_partition_fail_shred(TEST_SCRYPT_KEY));
+        let account_metadata_store =
+            MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
+        let account_manager =
+            AccountManager::new(DEFAULT_OPTIONS, disk_manager, account_metadata_store);
+
+        let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");
+        assert_eq!(account_ids_before, vec![GLOBAL_ACCOUNT_ID]);
+
+        account_manager.remove_account(GLOBAL_ACCOUNT_ID, true).await.expect("remove_account");
+
+        let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+        assert_eq!(account_ids, Vec::<u64>::new());
     }
 }

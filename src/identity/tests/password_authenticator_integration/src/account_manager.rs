@@ -626,3 +626,52 @@ async fn null_provision_and_unlock_with_real_password_fails_with_failed_authenti
         .expect_err("deprecated provision new account should fail");
     assert_eq!(error, fidl_fuchsia_identity_account::Error::FailedAuthentication);
 }
+
+#[fuchsia::test]
+async fn remove_account_succeeds_and_terminates_clients() {
+    let env = TestEnv::build().await;
+    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let account_manager = env.account_manager();
+
+    let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_provision_new_account(
+            REAL_PASSWORD,
+            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+            server_end,
+        )
+        .await
+        .expect("deprecated_new_provision FIDL")
+        .expect("deprecated provision new account");
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, vec![1]);
+
+    account_manager
+        .remove_account(account_ids[0], false)
+        .await
+        .expect("remove_account FIDL")
+        .expect("remove_account");
+
+    wait_for_account_close(&account_proxy).await.expect("remove_account closes channel");
+
+    let account_ids_after =
+        account_manager.get_account_ids().await.expect("get account ids after remove");
+    assert_eq!(account_ids_after, Vec::<u64>::new());
+
+    // After removal, the account can be provisioned again.
+    let (_account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_provision_new_account(
+            REAL_PASSWORD,
+            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+            server_end,
+        )
+        .await
+        .expect("deprecated_new_provision FIDL")
+        .expect("deprecated provision new account");
+
+    let account_ids =
+        account_manager.get_account_ids().await.expect("get account ids after second provision");
+    assert_eq!(account_ids, vec![1]);
+}
