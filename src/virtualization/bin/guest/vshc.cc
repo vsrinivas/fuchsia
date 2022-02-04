@@ -337,15 +337,16 @@ int GetContainerStatusIndex(fuchsia::virtualization::ContainerStatus status) {
 std::string GetContainerStatusString(const fuchsia::virtualization::LinuxGuestInfo& info) {
   switch (info.container_status()) {
     case fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST:
-      return std::string("Launching Linux guest");
+      return std::string("Initializing");
     case fuchsia::virtualization::ContainerStatus::STARTING_VM:
-      return std::string("Starting Termina VM");
+      return std::string("Starting the virtual machine");
     case fuchsia::virtualization::ContainerStatus::DOWNLOADING:
-      return fxl::StringPrintf("Downloading container image (%d%%)", info.download_percent());
+      return fxl::StringPrintf("Downloading the Linux container image (%d%%)",
+                               info.download_percent());
     case fuchsia::virtualization::ContainerStatus::EXTRACTING:
-      return std::string("Extracting container image");
+      return std::string("Extracting the Linux container image");
     case fuchsia::virtualization::ContainerStatus::STARTING:
-      return std::string("Starting container");
+      return std::string("Starting the Linux container");
     case fuchsia::virtualization::ContainerStatus::TRANSIENT:
     case fuchsia::virtualization::ContainerStatus::FAILED:
     case fuchsia::virtualization::ContainerStatus::READY:
@@ -384,6 +385,9 @@ class ContainerStartup {
   }
 
   void PrintProgress() {
+    if (container_status_ == fuchsia::virtualization::ContainerStatus::FAILED) {
+      return;
+    }
     InitializeProgress();
     int status_index = GetContainerStatusIndex(container_status_);
     Print(fxl::StringPrintf("\r%s%s%c", MoveForward(status_index).c_str(), kColor5Purple,
@@ -421,7 +425,7 @@ class ContainerStartup {
 
   void PrintAfterStage(const char* color, const std::string& output) {
     InitializeProgress();
-    Print(fxl::StringPrintf("\r%s%s%s", MoveForward(end_of_line_index_).c_str(), color,
+    Print(fxl::StringPrintf("\r%s%s: %s", MoveForward(end_of_line_index_).c_str(), color,
                             output.c_str()));
     end_of_line_index_ += output.size();
   }
