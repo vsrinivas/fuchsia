@@ -36,6 +36,10 @@
 #     List of sources for this python library, relative to source_root.
 #     Type: list(path)
 #
+#   library_deps (optional)
+#    List of targets for other python_library()s that this library depends on
+#    Type: list(target)
+#
 # Metadata
 #
 #   library_info
@@ -47,6 +51,11 @@
 template("python_library") {
   assert(defined(invoker.sources), "sources is required")
 
+  library_deps = []
+  if (defined(invoker.library_deps)) {
+    library_deps = invoker.library_deps
+  }
+
   group(target_name) {
     forward_variables_from(invoker,
                            [
@@ -57,6 +66,12 @@ template("python_library") {
     library_name = target_name
     if (defined(invoker.library_name)) {
       library_name = invoker.library_name
+    }
+
+    # Seed with the library_deps, and then add any other deps as well
+    deps = library_deps
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
     }
 
     source_root = "."
@@ -71,7 +86,9 @@ template("python_library") {
           sources = invoker.sources
         },
       ]
-      library_info_barrier = []
+
+      # Collect library_info from any libraries that are needed.
+      library_info_barrier = library_deps
     }
   }
 }

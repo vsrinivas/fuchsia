@@ -14,4 +14,6 @@ python_library("assembly") {
     "image_assembly_config.py",
     "utils.py",
   ]
+
+  library_deps = [ "//build/python/modules/depfile" ]
 }
