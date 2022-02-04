@@ -23,7 +23,6 @@ use futures::{FutureExt as _, SinkExt as _, TryFutureExt as _, TryStreamExt as _
 use log::{error, warn};
 use std::collections::HashMap;
 use std::convert::TryFrom as _;
-use std::os::unix::io::AsRawFd as _;
 use std::path;
 
 /// URL for the realm that contains the hermetic network components with a
@@ -564,47 +563,6 @@ async fn get_or_insert_socket<'a>(
     }
 }
 
-/// Joins or leaves an Ipv4 multicast group.
-///
-/// If `join` is true, then the `interface` will be used to join the multicast
-/// group `address`. Otherwise, the group `address` will be left.
-fn set_v4_multicast_socket_option(
-    socket: &socket2::Socket,
-    address: std::net::Ipv4Addr,
-    interface: u64,
-    join: bool,
-) -> std::io::Result<()> {
-    let fd = socket.as_raw_fd();
-    let name = if join { libc::IP_ADD_MEMBERSHIP } else { libc::IP_DROP_MEMBERSHIP };
-    let multiaddr = u32::from_le_bytes(address.octets());
-    let mreqn = libc::ip_mreqn {
-        imr_multiaddr: libc::in_addr { s_addr: multiaddr },
-        imr_address: libc::in_addr { s_addr: libc::INADDR_ANY },
-        // Note that the standard `socket2::Socket` join_multicast_v4 and
-        // leave_multicast_v4 methods are not used as they do not specify the
-        // interface id.
-        //
-        // TODO(https://github.com/rust-lang/socket2/issues/283): use upstream's
-        // method when available.
-        imr_ifindex: interface as i32,
-    };
-    unsafe {
-        match libc::setsockopt(
-            fd,
-            libc::IPPROTO_IP,
-            name,
-            &mreqn as *const libc::ip_mreqn as *const libc::c_void,
-            std::mem::size_of::<libc::ip_mreqn>() as libc::socklen_t,
-        ) {
-            -1 => {
-                let err = std::io::Error::last_os_error();
-                Err(err)
-            }
-            _ => Ok(()),
-        }
-    }
-}
-
 /// A controller for creating and manipulating the Network Test Realm.
 ///
 /// The Network Test Realm corresponds to a hermetic network realm with a
@@ -752,19 +710,18 @@ impl Controller {
         interface_id: u64,
     ) -> Result<(), fntr::Error> {
         let fnet_ext::IpAddress(address) = address.into();
+        let interface_id = u32::try_from(interface_id).map_err(|e| {
+            error!("failed to convert interface ID to u32, {:?}", e);
+            fntr::Error::Internal
+        })?;
         let socket = self.get_or_create_multicast_socket(address).await?;
 
         match address {
-            std::net::IpAddr::V4(addr) => {
-                set_v4_multicast_socket_option(socket, addr, interface_id, false /* join */)
-            }
-            std::net::IpAddr::V6(addr) => socket.leave_multicast_v6(
+            std::net::IpAddr::V4(addr) => socket.leave_multicast_v4_n(
                 &addr,
-                u32::try_from(interface_id).map_err(|e| {
-                    error!("failed to convert interface ID to u32, {:?}", e);
-                    fntr::Error::Internal
-                })?,
+                &socket2::InterfaceIndexOrAddress::Index(interface_id),
             ),
+            std::net::IpAddr::V6(addr) => socket.leave_multicast_v6(&addr, interface_id),
         }
         .map_err(|e| match e.kind() {
             // The group `address` was not previously joined.
@@ -786,19 +743,16 @@ impl Controller {
         interface_id: u64,
     ) -> Result<(), fntr::Error> {
         let fnet_ext::IpAddress(address) = address.into();
+        let interface_id = u32::try_from(interface_id).map_err(|e| {
+            error!("failed to convert interface ID to u32, {:?}", e);
+            fntr::Error::Internal
+        })?;
         let socket = self.get_or_create_multicast_socket(address).await?;
 
         match address {
-            std::net::IpAddr::V4(addr) => {
-                set_v4_multicast_socket_option(socket, addr, interface_id, true /* join */)
-            }
-            std::net::IpAddr::V6(addr) => socket.join_multicast_v6(
-                &addr,
-                u32::try_from(interface_id).map_err(|e| {
-                    error!("failed to convert interface ID to u32, {:?}", e);
-                    fntr::Error::Internal
-                })?,
-            ),
+            std::net::IpAddr::V4(addr) => socket
+                .join_multicast_v4_n(&addr, &socket2::InterfaceIndexOrAddress::Index(interface_id)),
+            std::net::IpAddr::V6(addr) => socket.join_multicast_v6(&addr, interface_id),
         }
         .map_err(|e| match e.kind() {
             // The group `address` was already joined.
