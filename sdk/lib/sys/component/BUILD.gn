@@ -4,6 +4,14 @@
 
 import("//build/sdk/sdk_component_manifests.gni")
 
+group("tests") {
+  testonly = true
+  deps = [
+    "cpp/tests",
+    "llcpp/tests",
+  ]
+}
+
 sdk_component_manifests("realm_builder_shard_sdk") {
   name = "sys/component"
   manifests = [ "realm_builder.shard.cml" ]

@@ -1,0 +1,13 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/llcpp_outgoing_directory_test_bin",
+    },
+    use: [
+        // Needed for gTest Death Tests.
+        { protocol: "fuchsia.process.Launcher" },
+    ],
+}

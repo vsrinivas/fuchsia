@@ -1,0 +1,16 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/llcpp_echo_service_server_bin",
+    },
+    capabilities: [
+        { service: "fuchsia.examples.EchoService" },
+    ],
+    expose: [
+        {
+            service: "fuchsia.examples.EchoService",
+            from: "self",
+        },
+    ],
+}

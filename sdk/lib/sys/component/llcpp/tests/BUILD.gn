@@ -1,0 +1,87 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":component_llcpp_tests" ]
+}
+
+executable("llcpp_echo_service_server_bin") {
+  testonly = true
+
+  sources = [ "echo_service_server.cc" ]
+
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//sdk/lib/sys/component/llcpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl",
+  ]
+}
+
+executable("llcpp_outgoing_directory_test_bin") {
+  testonly = true
+
+  sources = [ "outgoing_directory_test.cc" ]
+
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/sys/component/llcpp",
+    "//src/lib/fidl/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+executable("llcpp_outgoing_directory_integration_test_bin") {
+  testonly = true
+
+  sources = [ "outgoing_directory_integration_test.cc" ]
+
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+  ]
+}
+
+fuchsia_component("llcpp_echo_service_server") {
+  testonly = true
+  deps = [ ":llcpp_echo_service_server_bin" ]
+  manifest = "meta/echo_service_server.cml"
+  restricted_features = [ "services" ]
+}
+
+fuchsia_component("outgoing_directory_test") {
+  testonly = true
+  deps = [ ":llcpp_outgoing_directory_test_bin" ]
+  manifest = "meta/outgoing_directory_test.cml"
+}
+
+fuchsia_component("outgoing_directory_integration_test") {
+  testonly = true
+  deps = [ ":llcpp_outgoing_directory_integration_test_bin" ]
+  manifest = "meta/outgoing_directory_integration_test.cml"
+}
+
+fuchsia_test_package("component_llcpp_tests") {
+  test_components = [
+    ":outgoing_directory_test",
+    ":outgoing_directory_integration_test",
+  ]
+  deps = [ ":llcpp_echo_service_server" ]
+}

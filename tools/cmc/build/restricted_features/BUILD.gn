@@ -8,6 +8,7 @@ group("services") {
     "//examples/components/services:*",
     "//examples/fidl/*",
     "//sdk/lib/sys/component/cpp/tests/*",
+    "//sdk/lib/sys/component/llcpp/tests/*",
     "//src/devices/tests/*",
     "//src/sys/component_manager/tests/services:*",
     "//tools/cmc:*",
