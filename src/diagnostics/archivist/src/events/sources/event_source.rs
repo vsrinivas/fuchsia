@@ -28,7 +28,7 @@ impl EventSource {
         }
     }
 
-    pub async fn spawn(mut self) -> Result<(), EventError> {
+    pub async fn spawn(mut self) {
         while let Some(request) = self.request_stream.next().await {
             match request {
                 Ok(fsys::EventStreamRequest::OnEvent { event, .. }) => match event.try_into() {
@@ -49,7 +49,6 @@ impl EventSource {
             }
         }
         warn!("EventSource stream server closed");
-        Ok(())
     }
 }
 

@@ -261,9 +261,7 @@ impl Archivist {
                     ],
                 });
                 self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
-                    event_source.spawn().await.unwrap_or_else(|err| {
-                        error!(?err, "Failed to run event source producer loop");
-                    });
+                    event_source.spawn().await;
                 }));
             }
         }
@@ -286,7 +284,7 @@ impl Archivist {
         });
         self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
             component_event_provider.spawn().await.unwrap_or_else(|err| {
-                error!(?err, "Failed to run event source producer loop");
+                error!(?err, "Failed to run component event provider loop");
             });
         }));
     }

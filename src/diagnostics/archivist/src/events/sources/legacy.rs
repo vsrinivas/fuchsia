@@ -18,11 +18,27 @@ use fidl_fuchsia_sys_internal::{
 use fuchsia_zircon as zx;
 use futures::StreamExt;
 use std::convert::TryFrom;
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub struct ComponentEventProvider {
     proxy: ComponentEventProviderProxy,
     dispatcher: Dispatcher,
+}
+
+macro_rules! break_on_disconnect {
+    ($result:expr) => {{
+        match $result {
+            Err(EventError::SendError(err)) => {
+                if err.is_disconnected() {
+                    break;
+                }
+            }
+            Err(err) => {
+                warn!(?err, "Error handling event");
+            }
+            Ok(_) => {}
+        }
+    }};
 }
 
 impl ComponentEventProvider {
@@ -37,17 +53,19 @@ impl ComponentEventProvider {
         while let Some(request) = stream.next().await {
             match request {
                 Ok(ComponentEventListenerRequest::OnStart { component, .. }) => {
-                    self.handle_on_start(component).await?;
+                    break_on_disconnect!(self.handle_on_start(component).await);
                 }
                 Ok(ComponentEventListenerRequest::OnDiagnosticsDirReady {
                     component,
                     directory,
                     ..
                 }) => {
-                    self.handle_on_directory_ready(component, directory).await?;
+                    break_on_disconnect!(
+                        self.handle_on_directory_ready(component, directory).await
+                    );
                 }
                 Ok(ComponentEventListenerRequest::OnStop { component, .. }) => {
-                    self.handle_on_stop(component).await?;
+                    break_on_disconnect!(self.handle_on_stop(component).await);
                 }
                 other => {
                     debug!(?other, "unexpected component event listener request");
