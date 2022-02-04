@@ -5,11 +5,6 @@
 //! The reachability monitor monitors reachability state and generates an event to signal
 //! changes.
 
-// From https://docs.rs/futures/0.3.1/futures/macro.select.html:
-//   Note that select! relies on proc-macro-hack, and may require to set the compiler's
-//   recursion limit very high, e.g. #![recursion_limit="1024"].
-#![recursion_limit = "512"]
-
 extern crate fuchsia_syslog as syslog;
 #[macro_use]
 extern crate log;

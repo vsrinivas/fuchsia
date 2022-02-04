@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #![cfg(test)]
-// Increase recursion limit in order to use `futures::select`.
-#![recursion_limit = "256"]
 
 use std::collections::HashMap;
 

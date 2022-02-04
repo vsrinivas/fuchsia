@@ -83,17 +83,17 @@ eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
 event-listener = "2.5.1"
 fatfs = { path = "forks/fatfs" }
 flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
-futures = "=0.3.16"
-futures-channel = "=0.3.16"
-futures-core = "=0.3.16"
-futures-executor = "=0.3.16"
-futures-io = "=0.3.16"
+futures = "=0.3.19"
+futures-channel = "=0.3.19"
+futures-core = "=0.3.19"
+futures-executor = "=0.3.19"
+futures-io = "=0.3.19"
 futures-lite = "1.11.3"
-futures-macro = "=0.3.16"
-futures-sink = "=0.3.16"
-futures-task = "=0.3.16"
-futures-test = "=0.3.16"
-futures-util = "=0.3.16"
+futures-macro = "=0.3.19"
+futures-sink = "=0.3.19"
+futures-task = "=0.3.19"
+futures-test = "=0.3.19"
+futures-util = "=0.3.19"
 getrandom = { features = ["js"] }
 glob = "0.3.0"
 gpt = "2.0.0"
@@ -394,20 +394,20 @@ rustflags = [
   # "--cfg=has_atomic_u128",
 ]
 
-[gn.package.futures-core."0.3.16"]
+[gn.package.futures-core."0.3.19"]
 env_vars = [ "CARGO_PKG_NAME=futures-core" ]
 
-[gn.package.futures-channel."0.3.16"]
+[gn.package.futures-channel."0.3.19"]
 env_vars = [ "CARGO_PKG_NAME=futures-channel" ]
 
-[gn.package.futures-macro."0.3.16"]
+[gn.package.futures-macro."0.3.19"]
 env_vars = [ "CARGO_PKG_NAME=futures-macro" ]
 rustflags = [ "--cfg=fn_like_proc_macro" ]
 
-[gn.package.futures-task."0.3.16"]
+[gn.package.futures-task."0.3.19"]
 env_vars = [ "CARGO_PKG_NAME=futures-task" ]
 
-[gn.package.futures-util."0.3.16"]
+[gn.package.futures-util."0.3.19"]
 env_vars = [ "CARGO_PKG_NAME=futures-util" ]
 rustflags = [ "--cfg=fn_like_proc_macro" ]
 
@@ -473,9 +473,6 @@ rustflags = ["--cfg=u128", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 # cargo-gnaw suggested "--cfg=proc_macro_span" as well but proc_macro_span is still an unstable feature.
 [gn.package.proc-macro2."1.0.28"]
 rustflags = ["--cfg=span_locations", "--cfg=lexerror_display", "--cfg=hygiene", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
-
-[gn.package.proc-macro-hack."0.5.19"]
-rustflags = []
 
 [gn.package.rand."0.6.5"]
 rustflags = ["--cfg=rustc_1_25","--cfg=rustc_1_26",  "--cfg=rustc_1_27",]

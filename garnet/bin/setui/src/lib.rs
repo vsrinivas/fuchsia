@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This declaration is required to support the `select!`.
-#![recursion_limit = "256"]
-#![deny(unused_results)]
-
 use crate::accessibility::accessibility_controller::AccessibilityController;
 use crate::agent::authority::Authority;
 use crate::agent::{BlueprintHandle as AgentBlueprintHandle, Lifespan};

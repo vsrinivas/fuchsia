@@ -78,7 +78,6 @@
 //! The majority of examples and code snippets in this crate assume that they are
 //! inside an async block as written above.
 
-#![cfg_attr(feature = "read-initializer", feature(read_initializer))]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![warn(
     missing_debug_implementations,
@@ -99,29 +98,26 @@
 #[cfg(all(feature = "bilock", not(feature = "unstable")))]
 compile_error!("The `bilock` feature requires the `unstable` feature as an explicit opt-in to unstable features");
 
-#[cfg(all(feature = "read-initializer", not(feature = "unstable")))]
-compile_error!("The `read-initializer` feature requires the `unstable` feature as an explicit opt-in to unstable features");
-
-#[doc(hidden)]
+#[doc(no_inline)]
 pub use futures_core::future::{Future, TryFuture};
-#[doc(hidden)]
+#[doc(no_inline)]
 pub use futures_util::future::{FutureExt, TryFutureExt};
 
-#[doc(hidden)]
+#[doc(no_inline)]
 pub use futures_core::stream::{Stream, TryStream};
-#[doc(hidden)]
+#[doc(no_inline)]
 pub use futures_util::stream::{StreamExt, TryStreamExt};
 
-#[doc(hidden)]
+#[doc(no_inline)]
 pub use futures_sink::Sink;
-#[doc(hidden)]
+#[doc(no_inline)]
 pub use futures_util::sink::SinkExt;
 
 #[cfg(feature = "std")]
-#[doc(hidden)]
+#[doc(no_inline)]
 pub use futures_io::{AsyncBufRead, AsyncRead, AsyncSeek, AsyncWrite};
 #[cfg(feature = "std")]
-#[doc(hidden)]
+#[doc(no_inline)]
 pub use futures_util::{AsyncBufReadExt, AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 // Macro reexports
@@ -136,6 +132,10 @@ pub use futures_util::{join, pending, poll, select_biased, try_join}; // Async-a
 // Module reexports
 #[doc(inline)]
 pub use futures_util::{future, never, sink, stream, task};
+
+#[cfg(feature = "std")]
+#[cfg(feature = "async-await")]
+pub use futures_util::stream_select;
 
 #[cfg(feature = "alloc")]
 #[doc(inline)]
