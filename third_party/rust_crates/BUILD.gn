@@ -243,23 +243,23 @@ group("flate2") {
 }
 
 group("futures") {
-  deps = [ ":futures-v0_3_15" ]
+  deps = [ ":futures-v0_3_16" ]
 }
 
 group("futures-channel") {
-  deps = [ ":futures-channel-v0_3_15" ]
+  deps = [ ":futures-channel-v0_3_16" ]
 }
 
 group("futures-core") {
-  deps = [ ":futures-core-v0_3_15" ]
+  deps = [ ":futures-core-v0_3_16" ]
 }
 
 group("futures-executor") {
-  deps = [ ":futures-executor-v0_3_15" ]
+  deps = [ ":futures-executor-v0_3_16" ]
 }
 
 group("futures-io") {
-  deps = [ ":futures-io-v0_3_15" ]
+  deps = [ ":futures-io-v0_3_16" ]
 }
 
 group("futures-lite") {
@@ -267,23 +267,23 @@ group("futures-lite") {
 }
 
 group("futures-macro") {
-  deps = [ ":futures-macro-v0_3_15($host_toolchain)" ]
+  deps = [ ":futures-macro-v0_3_16($host_toolchain)" ]
 }
 
 group("futures-sink") {
-  deps = [ ":futures-sink-v0_3_15" ]
+  deps = [ ":futures-sink-v0_3_16" ]
 }
 
 group("futures-task") {
-  deps = [ ":futures-task-v0_3_15" ]
+  deps = [ ":futures-task-v0_3_16" ]
 }
 
 group("futures-test") {
-  deps = [ ":futures-test-v0_3_15" ]
+  deps = [ ":futures-test-v0_3_16" ]
 }
 
 group("futures-util") {
-  deps = [ ":futures-util-v0_3_15" ]
+  deps = [ ":futures-util-v0_3_16" ]
 }
 
 if (current_os == "fuchsia") {
@@ -1362,7 +1362,7 @@ rust_library("async-broadcast-v0_2_0") {
   deps = []
   deps += [ ":easy-parallel-v3_1_0" ]
   deps += [ ":event-listener-v2_5_1" ]
-  deps += [ ":futures-core-v0_3_15" ]
+  deps += [ ":futures-core-v0_3_16" ]
 
   rustenv = []
 
@@ -1388,7 +1388,7 @@ rust_library("async-channel-v1_6_1") {
   deps = []
   deps += [ ":concurrent-queue-v1_2_2" ]
   deps += [ ":event-listener-v2_5_1" ]
-  deps += [ ":futures-core-v0_3_15" ]
+  deps += [ ":futures-core-v0_3_16" ]
 
   rustenv = []
 
@@ -4134,31 +4134,31 @@ rust_library("fuchsia-cprng-v0_1_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("futures-v0_3_15") {
+rust_library("futures-v0_3_16") {
   crate_name = "futures"
   crate_root = "//third_party/rust_crates/vendor/futures/src/lib.rs"
-  output_name = "futures-31ddb4581b5046df"
+  output_name = "futures-eeaed1cfe3b6dac0"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":futures-channel-v0_3_15" ]
-  deps += [ ":futures-core-v0_3_15" ]
-  deps += [ ":futures-executor-v0_3_15" ]
-  deps += [ ":futures-io-v0_3_15" ]
-  deps += [ ":futures-sink-v0_3_15" ]
-  deps += [ ":futures-task-v0_3_15" ]
-  deps += [ ":futures-util-v0_3_15" ]
+  deps += [ ":futures-channel-v0_3_16" ]
+  deps += [ ":futures-core-v0_3_16" ]
+  deps += [ ":futures-executor-v0_3_16" ]
+  deps += [ ":futures-io-v0_3_16" ]
+  deps += [ ":futures-sink-v0_3_16" ]
+  deps += [ ":futures-task-v0_3_16" ]
+  deps += [ ":futures-util-v0_3_16" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=31ddb4581b5046df",
-    "-Cextra-filename=-31ddb4581b5046df",
+    "-Cmetadata=eeaed1cfe3b6dac0",
+    "-Cextra-filename=-eeaed1cfe3b6dac0",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"async-await\"",
     "--cfg=feature=\"default\"",
@@ -4170,26 +4170,26 @@ rust_library("futures-v0_3_15") {
   visibility = [ ":*" ]
 }
 
-rust_library("futures-channel-v0_3_15") {
+rust_library("futures-channel-v0_3_16") {
   crate_name = "futures_channel"
   crate_root = "//third_party/rust_crates/vendor/futures-channel/src/lib.rs"
-  output_name = "futures_channel-a472afe2b22d2dd7"
+  output_name = "futures_channel-870b7d0434c69ce9"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":futures-core-v0_3_15" ]
-  deps += [ ":futures-sink-v0_3_15" ]
+  deps += [ ":futures-core-v0_3_16" ]
+  deps += [ ":futures-sink-v0_3_16" ]
 
   rustenv = [ "CARGO_PKG_NAME=futures-channel" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=a472afe2b22d2dd7",
-    "-Cextra-filename=-a472afe2b22d2dd7",
+    "-Cmetadata=870b7d0434c69ce9",
+    "-Cextra-filename=-870b7d0434c69ce9",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"futures-sink\"",
@@ -4200,10 +4200,10 @@ rust_library("futures-channel-v0_3_15") {
   visibility = [ ":*" ]
 }
 
-rust_library("futures-core-v0_3_15") {
+rust_library("futures-core-v0_3_16") {
   crate_name = "futures_core"
   crate_root = "//third_party/rust_crates/vendor/futures-core/src/lib.rs"
-  output_name = "futures_core-a889fbd24b49cd84"
+  output_name = "futures_core-b565b523ef7d132f"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -4216,8 +4216,8 @@ rust_library("futures-core-v0_3_15") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=a889fbd24b49cd84",
-    "-Cextra-filename=-a889fbd24b49cd84",
+    "-Cmetadata=b565b523ef7d132f",
+    "-Cextra-filename=-b565b523ef7d132f",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
@@ -4226,27 +4226,27 @@ rust_library("futures-core-v0_3_15") {
   visibility = [ ":*" ]
 }
 
-rust_library("futures-executor-v0_3_15") {
+rust_library("futures-executor-v0_3_16") {
   crate_name = "futures_executor"
   crate_root = "//third_party/rust_crates/vendor/futures-executor/src/lib.rs"
-  output_name = "futures_executor-e65e94ffcff861ed"
+  output_name = "futures_executor-18c9df6e6271b15c"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":futures-core-v0_3_15" ]
-  deps += [ ":futures-task-v0_3_15" ]
-  deps += [ ":futures-util-v0_3_15" ]
+  deps += [ ":futures-core-v0_3_16" ]
+  deps += [ ":futures-task-v0_3_16" ]
+  deps += [ ":futures-util-v0_3_16" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=e65e94ffcff861ed",
-    "-Cextra-filename=-e65e94ffcff861ed",
+    "-Cmetadata=18c9df6e6271b15c",
+    "-Cextra-filename=-18c9df6e6271b15c",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -4254,10 +4254,10 @@ rust_library("futures-executor-v0_3_15") {
   visibility = [ ":*" ]
 }
 
-rust_library("futures-io-v0_3_15") {
+rust_library("futures-io-v0_3_16") {
   crate_name = "futures_io"
   crate_root = "//third_party/rust_crates/vendor/futures-io/src/lib.rs"
-  output_name = "futures_io-6746179a309717f3"
+  output_name = "futures_io-a78b54f4f1f0688d"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -4270,8 +4270,8 @@ rust_library("futures-io-v0_3_15") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=6746179a309717f3",
-    "-Cextra-filename=-6746179a309717f3",
+    "-Cmetadata=a78b54f4f1f0688d",
+    "-Cextra-filename=-a78b54f4f1f0688d",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -4290,8 +4290,8 @@ rust_library("futures-lite-v1_11_3") {
 
   deps = []
   deps += [ ":fastrand-v1_4_0" ]
-  deps += [ ":futures-core-v0_3_15" ]
-  deps += [ ":futures-io-v0_3_15" ]
+  deps += [ ":futures-core-v0_3_16" ]
+  deps += [ ":futures-io-v0_3_16" ]
   deps += [ ":memchr-v2_4_0" ]
   deps += [ ":parking-v2_0_0" ]
   deps += [ ":pin-project-lite-v0_2_4" ]
@@ -4316,10 +4316,10 @@ rust_library("futures-lite-v1_11_3") {
   visibility = [ ":*" ]
 }
 
-rust_proc_macro("futures-macro-v0_3_15") {
+rust_proc_macro("futures-macro-v0_3_16") {
   crate_name = "futures_macro"
   crate_root = "//third_party/rust_crates/vendor/futures-macro/src/lib.rs"
-  output_name = "futures_macro-3a768ba51e2ff2a0"
+  output_name = "futures_macro-908e97d69152e79b"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -4336,18 +4336,18 @@ rust_proc_macro("futures-macro-v0_3_15") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=3a768ba51e2ff2a0",
-    "-Cextra-filename=-3a768ba51e2ff2a0",
+    "-Cmetadata=908e97d69152e79b",
+    "-Cextra-filename=-908e97d69152e79b",
     "--cfg=fn_like_proc_macro",
   ]
 
   visibility = [ ":*" ]
 }
 
-rust_library("futures-sink-v0_3_15") {
+rust_library("futures-sink-v0_3_16") {
   crate_name = "futures_sink"
   crate_root = "//third_party/rust_crates/vendor/futures-sink/src/lib.rs"
-  output_name = "futures_sink-f8dc858c42d90791"
+  output_name = "futures_sink-17776246beec1776"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -4360,8 +4360,8 @@ rust_library("futures-sink-v0_3_15") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=f8dc858c42d90791",
-    "-Cextra-filename=-f8dc858c42d90791",
+    "-Cmetadata=17776246beec1776",
+    "-Cextra-filename=-17776246beec1776",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
@@ -4370,10 +4370,10 @@ rust_library("futures-sink-v0_3_15") {
   visibility = [ ":*" ]
 }
 
-rust_library("futures-task-v0_3_15") {
+rust_library("futures-task-v0_3_16") {
   crate_name = "futures_task"
   crate_root = "//third_party/rust_crates/vendor/futures-task/src/lib.rs"
-  output_name = "futures_task-823f4434df24e8a0"
+  output_name = "futures_task-22b385a204f51242"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -4386,8 +4386,8 @@ rust_library("futures-task-v0_3_15") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=823f4434df24e8a0",
-    "-Cextra-filename=-823f4434df24e8a0",
+    "-Cmetadata=22b385a204f51242",
+    "-Cextra-filename=-22b385a204f51242",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
@@ -4396,23 +4396,23 @@ rust_library("futures-task-v0_3_15") {
   visibility = [ ":*" ]
 }
 
-rust_library("futures-test-v0_3_15") {
+rust_library("futures-test-v0_3_16") {
   crate_name = "futures_test"
   crate_root = "//third_party/rust_crates/vendor/futures-test/src/lib.rs"
-  output_name = "futures_test-2ec6c5cd2f29a866"
+  output_name = "futures_test-ab823d895d94fbb1"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":futures-core-v0_3_15" ]
-  deps += [ ":futures-executor-v0_3_15" ]
-  deps += [ ":futures-io-v0_3_15" ]
-  deps += [ ":futures-macro-v0_3_15($host_toolchain)" ]
-  deps += [ ":futures-sink-v0_3_15" ]
-  deps += [ ":futures-task-v0_3_15" ]
-  deps += [ ":futures-util-v0_3_15" ]
+  deps += [ ":futures-core-v0_3_16" ]
+  deps += [ ":futures-executor-v0_3_16" ]
+  deps += [ ":futures-io-v0_3_16" ]
+  deps += [ ":futures-macro-v0_3_16($host_toolchain)" ]
+  deps += [ ":futures-sink-v0_3_16" ]
+  deps += [ ":futures-task-v0_3_16" ]
+  deps += [ ":futures-util-v0_3_16" ]
   deps += [ ":pin-project-v1_0_4" ]
   deps += [ ":pin-utils-v0_1_0" ]
 
@@ -4421,8 +4421,8 @@ rust_library("futures-test-v0_3_15") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=2ec6c5cd2f29a866",
-    "-Cextra-filename=-2ec6c5cd2f29a866",
+    "-Cmetadata=ab823d895d94fbb1",
+    "-Cextra-filename=-ab823d895d94fbb1",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -4430,22 +4430,22 @@ rust_library("futures-test-v0_3_15") {
   visibility = [ ":*" ]
 }
 
-rust_library("futures-util-v0_3_15") {
+rust_library("futures-util-v0_3_16") {
   crate_name = "futures_util"
   crate_root = "//third_party/rust_crates/vendor/futures-util/src/lib.rs"
-  output_name = "futures_util-dbc8e105bd010e36"
+  output_name = "futures_util-cbb98dddd2d88a72"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":futures-channel-v0_3_15" ]
-  deps += [ ":futures-core-v0_3_15" ]
-  deps += [ ":futures-io-v0_3_15" ]
-  deps += [ ":futures-macro-v0_3_15($host_toolchain)" ]
-  deps += [ ":futures-sink-v0_3_15" ]
-  deps += [ ":futures-task-v0_3_15" ]
+  deps += [ ":futures-channel-v0_3_16" ]
+  deps += [ ":futures-core-v0_3_16" ]
+  deps += [ ":futures-io-v0_3_16" ]
+  deps += [ ":futures-macro-v0_3_16($host_toolchain)" ]
+  deps += [ ":futures-sink-v0_3_16" ]
+  deps += [ ":futures-task-v0_3_16" ]
   deps += [ ":memchr-v2_4_0" ]
   deps += [ ":pin-project-lite-v0_2_4" ]
   deps += [ ":pin-utils-v0_1_0" ]
@@ -4458,8 +4458,8 @@ rust_library("futures-util-v0_3_15") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=dbc8e105bd010e36",
-    "-Cextra-filename=-dbc8e105bd010e36",
+    "-Cmetadata=cbb98dddd2d88a72",
+    "-Cextra-filename=-cbb98dddd2d88a72",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"async-await\"",
     "--cfg=feature=\"async-await-macro\"",
@@ -4660,9 +4660,9 @@ rust_library("h2-v0_2_5") {
   deps = []
   deps += [ ":bytes-v0_5_4" ]
   deps += [ ":fnv-v1_0_6" ]
-  deps += [ ":futures-core-v0_3_15" ]
-  deps += [ ":futures-sink-v0_3_15" ]
-  deps += [ ":futures-util-v0_3_15" ]
+  deps += [ ":futures-core-v0_3_16" ]
+  deps += [ ":futures-sink-v0_3_16" ]
+  deps += [ ":futures-util-v0_3_16" ]
   deps += [ ":http-v0_2_4" ]
   deps += [ ":indexmap-v1_0_2" ]
   deps += [ ":log-v0_4_11" ]
@@ -4993,9 +4993,9 @@ rust_library("hyper-v0_13_10") {
 
   deps = []
   deps += [ ":bytes-v0_5_4" ]
-  deps += [ ":futures-channel-v0_3_15" ]
-  deps += [ ":futures-core-v0_3_15" ]
-  deps += [ ":futures-util-v0_3_15" ]
+  deps += [ ":futures-channel-v0_3_16" ]
+  deps += [ ":futures-core-v0_3_16" ]
+  deps += [ ":futures-util-v0_3_16" ]
   deps += [ ":h2-v0_2_5" ]
   deps += [ ":http-v0_2_4" ]
   deps += [ ":http-body-v0_3_1" ]
@@ -5032,7 +5032,7 @@ rust_library("hyper-rustls-v0_20_0") {
 
   deps = []
   deps += [ ":bytes-v0_5_4" ]
-  deps += [ ":futures-util-v0_3_15" ]
+  deps += [ ":futures-util-v0_3_16" ]
   deps += [ ":hyper-v0_13_10" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":rustls-v0_17_0" ]
@@ -10794,7 +10794,7 @@ rust_library("tokio-v0_2_21") {
   deps = []
   deps += [ ":bytes-v0_5_4" ]
   deps += [ ":fnv-v1_0_6" ]
-  deps += [ ":futures-core-v0_3_15" ]
+  deps += [ ":futures-core-v0_3_16" ]
   deps += [ ":memchr-v2_4_0" ]
   deps += [ ":pin-project-lite-v0_1_4" ]
 
@@ -10827,7 +10827,7 @@ rust_library("tokio-rustls-v0_13_1") {
   ]
 
   deps = []
-  deps += [ ":futures-core-v0_3_15" ]
+  deps += [ ":futures-core-v0_3_16" ]
   deps += [ ":rustls-v0_17_0" ]
   deps += [ ":tokio-v0_2_21" ]
   deps += [ ":webpki-v0_21_0" ]
@@ -10855,8 +10855,8 @@ rust_library("tokio-util-v0_3_1") {
 
   deps = []
   deps += [ ":bytes-v0_5_4" ]
-  deps += [ ":futures-core-v0_3_15" ]
-  deps += [ ":futures-sink-v0_3_15" ]
+  deps += [ ":futures-core-v0_3_16" ]
+  deps += [ ":futures-sink-v0_3_16" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":pin-project-lite-v0_1_4" ]
   deps += [ ":tokio-v0_2_21" ]
@@ -11164,9 +11164,9 @@ rust_library("trust-dns-proto-v0_21_0-alpha_4") {
   deps += [ ":cfg-if-v1_0_0" ]
   deps += [ ":data-encoding-v2_3_2" ]
   deps += [ ":enum-as-inner-v0_3_0($host_toolchain)" ]
-  deps += [ ":futures-channel-v0_3_15" ]
-  deps += [ ":futures-io-v0_3_15" ]
-  deps += [ ":futures-util-v0_3_15" ]
+  deps += [ ":futures-channel-v0_3_16" ]
+  deps += [ ":futures-io-v0_3_16" ]
+  deps += [ ":futures-util-v0_3_16" ]
   deps += [ ":idna-v0_2_3" ]
   deps += [ ":ipnet-v2_3_1" ]
   deps += [ ":lazy_static-v1_4_0" ]
@@ -11201,7 +11201,7 @@ rust_library("trust-dns-resolver-v0_21_0-alpha_4") {
 
   deps = []
   deps += [ ":cfg-if-v1_0_0" ]
-  deps += [ ":futures-util-v0_3_15" ]
+  deps += [ ":futures-util-v0_3_16" ]
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":lru-cache-v0_1_2" ]
@@ -11285,8 +11285,8 @@ rust_library("tuf-v0_3_0-beta4") {
   deps += [ ":chrono-v0_4_11" ]
   deps += [ ":data-encoding-v2_3_2" ]
   deps += [ ":derp-v0_0_14" ]
-  deps += [ ":futures-io-v0_3_15" ]
-  deps += [ ":futures-util-v0_3_15" ]
+  deps += [ ":futures-io-v0_3_16" ]
+  deps += [ ":futures-util-v0_3_16" ]
   deps += [ ":http-v0_2_4" ]
   deps += [ ":hyper-v0_13_10" ]
   deps += [ ":itoa-v0_4_3" ]
