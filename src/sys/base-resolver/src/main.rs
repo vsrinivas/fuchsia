@@ -211,7 +211,7 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         fake_pkgfs::{Entry, MockDir, MockFile},
-        fidl::encoding::encode_persistent,
+        fidl::encoding::encode_persistent_with_context,
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl::prelude::*,
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
@@ -401,8 +401,11 @@ mod tests {
     }
 
     fn build_fake_pkgfs() -> Arc<MockDir> {
-        let cm_bytes = encode_persistent(&mut fdecl::Component::EMPTY.clone())
-            .expect("failed to encode ComponentDecl FIDL");
+        let cm_bytes = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &mut fdecl::Component::EMPTY.clone(),
+        )
+        .expect("failed to encode ComponentDecl FIDL");
         Arc::new(
             MockDir::new().add_entry(
                 "test-package",
@@ -421,7 +424,7 @@ mod tests {
                                         .add_entry(
                                             "foo-with-config.cm",
                                             Arc::new(MockFile::new(
-                                                encode_persistent(&mut fdecl::Component {
+                                                encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},&mut fdecl::Component {
                                                     config: Some(fdecl::ConfigSchema {
                                                         value_source: Some(
                                                             fdecl::ConfigValueSource::PackagePath(
@@ -439,7 +442,7 @@ mod tests {
                                         .add_entry(
                                             "foo-with-config.cvf",
                                             Arc::new(MockFile::new(
-                                                encode_persistent(&mut fconfig::ValuesData {
+                                                encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},&mut fconfig::ValuesData {
                                                     ..fconfig::ValuesData::EMPTY
                                                 })
                                                 .unwrap(),
@@ -448,7 +451,7 @@ mod tests {
                                         .add_entry(
                                             "foo-with-bad-config.cm",
                                             Arc::new(MockFile::new(
-                                                encode_persistent(&mut fdecl::Component {
+                                                encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},&mut fdecl::Component {
                                                     config: Some(fdecl::ConfigSchema {
                                                         ..fdecl::ConfigSchema::EMPTY
                                                     }),
@@ -460,7 +463,7 @@ mod tests {
                                         .add_entry(
                                             "foo-without-config.cm",
                                             Arc::new(MockFile::new(
-                                                encode_persistent(&mut fdecl::Component {
+                                                encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},&mut fdecl::Component {
                                                     config: Some(fdecl::ConfigSchema {
                                                         value_source: Some(
                                                             fdecl::ConfigValueSource::PackagePath(

@@ -184,7 +184,7 @@ mod tests {
         super::*,
         anyhow::Error,
         assert_matches::assert_matches,
-        fidl::{encoding::encode_persistent, endpoints::ServerEnd},
+        fidl::{encoding::encode_persistent_with_context, endpoints::ServerEnd},
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
         fidl_fuchsia_pkg::{PackageResolverRequest, PackageResolverRequestStream},
@@ -388,8 +388,13 @@ mod tests {
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         let server = async move {
-            let cm_bytes = encode_persistent(&mut fdecl::Component::EMPTY.clone())
-                .expect("failed to encode ComponentDecl FIDL");
+            let cm_bytes = encode_persistent_with_context(
+                &fidl::encoding::Context {
+                    wire_format_version: fidl::encoding::WireFormatVersion::V1,
+                },
+                &mut fdecl::Component::EMPTY.clone(),
+            )
+            .expect("failed to encode ComponentDecl FIDL");
             let fs = pseudo_directory! {
                 "meta" => pseudo_directory!{
                     "test.cm" => read_only_static(cm_bytes),
@@ -432,8 +437,13 @@ mod tests {
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         let server = async move {
-            let cm_bytes = encode_persistent(&mut fdecl::Component::EMPTY.clone())
-                .expect("failed to encode ComponentDecl FIDL");
+            let cm_bytes = encode_persistent_with_context(
+                &fidl::encoding::Context {
+                    wire_format_version: fidl::encoding::WireFormatVersion::V1,
+                },
+                &mut fdecl::Component::EMPTY.clone(),
+            )
+            .expect("failed to encode ComponentDecl FIDL");
             let fs = pseudo_directory! {
                 "meta" => pseudo_directory!{
                     "test.cm" => read_only_static(cm_bytes),
@@ -470,7 +480,7 @@ mod tests {
             let fs = pseudo_directory! {
                 "meta" => pseudo_directory!{
                     "test.cm" => vfs::file::vmo::read_only(|| async move {
-                        let cm_bytes = encode_persistent(&mut fdecl::Component::EMPTY.clone())
+                        let cm_bytes = encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},&mut fdecl::Component::EMPTY.clone())
                             .expect("failed to encode ComponentDecl FIDL");
                         let capacity = cm_bytes.len() as u64;
                         let vmo = Vmo::create(capacity)?;
@@ -600,19 +610,24 @@ mod tests {
     async fn resolve_component_succeeds_with_config() {
         let (proxy, server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
-        let cm_bytes = encode_persistent(&mut fdecl::Component {
-            config: Some(fdecl::ConfigSchema {
-                value_source: Some(fdecl::ConfigValueSource::PackagePath(
-                    "meta/test_with_config.cvf".to_string(),
-                )),
-                ..fdecl::ConfigSchema::EMPTY
-            }),
-            ..fdecl::Component::EMPTY
-        })
+        let cm_bytes = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &mut fdecl::Component {
+                config: Some(fdecl::ConfigSchema {
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath(
+                        "meta/test_with_config.cvf".to_string(),
+                    )),
+                    ..fdecl::ConfigSchema::EMPTY
+                }),
+                ..fdecl::Component::EMPTY
+            },
+        )
         .expect("failed to encode ComponentDecl FIDL");
-        let cvf_bytes =
-            encode_persistent(&mut fconfig::ValuesData { ..fconfig::ValuesData::EMPTY })
-                .expect("failed to encode ValuesData FIDL");
+        let cvf_bytes = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &mut fconfig::ValuesData { ..fconfig::ValuesData::EMPTY },
+        )
+        .expect("failed to encode ValuesData FIDL");
         let fs = pseudo_directory! {
             "meta" => pseudo_directory! {
                 "test_with_config.cm" => read_only_static(cm_bytes),
@@ -638,15 +653,18 @@ mod tests {
     async fn resolve_component_fails_missing_config_value_file() {
         let (proxy, server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
-        let cm_bytes = encode_persistent(&mut fdecl::Component {
-            config: Some(fdecl::ConfigSchema {
-                value_source: Some(fdecl::ConfigValueSource::PackagePath(
-                    "meta/test_with_config.cvf".to_string(),
-                )),
-                ..fdecl::ConfigSchema::EMPTY
-            }),
-            ..fdecl::Component::EMPTY
-        })
+        let cm_bytes = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &mut fdecl::Component {
+                config: Some(fdecl::ConfigSchema {
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath(
+                        "meta/test_with_config.cvf".to_string(),
+                    )),
+                    ..fdecl::ConfigSchema::EMPTY
+                }),
+                ..fdecl::Component::EMPTY
+            },
+        )
         .expect("failed to encode ComponentDecl FIDL");
         let fs = pseudo_directory! {
             "meta" => pseudo_directory! {
@@ -666,14 +684,19 @@ mod tests {
     async fn resolve_component_fails_bad_config_strategy() {
         let (proxy, server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
-        let cm_bytes = encode_persistent(&mut fdecl::Component {
-            config: Some(fdecl::ConfigSchema { ..fdecl::ConfigSchema::EMPTY }),
-            ..fdecl::Component::EMPTY
-        })
+        let cm_bytes = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &mut fdecl::Component {
+                config: Some(fdecl::ConfigSchema { ..fdecl::ConfigSchema::EMPTY }),
+                ..fdecl::Component::EMPTY
+            },
+        )
         .expect("failed to encode ComponentDecl FIDL");
-        let cvf_bytes =
-            encode_persistent(&mut fconfig::ValuesData { ..fconfig::ValuesData::EMPTY })
-                .expect("failed to encode ValuesData FIDL");
+        let cvf_bytes = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &mut fconfig::ValuesData { ..fconfig::ValuesData::EMPTY },
+        )
+        .expect("failed to encode ValuesData FIDL");
         let fs = pseudo_directory! {
             "meta" => pseudo_directory! {
                 "test_with_config.cm" => read_only_static(cm_bytes),

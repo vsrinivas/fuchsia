@@ -2306,7 +2306,13 @@ async fn resolver_component_decl_is_validated() {
                                 )]),
                                 ..fdecl::Component::EMPTY
                             };
-                            fidl::encoding::encode_persistent(&mut fidl).unwrap()
+                            fidl::encoding::encode_persistent_with_context(
+                                &fidl::encoding::Context {
+                                    wire_format_version: fidl::encoding::WireFormatVersion::V1,
+                                },
+                                &mut fidl,
+                            )
+                            .unwrap()
                         })),
                         package: None,
                         ..fsys::Component::EMPTY

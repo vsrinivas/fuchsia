@@ -138,7 +138,7 @@ mod tests {
     use {
         super::*,
         cm_rust::FidlIntoNative,
-        fidl::encoding::encode_persistent,
+        fidl::encoding::encode_persistent_with_context,
         fidl::endpoints::{self, ServerEnd},
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_data as fdata,
@@ -198,7 +198,7 @@ mod tests {
                     let sub_dir = pseudo_directory! {
                         "meta" => pseudo_directory! {
                             "invalid.cm" => read_only_static(
-                                encode_persistent(&mut fdecl::Component {
+                                encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},&mut fdecl::Component {
                                     program: Some(fdecl::Program {
                                         runner: None,
                                         info: Some(fdata::Dictionary {
@@ -238,7 +238,9 @@ mod tests {
                     let sub_dir = pseudo_directory! {
                         "meta" => pseudo_directory! {
                             "foo.cm" => read_only_static(
-                                encode_persistent(&mut fdecl::Component {
+                                encode_persistent_with_context(
+                                    &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+                        &mut fdecl::Component {
                                     config: Some(fdecl::ConfigSchema {
                                         fields: Some(vec![fdecl::ConfigField {
                                             key: Some("test".to_string()),
@@ -259,7 +261,9 @@ mod tests {
                         },
                         "config" => pseudo_directory! {
                             "foo.cvf" => read_only_static(
-                                encode_persistent(&mut fconfig::ValuesData {
+                                encode_persistent_with_context(
+                                    &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+                        &mut fconfig::ValuesData {
                                     values: Some(vec![
                                         fconfig::ValueSpec {
                                             value: Some(fconfig::Value::Single(fconfig::SingleValue::Flag(false))),

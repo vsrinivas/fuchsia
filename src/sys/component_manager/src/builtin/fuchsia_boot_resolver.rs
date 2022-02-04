@@ -188,7 +188,7 @@ mod tests {
         crate::model::{component::ComponentInstance, environment::Environment},
         assert_matches::assert_matches,
         cm_rust::{FidlIntoNative, NativeIntoFidl},
-        fidl::encoding::encode_persistent,
+        fidl::encoding::encode_persistent_with_context,
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_data as fdata,
@@ -328,8 +328,12 @@ mod tests {
         };
         let root = pseudo_directory! {
             "meta" => pseudo_directory! {
-                "has_config.cm" => read_only_static(encode_persistent(&mut manifest).unwrap()),
-                "has_config.cvf" => read_only_static(encode_persistent(&mut values_data).unwrap()),
+                "has_config.cm" => read_only_static(encode_persistent_with_context(
+                    &fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},
+                    &mut manifest).unwrap()),
+                "has_config.cvf" => read_only_static(encode_persistent_with_context(
+                    &fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},
+                    &mut values_data).unwrap()),
             }
         };
         let (_task, bootfs) = serve_vfs_dir(root);
@@ -385,7 +389,9 @@ mod tests {
         };
         let root = pseudo_directory! {
             "meta" => pseudo_directory! {
-                "has_config.cm" => read_only_static(encode_persistent(&mut manifest).unwrap()),
+                "has_config.cm" => read_only_static(encode_persistent_with_context(
+                    &fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},
+                    &mut manifest).unwrap()),
             }
         };
         let (_task, bootfs) = serve_vfs_dir(root);
@@ -419,7 +425,9 @@ mod tests {
             "meta" => pseudo_directory! {
                 // Provide a cm that will fail due to a missing runner.
                 "invalid.cm" => read_only_static(
-                    encode_persistent(&mut fdecl::Component {
+                    encode_persistent_with_context(
+                        &fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},
+                        &mut fdecl::Component {
                         program: Some(fdecl::Program {
                             runner: None,
                             info: Some(fdata::Dictionary {

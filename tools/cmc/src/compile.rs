@@ -8,7 +8,7 @@ use crate::features::FeatureSet;
 use crate::include;
 use crate::util;
 use crate::validate;
-use fidl::encoding::encode_persistent;
+use fidl::encoding::encode_persistent_with_context;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -61,7 +61,10 @@ pub fn compile(
     let mut out_file =
         fs::OpenOptions::new().create(true).truncate(true).write(true).open(output)?;
     let mut out_data = cml::compile(&document, config_package_path)?;
-    out_file.write(&encode_persistent(&mut out_data)?)?;
+    out_file.write(&encode_persistent_with_context(
+        &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+        &mut out_data,
+    )?)?;
 
     // Write includes to depfile
     if let Some(depfile_path) = depfile {

@@ -83,7 +83,13 @@ fn build_decl() -> fmem::Data {
         target_name: Some("fidl.test.components.Trigger".to_string()),
         ..fdecl::ExposeProtocol::EMPTY
     })]);
-    fmem::Data::Bytes(fidl::encoding::encode_persistent(&mut component_decl).expect("encoded"))
+    fmem::Data::Bytes(
+        fidl::encoding::encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &mut component_decl,
+        )
+        .expect("encoded"),
+    )
 }
 
 #[fuchsia::component]

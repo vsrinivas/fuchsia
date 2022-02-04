@@ -121,7 +121,7 @@ mod tests {
             OfferDirectoryDecl, OfferProtocolDecl, OfferSource, OfferTarget, ProgramDecl, UseDecl,
             UseDirectoryDecl, UseProtocolDecl, UseSource,
         },
-        fidl::encoding::encode_persistent,
+        fidl::encoding::encode_persistent_with_context,
         fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
         fidl_fuchsia_io2::Operations,
@@ -259,7 +259,10 @@ mod tests {
 
     fn make_v2_manifest(component_id: i32, decl: ComponentDecl) -> Result<Manifest> {
         let mut decl_fidl: fdecl::Component = decl.native_into_fidl();
-        let decl_base64 = base64::encode(&encode_persistent(&mut decl_fidl)?);
+        let decl_base64 = base64::encode(&encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &mut decl_fidl,
+        )?);
         Ok(Manifest { component_id, manifest: ManifestData::Version2(decl_base64), uses: vec![] })
     }
 
@@ -464,7 +467,10 @@ mod tests {
             if split_index_path.as_slice()[..2] == ["/", "boot/"] {
                 bootfs.insert(
                     split_index_path[2..].join(""),
-                    fidl::encoding::encode_persistent(
+                    fidl::encoding::encode_persistent_with_context(
+                        &fidl::encoding::Context {
+                            wire_format_version: fidl::encoding::WireFormatVersion::V1,
+                        },
                         &mut component_internal::ComponentIdIndex::try_from(component_id_index)
                             .expect("failed to convert component id index to fidl"),
                     )
@@ -475,7 +481,13 @@ mod tests {
 
         bootfs.insert(
             DEFAULT_CONFIG_PATH.to_string(),
-            fidl::encoding::encode_persistent(&mut runtime_config).unwrap(),
+            fidl::encoding::encode_persistent_with_context(
+                &fidl::encoding::Context {
+                    wire_format_version: fidl::encoding::WireFormatVersion::V1,
+                },
+                &mut runtime_config,
+            )
+            .unwrap(),
         );
         return Zbi { sections: Vec::default(), bootfs, cmdline: "".to_string() };
     }

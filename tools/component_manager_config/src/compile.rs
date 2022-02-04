@@ -6,7 +6,7 @@ use {
     argh::FromArgs,
     cm_types::{symmetrical_enums, Url},
     cml::error::{Error, Location},
-    fidl::encoding::encode_persistent,
+    fidl::encoding::encode_persistent_with_context,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
     serde::Deserialize,
     serde_json5,
@@ -508,7 +508,11 @@ fn compile(args: Args) -> Result<(), Error> {
         configs.into_iter().try_fold(Config::default(), |acc, next| acc.extend(next))?;
 
     let mut config_fidl: component_internal::Config = config_json.try_into()?;
-    let bytes = encode_persistent(&mut config_fidl).map_err(|e| Error::FidlEncoding(e))?;
+    let bytes = encode_persistent_with_context(
+        &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+        &mut config_fidl,
+    )
+    .map_err(|e| Error::FidlEncoding(e))?;
     let mut file = File::create(args.output).map_err(|e| Error::Io(e))?;
     file.write_all(&bytes).map_err(|e| Error::Io(e))?;
     Ok(())

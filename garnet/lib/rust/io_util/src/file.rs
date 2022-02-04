@@ -7,7 +7,7 @@
 use {
     crate::node::{CloseError, OpenError},
     anyhow::Error,
-    fidl::encoding::{decode_persistent, encode_persistent, Persistable},
+    fidl::encoding::{decode_persistent, encode_persistent_with_context, Persistable},
     fidl_fuchsia_io::{FileProxy, MAX_BUF},
     fuchsia_zircon_status as zx_status,
     thiserror::Error,
@@ -179,7 +179,14 @@ where
 
 /// Write the given FIDL message in a binary form into a file open for writing.
 pub async fn write_fidl<T: Persistable>(file: &FileProxy, data: &mut T) -> Result<(), Error> {
-    write(file, encode_persistent(data)?).await?;
+    write(
+        file,
+        encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            data,
+        )?,
+    )
+    .await?;
     Ok(())
 }
 
@@ -191,7 +198,14 @@ pub async fn write_fidl_in_namespace<T: Persistable>(
     path: &str,
     data: &mut T,
 ) -> Result<(), Error> {
-    write_in_namespace(path, encode_persistent(data)?).await?;
+    write_in_namespace(
+        path,
+        encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            data,
+        )?,
+    )
+    .await?;
     Ok(())
 }
 
@@ -534,7 +548,11 @@ mod tests {
         };
 
         // Binary encoded FIDL message, with header and padding.
-        let fidl_bytes = encode_persistent(&mut data).unwrap();
+        let fidl_bytes = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &mut data,
+        )
+        .unwrap();
 
         write_fidl(&file, &mut data).await.unwrap();
 

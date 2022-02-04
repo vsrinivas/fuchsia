@@ -5,7 +5,7 @@
 use anyhow::{anyhow, Context, Result};
 
 use component_id_index::*;
-use fidl::encoding::encode_persistent;
+use fidl::encoding::encode_persistent_with_context;
 use fidl_fuchsia_component_internal as fcomponent_internal;
 use serde_json;
 use serde_json5;
@@ -81,8 +81,11 @@ fn run(opts: CommandLineOpts) -> anyhow::Result<()> {
         .context("Could not write merged JSON-encoded index to file")?;
 
     let mut merged_index_fidl: fcomponent_internal::ComponentIdIndex = merged_index.try_into()?;
-    let serialized_output_fidl =
-        encode_persistent(&mut merged_index_fidl).context("Could not fidl-encode merged index")?;
+    let serialized_output_fidl = encode_persistent_with_context(
+        &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+        &mut merged_index_fidl,
+    )
+    .context("Could not fidl-encode merged index")?;
     fs::write(&opts.output_index_fidl, serialized_output_fidl)
         .context("Could not write merged FIDL-encoded index to file")?;
 

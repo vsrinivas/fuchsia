@@ -223,7 +223,7 @@ fn default_encode_context() -> Context {
 /// During migrations, this controls the default write path.
 #[inline]
 fn default_persistent_encode_context() -> Context {
-    Context { wire_format_version: WireFormatVersion::V1 }
+    Context { wire_format_version: WireFormatVersion::V2 }
 }
 
 impl<'a, 'b> Encoder<'a, 'b> {
@@ -3981,15 +3981,22 @@ impl<T: Persistable> Encodable for PersistentMessage<'_, T> {
 /// Encode the referred parameter into persistent binary form.
 /// Generates and adds message header to the returned bytes.
 pub fn encode_persistent<T: Persistable>(body: &mut T) -> Result<Vec<u8>> {
-    let msg = &mut PersistentMessage { header: PersistentHeader::new(), body };
+    encode_persistent_with_context(&default_persistent_encode_context(), body)
+}
+
+/// Encode the referred parameter into persistent binary form.
+/// Generates and adds message header to the returned bytes.
+pub fn encode_persistent_with_context<T: Persistable>(
+    context: &Context,
+    body: &mut T,
+) -> Result<Vec<u8>> {
+    let msg = &mut PersistentMessage {
+        header: PersistentHeader::new_full(context, MAGIC_NUMBER_INITIAL),
+        body,
+    };
     let mut combined_bytes = Vec::<u8>::new();
     let mut handles = Vec::<HandleDisposition<'static>>::new();
-    Encoder::encode_with_context(
-        &default_persistent_encode_context(),
-        &mut combined_bytes,
-        &mut handles,
-        msg,
-    )?;
+    Encoder::encode_with_context(context, &mut combined_bytes, &mut handles, msg)?;
     debug_assert!(handles.is_empty(), "Persistent message contains handles");
     Ok(combined_bytes)
 }
