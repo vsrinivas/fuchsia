@@ -24,7 +24,7 @@ use crate::data_structures::IdMap;
 /// may require updating all stored sockets as well. See the `Update` and
 /// `UpdateMeta` associated types and the `apply_update` method for more
 /// details.
-pub(crate) trait Socket {
+pub trait Socket {
     /// The type of updates to the socket.
     ///
     /// Updates are emitted whenever information changes that might require

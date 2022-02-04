@@ -29,9 +29,9 @@ use netstack3_core::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, icmp, listen_udp, remove_udp_conn,
     remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferDispatcher,
     BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap, IdMapCollection,
-    IdMapCollectionKey, IpExt, IpSockCreationError, IpSockSendError, SocketError,
+    IdMapCollectionKey, IpExt, IpSockCreationError, IpSockSendError, LocalAddressError,
     TransportIpContext, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo,
-    UdpSendError, UdpStateContext,
+    UdpSendError, UdpSendListenerError, UdpSockCreationError, UdpStateContext,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -158,7 +158,8 @@ pub(crate) trait OptionFromU16: Sized {
 
 /// An abstraction over transport protocols that allows generic manipulation of Core state.
 pub(crate) trait TransportState<I: Ip, C>: Transport<I> {
-    type CreateError: IntoErrno;
+    type CreateConnError: IntoErrno;
+    type CreateListenerError: IntoErrno;
     type LocalIdentifier: OptionFromU16 + Into<u16>;
     type RemoteIdentifier: OptionFromU16 + Into<u16>;
 
@@ -168,13 +169,13 @@ pub(crate) trait TransportState<I: Ip, C>: Transport<I> {
         local_id: Option<Self::LocalIdentifier>,
         remote_ip: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
-    ) -> Result<Self::ConnId, Self::CreateError>;
+    ) -> Result<Self::ConnId, Self::CreateConnError>;
 
     fn create_listener(
         ctx: &mut C,
         addr: Option<SpecifiedAddr<I::Addr>>,
         port: Option<Self::LocalIdentifier>,
-    ) -> Result<Self::ListenerId, Self::CreateError>;
+    ) -> Result<Self::ListenerId, Self::CreateListenerError>;
 
     fn get_conn_info(
         ctx: &C,
@@ -210,6 +211,8 @@ pub(crate) trait TransportState<I: Ip, C>: Transport<I> {
 /// An abstraction over transport protocols that allows data to be sent via the Core.
 pub(crate) trait BufferTransportState<I: Ip, B: BufferMut, C>: TransportState<I, C> {
     type SendError: IntoErrno;
+    type SendConnError: IntoErrno;
+    type SendListenerError: IntoErrno;
 
     fn send(
         ctx: &mut C,
@@ -218,9 +221,9 @@ pub(crate) trait BufferTransportState<I: Ip, B: BufferMut, C>: TransportState<I,
         remote_ip: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
         body: B,
-    ) -> netstack3_core::error::Result<()>;
+    ) -> Result<(), (B, Self::SendError)>;
 
-    fn send_conn(ctx: &mut C, conn: Self::ConnId, body: B) -> Result<(), Self::SendError>;
+    fn send_conn(ctx: &mut C, conn: Self::ConnId, body: B) -> Result<(), (B, Self::SendConnError)>;
 
     fn send_listener(
         ctx: &mut C,
@@ -229,7 +232,7 @@ pub(crate) trait BufferTransportState<I: Ip, B: BufferMut, C>: TransportState<I,
         remote_ip: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
         body: B,
-    ) -> Result<(), Self::SendError>;
+    ) -> Result<(), (B, Self::SendListenerError)>;
 }
 
 #[derive(Debug)]
@@ -246,8 +249,9 @@ impl OptionFromU16 for NonZeroU16 {
     }
 }
 
-impl<I: icmp::IcmpIpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
-    type CreateError = SocketError;
+impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
+    type CreateConnError = UdpSockCreationError;
+    type CreateListenerError = LocalAddressError;
     type LocalIdentifier = NonZeroU16;
     type RemoteIdentifier = NonZeroU16;
 
@@ -257,7 +261,7 @@ impl<I: icmp::IcmpIpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
         local_id: Option<Self::LocalIdentifier>,
         remote_ip: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
-    ) -> Result<Self::ConnId, Self::CreateError> {
+    ) -> Result<Self::ConnId, Self::CreateConnError> {
         connect_udp(ctx, local_ip, local_id, remote_ip, remote_id)
     }
 
@@ -265,7 +269,7 @@ impl<I: icmp::IcmpIpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
         ctx: &mut C,
         addr: Option<SpecifiedAddr<I::Addr>>,
         port: Option<Self::LocalIdentifier>,
-    ) -> Result<Self::ListenerId, Self::CreateError> {
+    ) -> Result<Self::ListenerId, Self::CreateListenerError> {
         listen_udp(ctx, addr, port)
     }
 
@@ -315,6 +319,8 @@ impl<I: icmp::IcmpIpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
 
 impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferTransportState<I, B, C> for Udp {
     type SendError = UdpSendError;
+    type SendConnError = IpSockSendError;
+    type SendListenerError = UdpSendListenerError;
 
     fn send(
         ctx: &mut C,
@@ -323,11 +329,11 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferTransportStat
         remote_ip: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
         body: B,
-    ) -> netstack3_core::error::Result<()> {
+    ) -> Result<(), (B, Self::SendError)> {
         send_udp(ctx, local_ip, local_id, remote_ip, remote_id, body)
     }
 
-    fn send_conn(ctx: &mut C, conn: Self::ConnId, body: B) -> Result<(), Self::SendError> {
+    fn send_conn(ctx: &mut C, conn: Self::ConnId, body: B) -> Result<(), (B, Self::SendConnError)> {
         send_udp_conn(ctx, conn, body)
     }
 
@@ -338,7 +344,7 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferTransportStat
         remote_ip: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
         body: B,
-    ) -> Result<(), Self::SendError> {
+    ) -> Result<(), (B, Self::SendListenerError)> {
         send_udp_listener(ctx, listener, local_ip, remote_ip, remote_id, body)
     }
 }
@@ -484,25 +490,51 @@ pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
         body: B,
-    ) -> Result<(), IcmpSendError>;
+    ) -> Result<(), (B, IcmpSendError)>;
 
     fn send_conn<B: BufferMut, D: BufferDispatcher<B>>(
         ctx: &mut Ctx<D>,
         conn: icmp::IcmpConnId<Self>,
         mut body: B,
-    ) -> Result<(), IcmpSendError>
+    ) -> Result<(), (B, IcmpSendError)>
     where
         IcmpEchoRequest: for<'a> IcmpMessage<Self, &'a [u8]>,
     {
         use net_types::Witness as _;
 
         let (src_ip, _id, dst_ip, IcmpRemoteIdentifier {}) = IcmpEcho::get_conn_info(ctx, conn);
-        let packet: IcmpPacket<Self, _, IcmpEchoRequest> =
-            body.parse_with(IcmpParseArgs::new(src_ip.get(), dst_ip.get()))?;
+        let packet = {
+            // This cruft (putting this logic inside a block, assigning to the
+            // temporary variable `res` rather than inlining this expression
+            // inside of the match argument, and manually dropping `res`) is
+            // required because, without it, the borrow checker believes that
+            // `body` is still borrowed by the `Result` returned from
+            // `parse_with` when it is moved in `return Err((body,
+            // err.into()))`.
+            //
+            // Storing first into `res` allows us to explicitly drop it before
+            // moving `body`, which satisfies the borrow checker. We do this
+            // inside of a block because if we instead did it at the top level
+            // of the function, `res` would live until the end of the function,
+            // and would conflict with `body` being moved into
+            // `send_icmp_echo_request`. This way, `res` only lives until the
+            // end of this block.
+            let res = body.parse_with::<_, IcmpPacket<Self, _, IcmpEchoRequest>>(
+                IcmpParseArgs::new(src_ip.get(), dst_ip.get()),
+            );
+            match res {
+                Ok(packet) => packet,
+                Err(err) => {
+                    std::mem::drop(res);
+                    return Err((body, err.into()));
+                }
+            }
+        };
         let message = packet.message();
         let seq = message.seq();
-        // Drop the packet so we can reuse `body`, which now holds the ICMP packet's body. This is
-        // fragile; we should perhaps expose a mutable getter instead.
+        // Drop the packet so we can reuse `body`, which now holds the ICMP
+        // packet's body. This is fragile; we should perhaps expose a mutable
+        // getter instead.
         std::mem::drop(packet);
         Self::send_icmp_echo_request(ctx, conn, seq, body)
     }
@@ -523,8 +555,9 @@ impl IcmpEchoIpExt for Ipv4 {
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
         body: B,
-    ) -> Result<(), IcmpSendError> {
-        icmp::send_icmpv4_echo_request(ctx, conn, seq, body).map_err(Into::into)
+    ) -> Result<(), (B, IcmpSendError)> {
+        icmp::send_icmpv4_echo_request(ctx, conn, seq, body)
+            .map_err(|(body, err)| (body, err.into()))
     }
 }
 
@@ -543,8 +576,9 @@ impl IcmpEchoIpExt for Ipv6 {
         conn: icmp::IcmpConnId<Self>,
         seq: u16,
         body: B,
-    ) -> Result<(), IcmpSendError> {
-        icmp::send_icmpv6_echo_request(ctx, conn, seq, body).map_err(Into::into)
+    ) -> Result<(), (B, IcmpSendError)> {
+        icmp::send_icmpv6_echo_request(ctx, conn, seq, body)
+            .map_err(|(body, err)| (body, err.into()))
     }
 }
 
@@ -555,7 +589,8 @@ impl OptionFromU16 for u16 {
 }
 
 impl<I: IcmpEchoIpExt, D: EventDispatcher> TransportState<I, Ctx<D>> for IcmpEcho {
-    type CreateError = icmp::IcmpSockCreationError;
+    type CreateConnError = icmp::IcmpSockCreationError;
+    type CreateListenerError = icmp::IcmpSockCreationError;
     type LocalIdentifier = u16;
     type RemoteIdentifier = IcmpRemoteIdentifier;
 
@@ -565,7 +600,7 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher> TransportState<I, Ctx<D>> for IcmpEch
         local_id: Option<Self::LocalIdentifier>,
         remote_addr: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
-    ) -> Result<Self::ConnId, Self::CreateError> {
+    ) -> Result<Self::ConnId, Self::CreateConnError> {
         let IcmpRemoteIdentifier {} = remote_id;
         I::new_icmp_connection(ctx, local_addr, local_id, remote_addr)
     }
@@ -574,7 +609,7 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher> TransportState<I, Ctx<D>> for IcmpEch
         _ctx: &mut Ctx<D>,
         _addr: Option<SpecifiedAddr<I::Addr>>,
         _id: Option<Self::LocalIdentifier>,
-    ) -> Result<Self::ListenerId, Self::CreateError> {
+    ) -> Result<Self::ListenerId, Self::CreateListenerError> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
@@ -623,6 +658,8 @@ where
     IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8]>,
 {
     type SendError = IcmpSendError;
+    type SendConnError = IcmpSendError;
+    type SendListenerError = IcmpSendError;
 
     fn send(
         _ctx: &mut Ctx<D>,
@@ -631,11 +668,15 @@ where
         _remote_ip: SpecifiedAddr<I::Addr>,
         _remote_id: Self::RemoteIdentifier,
         _body: B,
-    ) -> netstack3_core::error::Result<()> {
+    ) -> Result<(), (B, Self::SendError)> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
-    fn send_conn(ctx: &mut Ctx<D>, conn: Self::ConnId, body: B) -> Result<(), Self::SendError> {
+    fn send_conn(
+        ctx: &mut Ctx<D>,
+        conn: Self::ConnId,
+        body: B,
+    ) -> Result<(), (B, Self::SendConnError)> {
         I::send_conn(ctx, conn, body)
     }
 
@@ -646,7 +687,7 @@ where
         _remote_ip: SpecifiedAddr<I::Addr>,
         _remote_id: Self::RemoteIdentifier,
         _body: B,
-    ) -> Result<(), Self::SendError> {
+    ) -> Result<(), (B, Self::SendListenerError)> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 }
@@ -1740,6 +1781,7 @@ where
     T: TransportState<I, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
     T: BufferTransportState<I, Buf<Vec<u8>>, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
     C: RequestHandlerContext<I, T>,
+    Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>: TransportIpContext<I>,
 {
     fn send_msg(
         &mut self,
@@ -1787,20 +1829,20 @@ where
                             port,
                             body,
                         )
-                        .map_err(IntoErrno::into_errno)
+                        .map_err(|(_body, err)| err.into_errno())
                     }
                     None => {
                         // Caller did not specify a remote socket address; just
                         // use the existing conn.
                         T::send_conn(self.ctx.deref_mut(), conn_id, body)
-                            .map_err(IntoErrno::into_errno)
+                            .map_err(|(_body, err)| err.into_errno())
                     }
                 }
             }
             SocketState::BoundListen { listener_id } => match remote {
                 Some((addr, port)) => {
                     T::send_listener(self.ctx.deref_mut(), listener_id, None, addr, port, body)
-                        .map_err(IntoErrno::into_errno)
+                        .map_err(|(_body, err)| err.into_errno())
                 }
                 None => Err(fposix::Errno::Edestaddrreq),
             },

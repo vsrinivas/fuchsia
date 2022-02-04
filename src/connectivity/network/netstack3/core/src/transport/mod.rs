@@ -60,6 +60,7 @@ pub(crate) mod udp;
 
 use net_types::ip::{Ipv4, Ipv6};
 
+use crate::device::DeviceId;
 use crate::transport::udp::UdpStateBuilder;
 use crate::{Ctx, EventDispatcher};
 
@@ -82,8 +83,8 @@ impl TransportStateBuilder {
 
 /// The state associated with the transport layer.
 pub(crate) struct TransportLayerState {
-    udpv4: self::udp::UdpState<Ipv4>,
-    udpv6: self::udp::UdpState<Ipv6>,
+    udpv4: self::udp::UdpState<Ipv4, DeviceId>,
+    udpv6: self::udp::UdpState<Ipv6, DeviceId>,
 }
 
 /// The identifier for timer events in the transport layer.

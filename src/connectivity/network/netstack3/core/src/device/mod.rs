@@ -475,8 +475,8 @@ impl<I: Instant> DeviceLayerState<I> {
 /// Metadata describing an IP packet to be sent in a link-layer frame to a
 /// locally-connected host.
 pub struct IpFrameMeta<A: IpAddress, D> {
-    device: D,
-    local_addr: SpecifiedAddr<A>,
+    pub(crate) device: D,
+    pub(crate) local_addr: SpecifiedAddr<A>,
 }
 
 impl<A: IpAddress, D> IpFrameMeta<A, D> {

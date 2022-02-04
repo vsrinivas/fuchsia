@@ -1946,7 +1946,7 @@ pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
     conn: IcmpConnId<Ipv4>,
     seq_num: u16,
     body: B,
-) -> Result<(), IpSockSendError> {
+) -> Result<(), (B, IpSockSendError)> {
     send_icmp_echo_request_inner(ctx, conn, seq_num, body)
 }
 
@@ -1961,7 +1961,7 @@ pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
     conn: IcmpConnId<Ipv6>,
     seq_num: u16,
     body: B,
-) -> Result<(), IpSockSendError> {
+) -> Result<(), (B, IpSockSendError)> {
     send_icmp_echo_request_inner(ctx, conn, seq_num, body)
 }
 
@@ -1974,7 +1974,7 @@ fn send_icmp_echo_request_inner<
     conn: IcmpConnId<I>,
     seq_num: u16,
     body: B,
-) -> Result<(), IpSockSendError>
+) -> Result<(), (B, IpSockSendError)>
 where
     IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8], Code = IcmpUnusedCode>,
 {
@@ -1995,7 +1995,7 @@ where
             IcmpEchoRequest::new(conn.icmp_id, seq_num),
         )),
     )
-    .map_err(|(_body, err)| err)
+    .map_err(|(encapsulated, err)| (encapsulated.into_inner(), err))
 }
 
 /// An error when attempting to create ang ICMP socket.
@@ -2018,7 +2018,7 @@ pub enum IcmpSockCreationError {
 /// `local_addr` is `None`, one will be chosen automatically.
 ///
 /// If a connection with the conflicting parameters already exists, the call
-/// fails and returns an [`NetstackError`].
+/// fails and returns [`IcmpSockCreationError::SockAddrConflict`].
 pub fn new_icmpv4_connection<D: EventDispatcher>(
     ctx: &mut Ctx<D>,
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
@@ -2055,7 +2055,7 @@ fn new_icmpv4_connection_inner<C: InnerIcmpv4Context>(
 /// `local_addr` is `None`, one will be chosen automatically.
 ///
 /// If a connection with the conflicting parameters already exists, the call
-/// fails and returns an [`NetstackError`].
+/// fails and returns [`IcmpSockCreationError::SockAddrConflict`].
 pub fn new_icmpv6_connection<D: EventDispatcher>(
     ctx: &mut Ctx<D>,
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
@@ -2163,7 +2163,7 @@ mod tests {
             seq_num: u16,
             body: B,
         ) -> Result<(), IpSockSendError> {
-            send_icmpv4_echo_request(ctx, conn, seq_num, body)
+            send_icmpv4_echo_request(ctx, conn, seq_num, body).map_err(|(_body, err)| err)
         }
     }
 
@@ -2183,7 +2183,7 @@ mod tests {
             seq_num: u16,
             body: B,
         ) -> Result<(), IpSockSendError> {
-            send_icmpv6_echo_request(ctx, conn, seq_num, body)
+            send_icmpv6_echo_request(ctx, conn, seq_num, body).map_err(|(_body, err)| err)
         }
     }
 

@@ -42,7 +42,7 @@ use packet_formats::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::{
-    context::{CounterContext, FrameContext, StateContext, TimerContext},
+    context::{CounterContext, StateContext, TimerContext},
     device::{DeviceId, FrameDestination},
     error::{ExistsError, NotFoundError},
     ip::{
@@ -58,35 +58,13 @@ use crate::{
         ipv6::Ipv6PacketAction,
         path_mtu::{PmtuCache, PmtuHandler, PmtuTimerId},
         reassembly::{FragmentCacheKey, FragmentProcessingState, IpPacketFragmentCache},
-        socket::{ipv6_source_address_selection, IpSock, IpSockUpdate, Ipv4SocketContext},
+        socket::{BufferIpSocketHandler, IpSock, IpSockUpdate, IpSocketHandler, Ipv4SocketContext},
     },
     BufferDispatcher, Ctx, EventDispatcher, StackState, TimerId, TimerIdInner,
 };
 
 /// Default IPv4 TTL.
 const DEFAULT_TTL: NonZeroU8 = nonzero!(64u8);
-
-/// The metadata for sending an IP packet from a particular source address.
-///
-/// `IpPacketFromArgs` is used as the metadata for the [`FrameContext`] bound
-/// required by [`BufferTransportIpContext`]. It allows sending an IP packet
-/// from a particular source address.
-pub struct IpPacketFromArgs<I: IpExt> {
-    pub(crate) src_ip: SpecifiedAddr<I::Addr>,
-    pub(crate) dst_ip: SpecifiedAddr<I::Addr>,
-    pub(crate) proto: I::Proto,
-}
-
-impl<I: IpExt> IpPacketFromArgs<I> {
-    /// Constructs a new `IpPacketFromArgs`.
-    pub(crate) fn new(
-        src_ip: SpecifiedAddr<I::Addr>,
-        dst_ip: SpecifiedAddr<I::Addr>,
-        proto: I::Proto,
-    ) -> IpPacketFromArgs<I> {
-        IpPacketFromArgs { src_ip, dst_ip, proto }
-    }
-}
 
 /// An error encountered when receiving a transport-layer packet.
 #[derive(Debug)]
@@ -219,24 +197,13 @@ impl<I: IpExt, B: BufferMut, C: IpDeviceIdContext + ?Sized> BufferIpTransportCon
 }
 
 /// The execution context provided by the IP layer to transport layer protocols.
-pub trait TransportIpContext<I: Ip>: IpDeviceIdContext {
+pub trait TransportIpContext<I: IpExt>: IpDeviceIdContext + IpSocketHandler<I> {
     /// Is this one of our local addresses, and is it in the assigned state?
     ///
     /// `is_assigned_local_addr` returns whether `addr` is the address
     /// associated with one of our local interfaces and, for IPv6, whether it is
     /// in the "assigned" state.
     fn is_assigned_local_addr(&self, addr: I::Addr) -> bool;
-
-    /// Get the local address of the interface that will be used to route to a
-    /// remote address.
-    ///
-    /// `local_address_for_remote` looks up the route to `remote`. If one is
-    /// found, it returns the IP address of the interface specified by the
-    /// route, or `None` if the interface has no IP address.
-    fn local_address_for_remote(
-        &self,
-        remote: SpecifiedAddr<I::Addr>,
-    ) -> Option<SpecifiedAddr<I::Addr>>;
 }
 
 /// The execution context provided by the IP layer to transport layer protocols
@@ -244,16 +211,15 @@ pub trait TransportIpContext<I: Ip>: IpDeviceIdContext {
 ///
 /// `BufferTransportIpContext` is like [`TransportIpContext`], except that it
 /// also requires that the context be capable of receiving frames in buffers of
-/// type `B`. This is used when a buffer of type `B` is provided to IP (in
-/// particular, in the [`FrameContext`] implementation), and allows any
-/// generated link-layer frames to reuse that buffer rather than needing to
-/// always allocate a new one.
+/// type `B`. This is used when a buffer of type `B` is provided to IP, and
+/// allows any generated link-layer frames to reuse that buffer rather than
+/// needing to always allocate a new one.
 pub trait BufferTransportIpContext<I: IpExt, B: BufferMut>:
-    TransportIpContext<I> + FrameContext<B, IpPacketFromArgs<I>>
+    TransportIpContext<I> + BufferIpSocketHandler<I, B>
 {
 }
 
-impl<I: IpExt, B: BufferMut, C: TransportIpContext<I> + FrameContext<B, IpPacketFromArgs<I>>>
+impl<I: IpExt, B: BufferMut, C: TransportIpContext<I> + BufferIpSocketHandler<I, B>>
     BufferTransportIpContext<I, B> for C
 {
 }
@@ -296,35 +262,10 @@ impl<D: EventDispatcher> Ipv6TransportLayerContext for Ctx<D> {
     type Proto17 = crate::transport::udp::UdpIpTransportContext;
 }
 
-impl<I: IpExt, B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, IpPacketFromArgs<I>>
-    for Ctx<D>
+impl<I: IpExt, D: EventDispatcher> TransportIpContext<I> for Ctx<D>
+where
+    Ctx<D>: IpSocketHandler<I>,
 {
-    fn send_frame<S: Serializer<Buffer = B>>(
-        &mut self,
-        meta: IpPacketFromArgs<I>,
-        body: S,
-    ) -> Result<(), S> {
-        // TODO(brunodalbo) this lookup is not considering the source IP in
-        // `meta`, doesn't look totally correct.
-        let route = if let Some(r) = lookup_route(self, meta.dst_ip) {
-            r
-        } else {
-            return Err(body);
-        };
-        send_ip_packet_from_device(
-            self,
-            route.device,
-            meta.src_ip.get(),
-            meta.dst_ip.get(),
-            route.next_hop,
-            meta.proto,
-            body,
-            None,
-        )
-    }
-}
-
-impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Ctx<D> {
     fn is_assigned_local_addr(&self, addr: I::Addr) -> bool {
         match addr.to_ip_addr() {
             IpAddr::V4(addr) => crate::ip::device::iter_ipv4_devices(self)
@@ -339,31 +280,6 @@ impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Ctx<D> {
                     .unwrap_or(false)
             }),
         }
-    }
-
-    default fn local_address_for_remote(
-        &self,
-        remote: SpecifiedAddr<I::Addr>,
-    ) -> Option<SpecifiedAddr<I::Addr>> {
-        let route = lookup_route(self, remote)?;
-        crate::ip::device::get_ip_addr_subnet(self, route.device).map(|a| a.addr())
-    }
-}
-
-impl<D: EventDispatcher> TransportIpContext<Ipv6> for Ctx<D> {
-    fn local_address_for_remote(
-        &self,
-        remote: SpecifiedAddr<Ipv6Addr>,
-    ) -> Option<SpecifiedAddr<Ipv6Addr>> {
-        let Destination { next_hop: _, device } = lookup_route(self, remote)?;
-        ipv6_source_address_selection::select_ipv6_source_address(
-            remote,
-            device,
-            crate::ip::device::get_ipv6_device_state(self, device)
-                .iter_addrs()
-                .map(|a| (a, device)),
-        )
-        .map(|a| a.into_specified())
     }
 }
 

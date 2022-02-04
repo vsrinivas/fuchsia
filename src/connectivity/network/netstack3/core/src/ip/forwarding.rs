@@ -52,7 +52,7 @@ enum ActiveEntryDest<A: IpAddress, D> {
 /// `ForwardingTable` maps destination subnets to the nearest IP hosts (on the
 /// local network) able to route IP packets to those subnets.
 // TODO(ghanan): Use metrics to determine active route?
-pub(crate) struct ForwardingTable<I: Ip, D> {
+pub struct ForwardingTable<I: Ip, D> {
     /// A cache of the active routes to use when forwarding a packet.
     ///
     /// `active` MUST NOT have redundant (even if unique) paths to the same

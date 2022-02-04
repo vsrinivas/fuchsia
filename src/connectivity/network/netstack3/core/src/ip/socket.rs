@@ -43,7 +43,7 @@ pub(crate) trait IpSocket<I: Ip>: Socket<UpdateError = IpSockCreationError> {
 }
 
 /// An execution context defining a type of IP socket.
-pub(crate) trait IpSocketHandler<I: IpExt>: IpDeviceIdContext {
+pub trait IpSocketHandler<I: IpExt>: IpDeviceIdContext {
     /// A builder carrying optional parameters passed to [`new_ip_socket`].
     ///
     /// [`new_ip_socket`]: crate::ip::socket::IpSocketHandler::new_ip_socket
@@ -56,11 +56,9 @@ pub(crate) trait IpSocketHandler<I: IpExt>: IpDeviceIdContext {
     /// no local IP address is given, one will be chosen automatically.
     ///
     /// `new_ip_socket` returns an error if no route to the remote was found in
-    /// the forwarding table, if the given local IP address is not valid for the
-    /// found route, or if the remote is a loopback address (which is not
-    /// currently supported, but will be in the future). Currently, this is true
-    /// regardless of the value of `unroutable_behavior`. Eventually, this will
-    /// be changed.
+    /// the forwarding table or if the given local IP address is not valid for
+    /// the found route. Currently, this is true regardless of the value of
+    /// `unroutable_behavior`. Eventually, this will be changed.
     ///
     /// The builder may be used to override certain default parameters. Passing
     /// `None` for the `builder` parameter is equivalent to passing
@@ -114,7 +112,7 @@ pub enum IpSockCreateAndSendError {
 
 /// An extension of [`IpSocketHandler`] adding the ability to send packets on an
 /// IP socket.
-pub(crate) trait BufferIpSocketHandler<I: IpExt, B: BufferMut>: IpSocketHandler<I> {
+pub trait BufferIpSocketHandler<I: IpExt, B: BufferMut>: IpSocketHandler<I> {
     /// Sends an IP packet on a socket.
     ///
     /// The generated packet has its metadata initialized from `socket`,
@@ -177,7 +175,7 @@ pub(crate) trait BufferIpSocketHandler<I: IpExt, B: BufferMut>: IpSocketHandler<
 /// becomes unroutable. In particular, this affects the behavior of
 /// [`Socket::apply_update`].
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum UnroutableBehavior {
+pub enum UnroutableBehavior {
     /// The socket should stay open.
     ///
     /// When a call to [`Socket::apply_update`] results in the socket becoming
@@ -243,7 +241,7 @@ pub enum IpSockUnroutableError {
 /// form of a `SocketBuilder`. All configurations have default values that are
 /// used if a custom value is not provided.
 #[derive(Default)]
-pub(crate) struct Ipv4SocketBuilder {
+pub struct Ipv4SocketBuilder {
     // NOTE(joshlf): These fields are `Option`s rather than being set to a
     // default value in `Default::default` because global defaults may be set
     // per-stack at runtime, meaning that default values cannot be known at
@@ -578,11 +576,6 @@ impl<C: IpSocketContext<Ipv4>> IpSocketHandler<Ipv4> for C {
         builder: Option<Ipv4SocketBuilder>,
     ) -> Result<IpSock<Ipv4, C::DeviceId>, IpSockCreationError> {
         let builder = builder.unwrap_or_default();
-
-        if Ipv4::LOOPBACK_SUBNET.contains(&remote_ip) {
-            return Err(IpSockUnroutableError::NoRouteToRemoteAddr.into());
-        }
-
         let local_ip = self
             .lookup_route(remote_ip)
             .ok_or(IpSockUnroutableError::NoRouteToRemoteAddr.into())
@@ -628,11 +621,6 @@ impl<C: IpSocketContext<Ipv6>> IpSocketHandler<Ipv6> for C {
         builder: Option<Ipv6SocketBuilder>,
     ) -> Result<IpSock<Ipv6, C::DeviceId>, IpSockCreationError> {
         let builder = builder.unwrap_or_default();
-
-        if Ipv6::LOOPBACK_SUBNET.contains(&remote_ip) {
-            return Err(IpSockUnroutableError::NoRouteToRemoteAddr.into());
-        }
-
         let local_ip = self
             .lookup_route(remote_ip)
             .ok_or(IpSockUnroutableError::NoRouteToRemoteAddr.into())
@@ -717,14 +705,6 @@ impl<
     ) -> Result<(), (S, IpSockSendError)> {
         // TODO(joshlf): Call `trace!` with relevant fields from the socket.
         self.increment_counter("send_ipv4_packet");
-        // TODO(joshlf): Handle loopback sockets.
-        assert!(!Ipv4::LOOPBACK_SUBNET.contains(&socket.defn.remote_ip));
-        // If the remote IP is non-loopback but the local IP is loopback, that
-        // implies a bug elsewhere - when we resolve the local IP in
-        // `new_ipv4_socket`, if the remote IP is not a loopback IP, then we
-        // should never choose a loopback IP as our local IP.
-        assert!(!Ipv4::LOOPBACK_SUBNET.contains(&socket.defn.local_ip));
-
         match &socket.cached {
             Ok(CachedInfo { builder, device, next_hop }) => {
                 let mut builder = builder.clone();
@@ -768,14 +748,6 @@ impl<
     ) -> Result<(), (S, IpSockSendError)> {
         // TODO(joshlf): Call `trace!` with relevant fields from the socket.
         self.increment_counter("send_ipv6_packet");
-        // TODO(joshlf): Handle loopback sockets.
-        assert!(!Ipv6::LOOPBACK_SUBNET.contains(&socket.defn.remote_ip));
-        // If the remote IP is non-loopback but the local IP is loopback, that
-        // implies a bug elsewhere - when we resolve the local IP in
-        // `new_ipv6_socket`, if the remote IP is not a loopback IP, then we
-        // should never choose a loopback IP as our local IP.
-        assert!(!Ipv6::LOOPBACK_SUBNET.contains(&socket.defn.local_ip));
-
         match &socket.cached {
             Ok(CachedInfo { builder, device, next_hop }) => {
                 // Tentative addresses are not considered bound to an interface

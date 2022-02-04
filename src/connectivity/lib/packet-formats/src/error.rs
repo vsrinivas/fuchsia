@@ -17,7 +17,7 @@ pub type ParseResult<T> = core::result::Result<T, ParseError>;
 pub type IpParseResult<I, T> = core::result::Result<T, IpParseError<I>>;
 
 /// Error type for packet parsing.
-#[derive(Error, Debug, PartialEq)]
+#[derive(Copy, Clone, Error, Debug, PartialEq)]
 pub enum ParseError {
     /// Operation is not supported.
     #[error("Operation is not supported")]

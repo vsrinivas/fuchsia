@@ -15,7 +15,7 @@ use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::SpecifiedAddr;
 use netstack3_core::{
     IpSockCreationError, IpSockSendError, IpSockUnroutableError, LocalAddressError, NetstackError,
-    RemoteAddressError, SocketError, UdpSendError,
+    RemoteAddressError, SocketError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
 };
 
 use crate::bindings::{
@@ -323,7 +323,7 @@ impl IntoErrno for IpSockUnroutableError {
     fn into_errno(self) -> Errno {
         match self {
             IpSockUnroutableError::LocalAddrNotAssigned => Errno::Eaddrnotavail,
-            IpSockUnroutableError::NoRouteToRemoteAddr => Errno::Ehostunreach,
+            IpSockUnroutableError::NoRouteToRemoteAddr => Errno::Enetunreach,
         }
     }
 }
@@ -359,9 +359,28 @@ impl IntoErrno for netstack3_core::icmp::IcmpSockCreationError {
 impl IntoErrno for UdpSendError {
     fn into_errno(self) -> Errno {
         match self {
-            UdpSendError::Unknown => Errno::Eio,
-            UdpSendError::Local(l) => l.into_errno(),
-            UdpSendError::Remote(r) => r.into_errno(),
+            UdpSendError::CreateSock(err) => err.into_errno(),
+            UdpSendError::Send(err) => err.into_errno(),
+        }
+    }
+}
+
+impl IntoErrno for UdpSendListenerError {
+    fn into_errno(self) -> Errno {
+        match self {
+            UdpSendListenerError::CreateSock(err) => err.into_errno(),
+            UdpSendListenerError::LocalIpAddrMismatch => Errno::Einval,
+            UdpSendListenerError::Mtu => Errno::Emsgsize,
+        }
+    }
+}
+
+impl IntoErrno for UdpSockCreationError {
+    fn into_errno(self) -> Errno {
+        match self {
+            UdpSockCreationError::Ip(err) => err.into_errno(),
+            UdpSockCreationError::CouldNotAllocateLocalPort => Errno::Eaddrnotavail,
+            UdpSockCreationError::SockAddrConflict => Errno::Eaddrinuse,
         }
     }
 }

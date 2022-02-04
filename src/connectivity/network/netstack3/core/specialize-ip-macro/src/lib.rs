@@ -287,12 +287,22 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
         let arg_idents = &input.arg_idents;
 
         quote! {
-                trait Ext: net_types::ip::#trait_ident {
+                // NOTE: We use `#trait_ident` rather than
+                // `net_types::ip::#trait_ident` for these bounds so that, if
+                // desired, the caller is able to define a new trait called `Ip`
+                // with extra bounds which are required for whatever reason. By
+                // using whatever item has that name in the local scope, we
+                // allow this trick to work. This won't cause problems because,
+                // even if this trick isn't employed, the caller still has to
+                // write an `I: Ip` or `A: IpAddress` bound, and so it's
+                // reasonable to require that the proper trait be in scope.
+
+                trait Ext: #trait_ident {
                     #[allow(patterns_in_fns_without_body)]
                     #trait_decl;
                 }
 
-                impl<__SpecializeIpDummyTypeParam: net_types::ip::#trait_ident> Ext for __SpecializeIpDummyTypeParam {
+                impl<__SpecializeIpDummyTypeParam: #trait_ident> Ext for __SpecializeIpDummyTypeParam {
                     #![allow(unused_variables)]
                     default #trait_decl {
                         // This is a backstop against a bug in our logic (if the
@@ -573,7 +583,7 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
 
 // Rewrite the types in the function declaration according the following rules:
 // First, find exactly one type parameter with a single trait bound with the
-// trait `cfg.rait_ident`. If there are zero or more than one such types, fail.
+// trait `cfg.trait_ident`. If there are zero or more than one such types, fail.
 // If a type with the desired trait bound has that trait bound multiple times or
 // has other trait bounds, fail. Once the type has been found, replace every
 // instance of it in the other trait bounds, argument types, and return types
@@ -593,7 +603,7 @@ fn rewrite_types(
     // clauses, we need to look both in the list of type parameters and in the
     // where clause to find trait bounds.
     if sig.generics.where_clause.is_some() {
-        panic!("#[{}]: where clause are currently unsupported", cfg.attr_name);
+        panic!("#[{}]: where clauses are currently unsupported", cfg.attr_name);
     }
 
     // The ident of the type and the index into sig.generics.params. We will
