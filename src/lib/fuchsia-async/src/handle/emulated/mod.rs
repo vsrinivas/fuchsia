@@ -1691,13 +1691,14 @@ mod test {
 
     #[cfg(not(target_os = "fuchsia"))]
     #[test]
-    fn dropped_handle_is_dangling() {
-        let (c, _) = Channel::create().unwrap();
-        let c = std::mem::ManuallyDrop::new(c);
-        unsafe {
-            drop(Handle::from_raw(c.raw_handle()));
-        }
-        assert!(c.is_dangling());
+    fn unallocated_handle_is_dangling() {
+        // This corresponds to the last id we would allocate in its shard; this test won't generate that many handles at once.
+        let raw_unallocated_handle = u32::MAX;
+        let unallocated_handle = unsafe { Handle::from_raw(raw_unallocated_handle) };
+        // Use ManuallyDrop to avoid dropping this "handle" and panicking.
+        let unallocated_handle = std::mem::ManuallyDrop::new(unallocated_handle);
+
+        assert!(unallocated_handle.is_dangling());
     }
 
     #[test]
