@@ -191,9 +191,10 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         log::info!("Listening for link-local IPv6 address generation events from the netstack.");
         let interface_state =
             client::connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()?;
-        let autogen_link_local_addrs = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid);
+        let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
-            &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid),
+            &mut state,
             |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
                 if addresses.is_empty() {
                     log::info!(
@@ -202,12 +203,21 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
                     );
                     None
                 } else {
-                    Some(addresses.clone())
+                    Some(())
                 }
             },
         )
         .await
         .context("error listening for link-local IPv6 address generation events")?;
+
+        let autogen_link_local_addrs = match state {
+            fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid) => {
+                return Err(anyhow::anyhow!("Interface with id {} state unknown", nicid))
+            }
+            fidl_fuchsia_net_interfaces_ext::InterfaceState::Known(
+                fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. },
+            ) => addresses,
+        };
 
         match autogen_link_local_addrs.as_slice() {
             [address] => {
