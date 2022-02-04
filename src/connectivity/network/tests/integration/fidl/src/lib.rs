@@ -209,7 +209,7 @@ async fn add_del_interface_address_deprecated<N: Netstack>(name: &str) {
 
     // TODO(https://fxbug.dev/20989#c5): netstack3 doesn't allow addresses to be added while
     // link is down.
-    let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
+    let () = stack.enable_interface_deprecated(id).await.squash_result().expect("enable interface");
     let () = iface.set_link_up(true).await.expect("bring device up");
     // TODO(https://fxbug.dev/60923): N3 doesn't implement watcher events past idle.
     loop {
@@ -636,7 +636,9 @@ async fn disable_interface_loopback<N: Netstack>(name: &str) {
         }
         NetstackVersion::Netstack3 => {
             // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
-            let () = exec_fidl!(stack.disable_interface(loopback_id), "disable interface").unwrap();
+            let () =
+                exec_fidl!(stack.disable_interface_deprecated(loopback_id), "disable interface")
+                    .unwrap();
 
             // TODO(https://fxbug.dev/75553): Wait for changed event instead of
             // creating a new watcher.

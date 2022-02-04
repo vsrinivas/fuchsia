@@ -50,8 +50,8 @@ func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResul
 	return result
 }
 
-func (ns *Netstack) enableInterface(id uint64) stack.StackEnableInterfaceResult {
-	var result stack.StackEnableInterfaceResult
+func (ns *Netstack) enableInterface(id uint64) stack.StackEnableInterfaceDeprecatedResult {
+	var result stack.StackEnableInterfaceDeprecatedResult
 
 	nicInfo, ok := ns.stack.NICInfo()[tcpip.NICID(id)]
 	if !ok {
@@ -65,12 +65,12 @@ func (ns *Netstack) enableInterface(id uint64) stack.StackEnableInterfaceResult 
 		return result
 	}
 
-	result.SetResponse(stack.StackEnableInterfaceResponse{})
+	result.SetResponse(stack.StackEnableInterfaceDeprecatedResponse{})
 	return result
 }
 
-func (ns *Netstack) disableInterface(id uint64) stack.StackDisableInterfaceResult {
-	var result stack.StackDisableInterfaceResult
+func (ns *Netstack) disableInterface(id uint64) stack.StackDisableInterfaceDeprecatedResult {
+	var result stack.StackDisableInterfaceDeprecatedResult
 
 	nicInfo, ok := ns.stack.NICInfo()[tcpip.NICID(id)]
 	if !ok {
@@ -84,7 +84,7 @@ func (ns *Netstack) disableInterface(id uint64) stack.StackDisableInterfaceResul
 		return result
 	}
 
-	result.SetResponse(stack.StackDisableInterfaceResponse{})
+	result.SetResponse(stack.StackDisableInterfaceDeprecatedResponse{})
 	return result
 }
 
@@ -236,11 +236,11 @@ func (ni *stackImpl) DelEthernetInterface(_ fidl.Context, id uint64) (stack.Stac
 	return ni.ns.delInterface(id), nil
 }
 
-func (ni *stackImpl) EnableInterface(_ fidl.Context, id uint64) (stack.StackEnableInterfaceResult, error) {
+func (ni *stackImpl) EnableInterfaceDeprecated(_ fidl.Context, id uint64) (stack.StackEnableInterfaceDeprecatedResult, error) {
 	return ni.ns.enableInterface(id), nil
 }
 
-func (ni *stackImpl) DisableInterface(_ fidl.Context, id uint64) (stack.StackDisableInterfaceResult, error) {
+func (ni *stackImpl) DisableInterfaceDeprecated(_ fidl.Context, id uint64) (stack.StackDisableInterfaceDeprecatedResult, error) {
 	return ni.ns.disableInterface(id), nil
 }
 

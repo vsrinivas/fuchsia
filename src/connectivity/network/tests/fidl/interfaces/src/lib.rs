@@ -129,7 +129,8 @@ async fn watcher_existing<N: Netstack>(name: &str) {
 
         // TODO(https://fxbug.dev/20989#c5): netstack3 doesn't allow addresses to be added while
         // link is down.
-        let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
+        let () =
+            stack.enable_interface_deprecated(id).await.squash_result().expect("enable interface");
         let () = iface.set_link_up(true).await.expect("bring device up");
         // TODO(https://fxbug.dev/60923): N3 doesn't implement watcher events past idle.
         loop {

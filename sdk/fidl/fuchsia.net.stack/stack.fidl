@@ -58,13 +58,17 @@ protocol Stack {
 
     /// Enable the interface. Packets may be processed by the stack after this
     /// call is processed.
-    EnableInterface(struct {
+    // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
+    @deprecated("Use fuchsia.net.interfaces.admin/Control.Enable")
+    EnableInterfaceDeprecated(struct {
         id fuchsia.net.interface_id;
     }) -> (struct {}) error Error;
 
     /// Disable the interface. The stack will no longer process packets after
     /// this call.
-    DisableInterface(struct {
+    // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
+    @deprecated("Use fuchsia.net.interfaces.admin/Control.Disable")
+    DisableInterfaceDeprecated(struct {
         id fuchsia.net.interface_id;
     }) -> (struct {}) error Error;
 

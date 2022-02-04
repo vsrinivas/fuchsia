@@ -862,8 +862,11 @@ async fn test_disable_enable_interface() {
 
     // Disable the interface and test again, physical_status should be
     // unchanged.
-    let () =
-        stack.disable_interface(if_id).await.squash_result().expect("Disable interface succeeds");
+    let () = stack
+        .disable_interface_deprecated(if_id)
+        .await
+        .squash_result()
+        .expect("Disable interface succeeds");
 
     let if_info = test_stack.get_interface_info(if_id).await;
     assert!(!if_info.admin_enabled);
@@ -873,8 +876,11 @@ async fn test_disable_enable_interface() {
     assert!(test_stack.ctx().await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
 
     // Enable the interface and test again.
-    let () =
-        stack.enable_interface(if_id).await.squash_result().expect("Enable interface succeeds");
+    let () = stack
+        .enable_interface_deprecated(if_id)
+        .await
+        .squash_result()
+        .expect("Enable interface succeeds");
 
     let if_info = test_stack.get_interface_info(if_id).await;
     assert!(if_info.admin_enabled);
@@ -885,13 +891,13 @@ async fn test_disable_enable_interface() {
 
     // Check that we get the correct error for a non-existing interface id.
     assert_eq!(
-        stack.enable_interface(12345).await.unwrap().unwrap_err(),
+        stack.enable_interface_deprecated(12345).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::NotFound
     );
 
     // Check that we get the correct error for a non-existing interface id.
     assert_eq!(
-        stack.disable_interface(12345).await.unwrap().unwrap_err(),
+        stack.disable_interface_deprecated(12345).await.unwrap().unwrap_err(),
         fidl_net_stack::Error::NotFound
     );
 }
@@ -919,8 +925,11 @@ async fn test_phy_admin_interface_state_interaction() {
 
     // Disable the interface and test again, physical_status should be
     // unchanged.
-    let () =
-        stack.disable_interface(if_id).await.squash_result().expect("Disable interface succeeds");
+    let () = stack
+        .disable_interface_deprecated(if_id)
+        .await
+        .squash_result()
+        .expect("Disable interface succeeds");
 
     let if_info = test_stack.get_interface_info(if_id).await;
     assert!(!if_info.admin_enabled);
@@ -945,8 +954,11 @@ async fn test_phy_admin_interface_state_interaction() {
 
     // Enable the interface and test again, only cached status should be changed
     // and core state should still be disabled.
-    let () =
-        stack.enable_interface(if_id).await.squash_result().expect("Enable interface succeeds");
+    let () = stack
+        .enable_interface_deprecated(if_id)
+        .await
+        .squash_result()
+        .expect("Enable interface succeeds");
 
     let test_stack = t.get(0);
     let if_info = test_stack.get_interface_info(if_id).await;
@@ -957,8 +969,11 @@ async fn test_phy_admin_interface_state_interaction() {
     assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
 
     // Disable the interface and test again, both should be down now.
-    let () =
-        stack.disable_interface(if_id).await.squash_result().expect("Disable interface succeeds");
+    let () = stack
+        .disable_interface_deprecated(if_id)
+        .await
+        .squash_result()
+        .expect("Disable interface succeeds");
 
     let test_stack = t.get(0);
     let if_info = test_stack.get_interface_info(if_id).await;
@@ -983,8 +998,11 @@ async fn test_phy_admin_interface_state_interaction() {
 
     // Finally, setting admin status up should update the cached state and
     // re-add the device to the core.
-    let () =
-        stack.enable_interface(if_id).await.squash_result().expect("Enable interface succeeds");
+    let () = stack
+        .enable_interface_deprecated(if_id)
+        .await
+        .squash_result()
+        .expect("Enable interface succeeds");
 
     // Get the interface info to confirm that it is reenabled.
     let test_stack = t.get(0);

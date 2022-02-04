@@ -66,13 +66,13 @@ where
                             &mut worker.lock_worker().await.fidl_del_ethernet_interface(id)
                         );
                     }
-                    StackRequest::EnableInterface { id, responder } => {
+                    StackRequest::EnableInterfaceDeprecated { id, responder } => {
                         responder_send!(
                             responder,
                             &mut worker.lock_worker().await.fidl_enable_interface(id)
                         );
                     }
-                    StackRequest::DisableInterface { id, responder } => {
+                    StackRequest::DisableInterfaceDeprecated { id, responder } => {
                         responder_send!(
                             responder,
                             &mut worker.lock_worker().await.fidl_disable_interface(id)
