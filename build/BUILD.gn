@@ -52,6 +52,9 @@ group("non_hermetic_deps") {
     "//build/prebuilt/*",
     "//scripts/sdk/gn/*",
     "//third_party/crashpad/*",
+    "//third_party/glslang/*",
+    "//third_party/mesa/*",
+    "//third_party/spirv-tools/*",
     "//vendor/google/*",
     "//zircon/kernel/lib/version/*",
   ]
