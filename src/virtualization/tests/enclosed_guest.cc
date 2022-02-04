@@ -385,23 +385,15 @@ zx_status_t DebianEnclosedGuest::LaunchInfo(std::string* url,
 }
 
 zx_status_t DebianEnclosedGuest::WaitForSystemReady(zx::time deadline) {
-  // Keep running a simple command until we get a valid response.
-  do {
-    // Execute `echo "guest ready"`.
+  std::optional<GuestConsole>& console_opt = GetConsole();
+  if (console_opt.has_value()) {
+    GuestConsole& console = console_opt.value();
     constexpr zx::duration kEchoWaitTime = zx::sec(1);
-    std::string response;
-    zx_status_t status = Execute({"echo", "guest ready"}, {},
-                                 std::min(zx::deadline_after(kEchoWaitTime), deadline), &response);
-    if (status == ZX_OK && response.find("guest ready") != std::string::npos) {
-      return ZX_OK;
-    }
-
-    // Keep trying until we run out of time.
-    zx::nanosleep(std::min(zx::deadline_after(kRetryStep), deadline));
-  } while (zx::clock::get_monotonic() < deadline);
-
-  FX_LOGS(ERROR) << "Failed to wait for shell";
-  return ZX_ERR_TIMED_OUT;
+    return console.RepeatCommandTillSuccess("echo guest ready", ShellPrompt(), "guest ready",
+                                            deadline, kEchoWaitTime);
+  } else {
+    return ZX_ERR_BAD_STATE;
+  }
 }
 
 zx_status_t DebianEnclosedGuest::ShutdownAndWait(zx::time deadline) {

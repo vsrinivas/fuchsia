@@ -128,6 +128,26 @@ zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std:
   return ZX_OK;
 }
 
+zx_status_t GuestConsole::RepeatCommandTillSuccess(const std::string& command,
+                                                   const std::string& prompt,
+                                                   const std::string& success, zx::time deadline,
+                                                   zx::duration repeat_rate) {
+  do {
+    std::string response;
+    zx::time command_timeout = std::min(zx::deadline_after(repeat_rate), deadline);
+    zx_status_t status = ExecuteBlocking(command, prompt, command_timeout, &response);
+    if (status == ZX_OK && response.find(success) != std::string::npos) {
+      return ZX_OK;
+    }
+
+    // In case the command failed early, wait till at least the repeat_rate deadline has passed
+    // before trying agian.
+    zx::nanosleep(std::min(command_timeout, deadline));
+  } while (zx::clock::get_monotonic() < deadline);
+
+  return ZX_ERR_TIMED_OUT;
+}
+
 zx_status_t GuestConsole::SendBlocking(const std::string& message, zx::time deadline) {
   return socket_->Send(deadline, message);
 }

@@ -16,11 +16,13 @@ class GuestConsole {
  public:
   explicit GuestConsole(std::unique_ptr<SocketInterface> socket);
 
-  // Initialize the socket, attempting to reach a state where we have a
-  // useable shell.
+  // Initialize the socket, attempting to reach a state where the socket appears
+  // 'stable' with respect to output.
   //
-  // Skips over noise (such as boot logs, etc) that may be present on
-  // the socket interface.
+  // This skips over initial startup noise (such as boot logs, etc) that may be
+  // present on the socket interface. However, no guarantee can be made on the
+  // state of the guest and whether it is actually finished starting up services
+  // or even started listening for input on the serial line.
   //
   // Aborts with the error ZX_ERR_TIMEOUT if `deadline` is reached
   // prior to the system reaching its shell.
@@ -57,6 +59,17 @@ class GuestConsole {
 
   // Waits for the socket interface to be closed, or a deadline is reached.
   zx_status_t WaitForSocketClosed(zx::time deadline);
+
+  // Repeatedly execute a command until the desired output is seen. This
+  // essentially retries the command using ExecuteBlocking at the specified rate
+  // until it either succeeds and the output is matched, or the overall deadline
+  // expires and this returns with an error.
+  //
+  // This is intended to be used when a guest is starting up and it is ambiguous
+  // whether it is even listening for input yet.
+  zx_status_t RepeatCommandTillSuccess(const std::string& command, const std::string& prompt,
+                                       const std::string& success, zx::time deadline,
+                                       zx::duration repeat_rate);
 
  private:
   // Waits for something to be written to the socket and drains it.
