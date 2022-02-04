@@ -135,7 +135,6 @@ group("utils") {
     "//src/devices/cpu/bin/cpuctl",
     "//src/devices/gpio/bin/gpioutil",
     "//src/devices/i2c/bin:i2cutil",
-    "//src/devices/i2c/bin/i2c",
     "//src/devices/power/bin/lspwr",
     "//src/devices/pwm/bin/pwmctl",
     "//src/devices/ram/bin/ram-info",
