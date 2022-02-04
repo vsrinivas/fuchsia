@@ -6,3 +6,4 @@
 from .assembly_input_bundle import *
 from .common import *
 from .image_assembly_config import *
+from .package_manifest import *

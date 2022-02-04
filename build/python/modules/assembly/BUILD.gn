@@ -12,6 +12,7 @@ python_library("assembly") {
     "assembly_input_bundle.py",
     "common.py",
     "image_assembly_config.py",
+    "package_manifest.py",
     "utils.py",
   ]
 
