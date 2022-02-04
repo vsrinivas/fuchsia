@@ -226,10 +226,11 @@ Dump loaded successfully.
 Now the thread, stack, and memory commands can be used to inspect the state of the program. Use
 `disconnect` to close the dump.
 
-For in-tree users, the `fx debug` command can take the path to a core file as an argument.
+It's also possible to use the [`ffx debug core`](https://fuchsia.dev/reference/tools/sdk/ffx#core)
+command, for example:
 
-```posix-terminal {:.devsite-disable-click-to-copy}
-fx debug -c upload_file_minidump-e71256ba30163a0.dmp
+```none {:.devsite-disable-click-to-copy}
+ffx debug core upload_file_minidump-e71256ba30163a0.dmp
 ```
 
 #### Downloading symbols

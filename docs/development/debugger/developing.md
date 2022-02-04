@@ -62,7 +62,7 @@ debugger team.
 
 ```none {:.devsite-disable-click-to-copy}
 // Run the debugger that will attach to the "to-be-debugged" debug agent.
-fx debug
+$ ffx debug connect
 
 // * Within zxdb.
 [zxdb] attach debug_agent
@@ -79,7 +79,8 @@ Attached Process 1 [Running] koid=12345 debug_agent.cmx
 
 // Now there is a running debug agent that is attached by the first zxdb run.
 // You can also attach to it using another client (notice the port):
-fx zxdb --connect [<IPv6 to target>]:5000 --debug-mode
+// * On the host:
+out/<out_dir>/host_x64/zxdb --connect [<IPv6 to target>]:5000 --debug-mode
 
 // Now you have two running instances of the debugger!
 ```

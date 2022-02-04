@@ -54,12 +54,13 @@ fx serve
 ```
 
 to make the debug agent's package available for serving to the system. Otherwise you will get the
-message "Timed out trying to find the Debug Agent".
+message `Connection to debug_agent broken: A FIDL client's channel to the service
+fuchsia.debugger.DebugAgent was closed: PEER_CLOSED`.
 
 Once the server is running, launch the debugger in another terminal window:
 
 ```posix-terminal
-fx debug
+ffx debug connect
 ```
 
 To manually validate packages can be loaded, run `ls` from within the Fuchsia shell (for most setups
@@ -97,11 +98,7 @@ interface (should be the name of the bridge device).
 The address should look like `fe80::5054:ff:fe63:5e7a%br0`
 
 ```none {:.devsite-disable-click-to-copy}
-$ fx zxdb
-
-or
-
-out/<out_dir>/host_x64/zxdb
+$ out/<out_dir>/host_x64/zxdb
 
 [zxdb] connect [fe80::5054:ff:fe63:5e7a%br0]:2345
 ```
@@ -132,7 +129,7 @@ When you run out-of-tree, you will need to tell zxdb where your symbols and sour
 local development box (Linux or Mac). Zxdb can not use symbols in the binary that you pushed to the
 Fuchsia target device.
 
-See [Diagnosing symbol problems](#diagnosing-symbol-problems).
+See [Diagnosing symbol problems](./symbols.md).
 
 ### Set the symbol location {#set-symbol-location}
 
@@ -152,7 +149,7 @@ Or add it to the `build-id-dirs` list option in the interactive UI:
 [zxdb] set build-id-dirs += some/other_location/.build-id
 ```
 
-For in-tree development, `fx debug` automatically sets up all necessary
+For in-tree development, `ffx debug connect` automatically sets up all necessary
 flags.
 
 #### `build-id-dir`

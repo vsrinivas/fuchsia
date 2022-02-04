@@ -102,10 +102,10 @@ Setting up the debug session requires the following high-level steps:
 1.  Run the `zxdb` client and connect to the target device.
 1.  Set the location for `zxdb` to find debug symbols.
 
-The simplest method to start a debug session is to use the `fx debug` command,
-which does all of these in the context of your local Fuchsia build. However,
-these steps can also be performed manually if you need to configure them
-separately.
+The simplest method to start a debug session is to use the `ffx debug connect`
+command, which does all of these in the context of your local Fuchsia build.
+However, these steps can also be performed manually if you need to configure
+them separately.
 
 Once the debug session is active, you are taken to a `[zxdb]` prompt to issue
 debugger commands. You can use `zxdb` to configure the `debug_agent` to attach
@@ -186,15 +186,13 @@ instance of the `echo-args` component and understand the cause of a crash.
 ### Start a debug session
 
 Once the emulator has started up, start a `zxdb` debugging session with the
-`fx debug` command:
+`ffx debug connect` command:
 
 ```posix-terminal
-fx debug
+ffx debug connect
 ```
 
 ```none
-Checking for debug agent on [...]:2345.
-Debug agent not found. Starting one.
 Connecting (use "disconnect" to cancel)...
 Connected successfully.
 👉 To get started, try "status" or "help".
@@ -305,7 +303,7 @@ fx build
 Start a new debug session with `zxdb`:
 
 ```posix-terminal
-fx debug
+ffx debug connect
 ```
 
 ### Debug the crashing stack frame

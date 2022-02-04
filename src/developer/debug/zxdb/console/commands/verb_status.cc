@@ -124,7 +124,7 @@ OutputBuffer GetConnectionStatus(const Session* session) {
      Connects to a debug agent running on a remote system on the given port.
      However, most users will use a debug command from their environment to
      automatically run the debug_agent and connect the zxdb frontend to it
-     (e.g. "fx debug"). See your environment's documentation.
+     (e.g. "ffx debug connect"). See your environment's documentation.
 
 )");
     result.Append(Syntax::kHeading, "  opendump");

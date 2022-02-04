@@ -71,9 +71,7 @@ The main user of JITD is zxdb, which is able to attach to a process waiting in t
 starting zxdb, it will display the processes that are waiting in it:
 
 ```
-> fx debug
-Checking for debug agent on [fe80::2e0:4cff:fe68:8d%3]:2345.
-Debug agent not found. Starting one.
+> ffx debug connect
 Connecting (use "disconnect" to cancel)...
 Connected successfully.
 
