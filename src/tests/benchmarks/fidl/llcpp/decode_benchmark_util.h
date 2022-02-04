@@ -34,7 +34,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     fidl::Arena<65536> allocator;
     FidlType aligned_value = builder(allocator);
     // encode the value.
-    fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV1,
+    fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV2,
                                                 &aligned_value);
     if (!encoded.ok()) {
       std::cerr << "Unexpected error: " << encoded.error() << std::endl;
@@ -51,7 +51,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Decode.
 
     {
-      auto decoded = fidl::DecodedMessage<FidlType>(fidl::internal::WireFormatVersion::kV1,
+      auto decoded = fidl::DecodedMessage<FidlType>(fidl::internal::WireFormatVersion::kV2,
                                                     std::move(converted.incoming_message()));
       ZX_ASSERT_MSG(decoded.ok(), "%s", decoded.FormatDescription().c_str());
       // Include time taken to close handles in |FidlType|.
