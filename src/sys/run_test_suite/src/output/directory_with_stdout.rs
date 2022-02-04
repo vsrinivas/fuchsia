@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use futures::lock::Mutex;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::Error;
+use std::io::{BufWriter, Error};
 use std::path::PathBuf;
 
 /// A reporter implementation that saves output to the structured directory output format, and also
@@ -24,7 +24,7 @@ pub struct DirectoryWithStdoutReporter {
     directory_reporter: DirectoryReporter,
     /// Set of shell reporters, one per suite. Each |ShellReporter| is routed events for a single
     /// suite, and produces a report as if there is a run containing a single suite.
-    shell_reporters: Mutex<HashMap<SuiteId, ShellReporter<File>>>,
+    shell_reporters: Mutex<HashMap<SuiteId, ShellReporter<BufWriter<File>>>>,
 }
 
 impl DirectoryWithStdoutReporter {
@@ -38,7 +38,7 @@ impl DirectoryWithStdoutReporter {
     async fn get_locked_shell_reporter(
         &self,
         suite: &SuiteId,
-    ) -> impl '_ + std::ops::Deref<Target = ShellReporter<File>> {
+    ) -> impl '_ + std::ops::Deref<Target = ShellReporter<BufWriter<File>>> {
         futures::lock::MutexGuard::map(self.shell_reporters.lock().await, |reporters| {
             reporters.get_mut(suite).unwrap()
         })

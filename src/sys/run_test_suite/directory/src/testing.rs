@@ -8,6 +8,7 @@ use crate::{
 };
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
+use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use valico::json_schema;
 
@@ -27,7 +28,8 @@ pub fn parse_json_in_output(path: &Path) -> (TestRunResult, Vec<SuiteResult>) {
     let run_schema =
         run_scope.compile_and_return(run_schema_json, false).expect("compile json schema");
 
-    let summary_file = File::open(path.join(RUN_SUMMARY_NAME)).expect("open summary file");
+    let summary_file =
+        BufReader::new(File::open(path.join(RUN_SUMMARY_NAME)).expect("open summary file"));
     let run_result_value: serde_json::Value =
         serde_json::from_reader(summary_file).expect("deserialize run from file");
     if !run_schema.validate(&run_result_value).is_strictly_valid() {
@@ -42,7 +44,7 @@ pub fn parse_json_in_output(path: &Path) -> (TestRunResult, Vec<SuiteResult>) {
         .iter()
         .map(|SuiteEntryV0 { summary }| {
             let suite_summary_file =
-                File::open(path.join(summary)).expect("open suite summary file");
+                BufReader::new(File::open(path.join(summary)).expect("open suite summary file"));
             let suite_result_value: serde_json::Value =
                 serde_json::from_reader(suite_summary_file).expect("parse suite summary file");
             if !suite_schema.validate(&suite_result_value).is_strictly_valid() {

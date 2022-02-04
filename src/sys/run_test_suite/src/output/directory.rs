@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
-use std::io::{Error, ErrorKind};
+use std::io::{BufWriter, Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use test_output_directory as directory;
@@ -114,7 +114,7 @@ impl DirectoryReporter {
         Ok(new_self)
     }
 
-    pub(super) fn add_report(&self, entity: &EntityId) -> Result<File, Error> {
+    pub(super) fn add_report(&self, entity: &EntityId) -> Result<BufWriter<File>, Error> {
         self.new_artifact_inner(entity, directory::ArtifactType::Report)
     }
 
@@ -138,18 +138,19 @@ impl DirectoryReporter {
         // Save to a temp file first then rename. This ensures we at least
         // have the old version if writing the new version fails.
         let tmp_path = self.root.join(TEST_SUMMARY_TMP_FILE);
-        let mut summary_file = File::create(&tmp_path)?;
+        let mut summary_file = BufWriter::new(File::create(&tmp_path)?);
         serde_json::to_writer_pretty(&mut summary_file, &serializable_run)?;
-        summary_file.sync_all()?;
+        summary_file.flush()?;
         let final_path = self.root.join(directory::RUN_SUMMARY_NAME);
-        std::fs::rename(tmp_path, final_path)
+        let res = std::fs::rename(tmp_path, final_path);
+        res
     }
 
     fn new_artifact_inner(
         &self,
         entity: &EntityId,
         artifact_type: directory::ArtifactType,
-    ) -> Result<File, Error> {
+    ) -> Result<BufWriter<File>, Error> {
         let mut lock = self.entries.lock();
         let entry = lock
             .get_mut(entity)
@@ -159,7 +160,7 @@ impl DirectoryReporter {
         let artifact_dir = self.root.join(&entry.artifact_dir);
         ensure_directory_exists(&artifact_dir)?;
 
-        let artifact = File::create(artifact_dir.join(name))?;
+        let artifact = BufWriter::new(File::create(artifact_dir.join(name))?);
 
         entry.artifacts.push((
             name.to_string(),
@@ -350,15 +351,15 @@ impl DirectoryWrite for DirectoryDirectoryWriter {
             ensure_directory_exists(parent)?;
         }
 
-        let file = File::create(new_path)?;
+        let file = BufWriter::new(File::create(new_path)?);
         Ok(Box::new(file))
     }
 }
 
 fn persist_suite_summary(path: &Path, suite_result: directory::SuiteResult) -> Result<(), Error> {
-    let mut summary = File::create(path)?;
+    let mut summary = BufWriter::new(File::create(path)?);
     serde_json::to_writer_pretty(&mut summary, &suite_result)?;
-    summary.sync_all()
+    summary.flush()
 }
 
 fn ensure_directory_exists(dir: &Path) -> Result<(), Error> {
