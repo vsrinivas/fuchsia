@@ -17,7 +17,7 @@ use net_types::{
 };
 use packet::{
     serialize::{Buf, SerializeError},
-    Nested, NestedPacketBuilder, Serializer,
+    FragmentedBuffer, Nested, NestedPacketBuilder, Serializer,
 };
 use packet_formats::{
     ethernet::EthernetFrameBuilder, ipv4::Ipv4PacketBuilder, udp::UdpPacketBuilder,
@@ -36,6 +36,57 @@ fn initialize_logging() {
             log::info!("trace logs enabled");
             fuchsia_syslog::set_severity(fuchsia_syslog::levels::TRACE);
         };
+    }
+}
+
+mod print_on_panic {
+    use lazy_static::lazy_static;
+    use std::sync::Mutex;
+
+    /// A simple log whose contents get printed to stdout on panic.
+    ///
+    /// The singleton instance of this can be obtained via the static singleton
+    /// [`PRINT_ON_PANIC`].
+    pub struct PrintOnPanicLog(Mutex<Vec<String>>);
+
+    impl PrintOnPanicLog {
+        /// Constructs the singleton log instance.
+        fn new() -> Self {
+            let default_hook = std::panic::take_hook();
+
+            std::panic::set_hook(Box::new(move |panic_info| {
+                let Self(mutex): &PrintOnPanicLog = &PRINT_ON_PANIC;
+                let dispatched = std::mem::take(&mut *mutex.lock().unwrap());
+                if dispatched.is_empty() {
+                    println!("Processed: [none]");
+                } else {
+                    println!("Processed {} items", dispatched.len());
+                    for o in dispatched.into_iter() {
+                        println!("{}", o);
+                    }
+                }
+
+                // Resume panicking normally.
+                (*default_hook)(panic_info);
+            }));
+            Self(Mutex::new(Vec::new()))
+        }
+
+        /// Adds an entry to the log.
+        pub fn record<T: std::fmt::Display>(&self, t: &T) {
+            let Self(mutex) = self;
+            mutex.lock().unwrap().push(t.to_string());
+        }
+
+        /// Clears the log.
+        pub fn clear_log(&self) {
+            let Self(mutex) = self;
+            mutex.lock().unwrap().clear();
+        }
+    }
+
+    lazy_static! {
+        pub static ref PRINT_ON_PANIC: PrintOnPanicLog = PrintOnPanicLog::new();
     }
 }
 
@@ -73,9 +124,9 @@ enum IpFrameType {
 }
 
 impl FrameType {
-    fn arbitrary_buf(&self, u: &mut Unstructured<'_>) -> arbitrary::Result<Buf<Vec<u8>>> {
+    fn arbitrary_buf(&self, u: &mut Unstructured<'_>) -> arbitrary::Result<(Buf<Vec<u8>>, String)> {
         match self {
-            FrameType::Raw => Ok(Buf::new(u.arbitrary()?, ..)),
+            FrameType::Raw => Ok((Buf::new(u.arbitrary()?, ..), "[raw]".into())),
             FrameType::EthernetWith(ether_type) => {
                 let builder = Fuzzed::<EthernetFrameBuilder>::arbitrary(u)?.into();
                 ether_type.arbitrary_buf(builder, u)
@@ -89,7 +140,7 @@ impl EthernetFrameType {
         &self,
         outer: O,
         u: &mut Unstructured<'_>,
-    ) -> arbitrary::Result<Buf<Vec<u8>>> {
+    ) -> arbitrary::Result<(Buf<Vec<u8>>, String)> {
         match self {
             EthernetFrameType::Raw => arbitrary_packet(outer, u),
             EthernetFrameType::Ipv4(ip_type) => {
@@ -109,7 +160,7 @@ impl IpFrameType {
         &self,
         outer: O,
         u: &mut Unstructured<'a>,
-    ) -> arbitrary::Result<Buf<Vec<u8>>> {
+    ) -> arbitrary::Result<(Buf<Vec<u8>>, String)> {
         match self {
             IpFrameType::Raw => arbitrary_packet(outer, u),
             IpFrameType::Udp => {
@@ -120,12 +171,17 @@ impl IpFrameType {
     }
 }
 
-struct ArbitraryFrame(FrameType, Buf<Vec<u8>>);
+struct ArbitraryFrame {
+    frame_type: FrameType,
+    buf: Buf<Vec<u8>>,
+    description: String,
+}
 
 impl<'a> Arbitrary<'a> for ArbitraryFrame {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let frame_type = u.arbitrary::<FrameType>()?;
-        Ok(Self(frame_type, frame_type.arbitrary_buf(u)?))
+        let (buf, description) = frame_type.arbitrary_buf(u)?;
+        Ok(Self { frame_type, buf, description })
     }
 }
 
@@ -140,10 +196,27 @@ pub(crate) struct FuzzInput {
     actions: Vec<FuzzAction>,
 }
 
+impl std::fmt::Display for FuzzAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FuzzAction::ReceiveFrame(ArbitraryFrame { frame_type, buf, description }) => f
+                .write_fmt(format_args!(
+                    "Send {:?} frame with {} total bytes: {}",
+                    frame_type,
+                    buf.len(),
+                    description
+                )),
+            FuzzAction::AdvanceTime(SmallDuration(duration)) => {
+                f.write_fmt(format_args!("Advance time by {:?}", duration))
+            }
+        }
+    }
+}
+
 fn arbitrary_packet<B: NestedPacketBuilder + std::fmt::Debug>(
     builder: B,
     u: &mut Unstructured<'_>,
-) -> arbitrary::Result<Buf<Vec<u8>>> {
+) -> arbitrary::Result<(Buf<Vec<u8>>, String)> {
     let constraints = match builder.try_constraints() {
         Some(constraints) => constraints,
         None => return Err(arbitrary::Error::IncorrectFormat),
@@ -153,6 +226,9 @@ fn arbitrary_packet<B: NestedPacketBuilder + std::fmt::Debug>(
         std::cmp::max(u.arbitrary_len::<u8>()?, constraints.min_body_len()),
         constraints.max_body_len(),
     );
+
+    let description = format!("{:?} with body length {}", builder, body_len);
+
     let mut buffer = vec![0; body_len + constraints.header_len() + constraints.footer_len()];
     u.fill_buffer(&mut buffer[constraints.header_len()..(constraints.header_len() + body_len)])?;
 
@@ -165,14 +241,13 @@ fn arbitrary_packet<B: NestedPacketBuilder + std::fmt::Debug>(
         })?
         .map_a(|buffer| Buf::new(buffer.as_ref().to_vec(), ..))
         .into_inner();
-    Ok(bytes)
+    Ok((bytes, description))
 }
 
 fn dispatch(ctx: &mut Ctx<DummyEventDispatcher>, device_id: DeviceId, action: FuzzAction) {
     use FuzzAction::*;
     match action {
-        ReceiveFrame(ArbitraryFrame(frame_type, buf)) => {
-            let _: FrameType = frame_type;
+        ReceiveFrame(ArbitraryFrame { frame_type: _, buf, description: _ }) => {
             crate::receive_frame(ctx, device_id, buf).expect("error receiving frame")
         }
         AdvanceTime(SmallDuration(duration)) => {
@@ -184,11 +259,19 @@ fn dispatch(ctx: &mut Ctx<DummyEventDispatcher>, device_id: DeviceId, action: Fu
 #[::fuzz::fuzz]
 pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
     initialize_logging();
+
     let mut ctx = Ctx::with_default_state(DummyEventDispatcher::default());
     let FuzzInput { actions } = input;
     let device_id = ctx
         .state
         .add_ethernet_device(UnicastAddr::new(net_mac!("10:20:30:40:50:60")).unwrap(), 1500);
     crate::initialize_device(&mut ctx, device_id);
-    actions.into_iter().for_each(|action| dispatch(&mut ctx, device_id, action));
+
+    for action in actions {
+        print_on_panic::PRINT_ON_PANIC.record(&action);
+        dispatch(&mut ctx, device_id, action);
+    }
+
+    // No panic occurred, so clear the log for the next run.
+    print_on_panic::PRINT_ON_PANIC.clear_log();
 }

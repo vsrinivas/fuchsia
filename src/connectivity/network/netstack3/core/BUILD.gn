@@ -126,6 +126,7 @@ rustc_fuzzer("fuzz-single-device") {
            "//src/lib/syslog/rust:syslog",
            "//third_party/rust_crates:arbitrary",
            "//third_party/rust_crates:log",
+           "//third_party/rust_crates:lazy_static",
          ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
