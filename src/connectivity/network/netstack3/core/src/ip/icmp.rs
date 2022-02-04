@@ -33,16 +33,14 @@ use crate::context::{CounterContext, InstantContext, StateContext};
 use crate::data_structures::{token_bucket::TokenBucket, IdMapCollectionKey};
 use crate::device::ndp::NdpPacketHandler;
 use crate::device::FrameDestination;
-use crate::ip::{
-    gmp::mld::MldPacketHandler, path_mtu::PmtuHandler, BufferIpTransportContext, IpDeviceIdContext,
-    IpTransportContext, TransportReceiveError,
+use crate::ip::forwarding::ForwardingTable;
+use crate::ip::socket::{
+    BufferIpSocketHandler, IpSock, IpSockCreationError, IpSockSendError, IpSockUpdate, IpSocket,
+    IpSocketHandler, UnroutableBehavior,
 };
 use crate::ip::{
-    socket::{
-        BufferIpSocketContext, IpSockCreationError, IpSockSendError, IpSocket, IpSocketContext,
-        UnroutableBehavior,
-    },
-    IpExt,
+    gmp::mld::MldPacketHandler, path_mtu::PmtuHandler, BufferIpTransportContext, IpDeviceIdContext,
+    IpExt, IpTransportContext, TransportReceiveError,
 };
 use crate::socket::{ConnSocketEntry, ConnSocketMap, Socket};
 use crate::{BufferDispatcher, Ctx, EventDispatcher};
@@ -289,7 +287,7 @@ impl<I: Ip> IdMapCollectionKey for IcmpConnId<I> {
 /// - namely, those contained in ICMPv4 sockets.
 pub(super) fn update_all_ipv4_sockets<C: InnerIcmpv4Context>(
     ctx: &mut C,
-    update: <C::IpSocket as Socket>::Update,
+    update: IpSockUpdate<Ipv4>,
 ) {
     let (state, meta) = ctx.get_state_and_update_meta();
     // We have to collect into a `Vec` here because the iterator borrows `ctx`,
@@ -307,7 +305,7 @@ pub(super) fn update_all_ipv4_sockets<C: InnerIcmpv4Context>(
 /// - namely, those contained in ICMPv6 sockets.
 pub(super) fn update_all_ipv6_sockets<C: InnerIcmpv6Context>(
     ctx: &mut C,
-    update: <C::IpSocket as Socket>::Update,
+    update: IpSockUpdate<Ipv6>,
 ) {
     let (state, meta) = ctx.get_state_and_update_meta();
     // We have to collect into a `Vec` here because the iterator borrows `ctx`,
@@ -411,7 +409,7 @@ impl<I: IcmpIpExt, B: BufferMut, D: EventDispatcher + BufferIcmpContext<I, B>>
 /// crate.
 pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt>:
     IcmpContext<I>
-    + IpSocketContext<I>
+    + IpSocketHandler<I>
     + IpDeviceIdContext
     + CounterContext
     + InstantContext
@@ -419,7 +417,7 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt>:
         IcmpState<
             I::Addr,
             <Self as InstantContext>::Instant,
-            <Self as IpSocketContext<I>>::IpSocket,
+            IpSock<I, <Self as IpDeviceIdContext>::DeviceId>,
         >,
     >
 {
@@ -465,15 +463,15 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt>:
     fn get_state_and_update_meta(
         &mut self,
     ) -> (
-        &mut IcmpState<I::Addr, Self::Instant, Self::IpSocket>,
-        &<Self::IpSocket as Socket>::UpdateMeta,
+        &mut IcmpState<I::Addr, Self::Instant, IpSock<I, Self::DeviceId>>,
+        &ForwardingTable<I, Self::DeviceId>,
     );
 }
 
 /// The execution context shared by ICMP(v4) and ICMPv6 for the internal
 /// operations of the IP stack when a buffer is required.
 pub(crate) trait InnerBufferIcmpContext<I: IcmpIpExt + IpExt, B: BufferMut>:
-    InnerIcmpContext<I> + BufferIcmpContext<I, B> + BufferIpSocketContext<I, B>
+    InnerIcmpContext<I> + BufferIcmpContext<I, B> + BufferIpSocketHandler<I, B>
 {
     /// Sends an ICMP error message to a remote host.
     ///
@@ -516,7 +514,10 @@ pub(crate) trait InnerBufferIcmpContext<I: IcmpIpExt + IpExt, B: BufferMut>:
 pub(crate) trait InnerIcmpv4Context:
     InnerIcmpContext<Ipv4>
     + StateContext<
-        Icmpv4State<<Self as InstantContext>::Instant, <Self as IpSocketContext<Ipv4>>::IpSocket>,
+        Icmpv4State<
+            <Self as InstantContext>::Instant,
+            IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
+        >,
     >
 {
 }
@@ -526,7 +527,7 @@ impl<
             + StateContext<
                 Icmpv4State<
                     <Self as InstantContext>::Instant,
-                    <Self as IpSocketContext<Ipv4>>::IpSocket,
+                    IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
                 >,
             >,
     > InnerIcmpv4Context for C
@@ -551,16 +552,16 @@ impl<C>
         IcmpState<
             Ipv4Addr,
             <Self as InstantContext>::Instant,
-            <Self as IpSocketContext<Ipv4>>::IpSocket,
+            IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
         >,
     > for C
 where
     C: InstantContext
-        + IpSocketContext<Ipv4>
+        + IpSocketHandler<Ipv4>
         + StateContext<
             Icmpv4State<
                 <Self as InstantContext>::Instant,
-                <Self as IpSocketContext<Ipv4>>::IpSocket,
+                IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
             >,
         >,
 {
@@ -570,7 +571,7 @@ where
     ) -> &IcmpState<
         Ipv4Addr,
         <Self as InstantContext>::Instant,
-        <Self as IpSocketContext<Ipv4>>::IpSocket,
+        IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
     > {
         &self.get_state().inner
     }
@@ -581,7 +582,7 @@ where
     ) -> &mut IcmpState<
         Ipv4Addr,
         <Self as InstantContext>::Instant,
-        <Self as IpSocketContext<Ipv4>>::IpSocket,
+        IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
     > {
         &mut self.get_state_mut().inner
     }
@@ -593,7 +594,10 @@ where
 pub(crate) trait InnerIcmpv6Context:
     InnerIcmpContext<Ipv6>
     + StateContext<
-        Icmpv6State<<Self as InstantContext>::Instant, <Self as IpSocketContext<Ipv6>>::IpSocket>,
+        Icmpv6State<
+            <Self as InstantContext>::Instant,
+            IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
+        >,
     >
 {
 }
@@ -603,7 +607,7 @@ impl<C> InnerIcmpv6Context for C where
         + StateContext<
             Icmpv6State<
                 <Self as InstantContext>::Instant,
-                <Self as IpSocketContext<Ipv6>>::IpSocket,
+                IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
             >,
         >
 {
@@ -627,16 +631,16 @@ impl<C>
         IcmpState<
             Ipv6Addr,
             <Self as InstantContext>::Instant,
-            <Self as IpSocketContext<Ipv6>>::IpSocket,
+            IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
         >,
     > for C
 where
     C: InstantContext
-        + IpSocketContext<Ipv6>
+        + IpSocketHandler<Ipv6>
         + StateContext<
             Icmpv6State<
                 <Self as InstantContext>::Instant,
-                <Self as IpSocketContext<Ipv6>>::IpSocket,
+                IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
             >,
         >,
 {
@@ -646,7 +650,7 @@ where
     ) -> &IcmpState<
         Ipv6Addr,
         <Self as InstantContext>::Instant,
-        <Self as IpSocketContext<Ipv6>>::IpSocket,
+        IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
     > {
         &self.get_state().inner
     }
@@ -657,7 +661,7 @@ where
     ) -> &mut IcmpState<
         Ipv6Addr,
         <Self as InstantContext>::Instant,
-        <Self as IpSocketContext<Ipv6>>::IpSocket,
+        IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
     > {
         &mut self.get_state_mut().inner
     }
@@ -1085,7 +1089,7 @@ impl<
 fn send_icmp_reply<
     I: crate::ip::IpExt,
     B: BufferMut,
-    C: BufferIpSocketContext<I, B> + IpDeviceIdContext + CounterContext,
+    C: BufferIpSocketHandler<I, B> + IpDeviceIdContext + CounterContext,
     S: Serializer<Buffer = B>,
     F: FnOnce(SpecifiedAddr<I::Addr>) -> S,
 >(
@@ -2115,10 +2119,11 @@ mod tests {
 
     use super::*;
     use crate::context::testutil::{DummyCtx, DummyInstant};
-    use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
+    use crate::device::{set_routing_enabled, DeviceId, FrameDestination, IpFrameMeta};
+    use crate::ip::device::state::IpDeviceStateIpExt;
     use crate::ip::gmp::mld::MldPacketHandler;
     use crate::ip::path_mtu::testutil::DummyPmtuState;
-    use crate::ip::socket::testutil::{DummyIpSock, DummyIpSocketCtx};
+    use crate::ip::socket::testutil::DummyIpSocketCtx;
     use crate::ip::{receive_ipv4_packet, receive_ipv6_packet, DummyDeviceId};
     use crate::testutil::{
         DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
@@ -2915,7 +2920,7 @@ mod tests {
         err: I::ErrorCode,
     }
 
-    struct DummyIcmpCtx<I: IcmpIpExt> {
+    struct DummyIcmpCtx<I: IcmpIpExt + IpDeviceStateIpExt<DummyInstant>> {
         // All calls to `InnerIcmpContext::send_icmp_error_message`.
         send_icmp_error_message: Vec<SendIcmpErrorMessageArgs<I>>,
         // We store calls to `InnerIcmpContext::receive_icmp_error` AND calls to
@@ -2933,25 +2938,23 @@ mod tests {
 
     impl Default for DummyIcmpCtx<Ipv4> {
         fn default() -> DummyIcmpCtx<Ipv4> {
-            DummyIcmpCtx::new(DummyIpSocketCtx::new(
+            DummyIcmpCtx::new(DummyIpSocketCtx::new_ipv4(
                 vec![DUMMY_CONFIG_V4.local_ip],
                 vec![DUMMY_CONFIG_V4.remote_ip],
-                true,
             ))
         }
     }
 
     impl Default for DummyIcmpCtx<Ipv6> {
         fn default() -> DummyIcmpCtx<Ipv6> {
-            DummyIcmpCtx::new(DummyIpSocketCtx::new(
+            DummyIcmpCtx::new(DummyIpSocketCtx::new_ipv6(
                 vec![DUMMY_CONFIG_V6.local_ip],
                 vec![DUMMY_CONFIG_V6.remote_ip],
-                true,
             ))
         }
     }
 
-    impl<I: IcmpIpExt> DummyIcmpCtx<I> {
+    impl<I: IcmpIpExt + IpDeviceStateIpExt<DummyInstant>> DummyIcmpCtx<I> {
         fn new(socket_ctx: DummyIpSocketCtx<I>) -> DummyIcmpCtx<I> {
             DummyIcmpCtx {
                 send_icmp_error_message: Vec::new(),
@@ -2967,12 +2970,12 @@ mod tests {
 
     struct DummyIcmpv4Ctx {
         inner: DummyIcmpCtx<Ipv4>,
-        icmp_state: Icmpv4State<DummyInstant, DummyIpSock<Ipv4>>,
+        icmp_state: Icmpv4State<DummyInstant, IpSock<Ipv4, DummyDeviceId>>,
     }
 
     struct DummyIcmpv6Ctx {
         inner: DummyIcmpCtx<Ipv6>,
-        icmp_state: Icmpv6State<DummyInstant, DummyIpSock<Ipv6>>,
+        icmp_state: Icmpv6State<DummyInstant, IpSock<Ipv6, DummyDeviceId>>,
     }
 
     impl Default for DummyIcmpv4Ctx {
@@ -2997,7 +3000,7 @@ mod tests {
     /// context types.
     macro_rules! impl_context_traits {
         ($ip:ident, $inner:ident, $outer:ident, $state:ident, $info_type:ident, $should_send:expr) => {
-            type $outer = DummyCtx<$inner, (), <$ip as packet_formats::ip::IpExt>::PacketBuilder>;
+            type $outer = DummyCtx<$inner, (), IpFrameMeta<<$ip as Ip>::Addr, DummyDeviceId>>;
 
             impl $inner {
                 fn with_errors_per_second(errors_per_second: u64) -> $inner {
@@ -3005,10 +3008,6 @@ mod tests {
                     ctx.icmp_state.inner.error_send_bucket = TokenBucket::new(errors_per_second);
                     ctx
                 }
-            }
-
-            impl IpDeviceIdContext for $outer {
-                type DeviceId = DummyDeviceId;
             }
 
             impl_pmtu_handler!($outer, $ip);
@@ -3031,15 +3030,18 @@ mod tests {
                 }
             }
 
-            impl StateContext<$state<DummyInstant, DummyIpSock<$ip>>> for $outer {
-                fn get_state_with(&self, _id: ()) -> &$state<DummyInstant, DummyIpSock<$ip>> {
+            impl StateContext<$state<DummyInstant, IpSock<$ip, DummyDeviceId>>> for $outer {
+                fn get_state_with(
+                    &self,
+                    _id: (),
+                ) -> &$state<DummyInstant, IpSock<$ip, DummyDeviceId>> {
                     &self.get_ref().icmp_state
                 }
 
                 fn get_state_mut_with(
                     &mut self,
                     _id: (),
-                ) -> &mut $state<DummyInstant, DummyIpSock<$ip>> {
+                ) -> &mut $state<DummyInstant, IpSock<$ip, DummyDeviceId>> {
                     &mut self.get_mut().icmp_state
                 }
             }
@@ -3115,8 +3117,12 @@ mod tests {
 
                 fn get_state_and_update_meta(
                     &mut self,
-                ) -> (&mut IcmpState<<$ip as Ip>::Addr, DummyInstant, DummyIpSock<$ip>>, &()) {
-                    (&mut self.get_mut().icmp_state.inner, &())
+                ) -> (
+                    &mut IcmpState<<$ip as Ip>::Addr, DummyInstant, IpSock<$ip, DummyDeviceId>>,
+                    &ForwardingTable<$ip, DummyDeviceId>,
+                ) {
+                    let state = self.get_mut();
+                    (&mut state.icmp_state.inner, &state.inner.socket_ctx.table)
                 }
             }
 
@@ -3929,8 +3935,8 @@ mod tests {
         fn run_test<
             I: IpExt,
             C,
-            W: Fn(u64) -> DummyCtx<C, (), I::PacketBuilder>,
-            S: Fn(&mut DummyCtx<C, (), I::PacketBuilder>),
+            W: Fn(u64) -> DummyCtx<C, (), IpFrameMeta<I::Addr, DummyDeviceId>>,
+            S: Fn(&mut DummyCtx<C, (), IpFrameMeta<I::Addr, DummyDeviceId>>),
         >(
             with_errors_per_second: W,
             send: S,

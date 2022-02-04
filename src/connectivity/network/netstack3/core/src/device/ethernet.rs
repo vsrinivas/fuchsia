@@ -1506,20 +1506,22 @@ mod tests {
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
-    use crate::context::testutil::DummyInstant;
-    use crate::device::{
-        arp::ArpHandler, set_routing_enabled, testutil::DeviceTestIpExt, DeviceId, DeviceIdInner,
-        EthernetDeviceId, IpLinkDeviceState,
+    use crate::{
+        context::testutil::DummyInstant,
+        device::{
+            arp::ArpHandler, set_routing_enabled, testutil::DeviceTestIpExt, DeviceId,
+            DeviceIdInner, EthernetDeviceId, IpLinkDeviceState,
+        },
+        ip::{
+            device::{is_routing_enabled, state::AssignedAddress},
+            dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId,
+        },
+        testutil::{
+            add_arp_or_ndp_table_entry, get_counter_val, new_rng, DummyEventDispatcher,
+            DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt, DUMMY_CONFIG_V4,
+        },
+        Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder,
     };
-    use crate::ip::{
-        device::{is_routing_enabled, state::AssignedAddress as _},
-        dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId, IpDeviceIdContext,
-    };
-    use crate::testutil::{
-        add_arp_or_ndp_table_entry, get_counter_val, new_rng, DummyEventDispatcher,
-        DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt, DUMMY_CONFIG_V4,
-    };
-    use crate::{Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder};
 
     struct DummyEthernetCtx {
         state: IpLinkDeviceState<DummyInstant, EthernetDeviceState>,
@@ -1570,10 +1572,6 @@ mod tests {
     }
 
     impl DeviceIdContext<EthernetLinkDevice> for DummyCtx {
-        type DeviceId = DummyDeviceId;
-    }
-
-    impl IpDeviceIdContext for DummyCtx {
         type DeviceId = DummyDeviceId;
     }
 

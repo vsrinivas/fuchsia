@@ -1250,7 +1250,7 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use super::*;
-    use crate::ip::socket::BufferIpSocketContext;
+    use crate::ip::socket::BufferIpSocketHandler;
     use crate::{assert_empty, TimerIdInner};
 
     #[test]
@@ -1260,7 +1260,7 @@ mod tests {
 
         // Alice sends Bob a ping.
 
-        BufferIpSocketContext::<Ipv4, _>::send_oneshot_ip_packet(
+        BufferIpSocketHandler::<Ipv4, _>::send_oneshot_ip_packet(
             net.context("alice"),
             None, // local_ip
             DUMMY_CONFIG_V4.remote_ip,
@@ -1435,7 +1435,7 @@ mod tests {
         );
 
         // Alice sends Bob a ping.
-        BufferIpSocketContext::<Ipv4, _>::send_oneshot_ip_packet(
+        BufferIpSocketHandler::<Ipv4, _>::send_oneshot_ip_packet(
             net.context("alice"),
             None, // local_ip
             DUMMY_CONFIG_V4.remote_ip,

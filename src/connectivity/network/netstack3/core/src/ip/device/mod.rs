@@ -6,20 +6,25 @@
 
 pub(crate) mod state;
 
-use crate::{
-    context::InstantContext,
-    ip::{
-        device::state::{DualStackIpDeviceState, IpDeviceState},
-        IpDeviceIdContext,
-    },
-};
 use alloc::boxed::Box;
 use core::num::NonZeroU8;
+
 use net_types::{
-    ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv6, Ipv6Addr},
+    ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     LinkLocalAddress as _, SpecifiedAddr,
 };
 use specialize_ip_macro::specialize_ip_address;
+
+use crate::{
+    context::InstantContext,
+    device::DeviceId,
+    ip::{
+        device::state::{DualStackIpDeviceState, IpDeviceState},
+        forwarding::Destination,
+        IpDeviceIdContext,
+    },
+    Ctx, EventDispatcher,
+};
 
 /// The execution context for IP devices.
 pub(crate) trait IpDeviceContext: InstantContext + IpDeviceIdContext {
@@ -145,6 +150,48 @@ pub(crate) fn is_routing_enabled<C: IpDeviceContext, I: Ip>(
 /// The MTU is the maximum size of an IP packet.
 pub(crate) fn get_mtu<C: IpDeviceContext>(ctx: &C, device_id: C::DeviceId) -> u32 {
     ctx.get_mtu(device_id)
+}
+
+impl<D: EventDispatcher> crate::ip::socket::IpSocketContext<Ipv4> for Ctx<D> {
+    fn lookup_route(
+        &self,
+        addr: SpecifiedAddr<Ipv4Addr>,
+    ) -> Option<Destination<Ipv4Addr, DeviceId>> {
+        crate::ip::lookup_route(self, addr)
+    }
+
+    fn get_ip_device_state(&self, device: DeviceId) -> &IpDeviceState<D::Instant, Ipv4> {
+        get_ipv4_device_state(self, device)
+    }
+
+    fn iter_devices(
+        &self,
+    ) -> Box<dyn Iterator<Item = (DeviceId, &IpDeviceState<D::Instant, Ipv4>)> + '_> {
+        Box::new(
+            iter_devices(self).map(move |device| (device, get_ipv4_device_state(self, device))),
+        )
+    }
+}
+
+impl<D: EventDispatcher> crate::ip::socket::IpSocketContext<Ipv6> for Ctx<D> {
+    fn lookup_route(
+        &self,
+        addr: SpecifiedAddr<Ipv6Addr>,
+    ) -> Option<Destination<Ipv6Addr, DeviceId>> {
+        crate::ip::lookup_route(self, addr)
+    }
+
+    fn get_ip_device_state(&self, device: DeviceId) -> &IpDeviceState<D::Instant, Ipv6> {
+        get_ipv6_device_state(self, device)
+    }
+
+    fn iter_devices(
+        &self,
+    ) -> Box<dyn Iterator<Item = (DeviceId, &IpDeviceState<D::Instant, Ipv6>)> + '_> {
+        Box::new(
+            iter_devices(self).map(move |device| (device, get_ipv6_device_state(self, device))),
+        )
+    }
 }
 
 #[cfg(test)]

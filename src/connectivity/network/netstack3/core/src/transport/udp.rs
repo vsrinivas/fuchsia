@@ -1069,7 +1069,7 @@ mod tests {
     use crate::assert_empty;
     use crate::ip::{
         icmp::{Icmpv4ErrorCode, Icmpv6ErrorCode},
-        DummyDeviceId, IpDeviceIdContext,
+        DummyDeviceId,
     };
     use crate::testutil::{set_logger_for_test, FakeCryptoRng};
 
@@ -1120,10 +1120,6 @@ mod tests {
     }
 
     type DummyCtx<I> = crate::context::testutil::DummyCtx<DummyUdpCtx<I>, (), IpPacketFromArgs<I>>;
-
-    impl<I: TestIpExt> IpDeviceIdContext for DummyCtx<I> {
-        type DeviceId = DummyDeviceId;
-    }
 
     impl<I: TestIpExt> TransportIpContext<I> for DummyCtx<I> {
         fn is_assigned_local_addr(&self, addr: <I as Ip>::Addr) -> bool {

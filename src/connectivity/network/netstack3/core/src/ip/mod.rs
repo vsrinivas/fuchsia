@@ -8,7 +8,7 @@
 pub(crate) mod path_mtu;
 
 pub(crate) mod device;
-mod forwarding;
+pub(crate) mod forwarding;
 pub(crate) mod gmp;
 pub mod icmp;
 mod ipv6;
@@ -58,7 +58,7 @@ use crate::{
         ipv6::Ipv6PacketAction,
         path_mtu::{PmtuCache, PmtuHandler, PmtuTimerId},
         reassembly::{FragmentCacheKey, FragmentProcessingState, IpPacketFragmentCache},
-        socket::{ipv6_source_address_selection::select_ipv6_source_address, IpSock, IpSockUpdate},
+        socket::{ipv6_source_address_selection, IpSock, IpSockUpdate, Ipv4SocketContext},
     },
     BufferDispatcher, Ctx, EventDispatcher, StackState, TimerId, TimerIdInner,
 };
@@ -356,7 +356,7 @@ impl<D: EventDispatcher> TransportIpContext<Ipv6> for Ctx<D> {
         remote: SpecifiedAddr<Ipv6Addr>,
     ) -> Option<SpecifiedAddr<Ipv6Addr>> {
         let Destination { next_hop: _, device } = lookup_route(self, remote)?;
-        select_ipv6_source_address(
+        ipv6_source_address_selection::select_ipv6_source_address(
             remote,
             device,
             crate::ip::device::get_ipv6_device_state(self, device)
@@ -376,7 +376,7 @@ impl<D: EventDispatcher> TransportIpContext<Ipv6> for Ctx<D> {
 /// require lots of verbose type bounds when they need to be interoperable (such
 /// as when ICMP delivers an MLD packet to the `mld` module for processing).
 pub trait IpDeviceIdContext {
-    type DeviceId: Copy + Display + Debug + Send + Sync + 'static;
+    type DeviceId: Copy + Display + Debug + PartialEq + Send + Sync + 'static;
 }
 
 /// A dummy device ID for use in testing.
@@ -387,6 +387,11 @@ pub trait IpDeviceIdContext {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[cfg(test)]
 pub(crate) struct DummyDeviceId;
+
+#[cfg(test)]
+impl<S, Id, Meta> IpDeviceIdContext for crate::context::testutil::DummyCtx<S, Id, Meta> {
+    type DeviceId = DummyDeviceId;
+}
 
 #[cfg(test)]
 impl Display for DummyDeviceId {
@@ -496,11 +501,12 @@ pub(crate) struct Ipv4State<Instant: crate::Instant, D> {
     next_packet_id: u16,
 }
 
-impl<Instant: crate::Instant, D> Ipv4State<Instant, D> {
-    // TODO(https://fxbug.dev/87588): Generate IPv4 IDs unpredictably
-    fn gen_next_packet_id(&mut self) -> u16 {
-        self.next_packet_id = self.next_packet_id.wrapping_add(1);
-        self.next_packet_id
+impl<D: EventDispatcher> crate::ip::socket::Ipv4SocketContext for Ctx<D> {
+    fn gen_ipv4_packet_id(&mut self) -> u16 {
+        // TODO(https://fxbug.dev/87588): Generate IPv4 IDs unpredictably
+        let state = &mut self.state.ipv4;
+        state.next_packet_id = state.next_packet_id.wrapping_add(1);
+        state.next_packet_id
     }
 }
 
@@ -1756,7 +1762,7 @@ pub(crate) fn send_ip_packet_from_device<
             get_hop_limit::<_, A::Version>(ctx, device),
             proto,
         );
-        builder.id(ctx.state.ipv4.gen_next_packet_id());
+        builder.id(ctx.gen_ipv4_packet_id());
         builder
     };
 

@@ -472,6 +472,31 @@ impl<I: Instant> DeviceLayerState<I> {
     }
 }
 
+/// Metadata describing an IP packet to be sent in a link-layer frame to a
+/// locally-connected host.
+pub struct IpFrameMeta<A: IpAddress, D> {
+    device: D,
+    local_addr: SpecifiedAddr<A>,
+}
+
+impl<A: IpAddress, D> IpFrameMeta<A, D> {
+    pub(crate) fn new(device: D, local_addr: SpecifiedAddr<A>) -> IpFrameMeta<A, D> {
+        IpFrameMeta { device, local_addr }
+    }
+}
+
+impl<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress> FrameContext<B, IpFrameMeta<A, DeviceId>>
+    for Ctx<D>
+{
+    fn send_frame<S: Serializer<Buffer = B>>(
+        &mut self,
+        meta: IpFrameMeta<A, DeviceId>,
+        body: S,
+    ) -> Result<(), S> {
+        send_ip_frame(self, meta.device, meta.local_addr, body)
+    }
+}
+
 /// An event dispatcher for the device layer.
 ///
 /// See the `EventDispatcher` trait in the crate root for more details.
