@@ -406,7 +406,7 @@ bool SpinelFramer::IsPacketPresent(void) {
   return false;
 }
 
-void SpinelFramer::SendPacketToRadio(uint8_t *packet, uint16_t length) {
+zx_status_t SpinelFramer::SendPacketToRadio(uint8_t *packet, uint16_t length) {
   if (!spi_tx_is_ready_) {
     memcpy(&spi_tx_frame_buffer_[kHeaderLen], packet, length);
     spi_tx_payload_size_ = length;
@@ -417,6 +417,9 @@ void SpinelFramer::SendPacketToRadio(uint8_t *packet, uint16_t length) {
     rx_frame_byte_count_ += spi_tx_payload_size_;
 
     TrySpiTransaction();
+    return ZX_OK;
+  } else {
+    return ZX_ERR_SHOULD_WAIT;
   }
 }
 

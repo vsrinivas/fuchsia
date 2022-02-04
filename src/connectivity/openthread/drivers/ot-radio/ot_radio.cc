@@ -319,9 +319,12 @@ zx_status_t OtRadioDevice::RadioPacketTx(uint8_t* frameBuffer, uint16_t length) 
   if (!port_.is_valid()) {
     return ZX_ERR_BAD_STATE;
   }
-  memcpy(spi_tx_buffer_, frameBuffer, length);
-  spi_tx_buffer_len_ = length;
+  std::vector<uint8_t> vec(frameBuffer, frameBuffer + length);
   InspectOutboundFrame(frameBuffer, length);
+  {
+    fbl::AutoLock lock(&spi_tx_lock_);
+    spi_tx_queue_.emplace_back(std::move(vec));
+  }
   return port_.queue(&packet);
 }
 
@@ -470,7 +473,22 @@ zx_status_t OtRadioDevice::RadioThread() {
         interrupt_is_asserted_ = IsInterruptAsserted();
       } while (interrupt_is_asserted_ && inbound_allowance_ != 0);
     } else if (packet.key == PORT_KEY_TX_TO_RADIO) {
-      spinel_framer_->SendPacketToRadio(spi_tx_buffer_, spi_tx_buffer_len_);
+      fbl::AutoLock lock(&spi_tx_lock_);
+      if (spi_tx_queue_.size() > 0) {
+        if (ZX_OK != spinel_framer_->SendPacketToRadio(spi_tx_queue_.front().data(),
+                                                       spi_tx_queue_.front().size())) {
+          lock.release();
+          // SPI busy, try next time.
+          // zx::port is thread-safe: Ok to queue directly to the port.
+          zx_port_packet packet = {PORT_KEY_TX_TO_RADIO, ZX_PKT_TYPE_USER, ZX_OK, {}};
+          if (!port_.is_valid()) {
+            return ZX_ERR_BAD_STATE;
+          }
+          port_.queue(&packet);
+        } else {
+          spi_tx_queue_.pop_front();
+        }
+      }
     }
   }
   zxlogf(DEBUG, "ot-radio: exiting");

@@ -138,9 +138,10 @@ class OtRadioDevice : public DeviceType {
   async::Loop loop_;
   std::unique_ptr<ot::SpinelFramer> spinel_framer_;
 
+  fbl::Mutex spi_tx_lock_;
+  std::list<std::vector<uint8_t>> spi_tx_queue_ __TA_GUARDED(spi_tx_lock_);
+
   uint16_t spi_rx_buffer_len_ = 0;
-  uint16_t spi_tx_buffer_len_ = 0;
-  uint8_t spi_tx_buffer_[kMaxFrameSize];
 
   class LowpanSpinelDeviceFidlImpl : public fidl::WireServer<fuchsia_lowpan_spinel::Device> {
    public:

@@ -18,7 +18,7 @@ class SpinelFramer {
   void Init(ddk::SpiProtocolClient spi, uint16_t spi_rx_align_allowance = 0);
   void HandleInterrupt();
   uint32_t GetTimeoutMs(void);
-  void SendPacketToRadio(uint8_t* packet, uint16_t length);
+  zx_status_t SendPacketToRadio(uint8_t* packet, uint16_t length);
   void ReceivePacketFromRadio(uint8_t* rxPacket, uint16_t* length);
   bool IsPacketPresent(void);
   void TrySpiTransaction(void);
