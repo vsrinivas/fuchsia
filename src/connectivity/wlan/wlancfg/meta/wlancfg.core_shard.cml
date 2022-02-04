@@ -47,6 +47,11 @@
             to: "#wlancfg",
         },
         {
+            protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
+            from: "#diagnostics-persistence",
+            to: "#wlancfg",
+        },
+        {
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.metrics.MetricEventLoggerFactory",

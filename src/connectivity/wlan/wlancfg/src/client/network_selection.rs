@@ -20,6 +20,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect::Node as InspectNode,
     fuchsia_inspect_contrib::{
+        auto_persist::{self, AutoPersist},
         inspect_insert, inspect_log,
         log::{InspectList, WriteInspect},
         nodes::BoundedListNode as InspectBoundedListNode,
@@ -70,7 +71,7 @@ pub struct NetworkSelector {
     cobalt_api: Arc<Mutex<CobaltSender>>,
     hasher: WlanHasher,
     _inspect_node_root: Arc<Mutex<InspectNode>>,
-    inspect_node_for_network_selections: Arc<Mutex<InspectBoundedListNode>>,
+    inspect_node_for_network_selections: Arc<Mutex<AutoPersist<InspectBoundedListNode>>>,
     telemetry_sender: TelemetrySender,
 }
 
@@ -217,11 +218,17 @@ impl NetworkSelector {
         cobalt_api: CobaltSender,
         hasher: WlanHasher,
         inspect_node: InspectNode,
+        persistence_req_sender: auto_persist::PersistenceReqSender,
         telemetry_sender: TelemetrySender,
     ) -> Self {
         let inspect_node_for_network_selection = InspectBoundedListNode::new(
             inspect_node.create_child("network_selection"),
             INSPECT_EVENT_LIMIT_FOR_NETWORK_SELECTIONS,
+        );
+        let inspect_node_for_network_selection = AutoPersist::new(
+            inspect_node_for_network_selection,
+            "wlancfg-network-selection",
+            persistence_req_sender.clone(),
         );
         Self {
             saved_network_manager,
@@ -458,7 +465,7 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
 fn select_best_connection_candidate<'a>(
     bss_list: Vec<InternalBss<'a>>,
     ignore_list: &Vec<types::NetworkIdentifier>,
-    inspect_node: &mut InspectBoundedListNode,
+    inspect_node: &mut AutoPersist<InspectBoundedListNode>,
 ) -> Option<(types::ConnectionCandidate, types::WlanChan, types::Bssid)> {
     info!("Selecting from {} BSSs found for saved networks", bss_list.len());
 
@@ -483,7 +490,7 @@ fn select_best_connection_candidate<'a>(
         .max_by(|bss_a, bss_b| bss_a.score().partial_cmp(&bss_b.score()).unwrap());
 
     // Log the candidates into Inspect
-    inspect_log!(inspect_node, candidates: InspectList(&bss_list), selected?: selected);
+    inspect_log!(inspect_node.get_mut(), candidates: InspectList(&bss_list), selected?: selected);
 
     selected.map(|bss| {
         info!("Selected BSS:");
@@ -653,8 +660,9 @@ mod tests {
             access_point::state_machine as ap_fsm,
             config_management::SavedNetworksManager,
             util::testing::{
-                create_mock_cobalt_sender_and_receiver, create_wlan_hasher, generate_channel,
-                generate_random_bss, generate_random_scan_result,
+                create_inspect_persistence_channel, create_mock_cobalt_sender_and_receiver,
+                create_wlan_hasher, generate_channel, generate_random_bss,
+                generate_random_scan_result,
                 poll_for_and_validate_sme_scan_request_and_send_results,
                 validate_sme_scan_request_and_send_results,
             },
@@ -698,6 +706,7 @@ mod tests {
         let saved_network_manager = Arc::new(SavedNetworksManager::new_for_test().await.unwrap());
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("net_select_test");
+        let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
 
         let network_selector = Arc::new(NetworkSelector::new(
@@ -705,6 +714,7 @@ mod tests {
             cobalt_api,
             create_wlan_hasher(),
             inspect_node,
+            persistence_req_sender,
             TelemetrySender::new(telemetry_sender),
         ));
         let (client_sme, remote) =
@@ -1207,8 +1217,11 @@ mod tests {
         let _executor = fasync::TestExecutor::new();
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
-        let mut inspect_node =
-            InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
+        let mut inspect_node = AutoPersist::new(
+            InspectBoundedListNode::new(inspector.root().create_child("test"), 10),
+            "sample-persistence-tag",
+            create_inspect_persistence_channel().0,
+        );
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("foo").unwrap(),
@@ -1327,8 +1340,11 @@ mod tests {
         let _executor = fasync::TestExecutor::new();
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
-        let mut inspect_node =
-            InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
+        let mut inspect_node = AutoPersist::new(
+            InspectBoundedListNode::new(inspector.root().create_child("test"), 10),
+            "sample-persistence-tag",
+            create_inspect_persistence_channel().0,
+        );
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("foo").unwrap(),
@@ -1452,8 +1468,11 @@ mod tests {
         let _executor = fasync::TestExecutor::new();
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
-        let mut inspect_node =
-            InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
+        let mut inspect_node = AutoPersist::new(
+            InspectBoundedListNode::new(inspector.root().create_child("test"), 10),
+            "sample-persistence-tag",
+            create_inspect_persistence_channel().0,
+        );
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("foo").unwrap(),
@@ -1573,8 +1592,11 @@ mod tests {
         let _executor = fasync::TestExecutor::new();
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
-        let mut inspect_node =
-            InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
+        let mut inspect_node = AutoPersist::new(
+            InspectBoundedListNode::new(inspector.root().create_child("test"), 10),
+            "sample-persistence-tag",
+            create_inspect_persistence_channel().0,
+        );
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("foo").unwrap(),
@@ -1663,8 +1685,11 @@ mod tests {
         let _executor = fasync::TestExecutor::new();
         // generate Inspect nodes
         let inspector = inspect::Inspector::new();
-        let mut inspect_node =
-            InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
+        let mut inspect_node = AutoPersist::new(
+            InspectBoundedListNode::new(inspector.root().create_child("test"), 10),
+            "sample-persistence-tag",
+            create_inspect_persistence_channel().0,
+        );
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("foo").unwrap(),

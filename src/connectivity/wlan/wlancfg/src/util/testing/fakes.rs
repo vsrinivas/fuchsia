@@ -247,3 +247,8 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
 pub fn create_wlan_hasher() -> WlanHasher {
     WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
 }
+
+pub fn create_inspect_persistence_channel() -> (mpsc::Sender<String>, mpsc::Receiver<String>) {
+    const DEFAULT_BUFFER_SIZE: usize = 100; // arbitrary value
+    mpsc::channel(DEFAULT_BUFFER_SIZE)
+}

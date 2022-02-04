@@ -13,12 +13,13 @@ use {
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::component,
+    fuchsia_inspect_contrib::auto_persist,
     fuchsia_syslog as syslog,
     fuchsia_zircon::prelude::*,
     futures::{
         self,
         channel::{mpsc, oneshot},
-        future::try_join,
+        future::{try_join, OptionFuture},
         lock::Mutex,
         prelude::*,
         select, TryFutureExt,
@@ -45,6 +46,9 @@ use {
 };
 
 const REGULATORY_LISTENER_TIMEOUT_SEC: i64 = 30;
+
+// Service name to persist Inspect data across boots
+const PERSISTENCE_SERVICE_PATH: &str = "/svc/fuchsia.diagnostics.persist.DataPersistence-wlan";
 
 async fn serve_fidl(
     ap: AccessPoint,
@@ -218,6 +222,26 @@ async fn run_all_futures() -> Result<(), Error> {
         .context("failed to connect to device monitor")?;
     let (cobalt_api, cobalt_fut) =
         CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
+    let persistence_proxy = fuchsia_component::client::connect_to_protocol_at_path::<
+        fidl_fuchsia_diagnostics_persist::DataPersistenceMarker,
+    >(PERSISTENCE_SERVICE_PATH);
+    let (persistence_req_sender, persistence_req_forwarder_fut) = match persistence_proxy {
+        Ok(persistence_proxy) => {
+            let (s, f) = auto_persist::create_persistence_req_sender(persistence_proxy);
+            (s, OptionFuture::from(Some(f)))
+        }
+        Err(e) => {
+            error!("Failed to connect to persistence service: {}", e);
+            // To simplify the code, we still create mpsc::Sender, but there's nothing to forward
+            // the tag to the Persistence service because we can't connect to it.
+            // Note: because we drop the receiver here, be careful about log spam when sending
+            //       tags through the `sender` below. This is automatically handled by
+            //       `auto_persist::AutoPersist` because it only logs the first time sending
+            //       fail, so just use that wrapper type instead of logging directly.
+            let (sender, _receiver) = mpsc::channel::<String>(1);
+            (sender, OptionFuture::from(None))
+        }
+    };
 
     // Cobalt 1.1
     let cobalt_1dot1_svc = fuchsia_component::client::connect_to_protocol::<
@@ -254,6 +278,7 @@ async fn run_all_futures() -> Result<(), Error> {
         hasher.clone(),
         component::inspector().root().create_child("client_stats"),
         external_inspect_node.create_child("client_stats"),
+        persistence_req_sender.clone(),
     );
     component::inspector().root().record(external_inspect_node);
 
@@ -263,6 +288,7 @@ async fn run_all_futures() -> Result<(), Error> {
         cobalt_api.clone(),
         hasher,
         component::inspector().root().create_child("network_selector"),
+        persistence_req_sender.clone(),
         telemetry_sender.clone(),
     ));
 
@@ -333,6 +359,7 @@ async fn run_all_futures() -> Result<(), Error> {
         metrics_fut,
         regulatory_fut,
         telemetry_fut.map(Ok),
+        persistence_req_forwarder_fut.map(Ok),
     )?;
     Ok(())
 }

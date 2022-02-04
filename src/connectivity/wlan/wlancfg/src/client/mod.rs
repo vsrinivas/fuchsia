@@ -490,7 +490,8 @@ mod tests {
             config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
             telemetry::{TelemetryEvent, TelemetrySender},
             util::testing::{
-                create_mock_cobalt_sender, create_wlan_hasher, fakes::FakeSavedNetworksManager,
+                create_inspect_persistence_channel, create_mock_cobalt_sender, create_wlan_hasher,
+                fakes::FakeSavedNetworksManager,
             },
         },
         async_trait::async_trait,
@@ -733,12 +734,14 @@ mod tests {
         ];
         let saved_networks =
             Arc::new(FakeSavedNetworksManager::new_with_saved_configs(presaved_default_configs));
+        let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            persistence_req_sender,
             TelemetrySender::new(telemetry_sender),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -1288,11 +1291,13 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            persistence_req_sender,
             TelemetrySender::new(telemetry_sender),
         ));
 
@@ -1350,12 +1355,14 @@ mod tests {
     fn save_network_with_disconnected_iface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
+        let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            persistence_req_sender,
             TelemetrySender::new(telemetry_sender),
         ));
 
@@ -1429,12 +1436,14 @@ mod tests {
     fn save_network_overwrite_disconnects() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
+        let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            persistence_req_sender,
             TelemetrySender::new(telemetry_sender),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -1503,12 +1512,14 @@ mod tests {
         let mut saved_networks = FakeSavedNetworksManager::new();
         saved_networks.fail_all_stores = true;
         let saved_networks = Arc::new(saved_networks);
+        let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            persistence_req_sender,
             TelemetrySender::new(telemetry_sender),
         ));
 
@@ -1569,12 +1580,14 @@ mod tests {
     fn test_remove_a_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
+        let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            persistence_req_sender,
             TelemetrySender::new(telemetry_sender),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -1712,12 +1725,14 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks =
             Arc::new(FakeSavedNetworksManager::new_with_saved_configs(saved_configs));
+        let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            persistence_req_sender,
             TelemetrySender::new(telemetry_sender),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -2047,12 +2062,14 @@ mod tests {
     fn no_client_interface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
+        let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            persistence_req_sender,
             TelemetrySender::new(telemetry_sender),
         ));
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManagerNoIfaces {}));

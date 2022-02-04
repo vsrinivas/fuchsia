@@ -19,8 +19,12 @@ use {
         ArrayProperty, InspectType, Inspector, Node as InspectNode, NumericProperty, UintProperty,
     },
     fuchsia_inspect_contrib::{
-        inspect_insert, inspect_log, inspectable::InspectableBool, log::InspectBytes,
-        make_inspect_loggable, nodes::BoundedListNode,
+        auto_persist::{self, AutoPersist},
+        inspect_insert, inspect_log,
+        inspectable::InspectableBool,
+        log::InspectBytes,
+        make_inspect_loggable,
+        nodes::BoundedListNode,
     },
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{
@@ -251,16 +255,18 @@ pub fn serve_telemetry(
     hasher: WlanHasher,
     inspect_node: InspectNode,
     external_inspect_node: InspectNode,
+    persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> (TelemetrySender, impl Future<Output = ()>) {
     let (sender, mut receiver) = mpsc::channel::<TelemetryEvent>(TELEMETRY_EVENT_BUFFER_SIZE);
     let sender = TelemetrySender::new(sender);
     let cloned_sender = sender.clone();
     let fut = async move {
         let mut report_interval_stream = fasync::Interval::new(TELEMETRY_QUERY_INTERVAL);
-        const ONE_HOUR: zx::Duration = zx::Duration::from_hours(1);
-        const_assert_eq!(ONE_HOUR.into_nanos() % TELEMETRY_QUERY_INTERVAL.into_nanos(), 0);
-        const INTERVAL_TICKS_PER_HR: u64 =
-            (ONE_HOUR.into_nanos() / TELEMETRY_QUERY_INTERVAL.into_nanos()) as u64;
+        const ONE_MINUTE: zx::Duration = zx::Duration::from_minutes(1);
+        const_assert_eq!(ONE_MINUTE.into_nanos() % TELEMETRY_QUERY_INTERVAL.into_nanos(), 0);
+        const INTERVAL_TICKS_PER_MINUTE: u64 =
+            (ONE_MINUTE.into_nanos() / TELEMETRY_QUERY_INTERVAL.into_nanos()) as u64;
+        const INTERVAL_TICKS_PER_HR: u64 = INTERVAL_TICKS_PER_MINUTE * 60;
         const INTERVAL_TICKS_PER_DAY: u64 = INTERVAL_TICKS_PER_HR * 24;
         let mut interval_tick = 0u64;
         let mut telemetry = Telemetry::new(
@@ -270,6 +276,7 @@ pub fn serve_telemetry(
             hasher,
             inspect_node,
             external_inspect_node,
+            persistence_req_sender,
         );
         loop {
             select! {
@@ -284,6 +291,10 @@ pub fn serve_telemetry(
                     interval_tick += 1;
                     if interval_tick % INTERVAL_TICKS_PER_DAY == 0 {
                         telemetry.log_daily_cobalt_metrics().await;
+                    }
+
+                    if interval_tick % (5 * INTERVAL_TICKS_PER_MINUTE) == 0 {
+                        telemetry.persist_client_stats_counters().await;
                     }
 
                     // This ensures that `signal_hr_passed` is always called after
@@ -650,9 +661,12 @@ pub struct Telemetry {
     // Inspect properties/nodes that telemetry hangs onto
     inspect_node: InspectNode,
     get_iface_stats_fail_count: UintProperty,
-    connect_events_node: Mutex<BoundedListNode>,
-    disconnect_events_node: Mutex<BoundedListNode>,
+    connect_events_node: Mutex<AutoPersist<BoundedListNode>>,
+    disconnect_events_node: Mutex<AutoPersist<BoundedListNode>>,
     external_inspect_node: ExternalInspectNode,
+
+    // Auto-persistence on various client stats counters
+    auto_persist_client_stats_counters: AutoPersist<()>,
 }
 
 impl Telemetry {
@@ -663,6 +677,7 @@ impl Telemetry {
         hasher: WlanHasher,
         inspect_node: InspectNode,
         external_inspect_node: InspectNode,
+        persistence_req_sender: auto_persist::PersistenceReqSender,
     ) -> Self {
         let stats_logger = StatsLogger::new(cobalt_1dot1_proxy);
         inspect_record_counters(
@@ -693,15 +708,22 @@ impl Telemetry {
             hasher,
             inspect_node,
             get_iface_stats_fail_count,
-            connect_events_node: Mutex::new(BoundedListNode::new(
-                connect_events,
-                INSPECT_CONNECT_EVENTS_LIMIT,
+            connect_events_node: Mutex::new(AutoPersist::new(
+                BoundedListNode::new(connect_events, INSPECT_CONNECT_EVENTS_LIMIT),
+                "wlancfg-connect-events",
+                persistence_req_sender.clone(),
             )),
-            disconnect_events_node: Mutex::new(BoundedListNode::new(
-                disconnect_events,
-                INSPECT_DISCONNECT_EVENTS_LIMIT,
+            disconnect_events_node: Mutex::new(AutoPersist::new(
+                BoundedListNode::new(disconnect_events, INSPECT_DISCONNECT_EVENTS_LIMIT),
+                "wlancfg-disconnect-events",
+                persistence_req_sender.clone(),
             )),
             external_inspect_node,
+            auto_persist_client_stats_counters: AutoPersist::new(
+                (),
+                "wlancfg-client-stats-counters",
+                persistence_req_sender.clone(),
+            ),
         }
     }
 
@@ -1003,7 +1025,7 @@ impl Telemetry {
         latest_ap_state: &BssDescription,
         multiple_bss_candidates: bool,
     ) {
-        inspect_log!(self.connect_events_node.lock(), {
+        inspect_log!(self.connect_events_node.lock().get_mut(), {
             multiple_bss_candidates: multiple_bss_candidates,
             network: {
                 bssid: latest_ap_state.bssid.0.to_mac_string(),
@@ -1018,7 +1040,7 @@ impl Telemetry {
 
     pub fn log_disconnect_event_inspect(&self, info: &DisconnectInfo) {
         let fidl_channel = fidl_common::WlanChannel::from(info.latest_ap_state.channel);
-        inspect_log!(self.disconnect_events_node.lock(), {
+        inspect_log!(self.disconnect_events_node.lock().get_mut(), {
             connected_duration: info.connected_duration.into_nanos(),
             disconnect_source: info.disconnect_source.inspect_string(),
             network: {
@@ -1076,6 +1098,10 @@ impl Telemetry {
 
     pub async fn signal_hr_passed(&mut self) {
         self.stats_logger.handle_hr_passed().await;
+    }
+
+    pub async fn persist_client_stats_counters(&mut self) {
+        let _auto_persist_guard = self.auto_persist_client_stats_counters.get_mut();
     }
 }
 
@@ -2449,7 +2475,7 @@ impl ConnectAttemptsCounter {
 mod tests {
     use {
         super::*,
-        crate::util::testing::create_wlan_hasher,
+        crate::util::testing::{create_inspect_persistence_channel, create_wlan_hasher},
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_metrics::{MetricEvent, MetricEventLoggerRequest, MetricEventPayload},
         fidl_fuchsia_wlan_device_service::{
@@ -5260,11 +5286,26 @@ mod tests {
         assert_eq!(metrics[0].payload, MetricEventPayload::Count(1));
     }
 
+    #[fuchsia::test]
+    fn test_data_persistence_called_every_five_minutes() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.advance_by(5.minutes(), test_fut.as_mut());
+
+        let tags = test_helper.get_persistence_reqs();
+        assert!(tags.contains(&"wlancfg-client-stats-counters".to_string()), "tags: {:?}", tags);
+
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.advance_by(5.minutes(), test_fut.as_mut());
+        let tags = test_helper.get_persistence_reqs();
+        assert!(tags.contains(&"wlancfg-client-stats-counters".to_string()), "tags: {:?}", tags);
+    }
+
     struct TestHelper {
         telemetry_sender: TelemetrySender,
         inspector: Inspector,
         dev_svc_stream: fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
         cobalt_1dot1_stream: fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
+        persistence_stream: mpsc::Receiver<String>,
         iface_counter_stats_resp: Option<Box<dyn Fn() -> GetIfaceCounterStatsResponse>>,
         /// As requests to Cobalt are responded to via `self.drain_cobalt_events()`,
         /// their payloads are drained to this HashMap
@@ -5364,6 +5405,16 @@ mod tests {
         // ignore previous values.
         fn clear_cobalt_events(&mut self) {
             self.cobalt_events = Vec::new();
+        }
+
+        fn get_persistence_reqs(&mut self) -> Vec<String> {
+            let mut persistence_reqs = vec![];
+            loop {
+                match self.persistence_stream.try_next() {
+                    Ok(Some(tag)) => persistence_reqs.push(tag),
+                    _ => return persistence_reqs,
+                }
+            }
         }
     }
 
@@ -5560,12 +5611,14 @@ mod tests {
         let inspector = Inspector::new();
         let inspect_node = inspector.root().create_child("stats");
         let external_inspect_node = inspector.root().create_child("external");
+        let (persistence_req_sender, persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, test_fut) = serve_telemetry(
             dev_svc_proxy,
             cobalt_1dot1_proxy,
             create_wlan_hasher(),
             inspect_node,
             external_inspect_node.create_child("stats"),
+            persistence_req_sender,
         );
         inspector.root().record(external_inspect_node);
         let mut test_fut = Box::pin(test_fut);
@@ -5577,6 +5630,7 @@ mod tests {
             inspector,
             dev_svc_stream,
             cobalt_1dot1_stream,
+            persistence_stream,
             iface_counter_stats_resp: None,
             cobalt_events: vec![],
             exec,
