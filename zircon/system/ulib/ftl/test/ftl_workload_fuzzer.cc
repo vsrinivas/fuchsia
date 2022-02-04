@@ -6,6 +6,8 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include <algorithm>
+
 #include <fuzzer/FuzzedDataProvider.h>
 
 #include "src/devices/block/drivers/ftl/tests/ftl-shell.h"
@@ -15,6 +17,7 @@
 constexpr uint32_t kPageSize = 4096;
 constexpr uint32_t kPagesPerBlock = 64;
 constexpr uint32_t kSpareSize = 16;
+constexpr uint32_t kMaxConsecutivePageWrites = 20;
 
 // 50 blocks means 3200 pages, which is enough to have several map pages.
 constexpr ftl::VolumeOptions kDefaultOptions = {.num_blocks = 50,
@@ -58,6 +61,18 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider provider(data, size);
 
   // Set up the test fixture.
+  TestOptions test_options = kBoringTestOptions;
+  if (provider.ConsumeBool()) {
+    test_options.ecc_error_interval =
+        provider.ConsumeIntegralInRange<int>(kDefaultOptions.max_bad_blocks, 2000);
+  }
+  if (provider.ConsumeBool()) {
+    test_options.bad_block_interval =
+        provider.ConsumeIntegralInRange<int>(kPagesPerBlock * 2, 2000);
+    test_options.bad_block_burst =
+        provider.ConsumeIntegralInRange<int>(0, kDefaultOptions.max_bad_blocks);
+  }
+
   auto driver_owned = std::make_unique<NdmRamDriver>(kDefaultOptions, kBoringTestOptions);
   driver_owned->Init();
   auto* driver = driver_owned.get();
@@ -67,8 +82,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   // Fill the device up with zeroes.
   ftl::VolumeImpl* vol = reinterpret_cast<ftl::VolumeImpl*>(ftl_shell.volume());
-  uint8_t buff[kPageSize];
-  memset(buff, 0, kPageSize);
+  uint8_t buff[kPageSize * kMaxConsecutivePageWrites] = {};
 
   zx_status_t res;
   for (uint32_t i = 0; i < ftl_shell.num_pages() - kPagesPerBlock; ++i) {
@@ -79,7 +93,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   ZX_ASSERT_MSG(res == ZX_OK, "Failed to flush fixture: %d\n", res);
 
   // Write out 01010101 patterns during the run so that we know what pages were modified.
-  memset(buff, 0x55, kPageSize);
+  std::fill(std::begin(buff), std::end(buff), 0x55);
 
   while (provider.remaining_bytes() != 0) {
     // Set up for some later failure.
@@ -89,13 +103,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     if (const char* result = vol->ReAttach(); result == nullptr) {
       // Start writing places. Stop at failure. Presumably due to power cut.
       int32_t next_flush = 0;
-      auto num_pages = provider.ConsumeIntegralInRange<uint32_t>(0, ftl_shell.num_pages());
-      while (vol->Write(num_pages, 1, buff) == ZX_OK) {
+      uint32_t page_num = provider.ConsumeIntegralInRange<uint32_t>(0, ftl_shell.num_pages() - 1);
+      uint32_t end_page = std::min(
+          ftl_shell.num_pages(),
+          page_num + provider.ConsumeIntegralInRange<uint32_t>(1, kMaxConsecutivePageWrites));
+      while (vol->Write(page_num, static_cast<int>(end_page - page_num), buff) == ZX_OK) {
         if (next_flush-- <= 0) {
           if (vol->Flush() != ZX_OK) {
             break;
           }
-          next_flush = provider.ConsumeIntegralInRange(0, 15);
+          next_flush = provider.ConsumeIntegralInRange(0, 200);
         }
       }
     }
