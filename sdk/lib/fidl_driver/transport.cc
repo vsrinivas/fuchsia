@@ -9,8 +9,11 @@
 // clang-format on
 
 #include <lib/fdf/cpp/channel_read.h>
+#include <lib/fdf/dispatcher.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
+#include <lib/fidl/llcpp/result.h>
+#include <zircon/errors.h>
 
 #include <optional>
 
@@ -142,13 +145,18 @@ const TransportVTable DriverTransport::VTable = {
 };
 
 zx_status_t DriverWaiter::Begin() {
-  state_->channel_read.emplace(
-      state_->handle, 0 /* options */,
-      // TODO(bprosnitz) Pass in a raw pointer after DriverWaiter::Cancel is implemented.
-      [state = state_](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                       fdf_status_t status) {
+  state_.channel_read.emplace(
+      state_.handle, 0 /* options */,
+      [&state = state_](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
+                        fdf_status_t status) {
         if (status != ZX_OK) {
-          return state->failure_handler(fidl::UnbindInfo::DispatcherError(status));
+          fidl::UnbindInfo unbind_info;
+          if (status == ZX_ERR_PEER_CLOSED) {
+            unbind_info = fidl::UnbindInfo::PeerClosed(status);
+          } else {
+            unbind_info = fidl::UnbindInfo::DispatcherError(status);
+          }
+          return state.failure_handler(unbind_info);
         }
 
         fdf_arena_t* arena;
@@ -157,19 +165,34 @@ zx_status_t DriverWaiter::Begin() {
         fidl_handle_t* handles;
         uint32_t num_handles;
         status =
-            fdf_channel_read(state->handle, 0, &arena, &data, &num_bytes, &handles, &num_handles);
+            fdf_channel_read(state.handle, 0, &arena, &data, &num_bytes, &handles, &num_handles);
         if (status != ZX_OK) {
-          return state->failure_handler(fidl::UnbindInfo(fidl::Result::TransportError(status)));
+          return state.failure_handler(fidl::UnbindInfo(fidl::Result::TransportError(status)));
         }
 
         internal::IncomingTransportContext incoming_transport_context =
             internal::IncomingTransportContext::Create<fidl::internal::DriverTransport>(arena);
         fidl::IncomingMessage msg = fidl::IncomingMessage::Create<fidl::internal::DriverTransport>(
             static_cast<uint8_t*>(data), num_bytes, handles, nullptr, num_handles);
-        state->channel_read = std::nullopt;
-        return state->success_handler(msg, std::move(incoming_transport_context));
+        state.channel_read = std::nullopt;
+        return state.success_handler(msg, std::move(incoming_transport_context));
       });
-  return state_->channel_read->Begin(fdf_dispatcher_from_async_dispatcher(state_->dispatcher));
+  return state_.channel_read->Begin(fdf_dispatcher_from_async_dispatcher(state_.dispatcher));
+}
+
+zx_status_t DriverWaiter::Cancel() {
+  fdf_dispatcher_t* dispatcher = fdf_dispatcher_from_async_dispatcher(state_.dispatcher);
+  uint32_t options = fdf_dispatcher_get_options(dispatcher);
+  state_.channel_read->Cancel();
+  // When the dispatcher is synchronized, our |ChannelRead| handler won't be
+  // called. When the dispatcher is unsynchronized, our |ChannelRead| handler
+  // will always be called (sometimes with a ZX_OK status and othertimes with a
+  // ZX_ERR_CANCELED status). For the purpose of determining which code should
+  // finish teardown of the |AsyncBinding|, it is as if the cancellation failed.
+  if (options & FDF_DISPATCHER_OPTION_UNSYNCHRONIZED) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  return ZX_OK;
 }
 
 const CodingConfig DriverTransport::EncodingConfiguration = {};

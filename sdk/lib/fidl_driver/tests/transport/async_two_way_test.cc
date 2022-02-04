@@ -12,6 +12,10 @@
 
 #include <zxtest/zxtest.h>
 
+#include "sdk/lib/fidl_driver/tests/transport/server_on_unbound_helper.h"
+
+namespace {
+
 constexpr uint32_t kRequestPayload = 1234;
 constexpr uint32_t kResponsePayload = 5678;
 
@@ -31,7 +35,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
   fdf_arena_t* fdf_response_arena;
 };
 
-// TODO(fxbug.dev/87387) Enable this test once fdf::ChannelRead supports Cancel().
+// TODO(fxbug.dev/92488): Investigate use-after-free in |driver_runtime::Dispatcher|.
 TEST(DriverTransport, DISABLED_TwoWayAsync) {
   void* driver = reinterpret_cast<void*>(uintptr_t(1));
   fdf_internal_push_driver(driver);
@@ -47,7 +51,8 @@ TEST(DriverTransport, DISABLED_TwoWayAsync) {
   fdf::ClientEnd<test_transport::TwoWayTest> client_end(std::move(channels->end1));
 
   auto server = std::make_shared<TestServer>();
-  fdf::BindServer(dispatcher->get(), std::move(server_end), server);
+  fdf::BindServer(dispatcher->get(), std::move(server_end), server,
+                  fidl_driver_testing::FailTestOnServerError<::test_transport::TwoWayTest>());
 
   fdf::WireSharedClient<test_transport::TwoWayTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
@@ -69,3 +74,5 @@ TEST(DriverTransport, DISABLED_TwoWayAsync) {
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }
+
+}  // namespace

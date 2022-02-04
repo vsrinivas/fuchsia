@@ -69,20 +69,16 @@ class DriverWaiter : public TransportWaiter {
  public:
   DriverWaiter(fidl_handle_t handle, async_dispatcher_t* dispatcher,
                TransportWaitSuccessHandler success_handler,
-               TransportWaitFailureHandler failure_handler)
-      : state_(std::make_shared<State>()) {
-    state_->handle = handle;
-    state_->dispatcher = dispatcher;
-    state_->success_handler = std::move(success_handler);
-    state_->failure_handler = std::move(failure_handler);
+               TransportWaitFailureHandler failure_handler) {
+    state_.handle = handle;
+    state_.dispatcher = dispatcher;
+    state_.success_handler = std::move(success_handler);
+    state_.failure_handler = std::move(failure_handler);
   }
 
   zx_status_t Begin() override;
 
-  zx_status_t Cancel() override {
-    state_->channel_read->Cancel();
-    return ZX_OK;
-  }
+  zx_status_t Cancel() override;
 
  private:
   struct State {
@@ -92,7 +88,7 @@ class DriverWaiter : public TransportWaiter {
     TransportWaitFailureHandler failure_handler;
     std::optional<fdf::ChannelRead> channel_read;
   };
-  std::shared_ptr<State> state_;
+  State state_;
 };
 
 }  // namespace internal
