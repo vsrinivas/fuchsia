@@ -44,7 +44,8 @@ class KernelStorage {
   // Return the position in the input ZBI where KERNEL_STORAGE was found.
   Zbi::iterator item() const { return item_; }
 
-  // Return the unpacked buffer owned by this object.
+  // Return the unpacked ZBI_BOOTFS_PAGE_SIZE-aligned buffer owned by this
+  // object.
   auto data() const { return storage_.data(); }
 
   // Helper to decode data() as a BOOTFS image.

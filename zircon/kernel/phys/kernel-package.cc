@@ -79,7 +79,8 @@ void KernelStorage::Init(Zbi zbi) {
 
   fbl::AllocChecker ac;
   const uint32_t storage_size = zbitl::UncompressedLength(*item_->header);
-  storage_ = Allocation::New(ac, memalloc::Type::kKernelStorage, storage_size);
+  storage_ =
+      Allocation::New(ac, memalloc::Type::kKernelStorage, storage_size, ZBI_BOOTFS_PAGE_SIZE);
   if (!ac.check()) {
     printf("%s: Cannot allocate %#x bytes for decompressed STORAGE_KERNEL item!\n",
            Symbolize::kProgramName_, storage_size);

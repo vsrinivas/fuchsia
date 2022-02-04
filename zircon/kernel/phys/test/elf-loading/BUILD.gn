@@ -1,0 +1,71 @@
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/dist/resource.gni")
+import("//build/testing/zbi_test.gni")
+import("//zircon/kernel/kernel_package.gni")
+import("//zircon/kernel/phys/zbi_executable.gni")
+
+zbi_executable("zbi-basic-elf-loading-test.executable") {
+  testonly = true
+  sources = [ "basic-test.cc" ]
+
+  deps = [
+    "..:zbi-test-main",
+    "//src/lib/elfldltl",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/libc",
+    "//zircon/kernel/phys:allocation",
+    "//zircon/kernel/phys:kernel-package",
+    "//zircon/kernel/phys:zbi-memory",
+    "//zircon/kernel/phys:zbitl-allocation",
+    "//zircon/kernel/phys/lib/memalloc",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zbitl",
+  ]
+
+  # TODO(fxbug.dev/91448): see related specification on :get-int.exe.
+  exclude_toolchain_tags = [ "gcc" ]
+}
+
+# TODO(fxbug.dev/91402): This would be more appropriate as a loadable_module().
+executable("get-int.exe") {
+  testonly = true
+  output_name = "get-int"
+  sources = [ "get-int.cc" ]
+  ldflags = [ "-Wl,-e,GetInt" ]
+
+  # TODO(fxbug.dev/91448): gcc links get-int with overlapping
+  # `p_align`-aligned file offset ranges, which invalidates an
+  # assumption of the test.
+  exclude_toolchain_tags = [ "gcc" ]
+}
+
+resource("get-int.resource") {
+  testonly = true
+  sources = [ "$root_out_dir/get-int" ]
+  outputs = [ "get-int" ]
+  deps = [ ":get-int.exe" ]
+}
+
+kernel_package("loadables") {
+  testonly = true
+  deps = [ ":get-int.resource" ]
+}
+
+zbi_test("zbi-basic-elf-loading-test") {
+  args = []
+  deps = [
+    ":loadables",
+    ":zbi-basic-elf-loading-test.executable",
+  ]
+}
+
+group("elf-loading") {
+  testonly = true
+
+  deps = [ ":zbi-basic-elf-loading-test" ]
+}

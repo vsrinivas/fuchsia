@@ -398,6 +398,7 @@ if (current_toolchain != default_toolchain) {
       ":zbi-decompress-test",
       ":zbi-memory-test",
       "code-patching",
+      "elf-loading",
     ]
     if (current_cpu == "x64") {
       deps += [ ":qemu-memory-test" ]
