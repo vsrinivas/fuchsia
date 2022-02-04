@@ -199,7 +199,7 @@ class VirtioMagmaTest : public TestWithDeviceV2 {
                           Protocol{fuchsia::tracing::provider::Registry::Name_},
                           Protocol{fuchsia::sysmem::Allocator::Name_},
                           Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                          Directory{kDevGpuDirectory, kDevGpuDirectory, fuchsia::io2::R_STAR_DIR},
+                          Directory{.name = kDevGpuDirectory, .rights = fuchsia::io2::R_STAR_DIR},
                       },
                   .source = ParentRef(),
                   .targets = {ChildRef{kComponentName}}})

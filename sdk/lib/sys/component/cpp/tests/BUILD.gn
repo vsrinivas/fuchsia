@@ -11,6 +11,22 @@ group("tests") {
   deps = [ ":component_cpp_tests" ]
 }
 
+source_set("test_utils") {
+  testonly = true
+
+  sources = [
+    "utils.cc",
+    "utils.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/fidl/fuchsia.component.test",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
+}
+
 executable("echo_server_bin") {
   testonly = true
 
@@ -61,13 +77,16 @@ executable("realm_builder_test_bin") {
   ]
 }
 
-executable("local_component_runner_test_bin") {
+executable("internal_test_bin") {
   testonly = true
 
-  sources = [ "local_component_runner_test.cc" ]
+  sources = [ "internal_test.cc" ]
 
   deps = [
+    ":test_utils",
     "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/fidl/fuchsia.component.test",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
@@ -104,14 +123,14 @@ fuchsia_component("realm_builder_test") {
   manifest = "meta/realm_builder_test.cml"
 }
 
-fuchsia_unittest_component("local_component_runner_test") {
-  deps = [ ":local_component_runner_test_bin" ]
+fuchsia_unittest_component("internal_test") {
+  deps = [ ":internal_test_bin" ]
 }
 
 fuchsia_test_package("component_cpp_tests") {
   test_components = [
     ":realm_builder_test",
-    ":local_component_runner_test",
+    ":internal_test",
   ]
   deps = [
     ":echo_server",

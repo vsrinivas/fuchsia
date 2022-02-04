@@ -7,12 +7,14 @@
 
 #include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
+#include <fuchsia/io2/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/namespace.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -21,11 +23,16 @@
 
 namespace component_testing {
 
+using DependencyType = fuchsia::component::decl::DependencyType;
+
 // A protocol capability. The name refers to the name of the FIDL protocol,
 // e.g. `fuchsia.logger.LogSink`.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/protocol.
 struct Protocol final {
   std::string_view name;
+  cpp17::optional<std::string_view> as = cpp17::nullopt;
+  cpp17::optional<DependencyType> type = cpp17::nullopt;
+  cpp17::optional<std::string_view> path = cpp17::nullopt;
 };
 
 // A service capability. The name refers to the name of the FIDL service,
@@ -33,14 +40,19 @@ struct Protocol final {
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/service.
 struct Service final {
   std::string_view name;
+  cpp17::optional<std::string_view> as = cpp17::nullopt;
+  cpp17::optional<std::string_view> path = cpp17::nullopt;
 };
 
 // A directory capability.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/directory.
 struct Directory final {
   std::string_view name;
-  std::string_view path;
-  fuchsia::io2::Operations rights;
+  cpp17::optional<std::string_view> as = cpp17::nullopt;
+  cpp17::optional<DependencyType> type = cpp17::nullopt;
+  cpp17::optional<std::string_view> subdir = cpp17::nullopt;
+  cpp17::optional<fuchsia::io2::Operations> rights = cpp17::nullopt;
+  cpp17::optional<std::string_view> path = cpp17::nullopt;
 };
 
 // A capability to be routed from one component to another.

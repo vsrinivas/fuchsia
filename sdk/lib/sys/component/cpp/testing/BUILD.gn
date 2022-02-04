@@ -24,6 +24,8 @@ sdk_source_set("cpp_library") {
   include_base = "//sdk"
 
   sources = [
+    "internal/convert.cc",
+    "internal/convert.h",
     "internal/errors.cc",
     "internal/errors.h",
     "internal/local_component_runner.cc",
@@ -43,6 +45,7 @@ sdk_source_set("cpp_library") {
     "internal/local_component_runner.h",
     "internal/mock_runner.h",
     "internal/realm.h",
+    "internal/convert.h",
   ]
 
   public_deps = [

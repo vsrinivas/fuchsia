@@ -34,9 +34,10 @@ void Setup(component_testing::RealmBuilder& realm_builder) {
   realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.driver.test.Realm"}},
                                .source = {ChildRef{"driver_test_realm"}},
                                .targets = {ParentRef()}});
-  realm_builder.AddRoute(Route{.capabilities = {Directory{"dev", "dev", fuchsia::io2::RW_STAR_DIR}},
-                               .source = {ChildRef{"driver_test_realm"}},
-                               .targets = {ParentRef()}});
+  realm_builder.AddRoute(
+      Route{.capabilities = {Directory{.name = "dev", .rights = fuchsia::io2::RW_STAR_DIR}},
+            .source = {ChildRef{"driver_test_realm"}},
+            .targets = {ParentRef()}});
 }
 
 }  // namespace driver_test_realm

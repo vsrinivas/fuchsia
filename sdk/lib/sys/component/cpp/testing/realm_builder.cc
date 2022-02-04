@@ -13,6 +13,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/sys/component/cpp/testing/internal/convert.h>
 #include <lib/sys/component/cpp/testing/internal/errors.h>
 #include <lib/sys/component/cpp/testing/internal/local_component_runner.h>
 #include <lib/sys/component/cpp/testing/internal/realm.h>
@@ -37,72 +38,6 @@ constexpr char kCollectionName[] = "realm_builder";
 constexpr char kFrameworkIntermediaryChildName[] = "realm_builder_server";
 constexpr char kChildPathSeparator[] = "/";
 
-// Basic implementation of std::get_if (since C++17).
-// This function is namespaced with `cpp17` prefix because
-// the name `get_if` clashes with std:: namespace usage *when* this
-// library is compiled in C++17+.
-// TODO(yaneury): Implement this in stdcompat library.
-template <class T, class... Ts>
-constexpr std::add_pointer_t<T> cpp17_get_if(cpp17::variant<Ts...>* pv) noexcept {
-  return pv && cpp17::holds_alternative<T>(*pv) ? std::addressof(cpp17::get<T, Ts...>(*pv))
-                                                : nullptr;
-}
-
-fuchsia::component::test::ChildOptions ConvertToFidl(const ChildOptions& options) {
-  fuchsia::component::test::ChildOptions result;
-  result.set_startup(options.startup_mode);
-  if (!options.environment.empty()) {
-    result.set_environment(std::string(options.environment));
-  }
-
-  return result;
-}
-
-fuchsia::component::decl::Ref ConvertToFidl(Ref ref) {
-  if (auto child_ref = cpp17_get_if<ChildRef>(&ref)) {
-    fuchsia::component::decl::ChildRef result;
-    result.name = std::string(child_ref->name);
-    return fuchsia::component::decl::Ref::WithChild(std::move(result));
-  }
-  if (auto _ = cpp17_get_if<ParentRef>(&ref)) {
-    return fuchsia::component::decl::Ref::WithParent(fuchsia::component::decl::ParentRef());
-  }
-
-  ZX_PANIC("ConvertToFidl(Ref) reached unreachable block!");
-}
-
-fuchsia::component::test::Capability2 ConvertToFidl(Capability capability) {
-  if (auto protocol = cpp17_get_if<Protocol>(&capability)) {
-    fuchsia::component::test::Protocol fidl_capability;
-    fidl_capability.set_name(std::string(protocol->name));
-    return fuchsia::component::test::Capability2::WithProtocol(std::move(fidl_capability));
-  }
-  if (auto service = cpp17_get_if<Service>(&capability)) {
-    fuchsia::component::test::Service fidl_capability;
-    fidl_capability.set_name(std::string(service->name));
-    return fuchsia::component::test::Capability2::WithService(std::move(fidl_capability));
-  }
-  if (auto directory = cpp17_get_if<Directory>(&capability)) {
-    fuchsia::component::test::Directory fidl_capability;
-    fidl_capability.set_name(std::string(directory->name));
-    fidl_capability.set_as(std::string(directory->path));
-    fidl_capability.set_rights(directory->rights);
-    return fuchsia::component::test::Capability2::WithDirectory(std::move(fidl_capability));
-  }
-
-  ZX_PANIC("ConvertToFidl(Capability) reached unreachable block!");
-}
-
-template <class Input, class Output>
-std::vector<Output> ConvertToFidlVec(std::vector<Input> inputs) {
-  std::vector<Output> result;
-  result.reserve(inputs.size());
-  for (const Input& input : inputs) {
-    result.push_back(ConvertToFidl(input));
-  }
-  return result;
-}
-
 fidl::InterfaceHandle<fuchsia::io::Directory> CreatePkgDirHandle() {
   int fd;
   ZX_COMPONENT_ASSERT_STATUS_OK(
@@ -123,8 +58,8 @@ Realm& Realm::AddChild(const std::string& child_name, const std::string& url,
                        ChildOptions options) {
   fuchsia::component::test::Realm_AddChild_Result result;
   ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
-      "Realm/AddChild", realm_proxy_->AddChild(child_name, url, ConvertToFidl(options), &result),
-      result);
+      "Realm/AddChild",
+      realm_proxy_->AddChild(child_name, url, internal::ConvertToFidl(options), &result), result);
   return *this;
 }
 Realm& Realm::AddLegacyChild(const std::string& child_name, const std::string& url,
@@ -132,7 +67,8 @@ Realm& Realm::AddLegacyChild(const std::string& child_name, const std::string& u
   fuchsia::component::test::Realm_AddLegacyChild_Result result;
   ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/AddLegacyChild",
-      realm_proxy_->AddLegacyChild(child_name, url, ConvertToFidl(options), &result), result);
+      realm_proxy_->AddLegacyChild(child_name, url, internal::ConvertToFidl(options), &result),
+      result);
   return *this;
 }
 Realm& Realm::AddLocalChild(const std::string& child_name, LocalComponent* local_impl,
@@ -142,7 +78,7 @@ Realm& Realm::AddLocalChild(const std::string& child_name, LocalComponent* local
   fuchsia::component::test::Realm_AddLocalChild_Result result;
   ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/AddLocalChild",
-      realm_proxy_->AddLocalChild(child_name, ConvertToFidl(options), &result), result);
+      realm_proxy_->AddLocalChild(child_name, internal::ConvertToFidl(options), &result), result);
   return *this;
 }
 
@@ -155,17 +91,17 @@ Realm Realm::AddChildRealm(const std::string& child_name, ChildOptions options) 
   fuchsia::component::test::Realm_AddChildRealm_Result result;
   ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
       "Realm/AddChildRealm",
-      realm_proxy_->AddChildRealm(child_name, ConvertToFidl(options),
+      realm_proxy_->AddChildRealm(child_name, internal::ConvertToFidl(options),
                                   sub_realm.realm_proxy_.NewRequest(), &result),
       result);
   return sub_realm;
 }
 
 Realm& Realm::AddRoute(Route route) {
-  auto capabilities =
-      ConvertToFidlVec<Capability, fuchsia::component::test::Capability2>(route.capabilities);
-  auto source = ConvertToFidl(route.source);
-  auto target = ConvertToFidlVec<Ref, fuchsia::component::decl::Ref>(route.targets);
+  auto capabilities = internal::ConvertToFidlVec<Capability, fuchsia::component::test::Capability2>(
+      route.capabilities);
+  auto source = internal::ConvertToFidl(route.source);
+  auto target = internal::ConvertToFidlVec<Ref, fuchsia::component::decl::Ref>(route.targets);
 
   fuchsia::component::test::Realm_AddRoute_Result result;
   ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
