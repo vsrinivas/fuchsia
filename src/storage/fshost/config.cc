@@ -47,6 +47,10 @@ const char Config::kFactory[] = "factory";
 // Automatically formats minfs if it is found to be corrupted.
 const char Config::kFormatMinfsOnCorruption[] = "format-minfs-on-corruption";
 
+// If enabled, users can change the data partition from the default minfs filesystem to either fxfs
+// or f2fs by writing "fxfs" or "f2fs" to /data/fs_switch and then rebooting.
+const char Config::kFsSwitch[] = "fs-switch";
+
 // Enables a single FVM device.
 const char Config::kFvm[] = "fvm";
 
@@ -86,9 +90,6 @@ const char Config::kWaitForData[] = "wait-for-data";
 
 // Use the given binary as the filesystem for the data partition.
 const char Config::kDataFilesystemBinaryPath[] = "data-filesystem-binary-path";
-
-// If set, the data filesystem needs crypt support.
-const char Config::kDataFilesystemUsesCrypt[] = "data-filesystem-uses-crypt";
 
 // Allow legacy names for the data partition.
 const char Config::kAllowLegacyDataPartitionNames[] = "allow-legacy-data-partition-names";

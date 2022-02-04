@@ -45,10 +45,12 @@
 #include <gpt/gpt.h>
 
 #include "block-watcher.h"
+#include "constants.h"
 #include "encrypted-volume.h"
 #include "extract-metadata.h"
 #include "pkgfs-launcher.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
+#include "src/lib/files/file.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/uuid/uuid.h"
@@ -185,7 +187,7 @@ void Unmount(const fidl::ClientEnd<fuchsia_io::Directory>& export_root) {
 
 // Tries to mount Minfs and reads all data found on the minfs partition.  Errors are ignored.
 Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
-  fbl::Vector<const char*> argv = {"/pkg/bin/minfs", "mount", nullptr};
+  fbl::Vector<const char*> argv = {kMinfsPath, "mount", nullptr};
   auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (export_root_or.is_error())
     return {};
@@ -726,6 +728,8 @@ zx_status_t BlockDevice::MountFilesystem() {
       mounter_->TryMountPkgfs();
       return ZX_OK;
     }
+    case fs_management::kDiskFormatFxfs:
+    case fs_management::kDiskFormatF2fs:
     case fs_management::kDiskFormatMinfs: {
       fs_management::MountOptions options;
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
@@ -744,6 +748,64 @@ zx_status_t BlockDevice::MountFilesystem() {
   }
 }
 
+zx_status_t BlockDevice::MaybeChangeDataPartitionFormat() const {
+  auto endpoint_or = GetDeviceEndPoint();
+  if (endpoint_or.is_error()) {
+    FX_LOGS(ERROR) << "Failed to get device endpoint: " << endpoint_or.error_value();
+    return ZX_ERR_BAD_STATE;
+  }
+  fbl::Vector<const char*> argv = {kMinfsPath, "mount", nullptr};
+  auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (export_root_or.is_error()) {
+    FX_LOGS(ERROR) << "Failed to create endpoints.";
+    return ZX_ERR_BAD_STATE;
+  }
+  if (zx_status_t status =
+          RunBinary(argv, endpoint_or->TakeChannel(), std::move(export_root_or->server));
+      status != ZX_OK) {
+    // Device might not be minfs. That's ok.
+    return ZX_ERR_BAD_STATE;
+  }
+
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> root_dir_or =
+      fs_management::FsRootHandle(export_root_or->client);
+  if (root_dir_or.is_error()) {
+    FX_LOGS(ERROR) << "Failed to get root handle: " << root_dir_or.error_value();
+    return ZX_ERR_BAD_STATE;
+  }
+
+  fbl::unique_fd fd;
+  if (zx_status_t status =
+          fdio_fd_create(root_dir_or->TakeChannel().release(), fd.reset_and_get_address());
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "fdio_fd_create failed";
+    return ZX_ERR_BAD_STATE;
+  }
+
+  std::string binary_path;
+  std::string fmt_str;
+  if (files::ReadFileToStringAt(fd.get(), "fs_switch", &fmt_str)) {
+    if (fmt_str.back() == '\n') {
+      fmt_str.pop_back();
+    }
+    if (fmt_str == "fxfs") {
+      binary_path = kFxfsPath;
+    } else if (fmt_str == "f2fs") {
+      binary_path = kF2fsPath;
+    } else if (fmt_str == "minfs") {
+      binary_path = kMinfsPath;
+    }
+  }
+
+  if (fs_management::Shutdown(export_root_or->client).is_error()) {
+    return ZX_ERR_BAD_STATE;
+  }
+  if (!binary_path.empty()) {
+    return FormatCustomFilesystem(binary_path);
+  }
+  return ZX_ERR_BAD_STATE;
+}
+
 // Attempt to mount the device at a known location.
 //
 // Returns ZX_ERR_ALREADY_BOUND if the device could be mounted, but something
@@ -757,7 +819,11 @@ zx_status_t BlockDevice::MountData(fs_management::MountOptions* options, zx::cha
   if (gpt_is_sys_guid(guid, GPT_GUID_LEN)) {
     return ZX_ERR_NOT_SUPPORTED;
   } else if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
-    return mounter_->MountData(std::move(block_device), *options);
+    if (device_config_->is_set(Config::kFsSwitch) &&
+        content_format() == fs_management::kDiskFormatMinfs) {
+      MaybeChangeDataPartitionFormat();
+    }
+    return mounter_->MountData(std::move(block_device), *options, content_format());
   } else if (gpt_is_install_guid(guid, GPT_GUID_LEN)) {
     options->readonly = true;
     return mounter_->MountInstall(std::move(block_device), *options);
@@ -1066,6 +1132,8 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   }
 
   Unmount(export_root_or->client);
+
+  content_format_ = fs_management::kDiskFormatUnknown;
 
   return ZX_OK;
 }

@@ -33,9 +33,17 @@ declare_args() {
   # migrated in-place to the specified format when fshost mounts it.
   data_filesystem_format = "minfs"
 
+  # Whether to bundle f2fs with the build.  This doesn't enable f2fs in any way, it simply includes
+  # the binary in the build with fshost.
+  bundle_f2fs = false
+
   # Whether to bundle fxfs with the build.  This doesn't enable fxfs in any way, it simply includes
-  # the binary in the build with fshost.  Use data_filesystem_format to enable fxfs.
+  # the binary in the build with fshost.
   bundle_fxfs = false
+
+  # If enabled, users can change the data partition from the default minfs filesystem to either fxfs
+  # or f2fs by writing "fxfs" or "f2fs" to /data/fs_switch and then rebooting.
+  fs_switch = false
 
   # Set to true to enable legacy data partition names.
   allow_legacy_data_partition_names = true
@@ -148,17 +156,13 @@ template("generated_fshost_config") {
     if (!format_minfs_on_corruption) {
       contents += [ "-format-minfs-on-corruption" ]
     }
+    if (invoker.fs_switch) {
+      contents += [ "fs-switch" ]
+    }
     if (invoker.data_filesystem_format == "fxfs") {
-      contents += [
-        "data-filesystem-binary-path=/pkg/bin/fxfs",
-        "data-filesystem-no-directory-admin",
-        "data-filesystem-uses-crypt",
-      ]
+      contents += [ "data-filesystem-binary-path=/pkg/bin/fxfs" ]
     } else if (invoker.data_filesystem_format == "f2fs") {
-      contents += [
-        "data-filesystem-binary-path=/pkg/bin/f2fs",
-        "data-filesystem-no-directory-admin",
-      ]
+      contents += [ "data-filesystem-binary-path=/pkg/bin/f2fs" ]
     } else if (invoker.data_filesystem_format != "minfs") {
       assert(false,
              "Invalid data_filesystem_format: '" +

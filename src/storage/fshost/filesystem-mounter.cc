@@ -19,6 +19,7 @@
 
 #include <fbl/ref_ptr.h>
 
+#include "constants.h"
 #include "fdio.h"
 #include "fshost-fs-provider.h"
 #include "pkgfs-launcher.h"
@@ -142,22 +143,47 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
 }
 
 zx_status_t FilesystemMounter::MountData(zx::channel block_device,
-                                         const fs_management::MountOptions& options) {
+                                         const fs_management::MountOptions& options,
+                                         fs_management::DiskFormat format) {
   if (data_mounted_) {
     return ZX_ERR_ALREADY_BOUND;
   }
 
+  fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client;
   std::string binary_path = config_.ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
-  if (binary_path.empty())
-    binary_path = "/pkg/bin/minfs";
+  // Config overrides passed in format.
+  if (binary_path.empty()) {
+    switch (format) {
+      case fs_management::kDiskFormatFxfs: {
+        binary_path = kFxfsPath;
+        break;
+      }
+      case fs_management::kDiskFormatMinfs: {
+        binary_path = kMinfsPath;
+        break;
+      }
+      case fs_management::kDiskFormatF2fs: {
+        binary_path = kF2fsPath;
+        break;
+      }
+      default: {
+        FX_LOGS(INFO) << "Device format '" << fs_management::DiskFormatString(format)
+                      << "'. Defaulting to minfs.";
+        binary_path = kMinfsPath;
+      }
+    }
+  }
 
-  auto crypt_client_or = GetCryptClient();
-  if (crypt_client_or.is_error())
-    return crypt_client_or.error_value();
+  if (binary_path == kFxfsPath) {
+    auto crypt_client_or = GetCryptClient();
+    if (crypt_client_or.is_error()) {
+      return crypt_client_or.error_value();
+    }
+    crypt_client = crypt_client_or->TakeHandle();
+  }
 
-  if (auto result =
-          MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
-                          std::move(block_device), FS_SVC, std::move(crypt_client_or).value());
+  if (auto result = MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
+                                    std::move(block_device), FS_SVC, std::move(crypt_client));
       result.is_error()) {
     return result.error_value();
   }
@@ -179,7 +205,7 @@ zx_status_t FilesystemMounter::MountInstall(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  if (auto result = MountFilesystem(FsManager::MountPoint::kInstall, "/pkg/bin/minfs", options,
+  if (auto result = MountFilesystem(FsManager::MountPoint::kInstall, kMinfsPath, options,
                                     std::move(block_device), FS_SVC);
       result.is_error()) {
     return result.error_value();
@@ -195,7 +221,7 @@ zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  if (auto result = MountFilesystem(FsManager::MountPoint::kFactory, "/pkg/bin/factoryfs", options,
+  if (auto result = MountFilesystem(FsManager::MountPoint::kFactory, kFactoryfsPath, options,
                                     std::move(block_device), FS_SVC);
       result.is_error()) {
     return result.error_value();
@@ -211,7 +237,7 @@ zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  if (auto result = MountFilesystem(FsManager::MountPoint::kDurable, "/pkg/bin/minfs", options,
+  if (auto result = MountFilesystem(FsManager::MountPoint::kDurable, kMinfsPath, options,
                                     std::move(block_device), FS_SVC);
       result.is_error()) {
     return result.error_value();
@@ -264,8 +290,6 @@ void FilesystemMounter::ReportMinfsCorruption() {
 }
 
 zx::status<fidl::ClientEnd<fuchsia_fxfs::Crypt>> FilesystemMounter::GetCryptClient() {
-  if (!config_.is_set(Config::kDataFilesystemUsesCrypt))
-    return zx::ok(fidl::ClientEnd<fuchsia_fxfs::Crypt>());
   auto crypt_endpoints_or = fidl::CreateEndpoints<fuchsia_fxfs::Crypt>();
   if (crypt_endpoints_or.is_error())
     return zx::error(crypt_endpoints_or.status_value());

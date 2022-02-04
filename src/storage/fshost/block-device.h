@@ -69,6 +69,9 @@ class BlockDevice : public BlockDeviceInterface {
  private:
   zx_status_t MountData(fs_management::MountOptions* options, zx::channel block_device);
 
+  // TODO(https://fxbug.dev/92302): Temporarily allow selection of filesystem format.
+  zx_status_t MaybeChangeDataPartitionFormat() const;
+
   FilesystemMounter* mounter_ = nullptr;
   fbl::unique_fd fd_;
   const Config* device_config_;

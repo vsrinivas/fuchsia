@@ -33,6 +33,7 @@ struct Config {
   static const char kDurable[];
   static const char kFactory[];
   static const char kFormatMinfsOnCorruption[];
+  static const char kFsSwitch[];
   static const char kFvm[];
   static const char kFvmRamdisk[];
   static const char kGpt[];
@@ -47,7 +48,6 @@ struct Config {
   static const char kUseSyslog[];
   static const char kWaitForData[];
   static const char kDataFilesystemBinaryPath[];
-  static const char kDataFilesystemUsesCrypt[];
   static const char kAllowLegacyDataPartitionNames[];
   static const char kNand[];
 

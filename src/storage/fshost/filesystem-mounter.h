@@ -52,8 +52,8 @@ class FilesystemMounter {
 
   // Attempts to mount a block device to "/data".
   // Fails if already mounted.
-  zx_status_t MountData(zx::channel block_device_client,
-                        const fs_management::MountOptions& options);
+  zx_status_t MountData(zx::channel block_device_client, const fs_management::MountOptions& options,
+                        fs_management::DiskFormat format);
 
   // Attempts to mount a block device to "/durable".
   // Fails if already mounted.

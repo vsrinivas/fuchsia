@@ -200,7 +200,8 @@ source_set("block-watcher") {
   if (bundle_fxfs || data_filesystem_format == "fxfs") {
     deps += [ "//src/storage/fxfs" ]
   }
-  if (data_filesystem_format == "f2fs") {
+
+  if (bundle_f2fs || data_filesystem_format == "f2fs") {
     deps += [ "//src/storage/bin/f2fs" ]
   }
 

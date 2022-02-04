@@ -21,6 +21,7 @@
 #include "src/lib/testing/predicates/status.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/fshost/block-watcher.h"
+#include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-fs-provider.h"
 #include "src/storage/fshost/metrics_cobalt.h"
@@ -124,12 +125,12 @@ class TestMounter : public FilesystemMounter {
 
     switch (expected_filesystem_) {
       case FilesystemType::kMinfs:
-        EXPECT_EQ(std::string_view(argv[0]), "/pkg/bin/minfs");
+        EXPECT_EQ(std::string_view(argv[0]), kMinfsPath);
         EXPECT_EQ(fs_flags, unsigned{FS_SVC});
         EXPECT_EQ(len, 2ul);
         break;
       case FilesystemType::kFactoryfs:
-        EXPECT_EQ(std::string_view(argv[0]), "/pkg/bin/factoryfs");
+        EXPECT_EQ(std::string_view(argv[0]), kFactoryfsPath);
         EXPECT_EQ(fs_flags, unsigned{FS_SVC});
         break;
       default:
@@ -206,7 +207,8 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions()));
+  ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions(),
+                              fs_management::kDiskFormatMinfs));
 
   ASSERT_FALSE(mounter.BlobMounted());
   ASSERT_TRUE(mounter.DataMounted());
@@ -221,7 +223,8 @@ TEST_F(MounterTest, PkgfsMountsWithBlobAndData) {
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
   ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions()));
+  ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions(),
+                              fs_management::kDiskFormatMinfs));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_TRUE(mounter.DataMounted());
