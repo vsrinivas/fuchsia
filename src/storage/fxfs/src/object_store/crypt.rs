@@ -11,7 +11,7 @@ use {
     xts_mode::{get_tweak_default, Xts128},
 };
 
-pub use crate::object_store::object_record::WrappedKeys;
+pub use crate::object_store::object_record::AES256XTSKeys;
 
 const KEY_SIZE: usize = 256 / 8;
 
@@ -27,7 +27,7 @@ pub struct UnwrappedKey {
     xts: Xts128<Aes256>,
 }
 
-/// The `Crypt` trait is used to wrap and unwrap `WrappedKeys` into `UnwrappedKeys`.
+/// The `Crypt` trait is used to wrap and unwrap `AES256XTSKeys` into `UnwrappedKeys`.
 ///
 /// Unwrapped keys contain the actual keydata used to encrypt and decrypt content.
 pub struct UnwrappedKeys {
@@ -140,10 +140,14 @@ pub trait Crypt: Send + Sync {
     /// to that of the same key wrapped by a different owner.  In this way, keys can be shared
     /// amongst different filesystem objects (e.g. for clones), but it is not possible to tell just
     /// by looking at the wrapped keys.
-    async fn create_key(&self, owner: u64) -> Result<(WrappedKeys, UnwrappedKeys), Error>;
+    async fn create_key(
+        &self,
+        wrapping_key_id: u64,
+        owner: u64,
+    ) -> Result<(AES256XTSKeys, UnwrappedKeys), Error>;
 
     /// Unwraps the keys and stores the result in UnwrappedKeys.
-    async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error>;
+    async fn unwrap_keys(&self, keys: &AES256XTSKeys, owner: u64) -> Result<UnwrappedKeys, Error>;
 }
 
 /// This struct provides the `Crypt` trait without any strong security.
@@ -162,7 +166,12 @@ impl InsecureCrypt {
 
 #[async_trait]
 impl Crypt for InsecureCrypt {
-    async fn create_key(&self, owner: u64) -> Result<(WrappedKeys, UnwrappedKeys), Error> {
+    async fn create_key(
+        &self,
+        wrapping_key_id: u64,
+        owner: u64,
+    ) -> Result<(AES256XTSKeys, UnwrappedKeys), Error> {
+        assert_eq!(wrapping_key_id, 0);
         let mut rng = rand::thread_rng();
         let mut key: KeyBytes = [0; KEY_SIZE];
         rng.fill_bytes(&mut key);
@@ -173,13 +182,13 @@ impl Crypt for InsecureCrypt {
             wrapped[i] = key[i] ^ WRAP_XOR[j] ^ owner_bytes[j];
         }
         Ok((
-            WrappedKeys { wrapping_key_id: 0, keys: vec![(0, wrapped)] },
+            AES256XTSKeys { wrapping_key_id, keys: vec![(0, wrapped)] },
             UnwrappedKeys::new([(0, key)]),
         ))
     }
 
     /// Unwraps the keys and stores the result in UnwrappedKeys.
-    async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
+    async fn unwrap_keys(&self, keys: &AES256XTSKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
         Ok(UnwrappedKeys::new(keys.keys.iter().map(|(id, key)| {
             let mut unwrapped: KeyBytes = [0; KEY_SIZE];
             let owner_bytes = owner.to_le_bytes();

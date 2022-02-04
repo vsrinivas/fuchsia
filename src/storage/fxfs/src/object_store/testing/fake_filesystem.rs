@@ -6,6 +6,7 @@ use {
     crate::{
         object_store::{
             allocator::Allocator,
+            crypt::{Crypt, InsecureCrypt},
             filesystem::{self, Filesystem, Info, SyncOptions},
             graveyard::Graveyard,
             journal::JournalCheckpoint,
@@ -32,6 +33,7 @@ pub struct FakeFilesystem {
     object_manager: Arc<ObjectManager>,
     lock_manager: LockManager,
     num_syncs: AtomicU64,
+    crypt: InsecureCrypt,
     graveyard: Arc<Graveyard>,
 }
 
@@ -44,6 +46,7 @@ impl FakeFilesystem {
             object_manager,
             lock_manager: LockManager::new(),
             num_syncs: AtomicU64::new(0),
+            crypt: InsecureCrypt::new(),
             graveyard,
         })
     }
@@ -78,6 +81,10 @@ impl Filesystem for FakeFilesystem {
 
     fn get_info(&self) -> Info {
         Info { total_bytes: 1024 * 1024, used_bytes: 0, block_size: 4096 }
+    }
+
+    fn crypt(&self) -> &dyn Crypt {
+        &self.crypt
     }
 
     fn graveyard(&self) -> &Arc<Graveyard> {

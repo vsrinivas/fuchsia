@@ -10,13 +10,11 @@ using zx;
 @discoverable
 protocol Crypt {
     /// Creates a new key wrapped with the key identified by `wrapping_key_id`.  `owner` identifies
-    /// the owner of the key and must be supplied to `UnwrapKeys`.  The crypt service chooses a
-    /// `wrapping_key_id` which must be supplied to UnwrapKeys.  The `wrapping_key_id` has no
-    /// meaning to Fxfs.
+    /// the owner of the key and must be supplied to `UnwrapKeys`.
     CreateKey(struct {
+        wrapping_key_id uint64;
         owner uint64;
     }) -> (struct {
-        wrapping_key_id uint64;
         wrapped_key bytes:32;
         unwrapped_key bytes:32;
     }) error zx.status;

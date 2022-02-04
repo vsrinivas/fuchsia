@@ -43,7 +43,7 @@ use {
             },
             object_manager::ObjectManager,
             transaction::{AssocObj, ExtentMutation, Mutation, Options, Transaction, TxnMutation},
-            HandleOptions, LockState, ObjectStore, StoreObjectHandle,
+            HandleOptions, ObjectStore, StoreObjectHandle,
         },
         round::{round_down, round_up},
         serialized_types::{Version, Versioned, LATEST_VERSION},
@@ -359,7 +359,7 @@ impl Journal {
             filesystem.clone(),
             None,
             None,
-            LockState::Locked,
+            true,
         );
         self.objects.set_root_store(root_store);
 
@@ -539,7 +539,7 @@ impl Journal {
 
         let root_store = self.objects.root_store();
         root_store.on_replay_complete().await?;
-        root_store.unlock(None).await?;
+        root_store.unlock().await?;
         allocator.open().await?;
 
         // Configure the journal writer so that we can continue.
@@ -555,7 +555,6 @@ impl Journal {
                 &root_parent,
                 super_block.journal_object_id,
                 journal_handle_options(),
-                None,
             )
             .await
             .context(format!(
@@ -855,7 +854,6 @@ impl Journal {
                     &self.objects.root_store(),
                     super_block_to_write.object_id(),
                     journal_handle_options(),
-                    None,
                 )
                 .await?,
             )
@@ -1179,6 +1177,7 @@ mod tests {
         crate::{
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
+                crypt::InsecureCrypt,
                 directory::Directory,
                 filesystem::{Filesystem, FxFilesystem, SyncOptions},
                 fsck::fsck,
@@ -1188,6 +1187,7 @@ mod tests {
             },
         },
         fuchsia_async as fasync,
+        std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
@@ -1197,7 +1197,9 @@ mod tests {
     async fn test_alternating_super_blocks() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
 
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
         device.reopen();
@@ -1207,7 +1209,8 @@ mod tests {
 
         // The second super-block won't be valid at this time so there's no point reading it.
 
-        let fs = FxFilesystem::open(device).await.expect("open failed");
+        let fs =
+            FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.expect("open failed");
         let root_store = fs.root_store();
         // Generate enough work to induce a journal flush.
         for _ in 0..2000 {
@@ -1259,7 +1262,9 @@ mod tests {
 
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
 
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
 
         let object_id = {
             let root_store = fs.root_store();
@@ -1291,19 +1296,17 @@ mod tests {
             fs.close().await.expect("Close failed");
             let device = fs.take_device().await;
             device.reopen();
-            let fs = FxFilesystem::open(device).await.expect("open failed");
-            let handle = ObjectStore::open_object(
-                &fs.root_store(),
-                object_id,
-                HandleOptions::default(),
-                None,
-            )
-            .await
-            .expect("open_object failed");
+            let fs = FxFilesystem::open(device, Arc::new(InsecureCrypt::new()))
+                .await
+                .expect("open failed");
+            let handle =
+                ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+                    .await
+                    .expect("open_object failed");
             let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
             assert_eq!(handle.read(0, buf.as_mut()).await.expect("read failed"), TEST_DATA.len());
             assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
-            fsck(&fs, None).await.expect("fsck failed");
+            fsck(&fs).await.expect("fsck failed");
             fs.close().await.expect("Close failed");
         }
     }
@@ -1316,7 +1319,9 @@ mod tests {
 
         let mut object_ids = Vec::new();
 
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         {
             let root_store = fs.root_store();
             let root_directory =
@@ -1360,20 +1365,17 @@ mod tests {
         }
         let device = fs.take_device().await;
         device.reopen();
-        let fs = FxFilesystem::open(device).await.expect("open failed");
-        fsck(&fs, None).await.expect("fsck failed");
+        let fs =
+            FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.expect("open failed");
+        fsck(&fs).await.expect("fsck failed");
         {
             let root_store = fs.root_store();
             // Check the first two objects which should exist.
             for &object_id in &object_ids[0..1] {
-                let handle = ObjectStore::open_object(
-                    &root_store,
-                    object_id,
-                    HandleOptions::default(),
-                    None,
-                )
-                .await
-                .expect("open_object failed");
+                let handle =
+                    ObjectStore::open_object(&root_store, object_id, HandleOptions::default())
+                        .await
+                        .expect("open_object failed");
                 let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
                 assert_eq!(
                     handle.read(0, buf.as_mut()).await.expect("read failed"),
@@ -1407,20 +1409,17 @@ mod tests {
         fs.close().await.expect("close failed");
         let device = fs.take_device().await;
         device.reopen();
-        let fs = FxFilesystem::open(device).await.expect("open failed");
+        let fs =
+            FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.expect("open failed");
         {
-            fsck(&fs, None).await.expect("fsck failed");
+            fsck(&fs).await.expect("fsck failed");
 
             // Check the first two and the last objects.
             for &object_id in object_ids[0..1].iter().chain(object_ids.last().cloned().iter()) {
-                let handle = ObjectStore::open_object(
-                    &fs.root_store(),
-                    object_id,
-                    HandleOptions::default(),
-                    None,
-                )
-                .await
-                .expect(&format!("open_object failed (object_id: {})", object_id));
+                let handle =
+                    ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+                        .await
+                        .expect(&format!("open_object failed (object_id: {})", object_id));
                 let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
                 assert_eq!(
                     handle.read(0, buf.as_mut()).await.expect("read failed"),

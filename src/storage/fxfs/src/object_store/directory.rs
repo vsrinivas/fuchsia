@@ -163,7 +163,7 @@ impl<S: HandleOwner> Directory<S> {
     ) -> Result<StoreObjectHandle<S>, Error> {
         ensure!(!self.is_deleted(), FxfsError::Deleted);
         let handle =
-            ObjectStore::create_object(&self.owner, transaction, HandleOptions::default(), None)
+            ObjectStore::create_object(&self.owner, transaction, HandleOptions::default(), Some(0))
                 .await?;
         transaction.add(
             self.store().store_object_id(),
@@ -497,6 +497,7 @@ mod tests {
             errors::FxfsError,
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
+                crypt::InsecureCrypt,
                 directory::{replace_child, Directory, ReplacedChild},
                 filesystem::{Filesystem, FxFilesystem, Mutations, SyncOptions},
                 object_record::Timestamp,
@@ -506,6 +507,7 @@ mod tests {
         },
         assert_matches::assert_matches,
         fuchsia_async as fasync,
+        std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
@@ -514,7 +516,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_create_directory() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let object_id = {
             let mut transaction = fs
                 .clone()
@@ -546,7 +550,8 @@ mod tests {
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
         device.reopen();
-        let fs = FxFilesystem::open(device).await.expect("open failed");
+        let fs =
+            FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.expect("open failed");
         {
             let dir = Directory::open(&fs.root_store(), object_id).await.expect("open failed");
             let (object_id, object_descriptor) =
@@ -557,25 +562,17 @@ mod tests {
             let (object_id, object_descriptor) =
                 child_dir.lookup("bar").await.expect("lookup failed").expect("not found");
             assert_eq!(object_descriptor, ObjectDescriptor::File);
-            let _child_dir_file = ObjectStore::open_object(
-                &fs.root_store(),
-                object_id,
-                HandleOptions::default(),
-                None,
-            )
-            .await
-            .expect("open object failed");
+            let _child_dir_file =
+                ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+                    .await
+                    .expect("open object failed");
             let (object_id, object_descriptor) =
                 dir.lookup("baz").await.expect("lookup failed").expect("not found");
             assert_eq!(object_descriptor, ObjectDescriptor::File);
-            let _child_file = ObjectStore::open_object(
-                &fs.root_store(),
-                object_id,
-                HandleOptions::default(),
-                None,
-            )
-            .await
-            .expect("open object failed");
+            let _child_file =
+                ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+                    .await
+                    .expect("open object failed");
             let (object_id, object_descriptor) =
                 dir.lookup("corge").await.expect("lookup failed").expect("not found");
             assert_eq!(object_id, 100);
@@ -592,7 +589,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_delete_child() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -624,7 +623,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_delete_child_with_children_fails() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -685,7 +686,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_delete_and_reinsert_child() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -725,7 +728,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_delete_child_persists() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let object_id = {
             let mut transaction = fs
                 .clone()
@@ -759,7 +764,8 @@ mod tests {
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
         device.reopen();
-        let fs = FxFilesystem::open(device).await.expect("open failed");
+        let fs =
+            FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.expect("open failed");
         let dir = Directory::open(&fs.root_store(), object_id).await.expect("open failed");
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
         fs.close().await.expect("Close failed");
@@ -768,7 +774,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_replace_child() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -808,7 +816,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_replace_child_overwrites_dst() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -860,7 +870,7 @@ mod tests {
         let (oid, object_descriptor) =
             child_dir2.lookup("bar").await.expect("lookup failed").expect("not found");
         assert_eq!(object_descriptor, ObjectDescriptor::File);
-        let bar = ObjectStore::open_object(&child_dir2.owner, oid, HandleOptions::default(), None)
+        let bar = ObjectStore::open_object(&child_dir2.owner, oid, HandleOptions::default())
             .await
             .expect("Open failed");
         let mut buf = bar.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
@@ -872,7 +882,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_replace_child_fails_if_would_overwrite_nonempty_dir() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -918,7 +930,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_replace_child_within_dir() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -950,7 +964,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_iterate() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -995,7 +1011,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_sub_dir_count() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -1078,7 +1096,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_deleted_dir() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())

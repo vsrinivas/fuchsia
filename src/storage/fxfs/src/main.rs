@@ -107,9 +107,10 @@ async fn main() -> Result<(), Error> {
             let fs = mount::mount_with_options(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?),
                 OpenOptions { trace: verbose, ..Default::default() },
+                crypt,
             )
             .await?;
-            let server = FxfsServer::new(fs, "default", crypt).await?;
+            let server = FxfsServer::new(fs, "default").await?;
             let startup_handle =
                 fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
                     .ok_or(MissingStartupHandle)?;
@@ -119,11 +120,12 @@ async fn main() -> Result<(), Error> {
             let fs = mount::mount_with_options(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), true).await?),
                 OpenOptions { read_only: true, trace: verbose, ..Default::default() },
+                crypt,
             )
             .await?;
             let mut options = fsck::default_options();
             options.verbose = verbose;
-            fsck::fsck_with_options(&fs, Some(crypt), options).await
+            fsck::fsck_with_options(&fs, options).await
         }
     }
 }

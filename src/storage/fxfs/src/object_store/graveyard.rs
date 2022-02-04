@@ -146,8 +146,9 @@ impl Graveyard {
     async fn tombstone(&self, store_id: u64, object_id: u64) -> Result<(), Error> {
         let store = self
             .object_manager
-            .store(store_id)
-            .context(format!("Failed to get store {}", store_id))?;
+            .open_store(store_id)
+            .await
+            .context(format!("Failed to open store {}", store_id))?;
         // TODO(csuter): we shouldn't assume that all objects in the root stores use the
         // metadata reservation.
         let options = if store_id == self.object_manager.root_parent_store_object_id()
@@ -249,11 +250,13 @@ mod tests {
     use {
         super::Graveyard,
         crate::object_store::{
+            crypt::InsecureCrypt,
             filesystem::{Filesystem, FxFilesystem, SyncOptions},
             transaction::{Options, TransactionHandler},
         },
         assert_matches::assert_matches,
         fuchsia_async as fasync,
+        std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
@@ -262,7 +265,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_graveyard() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let root_store = fs.root_store();
 
         // Create and add two objects to the graveyard.
@@ -313,7 +318,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_graveyard_sequences() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let root_store = fs.root_store();
 
         // Create and add two objects to the graveyard, syncing in between.

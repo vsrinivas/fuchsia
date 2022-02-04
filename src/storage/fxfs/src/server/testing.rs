@@ -51,22 +51,17 @@ impl TestFixture {
 
     pub async fn open(device: DeviceHolder, format: bool) -> Self {
         let (filesystem, volume) = if format {
-            let filesystem = FxFilesystem::new_empty(device).await.unwrap();
+            let filesystem =
+                FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new())).await.unwrap();
             let root_volume = root_volume(&filesystem).await.unwrap();
-            let vol = FxVolumeAndRoot::new(
-                root_volume.new_volume("vol", Arc::new(InsecureCrypt::new())).await.unwrap(),
-            )
-            .await
-            .unwrap();
+            let vol =
+                FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap()).await.unwrap();
             (filesystem, vol)
         } else {
-            let filesystem = FxFilesystem::open(device).await.unwrap();
+            let filesystem =
+                FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.unwrap();
             let root_volume = root_volume(&filesystem).await.unwrap();
-            let vol = FxVolumeAndRoot::new(
-                root_volume.volume("vol", Arc::new(InsecureCrypt::new())).await.unwrap(),
-            )
-            .await
-            .unwrap();
+            let vol = FxVolumeAndRoot::new(root_volume.volume("vol").await.unwrap()).await.unwrap();
             (filesystem, vol)
         };
         let scope = ExecutionScope::build().token_registry(token_registry::Simple::new()).new();
@@ -113,10 +108,10 @@ impl TestFixture {
         let device = filesystem.take_device().await;
         device.ensure_unique();
         device.reopen();
-        let filesystem = FxFilesystem::open(device).await.expect("open failed");
+        let filesystem =
+            FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.expect("open failed");
         fsck_with_options(
             &filesystem,
-            Some(Arc::new(InsecureCrypt::new())),
             FsckOptions {
                 fail_on_warning: true,
                 halt_on_error: false,

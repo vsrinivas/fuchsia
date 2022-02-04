@@ -8,7 +8,6 @@ use {
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::{Allocator, Reservation},
-            crypt::Crypt,
             directory::Directory,
             filesystem::{ApplyContext, ApplyMode, Mutations},
             journal::{self, checksum_list::ChecksumList, JournalCheckpoint},
@@ -16,7 +15,7 @@ use {
                 AssocObj, AssociatedObject, MetadataReservation, Mutation, Transaction, TxnMutation,
             },
             volume::{list_volumes, VOLUMES_DIRECTORY},
-            LockState, ObjectDescriptor, ObjectStore,
+            ObjectDescriptor, ObjectStore,
         },
     },
     anyhow::{anyhow, bail, Context, Error},
@@ -189,20 +188,12 @@ impl ObjectManager {
                 // This assumes that all stores are children of the root store.
                 assert_ne!(store_object_id, root_parent_store_object_id);
                 assert_ne!(store_object_id, root_store.store_object_id());
-                ObjectStore::new(
-                    Some(root_store),
-                    store_object_id,
-                    fs,
-                    None,
-                    None,
-                    LockState::Locked,
-                )
+                ObjectStore::new(Some(root_store), store_object_id, fs, None, None, true)
             })
             .clone()
     }
 
-    /// Returns the store which might or might not be locked.
-    pub fn store(&self, store_object_id: u64) -> Result<Arc<ObjectStore>, Error> {
+    pub async fn open_store(&self, store_object_id: u64) -> Result<Arc<ObjectStore>, Error> {
         Ok(self
             .inner
             .read()
@@ -211,17 +202,6 @@ impl ObjectManager {
             .get(&store_object_id)
             .ok_or(FxfsError::NotFound)?
             .clone())
-    }
-
-    /// Tries to unlock a store.
-    pub async fn open_store(
-        &self,
-        store_object_id: u64,
-        crypt: Arc<dyn Crypt>,
-    ) -> Result<Arc<ObjectStore>, Error> {
-        let store = self.store(store_object_id)?;
-        store.unlock(Some(crypt)).await?;
-        Ok(store)
     }
 
     /// This is not thread-safe: it assumes that a store won't be forgotten whilst the loop is
@@ -255,6 +235,11 @@ impl ObjectManager {
                 .on_replay_complete()
                 .await
                 .context(format!("Store {} failed to load after replay", store_id))?;
+
+            // TODO(csuter): This needs to move somewhere else.
+            if store.is_locked() {
+                store.unlock().await?;
+            }
         }
 
         self.init_metadata_reservation();

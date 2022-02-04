@@ -5,7 +5,6 @@
 use {
     crate::{
         object_store::{
-            crypt::Crypt,
             filesystem::{Filesystem, Info, OpenFxFilesystem},
             volume::root_volume,
         },
@@ -20,10 +19,7 @@ use {
     futures::TryFutureExt,
     std::{
         convert::TryInto,
-        sync::{
-            atomic::{self, AtomicBool},
-            Arc,
-        },
+        sync::atomic::{self, AtomicBool},
     },
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
@@ -69,15 +65,11 @@ pub struct FxfsServer {
 
 impl FxfsServer {
     /// Creates a new FxfsServer by opening or creating |volume_name| in |fs|.
-    pub async fn new(
-        fs: OpenFxFilesystem,
-        volume_name: &str,
-        crypt: Arc<dyn Crypt>,
-    ) -> Result<Self, Error> {
+    pub async fn new(fs: OpenFxFilesystem, volume_name: &str) -> Result<Self, Error> {
         let root_volume = root_volume(&fs).await?;
         let volume = FxVolumeAndRoot::new(
             root_volume
-                .open_or_create_volume(volume_name, crypt)
+                .open_or_create_volume(volume_name)
                 .await
                 .expect("Open or create volume failed"),
         )
@@ -220,10 +212,8 @@ mod tests {
     #[fasync::run(2, test)]
     async fn test_lifecycle() -> Result<(), Error> {
         let device = DeviceHolder::new(FakeDevice::new(16384, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let server = FxfsServer::new(filesystem, "root", Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("Create server failed");
+        let filesystem = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new())).await?;
+        let server = FxfsServer::new(filesystem, "root").await.expect("Create server failed");
 
         let (client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>()?;
         let client_proxy = client_end.into_proxy().expect("Create DirectoryProxy failed");

@@ -151,11 +151,11 @@ pub enum ObjectKind {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum EncryptionKeys {
     None,
-    AES256XTS(WrappedKeys),
+    AES256XTS(AES256XTSKeys),
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
-pub struct WrappedKeys {
+pub struct AES256XTSKeys {
     /// The identifier of the wrapping key.  The identifier has meaning to whatever is doing the
     /// unwrapping.
     pub wrapping_key_id: u64,
@@ -167,9 +167,9 @@ pub struct WrappedKeys {
     pub keys: Vec<(/* id= */ u64, [u8; 32])>,
 }
 
-impl std::fmt::Debug for WrappedKeys {
+impl std::fmt::Debug for AES256XTSKeys {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WrappedKeys")
+        f.debug_struct("AES256XTSKeys")
             .field("wrapping_key_id", &self.wrapping_key_id)
             .field("keys", &self.keys.iter().map(|k| k.0).collect::<Vec<_>>())
             .finish()

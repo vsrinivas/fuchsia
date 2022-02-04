@@ -6,7 +6,6 @@ use {
     crate::{
         errors::FxfsError,
         object_store::{
-            crypt::Crypt,
             directory::Directory,
             filesystem::{Filesystem, FxFilesystem},
             graveyard::Graveyard,
@@ -39,11 +38,7 @@ impl RootVolume {
     }
 
     /// Creates a new volume.  This is not thread-safe.
-    pub async fn new_volume(
-        &self,
-        volume_name: &str,
-        crypt: Arc<dyn Crypt>,
-    ) -> Result<Arc<ObjectStore>, Error> {
+    pub async fn new_volume(&self, volume_name: &str) -> Result<Arc<ObjectStore>, Error> {
         let root_store = self.filesystem.root_store();
         let store;
         let store_handle;
@@ -54,11 +49,11 @@ impl RootVolume {
             &root_store,
             &mut transaction,
             HandleOptions::default(),
-            None,
+            Some(0),
         )
         .await?;
 
-        store = ObjectStore::new_encrypted(root_store, store_handle, crypt).await?;
+        store = ObjectStore::new_encrypted(root_store, store_handle).await?;
         store.set_trace(self.filesystem.trace());
 
         let object_id = store.get_next_object_id();
@@ -97,17 +92,13 @@ impl RootVolume {
     }
 
     /// Returns the volume with the given name.  This is not thread-safe.
-    pub async fn volume(
-        &self,
-        volume_name: &str,
-        crypt: Arc<dyn Crypt>,
-    ) -> Result<Arc<ObjectStore>, Error> {
+    pub async fn volume(&self, volume_name: &str) -> Result<Arc<ObjectStore>, Error> {
         let object_id =
             match self.volume_directory().lookup(volume_name).await?.ok_or(FxfsError::NotFound)? {
                 (object_id, ObjectDescriptor::Volume) => object_id,
                 _ => bail!(anyhow!(FxfsError::Inconsistent).context("Expected volume")),
             };
-        let store = self.filesystem.object_manager().open_store(object_id, crypt).await?;
+        let store = self.filesystem.object_manager().open_store(object_id).await?;
         store.set_trace(self.filesystem.trace());
         Ok(store)
     }
@@ -115,14 +106,13 @@ impl RootVolume {
     pub async fn open_or_create_volume(
         &self,
         volume_name: &str,
-        crypt: Arc<dyn Crypt>,
     ) -> Result<Arc<ObjectStore>, Error> {
-        match self.volume(volume_name, crypt.clone()).await {
+        match self.volume(volume_name).await {
             Ok(volume) => Ok(volume),
             Err(e) => {
                 let cause = e.root_cause().downcast_ref::<FxfsError>().cloned();
                 if let Some(FxfsError::NotFound) = cause {
-                    self.new_volume(volume_name, crypt).await
+                    self.new_volume(volume_name).await
                 } else {
                     Err(e)
                 }
@@ -171,25 +161,23 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_lookup_nonexistent_volume() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
-        let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
-        let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
-        root_volume
-            .volume("vol", Arc::new(InsecureCrypt::new()))
+        let filesystem = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
             .await
-            .err()
-            .expect("Volume shouldn't exist");
+            .expect("new_empty failed");
+        let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
+        root_volume.volume("vol").await.err().expect("Volume shouldn't exist");
         filesystem.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_volume() {
         let device = DeviceHolder::new(FakeDevice::new(16384, 512));
-        let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
-        let crypt = Arc::new(InsecureCrypt::new());
+        let filesystem = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         {
             let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
-            let store =
-                root_volume.new_volume("vol", crypt.clone()).await.expect("new_volume failed");
+            let store = root_volume.new_volume("vol").await.expect("new_volume failed");
             let mut transaction = filesystem
                 .clone()
                 .new_transaction(&[], Options::default())
@@ -209,9 +197,11 @@ mod tests {
             filesystem.close().await.expect("Close failed");
             let device = filesystem.take_device().await;
             device.reopen();
-            let filesystem = FxFilesystem::open(device).await.expect("open failed");
+            let filesystem = FxFilesystem::open(device, Arc::new(InsecureCrypt::new()))
+                .await
+                .expect("open failed");
             let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
-            let volume = root_volume.volume("vol", crypt).await.expect("volume failed");
+            let volume = root_volume.volume("vol").await.expect("volume failed");
             let root_directory = Directory::open(&volume, volume.root_directory_object_id())
                 .await
                 .expect("open failed");
