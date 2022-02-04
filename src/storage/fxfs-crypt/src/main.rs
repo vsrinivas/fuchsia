@@ -26,11 +26,7 @@ async fn handle_request(stream: Services) -> Result<(), Error> {
         Services::Crypt(mut stream) => {
             while let Some(request) = stream.try_next().await.context("Reading request")? {
                 match request {
-                    CryptRequest::CreateKey { wrapping_key_id, owner, responder } => {
-                        assert_eq!(
-                            wrapping_key_id, 0,
-                            "Support for multiple key IDs not implemented yet. Key ID must be 0."
-                        );
+                    CryptRequest::CreateKey { owner, responder } => {
                         let mut key = [0; 32];
                         zx::cprng_draw(&mut key);
                         let mut wrapped = [0; 32];
@@ -40,9 +36,9 @@ async fn handle_request(stream: Services) -> Result<(), Error> {
                                 LittleEndian::read_u64(chunk) ^ WRAP_XOR ^ owner,
                             );
                         }
-                        responder.send(&mut Ok((wrapped.into(), key.into()))).unwrap_or_else(|e| {
-                            log::error!("Failed to send CreateKey response: {:?}", e)
-                        });
+                        responder.send(&mut Ok((0, wrapped.into(), key.into()))).unwrap_or_else(
+                            |e| log::error!("Failed to send CreateKey response: {:?}", e),
+                        );
                     }
                     CryptRequest::UnwrapKeys { wrapping_key_id, owner, keys, responder } => {
                         assert_eq!(

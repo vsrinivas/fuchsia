@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::crypt::{AES256XTSKeys, Crypt, UnwrappedKeys},
+    crate::object_store::crypt::{Crypt, UnwrappedKeys, WrappedKeys},
     anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
     fidl_fuchsia_fxfs::CryptProxy,
@@ -22,15 +22,11 @@ impl RemoteCrypt {
 
 #[async_trait]
 impl Crypt for RemoteCrypt {
-    async fn create_key(
-        &self,
-        wrapping_key_id: u64,
-        owner: u64,
-    ) -> Result<(AES256XTSKeys, UnwrappedKeys), Error> {
-        let (key, unwrapped_key) =
-            self.client.create_key(wrapping_key_id, owner).await?.map_err(|e| anyhow!(e))?;
+    async fn create_key(&self, owner: u64) -> Result<(WrappedKeys, UnwrappedKeys), Error> {
+        let (wrapping_key_id, key, unwrapped_key) =
+            self.client.create_key(owner).await?.map_err(|e| anyhow!(e))?;
         Ok((
-            AES256XTSKeys {
+            WrappedKeys {
                 wrapping_key_id,
                 keys: vec![(0, key.try_into().map_err(|_| anyhow!("Unexpected key length"))?)],
             },
@@ -41,7 +37,7 @@ impl Crypt for RemoteCrypt {
         ))
     }
 
-    async fn unwrap_keys(&self, keys: &AES256XTSKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
+    async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
         // Have to split this up because the &mut keys... bit isn't Send.
         let unwrapped_keys_fut = self.client.unwrap_keys(
             keys.wrapping_key_id,

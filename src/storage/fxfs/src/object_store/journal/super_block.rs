@@ -491,6 +491,7 @@ mod tests {
             &fs.root_store(),
             SUPER_BLOCK_A_OBJECT_ID,
             HandleOptions::default(),
+            None,
         )
         .await
         .expect("open_object failed");

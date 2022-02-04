@@ -43,7 +43,7 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt, WriteBytes, INVALID_OBJECT_ID},
         object_store::{
-            crypt::StreamCipher,
+            crypt::{Crypt, StreamCipher},
             data_buffer::{DataBuffer, MemDataBuffer},
             extent_record::{Checksums, DEFAULT_DATA_ATTRIBUTE_ID},
             filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
@@ -300,6 +300,12 @@ impl StoreOrReplayInfo {
     }
 }
 
+pub enum LockState {
+    Locked,
+    Unencrypted,
+    Unlocked(Arc<dyn Crypt>),
+}
+
 /// An object store supports a file like interface for objects.  Objects are keyed by a 64 bit
 /// identifier.  And object store has to be backed by a parent object store (which stores metadata
 /// for the object store).  The top-level object store (a.k.a. the root parent object store) is
@@ -327,8 +333,9 @@ pub struct ObjectStore {
     // unlocked.
     encrypted_mutations: Mutex<Option<Arc<EncryptedMutations>>>,
 
-    // False if the keys are available and the store can be used.
-    locked: Mutex<bool>,
+    // Holds the current lock state of the store.
+    lock_state: Mutex<LockState>,
+
     trace: AtomicBool,
 }
 
@@ -339,7 +346,7 @@ impl ObjectStore {
         filesystem: Arc<dyn Filesystem>,
         store_info: Option<StoreInfo>,
         mutations_cipher: Option<StreamCipher>,
-        locked: bool,
+        lock_state: LockState,
     ) -> Arc<ObjectStore> {
         let device = filesystem.device();
         let block_size = filesystem.block_size();
@@ -358,7 +365,7 @@ impl ObjectStore {
             store_info_handle: OnceCell::new(),
             mutations_cipher: Mutex::new(mutations_cipher),
             encrypted_mutations: Mutex::new(None),
-            locked: Mutex::new(locked),
+            lock_state: Mutex::new(lock_state),
             trace: AtomicBool::new(false),
         });
         store
@@ -375,7 +382,7 @@ impl ObjectStore {
             filesystem,
             Some(StoreInfo::default()),
             None,
-            false,
+            LockState::Unencrypted,
         )
     }
 
@@ -391,17 +398,17 @@ impl ObjectStore {
     pub async fn new_encrypted(
         parent_store: Arc<ObjectStore>,
         handle: StoreObjectHandle<ObjectStore>,
+        crypt: Arc<dyn Crypt>,
     ) -> Result<Arc<Self>, Error> {
         let filesystem = parent_store.filesystem();
-        // TODO(fxbug.dev/92275): Pass appropriate arguments to create_key here.
-        let keys = filesystem.crypt().create_key(0, 0).await?;
+        let keys = crypt.create_key(0).await?;
         let store = Self::new(
             Some(parent_store),
             handle.object_id(),
             filesystem.clone(),
             Some(StoreInfo { mutations_key: Some(keys.0.keys[0].1.into()), ..Default::default() }),
             Some(StreamCipher::new(0)),
-            false,
+            LockState::Unlocked(crypt),
         );
         assert!(store.store_info_handle.set(handle).is_ok());
         Ok(store)
@@ -515,7 +522,7 @@ impl ObjectStore {
             transaction,
             object_id,
             HandleOptions::default(),
-            Some(0),
+            None,
         )
         .await?;
         let fs = self.filesystem.upgrade().unwrap();
@@ -525,10 +532,37 @@ impl ObjectStore {
         Ok(store)
     }
 
+    /// Returns the crypt object for the store. Returns None if the store is unencrypted. This will
+    /// panic if the store is locked.
+    pub fn crypt(&self) -> Option<Arc<dyn Crypt>> {
+        match &*self.lock_state.lock().unwrap() {
+            LockState::Locked => panic!("Store is locked"),
+            LockState::Unencrypted => None,
+            LockState::Unlocked(crypt) => Some(crypt.clone()),
+        }
+    }
+
+    /// Returns the file size for the object without opening the object.
+    pub async fn get_file_size(&self, object_id: u64) -> Result<u64, Error> {
+        let item = self
+            .tree
+            .find(&ObjectKey::attribute(object_id, DEFAULT_DATA_ATTRIBUTE_ID))
+            .await?
+            .ok_or(FxfsError::NotFound)?;
+        if let ObjectValue::Attribute { size } = item.value {
+            Ok(size)
+        } else {
+            bail!(FxfsError::NotFile);
+        }
+    }
+
+    /// `crypt` can be provided if the crypt service should be different to the default; see the
+    /// comment on create_object.
     pub async fn open_object<S: HandleOwner>(
         owner: &Arc<S>,
         object_id: u64,
         options: HandleOptions,
+        mut crypt: Option<&dyn Crypt>,
     ) -> Result<StoreObjectHandle<S>, Error> {
         let store = owner.as_ref().as_ref();
         let keys = match store
@@ -542,7 +576,12 @@ impl ObjectStore {
             } => match keys {
                 EncryptionKeys::None => None,
                 EncryptionKeys::AES256XTS(keys) => {
-                    Some(store.filesystem().crypt().unwrap_keys(&keys, object_id).await?)
+                    let store_crypt;
+                    if crypt.is_none() {
+                        store_crypt = store.crypt();
+                        crypt = store_crypt.as_deref();
+                    }
+                    Some(crypt.ok_or(FxfsError::Inconsistent)?.unwrap_keys(&keys, object_id).await?)
                 }
             },
             Item { value: ObjectValue::None, .. } => bail!(FxfsError::NotFound),
@@ -571,17 +610,22 @@ impl ObjectStore {
         }
     }
 
+    // See the comment on create_object for the semantics of the `crypt` argument.
     async fn create_object_with_id<S: HandleOwner>(
         owner: &Arc<S>,
         transaction: &mut Transaction<'_>,
         object_id: u64,
         options: HandleOptions,
-        wrapping_key_id: Option<u64>,
+        mut crypt: Option<&dyn Crypt>,
     ) -> Result<StoreObjectHandle<S>, Error> {
         let store = owner.as_ref().as_ref();
-        let (keys, unwrapped_keys) = if let Some(wrapping_key_id) = wrapping_key_id {
-            let (keys, unwrapped_keys) =
-                store.filesystem().crypt().create_key(wrapping_key_id, object_id).await?;
+        let store_crypt;
+        if crypt.is_none() {
+            store_crypt = store.crypt();
+            crypt = store_crypt.as_deref();
+        }
+        let (keys, unwrapped_keys) = if let Some(crypt) = crypt {
+            let (keys, unwrapped_keys) = crypt.create_key(object_id).await?;
             (EncryptionKeys::AES256XTS(keys), Some(unwrapped_keys))
         } else {
             (EncryptionKeys::None, None)
@@ -616,21 +660,18 @@ impl ObjectStore {
         ))
     }
 
+    /// There are instances where a store might not be an encrypted store, but the object should
+    /// still be encrypted.  For example, the layer files for child stores should be encrypted using
+    /// the crypt service of the child store even though the root store doesn't have encryption.  If
+    /// `crypt` is None, the default for the store is used.
     pub async fn create_object<S: HandleOwner>(
         owner: &Arc<S>,
         mut transaction: &mut Transaction<'_>,
         options: HandleOptions,
-        wrapping_key_id: Option<u64>,
+        crypt: Option<&dyn Crypt>,
     ) -> Result<StoreObjectHandle<S>, Error> {
         let object_id = owner.as_ref().as_ref().get_next_object_id();
-        ObjectStore::create_object_with_id(
-            owner,
-            &mut transaction,
-            object_id,
-            options,
-            wrapping_key_id,
-        )
-        .await
+        ObjectStore::create_object_with_id(owner, &mut transaction, object_id, options, crypt).await
     }
 
     /// Adjusts the reference count for a given object.  If the reference count reaches zero, the
@@ -791,9 +832,13 @@ impl ObjectStore {
         }
 
         let parent_store = self.parent_store.as_ref().unwrap();
-        let handle =
-            ObjectStore::open_object(&parent_store, self.store_object_id, HandleOptions::default())
-                .await?;
+        let handle = ObjectStore::open_object(
+            &parent_store,
+            self.store_object_id,
+            HandleOptions::default(),
+            None,
+        )
+        .await?;
 
         let mut encrypted_mutations = EncryptedMutations::default();
 
@@ -840,13 +885,11 @@ impl ObjectStore {
         };
 
         // TODO(csuter): the layer size here could be bad and cause overflow.
-        let total_size = self
-            .open_layers(object_tree_layer_object_ids)
-            .await?
-            .into_iter()
-            .chain(self.open_layers(extent_tree_layer_object_ids).await?)
-            .map(|h| h.get_size())
-            .sum();
+        let mut total_size = 0;
+        let parent_store = self.parent_store.as_ref().unwrap();
+        for oid in object_tree_layer_object_ids.into_iter().chain(extent_tree_layer_object_ids) {
+            total_size += parent_store.get_file_size(oid).await?;
+        }
 
         let _ = self.store_info_handle.set(handle);
         self.filesystem().object_manager().update_reservation(
@@ -864,12 +907,13 @@ impl ObjectStore {
     async fn open_layers(
         &self,
         object_ids: impl std::iter::IntoIterator<Item = u64>,
+        crypt: Option<&dyn Crypt>,
     ) -> Result<Vec<CachingObjectHandle<ObjectStore>>, Error> {
         let parent_store = self.parent_store.as_ref().unwrap();
         let mut handles = Vec::new();
         for object_id in object_ids {
             let handle = CachingObjectHandle::new(
-                ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
+                ObjectStore::open_object(&parent_store, object_id, HandleOptions::default(), crypt)
                     .await
                     .context(format!("Failed to open layerr file {}", object_id))?,
             );
@@ -880,31 +924,35 @@ impl ObjectStore {
 
     /// Unlocks a store so that it is ready to be used.
     /// This is not thread-safe.
-    // TODO(fxbug.dev/92275): this should take a crypt service
-    pub async fn unlock(&self) -> Result<(), Error> {
+    pub async fn unlock(&self, crypt: Option<Arc<dyn Crypt>>) -> Result<(), Error> {
         let store_info = self.store_info();
 
         // The store should be locked.
-        assert!(*self.locked.lock().unwrap());
+        assert!(self.is_locked());
 
         self.tree
             .append_layers(
-                self.open_layers(store_info.object_tree_layers.iter().cloned()).await?.into(),
+                self.open_layers(store_info.object_tree_layers.iter().cloned(), crypt.as_deref())
+                    .await?
+                    .into(),
             )
             .await?;
         self.extent_tree
             .append_layers(
-                self.open_layers(store_info.extent_tree_layers.iter().cloned()).await?.into(),
+                self.open_layers(store_info.extent_tree_layers.iter().cloned(), None).await?.into(),
             )
             .await?;
 
         if store_info.mutations_key.is_none() {
+            assert!(crypt.is_none());
             assert!(self.encrypted_mutations.lock().unwrap().is_none());
             assert_eq!(store_info.encrypted_mutations_object_id, INVALID_OBJECT_ID);
 
-            *self.locked.lock().unwrap() = false;
+            *self.lock_state.lock().unwrap() = LockState::Unencrypted;
             return Ok(());
         }
+
+        assert!(crypt.is_some());
 
         // TODO(fxbug.dev/92275): this should pass the key into the cipher.
         *self.mutations_cipher.lock().unwrap() =
@@ -926,6 +974,7 @@ impl ObjectStore {
                 &parent_store,
                 store_info.encrypted_mutations_object_id,
                 HandleOptions::default(),
+                None,
             )
             .await?;
             EncryptedMutations::deserialize_with_version(&mut std::io::Cursor::new(
@@ -951,12 +1000,12 @@ impl ObjectStore {
             }
         }
 
-        *self.locked.lock().unwrap() = false;
+        *self.lock_state.lock().unwrap() = LockState::Unlocked(crypt.unwrap());
         Ok(())
     }
 
     pub fn is_locked(&self) -> bool {
-        *self.locked.lock().unwrap()
+        matches!(*self.lock_state.lock().unwrap(), LockState::Locked)
     }
 
     pub fn get_next_object_id(&self) -> u64 {
@@ -1235,7 +1284,7 @@ impl Mutations for ObjectStore {
             parent_store,
             &mut transaction,
             HandleOptions { skip_journal_checks: true, ..Default::default() },
-            Some(0),
+            self.crypt().as_deref(),
         )
         .await?;
         let new_object_tree_layer_object_id = new_object_tree_layer.object_id();
@@ -1245,7 +1294,7 @@ impl Mutations for ObjectStore {
             parent_store,
             &mut transaction,
             HandleOptions { skip_journal_checks: true, ..Default::default() },
-            Some(0),
+            None,
         )
         .await?;
         let new_extent_tree_layer_object_id = new_extent_tree_layer.object_id();
@@ -1536,9 +1585,7 @@ mod tests {
 
     async fn test_filesystem() -> OpenFxFilesystem {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("new_empty failed")
+        FxFilesystem::new_empty(device).await.expect("new_empty failed")
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1554,7 +1601,7 @@ mod tests {
             .expect("new_transaction failed");
         let store = fs.root_store();
         object1 = Arc::new(
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), None)
                 .await
                 .expect("create_object failed"),
         );
@@ -1565,7 +1612,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         object2 = Arc::new(
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), None)
                 .await
                 .expect("create_object failed"),
         );
@@ -1579,7 +1626,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         object3 = Arc::new(
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), None)
                 .await
                 .expect("create_object failed"),
         );
@@ -1611,16 +1658,22 @@ mod tests {
         let fs = test_filesystem().await;
         let store_id = {
             let root_volume = root_volume(&fs).await.expect("root_volume failed");
-            root_volume.new_volume("test").await.expect("new_volume failed").store_object_id()
+            root_volume
+                .new_volume("test", Arc::new(InsecureCrypt::new()))
+                .await
+                .expect("new_volume failed")
+                .store_object_id()
         };
 
         fs.close().await.expect("close failed");
         let device = fs.take_device().await;
         device.reopen();
-        let fs =
-            FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.expect("open failed");
+        let fs = FxFilesystem::open(device).await.expect("open failed");
 
-        fs.object_manager().open_store(store_id).await.expect("open_store failed");
+        fs.object_manager()
+            .open_store(store_id, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("open_store failed");
         fs.close().await.expect("Close failed");
     }
 
@@ -1635,7 +1688,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         let object = Arc::new(
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), None)
                 .await
                 .expect("create_object failed"),
         );
@@ -1671,6 +1724,7 @@ mod tests {
             &store.parent_store.as_ref().unwrap(),
             object_id,
             HandleOptions::default(),
+            store.crypt().as_deref(),
         )
         .await
         {
@@ -1694,7 +1748,7 @@ mod tests {
                 &root_store,
                 &mut transaction,
                 HandleOptions::default(),
-                Some(0),
+                None,
             )
             .await
             .expect("create_child failed");
@@ -1735,7 +1789,7 @@ mod tests {
                 &root_store,
                 &mut transaction,
                 HandleOptions::default(),
-                Some(0),
+                None,
             )
             .await
             .expect("create_child failed");
@@ -1815,7 +1869,7 @@ mod tests {
         // overwrite both of those extents.
         object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
 
-        fsck(&fs).await.expect("fsck failed");
+        fsck(&fs, None).await.expect("fsck failed");
     }
 }
 

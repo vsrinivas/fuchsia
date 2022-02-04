@@ -1068,7 +1068,7 @@ mod tests {
                 GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,
             },
             object_store::{
-                crypt::InsecureCrypt,
+                crypt::{Crypt, InsecureCrypt},
                 extent_record::ExtentKey,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
                 object_record::{ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
@@ -1100,13 +1100,11 @@ mod tests {
 
     async fn test_filesystem() -> OpenFxFilesystem {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("new_empty failed")
+        FxFilesystem::new_empty(device).await.expect("new_empty failed")
     }
 
     async fn test_filesystem_and_object_with_key(
-        wrapping_key: Option<u64>,
+        crypt: Option<&dyn Crypt>,
     ) -> (OpenFxFilesystem, StoreObjectHandle<ObjectStore>) {
         let fs = test_filesystem().await;
         let store = fs.root_store();
@@ -1116,14 +1114,10 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        object = ObjectStore::create_object(
-            &store,
-            &mut transaction,
-            HandleOptions::default(),
-            wrapping_key,
-        )
-        .await
-        .expect("create_object failed");
+        object =
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), crypt)
+                .await
+                .expect("create_object failed");
         {
             let align = TEST_DATA_OFFSET as usize % TEST_DEVICE_BLOCK_SIZE as usize;
             let mut buf = object.allocate_buffer(align + TEST_DATA.len());
@@ -1139,7 +1133,7 @@ mod tests {
     }
 
     async fn test_filesystem_and_object() -> (OpenFxFilesystem, StoreObjectHandle<ObjectStore>) {
-        test_filesystem_and_object_with_key(Some(0)).await
+        test_filesystem_and_object_with_key(Some(&InsecureCrypt::new())).await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1261,7 +1255,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         let object2 =
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), None)
                 .await
                 .expect("create_object failed");
         transaction.commit().await.expect("commit failed");
@@ -1433,10 +1427,14 @@ mod tests {
     async fn test_overwrite_fails_if_not_preallocated() {
         let (fs, object) = test_filesystem_and_object().await;
 
-        let object =
-            ObjectStore::open_object(&object.owner, object.object_id(), HandleOptions::default())
-                .await
-                .expect("open_object failed");
+        let object = ObjectStore::open_object(
+            &object.owner,
+            object.object_id(),
+            HandleOptions::default(),
+            Some(&InsecureCrypt::new()),
+        )
+        .await
+        .expect("open_object failed");
         let mut buf = object.allocate_buffer(2048);
         buf.as_mut_slice().fill(95);
         let offset = round_up(TEST_OBJECT_SIZE, fs.block_size()).unwrap();
@@ -1633,7 +1631,7 @@ mod tests {
             .expect("new_transaction failed");
         let store = fs.root_store();
         object = Arc::new(
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), None)
                 .await
                 .expect("create_object failed"),
         );

@@ -8,7 +8,6 @@ use {
         errors::FxfsError,
         object_store::{
             allocator::{Allocator, Hold, Reservation, ReservationOwner},
-            crypt::Crypt,
             directory::Directory,
             graveyard::Graveyard,
             journal::{super_block::SuperBlock, Journal, JournalCheckpoint},
@@ -66,10 +65,6 @@ pub trait Filesystem: TransactionHandler {
 
     /// Returns filesystem information.
     fn get_info(&self) -> Info;
-
-    /// Returns the crypt interface.
-    // TODO(csuter): This is going to need to be per-store eventually.
-    fn crypt(&self) -> &dyn Crypt;
 
     /// Returns the graveyard manager (whilst there exists a graveyard per store, the manager
     /// handles all of them).
@@ -193,7 +188,6 @@ pub struct FxFilesystem {
     closed: AtomicBool,
     read_only: bool,
     trace: bool,
-    crypt: Arc<dyn Crypt>,
     graveyard: Arc<Graveyard>,
 }
 
@@ -204,10 +198,7 @@ pub struct OpenOptions {
 }
 
 impl FxFilesystem {
-    pub async fn new_empty(
-        device: DeviceHolder,
-        crypt: Arc<dyn Crypt>,
-    ) -> Result<OpenFxFilesystem, Error> {
+    pub async fn new_empty(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
         let block_size = std::cmp::max(device.block_size().into(), MIN_BLOCK_SIZE);
@@ -223,7 +214,6 @@ impl FxFilesystem {
             closed: AtomicBool::new(false),
             read_only: false,
             trace: false,
-            crypt,
             graveyard: Graveyard::new(objects.clone()),
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
@@ -256,7 +246,6 @@ impl FxFilesystem {
     pub async fn open_with_options(
         device: DeviceHolder,
         options: OpenOptions,
-        crypt: Arc<dyn Crypt>,
     ) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
@@ -273,7 +262,6 @@ impl FxFilesystem {
             closed: AtomicBool::new(false),
             read_only: options.read_only,
             trace: options.trace,
-            crypt,
             graveyard: Graveyard::new(objects.clone()),
         });
         if !options.read_only {
@@ -299,11 +287,8 @@ impl FxFilesystem {
         Ok(filesystem.into())
     }
 
-    pub async fn open(
-        device: DeviceHolder,
-        crypt: Arc<dyn Crypt>,
-    ) -> Result<OpenFxFilesystem, Error> {
-        Self::open_with_options(device, OpenOptions::default(), crypt).await
+    pub async fn open(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
+        Self::open_with_options(device, OpenOptions::default()).await
     }
 
     pub fn root_parent_store(&self) -> Arc<ObjectStore> {
@@ -431,10 +416,6 @@ impl Filesystem for FxFilesystem {
         }
     }
 
-    fn crypt(&self) -> &dyn Crypt {
-        self.crypt.as_ref()
-    }
-
     fn graveyard(&self) -> &Arc<Graveyard> {
         &self.graveyard
     }
@@ -535,7 +516,6 @@ mod tests {
         crate::{
             object_handle::{ObjectHandle, WriteObjectHandle},
             object_store::{
-                crypt::InsecureCrypt,
                 directory::Directory,
                 fsck::fsck,
                 transaction::{Options, TransactionHandler},
@@ -543,7 +523,6 @@ mod tests {
         },
         fuchsia_async as fasync,
         futures::future::join_all,
-        std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
@@ -554,9 +533,7 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
 
         // If compaction is not working correctly, this test will run out of space.
-        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let root_store = fs.root_store();
         let root_directory = Directory::open(&root_store, root_store.root_directory_object_id())
             .await
@@ -586,7 +563,7 @@ mod tests {
         join_all(tasks).await;
         fs.sync(SyncOptions::default()).await.expect("sync failed");
 
-        fsck(&fs).await.expect("fsck failed");
+        fsck(&fs, None).await.expect("fsck failed");
         fs.close().await.expect("Close failed");
     }
 }
