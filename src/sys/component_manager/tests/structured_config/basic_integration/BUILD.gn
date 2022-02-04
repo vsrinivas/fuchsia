@@ -50,9 +50,30 @@ fuchsia_unittest_package("basic_integration_rust_false") {
   ]
 }
 
+fuchsia_unittest_package("basic_integration_cpp_true") {
+  manifest = "meta/tests.cml"
+  deps = [
+    ":my_flag_is_true",
+    ":test_bin",
+    "cpp:component",
+    "cpp:values_with_true",
+  ]
+}
+
+fuchsia_unittest_package("basic_integration_cpp_false") {
+  manifest = "meta/tests.cml"
+  deps = [
+    ":test_bin",
+    "cpp:component",
+    "cpp:values_with_false",
+  ]
+}
+
 group("basic_integration") {
   testonly = true
   deps = [
+    ":basic_integration_cpp_false",
+    ":basic_integration_cpp_true",
     ":basic_integration_rust_false",
     ":basic_integration_rust_true",
   ]

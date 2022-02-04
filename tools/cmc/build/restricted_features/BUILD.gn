@@ -36,6 +36,7 @@ group("structured_config") {
     "//src/session/bin/session_manager:*",
     "//src/session/examples/hello-world-session:*",
     "//src/sys/component_manager/tests/hub:*",
+    "//src/sys/component_manager/tests/structured_config/basic_integration/cpp:*",
     "//src/sys/component_manager/tests/structured_config/basic_integration/rust:*",
     "//tools/cmc:*",
     "//tools/configc:*",

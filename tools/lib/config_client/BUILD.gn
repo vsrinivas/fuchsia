@@ -8,6 +8,7 @@ if (is_host) {
   rustc_library("config_client") {
     with_unit_tests = true
     sources = [
+      "src/cpp_elf.rs",
       "src/fidl.rs",
       "src/lib.rs",
       "src/rust.rs",

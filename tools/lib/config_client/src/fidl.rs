@@ -17,6 +17,7 @@ pub fn create_fidl_source(config_decl: &ConfigDecl, library_name: String) -> Str
 
     // TODO(http://fxbug.dev/90690): The type identifier for the configuration fields struct
     // should be user-definable
+    // TODO(http://fxbug.dev/93026): Use a templating library instead of the format macro.
     let output = format!(
         "library {};
 type Config = struct {{

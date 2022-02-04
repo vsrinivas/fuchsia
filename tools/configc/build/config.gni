@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/config/clang/clang.gni")
 import("//build/host.gni")
 
 # Compile a configuration value file.
@@ -217,5 +218,88 @@ template("rust_config_client_lib_source") {
     deps += [ "//tools/cmc/build/restricted_features:structured_config" ]
 
     outputs = [ source_file_path ]
+  }
+}
+
+# Generate the C++ ELF client library source files for a configuration declaration.
+#
+# Parameters
+#
+#   compiled_manifest (required)
+#     Compiled manifest for which the source files should be generated.
+#     Type: path
+#
+#   fidl_library_name (required)
+#     Name for the internal FIDL library.
+#     Type: string
+#
+#   namespace (optional)
+#     Namespace used by the C++ library.
+#     Type: string
+#
+#   deps (optional)
+#   metadata (optional)
+#   output_name (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+template("cpp_elf_config_client_lib_source") {
+  assert(defined(invoker.compiled_manifest),
+         "the path to a compiled component manifest must be specified")
+  assert(defined(invoker.fidl_library_name),
+         "the name of the internal FIDL library must be specified")
+  if (defined(invoker.namespace)) {
+    namespace = invoker.namespace
+  } else {
+    namespace = target_name
+  }
+  compiled_manifest = invoker.compiled_manifest
+
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "metadata",
+                             "name",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//tools/configc"
+    tool_output_name = "configc"
+
+    inputs = [
+      compiled_manifest,
+      "${clang_prefix}/clang-format",
+    ]
+
+    output_path = "${target_out_dir}/${namespace}"
+    cc_source_file_path = "${output_path}/config.cc"
+    h_source_file_path = "${output_path}/config.h"
+
+    args = [
+      "cpp_elf",
+      "--cm",
+      rebase_path(compiled_manifest, root_build_dir),
+      "--output-path",
+      rebase_path(output_path, root_build_dir),
+      "--namespace",
+      namespace,
+      "--fidl-library-name",
+      invoker.fidl_library_name,
+      "--clang-format",
+      "${rebased_clang_prefix}/clang-format",
+    ]
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    deps += [ "//tools/cmc/build/restricted_features:structured_config" ]
+
+    outputs = [
+      cc_source_file_path,
+      h_source_file_path,
+    ]
   }
 }

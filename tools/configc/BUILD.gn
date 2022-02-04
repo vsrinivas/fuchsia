@@ -26,6 +26,7 @@ if (is_host) {
     ]
 
     sources = [
+      "src/client_cpp_elf.rs",
       "src/client_fidl.rs",
       "src/client_rust.rs",
       "src/cvf.rs",
@@ -74,6 +75,14 @@ rust_config_client_lib_source("rust_config_with_inspect_lib") {
   with_inspect = true
 }
 
+cpp_elf_config_client_lib_source("cpp_elf_config_lib") {
+  manifest_outputs = get_target_outputs(":config_manifest")
+  compiled_manifest = manifest_outputs[0]
+  fidl_library_name = "my.config.lib"
+  deps = [ ":config_manifest" ]
+  testonly = true
+}
+
 golden_file("fidl_config_lib_golden_test") {
   golden = "goldens/config.fidl.golden"
   lib_outputs = get_target_outputs(":fidl_config_lib")
@@ -98,9 +107,27 @@ golden_file("rust_config_lib_golden_test") {
   testonly = true
 }
 
+golden_file("cpp_elf_config_lib_cc_golden_test") {
+  golden = "goldens/config.cc.golden"
+  lib_outputs = get_target_outputs(":cpp_elf_config_lib")
+  current = lib_outputs[0]
+  deps = [ ":cpp_elf_config_lib" ]
+  testonly = true
+}
+
+golden_file("cpp_elf_config_lib_h_golden_test") {
+  golden = "goldens/config.h.golden"
+  lib_outputs = get_target_outputs(":cpp_elf_config_lib")
+  current = lib_outputs[1]
+  deps = [ ":cpp_elf_config_lib" ]
+  testonly = true
+}
+
 group("tests") {
   testonly = true
   deps = [
+    ":cpp_elf_config_lib_cc_golden_test",
+    ":cpp_elf_config_lib_h_golden_test",
     ":fidl_config_lib_golden_test",
     ":rust_config_lib_golden_test",
     ":rust_config_with_inspect_lib_golden_test",

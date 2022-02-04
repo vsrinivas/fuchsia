@@ -1,0 +1,52 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "basic_config_cpp_receiver"
+  sources = [ "src/main.cc" ]
+  deps = [
+    ":config_lib",
+    "../fidl:test.structuredconfig.receiver_hlcpp",
+    "//sdk/lib/sys/cpp:cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component_manifest("manifest") {
+  testonly = true
+  component_name = "basic_config_receiver"
+  manifest = "meta/receiver.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_structured_config_cpp_elf_lib("config_lib") {
+  testonly = true
+  namespace = "receiver_config"
+  cm_target = ":manifest"
+}
+
+fuchsia_component("component") {
+  testonly = true
+  cm_target = ":manifest"
+  deps = [ ":bin" ]
+}
+
+fuchsia_structured_config_values("values_with_true") {
+  testonly = true
+  cm_target = ":manifest"
+  values = "../config/values_with_true.json5"
+}
+
+fuchsia_structured_config_values("values_with_false") {
+  testonly = true
+  cm_target = ":manifest"
+  values = "../config/values_with_false.json5"
+}
