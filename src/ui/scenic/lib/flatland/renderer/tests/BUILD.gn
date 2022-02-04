@@ -47,9 +47,6 @@ executable("unittests") {
     "//src/ui/scenic/lib/utils",
   ]
 
-  # TODO(fxbug.dev/58615): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   public_configs = [ ":renderer_test_config" ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
