@@ -68,6 +68,7 @@ crc = "1.8.1"
 criterion = { version = "0.2", default-features = false }
 crossbeam = "0.8.0"
 cfg-if = "1.0.0"
+chacha20 = "0.8.1"
 csv = "1.0.7"
 cxx = "1.0.50"
 cxxbridge-cmd = "1.0.49"
@@ -589,7 +590,7 @@ env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-ucd-blo
 env_vars = [ "CARGO_PKG_VERSION=0.2.63" ]
 
 # These dependencies have build.rs scripts, but dummy invocations indicating they
-# do not need to be run are sufficient for our build
+# do not need to be run are sufficient for our build.
 #
 # Keep this sorted alphabetically, please.
 [gn.package.crossbeam-epoch."0.8.2"]

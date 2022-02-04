@@ -134,6 +134,10 @@ group("cfg-if") {
   deps = [ ":cfg-if-v1_0_0" ]
 }
 
+group("chacha20") {
+  deps = [ ":chacha20-v0_8_1" ]
+}
+
 group("chrono") {
   deps = [ ":chrono-v0_4_11" ]
 }
@@ -2315,6 +2319,36 @@ rust_library("cfg-if-v1_0_0") {
     "--edition=2018",
     "-Cmetadata=5f200286e6ae9b7a",
     "-Cextra-filename=-5f200286e6ae9b7a",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("chacha20-v0_8_1") {
+  crate_name = "chacha20"
+  crate_root = "//third_party/rust_crates/vendor/chacha20/src/lib.rs"
+  output_name = "chacha20-c4906d1a7ad0766f"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":cipher-v0_3_0" ]
+  if (current_cpu == "x64" || false) {
+    deps += [ ":cpufeatures-v0_2_1" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=c4906d1a7ad0766f",
+    "-Cextra-filename=-c4906d1a7ad0766f",
+    "--cfg=feature=\"cipher\"",
+    "--cfg=feature=\"default\"",
   ]
 
   visibility = [ ":*" ]

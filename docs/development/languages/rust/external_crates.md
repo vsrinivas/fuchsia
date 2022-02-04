@@ -58,7 +58,7 @@ To add an external crate, do the following:
 
       `fx update-rustc-third-party` downloads all of the crates listed in
       [`rust_crates/Cargo.toml`][external-cargo-toml] as well as their
-      dependencies,places the downloaded crates in the `vendor` directory, and
+      dependencies, places the downloaded crates in the `vendor` directory, and
       then updates `Cargo.toml` and `Cargo.lock`.
 
       You may need to provide additional configuration in a `[gn.package.<crate>]`
