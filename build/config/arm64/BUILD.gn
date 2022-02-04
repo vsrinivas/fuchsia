@@ -11,8 +11,13 @@ config("arm64") {
   ]
   ldflags = cflags
   asmflags = cflags
-  rustflags = [ "-Ctarget-feature=+armv8-a,+simd,+crc,+crypto" ]
   configs = [ ":no-outline-atomics" ]
+
+  # For supported target features see:
+  # rustc --target=aarch64-fuchsia --print target-features
+  # `armv8a` and `simd` features are assumed by the target triple
+  # `aarch64-fuchsia`.
+  rustflags = [ "-Ctarget-feature=+crc,+crypto" ]
 }
 
 config("cortex-a53") {
