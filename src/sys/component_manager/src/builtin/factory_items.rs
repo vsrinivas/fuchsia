@@ -41,7 +41,6 @@ pub struct FactoryItems {
 }
 
 impl FactoryItems {
-    #[allow(dead_code)] // Temporary until we instantiate this in component manager.
     pub fn new(parser: &mut ZbiParser) -> Result<Arc<Self>, Error> {
         match parser.try_get_item(StorageBootfsFactory) {
             Ok(result) => {

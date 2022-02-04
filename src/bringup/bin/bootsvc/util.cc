@@ -35,7 +35,6 @@ bool StoreItem(uint32_t type) {
     case ZBI_TYPE_CRASHLOG:
     case ZBI_TYPE_KERNEL_DRIVER:
     case ZBI_TYPE_PLATFORM_ID:
-    case ZBI_TYPE_STORAGE_BOOTFS_FACTORY:
     case ZBI_TYPE_STORAGE_RAMDISK:
     case ZBI_TYPE_IMAGE_ARGS:
     case ZBI_TYPE_SERIAL_NUMBER:
@@ -52,10 +51,10 @@ void DiscardItem(zx::vmo* vmo, uint32_t begin_in, uint32_t end_in) {
   uint64_t begin = fbl::round_up(begin_in, static_cast<uint32_t>(zx_system_get_page_size()));
   uint64_t end = fbl::round_down(end_in, static_cast<uint32_t>(zx_system_get_page_size()));
   if (begin < end) {
-    zx_status_t status = vmo->op_range(ZX_VMO_OP_DECOMMIT, begin, end - begin, nullptr, 0);
-    ZX_ASSERT_MSG(status == ZX_OK, "Discarding boot item failed: %s\n",
-                  zx_status_get_string(status));
-    printf("bootsvc: Decommitted BOOTDATA VMO from %#lx to %#lx\n", begin, end);
+    printf(
+        "bootsvc: Would have decommitted BOOTDATA VMO from %#lx to %#lx, but deferring to "
+        "component manager's ZBI parser instead\n",
+        begin, end);
   }
 }
 
@@ -81,42 +80,6 @@ bootsvc::ItemValue CreateItemValue(uint32_t type, uint32_t off, uint32_t len) {
       off = safemath::CheckAdd(off, sizeof(zbi_header_t)).ValueOrDie<uint32_t>();
   }
   return bootsvc::ItemValue{.offset = off, .length = len};
-}
-
-zx_status_t ProcessFactoryItem(const zx::vmo& vmo, uint32_t offset, uint32_t length,
-                               bootsvc::FactoryItemValue* out_factory_item) {
-  offset = safemath::CheckAdd(offset, sizeof(zbi_header_t)).ValueOrDie<uint32_t>();
-
-  zx::vmo payload;
-  zx_status_t status = zx::vmo::create(length, 0, &payload);
-  if (status != ZX_OK) {
-    printf("bootsvc: Failed to create payload vmo: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  auto buffer = std::make_unique<uint8_t[]>(length);
-  status = vmo.read(buffer.get(), offset, length);
-  if (status != ZX_OK) {
-    printf("bootsvc: Failed to read input vmo: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  status = payload.write(buffer.get(), 0, length);
-  if (status != ZX_OK) {
-    printf("bootsvc: Failed to write payload vmo: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  // Wipe the factory item from the original VMO.
-  memset(buffer.get(), 0, length);
-  status = vmo.write(buffer.get(), offset, length);
-  if (status != ZX_OK) {
-    printf("bootsvc: Failed to wipe input vmo: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  *out_factory_item = bootsvc::FactoryItemValue{.vmo = std::move(payload), .length = length};
-  return ZX_OK;
 }
 
 zx_status_t ProcessBootloaderFile(const zx::vmo& vmo, uint32_t offset, uint32_t length,
@@ -164,10 +127,9 @@ namespace bootsvc {
 
 const char* const kLastPanicFilePath = "log/last-panic.txt";
 
-zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap* out_factory_map,
+zx_status_t RetrieveBootImage(zx::vmo vmo, zx::vmo* out_vmo, ItemMap* out_map,
                               BootloaderFileMap* out_bootloader_file_map) {
   // Validate boot image VMO provided by startup handle.
-  zx::vmo vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTDATA, 0)));
   zbi_header_t header;
   zx_status_t status = vmo.read(&header, 0, sizeof(header));
   if (status != ZX_OK) {
@@ -185,7 +147,6 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
 
   // Read boot items from the boot image VMO.
   ItemMap map;
-  FactoryItemMap factory_map;
   BootloaderFileMap bootloader_file_map;
 
   uint32_t off = sizeof(header);
@@ -206,17 +167,7 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
       printf("bootsvc: ZBI item too large (%u > %u)\n", item_len, len);
       return ZX_ERR_IO_DATA_INTEGRITY;
     } else if (StoreItem(header.type)) {
-      if (header.type == ZBI_TYPE_STORAGE_BOOTFS_FACTORY) {
-        FactoryItemValue factory_item;
-
-        status = ProcessFactoryItem(vmo, off, header.length, &factory_item);
-        if (status != ZX_OK) {
-          printf("bootsvc: Failed to process factory item: %s\n", zx_status_get_string(status));
-          return status;
-        }
-
-        factory_map.emplace(header.extra, std::move(factory_item));
-      } else if (header.type == ZBI_TYPE_BOOTLOADER_FILE) {
+      if (header.type == ZBI_TYPE_BOOTLOADER_FILE) {
         std::string filename;
         ItemValue bootloader_file;
 
@@ -251,7 +202,6 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
   DiscardItem(&vmo, discard_begin, discard_end);
   *out_vmo = std::move(vmo);
   *out_map = std::move(map);
-  *out_factory_map = std::move(factory_map);
   *out_bootloader_file_map = std::move(bootloader_file_map);
   return ZX_OK;
 }

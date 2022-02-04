@@ -46,10 +46,6 @@ class SvcfsService : public fbl::RefCounted<SvcfsService> {
   fbl::RefPtr<fs::PseudoDir> root_;
 };
 
-// Create a service to retrive factory ZBI items.
-fbl::RefPtr<fs::Service> CreateFactoryItemsService(async_dispatcher_t* dispatcher,
-                                                   FactoryItemMap map);
-
 // Create a service to retrieve ZBI items.
 fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
                                             ItemMap map, BootloaderFileMap bootloader_file_map);

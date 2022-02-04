@@ -42,7 +42,6 @@ namespace fio = fuchsia_io;
 
 static std::vector<std::string> arguments;
 
-constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 
 void print_test_success_string() {
@@ -195,49 +194,6 @@ TEST(BootsvcIntegrationTest, Arguments) {
   ASSERT_EQ(arguments.size(), 2);
   EXPECT_STREQ(arguments[0].c_str(), "bin/bootsvc-integration-test");
   EXPECT_STREQ(arguments[1].c_str(), "testargument");
-}
-
-// Make sure the fuchsia.boot.FactoryItems service works
-TEST(BootsvcIntegrationTest, FactoryItems) {
-  zx::channel local_items, remote_items;
-  zx_status_t status = zx::channel::create(0, &local_items, &remote_items);
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we can open the fuchsia.boot.Items service.
-  status = fdio_service_connect(kItemsPath, remote_items.release());
-  ASSERT_EQ(ZX_OK, status);
-
-  zx::vmo payload;
-  uint32_t length;
-
-  // No factory items should appear here.
-  status = fuchsia_boot_ItemsGet(local_items.get(), ZBI_TYPE_STORAGE_BOOTFS_FACTORY, 0,
-                                 payload.reset_and_get_address(), &length);
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_FALSE(payload.is_valid());
-  ASSERT_EQ(0, length);
-
-  zx::channel local_factory_items, remote_factory_items;
-  status = zx::channel::create(0, &local_factory_items, &remote_factory_items);
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we can open the fuchsia.boot.FactoryItems service.
-  status = fdio_service_connect(kFactoryItemsPath, remote_factory_items.release());
-  ASSERT_EQ(ZX_OK, status);
-
-  static constexpr char kExpected[] = "IAmAFactoryItemHooray";
-  uint8_t buf[sizeof(kExpected) - 1];
-
-  // Verify that multiple calls work.
-  for (int i = 0; i < 2; i++) {
-    status = fuchsia_boot_FactoryItemsGet(local_factory_items.get(), 0,
-                                          payload.reset_and_get_address(), &length);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_TRUE(payload.is_valid());
-    ASSERT_EQ(sizeof(buf), length);
-    ASSERT_EQ(ZX_OK, payload.read(buf, 0, sizeof(buf)));
-    ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kExpected), buf, sizeof(buf), "");
-  }
 }
 
 // Make sure the fuchsia.boot.Items service works

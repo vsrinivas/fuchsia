@@ -18,31 +18,6 @@
 
 namespace {
 
-zx_status_t FactoryItemsGet(void* ctx, uint32_t extra, fidl_txn_t* txn) {
-  auto map = static_cast<bootsvc::FactoryItemMap*>(ctx);
-  auto it = map->find(extra);
-  if (it == map->end()) {
-    return fuchsia_boot_FactoryItemsGet_reply(txn, ZX_HANDLE_INVALID, 0);
-  }
-
-  const zx::vmo& vmo = it->second.vmo;
-  uint32_t length = it->second.length;
-  zx::vmo payload;
-  zx_status_t status =
-      vmo.duplicate(ZX_DEFAULT_VMO_RIGHTS & ~(ZX_RIGHT_WRITE | ZX_RIGHT_SET_PROPERTY), &payload);
-  if (status != ZX_OK) {
-    printf("bootsvc: Failed to duplicate handle for factory item VMO: %s",
-           zx_status_get_string(status));
-    return status;
-  }
-
-  return fuchsia_boot_FactoryItemsGet_reply(txn, payload.release(), length);
-}
-
-constexpr fuchsia_boot_FactoryItems_ops kFactoryItemsOps = {
-    .Get = FactoryItemsGet,
-};
-
 struct ItemsData {
   zx::vmo vmo;
   bootsvc::ItemMap map;
@@ -142,15 +117,6 @@ void SvcfsService::AddService(const char* service_name, fbl::RefPtr<fs::Service>
 
 zx_status_t SvcfsService::CreateRootConnection(zx::channel* out) {
   return CreateVnodeConnection(&vfs_, root_, fs::Rights::ReadWrite(), out);
-}
-
-fbl::RefPtr<fs::Service> CreateFactoryItemsService(async_dispatcher_t* dispatcher,
-                                                   FactoryItemMap map) {
-  return fbl::MakeRefCounted<fs::Service>(
-      [dispatcher, map = std::move(map)](zx::channel channel) mutable {
-        auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_FactoryItems_dispatch);
-        return fidl_bind(dispatcher, channel.release(), dispatch, &map, &kFactoryItemsOps);
-      });
 }
 
 fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::vmo vmo,

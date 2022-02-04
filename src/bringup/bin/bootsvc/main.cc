@@ -66,6 +66,7 @@ struct Resources {
 // are both creating bootfs services, as VMO handles taken need to be
 // passed on.
 struct Vmos {
+  zx::vmo zbi;
   zx::vmo bootfs;
   zx::vmo bootfs_exec;
   std::vector<zx::vmo> vdsos;
@@ -328,6 +329,7 @@ void LaunchNextProcess(const std::vector<std::string>& args,
   nametable[count++] = "/svc";
 
   // Pass on resources to the next process.
+  launchpad_add_handle(lp, vmos.zbi.release(), PA_HND(PA_VMO_BOOTDATA, 0));
   launchpad_add_handle(lp, vmos.bootfs.release(), PA_HND(PA_VMO_BOOTFS, 0));
   launchpad_add_handle(lp, resources.mmio.release(), PA_HND(PA_MMIO_RESOURCE, 0));
   launchpad_add_handle(lp, resources.irq.release(), PA_HND(PA_IRQ_RESOURCE, 0));
@@ -512,7 +514,7 @@ int main(int argc, char** argv) {
 
   Vmos vmos;
   vmos.bootfs = zx::vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
-  ZX_ASSERT_MSG(vmos.bootfs.is_valid(), "Invalid bootfs_resource handle\n");
+  ZX_ASSERT_MSG(vmos.bootfs.is_valid(), "Invalid bootfs vmo\n");
 
   zx::vmo vmo;
   status = vmos.bootfs.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
@@ -522,6 +524,9 @@ int main(int argc, char** argv) {
   ZX_ASSERT_MSG(status == ZX_OK && vmo.is_valid(), "Failed to mark bootfs vmo as executable: %s",
                 zx_status_get_string(status));
   vmos.bootfs_exec = std::move(vmo);
+
+  vmos.zbi = zx::vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTDATA, 0)));
+  ZX_ASSERT_MSG(vmos.zbi.is_valid(), "Invalid ZBI vmo\n");
 
   GetKernelVmos(PA_VMO_VDSO, &vmos.vdsos);
   GetKernelVmos(PA_VMO_KERNEL_FILE, &vmos.kernel_files);
@@ -542,12 +547,16 @@ int main(int argc, char** argv) {
 
   // Process the ZBI boot image
   printf("bootsvc: Retrieving boot image...\n");
+  zx::vmo zbi_dup;
+  status = vmos.zbi.duplicate(ZX_RIGHT_SAME_RIGHTS, &zbi_dup);
+  ZX_ASSERT_MSG(status == ZX_OK && zbi_dup.is_valid(), "Failed to duplicate ZBI vmo: %s\n.",
+                zx_status_get_string(status));
+
   zx::vmo image_vmo;
   bootsvc::ItemMap item_map;
-  bootsvc::FactoryItemMap factory_item_map;
   bootsvc::BootloaderFileMap bootloader_file_map;
   status =
-      bootsvc::RetrieveBootImage(&image_vmo, &item_map, &factory_item_map, &bootloader_file_map);
+      bootsvc::RetrieveBootImage(std::move(zbi_dup), &image_vmo, &item_map, &bootloader_file_map);
   ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot image failed: %s\n",
                 zx_status_get_string(status));
 
@@ -611,9 +620,6 @@ int main(int argc, char** argv) {
       fuchsia_boot_Items_Name,
       bootsvc::CreateItemsService(loop.dispatcher(), std::move(image_vmo), std::move(item_map),
                                   std::move(bootloader_file_map)));
-  svcfs_svc->AddService(
-      fuchsia_boot_FactoryItems_Name,
-      bootsvc::CreateFactoryItemsService(loop.dispatcher(), std::move(factory_item_map)));
 
   // Launch the next process in the chain.  This must be in a thread, since
   // it may issue requests to the loader, which runs in the async loop that

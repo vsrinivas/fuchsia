@@ -12,6 +12,7 @@ use {
             cpu_resource::CpuResource,
             crash_introspect::{CrashIntrospectSvc, CrashRecords},
             debug_resource::DebugResource,
+            factory_items::FactoryItems,
             fuchsia_boot_resolver::{FuchsiaBootResolver, SCHEME as BOOT_SCHEME},
             hypervisor_resource::HypervisorResource,
             info_resource::InfoResource,
@@ -80,6 +81,7 @@ use {
     fuchsia_component::{client, server::*},
     fuchsia_inspect::{self as inspect, component, health::Reporter, Inspector},
     fuchsia_runtime::{take_startup_handle, HandleType},
+    fuchsia_zbi::{ZbiParser, ZbiType},
     fuchsia_zircon::{self as zx, Clock, HandleBased, Resource},
     futures::lock::Mutex,
     futures::prelude::*,
@@ -351,6 +353,7 @@ pub struct BuiltinEnvironment {
     pub root_job_for_inspect: Arc<RootJob>,
     pub read_only_log: Option<Arc<ReadOnlyLog>>,
     pub write_only_log: Option<Arc<WriteOnlyLog>>,
+    pub factory_items_service: Option<Arc<FactoryItems>>,
     pub mmio_resource: Option<Arc<MmioResource>>,
     pub power_resource: Option<Arc<PowerResource>>,
     pub root_resource: Option<Arc<RootResource>>,
@@ -448,6 +451,32 @@ impl BuiltinEnvironment {
 
         let root_resource_handle =
             take_startup_handle(HandleType::Resource.into()).map(zx::Resource::from);
+
+        let zbi_vmo_handle = take_startup_handle(HandleType::BootdataVmo.into()).map(zx::Vmo::from);
+
+        // TODO(fxb/44784): Migrate the items service to use this ZBI handle too.
+        let factory_items_service = match zbi_vmo_handle {
+            None => None,
+            Some(zbi_vmo) => {
+                let mut zbi_parser = ZbiParser::new(zbi_vmo)
+                    .set_store_item(ZbiType::Cmdline)
+                    .set_store_item(ZbiType::Crashlog)
+                    .set_store_item(ZbiType::KernelDriver)
+                    .set_store_item(ZbiType::PlatformId)
+                    .set_store_item(ZbiType::StorageBootfsFactory)
+                    .set_store_item(ZbiType::StorageRamdisk)
+                    .set_store_item(ZbiType::ImageArgs)
+                    .set_store_item(ZbiType::SerialNumber)
+                    .set_store_item(ZbiType::BootloaderFile)
+                    .set_store_item(ZbiType::DeviceTree)
+                    .set_store_item(ZbiType::DriverMetadata)
+                    .parse()?;
+
+                let factory_items = FactoryItems::new(&mut zbi_parser)?;
+                model.root().hooks.install(factory_items.hooks()).await;
+                Some(factory_items)
+            }
+        };
 
         // Set up BootArguments service.
         let boot_args = BootArguments::new();
@@ -775,6 +804,7 @@ impl BuiltinEnvironment {
             kernel_stats,
             read_only_log,
             write_only_log,
+            factory_items_service,
             cpu_resource,
             debug_resource,
             mmio_resource,
