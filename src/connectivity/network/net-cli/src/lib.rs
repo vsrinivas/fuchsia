@@ -1543,14 +1543,11 @@ mod tests {
                 .expect("del address request");
             assert_eq!(addr, IF_ADDR_V4);
             let () = responder.send(&mut Ok(true)).expect("responder send");
-            // Return the control channel to avoid racing the response with the drop event.
-            // TODO(https://fxbug.dev/92774): Remove this when the race is fixed.
-            control
         };
 
         futures::select! {
             () = interfaces_fut => panic!("interfaces_fut should never complete"),
-            (_control, ()) = futures::future::join(handler_fut, succeeds).fuse() => {},
+            ((), ()) = futures::future::join(handler_fut, succeeds).fuse() => {},
         }
 
         // Make the second request.
@@ -1596,13 +1593,10 @@ mod tests {
                     .expect("del address request");
                 assert_eq!(addr, IF_ADDR_V6);
                 let () = responder.send(&mut Ok(false)).expect("responder send");
-                // Return the control channel to avoid racing the response with the drop event.
-                // TODO(https://fxbug.dev/92774): Remove this when the race is fixed.
-                Some(control)
             };
             futures::select! {
                 () = interfaces_fut => panic!("interfaces_fut should never complete"),
-                (_control, e) = futures::future::join(handler_fut, fails).fuse() => {
+                ((), e) = futures::future::join(handler_fut, fails).fuse() => {
                     let fnet_ext::IpAddress(addr) = extract_ip(IF_ADDR_V6).into();
                     assert_eq!(e.to_string(), format!("Address {} not found on interface {}", addr, interface2.nicid));
                 },

@@ -239,11 +239,19 @@ impl Control {
         fut: fidl::client::QueryResponseFut<R>,
     ) -> Result<R, TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>> {
         match futures::future::select(self.terminal_event_fut.clone(), fut).await {
-            futures::future::Either::Left((event, _fut)) => {
-                let event = event.map_err(TerminalError::Fidl)?;
-                let event = event
-                    .ok_or(TerminalError::Fidl(fidl::Error::ClientRead(zx::Status::PEER_CLOSED)))?;
-                Err(TerminalError::Terminal(event))
+            futures::future::Either::Left((event, fut)) => {
+                match event.map_err(|e| TerminalError::Fidl(e))? {
+                    Some(removal_reason) => Err(TerminalError::Terminal(removal_reason)),
+                    None => {
+                        if let Some(query_result) = fut.now_or_never() {
+                            query_result.map_err(TerminalError::Fidl)
+                        } else {
+                            Err(TerminalError::Fidl(fidl::Error::ClientRead(
+                                zx::Status::PEER_CLOSED,
+                            )))
+                        }
+                    }
+                }
             }
             futures::future::Either::Right((query_result, _fut)) => {
                 query_result.map_err(TerminalError::Fidl)
@@ -307,7 +315,7 @@ impl<E: std::fmt::Debug> std::error::Error for TerminalError<E> {}
 #[cfg(test)]
 mod test {
     use super::{assignment_state_stream, AddressStateProviderError};
-    use fidl::endpoints::{RequestStream as _, Responder as _};
+    use fidl::endpoints::{ProtocolMarker as _, RequestStream as _, Responder as _};
     use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
     use fuchsia_zircon_status as zx;
     use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
@@ -433,9 +441,10 @@ mod test {
             async move {
                 assert_matches::assert_matches!(
                     control.get_id().await,
-                    Err(super::TerminalError::Fidl(fidl::Error::ClientRead(
-                        zx::Status::PEER_CLOSED
-                    )))
+                    Err(super::TerminalError::Fidl(fidl::Error::ClientChannelClosed {
+                        status: zx::Status::PEER_CLOSED,
+                        protocol_name: fidl_fuchsia_net_interfaces_admin::ControlMarker::NAME
+                    }))
                 );
             },
             async move {
@@ -500,5 +509,30 @@ mod test {
             control.wait_termination().await,
             super::TerminalError::Terminal(CLOSE_REASON)
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn control_respond_and_drop() {
+        const ID: u64 = 15;
+        let (control, mut request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fnet_interfaces_admin::ControlMarker>()
+                .expect("create proxy");
+        let control = super::Control::new(control);
+        let ((), ()) = futures::future::join(
+            async move {
+                assert_matches::assert_matches!(control.get_id().await, Ok(ID));
+            },
+            async move {
+                let responder = request_stream
+                    .try_next()
+                    .await
+                    .expect("operating request stream")
+                    .expect("stream ended unexpectedly")
+                    .into_get_id()
+                    .expect("unexpected request");
+                let () = responder.send(ID).expect("failed to send response");
+            },
+        )
+        .await;
     }
 }
