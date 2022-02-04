@@ -10,6 +10,9 @@
 ##   --pave                  Pave device after flashing (recommended)
 ##   -s                      Serial of device you wish to flash to (only necessary
 ##                           if multiple devices in fastboot mode)
+##  --skip-verify            Skip hardware verification. This is dangerous, please be
+##                           sure the images you are flashing match the device. Only
+##                           supported with ffx
 ##
 ## Defaults are defined by the "incremental" feature:
 ##    'fx --enable=incremental flash'  defaults to "--build"
@@ -36,6 +39,7 @@ fi
 pave=false
 serial=
 device=$(get-device-name)
+skip_verify=false
 while [[ $# -ge 1 ]]; do
   case "$1" in
   -h|--help)
@@ -60,6 +64,9 @@ while [[ $# -ge 1 ]]; do
   -device)
     shift
     device="$1"
+    ;;
+  --skip-verify)
+    skip_verify=true
     ;;
   *)
     break
@@ -87,7 +94,7 @@ fi
 
 flash_manifest="${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --expect-one --name flash-manifest images)"
 cd "${FUCHSIA_BUILD_DIR}"
-fx-flash "${serial}" "${device}" "${flash_manifest}"
+fx-flash "${serial}" "${device}" "${flash_manifest}" "${skip_verify}"
 
 if $pave; then
   # no need to build, since all dependencies were already built above.

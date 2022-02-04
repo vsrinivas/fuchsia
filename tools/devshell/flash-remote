@@ -11,10 +11,13 @@
 ## Connect to HOST, run a build using fx from DIR, fetch the artifacts and
 ## start the flash.
 ##
-##  --no-build    do not build, just pull artifacts already present
-##  --no-flash    do not start the fastboot, just pull the artifacts
+##  --no-build    Do not build, just pull artifacts already present
+##  --no-flash    Do not start the fastboot, just pull the artifacts
 ##   -s           Serial of device you wish to flash to (only necessary if multiple
 ##                devices in fastboot mode)
+##  --skip-verify Skip hardware verification. This is dangerous, please be
+##                sure the images you are flashing match the device. Only supported
+##                with ffx
 ##
 ##  HOST          the hostname to connect to
 ##  DIR           defaults to ~/fuchsia, the path to the FUCHSIA_DIR on HOST
@@ -32,6 +35,7 @@ host=""
 dir=""
 serial=
 device=$(get-device-name)
+skip_verify=false
 while [[ $# -ne 0 ]]; do
   case "$1" in
   --help|-h)
@@ -51,6 +55,9 @@ while [[ $# -ne 0 ]]; do
   -device)
     shift
     device="$1"
+    ;;
+  --skip-verify)
+    skip_verify=true
     ;;
   -*)
     fx-error "Unknown flag: $1"
@@ -116,5 +123,5 @@ if "${flash}"; then
   fi
   cd "${artifact_dir}"
   manifest_path="${artifact_dir}/${flash_manifest}"
-  fx-flash "${serial}" "${device}" "${manifest_path}"
+  fx-flash "${serial}" "${device}" "${manifest_path}" "${skip_verify}"
 fi

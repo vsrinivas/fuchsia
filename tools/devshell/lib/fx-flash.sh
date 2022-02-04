@@ -11,6 +11,7 @@ function fx-flash {
   local serial="$1"
   local device="$2"
   local flash_manifest="$3"
+  local skip_verify="$4"
 
 
   if [[ $num_gb_devices > 1 ]]; then
@@ -85,6 +86,10 @@ function fx-flash {
   if [[ ! -f "${flash_manifest}" ]]; then
     fx-error "Flash manifest: '${flash_manifest}' not found"
     return 1
+  fi
+
+  if "${skip_verify}"; then
+    ffx_flash_args+=("--skip-verify")
   fi
 
   fx-info "Running fx ffx ${ffx_args[@]} target flash ${flash_manifest} ${ffx_flash_args[@]}"

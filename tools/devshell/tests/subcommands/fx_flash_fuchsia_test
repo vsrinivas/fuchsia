@@ -135,4 +135,9 @@ INPUT
   btf::expect-mock-args "${ffx}.mock_state.2" "ffx" "-c" "target.default=" "target" "flash" "${BT_TEMP_DIR}/out/default/flash.json" "--ssh-key" "${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys"
 }
 
+TEST_fx_flash_skip_verify_with_ffx() {
+  BT_EXPECT ${fx} flash --skip-verify
+  btf::expect-mock-args "${ffx}.mock_state" "ffx" "target" "flash" "${BT_TEMP_DIR}/out/default/flash.json" "--ssh-key" "${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys" "--skip-verify"
+}
+
 BT_RUN_TESTS "$@"
