@@ -329,17 +329,41 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
         }
         opts::IfEnum::Enable(opts::IfEnable { interface }) => {
             let id = interface.find_nicid(connector).await?;
-            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
-            let () =
-                fstack_ext::exec_fidl!(stack.enable_interface(id), "error enabling interface")?;
-            info!("Interface {} enabled", id);
+            let control = get_control(connector, id).await?;
+            let did_enable = control
+                .enable()
+                .await
+                .map_err(anyhow::Error::new)
+                .and_then(|res| {
+                    res.map_err(|e: finterfaces_admin::ControlEnableError| {
+                        anyhow::anyhow!("{:?}", e)
+                    })
+                })
+                .context("error enabling interface")?;
+            if did_enable {
+                info!("Interface {} enabled", id);
+            } else {
+                info!("Interface {} already enabled", id);
+            }
         }
         opts::IfEnum::Disable(opts::IfDisable { interface }) => {
             let id = interface.find_nicid(connector).await?;
-            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
-            let () =
-                fstack_ext::exec_fidl!(stack.disable_interface(id), "error disabling interface")?;
-            info!("Interface {} disabled", id);
+            let control = get_control(connector, id).await?;
+            let did_disable = control
+                .disable()
+                .await
+                .map_err(anyhow::Error::new)
+                .and_then(|res| {
+                    res.map_err(|e: finterfaces_admin::ControlDisableError| {
+                        anyhow::anyhow!("{:?}", e)
+                    })
+                })
+                .context("error disabling interface")?;
+            if did_disable {
+                info!("Interface {} disabled", id);
+            } else {
+                info!("Interface {} already disabled", id);
+            }
         }
         opts::IfEnum::Addr(opts::IfAddr { addr_cmd }) => match addr_cmd {
             opts::IfAddrEnum::Add(opts::IfAddrAdd { interface, addr, prefix }) => {
