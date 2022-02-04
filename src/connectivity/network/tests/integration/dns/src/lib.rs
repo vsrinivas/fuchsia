@@ -650,7 +650,7 @@ async fn fallback_on_error_response_code() {
         }
         .fuse();
 
-        pin_utils::pin_mut!(lookup_fut, error_server_fut, fallback_fut);
+        futures::pin_mut!(lookup_fut, error_server_fut, fallback_fut);
         futures::select! {
             () = lookup_fut => {},
             () = error_server_fut => panic!("error_server_fut should never complete"),
@@ -736,7 +736,7 @@ async fn no_fallback_to_tcp_on_failed_udp() {
     }
     .fuse();
 
-    pin_utils::pin_mut!(lookup_fut, udp_fut, tcp_fut);
+    futures::pin_mut!(lookup_fut, udp_fut, tcp_fut);
     futures::select! {
         () = lookup_fut => {},
         () = udp_fut => panic!("mock UDP name server future should never complete"),
@@ -842,7 +842,7 @@ async fn fallback_to_tcp_on_truncated_response() {
     }
     .fuse();
 
-    pin_utils::pin_mut!(lookup_fut, udp_fut, tcp_fut);
+    futures::pin_mut!(lookup_fut, udp_fut, tcp_fut);
     futures::select! {
         () = lookup_fut => {},
         () = udp_fut => panic!("mock UDP name server future should never complete"),

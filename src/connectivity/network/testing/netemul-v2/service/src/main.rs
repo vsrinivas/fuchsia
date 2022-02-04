@@ -23,12 +23,12 @@ use {
     },
     fuchsia_driver_test::DriverTestRealmBuilder as _,
     fuchsia_zircon as zx,
+    futures::pin_mut,
     futures::{
         channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryFutureExt as _,
         TryStreamExt as _,
     },
     log::{debug, error, info, warn},
-    pin_utils::pin_mut,
     std::{
         borrow::Cow,
         collections::hash_map::{Entry, HashMap},

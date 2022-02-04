@@ -471,7 +471,7 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
         .expect("connect to protocol");
     let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
         .expect("get interface event stream");
-    pin_utils::pin_mut!(stream);
+    futures::pin_mut!(stream);
 
     let (loopback_id, addresses) = assert_matches::assert_matches!(
         stream.try_next().await,
@@ -583,7 +583,7 @@ async fn disable_interface_loopback<N: Netstack>(name: &str) {
 
     let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
         .expect("get interface event stream");
-    pin_utils::pin_mut!(stream);
+    futures::pin_mut!(stream);
 
     let loopback_id = assert_matches::assert_matches!(
         stream.try_next().await,
@@ -626,7 +626,7 @@ async fn disable_interface_loopback<N: Netstack>(name: &str) {
             // creating a new watcher.
             let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
                 .expect("get interface event stream");
-            pin_utils::pin_mut!(stream);
+            futures::pin_mut!(stream);
             let new_loopback_id = assert_matches::assert_matches!(
                 stream.try_next().await,
                 Ok(Some(fidl_fuchsia_net_interfaces::Event::Existing(

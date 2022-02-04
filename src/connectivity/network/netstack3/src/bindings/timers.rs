@@ -368,7 +368,7 @@ mod tests {
         executor: &mut fasync::TestExecutor,
         f: Fut,
     ) -> R {
-        pin_utils::pin_mut!(f);
+        futures::pin_mut!(f);
         loop {
             executor.wake_main_future();
             match executor.run_one_step(&mut f) {
@@ -381,7 +381,7 @@ mod tests {
 
     fn run_until_stalled(executor: &mut fasync::TestExecutor) {
         let fut = futures::future::ready(());
-        pin_utils::pin_mut!(fut);
+        futures::pin_mut!(fut);
         executor.wake_main_future();
         loop {
             match executor.run_one_step(&mut fut) {

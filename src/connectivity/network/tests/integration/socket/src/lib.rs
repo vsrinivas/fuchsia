@@ -553,7 +553,7 @@ async fn test_ip_endpoint_packets() {
         }
         Ok(Some((frame_type, frame_data)))
     });
-    pin_utils::pin_mut!(read_frame);
+    futures::pin_mut!(read_frame);
 
     async fn write_frame_and_read_with_timeout<S>(
         tun_dev: &fidl_fuchsia_net_tun::DeviceProxy,

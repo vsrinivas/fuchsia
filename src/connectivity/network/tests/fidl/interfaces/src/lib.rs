@@ -749,10 +749,10 @@ async fn test_watcher() {
 
     let blocking_watcher = initialize_watcher().await.expect("initialize blocking watcher");
     let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(blocking_watcher.clone());
-    pin_utils::pin_mut!(blocking_stream);
+    futures::pin_mut!(blocking_stream);
     let watcher = initialize_watcher().await.expect("initialize watcher");
     let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone());
-    pin_utils::pin_mut!(stream);
+    futures::pin_mut!(stream);
 
     async fn assert_blocked<S>(stream: &mut S)
     where
@@ -926,9 +926,9 @@ async fn test_watcher() {
         )});
     assert_eq!(ll_addrs, addrs);
     let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(blocking_watcher.clone());
-    pin_utils::pin_mut!(blocking_stream);
+    futures::pin_mut!(blocking_stream);
     let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone());
-    pin_utils::pin_mut!(stream);
+    futures::pin_mut!(stream);
 
     // Add an address and subnet route.
     let () = assert_blocked(&mut blocking_stream).await;
@@ -1054,9 +1054,9 @@ async fn test_watcher() {
         async_utils::fold::FoldResult::ShortCircuited(addresses),
     );
     let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(blocking_watcher);
-    pin_utils::pin_mut!(blocking_stream);
+    futures::pin_mut!(blocking_stream);
     let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher);
-    pin_utils::pin_mut!(stream);
+    futures::pin_mut!(stream);
 
     // Remove the ethernet interface.
     let () = assert_blocked(&mut blocking_stream).await;

@@ -1092,7 +1092,6 @@ mod tests {
     use futures::future::TryFutureExt as _;
     use net_declare::{fidl_ip, std_ip, std_ip_v4, std_ip_v6};
     use net_types::ip::Ip as _;
-    use pin_utils::pin_mut;
     use trust_dns_proto::{
         op::Query,
         rr::{Name, RData, Record},
@@ -1793,7 +1792,7 @@ mod tests {
         let start_time = fasync::Time::now();
         let () = exec.set_fake_time(fasync::Time::after(delay));
         let update_stats = stats.finish_query(start_time, result);
-        pin_mut!(update_stats);
+        futures::pin_mut!(update_stats);
         assert!(exec.run_until_stalled(&mut update_stats).is_ready());
     }
 
@@ -2190,7 +2189,7 @@ mod tests {
             async move { create_ip_lookup_fut(&resolver, stats.clone(), routes_proxy, recv).await }
                 .fuse()
         };
-        pin_mut!(send_fut, recv_fut);
+        futures::pin_mut!(send_fut, recv_fut);
         futures::select! {
             () = send_fut => {},
             () = recv_fut => panic!("recv_fut should never complete"),

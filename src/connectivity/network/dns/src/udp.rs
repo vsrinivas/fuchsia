@@ -7,7 +7,6 @@ use {
     async_trait::async_trait,
     fuchsia_async::net::UdpSocket,
     futures::FutureExt as _,
-    pin_utils::pin_mut,
     std::{
         io,
         net::SocketAddr,
@@ -34,7 +33,7 @@ impl udp::UdpSocket for DnsUdpSocket {
         buf: &mut [u8],
     ) -> Poll<io::Result<(usize, SocketAddr)>> {
         let fut = self.recv_from(buf);
-        pin_mut!(fut);
+        futures::pin_mut!(fut);
         fut.poll_unpin(cx)
     }
 
@@ -50,7 +49,7 @@ impl udp::UdpSocket for DnsUdpSocket {
         target: SocketAddr,
     ) -> Poll<io::Result<usize>> {
         let fut = self.send_to(buf, target);
-        pin_mut!(fut);
+        futures::pin_mut!(fut);
         fut.poll_unpin(cx)
     }
 
