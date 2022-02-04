@@ -23,6 +23,7 @@ impl<DS, NI> SpinelDriver<DS, NI> {
 
 // TODO(fxbug.dev/81732): go back to #[fasync::run_until_stalled(test)] at some point.
 #[fasync::run_singlethreaded(test)]
+#[ignore]
 async fn test_spinel_lowpan_driver() {
     let (device_client, device_stream, ncp_task) = new_fake_spinel_pair();
     let network_interface = DummyNetworkInterface::default();
