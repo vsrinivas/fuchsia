@@ -11,7 +11,7 @@ use {
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-/// Interact with the tracing subsystem
+/// Interact with the tracing subsystem.
 #[argh(subcommand, name = "trace")]
 pub struct TraceCommand {
     #[argh(subcommand)]
@@ -30,12 +30,12 @@ pub enum TraceSubCommand {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// List the target's known trace categories
+/// List the target's known trace categories.
 #[argh(subcommand, name = "list-categories")]
 pub struct ListCategories {}
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// List the target's trace providers
+/// List the target's trace providers.
 #[argh(subcommand, name = "list-providers")]
 pub struct ListProviders {}
 
@@ -78,7 +78,7 @@ pub const DEFAULT_CATEGORIES: &[&'static str] = &[
 pub struct Status {}
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Record a trace
+/// Stops an active running trace.
 #[argh(subcommand, name = "stop")]
 pub struct Stop {
     /// name of output trace file.  Defaults to trace.fxt.
@@ -87,7 +87,7 @@ pub struct Stop {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Record a trace
+/// Record a trace.
 #[argh(subcommand, name = "start")]
 pub struct Start {
     /// the buffering to use on the trace. Defaults to "oneshot".
