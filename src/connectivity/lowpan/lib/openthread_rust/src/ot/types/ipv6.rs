@@ -28,9 +28,7 @@ use std::marker::PhantomData;
 /// want to revisit this approach in the future if this is a big concern.
 pub type Ip6Address = std::net::Ipv6Addr;
 
-unsafe impl OtCastable for std::net::Ipv6Addr {
-    type OtType = otIp6Address;
-
+impl Transparent for std::net::Ipv6Addr {
     fn from_ot(x: otIp6Address) -> std::net::Ipv6Addr {
         unsafe { x.mFields.m8.into() }
     }
@@ -38,6 +36,10 @@ unsafe impl OtCastable for std::net::Ipv6Addr {
     fn into_ot(self) -> otIp6Address {
         otIp6Address { mFields: otIp6Address__bindgen_ty_1 { m8: self.octets() } }
     }
+}
+
+unsafe impl OtCastable for std::net::Ipv6Addr {
+    type OtType = otIp6Address;
 
     fn as_ot_ptr(&self) -> *const otIp6Address {
         sa::assert_eq_size!(Ip6Address, otIp6Address);

@@ -72,7 +72,7 @@ pub trait Ip6 {
     ///
     /// The closure will ultimately be executed via
     /// [`ot::Tasklets::process`](crate::ot::Tasklets::process).
-    fn ip6_set_receive_fn<'a, F>(&self, f: Option<F>)
+    fn ip6_set_receive_fn<'a, F>(&'a self, f: Option<F>)
     where
         F: FnMut(OtMessageBox<'_>) + 'a;
 
@@ -143,7 +143,7 @@ impl<T: Ip6 + ot::Boxable> Ip6 for ot::Box<T> {
         self.as_ref().ip6_join_multicast_group(addr)
     }
 
-    fn ip6_set_receive_fn<'a, F>(&self, f: Option<F>)
+    fn ip6_set_receive_fn<'a, F>(&'a self, f: Option<F>)
     where
         F: FnMut(OtMessageBox<'_>) + 'a,
     {
@@ -232,7 +232,7 @@ impl Ip6 for Instance {
             .into()
     }
 
-    fn ip6_set_receive_fn<'a, F>(&self, f: Option<F>)
+    fn ip6_set_receive_fn<'a, F>(&'a self, f: Option<F>)
     where
         F: FnMut(OtMessageBox<'_>) + 'a,
     {

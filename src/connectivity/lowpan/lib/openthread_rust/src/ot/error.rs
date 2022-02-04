@@ -125,6 +125,15 @@ impl std::fmt::Display for Error {
     }
 }
 
+impl From<Result<(), Error>> for Error {
+    fn from(result: Result<(), Error>) -> Self {
+        match result {
+            Ok(()) => Error::None,
+            Err(e) => e,
+        }
+    }
+}
+
 impl From<otError> for Error {
     fn from(err: otError) -> Self {
         Error::from_u32(err).expect(format!("Unknown otError value: {}", err).as_str())

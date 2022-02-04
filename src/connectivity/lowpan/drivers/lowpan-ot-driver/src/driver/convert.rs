@@ -5,7 +5,9 @@
 use crate::convert_ext::*;
 use crate::prelude::*;
 use fidl_fuchsia_lowpan::*;
-use fidl_fuchsia_lowpan_device::{ProvisionError, ProvisioningProgress};
+use fidl_fuchsia_lowpan_device::{
+    ExternalRoute, OnMeshPrefix, ProvisionError, ProvisioningProgress,
+};
 
 impl FromExt<ot::JoinerState> for ProvisioningProgress {
     fn from_ext(x: ot::JoinerState) -> Self {
@@ -34,6 +36,36 @@ impl FromExt<ot::Error> for ProvisionError {
                 warn!("Unexpected error when joining: {:?}", x);
                 ProvisionError::Canceled
             }
+        }
+    }
+}
+
+impl FromExt<ot::BorderRouterConfig> for OnMeshPrefix {
+    fn from_ext(x: ot::BorderRouterConfig) -> Self {
+        OnMeshPrefix {
+            subnet: Some(Ipv6Subnet {
+                addr: fidl_fuchsia_net::Ipv6Address { addr: x.prefix().addr().octets() },
+                prefix_len: x.prefix().prefix_len(),
+            }),
+            default_route_preference: x.default_route_preference().map(|x| x.into_ext()),
+            stable: Some(x.is_stable()),
+            slaac_preferred: Some(x.is_preferred()),
+            slaac_valid: Some(x.is_slaac()),
+            ..OnMeshPrefix::EMPTY
+        }
+    }
+}
+
+impl FromExt<ot::ExternalRouteConfig> for ExternalRoute {
+    fn from_ext(x: ot::ExternalRouteConfig) -> Self {
+        ExternalRoute {
+            subnet: Some(Ipv6Subnet {
+                addr: fidl_fuchsia_net::Ipv6Address { addr: x.prefix().addr().octets() },
+                prefix_len: x.prefix().prefix_len(),
+            }),
+            route_preference: None,
+            stable: Some(x.is_stable()),
+            ..ExternalRoute::EMPTY
         }
     }
 }

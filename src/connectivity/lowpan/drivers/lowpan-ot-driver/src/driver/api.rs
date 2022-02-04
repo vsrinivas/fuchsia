@@ -9,7 +9,6 @@ use core::future::ready;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::*;
 use fidl_fuchsia_lowpan_test::*;
-use fidl_fuchsia_net::Ipv6Address;
 use fuchsia_zircon::Duration;
 use lowpan_driver_common::AsyncConditionWait;
 use lowpan_driver_common::Driver as LowpanDriver;
@@ -457,7 +456,7 @@ where
     }
 
     async fn reset(&self) -> ZxResult<()> {
-        fx_log_info!("Got API request to reset");
+        warn!("Got API request to reset");
         self.driver_state.lock().ot_instance.reset();
         Ok(())
     }
@@ -603,6 +602,10 @@ where
             er.set_route_preference(route_preference.into_ext());
         }
 
+        if let Some(stable) = net.stable {
+            er.set_stable(stable);
+        }
+
         Ok(self
             .driver_state
             .lock()
@@ -633,17 +636,7 @@ where
             .lock()
             .ot_instance
             .iter_local_on_mesh_prefixes()
-            .map(|x| OnMeshPrefix {
-                subnet: Some(Ipv6Subnet {
-                    addr: Ipv6Address { addr: x.prefix().addr().octets() },
-                    prefix_len: x.prefix().prefix_len(),
-                }),
-                default_route_preference: x.default_route_preference().map(|x| x.into_ext()),
-                stable: Some(x.is_stable()),
-                slaac_preferred: Some(x.is_preferred()),
-                slaac_valid: Some(x.is_slaac()),
-                ..OnMeshPrefix::EMPTY
-            })
+            .map(OnMeshPrefix::from_ext)
             .collect::<Vec<_>>())
     }
 
@@ -655,15 +648,7 @@ where
             .lock()
             .ot_instance
             .iter_local_external_routes()
-            .map(|x| ExternalRoute {
-                subnet: Some(Ipv6Subnet {
-                    addr: Ipv6Address { addr: x.prefix().addr().octets() },
-                    prefix_len: x.prefix().prefix_len(),
-                }),
-                route_preference: None,
-                stable: Some(x.is_stable()),
-                ..ExternalRoute::EMPTY
-            })
+            .map(ExternalRoute::from_ext)
             .collect::<Vec<_>>())
     }
 

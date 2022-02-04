@@ -6,8 +6,10 @@
 /// converted into a reference to the original OpenThread type identified by
 /// `Self::OtType`.
 ///
-/// Unlike types that implement the trait [`Boxable`], types implementing
-/// this trait may be passed and used by value.
+/// Types which implement this trait may be opaque, but, unlike [`Boxable`], these
+/// types are not necessarily opaque and not necessarily ownable. If a type is
+/// not opaque then it will also implement the related trait [`Transparent`],
+/// allowing it to be used by value.
 ///
 /// ## SAFETY ##
 ///
@@ -28,12 +30,6 @@ pub unsafe trait OtCastable: Sized {
     fn as_ot_ref(&self) -> &Self::OtType {
         unsafe { &*self.as_ot_ptr() }
     }
-
-    /// Creates a new instance from an instance of [`Self::OtType`].
-    fn from_ot(x: Self::OtType) -> Self;
-
-    /// Converts this type into an instance of [`Self::OtType`].
-    fn into_ot(self) -> Self::OtType;
 
     /// Returns a pointer to the underlying [`Self::OtType`] instance.
     fn as_ot_ptr(&self) -> *const Self::OtType;
@@ -59,10 +55,23 @@ pub unsafe trait OtCastable: Sized {
     }
 }
 
+/// Trait used to indicate that the implementing type can be used by value
+/// and converted to/from the associated OpenThread type by value.
+///
+/// Unlike types that implement the trait [`Boxable`], types implementing
+/// this trait may be passed and used by value.
+pub trait Transparent: OtCastable + Clone {
+    /// Creates a new instance from an instance of [`Self::OtType`].
+    fn from_ot(x: Self::OtType) -> Self;
+
+    /// Converts this type into an instance of [`Self::OtType`].
+    fn into_ot(self) -> Self::OtType;
+}
+
 #[doc(hidden)]
 #[macro_export]
 macro_rules! impl_ot_castable {
-    (from_only $wrapper:ty,$inner:ty) => {
+    (opaque from_only $wrapper:ty,$inner:ty) => {
         impl<'a> From<&'a $inner> for &'a $wrapper {
             fn from(x: &'a $inner) -> Self {
                 <$wrapper>::ref_from_ot_ref(x)
@@ -74,6 +83,10 @@ macro_rules! impl_ot_castable {
                 x.as_ot_ref()
             }
         }
+    };
+
+    (from_only $wrapper:ty,$inner:ty) => {
+        impl_ot_castable!(opaque from_only $wrapper, $inner);
 
         impl From<$inner> for $wrapper {
             fn from(x: $inner) -> Self {
@@ -94,23 +107,25 @@ macro_rules! impl_ot_castable {
         impl_ot_castable!(from_only $wrapper, $inner);
     };
 
+    (opaque $wrapper:ty,$inner:ty) => {
+        impl_ot_castable!(opaque lifetime $wrapper, $inner);
+
+        impl_ot_castable!(opaque from_only $wrapper, $inner);
+    };
+
     (lifetime $wrapper:ty,$inner:ty) => {
         impl_ot_castable!(lifetime $wrapper, $inner,);
     };
 
-    (lifetime $wrapper:ty,$inner:ty, $($other:expr),*) => {
+    (opaque lifetime $wrapper:ty,$inner:ty) => {
+        impl_ot_castable!(opaque lifetime $wrapper, $inner,);
+    };
+
+    (opaque lifetime $wrapper:ty,$inner:ty, $($other:expr),*) => {
         // Note that we don't implement the PointerSafe trait on
         // types with lifetimes.
         unsafe impl $crate::ot::OtCastable for $wrapper {
             type OtType = $inner;
-
-            fn from_ot(x: Self::OtType) -> Self {
-                Self(x,$($other),*)
-            }
-
-            fn into_ot(self) -> Self::OtType {
-                self.0
-            }
 
             fn as_ot_ptr(&self) -> *const Self::OtType {
                 &self.0 as *const Self::OtType
@@ -128,6 +143,21 @@ macro_rules! impl_ot_castable {
                 } else {
                     Some(&*(ptr as *const Self))
                 }
+            }
+        }
+    };
+
+    (lifetime $wrapper:ty,$inner:ty, $($other:expr),*) => {
+        impl_ot_castable!(opaque lifetime $wrapper, $inner, $($other),*);
+        // Note that we don't implement the PointerSafe trait on
+        // types with lifetimes.
+        impl $crate::ot::Transparent for $wrapper {
+            fn from_ot(x: Self::OtType) -> Self {
+                Self(x,$($other),*)
+            }
+
+            fn into_ot(self) -> Self::OtType {
+                self.0
             }
         }
     };
