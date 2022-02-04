@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
   name = "lowpanservice"
@@ -44,9 +45,23 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("lowpanservice") {
+fuchsia_component("lowpanservice-cv2") {
+  component_name = "lowpanservice"
+  deps = [ ":bin" ]
+  manifest = "meta/lowpanservice.cml"
+}
+
+fuchsia_component("lowpanservice-cv1") {
+  component_name = "lowpanservice"
   deps = [ ":bin" ]
   manifest = "meta/lowpanservice.cmx"
+}
+
+fuchsia_package("lowpanservice") {
+  deps = [
+    ":lowpanservice-cv1",
+    ":lowpanservice-cv2",
+  ]
 }
 
 group("service") {
@@ -73,4 +88,8 @@ fuchsia_unittest_package("lowpanservice-test") {
 group("tests") {
   testonly = true
   deps = [ ":lowpanservice-test" ]
+}
+
+core_shard("lowpanservice_shard") {
+  shard_file = "meta/lowpanservice.core_shard.cml"
 }

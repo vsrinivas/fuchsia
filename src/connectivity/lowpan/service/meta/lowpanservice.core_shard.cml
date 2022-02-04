@@ -1,0 +1,40 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "lowpanservice",
+            url: "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.factory.lowpan.FactoryLookup",
+                "fuchsia.factory.lowpan.FactoryRegister",
+                "fuchsia.lowpan.device.Lookup",
+                "fuchsia.lowpan.device.Register",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.factory.lowpan.FactoryLookup",
+                "fuchsia.factory.lowpan.FactoryRegister",
+                "fuchsia.lowpan.device.Lookup",
+                "fuchsia.lowpan.device.Register",
+            ],
+            from: "#lowpanservice",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#lowpanservice" ],
+        },
+    ],
+}

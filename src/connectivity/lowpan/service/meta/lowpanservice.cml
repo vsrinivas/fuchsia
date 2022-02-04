@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/lowpanservice",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.factory.lowpan.FactoryLookup",
+                "fuchsia.factory.lowpan.FactoryRegister",
+                "fuchsia.lowpan.device.Lookup",
+                "fuchsia.lowpan.device.Register",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.lowpan.device.Lookup" ],
+            from: "self",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.factory.lowpan.FactoryLookup",
+                "fuchsia.factory.lowpan.FactoryRegister",
+                "fuchsia.lowpan.device.Lookup",
+                "fuchsia.lowpan.device.Register",
+            ],
+            from: "self",
+        },
+    ],
+}
