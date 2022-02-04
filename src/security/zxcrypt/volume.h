@@ -150,6 +150,9 @@ class __EXPORT Volume {
   // Writes a block to the current offset on the underlying device.
   virtual zx_status_t Write() = 0;
 
+  // Flushes all pending writes to the underlying device.
+  virtual zx_status_t Flush() = 0;
+
   ////////////////
   // Fields
 

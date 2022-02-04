@@ -77,6 +77,9 @@ class __EXPORT FdioVolume final : public Volume {
   // Writes a block to the current offset on the underlying device.
   zx_status_t Write();
 
+  // Flushes all pending writes to the underlying device.
+  zx_status_t Flush();
+
   // The underlying block device, accessed over FDIO
   fbl::unique_fd block_dev_fd_;
 };
