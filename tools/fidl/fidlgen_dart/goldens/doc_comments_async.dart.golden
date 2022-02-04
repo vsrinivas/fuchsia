@@ -703,8 +703,8 @@ class InterfaceProxy extends $fidl.AsyncProxy<Interface> implements Interface {
         }, 'event');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -722,8 +722,8 @@ class InterfaceProxy extends $fidl.AsyncProxy<Interface> implements Interface {
     }
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }

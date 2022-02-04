@@ -232,7 +232,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
 {{- end }}
 {{- end }}
       default:
-        $fidl.handleCtrlError(ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError($fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -257,21 +257,21 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
         $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
           final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
           // ignore: prefer_const_declarations
-          final $response = {{- template "DecodeResponse" . -}};
+          final {{ .ResponseMessageType }} $response = {{- template "DecodeResponse" . -}};
           {{ if .Response.HasError }}
             if ($response.$tag == {{ .Response.ResultTypeTagName }}.response) {
               {{ if .AsyncResponseClass }}
                 $completer.complete(
                   {{ .AsyncResponseClass }}(
                   {{ range $param := .Response.MethodParameters }}
-                    $response.response.{{ $param.Name }},
+                    $response.response!.{{ $param.Name }},
                   {{ end }}
                   ));
               {{ else }}
                 {{ if (eq .AsyncResponseType "void") }}
                   $completer.complete(null);
                 {{ else }}
-                  $completer.complete($response.response.{{ (index .Response.MethodParameters 0).Name }});
+                  $completer.complete($response.response!.{{ (index .Response.MethodParameters 0).Name }});
                 {{ end }}
               {{ end }}
             } else {
@@ -286,7 +286,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
   {{- end }}
 {{- end }}
       default:
-        $fidl.handleCtrlError(ctrl,'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError($fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }

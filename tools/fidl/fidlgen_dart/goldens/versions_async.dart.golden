@@ -369,8 +369,8 @@ class OtherProtocolProxy extends $fidl.AsyncProxy<OtherProtocol>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -388,8 +388,8 @@ class OtherProtocolProxy extends $fidl.AsyncProxy<OtherProtocol>
     }
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -453,8 +453,8 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -472,8 +472,8 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
     }
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }

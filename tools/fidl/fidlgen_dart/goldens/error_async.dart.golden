@@ -254,8 +254,8 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -277,21 +277,21 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
         $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
           final List<$fidl.MemberType> $types = _kExample_foo_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
+          final ExampleFooResult $response = $fidl.decodeMessage(
               $message,
               _kExample_foo_Type.responseInlineSize($message.wireFormat),
               $types[0]);
 
           if ($response.$tag == ExampleFooResultTag.response) {
-            $completer.complete($response.response.y);
+            $completer.complete($response.response!.y);
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
         }, 'method response');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }

@@ -202,6 +202,17 @@ type Method struct {
 	Documented
 }
 
+// ResponseMessageType is the Dart type returned by the "DecodeResponse" template.
+func (m Method) ResponseMessageType() string {
+	if !m.HasResponse {
+		return "void"
+	}
+	if m.Response.HasError {
+		return m.Response.ResultTypeName
+	}
+	return m.AsyncResponseClass
+}
+
 // Import describes another FIDL library that will be imported.
 type Import struct {
 	URL       string

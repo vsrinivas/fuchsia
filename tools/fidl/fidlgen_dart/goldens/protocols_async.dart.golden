@@ -1353,8 +1353,8 @@ class WithAndWithoutRequestResponseProxy
         }, 'event');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -1432,8 +1432,8 @@ class WithAndWithoutRequestResponseProxy
         }, 'method response');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -1924,8 +1924,8 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -1948,18 +1948,19 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
           final List<$fidl.MemberType> $types =
               _kWithErrorSyntax_ResponseAsStruct_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kWithErrorSyntax_ResponseAsStruct_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final WithErrorSyntaxResponseAsStructResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kWithErrorSyntax_ResponseAsStruct_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag ==
               WithErrorSyntaxResponseAsStructResultTag.response) {
             $completer.complete(WithErrorSyntax$ResponseAsStruct$Response(
-              $response.response.a,
-              $response.response.b,
-              $response.response.c,
+              $response.response!.a,
+              $response.response!.b,
+              $response.response!.c,
             ));
           } else {
             $completer.completeError($fidl.MethodException($response.err));
@@ -1972,11 +1973,12 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
           final List<$fidl.MemberType> $types =
               _kWithErrorSyntax_ErrorAsPrimitive_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kWithErrorSyntax_ErrorAsPrimitive_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final WithErrorSyntaxErrorAsPrimitiveResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kWithErrorSyntax_ErrorAsPrimitive_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag ==
               WithErrorSyntaxErrorAsPrimitiveResultTag.response) {
@@ -1992,11 +1994,12 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
           final List<$fidl.MemberType> $types =
               _kWithErrorSyntax_ErrorAsEnum_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kWithErrorSyntax_ErrorAsEnum_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final WithErrorSyntaxErrorAsEnumResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kWithErrorSyntax_ErrorAsEnum_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag == WithErrorSyntaxErrorAsEnumResultTag.response) {
             $completer.complete(null);
@@ -2011,23 +2014,24 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
           final List<$fidl.MemberType> $types =
               _kWithErrorSyntax_HandleInResult_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kWithErrorSyntax_HandleInResult_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final WithErrorSyntaxHandleInResultResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kWithErrorSyntax_HandleInResult_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag ==
               WithErrorSyntaxHandleInResultResultTag.response) {
-            $completer.complete($response.response.h);
+            $completer.complete($response.response!.h);
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
         }, 'method response');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -2432,8 +2436,8 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
         }, 'event');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -2492,8 +2496,8 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
         }, 'method response');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -2862,8 +2866,8 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
         }, 'event');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -2896,8 +2900,8 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
         }, 'method response');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -3095,8 +3099,8 @@ class DiscoverableProtocolProxy extends $fidl.AsyncProxy<DiscoverableProtocol>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -3114,8 +3118,8 @@ class DiscoverableProtocolProxy extends $fidl.AsyncProxy<DiscoverableProtocol>
     }
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -3274,8 +3278,8 @@ class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
         }, 'event');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -3308,8 +3312,8 @@ class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
         }, 'method response');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -3569,8 +3573,8 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -3633,8 +3637,8 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
         }, 'method response');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -3914,8 +3918,8 @@ class ManyParametersProxy extends $fidl.AsyncProxy<ManyParameters>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -3933,8 +3937,8 @@ class ManyParametersProxy extends $fidl.AsyncProxy<ManyParameters>
     }
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -4084,8 +4088,8 @@ class MethodWithUnionProxy extends $fidl.AsyncProxy<MethodWithUnion>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -4103,8 +4107,8 @@ class MethodWithUnionProxy extends $fidl.AsyncProxy<MethodWithUnion>
     }
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }

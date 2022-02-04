@@ -1495,8 +1495,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
         }, 'event');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -1534,16 +1534,18 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayComposedWithError_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kMainProtocol_TwoWayComposedWithError_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final lib$test_protocolpayloads_imported
+                  .ComposedProtocolTwoWayComposedWithErrorResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kMainProtocol_TwoWayComposedWithError_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag ==
               lib$test_protocolpayloads_imported
                   .ComposedProtocolTwoWayComposedWithErrorResultTag.response) {
-            $completer.complete($response.response.a);
+            $completer.complete($response.response!.a);
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
@@ -1555,7 +1557,7 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayLocal_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl
+          final MainProtocol$TwoWayLocal$Response $response = $fidl
               .decodeMessageWithCallback<MainProtocol$TwoWayLocal$Response>(
                   $message,
                   _kMainProtocol_TwoWayLocal_Type.responseInlineSize(
@@ -1575,17 +1577,18 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayLocalWithError_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kMainProtocol_TwoWayLocalWithError_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final MainProtocolTwoWayLocalWithErrorResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kMainProtocol_TwoWayLocalWithError_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag ==
               MainProtocolTwoWayLocalWithErrorResultTag.response) {
             $completer.complete(MainProtocol$TwoWayLocalWithError$Response(
-              $response.response.a,
-              $response.response.b,
+              $response.response!.a,
+              $response.response!.b,
             ));
           } else {
             $completer.completeError($fidl.MethodException($response.err));
@@ -1613,15 +1616,16 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayImportWithError_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kMainProtocol_TwoWayImportWithError_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final MainProtocolTwoWayImportWithErrorResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kMainProtocol_TwoWayImportWithError_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag ==
               MainProtocolTwoWayImportWithErrorResultTag.response) {
-            $completer.complete($response.response.a);
+            $completer.complete($response.response!.a);
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
@@ -1633,7 +1637,7 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayAnon_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl
+          final MainProtocol$TwoWayAnon$Response $response = $fidl
               .decodeMessageWithCallback<MainProtocol$TwoWayAnon$Response>(
                   $message,
                   _kMainProtocol_TwoWayAnon_Type.responseInlineSize(
@@ -1653,17 +1657,18 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayAnonWithError_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kMainProtocol_TwoWayAnonWithError_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final MainProtocolTwoWayAnonWithErrorResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kMainProtocol_TwoWayAnonWithError_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag ==
               MainProtocolTwoWayAnonWithErrorResultTag.response) {
             $completer.complete(MainProtocol$TwoWayAnonWithError$Response(
-              $response.response.a,
-              $response.response.b,
+              $response.response!.a,
+              $response.response!.b,
             ));
           } else {
             $completer.completeError($fidl.MethodException($response.err));
@@ -1671,8 +1676,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
         }, 'method response');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }

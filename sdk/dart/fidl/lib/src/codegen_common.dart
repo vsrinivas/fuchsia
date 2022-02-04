@@ -30,12 +30,6 @@ void performWithExceptionHandling(
   }
 }
 
-/// Calls close and signals the error on the ctrl.
-void handleCtrlError(dynamic ctrl, String message) {
-  ctrl.proxyError(FidlError(message));
-  ctrl.close();
-}
-
 /// Wraps work with common try/catch behaviour and timeline events.
 void performCtrlWithExceptionHandling(
     String name, dynamic ctrl, void Function() work, String type) {
@@ -43,7 +37,7 @@ void performCtrlWithExceptionHandling(
     Timeline.startSync(name);
     work();
   } catch (_e) {
-    handleCtrlError(ctrl, 'Exception handling $type $name: $_e');
+    ctrl.proxyError(FidlError('Exception handling $type $name: $_e'));
     rethrow;
   } finally {
     Timeline.finishSync();

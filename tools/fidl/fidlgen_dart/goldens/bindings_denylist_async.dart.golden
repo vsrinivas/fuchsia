@@ -1229,8 +1229,8 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -1253,14 +1253,15 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
           final List<$fidl.MemberType> $types =
               _kDenyEachBinding_OnlyDenyCpp_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kDenyEachBinding_OnlyDenyCpp_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final DenyEachBindingOnlyDenyCppResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kDenyEachBinding_OnlyDenyCpp_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag == DenyEachBindingOnlyDenyCppResultTag.response) {
-            $completer.complete($response.response.b);
+            $completer.complete($response.response!.b);
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
@@ -1272,14 +1273,14 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
           final List<$fidl.MemberType> $types =
               _kDenyEachBinding_OnlyDenyGo_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
+          final DenyEachBindingOnlyDenyGoResult $response = $fidl.decodeMessage(
               $message,
               _kDenyEachBinding_OnlyDenyGo_Type
                   .responseInlineSize($message.wireFormat),
               $types[0]);
 
           if ($response.$tag == DenyEachBindingOnlyDenyGoResultTag.response) {
-            $completer.complete($response.response.b);
+            $completer.complete($response.response!.b);
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
@@ -1291,15 +1292,16 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
           final List<$fidl.MemberType> $types =
               _kDenyEachBinding_OnlyDenyLibfuzzer_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kDenyEachBinding_OnlyDenyLibfuzzer_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final DenyEachBindingOnlyDenyLibfuzzerResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kDenyEachBinding_OnlyDenyLibfuzzer_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag ==
               DenyEachBindingOnlyDenyLibfuzzerResultTag.response) {
-            $completer.complete($response.response.b);
+            $completer.complete($response.response!.b);
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
@@ -1311,14 +1313,15 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
           final List<$fidl.MemberType> $types =
               _kDenyEachBinding_OnlyDenyRust_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kDenyEachBinding_OnlyDenyRust_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final DenyEachBindingOnlyDenyRustResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kDenyEachBinding_OnlyDenyRust_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag == DenyEachBindingOnlyDenyRustResultTag.response) {
-            $completer.complete($response.response.b);
+            $completer.complete($response.response!.b);
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
@@ -1330,23 +1333,24 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
           final List<$fidl.MemberType> $types =
               _kDenyEachBinding_OnlyDenySyzkaller_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kDenyEachBinding_OnlyDenySyzkaller_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final DenyEachBindingOnlyDenySyzkallerResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kDenyEachBinding_OnlyDenySyzkaller_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag ==
               DenyEachBindingOnlyDenySyzkallerResultTag.response) {
-            $completer.complete($response.response.b);
+            $completer.complete($response.response!.b);
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
         }, 'method response');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -1735,8 +1739,8 @@ class AllowedProxy extends $fidl.AsyncProxy<Allowed> implements Allowed {
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -1754,8 +1758,8 @@ class AllowedProxy extends $fidl.AsyncProxy<Allowed> implements Allowed {
     }
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -1836,8 +1840,8 @@ class ImportsSameNameContextProxy extends $fidl
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -1855,8 +1859,8 @@ class ImportsSameNameContextProxy extends $fidl
     }
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }

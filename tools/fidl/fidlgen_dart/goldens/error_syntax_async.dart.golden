@@ -304,8 +304,8 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -329,17 +329,19 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
           final List<$fidl.MemberType> $types =
               _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final lib$test_errorsyntax_parent
+                  .ParentUsesErrorSyntaxComposedCallWhichMayFailResult
+              $response = $fidl.decodeMessage(
+                  $message,
+                  _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag ==
               lib$test_errorsyntax_parent
                   .ParentUsesErrorSyntaxComposedCallWhichMayFailResultTag
                   .response) {
-            $completer.complete($response.response.value);
+            $completer.complete($response.response!.value);
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
@@ -352,23 +354,24 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
           final List<$fidl.MemberType> $types =
               _kExampleUseOfErrorSyntax_CallWhichMayFail_Type.response!;
           // ignore: prefer_const_declarations
-          final $response = $fidl.decodeMessage(
-              $message,
-              _kExampleUseOfErrorSyntax_CallWhichMayFail_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]);
+          final ExampleUseOfErrorSyntaxCallWhichMayFailResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kExampleUseOfErrorSyntax_CallWhichMayFail_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
 
           if ($response.$tag ==
               ExampleUseOfErrorSyntaxCallWhichMayFailResultTag.response) {
-            $completer.complete($response.response.value);
+            $completer.complete($response.response!.value);
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
         }, 'method response');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }

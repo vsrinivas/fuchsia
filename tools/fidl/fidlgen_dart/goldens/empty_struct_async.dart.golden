@@ -193,8 +193,8 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
         }, 'event');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
@@ -227,8 +227,8 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
         }, 'method response');
         break;
       default:
-        $fidl.handleCtrlError(
-            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        ctrl.proxyError(
+            $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
     }
   }
