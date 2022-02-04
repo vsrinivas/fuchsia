@@ -51,6 +51,7 @@ import("//build/testing/host_test_data.gni")
 #    Type: list(string)
 #
 #   deps
+#   environments
 #   visibility
 template("python_host_test") {
   assert(defined(invoker.main_source), "main_source is required")
@@ -96,7 +97,11 @@ template("python_host_test") {
   }
 
   host_test(target_name) {
-    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker,
+                           [
+                             "environments",
+                             "visibility",
+                           ])
 
     binary_path = python_exe_src
     args =
