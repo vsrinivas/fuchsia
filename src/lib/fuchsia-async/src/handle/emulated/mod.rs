@@ -1445,10 +1445,10 @@ mod test {
     fn channel_closed_after_drop() {
         let (a, _b) = Channel::create().unwrap();
         let a_copy = Channel::from(unsafe { Handle::from_raw(a.0) });
+        // Prevent trying to close a twice at the end of the test.
+        let a_copy = std::mem::ManuallyDrop::new(a_copy);
         drop(a);
         assert_eq!(a_copy.is_closed(), true);
-        // Prevent trying to close a again.
-        std::mem::forget(a_copy);
     }
 
     #[test]
@@ -1693,11 +1693,11 @@ mod test {
     #[test]
     fn dropped_handle_is_dangling() {
         let (c, _) = Channel::create().unwrap();
+        let c = std::mem::ManuallyDrop::new(c);
         unsafe {
             drop(Handle::from_raw(c.raw_handle()));
         }
         assert!(c.is_dangling());
-        std::mem::forget(c);
     }
 
     #[test]
