@@ -177,7 +177,8 @@ class VirtioMagmaTest : public TestWithDeviceV2 {
     zx::vmar vmar;
     constexpr auto kComponentName = "virtio_magma";
     constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_magma#meta/virtio_magma.cm";
-    constexpr auto kFakeScenic = "fake_scenic";
+    constexpr auto kFakeScenicAllocator = "fake_scenic_allocator";
+    constexpr auto kDevGpuDirectory = "dev-gpu";
 
     ASSERT_EQ(zx::vmar::root_self()->allocate(kAllocateFlags, 0u, kVirtioMagmaVmarSize, &vmar,
                                               &vmar_addr),
@@ -188,30 +189,25 @@ class VirtioMagmaTest : public TestWithDeviceV2 {
     auto realm_builder = RealmBuilder::Create();
 
     realm_builder.AddChild(kComponentName, kComponentUrl);
-    realm_builder.AddLocalChild(kFakeScenic, &scenic_allocator_fake_);
+    realm_builder.AddLocalChild(kFakeScenicAllocator, &scenic_allocator_fake_);
 
     realm_builder
-        .AddRoute(Route{.capabilities =
-                            {
-                                Protocol{fuchsia::logger::LogSink::Name_},
-                                Protocol{fuchsia::tracing::provider::Registry::Name_},
-                                Protocol{fuchsia::sysmem::Allocator::Name_},
-                                Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                                Directory{"dev-gpu", "dev-gpu", fuchsia::io2::R_STAR_DIR},
-                            },
-                        .source = ParentRef(),
-                        .targets = {ChildRef{kComponentName}}})
-        .AddRoute(Route{.capabilities =
-                            {
-                                Protocol{fuchsia::ui::composition::Allocator::Name_},
-                            },
-                        .source = {ChildRef{kFakeScenic}},
-                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(
+            Route{.capabilities =
+                      {
+                          Protocol{fuchsia::logger::LogSink::Name_},
+                          Protocol{fuchsia::tracing::provider::Registry::Name_},
+                          Protocol{fuchsia::sysmem::Allocator::Name_},
+                          Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                          Directory{kDevGpuDirectory, kDevGpuDirectory, fuchsia::io2::R_STAR_DIR},
+                      },
+                  .source = ParentRef(),
+                  .targets = {ChildRef{kComponentName}}})
         .AddRoute(Route{.capabilities =
                             {
                                 Protocol{fuchsia::ui::composition::Allocator::Name_},
                             },
-                        .source = {ChildRef{kFakeScenic}},
+                        .source = {ChildRef{kFakeScenicAllocator}},
                         .targets = {ChildRef{kComponentName}}})
         .AddRoute(Route{.capabilities =
                             {
