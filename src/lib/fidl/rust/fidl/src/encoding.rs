@@ -2795,57 +2795,60 @@ pub fn decode_envelope_header(
     decoder: &mut Decoder<'_>,
     offset: usize,
 ) -> Result<Option<(bool, u32, u32)>> {
-    let mut inlined: bool = false;
     let mut num_bytes: u32 = 0;
     let mut num_handles: u32 = 0;
-    let mut present: u64 = 0;
+
+    let inlined: bool;
+    let is_present: bool;
 
     match decoder.context.wire_format_version {
         WireFormatVersion::V1 => {
+            inlined = false;
+
             num_bytes.decode(decoder, offset)?;
             num_handles.decode(decoder, offset + 4)?;
 
-            present.decode(decoder, offset + 8)?;
+            let mut presence: u64 = 0;
+            presence.decode(decoder, offset + 8)?;
+
+            is_present = match presence {
+                ALLOC_PRESENT_U64 => true,
+                ALLOC_ABSENT_U64 => false,
+                _ => return Err(Error::InvalidPresenceIndicator),
+            };
         }
         WireFormatVersion::V2 => {
+            num_bytes.decode(decoder, offset)?;
+
+            let mut num_handles_v2: u16 = 0;
+            num_handles_v2.decode(decoder, offset + 4)?;
+
             let mut flags: u16 = 0;
             flags.decode(decoder, offset + 6)?;
 
             inlined = flags & 1 != 0;
             if inlined {
                 num_bytes = 4;
-            } else {
-                num_bytes.decode(decoder, offset)?;
             }
-
-            let mut num_handles_v2: u16 = 0;
-            num_handles_v2.decode(decoder, offset + 4)?;
             num_handles = num_handles_v2 as u32;
-
-            if num_bytes != 0 || num_handles != 0 {
-                present = ALLOC_PRESENT_U64;
-            }
+            is_present = num_bytes != 0 || num_handles != 0
         }
     }
 
-    match present {
-        ALLOC_PRESENT_U64 => {
-            if !inlined && num_bytes % 8 != 0 {
-                Err(Error::InvalidNumBytesInEnvelope)
-            } else {
-                Ok(Some((inlined, num_bytes, num_handles)))
-            }
+    if is_present {
+        if !inlined && num_bytes % 8 != 0 {
+            Err(Error::InvalidNumBytesInEnvelope)
+        } else {
+            Ok(Some((inlined, num_bytes, num_handles)))
         }
-        ALLOC_ABSENT_U64 => {
-            if num_bytes != 0 {
-                Err(Error::InvalidNumBytesInEnvelope)
-            } else if num_handles != 0 {
-                Err(Error::InvalidNumHandlesInEnvelope)
-            } else {
-                Ok(None)
-            }
+    } else {
+        if num_bytes != 0 {
+            Err(Error::InvalidNumBytesInEnvelope)
+        } else if num_handles != 0 {
+            Err(Error::InvalidNumHandlesInEnvelope)
+        } else {
+            Ok(None)
         }
-        _ => Err(Error::InvalidPresenceIndicator),
     }
 }
 
