@@ -25,7 +25,7 @@ async fn main() -> Result<(), Error> {
     let startup_handle = ServerEnd::new(zx::Channel::from(startup_handle));
     FakePkgfs::new(startup_handle).expect("failed to serve fake pkgfs");
 
-    // Bind to the echo_server. Note, we deliberately ignore errors below because
+    // Start the echo_server. Note, we deliberately ignore errors below because
     // we don't want panic the component_manager under test before all events
     // of interest are observed.
     let mut child_ref = fdecl::ChildRef { name: "echo_server".to_string(), collection: None };

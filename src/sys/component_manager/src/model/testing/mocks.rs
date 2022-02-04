@@ -6,13 +6,13 @@ use {
     crate::{
         builtin::runner::BuiltinRunnerFactory,
         model::{
-            binding::Binder,
             component::{
                 ComponentInstance, ComponentManagerInstance, StartReason, WeakComponentInstance,
             },
             environment::Environment,
             error::ModelError,
             resolver::{ResolvedComponent, Resolver, ResolverError, ResolverRegistry},
+            starter::Starter,
         },
     },
     ::routing::{
@@ -415,19 +415,19 @@ impl Runner for MockRunner {
 }
 
 /// A fake `Binder` implementation that always returns `Ok(())` in a `BoxFuture`.
-pub struct FakeBinder {
+pub struct FakeStarter {
     top_instance: Arc<ComponentManagerInstance>,
 }
 
-impl FakeBinder {
-    pub fn new(top_instance: Arc<ComponentManagerInstance>) -> Arc<dyn Binder> {
+impl FakeStarter {
+    pub fn new(top_instance: Arc<ComponentManagerInstance>) -> Arc<dyn Starter> {
         Arc::new(Self { top_instance })
     }
 }
 
 #[async_trait]
-impl Binder for FakeBinder {
-    async fn bind<'a>(
+impl Starter for FakeStarter {
+    async fn start_instance<'a>(
         &'a self,
         _abs_moniker: &'a AbsoluteMoniker,
         _reason: &'a StartReason,

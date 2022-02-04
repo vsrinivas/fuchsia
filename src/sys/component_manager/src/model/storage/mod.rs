@@ -170,7 +170,7 @@ async fn open_storage_root(
         None => storage_source_info.backing_directory_path.to_path_buf(),
     };
     if let Some(dir_source_component) = storage_source_info.storage_provider.as_ref() {
-        dir_source_component.bind(start_reason).await?;
+        dir_source_component.start(start_reason).await?;
         dir_source_component
             .open_outgoing(
                 FLAGS,
@@ -622,7 +622,7 @@ mod tests {
             .set_component_outgoing_host_fn("a", Box::new(|_| {}))
             .build()
             .await;
-        test.bind_instance_and_wait_start(&AbsoluteMoniker::root()).await.unwrap();
+        test.start_instance_and_wait_start(&AbsoluteMoniker::root()).await.unwrap();
 
         // Try to open the storage. We expect an error.
         let relative_moniker =

@@ -80,7 +80,7 @@ impl CapabilityProvider for BinderCapabilityProvider {
                     target: target.abs_moniker.clone(),
                     name: BINDER_SERVICE.clone(),
                 };
-                match source.bind(&start_reason).await {
+                match source.start(&start_reason).await {
                     Ok(_) => {
                         source.scope_to_runtime(server_end).await;
                     }

@@ -32,7 +32,7 @@ async fn main() {
         .unwrap()
         .unwrap();
 
-    // Bind to child
+    // Start child
     let mut child_ref =
         fdecl::ChildRef { name: "storage_user".to_string(), collection: Some("coll".to_string()) };
     let (exposed_dir, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();

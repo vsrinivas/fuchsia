@@ -10,7 +10,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn test() {
-    // Bind to the component manager component, causing it to start
+    // Start the component manager component.
     let realm_svc = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("Could not connect to Realm service");
     let mut child = fdecl::ChildRef { name: "component_manager".to_string(), collection: None };

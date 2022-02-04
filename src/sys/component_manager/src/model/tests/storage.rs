@@ -550,14 +550,14 @@ async fn use_restricted_storage_start_failure() {
         .build()
         .await;
 
-    test.bind_instance(
+    test.start_instance(
         &AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
     )
     .await
-    .expect("bind to /parent_consumer failed");
+    .expect("start /parent_consumer failed");
 
     let child_bind_result = test
-        .bind_instance(
+        .start_instance(
             &AbsoluteMoniker::parse_string_without_instances("/parent_consumer/child_consumer")
                 .unwrap(),
         )
@@ -637,7 +637,7 @@ async fn use_restricted_storage_open_failure() {
     let parent_consumer_moniker =
         AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap();
     let parent_consumer_instance = test
-        .bind_and_get_instance(&parent_consumer_moniker, StartReason::Eager, false)
+        .start_and_get_instance(&parent_consumer_moniker, StartReason::Eager, false)
         .await
         .expect("could not resolve state");
 
@@ -661,7 +661,7 @@ async fn use_restricted_storage_open_failure() {
 
     // now modify StorageDecl so that it restricts storage
     let provider_instance = test
-        .bind_and_get_instance(&AbsoluteMoniker::root(), StartReason::Eager, false)
+        .start_and_get_instance(&AbsoluteMoniker::root(), StartReason::Eager, false)
         .await
         .expect("could not resolve state");
     {

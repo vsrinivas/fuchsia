@@ -99,7 +99,7 @@ impl LifecycleController {
 
     async fn start(&self, moniker: String) -> Result<fsys::StartResult, fcomponent::Error> {
         let component = self.resolve_component(&moniker).await?;
-        let res = component.bind(&StartReason::Debug).await.map_err(|e: ModelError| {
+        let res = component.start(&StartReason::Debug).await.map_err(|e: ModelError| {
             debug!(
                 "lifecycle controller failed to start the component instance {}: {:?}",
                 moniker, e

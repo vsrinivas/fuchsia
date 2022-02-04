@@ -306,7 +306,7 @@ mod tests {
             .await;
 
         // Bind the root component.
-        universe.bind_instance(&vec![].into()).await.expect("bind failed");
+        universe.start_instance(&vec![].into()).await.expect("bind failed");
 
         // Ensure the instance starts up.
         mock_runner.wait_for_url("test:///a_resolved").await;
@@ -346,7 +346,7 @@ mod tests {
             .await;
 
         // Bind the child component.
-        universe.bind_instance(&vec!["b"].into()).await.expect("bind failed");
+        universe.start_instance(&vec!["b"].into()).await.expect("bind failed");
 
         // Ensure the instances started up.
         mock_runner.wait_for_urls(&["test:///b_resolved"]).await;

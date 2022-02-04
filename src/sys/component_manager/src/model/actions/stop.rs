@@ -57,8 +57,8 @@ pub mod tests {
         ];
         let test = ActionsTest::new("root", components, None).await;
 
-        // Bind to component so we can witness it getting stopped.
-        test.bind(vec!["a"].into()).await;
+        // Start component so we can witness it getting stopped.
+        test.start(vec!["a"].into()).await;
 
         // Register `stopped` action, and wait for it. Component should be stopped.
         let component_root = test.look_up(vec![].into()).await;
@@ -108,9 +108,9 @@ pub mod tests {
         ];
         let test = ActionsTest::new("root", components, None).await;
 
-        // Bind to component so we can witness it getting stopped.
-        test.bind(vec!["a"].into()).await;
-        test.bind(vec!["a", "aa"].into()).await;
+        // Start component so we can witness it getting stopped.
+        test.start(vec!["a"].into()).await;
+        test.start(vec!["a", "aa"].into()).await;
 
         // Register `stopped` action, and wait for it. Component should be stopped.
         let component_root = test.look_up(vec![].into()).await;

@@ -65,7 +65,7 @@ async fn do_start(
     start_reason: &StartReason,
 ) -> Result<fsys::StartResult, ModelError> {
     // Pre-flight check: if the component is already started, or was shut down, return now. Note
-    // that `bind_at` also performs this check before scheduling the action here. We do it again
+    // that `start` also performs this check before scheduling the action here. We do it again
     // while the action is registered to avoid the risk of dispatching the Started event twice.
     {
         let state = component.lock_state().await;
@@ -185,7 +185,7 @@ async fn configure_component_runtime(
     Ok(fsys::StartResult::Started)
 }
 
-/// Returns `Some(Result)` if `bind` should return early based on either of the following:
+/// Returns `Some(Result)` if `start` should return early due to any of the following:
 /// - The component instance is destroyed.
 /// - The component instance is shut down.
 /// - The component instance is already started.
@@ -354,14 +354,14 @@ mod tests {
             .lifecycle()
             .into_iter()
             .filter(|event| match event {
-                Lifecycle::Bind(_) | Lifecycle::Stop(_) => true,
+                Lifecycle::Start(_) | Lifecycle::Stop(_) => true,
                 _ => false,
             })
             .collect();
         assert_eq!(
             events,
             vec![
-                Lifecycle::Bind(vec![format!("{}:0", TEST_CHILD_NAME).as_str()].into()),
+                Lifecycle::Start(vec![format!("{}:0", TEST_CHILD_NAME).as_str()].into()),
                 Lifecycle::Stop(vec![format!("{}:0", TEST_CHILD_NAME).as_str()].into())
             ]
         );

@@ -94,8 +94,8 @@ pub mod tests {
         ];
         let test = ActionsTest::new("root", components, None).await;
 
-        // Bind to component so we can witness it getting stopped.
-        test.bind(vec!["a"].into()).await;
+        // start component so we can witness it getting stopped.
+        test.start(vec!["a"].into()).await;
 
         // Register `destroyed` action, and wait for it. Component should be destroyed.
         let component_root = test.look_up(vec![].into()).await;
@@ -160,8 +160,8 @@ pub mod tests {
         test.create_dynamic_child("coll", "a").await;
         test.create_dynamic_child("coll", "b").await;
 
-        // Bind to component so we can witness it getting stopped.
-        test.bind(vec!["coll:a"].into()).await;
+        // Start the component so we can witness it getting stopped.
+        test.start(vec!["coll:a"].into()).await;
 
         // Register `destroyed` action for "a" only.
         let component_root = test.look_up(vec![].into()).await;

@@ -94,8 +94,8 @@ async fn main() {
     // this test will fail.
     fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(5))).await;
 
-    // Rebind to the child.
-    info!("Re-binding to child");
+    // Restart the child.
+    info!("Restarting to child");
     {
         let mut child_ref =
             fdecl::ChildRef { name: "trigger".to_string(), collection: Some("coll".to_string()) };

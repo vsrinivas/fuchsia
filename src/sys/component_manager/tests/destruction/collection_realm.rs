@@ -43,8 +43,8 @@ async fn main() {
             .expect(&format!("failed to create child"));
     }
 
-    // Bind to child, causing it to start (along with its eager children).
-    info!("Binding to child");
+    // Start the child, causing its eager children to start as well.
+    info!("Starting the child");
     {
         let mut child_ref =
             fdecl::ChildRef { name: "parent".to_string(), collection: Some("coll".to_string()) };

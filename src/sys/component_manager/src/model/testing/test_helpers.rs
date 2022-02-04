@@ -6,11 +6,11 @@ use {
     crate::{
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         model::{
-            binding::Binder,
             component::{ComponentInstance, InstanceState, StartReason, WeakComponentInstance},
             events::{registry::EventSubscription, source::EventSource, stream::EventStream},
             hooks::HooksRegistration,
             model::Model,
+            starter::Starter,
             testing::{
                 mocks::{ControlMessage, MockResolver, MockRunner},
                 test_hook::TestHook,
@@ -464,11 +464,11 @@ impl ActionsTest {
         self.model.look_up(&moniker).await.expect(&format!("could not look up {}", moniker))
     }
 
-    pub async fn bind(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
+    pub async fn start(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
         self.model
-            .bind(&moniker, &StartReason::Eager)
+            .start_instance(&moniker, &StartReason::Eager)
             .await
-            .expect(&format!("could not bind to {}", moniker))
+            .expect(&format!("could not start {}", moniker))
     }
 
     /// Add a dynamic child to the given collection, with the given name to the

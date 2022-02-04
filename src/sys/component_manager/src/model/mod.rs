@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 pub mod actions;
-pub mod binding;
 pub mod component;
 pub mod error;
 pub mod event_logger;
 pub mod hooks;
 pub mod hub;
 pub mod model;
+pub mod starter;
 
 pub(crate) mod context;
 pub(crate) mod environment;

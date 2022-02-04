@@ -82,7 +82,7 @@ fn main() {
         };
 
         if let Err(error) = builtin_environment.run_root().await {
-            error!("Failed to bind to root component: {}", error);
+            error!("Failed to start root component: {}", error);
             process::exit(1);
         }
     };

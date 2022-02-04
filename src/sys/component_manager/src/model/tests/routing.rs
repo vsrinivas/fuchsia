@@ -1284,7 +1284,7 @@ async fn use_runner_from_parent_environment() {
     join!(
         // Bind "b". We expect to see a call to our runner service for the new component.
         async move {
-            universe.bind_instance(&vec!["b"].into()).await.unwrap();
+            universe.start_instance(&vec!["b"].into()).await.unwrap();
         },
         // Wait for a request, and ensure it has the correct URL.
         async move {
@@ -1365,7 +1365,7 @@ async fn use_runner_from_environment_in_collection() {
     join!(
         // Bind "coll:b". We expect to see a call to our runner service for the new component.
         async move {
-            universe.bind_instance(&vec!["coll:b"].into()).await.unwrap();
+            universe.start_instance(&vec!["coll:b"].into()).await.unwrap();
         },
         // Wait for a request, and ensure it has the correct URL.
         async move {
@@ -1438,7 +1438,7 @@ async fn use_runner_from_grandparent_environment() {
     join!(
         // Bind "c". We expect to see a call to our runner service for the new component.
         async move {
-            universe.bind_instance(&vec!["b", "c"].into()).await.unwrap();
+            universe.start_instance(&vec!["b", "c"].into()).await.unwrap();
         },
         // Wait for a request, and ensure it has the correct URL.
         async move {
@@ -1508,7 +1508,7 @@ async fn use_runner_from_sibling_environment() {
     join!(
         // Bind "c". We expect to see a call to our runner service for the new component.
         async move {
-            universe.bind_instance(&vec!["c"].into()).await.unwrap();
+            universe.start_instance(&vec!["c"].into()).await.unwrap();
         },
         // Wait for a request, and ensure it has the correct URL.
         async move {
@@ -1581,7 +1581,7 @@ async fn use_runner_from_inherited_environment() {
     join!(
         // Bind "c". We expect to see a call to our runner service for the new component.
         async move {
-            universe.bind_instance(&vec!["b", "c"].into()).await.unwrap();
+            universe.start_instance(&vec!["b", "c"].into()).await.unwrap();
         },
         // Wait for a request, and ensure it has the correct URL.
         async move {
@@ -1718,7 +1718,7 @@ async fn use_runner_from_environment_failed() {
 
     // Even though we expect the runner to fail, bind should succeed. This is because the failure
     // is propagated via the controller channel, separately from the Start action.
-    test.bind_instance(&vec!["b"].into()).await.unwrap();
+    test.start_instance(&vec!["b"].into()).await.unwrap();
 
     // Since the controller should have closed, expect a Stopped event.
     let event = match event_stream.next().await {
@@ -1793,7 +1793,7 @@ async fn use_runner_from_environment_not_found() {
 
     // Bind "b". We expect it to fail because routing failed.
     assert_matches!(
-        universe.bind_instance(&vec!["b"].into()).await,
+        universe.start_instance(&vec!["b"].into()).await,
         Err(ModelError::RoutingError {
             err: RoutingError::UseFromEnvironmentNotFound {
                 moniker,
@@ -2033,7 +2033,7 @@ async fn use_resolver_from_parent_environment() {
     join!(
         // Bind "b". We expect to see a call to our resolver service for the new component.
         async move {
-            universe.bind_instance(&vec!["b"].into()).await.expect("failed to bind to instance b");
+            universe.start_instance(&vec!["b"].into()).await.expect("failed to start instance b");
         },
         // Wait for a request, and resolve it.
         async {
@@ -2116,9 +2116,9 @@ async fn use_resolver_from_grandparent_environment() {
         // Bind "c". We expect to see a call to our resolver service for the new component.
         async move {
             universe
-                .bind_instance(&vec!["b", "c"].into())
+                .start_instance(&vec!["b", "c"].into())
                 .await
-                .expect("failed to bind to instance c");
+                .expect("failed to start instance c");
         },
         // Wait for a request, and resolve it.
         async {
@@ -2191,7 +2191,7 @@ async fn resolver_is_not_available() {
     join!(
         // Bind "c". We expect to see a failure that the scheme is not registered.
         async move {
-            match universe.bind_instance(&vec!["c"].into()).await {
+            match universe.start_instance(&vec!["c"].into()).await {
                 Err(ModelError::ComponentInstanceError {
                     err: ComponentInstanceError::ResolveFailed { err: resolve_error, .. },
                 }) => {
@@ -2274,7 +2274,7 @@ async fn resolver_component_decl_is_validated() {
     join!(
         // Bind "b". We expect to see a ResolverError.
         async move {
-            match universe.bind_instance(&vec!["b"].into()).await {
+            match universe.start_instance(&vec!["b"].into()).await {
                 Err(ModelError::ComponentInstanceError {
                     err: ComponentInstanceError::ResolveFailed { err: resolve_error, .. },
                 }) => {

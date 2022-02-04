@@ -188,7 +188,7 @@ impl RealmCapabilityHost {
                 let (_client_end, server_end) =
                     fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
                 let weak_component = WeakComponentInstance::new(&component);
-                RealmCapabilityHost::bind_child(
+                RealmCapabilityHost::start_child(
                     &weak_component,
                     child_ref,
                     server_end,
@@ -213,7 +213,7 @@ impl RealmCapabilityHost {
         }
     }
 
-    async fn bind_child(
+    async fn start_child(
         component: &WeakComponentInstance,
         child: fdecl::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
@@ -222,7 +222,7 @@ impl RealmCapabilityHost {
         match Self::get_child(component, child.clone()).await? {
             Some(child) => {
                 let mut exposed_dir = exposed_dir.into_channel();
-                child.bind(&start_reason).await.map_err(|e| match e {
+                child.start(&start_reason).await.map_err(|e| match e {
                     ModelError::ResolverError { err, .. } => {
                         debug!("failed to resolve child: {}", err);
                         fcomponent::Error::InstanceCannotResolve
@@ -232,7 +232,7 @@ impl RealmCapabilityHost {
                         fcomponent::Error::InstanceCannotStart
                     }
                     e => {
-                        error!("bind() failed: {}", e);
+                        error!("start() failed: {}", e);
                         fcomponent::Error::Internal
                     }
                 })?;
@@ -245,7 +245,7 @@ impl RealmCapabilityHost {
                         // TODO(fxbug.dev/54109): The runner may have decided to not run the component. Perhaps a
                         // security policy prevented it, or maybe there was some other issue.
                         // Unfortunately these failed runs may or may not have occurred by this point,
-                        // but we want to be consistent about how bind_child responds to these errors.
+                        // but we want to be consistent about how start_child responds to these errors.
                         // Since this call succeeds if the runner hasn't yet decided to not run the
                         // component, we need to also succeed if the runner has already decided to not
                         // run the component, because otherwise the result of this call will be
@@ -259,7 +259,7 @@ impl RealmCapabilityHost {
                 }
             }
             None => {
-                debug!("bind_child() failed: instance not found {:?}", child);
+                debug!("start_child() failed: instance not found {:?}", child);
                 return Err(fcomponent::Error::InstanceNotFound);
             }
         }
@@ -451,9 +451,9 @@ mod tests {
         crate::{
             builtin_environment::BuiltinEnvironment,
             model::{
-                binding::Binder,
                 component::{ComponentInstance, StartReason},
                 events::{source::EventSource, stream::EventStream},
+                starter::Starter,
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::*},
             },
         },
@@ -504,11 +504,11 @@ mod tests {
             let hooks = hook.hooks();
             model.root().hooks.install(hooks).await;
 
-            // Look up and bind to component.
+            // Look up and start component.
             let component = model
-                .bind(&component_moniker, &StartReason::Eager)
+                .start_instance(&component_moniker, &StartReason::Eager)
                 .await
-                .expect("failed to bind to component");
+                .expect("failed to start component");
 
             // Host framework service.
             let (realm_proxy, stream) =
@@ -996,7 +996,7 @@ mod tests {
             )
             .await;
 
-        // Create children "a" and "b" in collection, and bind to them.
+        // Create children "a" and "b" in collection, and start them.
         for name in &["a", "b"] {
             let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
             let res = test

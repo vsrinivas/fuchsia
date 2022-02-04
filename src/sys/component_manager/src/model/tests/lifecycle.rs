@@ -7,12 +7,12 @@ use {
         builtin_environment::BuiltinEnvironment,
         model::{
             actions::{ActionKey, ActionSet, ShutdownAction, StartAction, StopAction},
-            binding::Binder,
             component::{ComponentInstance, InstanceState, StartReason},
             error::ModelError,
             events::registry::EventSubscription,
             hooks::{EventPayload, EventType, HooksRegistration},
             model::Model,
+            starter::Starter,
             testing::{
                 mocks::*, out_dir::OutDir, routing_test_helpers::RoutingTestBuilder,
                 test_helpers::*, test_hook::TestHook,
@@ -58,7 +58,7 @@ async fn bind_root() {
     let (model, _builtin_environment, mock_runner) =
         new_model(vec![("root", component_decl_with_test_runner())]).await;
     let m: AbsoluteMoniker = AbsoluteMoniker::root();
-    let res = model.bind(&m, &StartReason::Root).await;
+    let res = model.start_instance(&m, &StartReason::Root).await;
     assert!(res.is_ok());
     mock_runner.wait_for_url("test:///root_resolved").await;
     let actual_children = get_live_children(&model.root()).await;
@@ -70,7 +70,7 @@ async fn bind_non_existent_root_child() {
     let (model, _builtin_environment, _mock_runner) =
         new_model(vec![("root", component_decl_with_test_runner())]).await;
     let m: AbsoluteMoniker = vec!["no-such-instance"].into();
-    let res = model.bind(&m, &StartReason::Root).await;
+    let res = model.start_instance(&m, &StartReason::Root).await;
     let expected_res: Result<Arc<ComponentInstance>, ModelError> =
         Err(ModelError::instance_not_found(vec!["no-such-instance"].into()));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
@@ -99,11 +99,11 @@ async fn bind_concurrent() {
     let mut event_stream = event_source.subscribe(events).await.expect("subscribe to event stream");
     event_source.start_component_tree().await;
 
-    // Bind to "system", pausing before it starts.
+    // Start the "system", pausing before it starts.
     let model_copy = model.clone();
     let (f, bind_handle) = async move {
         let m: AbsoluteMoniker = vec!["system"].into();
-        model_copy.bind(&m, &StartReason::Root).await.expect("failed to bind 1");
+        model_copy.start_instance(&m, &StartReason::Root).await.expect("failed to start 1");
     }
     .remote_handle();
     fasync::Task::spawn(f).detach();
@@ -114,8 +114,8 @@ async fn bind_concurrent() {
         Ok(EventPayload::Started { start_reason: StartReason::Root, .. })
     );
 
-    // While the bind() is paused, simulate a second bind by explicitly scheduling a Start
-    // action. Allow the original bind to proceed, then check the result of both bindings.
+    // While the start() is paused, simulate a second start by explicitly scheduling a Start
+    // action. Allow the original start to proceed, then check the result of both starts.
     let m: AbsoluteMoniker = vec!["system"].into();
     let component = model.look_up(&m).await.expect("failed component lookup");
     let f = ActionSet::register(component, StartAction::new(StartReason::Eager));
@@ -123,7 +123,7 @@ async fn bind_concurrent() {
     fasync::Task::spawn(f).detach();
     event.resume();
     bind_handle.await;
-    action_handle.await.expect("failed to bind 2");
+    action_handle.await.expect("failed to start 2");
 
     // Verify that the component was started only once.
     mock_runner.wait_for_urls(&["test:///system_resolved"]).await;
@@ -144,9 +144,9 @@ async fn bind_parent_then_child() {
         hook.hooks(),
     )
     .await;
-    // bind to system
+    // Start the system.
     let m: AbsoluteMoniker = vec!["system"].into();
-    assert!(model.bind(&m, &StartReason::Root).await.is_ok());
+    assert!(model.start_instance(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///system_resolved"]).await;
 
     // Validate children. system is resolved, but not echo.
@@ -164,9 +164,9 @@ async fn bind_parent_then_child() {
         *echo_component.lock_state().await,
         InstanceState::New | InstanceState::Discovered
     );
-    // bind to echo
+    // Start echo.
     let m: AbsoluteMoniker = vec!["echo"].into();
-    assert!(model.bind(&m, &StartReason::Root).await.is_ok());
+    assert!(model.start_instance(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///system_resolved", "test:///echo_resolved"]).await;
 
     // Validate children. Now echo is resolved.
@@ -198,19 +198,19 @@ async fn bind_child_doesnt_bind_parent() {
     )
     .await;
 
-    // Bind to logger (before ever binding to system).
+    // Start logger (before ever starting system).
     let m: AbsoluteMoniker = vec!["system", "logger"].into();
-    assert!(model.bind(&m, &StartReason::Root).await.is_ok());
+    assert!(model.start_instance(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///logger_resolved"]).await;
 
-    // Bind to netstack.
+    // Start netstack.
     let m: AbsoluteMoniker = vec!["system", "netstack"].into();
-    assert!(model.bind(&m, &StartReason::Root).await.is_ok());
+    assert!(model.start_instance(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///logger_resolved", "test:///netstack_resolved"]).await;
 
-    // finally, bind to system.
+    // Finally, start the system.
     let m: AbsoluteMoniker = vec!["system"].into();
-    assert!(model.bind(&m, &StartReason::Root).await.is_ok());
+    assert!(model.start_instance(&m, &StartReason::Root).await.is_ok());
     mock_runner
         .wait_for_urls(&[
             "test:///system_resolved",
@@ -230,14 +230,14 @@ async fn bind_child_non_existent() {
         ("system", component_decl_with_test_runner()),
     ])
     .await;
-    // bind to system
+    // Start the system.
     let m: AbsoluteMoniker = vec!["system"].into();
-    assert!(model.bind(&m, &StartReason::Root).await.is_ok());
+    assert!(model.start_instance(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///system_resolved"]).await;
 
-    // can't bind to logger: it does not exist
+    // Can't start the logger. It does not exist.
     let m: AbsoluteMoniker = vec!["system", "logger"].into();
-    let res = model.bind(&m, &StartReason::Root).await;
+    let res = model.start_instance(&m, &StartReason::Root).await;
     let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(m.to_partial()));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     mock_runner.wait_for_urls(&["test:///system_resolved"]).await;
@@ -270,10 +270,10 @@ async fn bind_eager_children() {
     )
     .await;
 
-    // Bind to the top component, and check that it and the eager components were started.
+    // Start the top component, and check that it and the eager components were started.
     {
         let m = AbsoluteMoniker::new(vec!["a".into()]);
-        let res = model.bind(&m, &StartReason::Root).await;
+        let res = model.start_instance(&m, &StartReason::Root).await;
         assert!(res.is_ok());
         mock_runner
             .wait_for_urls(&[
@@ -338,11 +338,11 @@ async fn bind_eager_children_reentrant() {
     out_dir.add_entry(CapabilityPath::try_from("/svc/runner").unwrap(), runner_service);
     mock_runner.add_host_fn("test:///a_resolved", out_dir.host_fn());
 
-    // Bind to the top component, and check that it and the eager components were started.
+    // Start the top component, and check that it and the eager components were started.
     {
         let (f, bind_handle) = async move {
             let m = AbsoluteMoniker::new(vec!["a".into()]);
-            model.bind(&m, &StartReason::Root).await
+            model.start_instance(&m, &StartReason::Root).await
         }
         .remote_handle();
         fasync::Task::spawn(f).detach();
@@ -351,7 +351,7 @@ async fn bind_eager_children_reentrant() {
             wait_for_runner_request(&mut receiver).await.resolved_url,
             Some("test:///b_resolved".to_string())
         );
-        bind_handle.await.expect("bind to `a` failed");
+        bind_handle.await.expect("start `a` failed");
         // `root` and `a` use the test runner.
         mock_runner.wait_for_urls(&["test:///a_resolved"]).await;
     }
@@ -369,10 +369,10 @@ async fn bind_no_execute() {
     ])
     .await;
 
-    // Bind to the parent component. The child should be started. However, the parent component
+    // Start the parent component. The child should be started. However, the parent component
     // is non-executable so it is not run.
     let m: AbsoluteMoniker = vec!["a"].into();
-    assert!(model.bind(&m, &StartReason::Root).await.is_ok());
+    assert!(model.start_instance(&m, &StartReason::Root).await.is_ok());
     mock_runner.wait_for_urls(&["test:///b_resolved"]).await;
 }
 
@@ -429,9 +429,9 @@ async fn bind_action_sequence() {
     };
     join!(start_model, check_events);
 
-    // Bind to child and check that it gets resolved, with a Resolve event and action.
+    // Start child and check that it gets resolved, with a Resolve event and action.
     let bind = async {
-        model.bind(&m.to_partial(), &StartReason::Root).await.unwrap();
+        model.start_instance(&m.to_partial(), &StartReason::Root).await.unwrap();
     };
     let check_events = async {
         let event = event_stream.wait_until(EventType::Resolved, m.clone()).await.unwrap();
@@ -479,7 +479,7 @@ async fn reboot_on_terminate_disabled() {
         .build()
         .await;
 
-    let res = test.model.bind(&vec!["system"].into(), &StartReason::Debug).await;
+    let res = test.model.start_instance(&vec!["system"].into(), &StartReason::Debug).await;
     assert_matches!(res, Err(ModelError::PolicyError {
         err: PolicyError::Unsupported {
             policy, moniker
@@ -508,7 +508,7 @@ async fn reboot_on_terminate_disallowed() {
         .build()
         .await;
 
-    let res = test.model.bind(&vec!["system"].into(), &StartReason::Debug).await;
+    let res = test.model.start_instance(&vec!["system"].into(), &StartReason::Debug).await;
     assert_matches!(res, Err(ModelError::PolicyError {
         err: PolicyError::ChildPolicyDisallowed {
             policy, moniker
@@ -557,9 +557,9 @@ async fn on_terminate_stop_triggers_reboot() {
         .build()
         .await;
 
-    // Bind to the critical component and make it stop. This should cause the Admin protocol to
+    // Start the critical component and make it stop. This should cause the Admin protocol to
     // receive a reboot request.
-    test.model.bind(&vec!["system"].into(), &StartReason::Debug).await.unwrap();
+    test.model.start_instance(&vec!["system"].into(), &StartReason::Debug).await.unwrap();
     let component = test.model.look_up(&vec!["system"].into()).await.unwrap();
     let stop = async move {
         ActionSet::register(component.clone(), StopAction::new(false, false)).await.unwrap();
@@ -614,9 +614,9 @@ async fn on_terminate_exit_triggers_reboot() {
         .build()
         .await;
 
-    // Bind to the critical component and cause it to 'exit' by making the runner close its end
+    // Start the critical component and cause it to 'exit' by making the runner close its end
     // of the controller channel. This should cause the Admin protocol to receive a reboot request.
-    test.model.bind(&vec!["system"].into(), &StartReason::Debug).await.unwrap();
+    test.model.start_instance(&vec!["system"].into(), &StartReason::Debug).await.unwrap();
     let component = test.model.look_up(&vec!["system"].into()).await.unwrap();
     let info = ComponentInfo::new(component.clone()).await;
     test.mock_runner.abort_controller(&info.channel_id);
@@ -667,9 +667,9 @@ async fn reboot_shutdown_does_not_trigger_reboot() {
         .build()
         .await;
 
-    // Bind to the critical component and make it stop. This should cause the Admin protocol to
+    // Start the critical component and make it stop. This should cause the Admin protocol to
     // receive a reboot request.
-    test.model.bind(&vec!["system"].into(), &StartReason::Debug).await.unwrap();
+    test.model.start_instance(&vec!["system"].into(), &StartReason::Debug).await.unwrap();
     let component = test.model.look_up(&vec!["system"].into()).await.unwrap();
     ActionSet::register(component.clone(), ShutdownAction::new()).await.unwrap();
     assert!(!test.model.top_instance().has_reboot_task().await);
@@ -711,11 +711,11 @@ async fn on_terminate_with_missing_reboot_protocol_panics() {
         .build()
         .await;
 
-    // Bind to the critical component and cause it to 'exit' by making the runner close its end of
+    // Start the critical component and cause it to 'exit' by making the runner close its end of
     // the controller channel. component_manager should attempt to send a reboot request, which
     // should fail because the reboot protocol isn't exposed to it -- expect component_manager to
     // respond by crashing.
-    test.model.bind(&vec!["system"].into(), &StartReason::Debug).await.unwrap();
+    test.model.start_instance(&vec!["system"].into(), &StartReason::Debug).await.unwrap();
     let component = test.model.look_up(&vec!["system"].into()).await.unwrap();
     let info = ComponentInfo::new(component.clone()).await;
     test.mock_runner.abort_controller(&info.channel_id);
@@ -765,10 +765,10 @@ async fn on_terminate_with_failed_reboot_panics() {
         .build()
         .await;
 
-    // Bind to the critical component and cause it to 'exit' by making the runner close its end
+    // Start the critical component and cause it to 'exit' by making the runner close its end
     // of the controller channel. Admin protocol should receive a reboot request -- make it fail
     // and expect component_manager to respond by crashing.
-    test.model.bind(&vec!["system"].into(), &StartReason::Debug).await.unwrap();
+    test.model.start_instance(&vec!["system"].into(), &StartReason::Debug).await.unwrap();
     let component = test.model.look_up(&vec!["system"].into()).await.unwrap();
     let info = ComponentInfo::new(component.clone()).await;
     test.mock_runner.abort_controller(&info.channel_id);

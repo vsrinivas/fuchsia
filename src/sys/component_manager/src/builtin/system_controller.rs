@@ -204,11 +204,11 @@ mod tests {
         let test = ActionsTest::new("root", components, None).await;
 
         // Start each component.
-        test.bind(vec![].into()).await;
-        let component_a = test.bind(vec!["a"].into()).await;
-        let component_b = test.bind(vec!["a", "b"].into()).await;
-        let component_c = test.bind(vec!["a", "b", "c"].into()).await;
-        let component_d = test.bind(vec!["a", "b", "d"].into()).await;
+        test.start(vec![].into()).await;
+        let component_a = test.start(vec!["a"].into()).await;
+        let component_b = test.start(vec!["a", "b"].into()).await;
+        let component_c = test.start(vec!["a", "b", "c"].into()).await;
+        let component_d = test.start(vec!["a", "b", "d"].into()).await;
 
         // Wire up connections to SystemController
         let sys_controller = Box::new(SystemControllerCapabilityProvider::new(
@@ -293,8 +293,8 @@ mod tests {
             let test = ActionsTest::new_with_hooks("root", components, None, vec![hooks_reg]).await;
 
             // Start root and `a`.
-            test.bind(vec![].into()).await;
-            let component_a = test.bind(vec!["a"].into()).await;
+            test.start(vec![].into()).await;
+            let component_a = test.start(vec!["a"].into()).await;
 
             // Wire up connections to SystemController
             let sys_controller = Box::new(SystemControllerCapabilityProvider::new(

@@ -97,7 +97,7 @@ impl ComponentInstance {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Lifecycle {
-    Bind(InstancedAbsoluteMoniker),
+    Start(InstancedAbsoluteMoniker),
     Stop(InstancedAbsoluteMoniker),
     PreDestroy(InstancedAbsoluteMoniker),
     Destroy(InstancedAbsoluteMoniker),
@@ -106,7 +106,7 @@ pub enum Lifecycle {
 impl fmt::Display for Lifecycle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Lifecycle::Bind(m) => write!(f, "bind({})", m),
+            Lifecycle::Start(m) => write!(f, "bind({})", m),
             Lifecycle::Stop(m) => write!(f, "stop({})", m),
             Lifecycle::PreDestroy(m) => write!(f, "predestroy({})", m),
             Lifecycle::Destroy(m) => write!(f, "destroy({})", m),
@@ -171,7 +171,7 @@ impl TestHook {
     ) -> Result<(), ModelError> {
         self.create_instance_if_necessary(target_moniker).await?;
         let mut events = self.lifecycle_events.lock().await;
-        events.push(Lifecycle::Bind(target_moniker.clone()));
+        events.push(Lifecycle::Start(target_moniker.clone()));
         Ok(())
     }
 

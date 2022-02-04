@@ -5,11 +5,11 @@
 use {
     crate::model::{
         actions::{ActionKey, DiscoverAction},
-        binding::Binder,
         component::{ComponentInstance, ComponentManagerInstance, StartReason},
         context::ModelContext,
         environment::Environment,
         error::ModelError,
+        starter::Starter,
     },
     ::routing::config::RuntimeConfig,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
@@ -95,7 +95,7 @@ impl Model {
         Ok(cur)
     }
 
-    /// Binds to the root, starting the component tree.
+    /// Starts root, starting the component tree.
     pub async fn start(self: &Arc<Model>) {
         // Normally the Discovered event is dispatched when an instance is added as a child, but
         // since the root isn't anyone's child we need to dispatch it here.
@@ -104,13 +104,13 @@ impl Model {
             // This returns a Future that does not need to be polled.
             let _ = actions.register_no_wait(&self.root, DiscoverAction::new());
         }
-        if let Err(e) = self.bind(&AbsoluteMoniker::root(), &StartReason::Root).await {
-            // If we fail binding to the root, but the root is being shutdown, that's ok. The
+        if let Err(e) = self.start_instance(&AbsoluteMoniker::root(), &StartReason::Root).await {
+            // If we fail to start the root, but the root is being shutdown, that's ok. The
             // system is tearing down, so it doesn't matter any more if we never got everything
             // started that we wanted to.
             let action_set = self.root.lock_actions().await;
             if !action_set.contains(&ActionKey::Shutdown) {
-                panic!("failed to bind to root component {}: {:?}", self.root.component_url, e);
+                panic!("failed to start root component {}: {:?}", self.root.component_url, e);
             }
         }
     }

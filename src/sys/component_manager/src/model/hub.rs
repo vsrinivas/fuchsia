@@ -737,9 +737,9 @@ mod tests {
         crate::{
             builtin_environment::BuiltinEnvironment,
             model::{
-                binding::Binder,
                 component::StartReason,
                 model::Model,
+                starter::Starter,
                 testing::{
                     test_helpers::{
                         component_decl_with_test_runner, dir_contains, list_directory,
@@ -865,7 +865,7 @@ mod tests {
         model.root().hooks.install(additional_hooks).await;
 
         let root_moniker = AbsoluteMoniker::root();
-        model.bind(&root_moniker, &StartReason::Root).await.unwrap();
+        model.start_instance(&root_moniker, &StartReason::Root).await.unwrap();
 
         (model, builtin_environment, hub_proxy)
     }
@@ -1218,9 +1218,9 @@ mod tests {
         )
         .await;
 
-        // Binding will resolve the component and cause the instance id to be written.
+        // Starting will resolve the component and cause the instance id to be written.
         model
-            .bind(
+            .start_instance(
                 &AbsoluteMoniker::parse_string_without_instances("/a").unwrap(),
                 &StartReason::Debug,
             )

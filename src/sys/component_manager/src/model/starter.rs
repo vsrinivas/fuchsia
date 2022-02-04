@@ -13,12 +13,12 @@ use {
     std::sync::{Arc, Weak},
 };
 
-/// A trait to enable support for different `bind()` implementations. This is used,
-/// for example, for testing code that depends on `bind()`, but no other `Model`
+/// A trait to enable support for different `start()` implementations. This is used,
+/// for example, for testing code that depends on `start()`, but no other `Model`
 /// functionality.
 #[async_trait]
-pub trait Binder: Send + Sync {
-    async fn bind<'a>(
+pub trait Starter: Send + Sync {
+    async fn start_instance<'a>(
         &'a self,
         abs_moniker: &'a AbsoluteMoniker,
         reason: &'a StartReason,
@@ -26,46 +26,46 @@ pub trait Binder: Send + Sync {
 }
 
 #[async_trait]
-impl Binder for Arc<Model> {
-    /// Binds to the component instance with the specified moniker. This has the following effects:
+impl Starter for Arc<Model> {
+    /// Starts the component instance with the specified moniker. This has the following effects:
     /// - Binds to the parent instance.
     /// - Starts the component instance, if it is not already running and not shut down.
-    /// - Binds to any descendant component instances that need to be eagerly started.
+    /// - Starts any descendant component instances that need to be eagerly started.
     // TODO: This function starts the parent component, but doesn't track the bindings anywhere.
     // This means that when the child stops and the parent has no other reason to run, we won't
     // stop the parent. To solve this, we need to track the bindings.
-    async fn bind<'a>(
+    async fn start_instance<'a>(
         &'a self,
         abs_moniker: &'a AbsoluteMoniker,
         reason: &'a StartReason,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
-        bind_at_moniker(self, abs_moniker, reason).await
+        start_moniker(self, abs_moniker, reason).await
     }
 }
 
 #[async_trait]
-impl Binder for Weak<Model> {
-    async fn bind<'a>(
+impl Starter for Weak<Model> {
+    async fn start_instance<'a>(
         &'a self,
         abs_moniker: &'a AbsoluteMoniker,
         reason: &'a StartReason,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         if let Some(model) = self.upgrade() {
-            model.bind(abs_moniker, reason).await
+            model.start_instance(abs_moniker, reason).await
         } else {
             Err(ModelError::ModelNotAvailable)
         }
     }
 }
 
-/// Binds to the component instance in the given component, starting it if it's not already running.
+/// Starts the component instance in the given component if it's not already running.
 /// Returns the component that was bound to.
-pub async fn bind_at_moniker<'a>(
+pub async fn start_moniker<'a>(
     model: &'a Arc<Model>,
     abs_moniker: &'a AbsoluteMoniker,
     reason: &StartReason,
 ) -> Result<Arc<ComponentInstance>, ModelError> {
     let component = model.look_up(abs_moniker).await?;
-    component.bind(reason).await?;
+    component.start(reason).await?;
     Ok(component)
 }

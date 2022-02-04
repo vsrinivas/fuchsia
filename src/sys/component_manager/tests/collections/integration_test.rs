@@ -44,7 +44,7 @@ async fn collections() {
     let children = list_children(&realm).await.expect("failed to list children");
     assert_eq!("coll:a,coll:b", &children);
 
-    // Bind to children, causing them to execute.
+    // Start the children.
     for name in vec!["a", "b"] {
         let mut child_ref = new_child_ref(name, "coll");
         let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
@@ -83,7 +83,7 @@ async fn collections() {
     let children = list_children(&realm).await.expect("failed to list children");
     assert_eq!("coll:b", &children);
 
-    // Recreate child (with different URL), and bind to it. Should work.
+    // Recreate child (with different URL), and start it. Should work.
     {
         let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
         let child_decl = fdecl::Child {

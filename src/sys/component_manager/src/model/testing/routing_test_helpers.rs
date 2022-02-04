@@ -7,11 +7,11 @@ use {
         builtin::runner::BuiltinRunnerFactory,
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         model::{
-            binding::Binder,
             component::{ComponentInstance, InstanceState, StartReason},
             error::ModelError,
             hooks::HooksRegistration,
             model::Model,
+            starter::Starter,
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},
         },
     },
@@ -386,7 +386,7 @@ impl RoutingTest {
         args: fcomponent::CreateChildArgs,
     ) {
         let component_name =
-            self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
+            self.start_instance_and_wait_start(&moniker).await.expect("start instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
         let namespace = self
@@ -407,9 +407,9 @@ impl RoutingTest {
         let component =
             self.model.look_up(&moniker.to_partial()).await.expect("failed to look up component");
         self.model
-            .bind(&component.abs_moniker, &StartReason::Eager)
+            .start_instance(&component.abs_moniker, &StartReason::Eager)
             .await
-            .expect("bind instance failed");
+            .expect("start instance failed");
         let child_moniker = ChildMoniker::new(name.to_string(), Some(collection.to_string()));
         let nf =
             component.remove_dynamic_child(&child_moniker).await.expect("failed to remove child");
@@ -418,7 +418,7 @@ impl RoutingTest {
     }
 
     pub async fn bind_and_get_namespace(&self, moniker: AbsoluteMoniker) -> Arc<ManagedNamespace> {
-        let component_name = self.bind_instance_and_wait_start(&moniker).await.unwrap();
+        let component_name = self.start_instance_and_wait_start(&moniker).await.unwrap();
         let component_resolved_url = Self::resolved_url(&component_name);
         let namespace = self
             .mock_runner
@@ -515,7 +515,7 @@ impl RoutingTest {
         bind_calls: Arc<Mutex<Vec<String>>>,
     ) {
         let component_name =
-            self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
+            self.start_instance_and_wait_start(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         let path = "/svc/fuchsia.component.Realm".try_into().unwrap();
         Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
@@ -578,34 +578,34 @@ impl RoutingTest {
         out_dir
     }
 
-    /// Attempt to bind the instance associated with the given moniker with the
+    /// Attempt to start the instance associated with the given moniker with the
     /// default reason of StartReason::Eager.
     ///
     /// On success, returns the short name of the component.
-    pub async fn bind_instance(&self, moniker: &AbsoluteMoniker) -> Result<String, ModelError> {
-        self.bind_instance_with(moniker, StartReason::Eager, false).await
+    pub async fn start_instance(&self, moniker: &AbsoluteMoniker) -> Result<String, ModelError> {
+        self.start_instance_with(moniker, StartReason::Eager, false).await
     }
 
-    /// Attempt to bind the instance associated with the given moniker with the
-    /// default reason of StartReason::Eager, and waits for the runner to start the component.
-    /// This method will only work if the component in question is using the default mock runner
-    /// (otherwise, it will hang).
+    /// Attempt to start the instance associated with the given moniker with the default reason of
+    /// StartReason::Eager, and waits for the runner to start the component. This method will only
+    /// work if the component in question is using the default mock runner (otherwise, it will
+    /// hang).
     ///
     /// On success, returns the short name of the component.
-    pub async fn bind_instance_and_wait_start(
+    pub async fn start_instance_and_wait_start(
         &self,
         moniker: &AbsoluteMoniker,
     ) -> Result<String, ModelError> {
-        self.bind_instance_with(moniker, StartReason::Eager, true).await
+        self.start_instance_with(moniker, StartReason::Eager, true).await
     }
 
-    async fn bind_instance_with(
+    async fn start_instance_with(
         &self,
         moniker: &AbsoluteMoniker,
         reason: StartReason,
         wait_for_start: bool,
     ) -> Result<String, ModelError> {
-        self.model.bind(moniker, &reason).await?;
+        self.model.start_instance(moniker, &reason).await?;
         let component_name = match moniker.path().last() {
             Some(part) => part.name().to_string(),
             None => self.root_component_name.to_string(),
@@ -617,13 +617,13 @@ impl RoutingTest {
         Ok(component_name)
     }
 
-    pub async fn bind_and_get_instance<'a>(
+    pub async fn start_and_get_instance<'a>(
         &self,
         moniker: &AbsoluteMoniker,
         reason: StartReason,
         wait_for_start: bool,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
-        let instance = self.model.bind(moniker, &reason).await?;
+        let instance = self.model.start_instance(moniker, &reason).await?;
         let component_name = match moniker.path().last() {
             Some(part) => part.name().to_string(),
             None => self.root_component_name.to_string(),
@@ -641,15 +641,15 @@ impl RoutingTest {
     /// We define "running" as "the components outgoing directory has responded to a simple
     /// request", which the MockRunner supports.
     pub async fn wait_for_component_start(&self, moniker: &AbsoluteMoniker) {
-        // Lookup, bind, and open a connection to the component's outgoing directory.
+        // Lookup, start, and open a connection to the component's outgoing directory.
         let (dir_proxy, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
         self.model.look_up(moniker).await.expect("lookup component failed");
         let mut server_end = server_end.into_channel();
         self.model
-            .bind(moniker, &StartReason::Eager)
+            .start_instance(moniker, &StartReason::Eager)
             .await
-            .expect("failed to bind to component")
+            .expect("failed to start component")
             .open_outgoing(
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE,
                 fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
@@ -674,9 +674,9 @@ impl RoutingTestModel for RoutingTest {
 
     async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         let component_name = self
-            .bind_instance_and_wait_start(&moniker)
+            .start_instance_and_wait_start(&moniker)
             .await
-            .expect(&format!("bind instance failed for `{}`", moniker));
+            .expect(&format!("start instance failed for `{}`", moniker));
         let component_resolved_url = Self::resolved_url(&component_name);
         let namespace = self
             .mock_runner
@@ -897,7 +897,7 @@ impl RoutingTestModel for RoutingTest {
 
     async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {
         let component_name =
-            self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
+            self.start_instance_and_wait_start(&moniker).await.expect("start instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
         let namespace = self.mock_runner.get_namespace(&component_resolved_url).unwrap();
@@ -1524,7 +1524,10 @@ pub mod capability_util {
             .look_up(abs_moniker)
             .await
             .expect(&format!("component not found {}", abs_moniker));
-        model.bind(abs_moniker, &StartReason::Eager).await.expect("failed to bind instance");
+        model
+            .start_instance(abs_moniker, &StartReason::Eager)
+            .await
+            .expect("failed to start instance");
         let state = component.lock_state().await;
         match &*state {
             InstanceState::Resolved(resolved_instance_state) => {

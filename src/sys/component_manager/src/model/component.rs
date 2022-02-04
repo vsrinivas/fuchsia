@@ -964,12 +964,12 @@ impl ComponentInstance {
     }
 
     /// Binds to the component instance in this instance, starting it if it's not already running.
-    pub async fn bind(
+    pub async fn start(
         self: &Arc<Self>,
         reason: &StartReason,
     ) -> Result<fsys::StartResult, ModelError> {
         // Skip starting a component instance that was already started. It's important to bail out
-        // here so we don't waste time binding to eager children more than once.
+        // here so we don't waste time starting eager children more than once.
         {
             let state = self.lock_state().await;
             let execution = self.lock_execution().await;
@@ -993,26 +993,26 @@ impl ComponentInstance {
                     return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
                 }
                 InstanceState::New | InstanceState::Discovered => {
-                    panic!("bind_at: not resolved")
+                    panic!("start: not resolved")
                 }
             }
         };
-        Self::bind_eager_children_recursive(eager_children).await.or_else(|e| match e {
+        Self::start_eager_children_recursive(eager_children).await.or_else(|e| match e {
             ModelError::InstanceShutDown { .. } => Ok(()),
             _ => Err(e),
         })?;
         Ok(fsys::StartResult::Started)
     }
 
-    /// Binds to a list of instances, and any eager children they may return.
-    // This function recursive calls `bind_at`, so it returns a BoxFutuer,
-    fn bind_eager_children_recursive<'a>(
+    /// Starts a list of instances, and any eager children they may return.
+    // This function recursively calls `start`, so it returns a BoxFuture,
+    fn start_eager_children_recursive<'a>(
         instances_to_bind: Vec<Arc<ComponentInstance>>,
     ) -> BoxFuture<'a, Result<(), ModelError>> {
         let f = async move {
             let futures: Vec<_> = instances_to_bind
                 .iter()
-                .map(|component| async move { component.bind(&StartReason::Eager).await })
+                .map(|component| async move { component.start(&StartReason::Eager).await })
                 .collect();
             join_all(futures)
                 .await
@@ -1858,9 +1858,9 @@ pub mod tests {
         super::*,
         crate::model::{
             actions::ShutdownAction,
-            binding::Binder,
             events::{registry::EventSubscription, stream::EventStream},
             hooks::EventType,
+            starter::Starter,
             testing::{
                 mocks::{ControlMessage, ControllerActionResponse, MockController},
                 routing_test_helpers::{RoutingTest, RoutingTestBuilder},
@@ -2354,7 +2354,7 @@ pub mod tests {
 
         let model = test.model.clone();
         let (f, bind_handle) = async move {
-            model.bind(&vec![].into(), &StartReason::Root).await.expect("failed to bind")
+            model.start_instance(&vec![].into(), &StartReason::Root).await.expect("failed to bind")
         }
         .remote_handle();
         fasync::Task::spawn(f).detach();
@@ -2415,12 +2415,12 @@ pub mod tests {
 
         let component_b = test.look_up(b_moniker.to_partial()).await;
 
-        // Bind to the root so it and its eager children start
+        // Start the root so it and its eager children start.
         let _root = test
             .model
-            .bind(&vec![].into(), &StartReason::Root)
+            .start_instance(&vec![].into(), &StartReason::Root)
             .await
-            .expect("failed to bind to root");
+            .expect("failed to start root");
         test.runner
             .wait_for_urls(&["test:///root_resolved", "test:///a_resolved", "test:///b_resolved"])
             .await;
@@ -2484,11 +2484,14 @@ pub mod tests {
             .await;
 
         let root_realm =
-            test.model.bind(&AbsoluteMoniker::root(), &StartReason::Root).await.unwrap();
+            test.model.start_instance(&AbsoluteMoniker::root(), &StartReason::Root).await.unwrap();
         assert_eq!(instance_id, root_realm.instance_id());
 
-        let a_realm =
-            test.model.bind(&AbsoluteMoniker::from(vec!["a"]), &StartReason::Root).await.unwrap();
+        let a_realm = test
+            .model
+            .start_instance(&AbsoluteMoniker::from(vec!["a"]), &StartReason::Root)
+            .await
+            .unwrap();
         assert_eq!(None, a_realm.instance_id());
     }
 
@@ -2521,11 +2524,11 @@ pub mod tests {
             .await;
 
         let root_realm =
-            test.model.bind(&AbsoluteMoniker::root(), &StartReason::Root).await.unwrap();
+            test.model.start_instance(&AbsoluteMoniker::root(), &StartReason::Root).await.unwrap();
 
         assert_eq!(
             fsys::StartResult::AlreadyStarted,
-            root_realm.bind(&StartReason::Root).await.unwrap()
+            root_realm.start(&StartReason::Root).await.unwrap()
         );
     }
 }

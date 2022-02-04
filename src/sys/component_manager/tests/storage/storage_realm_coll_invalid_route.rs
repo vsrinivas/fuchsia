@@ -35,7 +35,7 @@ async fn main() {
         .unwrap()
         .unwrap();
 
-    // Bind to child
+    // Start child
     let mut child_ref = fdecl::ChildRef {
         name: "storage_user".to_string(),
         collection: Some("coll_bad_route".to_string()),

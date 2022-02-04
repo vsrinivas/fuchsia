@@ -151,7 +151,7 @@ fn request_for_namespace_capability_expose(
 }
 
 /// The default provider for a ComponentCapability.
-/// This provider will bind to the source component instance and open the capability `name` at
+/// This provider will start the source component instance and open the capability `name` at
 /// `path` under the source component's outgoing namespace.
 struct DefaultComponentCapabilityProvider {
     target: WeakComponentInstance,
@@ -175,7 +175,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
             // Start the source component, if necessary
             let source = self.source.upgrade()?;
             source
-                .bind(&StartReason::AccessCapability {
+                .start(&StartReason::AccessCapability {
                     target: self.target.abs_moniker.clone(),
                     name: self.name.clone(),
                 })
