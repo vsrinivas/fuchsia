@@ -1028,23 +1028,6 @@ pub(super) fn get_mtu<C: EthernetIpLinkDeviceContext>(ctx: &C, device_id: C::Dev
     ctx.get_state_with(device_id).link.mtu
 }
 
-/// Is IP packet routing enabled on `device_id`?
-///
-/// Note, `true` does not necessarily mean that `device` is currently routing IP
-/// packets. It only means that `device` is allowed to route packets. To route
-/// packets, this netstack must be configured to allow IP packets to be routed
-/// if it was not destined for this node.
-pub(super) fn is_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
-    ctx: &C,
-    device_id: C::DeviceId,
-) -> bool {
-    let state = &ctx.get_state_with(device_id).ip;
-    match I::VERSION {
-        IpVersion::V4 => state.ipv4.ip_state.routing_enabled,
-        IpVersion::V6 => state.ipv6.ip_state.routing_enabled,
-    }
-}
-
 pub(super) fn set_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
     ctx: &mut C,
     device_id: C::DeviceId,
@@ -1525,12 +1508,12 @@ mod tests {
     use super::*;
     use crate::context::testutil::DummyInstant;
     use crate::device::{
-        arp::ArpHandler, is_routing_enabled, set_routing_enabled, testutil::DeviceTestIpExt,
-        DeviceId, DeviceIdInner, EthernetDeviceId, IpLinkDeviceState,
+        arp::ArpHandler, set_routing_enabled, testutil::DeviceTestIpExt, DeviceId, DeviceIdInner,
+        EthernetDeviceId, IpLinkDeviceState,
     };
     use crate::ip::{
-        device::state::AssignedAddress as _, dispatch_receive_ip_packet_name, receive_ip_packet,
-        DummyDeviceId, IpDeviceIdContext,
+        device::{is_routing_enabled, state::AssignedAddress as _},
+        dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId, IpDeviceIdContext,
     };
     use crate::testutil::{
         add_arp_or_ndp_table_entry, get_counter_val, new_rng, DummyEventDispatcher,
@@ -2293,40 +2276,6 @@ mod tests {
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 5);
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 6);
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, sn_addr, 7);
-    }
-
-    #[test]
-    fn test_get_ip_addr_subnet() {
-        // Test that `get_ip_addr_subnet` only returns non-local IPv6 addresses.
-
-        let config = Ipv6::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = EthernetDeviceId(0);
-        assert_eq!(
-            ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into()),
-            DeviceIdInner::Ethernet(device).into()
-        );
-
-        // `initialize_device` adds the MAC-derived link-local IPv6 address.
-        initialize_device(&mut ctx, device);
-        // Verify that there is a single assigned address - the MAC-derived
-        // link-local.
-        assert_eq!(
-            ctx.state
-                .device
-                .ethernet
-                .get(0)
-                .unwrap()
-                .device
-                .ip
-                .ipv6
-                .ip_state
-                .iter_addrs()
-                .map(|entry| entry.addr_sub().addr())
-                .collect::<Vec<_>>(),
-            [config.local_mac.to_ipv6_link_local().addr().get()]
-        );
-        assert_eq!(crate::device::get_ip_addr_subnet::<_, Ipv6Addr>(&ctx, device.into()), None);
     }
 
     #[test]

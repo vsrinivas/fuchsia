@@ -2270,9 +2270,8 @@ mod tests {
     use crate::device::{
         add_ip_addr_subnet, del_ip_addr,
         ethernet::{EthernetLinkDevice, EthernetTimerId},
-        get_assigned_ip_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
-        is_routing_enabled, set_routing_enabled, DeviceId, DeviceIdInner, DeviceLayerTimerId,
-        DeviceLayerTimerIdInner, EthernetDeviceId,
+        set_routing_enabled, DeviceId, DeviceIdInner, DeviceLayerTimerId, DeviceLayerTimerIdInner,
+        EthernetDeviceId,
     };
     use crate::testutil::{
         self, get_counter_val, run_for, set_logger_for_test, trigger_next_timer,
@@ -2280,8 +2279,13 @@ mod tests {
         TestIpExt, DUMMY_CONFIG_V6,
     };
     use crate::{
-        assert_empty, context::InstantContext as _, ip::device::state::Ipv6AddressEntry, Ctx,
-        Instant, Ipv6StateBuilder, StackStateBuilder, TimerId, TimerIdInner,
+        assert_empty,
+        context::InstantContext as _,
+        ip::device::{
+            get_assigned_ip_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
+            is_routing_enabled, state::Ipv6AddressEntry,
+        },
+        Ctx, Instant, Ipv6StateBuilder, StackStateBuilder, TimerId, TimerIdInner,
     };
 
     type IcmpParseArgs = packet_formats::icmp::IcmpParseArgs<Ipv6Addr>;
@@ -2967,7 +2971,7 @@ mod tests {
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
@@ -2983,12 +2987,12 @@ mod tests {
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
             .is_tentative());
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -3002,12 +3006,12 @@ mod tests {
             run_for(&mut ctx, Duration::from_secs(2)),
             [local_timer_id, remote_timer_id, local_timer_id, remote_timer_id]
         );
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
             .is_assigned());
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -3016,12 +3020,12 @@ mod tests {
 
         // Run to the end for DAD for local ip
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [remote_timer_id]);
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
             .is_assigned());
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -3052,7 +3056,7 @@ mod tests {
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
@@ -3068,12 +3072,12 @@ mod tests {
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
             .unwrap();
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
             .is_tentative());
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -3084,12 +3088,12 @@ mod tests {
         let remote_timer_id =
             dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), remote_ip());
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id, remote_timer_id]);
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&local_ip())
             .unwrap()
             .state
             .is_tentative());
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -3098,8 +3102,8 @@ mod tests {
 
         // Remove local ip
         del_ip_addr(&mut ctx, dev_id, &local_ip().into_specified()).unwrap();
-        assert_eq!(crate::device::get_ipv6_device_state(&ctx, dev_id).find_addr(&local_ip()), None);
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert_eq!(get_ipv6_device_state(&ctx, dev_id).find_addr(&local_ip()), None);
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -3108,8 +3112,8 @@ mod tests {
 
         // Run to the end for DAD for local ip
         assert_eq!(run_for(&mut ctx, Duration::from_secs(2)), [remote_timer_id, remote_timer_id]);
-        assert_eq!(crate::device::get_ipv6_device_state(&ctx, dev_id).find_addr(&local_ip()), None);
-        assert!(crate::device::get_ipv6_device_state(&ctx, dev_id)
+        assert_eq!(get_ipv6_device_state(&ctx, dev_id).find_addr(&local_ip()), None);
+        assert!(get_ipv6_device_state(&ctx, dev_id)
             .find_addr(&remote_ip())
             .unwrap()
             .state
@@ -3565,7 +3569,7 @@ mod tests {
                 config.local_ip,
                 icmpv6_packet.unwrap_ndp(),
             );
-            assert_eq!(get_ipv6_hop_limit(&ctx, device_id).get(), hop_limit);
+            assert_eq!(get_ipv6_hop_limit(ctx, device_id).get(), hop_limit);
             crate::ip::send_ip_packet_from_device(
                 ctx,
                 device_id,

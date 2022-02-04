@@ -436,7 +436,7 @@ fn compute_ipv4_cached_info<D: EventDispatcher>(
             let mut local_on_device = false;
             let mut next_hop = NextHop::Remote(dst.next_hop);
             for addr_sub in
-                crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(ctx, dst.device)
+                crate::ip::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(ctx, dst.device)
             {
                 let assigned_addr = addr_sub.addr();
                 local_on_device = local_on_device || assigned_addr == defn.local_ip;
@@ -480,7 +480,7 @@ fn compute_ipv6_cached_info<D: EventDispatcher>(
             //   host model.
             // - What about when the socket is bound to a device? How does
             //   that affect things?
-            if crate::device::get_ipv6_device_state(ctx, dst.device)
+            if crate::ip::device::get_ipv6_device_state(ctx, dst.device)
                 .find_addr(&defn.local_ip)
                 .map_or(true, |addr| addr.state.is_tentative())
             {
@@ -488,7 +488,7 @@ fn compute_ipv6_cached_info<D: EventDispatcher>(
             }
 
             let next_hop =
-                if crate::device::get_assigned_ip_addr_subnets::<_, Ipv6Addr>(ctx, dst.device)
+                if crate::ip::device::get_assigned_ip_addr_subnets::<_, Ipv6Addr>(ctx, dst.device)
                     .any(|addr_sub| addr_sub.addr() == defn.remote_ip)
                 {
                     NextHop::Local
@@ -526,7 +526,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Ctx<D> {
         let local_ip = super::lookup_route(self, remote_ip)
             .ok_or(IpSockUnroutableError::NoRouteToRemoteAddr.into())
             .and_then(|dst| {
-                let dev_state = crate::device::get_ipv4_device_state(self, dst.device);
+                let dev_state = crate::ip::device::get_ipv4_device_state(self, dst.device);
                 if let Some(local_ip) = local_ip {
                     if dev_state.iter_addrs().any(|addr_sub| local_ip == addr_sub.addr()) {
                         Ok(local_ip)
@@ -590,7 +590,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Ctx<D> {
                     // check here.
                     let local_ip = UnicastAddr::from_witness(local_ip)
                         .ok_or(IpSockCreationError::LocalAddrNotUnicast)?;
-                    if crate::device::get_ipv6_device_state(self, dst.device)
+                    if crate::ip::device::get_ipv6_device_state(self, dst.device)
                         .find_addr(&local_ip)
                         .map_or(true, |addr| addr.state.is_tentative())
                     {
@@ -609,7 +609,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Ctx<D> {
                     ipv6_source_address_selection::select_ipv6_source_address(
                         remote_ip,
                         dst.device,
-                        crate::device::iter_ipv6_devices(self)
+                        crate::ip::device::iter_ipv6_devices(self)
                             .map(|(device_id, ip_state)| {
                                 ip_state.iter_addrs().map(move |a| (a, device_id))
                             })
@@ -722,7 +722,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv6, B> for Ct
                 // which is "assigned" or "deprecated". This should be enforced
                 // by the `IpSock` being kept up to date.
                 assert_matches::debug_assert_matches!(
-                    crate::device::get_ipv6_device_state(self, *device)
+                    crate::ip::device::get_ipv6_device_state(self, *device)
                         .find_addr(&socket.defn.local_ip)
                         .unwrap()
                         .state,
@@ -1306,15 +1306,13 @@ mod tests {
         let NewSocketTestCase { local_ip_type, remote_ip_type, expected_result } = test_case;
 
         let remove_all_local_addrs = |ctx: &mut Ctx<DummyEventDispatcher>| {
-            let mut devices = crate::device::list_devices(&ctx);
+            let mut devices = crate::ip::device::iter_devices(ctx);
             let device = devices.next().unwrap();
             assert_eq!(devices.next(), None);
             drop(devices);
-            let subnets = crate::device::get_assigned_ip_addr_subnets::<
-                DummyEventDispatcher,
-                I::Addr,
-            >(&ctx, device)
-            .collect::<Vec<AddrSubnet<I::Addr>>>();
+            let subnets =
+                crate::ip::device::get_assigned_ip_addr_subnets::<_, I::Addr>(ctx, device)
+                    .collect::<Vec<AddrSubnet<I::Addr>>>();
             for subnet in subnets {
                 crate::device::del_ip_addr(ctx, device, &subnet.addr())
                     .expect("failed to remove addr from device");

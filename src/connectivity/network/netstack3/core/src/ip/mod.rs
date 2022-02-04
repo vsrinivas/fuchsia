@@ -327,9 +327,9 @@ impl<I: IpExt, B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, IpPacketFro
 impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Ctx<D> {
     fn is_assigned_local_addr(&self, addr: I::Addr) -> bool {
         match addr.to_ip_addr() {
-            IpAddr::V4(addr) => crate::device::iter_ipv4_devices(self)
+            IpAddr::V4(addr) => crate::ip::device::iter_ipv4_devices(self)
                 .any(|(_, state)| state.find_addr(&addr).is_some()),
-            IpAddr::V6(addr) => crate::device::iter_ipv6_devices(self).any(|(_, state)| {
+            IpAddr::V6(addr) => crate::ip::device::iter_ipv6_devices(self).any(|(_, state)| {
                 state
                     .find_addr(&addr)
                     .map(|entry| match entry.state {
@@ -346,7 +346,7 @@ impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Ctx<D> {
         remote: SpecifiedAddr<I::Addr>,
     ) -> Option<SpecifiedAddr<I::Addr>> {
         let route = lookup_route(self, remote)?;
-        crate::device::get_ip_addr_subnet(self, route.device).map(|a| a.addr())
+        crate::ip::device::get_ip_addr_subnet(self, route.device).map(|a| a.addr())
     }
 }
 
@@ -359,7 +359,9 @@ impl<D: EventDispatcher> TransportIpContext<Ipv6> for Ctx<D> {
         select_ipv6_source_address(
             remote,
             device,
-            crate::device::get_ipv6_device_state(self, device).iter_addrs().map(|a| (a, device)),
+            crate::ip::device::get_ipv6_device_state(self, device)
+                .iter_addrs()
+                .map(|a| (a, device)),
         )
         .map(|a| a.into_specified())
     }
@@ -1403,7 +1405,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                         // the sender's ability to figure out the minimum path
                         // MTU. This may break other logic, though, so we should
                         // still fix it eventually.
-                        let mtu = crate::device::get_mtu(ctx, device);
+                        let mtu = crate::ip::device::get_mtu(ctx, device);
                         crate::ip::icmp::send_icmpv6_packet_too_big(
                             ctx,
                             device,
@@ -1521,7 +1523,7 @@ fn receive_ipv4_packet_action<D: EventDispatcher>(
     device: DeviceId,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
 ) -> ReceivePacketAction<Ipv4Addr> {
-    let dev_state = crate::device::get_ipv4_device_state(ctx, device);
+    let dev_state = crate::ip::device::get_ipv4_device_state(ctx, device);
     if dev_state
         .iter_addrs()
         .map(|addr| addr.addr_subnet())
@@ -1543,7 +1545,7 @@ fn receive_ipv6_packet_action<D: EventDispatcher>(
     device: DeviceId,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
 ) -> ReceivePacketAction<Ipv6Addr> {
-    let dev_state = crate::device::get_ipv6_device_state(ctx, device);
+    let dev_state = crate::ip::device::get_ipv6_device_state(ctx, device);
     if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified()
         || MulticastAddr::new(dst_ip.get())
             .map_or(false, |dst_ip| dev_state.multicast_groups.contains(&dst_ip))
@@ -1620,7 +1622,7 @@ fn receive_ip_packet_action_common<D: EventDispatcher, A: IpAddress>(
         // discard the packet in this case.
         increment_counter!(ctx, "receive_ip_packet_action_common::routing_disabled_globally");
         ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabled }
-    } else if !crate::device::is_routing_enabled::<_, A::Version>(ctx, device) {
+    } else if !crate::ip::device::is_routing_enabled::<_, A::Version>(ctx, device) {
         increment_counter!(ctx, "receive_ip_packet_action_common::routing_disabled_per_device");
         ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabledInboundIface }
     } else {
@@ -2055,7 +2057,7 @@ fn get_icmp_error_message_destination<D: EventDispatcher, A: IpAddress>(
 
     if let Some(route) = lookup_route(ctx, src_ip) {
         if let Some(local_ip) =
-            crate::device::get_ip_addr_subnet(ctx, route.device).as_ref().map(AddrSubnet::addr)
+            crate::ip::device::get_ip_addr_subnet(ctx, route.device).as_ref().map(AddrSubnet::addr)
         {
             Some((route.device, local_ip, route.next_hop))
         } else {
@@ -2095,7 +2097,7 @@ fn get_hop_limit<D: EventDispatcher, I: Ip>(ctx: &Ctx<D>, device: DeviceId) -> u
     match I::VERSION {
         IpVersion::V4 => DEFAULT_TTL.get(),
         // This value can be updated by NDP's Router Advertisements.
-        IpVersion::V6 => crate::device::get_ipv6_hop_limit(ctx, device).get(),
+        IpVersion::V6 => crate::ip::device::get_ipv6_hop_limit(ctx, device).get(),
     }
 }
 

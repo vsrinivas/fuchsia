@@ -11,18 +11,16 @@ pub(crate) mod loopback;
 pub(crate) mod ndp;
 mod state;
 
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use core::fmt::{self, Debug, Display, Formatter};
 use core::marker::PhantomData;
-use core::num::NonZeroU8;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr};
 #[cfg(test)]
 use net_types::Witness as _;
-use net_types::{LinkLocalAddress as _, MulticastAddr, SpecifiedAddr, UnicastAddr};
+use net_types::{MulticastAddr, SpecifiedAddr, UnicastAddr};
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
 use packet_formats::icmp::{mld::MldPacket, ndp::NdpPacket};
 use specialize_ip_macro::specialize_ip_address;
@@ -45,7 +43,10 @@ use crate::{
     },
     error::{ExistsError, NotFoundError, NotSupportedError},
     ip::{
-        device::state::{AddressError, IpDeviceState, Ipv6DeviceConfiguration},
+        device::{
+            state::{AddressError, DualStackIpDeviceState, Ipv6DeviceConfiguration},
+            IpDeviceContext,
+        },
         gmp::{igmp::IgmpPacketHandler, mld::MldPacketHandler},
         socket::IpSockUpdate,
     },
@@ -176,6 +177,40 @@ impl<D: EventDispatcher>
     ) -> (&mut IpLinkDeviceState<D::Instant, EthernetDeviceState>, &mut D::Rng) {
         let Ctx { state, dispatcher } = self;
         (&mut state.device.ethernet.get_mut(id0.0).unwrap().device, dispatcher.rng_mut())
+    }
+}
+
+impl<D: EventDispatcher> IpDeviceContext for Ctx<D> {
+    fn get_ip_device_state(&self, device: DeviceId) -> &DualStackIpDeviceState<Self::Instant> {
+        match device.inner() {
+            DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
+                &self.state.device.ethernet.get(id).unwrap().device.ip
+            }
+            DeviceIdInner::Loopback => &self.state.device.loopback.as_ref().unwrap().device.ip,
+        }
+    }
+
+    fn iter_devices(&self) -> Box<dyn Iterator<Item = DeviceId> + '_> {
+        let DeviceLayerState { ethernet, loopback, default_ndp_config: _, default_ipv6_config: _ } =
+            &self.state.device;
+
+        Box::new(
+            ethernet
+                .iter()
+                .filter_map(|(id, state)| {
+                    state.common.is_initialized().then(|| DeviceId::new_ethernet(id))
+                })
+                .chain(loopback.iter().filter_map(|state| {
+                    state.common.is_initialized().then(|| DeviceIdInner::Loopback.into())
+                })),
+        )
+    }
+
+    fn get_mtu(&self, device_id: Self::DeviceId) -> u32 {
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(self, id),
+            DeviceIdInner::Loopback => self::loopback::get_mtu(self),
+        }
     }
 }
 
@@ -513,7 +548,7 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
             // RFC 4861 section 6.3.7, it implies only a host sends router
             // solicitation messages.
             if !(crate::ip::is_routing_enabled::<_, Ipv6>(ctx)
-                && is_routing_enabled::<_, Ipv6>(ctx, device))
+                && crate::ip::device::is_routing_enabled::<_, Ipv6>(ctx, device))
             {
                 <Ctx<_> as NdpHandler<EthernetLinkDevice>>::start_soliciting_routers(ctx, id);
             }
@@ -555,20 +590,6 @@ pub fn remove_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId) -> 
             None
         }
     }
-}
-
-/// List the device IDs of all devices that exist and are initialized.
-pub(crate) fn list_devices<D: EventDispatcher>(
-    ctx: &Ctx<D>,
-) -> impl Iterator<Item = DeviceId> + '_ {
-    let DeviceLayerState { ethernet, loopback, default_ndp_config: _, default_ipv6_config: _ } =
-        &ctx.state.device;
-    ethernet
-        .iter()
-        .filter_map(|(id, state)| state.common.is_initialized().then(|| DeviceId::new_ethernet(id)))
-        .chain(loopback.iter().filter_map(|state| {
-            state.common.is_initialized().then(|| DeviceIdInner::Loopback.into())
-        }))
 }
 
 /// Send an IP packet in a device layer frame.
@@ -631,102 +652,6 @@ pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
         DeviceIdInner::Ethernet(id) => Ok(self::ethernet::set_promiscuous_mode(ctx, id, enabled)),
         DeviceIdInner::Loopback => Err(NotSupportedError),
     }
-}
-
-/// Get a single IP address and subnet for a device.
-///
-/// Note, tentative IP addresses (addresses which are not yet fully bound to a
-/// device) will not be returned by `get_ip_addr`.
-///
-/// For IPv6, this only returns global (not link-local) addresses.
-#[specialize_ip_address]
-pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
-    ctx: &Ctx<D>,
-    device: DeviceId,
-) -> Option<AddrSubnet<A>> {
-    #[ipv4addr]
-    return get_assigned_ip_addr_subnets(ctx, device).nth(0);
-
-    #[ipv6addr]
-    return get_assigned_ip_addr_subnets(ctx, device).find(|a| {
-        let addr: SpecifiedAddr<Ipv6Addr> = a.addr();
-        !addr.is_link_local()
-    });
-}
-
-/// Gets the state associated with an IPv4 device.
-pub(crate) fn get_ipv4_device_state<D: EventDispatcher>(
-    ctx: &Ctx<D>,
-    device: DeviceId,
-) -> &IpDeviceState<D::Instant, Ipv4> {
-    match device.inner() {
-        DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
-            &ctx.state.device.ethernet.get(id).unwrap().device.ip.ipv4.ip_state
-        }
-        DeviceIdInner::Loopback => {
-            &ctx.state.device.loopback.as_ref().unwrap().device.ip.ipv4.ip_state
-        }
-    }
-}
-
-/// Gets the state associated with an IPv6 device.
-pub(crate) fn get_ipv6_device_state<D: EventDispatcher>(
-    ctx: &Ctx<D>,
-    device: DeviceId,
-) -> &IpDeviceState<D::Instant, Ipv6> {
-    match device.inner() {
-        DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
-            &ctx.state.device.ethernet.get(id).unwrap().device.ip.ipv6.ip_state
-        }
-        DeviceIdInner::Loopback => {
-            &ctx.state.device.loopback.as_ref().unwrap().device.ip.ipv6.ip_state
-        }
-    }
-}
-
-/// Iterates over all of the IPv4 devices in the stack.
-pub(crate) fn iter_ipv4_devices<D: EventDispatcher>(
-    ctx: &Ctx<D>,
-) -> impl Iterator<Item = (DeviceId, &IpDeviceState<D::Instant, Ipv4>)> + '_ {
-    list_devices(ctx).map(move |device| (device, get_ipv4_device_state(ctx, device)))
-}
-
-/// Iterates over all of the IPv6 devices in the stack.
-pub(crate) fn iter_ipv6_devices<D: EventDispatcher>(
-    ctx: &Ctx<D>,
-) -> impl Iterator<Item = (DeviceId, &IpDeviceState<D::Instant, Ipv6>)> + '_ {
-    list_devices(ctx).map(move |device| (device, get_ipv6_device_state(ctx, device)))
-}
-
-/// Get the IP address and subnet pairs associated with this device which are in
-/// the assigned state.
-///
-/// Tentative IP addresses (addresses which are not yet fully bound to a device)
-/// and deprecated IP addresses (addresses which have been assigned but should
-/// no longer be used for new connections) will not be returned by
-/// `get_assigned_ip_addr_subnets`.
-///
-/// Returns an [`Iterator`] of `AddrSubnet<A>`.
-///
-/// See [`Tentative`] and [`AddrSubnet`] for more information.
-#[specialize_ip_address]
-pub fn get_assigned_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
-    ctx: &Ctx<D>,
-    device: DeviceId,
-) -> Box<dyn Iterator<Item = AddrSubnet<A>> + '_> {
-    #[ipv4addr]
-    return Box::new(crate::device::get_ipv4_device_state(ctx, device).iter_addrs().cloned());
-
-    #[ipv6addr]
-    return Box::new(crate::device::get_ipv6_device_state(ctx, device).iter_addrs().filter_map(
-        |a| {
-            if a.state.is_assigned() {
-                Some((*a.addr_sub()).to_witness())
-            } else {
-                None
-            }
-        },
-    ));
 }
 
 /// Adds an IP address and associated subnet to this device.
@@ -862,19 +787,6 @@ pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     }
 }
 
-/// Get the MTU associated with this device.
-pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &Ctx<D>, device: DeviceId) -> u32 {
-    match device.inner() {
-        DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(ctx, id),
-        DeviceIdInner::Loopback => self::loopback::get_mtu(ctx),
-    }
-}
-
-/// Get the hop limit for new IPv6 packets that will be sent out from `device`.
-pub(crate) fn get_ipv6_hop_limit<D: EventDispatcher>(ctx: &Ctx<D>, device: DeviceId) -> NonZeroU8 {
-    get_ipv6_device_state(ctx, device).default_hop_limit
-}
-
 /// Get a reference to the common device state for a `device`.
 fn get_common_device_state<D: EventDispatcher>(
     state: &StackState<D>,
@@ -915,22 +827,6 @@ fn get_common_device_state_mut<D: EventDispatcher>(
     }
 }
 
-/// Is IP packet routing enabled on `device`?
-///
-/// Note, `true` does not necessarily mean that `device` is currently routing IP
-/// packets. It only means that `device` is allowed to route packets. To route
-/// packets, this netstack must be configured to allow IP packets to be routed
-/// if it was not destined for this node.
-pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(
-    ctx: &Ctx<D>,
-    device: DeviceId,
-) -> bool {
-    match device.inner() {
-        DeviceIdInner::Ethernet(id) => self::ethernet::is_routing_enabled::<_, I>(ctx, id),
-        DeviceIdInner::Loopback => false,
-    }
-}
-
 /// Enables or disables IP packet routing on `device`.
 ///
 /// `set_routing_enabled` does nothing if the new routing status, `enabled`, is
@@ -946,7 +842,7 @@ pub(crate) fn set_routing_enabled<D: EventDispatcher, I: Ip>(
     device: DeviceId,
     enabled: bool,
 ) -> Result<(), NotSupportedError> {
-    if crate::device::is_routing_enabled::<_, I>(ctx, device) == enabled {
+    if crate::ip::device::is_routing_enabled::<_, I>(ctx, device) == enabled {
         trace!(
             "set_routing_enabled: {:?} routing status unchanged for device {:?}",
             I::VERSION,
@@ -1137,8 +1033,8 @@ pub(crate) mod testutil {
     use net_types::ip::{Ipv4, Ipv6};
 
     use crate::{
-        device::{DeviceId, IpDeviceState},
-        ip::device::state::IpDeviceStateIpExt,
+        device::DeviceId,
+        ip::device::state::{IpDeviceState, IpDeviceStateIpExt},
         Ctx, EventDispatcher,
     };
 
@@ -1156,7 +1052,7 @@ pub(crate) mod testutil {
             ctx: &Ctx<D>,
             device: DeviceId,
         ) -> &IpDeviceState<D::Instant, Ipv4> {
-            super::get_ipv4_device_state(ctx, device)
+            crate::ip::device::get_ipv4_device_state(ctx, device)
         }
     }
 
@@ -1165,7 +1061,7 @@ pub(crate) mod testutil {
             ctx: &Ctx<D>,
             device: DeviceId,
         ) -> &IpDeviceState<D::Instant, Ipv6> {
-            super::get_ipv6_device_state(ctx, device)
+            crate::ip::device::get_ipv6_device_state(ctx, device)
         }
     }
 }
@@ -1179,9 +1075,9 @@ mod tests {
     };
 
     #[test]
-    fn test_list_devices() {
+    fn test_iter_devices() {
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        assert_eq!(list_devices(&ctx).collect::<Vec<_>>(), []);
+        assert_eq!(crate::ip::device::iter_devices(&ctx).collect::<Vec<_>>(), []);
 
         let loopback_device =
             ctx.state.add_loopback_device(55 /* mtu */).expect("error adding loopback device");
@@ -1193,12 +1089,15 @@ mod tests {
             remote_mac: _,
         } = DUMMY_CONFIG_V4;
         let ethernet_device = ctx.state.add_ethernet_device(local_mac, 0 /* mtu */);
-        assert_eq!(list_devices(&ctx).collect::<Vec<_>>(), []);
+        assert_eq!(crate::ip::device::iter_devices(&ctx).collect::<Vec<_>>(), []);
 
         initialize_device(&mut ctx, loopback_device);
-        assert_eq!(list_devices(&ctx).collect::<Vec<_>>(), [loopback_device]);
+        assert_eq!(crate::ip::device::iter_devices(&ctx).collect::<Vec<_>>(), [loopback_device]);
 
         initialize_device(&mut ctx, ethernet_device);
-        assert_eq!(list_devices(&ctx).collect::<Vec<_>>(), [ethernet_device, loopback_device]);
+        assert_eq!(
+            crate::ip::device::iter_devices(&ctx).collect::<Vec<_>>(),
+            [ethernet_device, loopback_device]
+        );
     }
 }

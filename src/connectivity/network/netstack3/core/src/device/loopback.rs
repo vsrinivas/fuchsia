@@ -145,7 +145,7 @@ mod tests {
         let device = ctx.state.add_loopback_device(MTU).expect("error adding loopback device");
         crate::device::initialize_device(&mut ctx, device);
 
-        assert_eq!(crate::device::get_mtu(&ctx, device), MTU);
+        assert_eq!(crate::ip::device::get_mtu(&ctx, device), MTU);
 
         fn test<
             I: TestIpExt + IpDeviceStateIpExt<D::Instant>,
@@ -197,12 +197,12 @@ mod tests {
         test::<Ipv4, _>(
             &mut ctx,
             device,
-            crate::device::get_ipv4_device_state::<DummyEventDispatcher>,
+            crate::ip::device::get_ipv4_device_state::<Ctx<DummyEventDispatcher>>,
         );
         test::<Ipv6, _>(
             &mut ctx,
             device,
-            crate::device::get_ipv6_device_state::<DummyEventDispatcher>,
+            crate::ip::device::get_ipv6_device_state::<Ctx<DummyEventDispatcher>>,
         );
     }
 }
