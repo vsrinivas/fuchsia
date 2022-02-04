@@ -55,8 +55,8 @@ use log::trace;
 pub use crate::data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionKey};
 pub use crate::device::ndp::NdpConfiguration;
 pub use crate::device::{
-    get_assigned_ip_addr_subnets, initialize_device, receive_frame, remove_device, DeviceId,
-    DeviceLayerEventDispatcher,
+    get_assigned_ip_addr_subnets, initialize_device, receive_frame, remove_device,
+    set_ipv6_configuration, DeviceId, DeviceLayerEventDispatcher,
 };
 pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 pub use crate::ip::socket::{IpSockCreationError, IpSockSendError, IpSockUnroutableError};
@@ -207,6 +207,20 @@ impl<D: EventDispatcher> StackState<D> {
     /// [`initialize_device`]: crate::device::initialize_device
     pub fn add_ethernet_device(&mut self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
         self.device.add_ethernet_device(mac, mtu)
+    }
+
+    /// Add a new loopback device to the device layer.
+    ///
+    /// `add_loopback_device` only makes the netstack aware of the device. The
+    /// device still needs to be initialized. A device MUST NOT be used until it
+    /// has been initialized. The netstack will not generate any outbound
+    /// traffic on the device until [`initialize_device`] has been called.
+    ///
+    /// See [`initialize_device`] for more information.
+    ///
+    /// [`initialize_device`]: crate::device::initialize_device
+    pub fn add_loopback_device(&mut self, mtu: u32) -> Result<DeviceId, NetstackError> {
+        self.device.add_loopback_device(mtu).map_err(Into::into)
     }
 }
 

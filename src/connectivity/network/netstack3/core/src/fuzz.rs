@@ -173,7 +173,7 @@ fn dispatch(ctx: &mut Ctx<DummyEventDispatcher>, device_id: DeviceId, action: Fu
     match action {
         ReceiveFrame(ArbitraryFrame(frame_type, buf)) => {
             let _: FrameType = frame_type;
-            crate::receive_frame(ctx, device_id, buf)
+            crate::receive_frame(ctx, device_id, buf).expect("error receiving frame")
         }
         AdvanceTime(SmallDuration(duration)) => {
             let _: Vec<TimerId> = crate::testutil::run_for(ctx, duration);

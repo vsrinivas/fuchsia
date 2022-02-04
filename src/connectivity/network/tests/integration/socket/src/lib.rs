@@ -12,11 +12,11 @@ use futures::{
     io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, StreamExt as _,
     TryFutureExt as _, TryStreamExt as _,
 };
-use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet};
+use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
 use netstack_testing_common::{
     ping,
-    realms::{Netstack2, TestSandboxExt as _},
+    realms::{Netstack, Netstack2, TestSandboxExt as _},
     Result,
 };
 use netstack_testing_macros::variants_test;
@@ -774,4 +774,22 @@ async fn ping<E: netemul::Endpoint>(name: &str) {
         .ping_pairwise(std::slice::from_ref(&node_b))
         .await
         .expect("failed to ping between nodes");
+}
+
+#[variants_test]
+async fn udpv4_loopback<N: Netstack>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("failed to create realm");
+
+    const IPV4_LOOPBACK: fidl_fuchsia_net::IpAddress = fidl_ip!("127.0.0.1");
+    run_udp_socket_test(&realm, IPV4_LOOPBACK, &realm, IPV4_LOOPBACK).await
+}
+
+#[variants_test]
+async fn udpv6_loopback<N: Netstack>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("failed to create realm");
+
+    const IPV6_LOOPBACK: fidl_fuchsia_net::IpAddress = fidl_ip!("::1");
+    run_udp_socket_test(&realm, IPV6_LOOPBACK, &realm, IPV6_LOOPBACK).await
 }

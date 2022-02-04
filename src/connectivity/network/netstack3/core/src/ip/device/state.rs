@@ -20,7 +20,7 @@ use crate::{
 /// An `Ip` extension trait adding IP device state properties.
 pub(crate) trait IpDeviceStateIpExt<Instant>: Ip {
     /// The information stored about an IP address assigned to an interface.
-    type AssignedAddress: AssignedAddress<Self::Addr>;
+    type AssignedAddress: AssignedAddress<Self::Addr> + Debug;
 
     /// The state kept by the Group Messaging Protocol (GMP) used to announce
     /// membership in an IP multicast group for this version of IP.
@@ -149,9 +149,19 @@ impl<Instant, I: IpDeviceStateIpExt<Instant>> IpDeviceState<Instant, I> {
         self.addrs.push(addr);
     }
 
-    /// Retains only the assigned addresses specifies by the predicate.
-    pub(crate) fn retain_addrs<F: FnMut(&I::AssignedAddress) -> bool>(&mut self, f: F) {
-        self.addrs.retain(f);
+    /// Removes the address.
+    pub(crate) fn remove_addr(
+        &mut self,
+        addr: &I::Addr,
+    ) -> Result<(), crate::error::NotFoundError> {
+        let (index, _entry): (_, &I::AssignedAddress) = self
+            .addrs
+            .iter()
+            .enumerate()
+            .find(|(_, entry)| &entry.addr().get() == addr)
+            .ok_or(crate::error::NotFoundError)?;
+        let _entry: I::AssignedAddress = self.addrs.remove(index);
+        Ok(())
     }
 
     /// Is a Group Messaging Protocol (GMP) enabled for this device?

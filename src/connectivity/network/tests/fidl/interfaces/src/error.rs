@@ -46,9 +46,8 @@ async fn interfaces_watcher_after_invalid_state_request<N: Netstack>(name: &str)
     let interfaces = fidl_fuchsia_net_interfaces_ext::existing(stream, HashMap::new())
         .await
         .expect("failed to collect interfaces");
-    // TODO(https://fxbug.dev/72378): N3 doesn't support loopback devices yet.
     let expected = match N::VERSION {
-        NetstackVersion::Netstack2 => std::iter::once((
+        NetstackVersion::Netstack3 | NetstackVersion::Netstack2 => std::iter::once((
             1,
             fidl_fuchsia_net_interfaces_ext::Properties {
                 id: 1,
@@ -72,7 +71,6 @@ async fn interfaces_watcher_after_invalid_state_request<N: Netstack>(name: &str)
             },
         ))
         .collect(),
-        NetstackVersion::Netstack3 => HashMap::new(),
         NetstackVersion::ProdNetstack2 => panic!("unexpected netstack version"),
     };
     assert_eq!(interfaces, expected);
@@ -97,6 +95,16 @@ async fn interfaces_watcher_hanging_get() {
         .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server)
         .expect("failed to get watcher");
 
+    assert_matches::assert_matches!(
+        watcher.watch().await.expect("failed to get existing event for loopback"),
+        fidl_fuchsia_net_interfaces::Event::Existing(fidl_fuchsia_net_interfaces::Properties {
+            id: Some(id),
+            device_class: Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                fidl_fuchsia_net_interfaces::Empty,
+            )),
+            ..
+        }) => assert_ne!(id, 0)
+    );
     assert_eq!(
         watcher.watch().await.expect("failed to get idle event"),
         fidl_fuchsia_net_interfaces::Event::Idle(fidl_fuchsia_net_interfaces::Empty)

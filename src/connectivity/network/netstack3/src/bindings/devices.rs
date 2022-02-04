@@ -49,7 +49,7 @@ pub type BindingId = u64;
 //       id_map and the device info is moved into inactive_devices.
 //    => For the up case, the inactive_devices entry is removed and one entry is
 //       created in each of active_devices and id_map.
-pub struct Devices<C: IdMapCollectionKey = DeviceId, I = CommonInfo> {
+pub struct Devices<C: IdMapCollectionKey = DeviceId, I = DeviceSpecificInfo> {
     active_devices: IdMapCollection<C, DeviceInfo<C, I>>,
     // invariant: all values in id_map are valid keys in active_devices.
     id_map: HashMap<BindingId, C>,
@@ -276,33 +276,45 @@ where
     }
 }
 
-/// Device information kept in [`DeviceInfo`].
-#[cfg_attr(test, derive(Debug))]
-pub struct CommonInfo {
-    client: eth::Client,
-    mac: UnicastAddr<Mac>,
-    mtu: u32,
-    features: Features,
-    admin_enabled: bool,
-    phy_up: bool,
+/// Device specific iformation.
+#[derive(Debug)]
+pub enum DeviceSpecificInfo {
+    Ethernet(EthernetInfo),
+    Loopback(LoopbackInfo),
 }
 
-impl CommonInfo {
-    pub fn new(
-        client: eth::Client,
-        mac: UnicastAddr<Mac>,
-        mtu: u32,
-        features: Features,
-        admin_enabled: bool,
-        phy_up: bool,
-    ) -> Self {
-        Self { client, mac, mtu, features, admin_enabled, phy_up }
+/// Information common to all devices.
+#[derive(Debug)]
+pub struct CommonInfo {
+    pub mtu: u32,
+    pub admin_enabled: bool,
+}
+
+/// Loopback device information.
+#[derive(Debug)]
+pub struct LoopbackInfo {
+    pub common_info: CommonInfo,
+}
+
+/// Ethernet device information.
+#[derive(Debug)]
+pub struct EthernetInfo {
+    pub common_info: CommonInfo,
+    pub client: eth::Client,
+    pub mac: UnicastAddr<Mac>,
+    pub features: Features,
+    pub phy_up: bool,
+}
+
+impl From<EthernetInfo> for DeviceSpecificInfo {
+    fn from(i: EthernetInfo) -> DeviceSpecificInfo {
+        DeviceSpecificInfo::Ethernet(i)
     }
 }
 
 /// Device information kept by [`Devices`].
 #[derive(Debug, PartialEq)]
-pub struct DeviceInfo<C = DeviceId, I = CommonInfo> {
+pub struct DeviceInfo<C = DeviceId, I = DeviceSpecificInfo> {
     id: BindingId,
     core_id: Option<C>,
     info: I,
@@ -324,43 +336,13 @@ where
     pub fn is_active(&self) -> bool {
         self.core_id.is_some()
     }
-}
 
-impl<C> DeviceInfo<C, CommonInfo> {
-    pub fn client(&self) -> &eth::Client {
-        &self.info.client
+    pub fn info(&self) -> &I {
+        &self.info
     }
 
-    pub fn client_mut(&mut self) -> &mut eth::Client {
-        &mut self.info.client
-    }
-
-    pub fn mac(&self) -> UnicastAddr<Mac> {
-        self.info.mac
-    }
-
-    pub fn mtu(&self) -> u32 {
-        self.info.mtu
-    }
-
-    pub fn features(&self) -> Features {
-        self.info.features
-    }
-
-    pub fn admin_enabled(&self) -> bool {
-        self.info.admin_enabled
-    }
-
-    pub fn set_admin_enabled(&mut self, setting: bool) {
-        self.info.admin_enabled = setting;
-    }
-
-    pub fn phy_up(&self) -> bool {
-        self.info.phy_up
-    }
-
-    pub fn set_phy_up(&mut self, setting: bool) {
-        self.info.phy_up = setting;
+    pub fn info_mut(&mut self) -> &mut I {
+        &mut self.info
     }
 }
 

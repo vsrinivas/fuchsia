@@ -160,7 +160,8 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
 
     let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
         .build_with::<BenchmarkEventDispatcher>(state_builder, BenchmarkEventDispatcher::default());
-    crate::device::set_routing_enabled::<_, Ipv4>(&mut ctx, DeviceId::new_ethernet(0), true);
+    crate::device::set_routing_enabled::<_, Ipv4>(&mut ctx, DeviceId::new_ethernet(0), true)
+        .expect("error setting routing enabled");
 
     assert!(
         frame_size
@@ -197,11 +198,14 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
         {
             iters += 1;
         }
-        black_box(receive_frame(
-            black_box(&mut ctx),
-            black_box(device),
-            black_box(Buf::new(&mut buf[..], range.clone())),
-        ));
+        black_box(
+            receive_frame(
+                black_box(&mut ctx),
+                black_box(device),
+                black_box(Buf::new(&mut buf[..], range.clone())),
+            )
+            .expect("error receiving frame"),
+        );
 
         #[cfg(debug_assertions)]
         {

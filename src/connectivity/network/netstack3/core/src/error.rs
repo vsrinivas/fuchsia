@@ -54,10 +54,15 @@ impl From<AddressError> for NetstackError {
     }
 }
 
-/// Error when something exists unexpectedly, such as trying to add an
-/// element when the element is already present.
-#[derive(Debug, PartialEq, Eq)]
-pub(crate) struct ExistsError;
+/// Error when something is not supported.
+#[derive(Debug, Error)]
+#[error("Not supported")]
+pub struct NotSupportedError;
+
+/// Error when something exists unexpectedly.
+#[derive(Debug, Error, PartialEq, Eq)]
+#[error("Already exists")]
+pub struct ExistsError;
 
 impl From<ExistsError> for NetstackError {
     fn from(_: ExistsError) -> NetstackError {
@@ -73,8 +78,9 @@ impl From<ExistsError> for SocketError {
 
 /// Error when something unexpectedly doesn't exist, such as trying to
 /// remove an element when the element is not present.
-#[derive(Debug, PartialEq, Eq)]
-pub(crate) struct NotFoundError;
+#[derive(Debug, Error, PartialEq, Eq)]
+#[error("Not found")]
+pub struct NotFoundError;
 
 impl From<NotFoundError> for NetstackError {
     fn from(_: NotFoundError) -> NetstackError {

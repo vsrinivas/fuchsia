@@ -43,15 +43,31 @@ use rand::rngs::OsRng;
 use util::ConversionContext;
 
 use context::Lockable;
-use devices::{DeviceInfo, Devices, ToggleError};
+use devices::{
+    CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo, ToggleError,
+};
 use timers::TimerDispatcher;
 
+use net_types::ip::{AddrSubnet, AddrSubnetEither, Ip, Ipv4, Ipv6};
 use netstack3_core::{
+    add_ip_addr_subnet, add_route,
     context::{InstantContext, RngContext, TimerContext},
-    handle_timer, icmp, initialize_device, remove_device, BufferUdpContext, Ctx, DeviceId,
-    DeviceLayerEventDispatcher, EventDispatcher, IpExt, IpSockCreationError, StackStateBuilder,
-    TimerId, UdpConnId, UdpContext, UdpListenerId,
+    handle_timer, icmp, initialize_device, remove_device, set_ipv6_configuration, BufferUdpContext,
+    Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpExt,
+    IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder, TimerId, UdpConnId,
+    UdpContext, UdpListenerId,
 };
+
+/// Default MTU for loopback.
+///
+/// This value is also the default value used on Linux. As of writing:
+///
+/// ```shell
+/// $ ip link show dev lo
+/// 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+///     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+/// ```
+const DEFAULT_LOOPBACK_MTU: u32 = 65536;
 
 pub(crate) trait LockableContext: for<'a> Lockable<'a, Ctx<Self::Dispatcher>> {
     type Dispatcher: EventDispatcher;
@@ -275,12 +291,31 @@ where
     ) -> Result<(), S> {
         // TODO(wesleyac): Error handling
         let frame = frame.serialize_vec_outer().map_err(|(_, ser)| ser)?;
-        match self.devices.get_core_device_mut(device) {
-            Some(dev) => {
-                dev.client_mut().send(frame.as_ref());
+        let dev = match self.devices.get_core_device_mut(device) {
+            Some(dev) => dev,
+            None => {
+                error!("Tried to send frame on device that is not listed: {:?}", device);
+                return Ok(());
             }
-            None => error!("Tried to send frame on device that is not listed: {:?}", device),
+        };
+
+        match dev.info_mut() {
+            DeviceSpecificInfo::Ethernet(EthernetInfo {
+                common_info: CommonInfo { admin_enabled, mtu: _ },
+                client,
+                mac: _,
+                features: _,
+                phy_up,
+            }) => {
+                if *admin_enabled && *phy_up {
+                    client.send(frame.as_ref())
+                }
+            }
+            DeviceSpecificInfo::Loopback(LoopbackInfo { .. }) => {
+                unreachable!("loopback must not send packets out of the node")
+            }
         }
+
         Ok(())
     }
 }
@@ -399,13 +434,45 @@ where
         let Ctx { state, dispatcher } = self;
         let device = dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
 
-        if device.admin_enabled() && device.phy_up() {
+        let enabled = match device.info() {
+            DeviceSpecificInfo::Ethernet(EthernetInfo {
+                common_info: CommonInfo { admin_enabled, mtu: _ },
+                client: _,
+                mac: _,
+                features: _,
+                phy_up,
+            }) => *admin_enabled && *phy_up,
+            DeviceSpecificInfo::Loopback(LoopbackInfo {
+                common_info: CommonInfo { admin_enabled, mtu: _ },
+            }) => *admin_enabled,
+        };
+
+        if enabled {
             // TODO(rheacock, fxbug.dev/21135): Handle core and driver state in
             // two stages: add device to the core to get an id, then reach into
             // the driver to get updated info before triggering the core to
             // allow traffic on the interface.
-            let generate_core_id =
-                |info: &DeviceInfo| state.add_ethernet_device(info.mac(), info.mtu());
+            let generate_core_id = |info: &DeviceInfo| match info.info() {
+                DeviceSpecificInfo::Ethernet(EthernetInfo {
+                    common_info: CommonInfo { admin_enabled: _, mtu },
+                    client: _,
+                    mac,
+                    features: _,
+                    phy_up: _,
+                }) => state.add_ethernet_device(*mac, *mtu),
+                DeviceSpecificInfo::Loopback(LoopbackInfo {
+                    common_info: CommonInfo { admin_enabled: _, mtu },
+                }) => {
+                    // Should not panic as we only reach this point if a device
+                    // was previously disabled and (as of writing) disabled
+                    // devices are not held in core.
+                    //
+                    // TODO(https://fxbug.dev/92656): Hold disabled interfaces
+                    // in core so we can avoid adding interfaces when
+                    // transitioning from disabled to enabled.
+                    state.add_loopback_device(*mtu).expect("error adding loopback device")
+                }
+            };
             match dispatcher.as_mut().activate_device(id, generate_core_id) {
                 Ok(device_info) => {
                     // we can unwrap core_id here because activate_device just
@@ -433,7 +500,21 @@ where
             Ok((core_id, device_info)) => {
                 // Sanity check that there is a reason that the device is
                 // disabled.
-                assert!(!device_info.admin_enabled() || !device_info.phy_up());
+                assert!(match device_info.info() {
+                    DeviceSpecificInfo::Ethernet(EthernetInfo {
+                        common_info: CommonInfo { admin_enabled, mtu: _ },
+                        client: _,
+                        mac: _,
+                        features: _,
+                        phy_up,
+                    }) => !admin_enabled || !phy_up,
+                    DeviceSpecificInfo::Loopback(LoopbackInfo {
+                        common_info: CommonInfo { admin_enabled, mtu: _ },
+                    }) => {
+                        !admin_enabled
+                    }
+                });
+
                 // Disabling the interface deactivates it in the bindings, and
                 // will remove it completely from the core.
                 match remove_device(self, core_id) {
@@ -514,7 +595,59 @@ impl Netstack {
 
     /// Creates a new netstack with the provided core state builder.
     pub fn new_with_builder(builder: StackStateBuilder) -> Self {
-        Netstack { ctx: Arc::new(Mutex::new(Ctx::new(builder.build(), BindingsDispatcher::new()))) }
+        let mut ctx = Ctx::new(builder.build(), BindingsDispatcher::new());
+        let Ctx { state, dispatcher } = &mut ctx;
+
+        // Add and initialize the loopback device with loopback IPv4 and IPv6
+        // addresses and routes.
+        let loopback =
+            state.add_loopback_device(DEFAULT_LOOPBACK_MTU).expect("error adding loopback device");
+        let devices: &mut Devices = dispatcher.as_mut();
+        let _binding_id: u64 = devices
+            .add_active_device(
+                loopback,
+                DeviceSpecificInfo::Loopback(LoopbackInfo {
+                    common_info: CommonInfo { mtu: DEFAULT_LOOPBACK_MTU, admin_enabled: true },
+                }),
+            )
+            .expect("error adding loopback device");
+
+        initialize_device(&mut ctx, loopback);
+        let mut ipv6_config = Ipv6DeviceConfiguration::default();
+        ipv6_config.set_dad_transmits(None);
+        set_ipv6_configuration(&mut ctx, loopback, ipv6_config);
+        add_ip_addr_subnet(
+            &mut ctx,
+            loopback,
+            AddrSubnetEither::V4(
+                AddrSubnet::from_witness(Ipv4::LOOPBACK_ADDRESS, Ipv4::LOOPBACK_SUBNET.prefix())
+                    .expect("error creating IPv4 loopback AddrSub"),
+            ),
+        )
+        .expect("error adding IPv4 loopback address");
+        add_route(
+            &mut ctx,
+            EntryEither::new(Ipv4::LOOPBACK_SUBNET.into(), EntryDest::Local { device: loopback })
+                .expect("error creating IPv4 route entry"),
+        )
+        .expect("error adding IPv4 loopback on-link subnet route");
+        add_ip_addr_subnet(
+            &mut ctx,
+            loopback,
+            AddrSubnetEither::V6(
+                AddrSubnet::from_witness(Ipv6::LOOPBACK_ADDRESS, Ipv6::LOOPBACK_SUBNET.prefix())
+                    .expect("error creating IPv6 loopback AddrSub"),
+            ),
+        )
+        .expect("error adding IPv6 loopback address");
+        add_route(
+            &mut ctx,
+            EntryEither::new(Ipv6::LOOPBACK_SUBNET.into(), EntryDest::Local { device: loopback })
+                .expect("error creating IPv6 route entry"),
+        )
+        .expect("error adding IPv6 loopback on-link subnet route");
+
+        Netstack { ctx: Arc::new(Mutex::new(ctx)) }
     }
 
     /// Starts servicing timers.

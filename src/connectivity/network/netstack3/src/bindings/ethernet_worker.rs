@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::{
+    devices::{BindingId, DeviceSpecificInfo, Devices, EthernetInfo},
+    DeviceStatusNotifier, InterfaceControl as _, LockableContext, MutableDeviceState as _,
+};
 use anyhow::Error;
+use assert_matches::assert_matches;
 use ethernet as eth;
 pub use fidl_ethernet::DeviceStatus;
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
-pub use fidl_fuchsia_hardware_ethernet_ext::EthernetInfo;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{TryFutureExt as _, TryStreamExt as _};
@@ -15,14 +19,9 @@ use netstack3_core::{receive_frame, BufferDispatcher};
 use packet::serialize::Buf;
 use std::ops::DerefMut as _;
 
-use super::{
-    devices::{BindingId, Devices},
-    DeviceStatusNotifier, InterfaceControl as _, LockableContext, MutableDeviceState as _,
-};
-
 pub async fn setup_ethernet(
     dev: fidl_ethernet::DeviceProxy,
-) -> Result<(eth::Client, EthernetInfo), Error> {
+) -> Result<(eth::Client, fidl_fuchsia_hardware_ethernet_ext::EthernetInfo), Error> {
     let vmo = zx::Vmo::create(256 * eth::DEFAULT_BUFFER_SIZE as u64)?;
     let eth_client = eth::Client::new(dev, vmo, eth::DEFAULT_BUFFER_SIZE, "netstack3").await?;
     let info = eth_client.info().await?;
@@ -105,20 +104,33 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                             // calling it acks the message, and prevents the device from sending
                             // more status changed messages.
                             if let Some(device) = ctx.dispatcher.as_ref().get_device(id) {
-                                if let Ok(status) = device.client().get_status().await {
+                                let device = assert_matches!(
+                                    device.info(),
+                                    DeviceSpecificInfo::Ethernet(device) => device
+                                );
+                                let EthernetInfo { common_info: _, client, mac: _, features: _, phy_up: _} = device;
+                                if let Ok(status) = client.get_status().await {
                                     info!("device {:?} status changed to: {:?}", id, status);
                                     // Handle the new device state. If this results in no change, no
                                     // state will be modified.
                                     if status.contains(fidl_ethernet::DeviceStatus::ONLINE) {
                                         ctx.update_device_state(id, |dev_info| {
-                                            dev_info.set_phy_up(true)
+                                            let phy_up: &mut bool = assert_matches!(
+                                                dev_info.info_mut(),
+                                                DeviceSpecificInfo::Ethernet(EthernetInfo { common_info: _, client: _, mac: _, features: _, phy_up}) => phy_up
+                                            );
+                                            *phy_up = true;
                                         });
                                         ctx.enable_interface(id).unwrap_or_else(|e| {
                                             trace!("phy enable interface failed: {:?}", e)
                                         });
                                     } else {
                                         ctx.update_device_state(id, |dev_info| {
-                                            dev_info.set_phy_up(false)
+                                            let phy_up: &mut bool = assert_matches!(
+                                                dev_info.info_mut(),
+                                                DeviceSpecificInfo::Ethernet(EthernetInfo { common_info: _, client: _, mac: _, features: _, phy_up}) => phy_up
+                                            );
+                                            *phy_up = false;
                                         });
                                         ctx.disable_interface(id).unwrap_or_else(|e| {
                                             trace!("phy enable disable failed: {:?}", e)
@@ -134,7 +146,8 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                             if let Some(id) =
                                 AsRef::<Devices>::as_ref(&ctx.dispatcher).get_core_id(id)
                             {
-                                receive_frame(ctx.deref_mut(), id, Buf::new(&mut buf[..len], ..));
+                                receive_frame(ctx.deref_mut(), id, Buf::new(&mut buf[..len], ..))
+                                    .unwrap_or_else(|e| error!("error receiving frame: {}", e))
                             } else {
                                 debug!("received ethernet frame on disabled device: {}", id);
                             }

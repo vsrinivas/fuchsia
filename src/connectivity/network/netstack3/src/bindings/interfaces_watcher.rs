@@ -20,7 +20,13 @@ use futures::{
 use net_types::ip::{Ip as _, Ipv4, Ipv6, Subnet, SubnetEither};
 use netstack3_core::{get_all_ip_addr_subnets, get_all_routes, EntryDest};
 
-use super::{util::IntoFidl as _, Devices, LockableContext};
+use super::{
+    devices::{CommonInfo, DeviceSpecificInfo, EthernetInfo, LoopbackInfo},
+    util::IntoFidl as _,
+    Devices, LockableContext,
+};
+
+pub(crate) const LOOPBACK_DEVICE_NAME: &str = "lo";
 
 /// Possible errors when serving `fuchsia.net.interfaces/State`.
 #[derive(thiserror::Error, Debug)]
@@ -65,15 +71,6 @@ where
 {
     let ctx = ctx.lock().await;
     let existing = ctx.dispatcher.as_ref().iter_devices().map(|info| {
-        let features = info.features();
-        // TODO(https://fxbug.dev/84863): rewrite features in terms of fuchsia.hardware.network.
-        let device_class = if features.contains(fidl_ethernet::Features::LOOPBACK) {
-            fidl_interfaces::DeviceClass::Loopback(fidl_interfaces::Empty)
-        } else if features.contains(fidl_ethernet::Features::WLAN) {
-            fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::Wlan)
-        } else {
-            fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::Ethernet)
-        };
         let addrs = info
             .core_id()
             .map(|id| {
@@ -86,48 +83,78 @@ where
             })
             .unwrap_or(Vec::new());
 
-        let (has_default_ipv4_route, has_default_ipv6_route) = {
-            let mut has_default_ipv4_route = false;
-            let mut has_default_ipv6_route = false;
-            if let Some(id) = info.core_id() {
-                let default_ipv4_dest = Subnet::new(Ipv4::UNSPECIFIED_ADDRESS, 0).unwrap();
-                let default_ipv6_dest = Subnet::new(Ipv6::UNSPECIFIED_ADDRESS, 0).unwrap();
-                for r in get_all_routes(&ctx) {
-                    let (subnet, dest) = r.into_subnet_dest();
-                    match dest {
-                        EntryDest::Remote { next_hop: _ } => {}
-                        EntryDest::Local { device } => {
-                            if device != id {
-                                continue;
-                            }
-                            match subnet {
-                                SubnetEither::V4(subnet) => {
-                                    if subnet == default_ipv4_dest {
-                                        has_default_ipv4_route = true;
+        match info.info() {
+            DeviceSpecificInfo::Ethernet(EthernetInfo {
+                common_info: CommonInfo { admin_enabled, mtu: _ },
+                client: _,
+                mac: _,
+                features,
+                phy_up,
+            }) => {
+                // TODO(https://fxbug.dev/84863): rewrite features in terms of fuchsia.hardware.network.
+                let device_class = if features.contains(fidl_ethernet::Features::LOOPBACK) {
+                    fidl_interfaces::DeviceClass::Loopback(fidl_interfaces::Empty)
+                } else if features.contains(fidl_ethernet::Features::WLAN) {
+                    fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::Wlan)
+                } else {
+                    fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::Ethernet)
+                };
+
+                let (has_default_ipv4_route, has_default_ipv6_route) = {
+                    let mut has_default_ipv4_route = false;
+                    let mut has_default_ipv6_route = false;
+                    if let Some(id) = info.core_id() {
+                        let default_ipv4_dest = Subnet::new(Ipv4::UNSPECIFIED_ADDRESS, 0).unwrap();
+                        let default_ipv6_dest = Subnet::new(Ipv6::UNSPECIFIED_ADDRESS, 0).unwrap();
+                        for r in get_all_routes(&ctx) {
+                            let (subnet, dest) = r.into_subnet_dest();
+                            match dest {
+                                EntryDest::Remote { next_hop: _ } => {}
+                                EntryDest::Local { device } => {
+                                    if device != id {
+                                        continue;
                                     }
-                                }
-                                SubnetEither::V6(subnet) => {
-                                    if subnet == default_ipv6_dest {
-                                        has_default_ipv6_route = true;
+                                    match subnet {
+                                        SubnetEither::V4(subnet) => {
+                                            if subnet == default_ipv4_dest {
+                                                has_default_ipv4_route = true;
+                                            }
+                                        }
+                                        SubnetEither::V6(subnet) => {
+                                            if subnet == default_ipv6_dest {
+                                                has_default_ipv6_route = true;
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+                    (has_default_ipv4_route, has_default_ipv6_route)
+                };
+
+                fidl_interfaces_ext::Properties {
+                    id: info.id(),
+                    addresses: addrs,
+                    online: *admin_enabled && *phy_up,
+                    device_class,
+                    has_default_ipv4_route,
+                    has_default_ipv6_route,
+                    // TODO(https://fxbug.dev/84516): populate interface name.
+                    name: format!("[TBD]-{}", info.id()),
                 }
             }
-            (has_default_ipv4_route, has_default_ipv6_route)
-        };
-
-        fidl_interfaces_ext::Properties {
-            id: info.id(),
-            addresses: addrs,
-            online: info.admin_enabled() && info.phy_up(),
-            device_class,
-            has_default_ipv4_route,
-            has_default_ipv6_route,
-            // TODO(https://fxbug.dev/84516): populate interface name.
-            name: format!("[TBD]-{}", info.id()),
+            DeviceSpecificInfo::Loopback(LoopbackInfo {
+                common_info: CommonInfo { admin_enabled, mtu: _ },
+            }) => fidl_interfaces_ext::Properties {
+                id: info.id(),
+                addresses: addrs,
+                online: *admin_enabled,
+                device_class: fidl_interfaces::DeviceClass::Loopback(fidl_interfaces::Empty),
+                has_default_ipv4_route: false,
+                has_default_ipv6_route: false,
+                name: LOOPBACK_DEVICE_NAME.to_string(),
+            },
         }
     });
     EventQueue::existing(existing)

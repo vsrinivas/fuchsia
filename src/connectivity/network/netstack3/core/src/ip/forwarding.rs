@@ -15,12 +15,6 @@ use crate::ip::*;
 // - How do we detect circular routes? Do we attempt to detect at rule
 //   installation time? At runtime? Using what algorithm?
 
-// NOTE on loopback addresses: Loopback addresses should be handled before
-// reaching the forwarding table. For that reason, we do not prevent a rule
-// whose subnet is a subset of the loopback subnet from being installed; they
-// will never get triggered anyway, so implementing the logic of detecting these
-// rules is a needless complexity.
-
 /// The destination of an outbound IP packet.
 ///
 /// Outbound IP packets are sent to a particular device (specified by the
@@ -224,23 +218,10 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     ///
     /// The unspecified address (0.0.0.0 in IPv4 and :: in IPv6) are not
     /// routable and will return None even if they have been added to the table.
-    ///
-    /// # Panics
-    ///
-    /// `lookup` asserts that `address` is not in the loopback interface.
-    /// Traffic destined for loopback addresses from local applications should
-    /// be properly routed without consulting the forwarding table, and traffic
-    /// from the network with a loopback destination address is invalid and
-    /// should be dropped before consulting the forwarding table.
     pub(crate) fn lookup(
         &self,
         address: SpecifiedAddr<I::Addr>,
     ) -> Option<Destination<I::Addr, D>> {
-        assert!(
-            !I::LOOPBACK_SUBNET.contains(&address),
-            "loopback addresses should be handled before consulting the forwarding table"
-        );
-
         let best_match = self
             .active
             .iter()

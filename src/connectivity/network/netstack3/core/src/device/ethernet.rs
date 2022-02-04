@@ -4,7 +4,6 @@
 
 //! The Ethernet protocol.
 
-use alloc::boxed::Box;
 use alloc::collections::HashMap;
 use alloc::collections::VecDeque;
 use alloc::vec::Vec;
@@ -20,8 +19,8 @@ use net_types::ip::{
     UnicastOrMulticastIpv6Addr,
 };
 use net_types::{
-    BroadcastAddress, LinkLocalAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress,
-    SpecifiedAddr, UnicastAddr, UnicastAddress, Witness,
+    BroadcastAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress, SpecifiedAddr,
+    UnicastAddr, UnicastAddress, Witness,
 };
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use packet_formats::arp::{peek_arp_types, ArpHardwareType, ArpNetworkType};
@@ -44,6 +43,7 @@ use crate::{
         BufferIpLinkDeviceContext, DadTimerId, DeviceIdContext, FrameDestination,
         IpLinkDeviceContext, RecvIpFrameMeta,
     },
+    error::NotFoundError,
     ip::{
         device::state::{
             AddrConfig, AddrConfigType, AddressError, AddressState, IpDeviceState,
@@ -604,57 +604,6 @@ pub(super) fn set_promiscuous_mode<C: EthernetIpLinkDeviceContext>(
     ctx.get_state_mut_with(device_id).link.promiscuous_mode = enabled;
 }
 
-/// Get a single IP address for a device.
-///
-/// Note, tentative IP addresses (addresses which are not yet fully bound to a
-/// device) will not be returned by `get_ip_addr`.
-///
-/// For IPv6, this only returns global (not link-local) addresses.
-#[specialize_ip_address]
-pub(super) fn get_ip_addr_subnet<C: EthernetIpLinkDeviceContext, A: IpAddress>(
-    ctx: &C,
-    device_id: C::DeviceId,
-) -> Option<AddrSubnet<A>> {
-    #[ipv4addr]
-    return get_assigned_ip_addr_subnets(ctx, device_id).nth(0);
-    #[ipv6addr]
-    return get_assigned_ip_addr_subnets(ctx, device_id).find(|a| {
-        let addr: SpecifiedAddr<Ipv6Addr> = a.addr();
-        !addr.is_link_local()
-    });
-}
-
-/// Get the IP address and subnet pairs associated with this device which are in
-/// the assigned state.
-///
-/// Tentative IP addresses (addresses which are not yet fully bound to a device)
-/// and deprecated IP addresses (addresses which have been assigned but should
-/// no longer be used for new connections) will not be returned by
-/// `get_assigned_ip_addr_subnets`.
-///
-/// Returns an [`Iterator`] of `AddrSubnet<A>`.
-///
-/// See [`Tentative`] and [`AddrSubnet`] for more information.
-#[specialize_ip_address]
-pub(super) fn get_assigned_ip_addr_subnets<C: EthernetIpLinkDeviceContext, A: IpAddress>(
-    ctx: &C,
-    device_id: C::DeviceId,
-) -> Box<dyn Iterator<Item = AddrSubnet<A>> + '_> {
-    let state = &ctx.get_state_with(device_id).ip;
-
-    #[ipv4addr]
-    return Box::new(state.ipv4.ip_state.iter_addrs().cloned());
-
-    #[ipv6addr]
-    return Box::new(state.ipv6.ip_state.iter_addrs().filter_map(|a| {
-        if a.state.is_assigned() {
-            Some((*a.addr_sub()).to_witness())
-        } else {
-            None
-        }
-    }));
-}
-
 /// Adds an IP address and associated subnet to this device.
 ///
 /// For IPv6, this function also joins the solicited-node multicast group and
@@ -795,7 +744,7 @@ pub(super) fn del_ip_addr<C: EthernetIpLinkDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr: &SpecifiedAddr<A>,
-) -> Result<(), AddressError> {
+) -> Result<(), NotFoundError> {
     del_ip_addr_inner(ctx, device_id, &addr.get(), None)
 }
 
@@ -812,64 +761,35 @@ fn del_ip_addr_inner<C: EthernetIpLinkDeviceContext, A: IpAddress>(
     device_id: C::DeviceId,
     addr: &A,
     config_type: Option<AddrConfigType>,
-) -> Result<(), AddressError> {
+) -> Result<(), NotFoundError> {
+    let state = &mut ctx.get_state_mut_with(device_id).ip;
+
     match addr.clone().into() {
         IpAddr::V4(addr) => {
             assert_eq!(config_type, None);
-
-            let state = &mut ctx.get_state_mut_with(device_id).ip;
-
-            let original_size = state.ipv4.ip_state.iter_addrs().len();
-            state.ipv4.ip_state.retain_addrs(|x| x.addr().get() != addr);
-            let new_size = state.ipv4.ip_state.iter_addrs().len();
-
-            if new_size == original_size {
-                return Err(AddressError::NotFound);
-            }
-
-            assert_eq!(original_size - new_size, 1);
-
-            Ok(())
+            state.ipv4.ip_state.remove_addr(&addr)
         }
         IpAddr::V6(addr) => {
-            // TODO(fxbug.dev/69196): Give `addr` the type
-            // `UnicastAddr<Ipv6Addr>` for IPv6 instead of doing this dynamic
-            // check here.
-            let addr = if let Some(addr) = UnicastAddr::new(addr) {
-                addr
-            } else {
-                return Err(AddressError::NotFound);
-            };
+            let res = state.ipv6.ip_state.remove_addr(&addr);
+            match res {
+                Ok(()) => {
+                    // TODO(https://fxbug.dev/69196): Give `addr` the type
+                    // `UnicastAddr<Ipv6Addr>` for IPv6 instead of doing this
+                    // dynamic check here and statically guarantee only unicast
+                    // addresses are added for IPv6.
+                    if let Some(addr) = UnicastAddr::new(addr) {
+                        let _: Option<C::Instant> = ctx.cancel_timer(
+                            DadTimerId { device_id, addr, _marker: core::marker::PhantomData }
+                                .into(),
+                        );
 
-            if !ctx
-                .get_state_with(device_id)
-                .ip
-                .ipv6
-                .ip_state
-                .iter_addrs()
-                .any(|e| e.addr_sub().addr() == addr)
-            {
-                return Err(AddressError::NotFound);
+                        // Leave the the solicited-node multicast group.
+                        leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
+                    }
+                }
+                Err(NotFoundError) => {}
             }
-
-            let _: Option<C::Instant> = ctx.cancel_timer(
-                DadTimerId { device_id, addr, _marker: core::marker::PhantomData }.into(),
-            );
-
-            let state = &mut ctx.get_state_mut_with(device_id).ip;
-
-            let original_size = state.ipv6.ip_state.iter_addrs().len();
-            state.ipv6.ip_state.retain_addrs(|x| x.addr_sub().addr() != addr);
-            let new_size = state.ipv6.ip_state.iter_addrs().len();
-
-            // Since we just checked earlier if we had the address, we must have
-            // removed it now.
-            assert_eq!(original_size - new_size, 1);
-
-            // Leave the the solicited-node multicast group.
-            leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
-
-            Ok(())
+            res
         }
     }
 }
@@ -1108,15 +1028,6 @@ pub(super) fn get_mtu<C: EthernetIpLinkDeviceContext>(ctx: &C, device_id: C::Dev
     ctx.get_state_with(device_id).link.mtu
 }
 
-/// Get the hop limit for new IPv6 packets that will be sent out from
-/// `device_id`.
-pub(super) fn get_ipv6_hop_limit<C: EthernetIpLinkDeviceContext>(
-    ctx: &C,
-    device_id: C::DeviceId,
-) -> NonZeroU8 {
-    ctx.get_state_with(device_id).ip.ipv6.ip_state.default_hop_limit
-}
-
 /// Is IP packet routing enabled on `device_id`?
 ///
 /// Note, `true` does not necessarily mean that `device` is currently routing IP
@@ -1134,21 +1045,87 @@ pub(super) fn is_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
     }
 }
 
-/// Sets the IP packet routing flag on `device_id`.
-///
-/// This method MUST NOT be called directly. It MUST only only called by
-/// [`crate::device::set_routing_enabled`].
-///
-/// See [`crate::device::set_routing_enabled`] for more information.
-pub(super) fn set_routing_enabled_inner<C: EthernetIpLinkDeviceContext, I: Ip>(
+pub(super) fn set_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
     ctx: &mut C,
     device_id: C::DeviceId,
     enabled: bool,
+    ip_routing: bool,
 ) {
-    let state = &mut ctx.get_state_mut_with(device_id).ip;
     match I::VERSION {
-        IpVersion::V6 => state.ipv6.ip_state.routing_enabled = enabled,
-        IpVersion::V4 => state.ipv4.ip_state.routing_enabled = enabled,
+        IpVersion::V4 => {
+            ctx.get_state_mut_with(device_id).ip.ipv4.ip_state.routing_enabled = enabled;
+        }
+        IpVersion::V6 => {
+            if enabled {
+                trace!(
+                    "set_ipv6_routing_enabled: enabling IPv6 routing for device {:?}",
+                    device_id
+                );
+
+                // Make sure that the netstack is configured to route packets before
+                // considering this device a router and stopping router solicitations.
+                // If the netstack was not configured to route packets before, then we
+                // would still be considered a host, so we shouldn't stop soliciting
+                // routers.
+                if ip_routing {
+                    // TODO(ghanan): Handle transition from disabled to enabled: - start
+                    //               periodic router advertisements (if configured to do
+                    //               so)
+                    ctx.stop_soliciting_routers(device_id);
+                }
+
+                // Actually update the routing flag.
+                ctx.get_state_mut_with(device_id).ip.ipv6.ip_state.routing_enabled = true;
+
+                // Make sure that the netstack is configured to route packets before
+                // considering this device a router and starting periodic router
+                // advertisements.
+                if ip_routing {
+                    // Now that `device` is a router, join the all-routers multicast
+                    // group.
+                    join_ip_multicast(
+                        ctx,
+                        device_id,
+                        Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
+                    );
+                }
+            } else {
+                trace!(
+                    "set_ipv6_routing_enabled: disabling IPv6 routing for device {:?}",
+                    device_id
+                );
+
+                // Make sure that the netstack is configured to route packets before
+                // considering this device a router and stopping periodic router
+                // advertisements. If the netstack was not configured to route packets
+                // before, then we would still be considered a host, so we wouldn't have
+                // any periodic router advertisements to stop.
+                if ip_routing {
+                    // Now that `device` is a host, leave the all-routers multicast
+                    // group.
+                    leave_ip_multicast(
+                        ctx,
+                        device_id,
+                        Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
+                    );
+                }
+
+                // Actually update the routing flag.
+                ctx.get_state_mut_with(device_id).ip.ipv6.ip_state.routing_enabled = false;
+
+                // We only need to start soliciting routers if we were not soliciting
+                // them before. We would only reach this point if there was a change in
+                // routing status for `device`. However, if the nestatck does not
+                // currently have routing enabled, the device would not have been
+                // considered a router before this routing change on the device, so it
+                // would have already solicited routers.
+                if ip_routing {
+                    // On transition from router -> host, start soliciting router
+                    // information.
+                    ctx.start_soliciting_routers(device_id);
+                }
+            }
+        }
     }
 }
 
@@ -1731,7 +1708,8 @@ mod tests {
         }
 
         // Will panic if we do not initialize.
-        crate::device::receive_frame(&mut ctx, device, Buf::new(bytes, ..));
+        crate::device::receive_frame(&mut ctx, device, Buf::new(bytes, ..))
+            .expect("error receiving frame");
 
         // If we did not initialize, we would not reach here since
         // `receive_frame` would have panicked.
@@ -1884,7 +1862,7 @@ mod tests {
 
         // Attempting to set router should work, but it still won't be able to
         // route packets.
-        set_routing_enabled::<_, I>(&mut ctx, device, true);
+        set_routing_enabled::<_, I>(&mut ctx, device, true).expect("error setting routing enabled");
         assert!(is_routing_enabled::<_, I>(&ctx, device));
         // Should not update other Ip routing status.
         check_other_is_routing_enabled::<I>(&ctx, device, false);
@@ -1919,7 +1897,7 @@ mod tests {
         assert_empty(ctx.dispatcher.frames_sent().iter());
 
         // Attempting to set router should work
-        set_routing_enabled::<_, I>(&mut ctx, device, true);
+        set_routing_enabled::<_, I>(&mut ctx, device, true).expect("error setting routing enabled");
         assert!(is_routing_enabled::<_, I>(&ctx, device));
         // Should not update other Ip routing status.
         check_other_is_routing_enabled::<I>(&ctx, device, false);
@@ -1955,7 +1933,8 @@ mod tests {
         check_icmp::<I>(&ctx.dispatcher.frames_sent()[1].1);
 
         // Attempt to unset router
-        set_routing_enabled::<_, I>(&mut ctx, device, false);
+        set_routing_enabled::<_, I>(&mut ctx, device, false)
+            .expect("error setting routing enabled");
         assert!(!is_routing_enabled::<_, I>(&ctx, device));
         check_other_is_routing_enabled::<I>(&ctx, device, false);
 
@@ -1994,13 +1973,15 @@ mod tests {
             .unwrap_b();
 
         // Accept packet destined for this device if promiscuous mode is off.
-        crate::device::set_promiscuous_mode(&mut ctx, device, false);
-        crate::device::receive_frame(&mut ctx, device, buf.clone());
+        crate::device::set_promiscuous_mode(&mut ctx, device, false)
+            .expect("error setting promiscuous mode");
+        crate::device::receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Accept packet destined for this device if promiscuous mode is on.
-        crate::device::set_promiscuous_mode(&mut ctx, device, true);
-        crate::device::receive_frame(&mut ctx, device, buf.clone());
+        crate::device::set_promiscuous_mode(&mut ctx, device, true)
+            .expect("error setting promiscuous mode");
+        crate::device::receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         let buf = Buf::new(Vec::new(), ..)
@@ -2022,13 +2003,15 @@ mod tests {
 
         // Reject packet not destined for this device if promiscuous mode is
         // off.
-        crate::device::set_promiscuous_mode(&mut ctx, device, false);
-        crate::device::receive_frame(&mut ctx, device, buf.clone());
+        crate::device::set_promiscuous_mode(&mut ctx, device, false)
+            .expect("error setting promiscuous mode");
+        crate::device::receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         // Accept packet not destined for this device if promiscuous mode is on.
-        crate::device::set_promiscuous_mode(&mut ctx, device, true);
-        crate::device::receive_frame(&mut ctx, device, buf.clone());
+        crate::device::set_promiscuous_mode(&mut ctx, device, true)
+            .expect("error setting promiscuous mode");
+        crate::device::receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 3);
     }
 
@@ -2072,7 +2055,7 @@ mod tests {
         assert!(!contains_addr(&ctx, device, ip3));
 
         // Del ip1 again (ip1 not found)
-        assert_eq!(crate::device::del_ip_addr(&mut ctx, device, &ip1), Err(AddressError::NotFound));
+        assert_eq!(crate::device::del_ip_addr(&mut ctx, device, &ip1), Err(NotFoundError));
         assert!(!contains_addr(&ctx, device, ip1));
         assert!(contains_addr(&ctx, device, ip2));
         assert!(!contains_addr(&ctx, device, ip3));
@@ -2343,7 +2326,7 @@ mod tests {
                 .collect::<Vec<_>>(),
             [config.local_mac.to_ipv6_link_local().addr().get()]
         );
-        assert_eq!(get_ip_addr_subnet::<_, Ipv6Addr>(&ctx, device), None);
+        assert_eq!(crate::device::get_ip_addr_subnet::<_, Ipv6Addr>(&ctx, device.into()), None);
     }
 
     #[test]

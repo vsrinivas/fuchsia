@@ -764,7 +764,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv6, B> for Ct
 }
 
 /// IPv6 source address selection as defined in [RFC 6724 Section 5].
-mod ipv6_source_address_selection {
+pub(super) mod ipv6_source_address_selection {
     use net_types::ip::IpAddress as _;
 
     use super::*;
@@ -781,7 +781,7 @@ mod ipv6_source_address_selection {
     /// addresses on all devices. The algorithm works by iterating over
     /// `addresses` and selecting the address which is most preferred according
     /// to a set of selection criteria.
-    pub(super) fn select_ipv6_source_address<
+    pub(crate) fn select_ipv6_source_address<
         'a,
         Instant: 'a,
         I: Iterator<Item = (&'a Ipv6AddressEntry<Instant>, DeviceId)>,

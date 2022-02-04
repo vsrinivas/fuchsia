@@ -2371,10 +2371,11 @@ mod tests {
     }
 
     impl TryFrom<DeviceId> for EthernetDeviceId {
-        type Error = ();
-        fn try_from(id: DeviceId) -> Result<EthernetDeviceId, ()> {
+        type Error = DeviceId;
+        fn try_from(id: DeviceId) -> Result<EthernetDeviceId, DeviceId> {
             match id.inner() {
                 DeviceIdInner::Ethernet(id) => Ok(id),
+                DeviceIdInner::Loopback => Err(id),
             }
         }
     }
@@ -2957,7 +2958,8 @@ mod tests {
 
         let mut ndp_config = NdpConfiguration::default();
         ndp_config.set_max_router_solicitations(None);
-        crate::device::set_ndp_configuration(&mut ctx, dev_id, ndp_config);
+        crate::device::set_ndp_configuration(&mut ctx, dev_id, ndp_config)
+            .expect("error setting NDP configuuration");
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(NonZeroU8::new(3));
         crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
@@ -3039,7 +3041,8 @@ mod tests {
         // Enable DAD.
         let mut ndp_config = NdpConfiguration::default();
         ndp_config.set_max_router_solicitations(None);
-        crate::device::set_ndp_configuration(&mut ctx, dev_id, ndp_config);
+        crate::device::set_ndp_configuration(&mut ctx, dev_id, ndp_config)
+            .expect("error setting NDP configuuration");
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.set_dad_transmits(NonZeroU8::new(3));
         crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
@@ -4163,7 +4166,8 @@ mod tests {
         let instant = timers[0].0.clone();
 
         // Enable routing on device.
-        set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        set_routing_enabled::<_, Ipv6>(&mut ctx, device, true)
+            .expect("error setting routing enabled");
         assert!(is_routing_enabled::<_, Ipv6>(&ctx, device));
 
         // Should have not send any new packets and still have the original
@@ -4214,7 +4218,8 @@ mod tests {
         assert_eq!(ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).count(), 1);
 
         // Enable routing on the device.
-        set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        set_routing_enabled::<_, Ipv6>(&mut ctx, device, true)
+            .expect("error setting routing enabled");
         assert!(is_routing_enabled::<_, Ipv6>(&ctx, device));
 
         // Should have not sent any new packets, but unset the router
@@ -4223,7 +4228,8 @@ mod tests {
         assert_empty(ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id));
 
         // Unsetting routing should succeed.
-        set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
+        set_routing_enabled::<_, Ipv6>(&mut ctx, device, false)
+            .expect("error setting routing enabled");
         assert!(!is_routing_enabled::<_, Ipv6>(&ctx, device));
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         let timers: Vec<(&DummyInstant, &TimerId)> =
@@ -4756,7 +4762,8 @@ mod tests {
             .build_with(state_builder, DummyEventDispatcher::default());
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
-        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true)
+            .expect("error setting routing enabled");
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();

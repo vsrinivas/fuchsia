@@ -58,7 +58,7 @@ use crate::{
         ipv6::Ipv6PacketAction,
         path_mtu::{PmtuCache, PmtuHandler, PmtuTimerId},
         reassembly::{FragmentCacheKey, FragmentProcessingState, IpPacketFragmentCache},
-        socket::{IpSock, IpSockUpdate},
+        socket::{ipv6_source_address_selection::select_ipv6_source_address, IpSock, IpSockUpdate},
     },
     BufferDispatcher, Ctx, EventDispatcher, StackState, TimerId, TimerIdInner,
 };
@@ -341,12 +341,27 @@ impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Ctx<D> {
         }
     }
 
-    fn local_address_for_remote(
+    default fn local_address_for_remote(
         &self,
         remote: SpecifiedAddr<I::Addr>,
     ) -> Option<SpecifiedAddr<I::Addr>> {
         let route = lookup_route(self, remote)?;
         crate::device::get_ip_addr_subnet(self, route.device).map(|a| a.addr())
+    }
+}
+
+impl<D: EventDispatcher> TransportIpContext<Ipv6> for Ctx<D> {
+    fn local_address_for_remote(
+        &self,
+        remote: SpecifiedAddr<Ipv6Addr>,
+    ) -> Option<SpecifiedAddr<Ipv6Addr>> {
+        let Destination { next_hop: _, device } = lookup_route(self, remote)?;
+        select_ipv6_source_address(
+            remote,
+            device,
+            crate::device::get_ipv6_device_state(self, device).iter_addrs().map(|a| (a, device)),
+        )
+        .map(|a| a.into_specified())
     }
 }
 
@@ -987,8 +1002,7 @@ macro_rules! try_parse_ip_packet {
 /// Receive an IP packet from a device.
 ///
 /// `receive_ip_packet` calls [`receive_ipv4_packet`] or [`receive_ipv6_packet`]
-/// depending on the type parameter, `I`. It is used only in testing.
-#[cfg(test)]
+/// depending on the type parameter, `I`.
 pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
     ctx: &mut Ctx<D>,
     device: DeviceId,
@@ -1478,7 +1492,6 @@ enum ReceivePacketAction<A: IpAddress> {
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 enum DropReason {
-    Loopback,
     Tentative,
     ForwardingDisabled,
     ForwardingDisabledInboundIface,
@@ -1490,7 +1503,6 @@ impl Display for DropReason {
             f,
             "{}",
             match self {
-                DropReason::Loopback => "remote packet destined to loopback address",
                 DropReason::Tentative => "remote packet destined to tentative address",
                 DropReason::ForwardingDisabled => {
                     "packet should be forwarded but forwarding is disabled"
@@ -1510,10 +1522,7 @@ fn receive_ipv4_packet_action<D: EventDispatcher>(
     dst_ip: SpecifiedAddr<Ipv4Addr>,
 ) -> ReceivePacketAction<Ipv4Addr> {
     let dev_state = crate::device::get_ipv4_device_state(ctx, device);
-    if Ipv4::LOOPBACK_SUBNET.contains(&dst_ip) {
-        increment_counter!(ctx, "receive_ipv4_packet_action::loopback");
-        ReceivePacketAction::Drop { reason: DropReason::Loopback }
-    } else if dev_state
+    if dev_state
         .iter_addrs()
         .map(|addr| addr.addr_subnet())
         .any(|(addr, subnet)| dst_ip == addr || dst_ip.get() == subnet.broadcast())
@@ -1534,64 +1543,57 @@ fn receive_ipv6_packet_action<D: EventDispatcher>(
     device: DeviceId,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
 ) -> ReceivePacketAction<Ipv6Addr> {
-    if Ipv6::LOOPBACK_SUBNET.contains(&dst_ip.get()) {
-        increment_counter!(ctx, "receive_ipv6_packet_action::loopback");
-        ReceivePacketAction::Drop { reason: DropReason::Loopback }
-    } else {
-        let dev_state = crate::device::get_ipv6_device_state(ctx, device);
-        if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified()
-            || MulticastAddr::new(dst_ip.get())
-                .map_or(false, |dst_ip| dev_state.multicast_groups.contains(&dst_ip))
-        {
-            increment_counter!(ctx, "receive_ipv6_packet_action::deliver_multicast");
-            ReceivePacketAction::Deliver
-            // TODO(brunodalbo): We need to be able to have multiple IPs per interface.
-        } else if let Some(state) = dev_state.find_addr(&dst_ip).map(|addr| addr.state) {
-            match state {
-                AddressState::Assigned | AddressState::Deprecated => {
-                    increment_counter!(ctx, "receive_ipv6_packet_action::deliver_unicast");
-                    ReceivePacketAction::Deliver
-                }
-                AddressState::Tentative { dad_transmits_remaining: _ } => {
-                    // If the destination address is tentative (which implies
-                    // that we are still performing NDP's Duplicate Address
-                    // Detection on it), then we don't consider the address
-                    // "assigned to an interface", and so we drop packets
-                    // destined to that address instead of delivering them
-                    // locally.
-                    //
-                    // As per RFC 4862 section 5.4:
-                    //
-                    //   An address on which the Duplicate Address Detection
-                    //   procedure is applied is said to be tentative until the
-                    //   procedure has completed successfully. A tentative
-                    //   address is not considered "assigned to an interface" in
-                    //   the traditional sense.  That is, the interface must
-                    //   accept Neighbor Solicitation and Advertisement messages
-                    //   containing the tentative address in the Target Address
-                    //   field, but processes such packets differently from
-                    //   those whose Target Address matches an address assigned
-                    //   to the interface. Other packets addressed to the
-                    //   tentative address should be silently discarded. Note
-                    //   that the "other packets" include Neighbor Solicitation
-                    //   and Advertisement messages that have the tentative
-                    //   (i.e., unicast) address as the IP destination address
-                    //   and contain the tentative address in the Target Address
-                    //   field.  Such a case should not happen in normal
-                    //   operation, though, since these messages are multicasted
-                    //   in the Duplicate Address Detection procedure.
-                    //
-                    // That is, we accept no packets destined to a tentative
-                    // address. NS and NA packets should be addressed to a
-                    // multicast address that we would have joined during DAD so
-                    // that we can receive those packets.
-                    increment_counter!(ctx, "receive_ipv6_packet_action::drop_for_tentative");
-                    ReceivePacketAction::Drop { reason: DropReason::Tentative }
-                }
+    let dev_state = crate::device::get_ipv6_device_state(ctx, device);
+    if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified()
+        || MulticastAddr::new(dst_ip.get())
+            .map_or(false, |dst_ip| dev_state.multicast_groups.contains(&dst_ip))
+    {
+        increment_counter!(ctx, "receive_ipv6_packet_action::deliver_multicast");
+        ReceivePacketAction::Deliver
+        // TODO(brunodalbo): We need to be able to have multiple IPs per interface.
+    } else if let Some(state) = dev_state.find_addr(&dst_ip).map(|addr| addr.state) {
+        match state {
+            AddressState::Assigned | AddressState::Deprecated => {
+                increment_counter!(ctx, "receive_ipv6_packet_action::deliver_unicast");
+                ReceivePacketAction::Deliver
             }
-        } else {
-            receive_ip_packet_action_common(ctx, device, dst_ip)
+            AddressState::Tentative { dad_transmits_remaining: _ } => {
+                // If the destination address is tentative (which implies that
+                // we are still performing NDP's Duplicate Address Detection on
+                // it), then we don't consider the address "assigned to an
+                // interface", and so we drop packets instead of delivering them
+                // locally.
+                //
+                // As per RFC 4862 section 5.4:
+                //
+                //   An address on which the Duplicate Address Detection
+                //   procedure is applied is said to be tentative until the
+                //   procedure has completed successfully. A tentative address
+                //   is not considered "assigned to an interface" in the
+                //   traditional sense.  That is, the interface must accept
+                //   Neighbor Solicitation and Advertisement messages containing
+                //   the tentative address in the Target Address field, but
+                //   processes such packets differently from those whose Target
+                //   Address matches an address assigned to the interface. Other
+                //   packets addressed to the tentative address should be
+                //   silently discarded. Note that the "other packets" include
+                //   Neighbor Solicitation and Advertisement messages that have
+                //   the tentative (i.e., unicast) address as the IP destination
+                //   address and contain the tentative address in the Target
+                //   Address field.  Such a case should not happen in normal
+                //   operation, though, since these messages are multicasted in
+                //   the Duplicate Address Detection procedure.
+                //
+                // That is, we accept no packets destined to a tentative
+                // address. NS and NA packets should be addressed to a multicast
+                // address that we would have joined during DAD so that we can
+                // receive those packets.
+                increment_counter!(ctx, "receive_ipv6_packet_action::drop_for_tentative");
+                ReceivePacketAction::Drop { reason: DropReason::Tentative }
+            }
         }
+    } else {
+        receive_ip_packet_action_common(ctx, device, dst_ip)
     }
 }
 
@@ -1722,9 +1724,8 @@ pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
 ///
 /// # Panics
 ///
-/// Since `send_ip_packet_from_device` specifies a physical device, it cannot
-/// send to or from a loopback IP address. If either `src_ip` or `dst_ip` are in
-/// the loopback subnet, `send_ip_packet_from_device` will panic.
+/// Panics if either `src_ip` or `dst_ip` is the loopback address and the device
+/// is a non-loopback device.
 #[specialize_ip_address]
 pub(crate) fn send_ip_packet_from_device<
     B: BufferMut,
@@ -1743,8 +1744,10 @@ pub(crate) fn send_ip_packet_from_device<
 ) -> Result<(), S> {
     #[ipv4addr]
     let builder = {
-        assert!(!Ipv4::LOOPBACK_SUBNET.contains(&src_ip));
-        assert!(!Ipv4::LOOPBACK_SUBNET.contains(&dst_ip));
+        assert!(
+            (!Ipv4::LOOPBACK_SUBNET.contains(&src_ip) && !Ipv4::LOOPBACK_SUBNET.contains(&dst_ip))
+                || device.is_loopback()
+        );
         let mut builder = Ipv4PacketBuilder::new(
             src_ip,
             dst_ip,
@@ -1757,8 +1760,10 @@ pub(crate) fn send_ip_packet_from_device<
 
     #[ipv6addr]
     let builder = {
-        assert!(!Ipv6::LOOPBACK_SUBNET.contains(&src_ip));
-        assert!(!Ipv6::LOOPBACK_SUBNET.contains(&dst_ip));
+        assert!(
+            (!Ipv6::LOOPBACK_SUBNET.contains(&src_ip) && !Ipv6::LOOPBACK_SUBNET.contains(&dst_ip))
+                || device.is_loopback()
+        );
         Ipv6PacketBuilder::new(src_ip, dst_ip, get_hop_limit::<_, A::Version>(ctx, device), proto)
     };
 
@@ -2665,7 +2670,8 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap())
             .build_with(state_builder, DummyEventDispatcher::default());
-        set_routing_enabled::<_, I>(&mut alice, device, true);
+        set_routing_enabled::<_, I>(&mut alice, device, true)
+            .expect("error setting routing enabled");
         let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
         let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
         let mut net = DummyNetwork::new(contexts, move |net, _device_id| {
@@ -2750,7 +2756,8 @@ mod tests {
         );
         let mut ctx = dispatcher_builder.build_with(state_builder, DummyEventDispatcher::default());
         let device = DeviceId::new_ethernet(0);
-        set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        set_routing_enabled::<_, Ipv6>(&mut ctx, device, true)
+            .expect("error setting routing enabled");
         let frame_dst = FrameDestination::Unicast;
 
         // Construct an IPv6 packet that is too big for our MTU (MTU = 1280;
@@ -3243,35 +3250,22 @@ mod tests {
         // Should not have dispatched the packet since we are not in the
         // multicast group `multi_addr`.
         assert!(!I::get_ip_device_state(&ctx, device).multicast_groups.contains(&multi_addr));
-        receive_frame(&mut ctx, device, buf.clone());
+        receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
         // Join the multicast group and receive the packet, we should dispatch
         // it.
         crate::device::join_ip_multicast(&mut ctx, device, multi_addr);
         assert!(I::get_ip_device_state(&ctx, device).multicast_groups.contains(&multi_addr));
-        receive_frame(&mut ctx, device, buf.clone());
+        receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Leave the multicast group and receive the packet, we should not
         // dispatch it.
         crate::device::leave_ip_multicast(&mut ctx, device, multi_addr);
         assert!(!I::get_ip_device_state(&ctx, device).multicast_groups.contains(&multi_addr));
-        receive_frame(&mut ctx, device, buf.clone());
+        receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
-    }
-
-    #[ip_test]
-    #[should_panic(
-        expected = "loopback addresses should be handled before consulting the forwarding table"
-    )]
-    fn test_lookup_table_address<I: Ip + TestIpExt>() {
-        let cfg = I::DUMMY_CONFIG;
-        let ip_address = I::LOOPBACK_ADDRESS;
-        let ctx =
-            DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
-        let destination = lookup_route(&ctx, ip_address);
-        unreachable!("should have panicked, got destination {:?}", destination);
     }
 
     #[test]
@@ -3440,16 +3434,6 @@ mod tests {
             ReceivePacketAction::Deliver
         );
 
-        // Receive packet addressed to the loopback subnet.
-        assert_eq!(
-            receive_ipv4_packet_action(&mut ctx, v4_dev, Ipv4::LOOPBACK_ADDRESS),
-            ReceivePacketAction::Drop { reason: DropReason::Loopback }
-        );
-        assert_eq!(
-            receive_ipv6_packet_action(&mut ctx, v6_dev, Ipv6::LOOPBACK_ADDRESS),
-            ReceivePacketAction::Drop { reason: DropReason::Loopback }
-        );
-
         // Receive packet addressed to a tentative address.
         {
             // Construct a one-off context that has DAD enabled. The context
@@ -3492,8 +3476,10 @@ mod tests {
 
         // Receive packet destined to a remote address when forwarding is
         // enabled both globally and on the inbound device.
-        crate::device::set_routing_enabled::<_, Ipv4>(&mut ctx, v4_dev, true);
-        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, v6_dev, true);
+        crate::device::set_routing_enabled::<_, Ipv4>(&mut ctx, v4_dev, true)
+            .expect("error setting routing enabled");
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, v6_dev, true)
+            .expect("error setting routing enabled");
         assert_eq!(
             receive_ipv4_packet_action(&mut ctx, v4_dev, v4_config.remote_ip),
             ReceivePacketAction::Forward {

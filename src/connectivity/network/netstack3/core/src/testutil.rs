@@ -548,11 +548,13 @@ impl DummyEventDispatcherBuilder {
             .collect();
         for (idx, ip, mac) in arp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::insert_static_arp_table_entry(&mut ctx, device, ip, mac);
+            crate::device::insert_static_arp_table_entry(&mut ctx, device, ip, mac)
+                .expect("error inserting static ARP entry");
         }
         for (idx, ip, mac) in ndp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::insert_ndp_table_entry(&mut ctx, device, ip, mac.get());
+            crate::device::insert_ndp_table_entry(&mut ctx, device, ip, mac.get())
+                .expect("error inserting static NDP entry");
         }
         for (subnet, idx) in device_routes {
             let device = *idx_to_device_id.get(&idx).unwrap();
@@ -1057,7 +1059,8 @@ where
                 self.context(frame.dst_context),
                 frame.dst_device,
                 Buf::new(&mut frame.data, ..),
-            );
+            )
+            .expect("error receiving frame");
             ret.frames_sent += 1;
         }
 

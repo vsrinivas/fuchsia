@@ -36,7 +36,7 @@ use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
 
 use crate::bindings::{
     context::Lockable,
-    devices::{DeviceInfo, Devices},
+    devices::{CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo},
     socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsDispatcher, DeviceStatusNotifier, LockableContext, RequestStreamExt as _,
@@ -317,13 +317,35 @@ impl TestStack {
 
     /// Waits for interface with given `if_id` to come online.
     pub(crate) async fn wait_for_interface_online(&mut self, if_id: u64) {
-        let check_online = |status: &DeviceInfo| status.phy_up();
+        let check_online = |info: &DeviceInfo| match info.info() {
+            DeviceSpecificInfo::Ethernet(EthernetInfo {
+                common_info: CommonInfo { admin_enabled: _, mtu: _ },
+                client: _,
+                mac: _,
+                features: _,
+                phy_up,
+            }) => *phy_up,
+            DeviceSpecificInfo::Loopback(LoopbackInfo {
+                common_info: CommonInfo { admin_enabled: _, mtu: _ },
+            }) => true,
+        };
         self.wait_for_interface_status(if_id, check_online).await;
     }
 
     /// Waits for interface with given `if_id` to go offline.
     pub(crate) async fn wait_for_interface_offline(&mut self, if_id: u64) {
-        let check_offline = |status: &DeviceInfo| !status.phy_up();
+        let check_offline = |info: &DeviceInfo| match info.info() {
+            DeviceSpecificInfo::Ethernet(EthernetInfo {
+                common_info: CommonInfo { admin_enabled: _, mtu: _ },
+                client: _,
+                mac: _,
+                features: _,
+                phy_up,
+            }) => !phy_up,
+            DeviceSpecificInfo::Loopback(LoopbackInfo {
+                common_info: CommonInfo { admin_enabled: _, mtu: _ },
+            }) => false,
+        };
         self.wait_for_interface_status(if_id, check_offline).await;
     }
 
@@ -406,7 +428,9 @@ impl TestStack {
                 .map(|addr| addr.try_into_fidl().expect("convert to FIDL"))
                 .collect()
         });
-        InterfaceInfo { admin_enabled: device.admin_enabled(), phy_up: device.phy_up(), addresses }
+
+        let (admin_enabled, phy_up) = assert_matches::assert_matches!(device.info(), DeviceSpecificInfo::Ethernet(EthernetInfo {  common_info: CommonInfo { admin_enabled, mtu: _ }, client: _, mac: _, features: _, phy_up }) => (*admin_enabled, *phy_up));
+        InterfaceInfo { admin_enabled, phy_up, addresses }
     }
 }
 
@@ -815,7 +839,8 @@ async fn test_ethernet_link_up_down() {
     // call directly into core to prove that the device was correctly
     // initialized (core will panic if we try to use the device and initialize
     // hasn't been called)
-    netstack3_core::receive_frame(t.ctx(0).await.deref_mut(), core_id, Buf::new(&mut [], ..));
+    netstack3_core::receive_frame(t.ctx(0).await.deref_mut(), core_id, Buf::new(&mut [], ..))
+        .expect("error receiving frame");
 }
 
 #[fasync::run_singlethreaded(test)]

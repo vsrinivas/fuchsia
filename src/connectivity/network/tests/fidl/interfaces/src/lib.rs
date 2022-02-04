@@ -221,14 +221,8 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         }
     }
 
-    // Netstack2 reports the loopback interface as NIC 1.
-    match N::VERSION {
-        NetstackVersion::Netstack2 => {
-            assert_eq!(expectations.insert(1, Expectation::Loopback(1)), None);
-        }
-        NetstackVersion::ProdNetstack2 => panic!("unexpected netstack version"),
-        NetstackVersion::Netstack3 => {}
-    }
+    // The netstacks report the loopback interface as NIC 1.
+    assert_eq!(expectations.insert(1, Expectation::Loopback(1)), None);
 
     let mut interfaces = fidl_fuchsia_net_interfaces_ext::existing(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
@@ -271,9 +265,8 @@ async fn watcher_after_state_closed<N: Netstack>(name: &str) {
     let interfaces = fidl_fuchsia_net_interfaces_ext::existing(stream, HashMap::new())
         .await
         .expect("collect interfaces");
-    // TODO(https://fxbug.dev/72378): N3 doesn't support loopback devices yet.
     let expected = match N::VERSION {
-        NetstackVersion::Netstack2 => std::iter::once((
+        NetstackVersion::Netstack3 | NetstackVersion::Netstack2 => std::iter::once((
             1,
             fidl_fuchsia_net_interfaces_ext::Properties {
                 id: 1,
@@ -297,7 +290,6 @@ async fn watcher_after_state_closed<N: Netstack>(name: &str) {
             },
         ))
         .collect(),
-        NetstackVersion::Netstack3 => HashMap::new(),
         NetstackVersion::ProdNetstack2 => panic!("unexpected netstack version"),
     };
     assert_eq!(interfaces, expected);

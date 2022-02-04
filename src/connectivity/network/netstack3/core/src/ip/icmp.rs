@@ -2237,7 +2237,7 @@ mod tests {
             .build_with_modifications::<DummyEventDispatcher, _>(modify_stack_state_builder);
 
         let device = DeviceId::new_ethernet(0);
-        set_routing_enabled::<_, I>(&mut ctx, device, true);
+        set_routing_enabled::<_, I>(&mut ctx, device, true).expect("error setting routing enabled");
         match I::VERSION {
             IpVersion::V4 => {
                 receive_ipv4_packet(&mut ctx, device, FrameDestination::Unicast, buffer)

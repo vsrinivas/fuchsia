@@ -19,7 +19,9 @@ use net_declare::{fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
     get_component_moniker, interfaces,
-    realms::{constants, KnownServiceProvider, Netstack, Netstack2, TestSandboxExt as _},
+    realms::{
+        constants, KnownServiceProvider, Netstack, Netstack2, NetstackVersion, TestSandboxExt as _,
+    },
     ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
@@ -459,12 +461,10 @@ fn extract_v4_and_v6(
     (v4.expect("expected v4 addr"), v6.expect("expected v6 addr"))
 }
 
-// TODO(https://fxbug.dev/91754): Run this test on Netstack3.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn add_remove_address_on_loopback() {
-    let name = "add_remove_address_on_loopback";
+#[variants_test]
+async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -551,12 +551,10 @@ async fn add_remove_address_on_loopback() {
     assert_eq!(extract_v4_and_v6(addresses), (NEW_IPV4_ADDRESS, NEW_IPV6_ADDRESS));
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn disable_interface_loopback() {
-    let name = "disable_interface_loopback";
-
+#[variants_test]
+async fn disable_interface_loopback<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let stack =
         realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
 
@@ -568,7 +566,8 @@ async fn disable_interface_loopback() {
         .expect("get interface event stream");
     pin_utils::pin_mut!(stream);
 
-    let loopback_id = match stream.try_next().await {
+    let loopback_id = assert_matches::assert_matches!(
+        stream.try_next().await,
         Ok(Some(fidl_fuchsia_net_interfaces::Event::Existing(
             fidl_fuchsia_net_interfaces::Properties {
                 id: Some(id),
@@ -579,25 +578,55 @@ async fn disable_interface_loopback() {
                 online: Some(true),
                 ..
             },
-        ))) => id,
-        event => panic!("got {:?}, want loopback interface existing event", event),
-    };
+        ))) => id
+    );
 
-    let () = match stream.try_next().await {
+    let () = assert_matches::assert_matches!(
+        stream.try_next().await,
         Ok(Some(fidl_fuchsia_net_interfaces::Event::Idle(
             fidl_fuchsia_net_interfaces::Empty {},
-        ))) => (),
-        event => panic!("got {:?}, want idle event", event),
-    };
+        ))) => ()
+    );
 
     let () = exec_fidl!(stack.disable_interface(loopback_id), "disable interface").unwrap();
 
-    let () = match stream.try_next().await {
-        Ok(Some(fidl_fuchsia_net_interfaces::Event::Changed(
-            fidl_fuchsia_net_interfaces::Properties { id: Some(id), online: Some(false), .. },
-        ))) if id == loopback_id => (),
-        event => panic!("got {:?}, want loopback interface offline event", event),
-    };
+    match N::VERSION {
+        NetstackVersion::Netstack2 => {
+            let () = assert_matches::assert_matches!(stream.try_next().await,
+                Ok(Some(fidl_fuchsia_net_interfaces::Event::Changed(
+                    fidl_fuchsia_net_interfaces::Properties {
+                        id: Some(id),
+                        online: Some(false),
+                        ..
+                    },
+                ))) if id == loopback_id => ()
+            );
+        }
+        NetstackVersion::Netstack3 => {
+            // TODO(https://fxbug.dev/75553): Wait for changed event instead of
+            // creating a new watcher.
+            let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+                .expect("get interface event stream");
+            pin_utils::pin_mut!(stream);
+            let new_loopback_id = assert_matches::assert_matches!(
+                stream.try_next().await,
+                Ok(Some(fidl_fuchsia_net_interfaces::Event::Existing(
+                    fidl_fuchsia_net_interfaces::Properties {
+                        id: Some(id),
+                        device_class:
+                        Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                            fidl_fuchsia_net_interfaces::Empty {},
+                        )),
+                        online: Some(false),
+                        ..
+                    },
+                ))) => id
+            );
+
+            assert_eq!(loopback_id, new_loopback_id);
+        }
+        NetstackVersion::ProdNetstack2 => panic!("unexpectedly got ProdNetstack2 variant"),
+    }
 }
 
 enum ForwardingConfiguration {

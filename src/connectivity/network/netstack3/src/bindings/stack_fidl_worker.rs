@@ -5,7 +5,7 @@
 use std::ops::DerefMut as _;
 
 use super::{
-    devices::{CommonInfo, Devices},
+    devices::{CommonInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo},
     ethernet_worker,
     util::{IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidlWithContext as _},
     DeviceStatusNotifier, InterfaceControl as _, Lockable, LockableContext,
@@ -167,7 +167,14 @@ where
         _topological_path: String,
         device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
     ) -> Result<u64, fidl_net_stack::Error> {
-        let (client, info) = ethernet_worker::setup_ethernet(
+        let (
+            client,
+            fidl_fuchsia_hardware_ethernet_ext::EthernetInfo {
+                mtu,
+                features,
+                mac: fidl_fuchsia_hardware_ethernet_ext::MacAddress { octets: mac_octets },
+            },
+        ) = ethernet_worker::setup_ethernet(
             device.into_proxy().map_err(|_| fidl_net_stack::Error::InvalidArgs)?,
         )
         .await
@@ -181,19 +188,25 @@ where
             .await
             .map(|s| s.contains(ethernet_worker::DeviceStatus::ONLINE))
             .unwrap_or(false);
-        let mac_addr = UnicastAddr::new(Mac::new(info.mac.octets))
-            .ok_or(fidl_net_stack::Error::NotSupported)?;
+        let mac_addr =
+            UnicastAddr::new(Mac::new(mac_octets)).ok_or(fidl_net_stack::Error::NotSupported)?;
         // We do not support updating the device's mac-address, mtu, and
         // features during it's lifetime, their cached states are hence not
         // updated once initialized.
-        let comm_info = CommonInfo::new(client, mac_addr, info.mtu, info.features, true, online);
+        let comm_info = EthernetInfo {
+            common_info: CommonInfo { mtu, admin_enabled: true },
+            client,
+            mac: mac_addr,
+            features,
+            phy_up: online,
+        };
 
         let devices: &mut Devices = dispatcher.as_mut();
         let id = if online {
-            let eth_id = state.add_ethernet_device(mac_addr, info.mtu);
-            devices.add_active_device(eth_id, comm_info)
+            let eth_id = state.add_ethernet_device(mac_addr, mtu);
+            devices.add_active_device(eth_id, comm_info.into())
         } else {
-            Some(devices.add_device(comm_info))
+            Some(devices.add_device(comm_info.into()))
         };
         match id {
             Some(id) => {
@@ -321,12 +334,40 @@ where
     C::Dispatcher: AsRef<Devices> + AsMut<Devices>,
 {
     fn fidl_enable_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        self.ctx.update_device_state(id, |dev_info| dev_info.set_admin_enabled(true));
+        self.ctx.update_device_state(id, |dev_info| {
+            let admin_enabled: &mut bool = match dev_info.info_mut() {
+                DeviceSpecificInfo::Ethernet(EthernetInfo {
+                    common_info: CommonInfo { admin_enabled, mtu: _ },
+                    client: _,
+                    mac: _,
+                    features: _,
+                    phy_up: _,
+                }) => admin_enabled,
+                DeviceSpecificInfo::Loopback(LoopbackInfo {
+                    common_info: CommonInfo { admin_enabled, mtu: _ },
+                }) => admin_enabled,
+            };
+            *admin_enabled = true;
+        });
         self.ctx.enable_interface(id)
     }
 
     fn fidl_disable_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        self.ctx.update_device_state(id, |dev_info| dev_info.set_admin_enabled(false));
+        self.ctx.update_device_state(id, |dev_info| {
+            let admin_enabled: &mut bool = match dev_info.info_mut() {
+                DeviceSpecificInfo::Ethernet(EthernetInfo {
+                    common_info: CommonInfo { admin_enabled, mtu: _ },
+                    client: _,
+                    mac: _,
+                    features: _,
+                    phy_up: _,
+                }) => admin_enabled,
+                DeviceSpecificInfo::Loopback(LoopbackInfo {
+                    common_info: CommonInfo { admin_enabled, mtu: _ },
+                }) => admin_enabled,
+            };
+            *admin_enabled = false;
+        });
         self.ctx.disable_interface(id)
     }
 }
