@@ -81,6 +81,12 @@ fuchsia_component("simple_chromium_realm_test") {
   manifest = "meta/simple_chromium_realm_test.cml"
 }
 
+fuchsia_component("check_build_info_chromium_realm_test") {
+  testonly = true
+  deps = [ ":noop_test_bin" ]
+  manifest = "meta/check_build_info_chromium_realm_test.cml"
+}
+
 fuchsia_component("hanging_test") {
   testonly = true
   deps = [ ":hanging_test_bin" ]

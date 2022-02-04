@@ -1,0 +1,21 @@
+// This test marks itself as a chromium test so it is launched in the chromium realm.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/chromium_routing_test",
+    },
+    use: [
+        {
+            directory: "build-info",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/build_info",
+        },
+    ],
+    facets: {
+        "fuchsia.test": { type: "chromium" },
+    },
+}

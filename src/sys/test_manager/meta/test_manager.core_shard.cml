@@ -148,6 +148,13 @@
             to: "#test_manager",
         },
         {
+            // TODO(fxbug.dev/91934) - this is routed to test manager to support chromium tests.
+            // Once we're able, this part of the manifest should be maintained by chromium.
+            directory: "build-info",
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
             directory: "dev",
             from: "parent",
             as: "dev-mediacodec",

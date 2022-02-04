@@ -286,6 +286,10 @@
                     "/core/feedback",
                     "/core/omaha-client-service",
                     "/core/system-updater",
+
+                    // TODO(fxbug.dev/91934): Once we can define test realms out of tree
+                    // we should remove this.
+                    "/core/test_manager/chromium-tests:**",
                 ],
             },
             {

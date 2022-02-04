@@ -30,11 +30,17 @@
             from: "parent",
             to: "#chromium-tests",
         },
+
         // Test realms may offer subdirectories of config-data to test
         // components. See:
         // https://fuchsia.dev/fuchsia-src/development/components/data#product-specific_configuration_with_config_data
         {
             directory: "config-data",
+            from: "parent",
+            to: "#chromium-tests",
+        },
+        {
+            directory: "build-info",
             from: "parent",
             to: "#chromium-tests",
         },
