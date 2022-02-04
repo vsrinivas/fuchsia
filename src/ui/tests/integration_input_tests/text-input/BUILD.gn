@@ -1,0 +1,166 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# By and large copied from //src/ui/tests/integration_input_tests/factory-reset-handler.
+
+import("//build/components.gni")
+import("//build/config.gni")
+import("//build/flutter/config.gni")
+import("//build/rust/rustc_test.gni")
+
+group("text-input") {
+  testonly = true
+  deps = [
+    ":tests",
+    "text-input-flutter",
+  ]
+}
+
+fidl("test.text") {
+  sdk_category = "internal"
+  sources = [ "response_listener.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":text-input-test",
+    "text-input-flutter:text-input-flutter-component",
+
+    # The deps below are necessary on minimal product configs.
+    "//examples/intl/manager:intl_property_manager",
+    "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/flutter",
+    "//src/graphics/bin/vulkan_loader",
+    "//src/ui/a11y/bin/a11y_manager:a11y-manager",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
+    "//src/ui/bin/text:text_manager",
+  ]
+}
+
+executable("text-input-test-bin") {
+  testonly = true
+  sources = [ "text-input-test.cc" ]
+  output_name = "text-input-test"
+  deps = [
+    ":test.text",
+    "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.fonts",
+    "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.io2",
+    "//sdk/fidl/fuchsia.kernel",
+    "//sdk/fidl/fuchsia.memorypressure",
+    "//sdk/fidl/fuchsia.net.interfaces",
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.posix.socket",
+    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.session.scene",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.pointer",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.web",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fit",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//src/lib/fostr/fidl/fuchsia.ui.input",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/lib/ui/input-synthesis:test.inputsynthesis",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
+  ]
+
+  configs += [
+    # Allow passing the test even on configs where there is no modern injection.
+    "//src/lib/ui/input-synthesis:use_modern_input_injection",
+  ]
+}
+
+config_data("text-input-test-config") {
+  for_pkg = "text-input-test"
+
+  sources = [
+    # Tells input pipeline to ignore real devices; avoids logging
+    # the "Input pipeline is unable to watch the input report directory"
+    # error.
+    "data/ignore_real_devices",
+  ]
+}
+
+config_data("scenic-test-config") {
+  for_pkg = "text-input-test"
+
+  sources = [ "data/scenic_config" ]
+  outputs = [ "scenic_config" ]
+}
+
+fuchsia_component("text-input-test-component") {
+  testonly = true
+  component_name = "text_input_test"
+  manifest = "meta/text-input-test.cml"
+  deps = [ ":text-input-test-bin" ]
+}
+
+fuchsia_test_package("text-input-test") {
+  package_deps_for_infra_only = [
+    "//garnet/bin/trace_manager:trace_manager",
+    flutter_default_build_cfg.runner_dep,
+  ]
+  test_components = [ ":text-input-test-component" ]
+  deps = [
+    ":scenic-test-config",
+    ":text-input-test-config",
+    "text-input-flutter:text-input-flutter-component",
+    "//examples/fidl/rust/server:echo-server",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/lib/ui/input-synthesis:input-synthesis-component",
+    "//src/sys/stash:stash_v2",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/bin/scene_manager:scene_manager_component",
+    "//src/ui/bin/text:text_manager_comp",
+    "//src/ui/tests/integration_input_tests:scenic-for-test",
+    "//src/ui/tests/integration_input_tests:workstation-test-realm",
+    "//src/ui/tests/integration_input_tests:wrapped-text-manager",
+  ]
+  test_specs = {
+    log_settings = {
+      # Do not fail the test if a message with level ERROR is logged.  Several
+      # components will log ERROR if they miss a non-essential FIDL API in the
+      # sandbox, which would make the test fail if it weren't for this. For
+      # example, the flutter runner is noisy like this. Ideally, we should have
+      # a setup that does not have such errors at all, but adding ever more
+      # components to satisfy all FIDL dependencies expands the test graph
+      # beyond what is practical for testing.  In the future we may strike a
+      # balance such that this becomes a non-issue, and that this could be
+      # removed.
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          # Ensure the device has Vulkan.
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
+}

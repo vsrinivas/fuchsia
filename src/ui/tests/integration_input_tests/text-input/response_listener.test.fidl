@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.text;
+
+/// The content of a text field as reported by the flutter application.
+type Response = table {
+    1: text string:1024;
+};
+
+/// A test-specific scheme to gather signal from the client-under-test.
+@discoverable
+protocol ResponseListener {
+    /// Notify the test that client-under-test has received expected input.
+    Respond(struct {
+        response Response;
+    }) -> ();
+};

@@ -203,12 +203,22 @@ void DisplayInfoDelegate::GetDisplayOwnershipEvent(
   }
 }
 
+// TODO(fxbug.dev/92839): Remove this when it becomes easy to add the configs
+// in test realms via the configuration files.
+static ConfigValues MaybeForceFlatland(ConfigValues config, bool force_flatland_use) {
+  if (force_flatland_use) {
+    config.i_can_haz_flatland = true;
+    FX_LOGS(WARNING) << "i_can_haz_flatland forced to true by a flag -- for test only";
+  }
+  return config;
+}
+
 App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspect_node,
          fpromise::promise<ui_display::DisplayControllerHandles> dc_handles_promise,
-         fit::closure quit_callback)
+         fit::closure quit_callback, bool force_flatland_use)
     : executor_(async_get_default_dispatcher()),
       app_context_(std::move(app_context)),
-      config_values_(GetConfig(app_context_.get())),
+      config_values_(MaybeForceFlatland(GetConfig(app_context_.get()), force_flatland_use)),
       // TODO(fxbug.dev/40997): subsystems requiring graceful shutdown *on a loop* should register
       // themselves. It is preferable to cleanly shutdown using destructors only, if possible.
       shutdown_manager_(

@@ -1,0 +1,13 @@
+{
+    "program": {
+        "data": "data/text-input-flutter"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.scenic.Scenic",
+            "test.text.ResponseListener"
+        ]
+    }
+}

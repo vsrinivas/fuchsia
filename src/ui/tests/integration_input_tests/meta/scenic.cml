@@ -5,11 +5,13 @@
 // Borrowed from //src/virtualization/bin/vmm/device/meta/wrapped_scenic.cml
 {
     include: [
-        "//src/sys/test_manager/cmx_runner/default.shard.cml",
+        "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
-        legacy_url: "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
+        runner: "elf",
+        binary: "bin/scenic",
+        args: [ "--force-flatland-for-test" ],
     },
     capabilities: [
         {
@@ -19,6 +21,7 @@
                 "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
             ],
         },
     ],
@@ -42,6 +45,7 @@
                 "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "self",
         },

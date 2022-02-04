@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/ui/lib/escher/build_args.gni")
+import("//src/ui/scenic/lib/gfx/build_args.gni")
 
 group("integration_input_tests") {
   testonly = true
@@ -14,15 +16,27 @@ group("integration_input_tests") {
     "focus:tests",
     "media-buttons:tests",
     "pointerinjector_config:tests",
+    "text-input:tests",
     "touch:tests",
     "virtual-keyboard:tests",
   ]
 }
 
-fuchsia_component("wrapped-scenic") {
-  testonly = true
-  manifest = "meta/wrapped-scenic.cml"
-  deps = [ "//src/ui/scenic" ]
+# TODO(fxbug.dev/92780): Instantiated scenic for test, remove once bug is fixed.
+fuchsia_component("scenic-for-test") {
+  component_name = "scenic"
+  manifest = "meta/scenic.cml"
+  deps = [ "//src/ui/scenic/bin" ]
+
+  if (escher_use_runtime_glsl) {
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_resources" ]
+  } else {
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_spirv_resources" ]
+  }
+
+  if (scenic_enable_vulkan_validation) {
+    deps += [ "//src/lib/vulkan:vulkan_validation_layers" ]
+  }
 }
 
 fuchsia_component("wrapped-text-manager") {
@@ -44,8 +58,8 @@ fuchsia_component("workstation-test-realm") {
   testonly = true
   manifest = "meta/workstation-test-realm.cml"
   deps = [
+    ":scenic-for-test",
     ":wrapped-root-presenter",
-    ":wrapped-scenic",
     ":wrapped-text-manager",
     "//examples/fidl/rust/server:echo-server",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",

@@ -1,0 +1,35 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_component.gni")
+
+group("text-input-flutter") {
+  testonly = true
+  deps = [
+    ":lib",
+    ":text-input-flutter-component",
+  ]
+}
+
+dart_library("lib") {
+  package_name = "text-input-flutter"
+  sources = [ "text-input-flutter.dart" ]
+  deps = [
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
+    "//src/ui/tests/integration_input_tests/text-input:test.text",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+  ]
+}
+
+flutter_component("text-input-flutter-component") {
+  component_name = "text-input-flutter"
+  manifest = "meta/text-input-flutter.cmx"
+  main_package = "text-input-flutter"
+  main_dart = "text-input-flutter.dart"
+  deps = [ ":lib" ]
+}

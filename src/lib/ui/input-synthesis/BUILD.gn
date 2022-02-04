@@ -88,6 +88,7 @@ config("use_modern_input_injection") {
       # Injects input through `fuchsia.input.injection.InputDeviceRegistry`.
       "--cfg=use_modern_input_injection",
     ]
+    defines = [ "INPUT_USE_MODERN_INPUT_INJECTION" ]
   }
 }
 
