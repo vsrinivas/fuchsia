@@ -100,7 +100,7 @@ impl AudioOutStream {
             "Bluetooth A2DP",
             LOCAL_MONOTONIC_CLOCK_DOMAIN,
             pcm_format,
-            12.millis(),
+            11.millis(),
         )?;
 
         let svc = fuchsia_component::client::connect_to_protocol::<AudioDeviceEnumeratorMarker>()

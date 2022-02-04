@@ -30,8 +30,10 @@ rustc_library("fuchsia-audio-device-output") {
   ]
 
   test_deps = [
+    "//src/lib/async-utils",
     "//src/lib/fuchsia",
     "//src/lib/testing/fixture",
+    "//third_party/rust_crates:futures-test",
   ]
 
   sources = [

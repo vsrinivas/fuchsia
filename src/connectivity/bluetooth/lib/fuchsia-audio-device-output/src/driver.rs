@@ -13,7 +13,7 @@ use {
         select,
         stream::{FusedStream, Stream},
         task::{Context, Poll},
-        Future, StreamExt,
+        StreamExt,
     },
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc},
@@ -29,14 +29,10 @@ use crate::types::{AudioSampleFormat, Error, Result};
 pub struct AudioFrameStream {
     /// The VMO that is receiving the frames.
     frame_vmo: Arc<Mutex<frame_vmo::FrameVmo>>,
-    /// A timer to set the waiter to poll when there are no frames available.
-    timer: fasync::Timer,
-    /// The last time we received frames.
-    /// None if it hasn't started yet.
-    last_frame_time: Option<fasync::Time>,
-    /// Minimum slice of time to deliver audio data in.
-    /// This must be longer than the duration of one frame.
-    min_packet_duration: zx::Duration,
+    /// The index of the next frame we should retrieve.
+    next_frame_index: usize,
+    /// Minimum number of frames to return.
+    min_packet_frames: usize,
     /// Handle to remove the audio device processing future when this is dropped.
     control_handle: StreamConfigControlHandle,
 }
@@ -44,16 +40,10 @@ pub struct AudioFrameStream {
 impl AudioFrameStream {
     fn new(
         frame_vmo: Arc<Mutex<frame_vmo::FrameVmo>>,
-        min_packet_duration: zx::Duration,
+        min_packet_frames: usize,
         control_handle: StreamConfigControlHandle,
     ) -> AudioFrameStream {
-        AudioFrameStream {
-            frame_vmo,
-            timer: fasync::Timer::new(fasync::Time::INFINITE_PAST),
-            last_frame_time: Some(fasync::Time::now()),
-            min_packet_duration,
-            control_handle,
-        }
+        AudioFrameStream { frame_vmo, next_frame_index: 0, min_packet_frames, control_handle }
     }
 }
 
@@ -61,36 +51,19 @@ impl Stream for AudioFrameStream {
     type Item = Result<Vec<u8>>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let now = fasync::Time::now();
-        if self.last_frame_time.is_none() {
-            self.last_frame_time = Some(now);
-        }
-        let from = self.last_frame_time.take().expect("need last frame time");
-        let next_frame_time = {
+        let result = {
             let mut lock = self.frame_vmo.lock();
-            match lock.next_frame_after(from.into()) {
-                Err(Error::InvalidState) => {
-                    lock.set_start_waker(cx.waker().clone());
-                    return Poll::Pending;
-                }
-                Err(e) => return Poll::Ready(Some(Err(e))),
-                Ok(time) => time,
-            }
+            futures::ready!(lock.poll_frames(self.next_frame_index, self.min_packet_frames, cx))
         };
-        if next_frame_time + self.min_packet_duration > now.into() {
-            self.last_frame_time = Some(from);
-            self.timer = fasync::Timer::new(from + self.min_packet_duration);
-            let poll = fasync::Timer::poll(Pin::new(&mut self.timer), cx);
-            assert!(poll == Poll::Pending);
-            return Poll::Pending;
-        }
-        let res = self.frame_vmo.lock().get_frames(from.into(), now.into());
-        match res {
-            Ok((frames, missed)) => {
+
+        match result {
+            Ok((frames, latest, missed)) => {
                 if missed > 0 {
                     info!("Missed {} frames due to slow polling", missed);
                 }
-                self.last_frame_time = Some(now);
+                if frames.len() > 0 {
+                    self.next_frame_index = latest + 1;
+                }
                 Poll::Ready(Some(Ok(frames)))
             }
             Err(e) => Poll::Ready(Some(Err(e))),
@@ -113,15 +86,12 @@ impl Drop for AudioFrameStream {
 /// Open front, closed end frames from duration.
 /// This means if duration is an exact duration of a number of frames, the last
 /// frame will be considered to not be inside the duration, and will not be counted.
-pub(crate) fn frames_from_duration(frames_per_second: usize, duration: zx::Duration) -> usize {
+pub(crate) fn frames_from_duration(frames_per_second: usize, duration: fasync::Duration) -> usize {
     assert!(duration >= 0.nanos(), "frames_from_duration is not defined for negative durations");
-    if duration == 0.nanos() {
-        return 0;
-    }
     let mut frames = duration.into_seconds() * frames_per_second as i64;
     let mut frames_partial =
         ((duration.into_nanos() % 1_000_000_000) as f64 / 1e9) * frames_per_second as f64;
-    if frames_partial.ceil() == frames_partial {
+    if frames_partial.ceil() == frames_partial && duration > 0.nanos() {
         // The end of this frame is exactly on the duration, but we don't include it.
         frames_partial -= 1.0;
     }
@@ -148,9 +118,9 @@ pub struct SoftPcmOutput {
     /// Currently only support one format per output is supported.
     supported_formats: PcmSupportedFormats,
 
-    /// The minimum amount of time between audio frames output from the frame stream.
+    /// The minimum number of audio frames output from the frame stream.
     /// Used to calculate minimum audio buffer sizes.
-    min_packet_duration: zx::Duration,
+    min_packet_frames: usize,
 
     /// The currently set format, in frames per second, audio sample format, and channels.
     current_format: Option<(u32, AudioSampleFormat, u16)>,
@@ -206,6 +176,9 @@ impl SoftPcmOutput {
             ..PcmSupportedFormats::EMPTY
         };
 
+        let min_packet_frames =
+            frames_from_duration(pcm_format.frames_per_second as usize, min_packet_duration);
+
         let stream = SoftPcmOutput {
             stream_config_stream: request_stream,
             unique_id: unique_id.clone(),
@@ -213,7 +186,7 @@ impl SoftPcmOutput {
             product: product.to_string(),
             clock_domain,
             supported_formats,
-            min_packet_duration,
+            min_packet_frames,
             current_format: None,
             ring_buffer_stream: Default::default(),
             frame_vmo: Arc::new(Mutex::new(frame_vmo::FrameVmo::new()?)),
@@ -224,7 +197,7 @@ impl SoftPcmOutput {
         let rb = stream.frame_vmo.clone();
         let control = stream.stream_config_stream.control_handle().clone();
         fasync::Task::spawn(stream.process_requests()).detach();
-        Ok((client, AudioFrameStream::new(rb, min_packet_duration, control)))
+        Ok((client, AudioFrameStream::new(rb, min_packet_frames, control)))
     }
 
     async fn process_requests(mut self) {
@@ -401,8 +374,7 @@ impl SoftPcmOutput {
                     Some(x) => x.clone(),
                 };
                 // Require a minimum amount of frames for three fetches of packets.
-                let min_frames_from_duration =
-                    3 * frames_from_duration(fps as usize, self.min_packet_duration) as u32;
+                let min_frames_from_duration = 3 * self.min_packet_frames as u32;
                 let ring_buffer_frames = min_frames.max(min_frames_from_duration);
                 match self.frame_vmo.lock().set_format(
                     fps,
