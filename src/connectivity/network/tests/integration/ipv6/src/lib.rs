@@ -22,6 +22,7 @@ use net_types::{
 };
 use netstack_testing_common::{
     constants::{eth as eth_consts, ipv6 as ipv6_consts},
+    interfaces,
     realms::{constants, KnownServiceProvider, Netstack, Netstack2, NetstackVersion},
     send_ra_with_router_lifetime, setup_network, setup_network_with, sleep, write_ndp_message,
     ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
@@ -1060,15 +1061,18 @@ async fn sends_mld_reports<E: netemul::Endpoint>(name: &str) {
         setup_network::<E>(&sandbox, name).await.expect("error setting up networking");
 
     // Add an address so we join the address's solicited node multicast group.
-    let () = iface
-        .add_ip_addr(net::Subnet {
+    let _address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
+        &iface,
+        net::Subnet {
             addr: net::IpAddress::Ipv6(net::Ipv6Address {
                 addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
             }),
             prefix_len: 64,
-        })
-        .await
-        .expect("error adding IP address");
+        },
+        fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+    )
+    .await
+    .expect("add subnet address and route");
     let snmc = ipv6_consts::LINK_LOCAL_ADDR.to_solicited_node_address();
 
     let stream = fake_ep

@@ -10,7 +10,6 @@ use anyhow::Context as _;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_filter as fnetfilter;
-use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
@@ -23,8 +22,7 @@ use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
 use netfilter::FidlReturn as _;
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
 use netstack_testing_common::{
-    interfaces::wait_for_interface_up_and_address, ping as ping_helper,
-    ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    ping as ping_helper, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
 use test_case::test_case;
@@ -1070,14 +1068,6 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
             )
             .await
             .expect("router failed to join network");
-        let () = wait_for_interface_up_and_address(
-            &router_realm
-                .connect_to_protocol::<fnet_interfaces::StateMarker>()
-                .expect("failed to connect to router_realm's State watcher"),
-            router_ep.id(),
-            &router_addr,
-        )
-        .await;
 
         let host_ep = host_realm
             .join_network::<E, _>(
@@ -1087,14 +1077,6 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
             )
             .await
             .expect("host failed to join network");
-        let () = wait_for_interface_up_and_address(
-            &host_realm
-                .connect_to_protocol::<fnet_interfaces::StateMarker>()
-                .expect("failed to connect to host_realm's State watcher"),
-            host_ep.id(),
-            &host_addr,
-        )
-        .await;
 
         let stack = host_realm
             .connect_to_protocol::<fnet_stack::StackMarker>()

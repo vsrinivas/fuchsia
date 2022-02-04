@@ -5,10 +5,13 @@
 #![cfg(test)]
 
 use anyhow::Context as _;
-use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
+use net_declare::{fidl_ip, fidl_ip_v4, fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
-use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
 use netstack_testing_common::Result;
+use netstack_testing_common::{
+    interfaces,
+    realms::{Netstack2, TestSandboxExt as _},
+};
 
 async fn resolve(
     routes: &fidl_fuchsia_net_routes::StateProxy,
@@ -74,9 +77,6 @@ async fn test_resolve_route() {
     let host_stack = host
         .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
         .expect("failed to connect to netstack");
-    let host_interface_state = host
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("failed to connect to fuchsia.net.interfaces/State");
 
     let host_ep = host
         .join_network::<netemul::NetworkDevice, _>(
@@ -86,32 +86,18 @@ async fn test_resolve_route() {
         )
         .await
         .expect("host failed to join network");
-    let () = host_ep.add_ip_addr(HOST_IP_V6).await.expect("failed to add IPv6 address to host");
-    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&host_interface_state)
-            .expect("failed to get event stream from state"),
-        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(host_ep.id()),
-        |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
-            // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-            addresses
-                .iter()
-                .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                    addr == HOST_IP_V6
-                })
-                .then(|| ())
-        },
+    let _host_address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
+        &host_ep,
+        HOST_IP_V6,
+        fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
     )
     .await
-    .expect("failed to observe host IPv6");
+    .expect("add subnet address and route");
 
     // Configure a gateway.
     let gateway = sandbox
         .create_netstack_realm::<Netstack2, _>("resolve_route_gateway")
         .expect("failed to create server realm");
-
-    let gateway_interface_state = gateway
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("failed to connect to fuchsia.net.interfaces/State");
 
     let gateway_ep = gateway
         .join_network_with(
@@ -122,24 +108,13 @@ async fn test_resolve_route() {
         )
         .await
         .expect("gateway failed to join network");
-    let () =
-        gateway_ep.add_ip_addr(GATEWAY_IP_V6).await.expect("failed to add IPv6 address to gateway");
-    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&gateway_interface_state)
-            .expect("failed to get event stream from state"),
-        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(gateway_ep.id()),
-        |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
-            // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-            addresses
-                .iter()
-                .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                    addr == GATEWAY_IP_V6
-                })
-                .then(|| ())
-        },
+    let _gateway_address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
+        &gateway_ep,
+        GATEWAY_IP_V6,
+        fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
     )
     .await
-    .expect("failed to observe gateway IPv6 address assignment");
+    .expect("add subnet address and route");
 
     let routes = host
         .connect_to_protocol::<fidl_fuchsia_net_routes::StateMarker>()
@@ -258,13 +233,23 @@ async fn test_resolve_default_route_while_dhcp_is_running() {
 
     assert_eq!(resolved, Err(fuchsia_zircon::Status::ADDRESS_UNREACHABLE));
 
-    const EP_ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.3/24");
+    const EP_ADDR: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!("192.168.0.3");
+    const PREFIX_LEN: u8 = 24;
     const GATEWAY_ADDR: fidl_fuchsia_net::IpAddress = fidl_ip!("192.168.0.1");
     const GATEWAY_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:01:02:03:04:05");
     const UNSPECIFIED_IP: fidl_fuchsia_net::IpAddress = fidl_ip!("0.0.0.0");
 
     // Configure stack statically with an address and a default route while DHCP is still running.
-    let () = ep.add_ip_addr(EP_ADDR).await.expect("failed to add address");
+    let _host_address_state_provider = interfaces::add_address_wait_assigned(
+        ep.control(),
+        fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
+            addr: EP_ADDR,
+            prefix_len: PREFIX_LEN,
+        }),
+        fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+    )
+    .await
+    .expect("add address");
 
     let neigh = realm
         .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
@@ -300,7 +285,7 @@ async fn test_resolve_default_route_while_dhcp_is_running() {
             address: Some(GATEWAY_ADDR),
             mac: Some(GATEWAY_MAC),
             interface_id: Some(ep.id()),
-            source_address: Some(EP_ADDR.addr),
+            source_address: Some(fidl_fuchsia_net::IpAddress::Ipv4(EP_ADDR)),
             ..fidl_fuchsia_net_routes::Destination::EMPTY
         }))
     );

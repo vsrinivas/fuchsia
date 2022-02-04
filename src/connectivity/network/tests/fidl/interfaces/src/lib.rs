@@ -15,7 +15,7 @@ use net_declare::{fidl_if_addr, fidl_ip, fidl_subnet, std_ip};
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::Result;
 use netstack_testing_common::{
-    interfaces::add_address_wait_assigned,
+    interfaces,
     realms::{Netstack, Netstack2, NetstackVersion, TestSandboxExt as _},
 };
 use netstack_testing_macros::variants_test;
@@ -172,7 +172,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         assert_eq!(expectations.insert(id, expected), None);
         match N::VERSION {
             NetstackVersion::Netstack2 => {
-                let address_state_provider = add_address_wait_assigned(
+                let address_state_provider = interfaces::add_address_wait_assigned(
                     iface.control(),
                     if_addr,
                     fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
@@ -476,7 +476,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) {
 
     // NOTE: We only run this test with IPv4 sockets since we only care about
     // exciting the tx path, the domain is irrelevant.
-    const DEVICE_ADDRESS: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
+    const DEVICE_ADDRESS_IN_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
     // We're going to send data over a UDP socket to a multicast address so we
     // skip ARP resolution.
     const MCAST_ADDR: std::net::IpAddr = std_ip!("224.0.0.1");
@@ -503,24 +503,18 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) {
         let did_enable = dev.control().enable().await.expect("send enable").expect("enable");
         assert!(did_enable);
         let () = dev.set_link_up(true).await.expect("bring device up");
-        let () = dev.add_ip_addr(DEVICE_ADDRESS).await.expect("add address");
 
-        let id = dev.id();
-        // Wait until the interface is installed and the link state is up.
-        let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
-            fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
-            &mut if_map,
-            |if_map| {
-                let &fidl_fuchsia_net_interfaces_ext::Properties { online, .. } =
-                    if_map.get(&id)?;
-                // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-                online.then(|| ())
-            },
+        let address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
+            &dev,
+            DEVICE_ADDRESS_IN_SUBNET,
+            fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
         )
         .await
-        .expect("observe interface online");
+        .expect("add subnet address and route");
+        let () = address_state_provider.detach().expect("detach address lifetime");
+
         // Create a socket and start sending data on it nonstop.
-        let fidl_fuchsia_net_ext::IpAddress(bind_addr) = DEVICE_ADDRESS.addr.into();
+        let fidl_fuchsia_net_ext::IpAddress(bind_addr) = DEVICE_ADDRESS_IN_SUBNET.addr.into();
         let sock = fuchsia_async::net::UdpSocket::bind_in_realm(
             &realm,
             std::net::SocketAddr::new(bind_addr, 0),
@@ -561,6 +555,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) {
             }
         };
 
+        let id = dev.id();
         let drop_fut = async move {
             let () = fuchsia_async::Timer::new(fuchsia_async::Time::after(
                 fuchsia_zircon::Duration::from_millis(3),
@@ -614,7 +609,10 @@ async fn test_watcher_race() {
             .await
             .expect("install in realm");
 
+        // TODO(https://fxbug.dev/89901): Delete this once fuchsia.net.interfaces uses
+        // InterfaceAddress.
         const ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
+        const IF_ADDR: fidl_fuchsia_net::InterfaceAddress = fidl_if_addr!("192.168.0.1/24");
 
         // Bring the link up, enable the interface, and add an IP address
         // "non-sequentially" (as much as possible) to cause races in Netstack
@@ -625,7 +623,16 @@ async fn test_watcher_race() {
                 let did_enable = ep.control().enable().await.expect("send enable").expect("enable");
                 assert!(did_enable);
             },
-            ep.add_ip_addr(ADDR).map(|r| r.expect("add address")),
+            async {
+                let address_state_provider = interfaces::add_address_wait_assigned(
+                    ep.control(),
+                    IF_ADDR,
+                    fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+                )
+                .await
+                .expect("add address");
+                let () = address_state_provider.detach().expect("detach address lifetime");
+            },
         )
         .await;
 
@@ -937,26 +944,14 @@ async fn test_watcher() {
 
     // Add an address and subnet route.
     let () = assert_blocked(&mut blocking_stream).await;
-    let mut if_addr = fidl_if_addr!("192.168.0.1/16");
-    // TODO(https://fxbug.dev/89901): Replace net/Subnet with net/InterfaceAddress.
     let subnet = fidl_subnet!("192.168.0.1/16");
-    let _address_state_provider = add_address_wait_assigned(
-        dev.control(),
-        if_addr,
+    let _address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
+        &dev,
+        subnet,
         fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
     )
     .await
-    .expect("add address");
-    let () = stack
-        .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
-            subnet: fidl_fuchsia_net_ext::apply_subnet_mask(subnet),
-            device_id: dev.id(),
-            next_hop: None,
-            metric: 0,
-        })
-        .await
-        .squash_result()
-        .expect("add subnet route");
+    .expect("add subnet address and route");
     let addresses_changed = |event| match event {
         fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
             id: Some(event_id),
@@ -1020,12 +1015,9 @@ async fn test_watcher() {
 
     // Remove the added address.
     let () = assert_blocked(&mut blocking_stream).await;
-    let was_removed = dev
-        .control()
-        .remove_address(&mut if_addr)
+    let was_removed = interfaces::remove_subnet_address_and_route(&dev, subnet)
         .await
-        .expect("remove address request")
-        .expect("remove address");
+        .expect("remove subnet address and route");
     assert!(was_removed);
     assert_eq!(addresses_changed(next(&mut blocking_stream).await), ll_addrs);
     assert_eq!(addresses_changed(next(&mut stream).await), ll_addrs);

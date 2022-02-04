@@ -18,7 +18,7 @@ use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 use net_declare::{fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
-    get_component_moniker, interfaces,
+    get_component_moniker,
     realms::{
         constants, KnownServiceProvider, Netstack, Netstack2, NetstackVersion, TestSandboxExt as _,
     },
@@ -335,9 +335,12 @@ async fn remove_interface_and_address<E: netemul::Endpoint>(name: &str) {
             sandbox.create_endpoint::<E, _>(format!("ep{}", i)).await.expect("create endpoint");
         let iface = ep.into_interface_in_realm(&realm).await.expect("add device");
 
-        futures::stream::iter(addresses.iter())
-            .for_each_concurrent(None, |&addr| {
-                iface.add_ip_addr(addr).map(|r| r.expect("add address"))
+        futures::stream::iter(addresses.iter_mut())
+            .for_each_concurrent(None, |addr| {
+                stack
+                    .add_interface_address(iface.id(), addr)
+                    .map(|r| r.expect("call add_interface_address"))
+                    .map(|r| r.expect("add interface address"))
             })
             .await;
 
@@ -819,16 +822,6 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
 
     let (_net1, fake_ep1, iface1) = net_ep_iface(1, iface1_addr).await;
     let (_net2, fake_ep2, iface2) = net_ep_iface(2, iface2_addr).await;
-
-    let interface_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
-
-    let ((), ()) = futures::future::join(
-        interfaces::wait_for_interface_up_and_address(&interface_state, iface1.id(), &iface1_addr),
-        interfaces::wait_for_interface_up_and_address(&interface_state, iface2.id(), &iface2_addr),
-    )
-    .await;
 
     if let Some(config) = forwarding_config {
         let stack = realm

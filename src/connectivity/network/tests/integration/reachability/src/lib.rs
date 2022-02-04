@@ -8,7 +8,6 @@ use std::collections::HashMap;
 
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
-use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_net_stack as fnet_stack;
 use fuchsia_async as fasync;
@@ -270,15 +269,10 @@ impl<'a> NetemulInterface<'a> {
     fn id(&self) -> u64 {
         self.interface.id()
     }
-
-    pub fn control(&self) -> &fnet_interfaces_ext::admin::Control {
-        self.interface.control()
-    }
 }
 
-async fn configure_interface(
-    device_id: u64,
-    control: &fnet_interfaces_ext::admin::Control,
+async fn configure_interface<'a>(
+    iface: &'a netemul::TestInterface<'a>,
     controller: &fnet_neighbor::ControllerProxy,
     stack: &fnet_stack::StackProxy,
     InterfaceConfig {
@@ -302,38 +296,19 @@ async fn configure_interface(
             prefix_len: PREFIX_V6,
         },
     ]))
-    .for_each_concurrent(None, |subnet| {
-        let fnet::Subnet { addr, prefix_len } = subnet;
-        let interface_address = match addr {
-            fnet::IpAddress::Ipv4(addr) => {
-                fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix { addr, prefix_len })
-            }
-            fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
-        };
-        async move {
-            let address_state_provider = interfaces::add_address_wait_assigned(
-                control,
-                interface_address,
-                fnet_interfaces_admin::AddressParameters::EMPTY,
-            )
-            .await
-            .expect("failed to add address");
-            let () = address_state_provider.detach().expect("address detach");
-
-            let subnet = fidl_fuchsia_net_ext::apply_subnet_mask(subnet);
-            stack
-                .add_forwarding_entry(&mut fnet_stack::ForwardingEntry {
-                    subnet,
-                    device_id,
-                    next_hop: None,
-                    metric: 0,
-                })
-                .await
-                .expect("send add subnet route")
-                .expect("add subnet route")
-        }
+    .for_each_concurrent(None, |subnet| async move {
+        let address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
+            iface,
+            subnet,
+            fnet_interfaces_admin::AddressParameters::EMPTY,
+        )
+        .await
+        .expect("add subnet address and route");
+        let () = address_state_provider.detach().expect("address detach");
     })
     .await;
+
+    let device_id = iface.id();
 
     // Add neighbor table entries for the gateway addresses.
     let mut gateway_v4 = fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: gateway_v4.ipv4_bytes() });
@@ -474,16 +449,8 @@ async fn test_state<E: netemul::Endpoint>(
                     .await
                     .expect("failed to join network with netdevice endpoint");
 
-                let interface = NetemulInterface { _network: network, interface, fake_ep };
-                configure_interface(
-                    interface.id(),
-                    interface.control(),
-                    &controller,
-                    &stack,
-                    config,
-                )
-                .await;
-                interface
+                configure_interface(&interface, &controller, &stack, config).await;
+                NetemulInterface { _network: network, interface, fake_ep }
             }
         })
         .collect::<Vec<_>>()

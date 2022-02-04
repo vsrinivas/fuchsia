@@ -14,7 +14,7 @@ use net_types::{
     MulticastAddress as _,
 };
 use netemul::RealmUdpSocket as _;
-use netstack_testing_common::{setup_network, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT};
+use netstack_testing_common::{interfaces, setup_network, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT};
 use netstack_testing_macros::variants_test;
 use packet::ParsablePacket as _;
 use packet_formats::{
@@ -33,13 +33,14 @@ async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) {
     let (_network, realm, _netstack, iface, fake_ep) =
         setup_network::<E>(&sandbox, name).await.expect("error setting up network");
 
-    let () = iface
-        .add_ip_addr(net::Subnet {
-            addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: INTERFACE_ADDR.octets() }),
-            prefix_len: 24,
-        })
-        .await
-        .expect("error adding IP address");
+    let addr = net::Ipv4Address { addr: INTERFACE_ADDR.octets() };
+    let _address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
+        &iface,
+        net::Subnet { addr: net::IpAddress::Ipv4(addr), prefix_len: 24 },
+        fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+    )
+    .await
+    .expect("add subnet address and route");
 
     let sock = fuchsia_async::net::UdpSocket::bind_in_realm(
         &realm,

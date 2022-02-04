@@ -15,6 +15,7 @@ use futures::{
 };
 use net_declare::{fidl_ip_v4, fidl_mac, std_ip_v4};
 use netstack_testing_common::{
+    interfaces,
     realms::{constants, KnownServiceProvider, Netstack2, TestSandboxExt as _},
     Result,
 };
@@ -535,10 +536,16 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                                         (static_addrs, false)
                                     }
                                 };
-                                for addr in static_addrs.into_iter() {
-                                    let () = iface.add_ip_addr(*addr).await.unwrap_or_else(|e| {
-                                        panic!("failed to add address {:?} with error: {:?}", addr, e)
-                                    });
+                                for subnet in static_addrs.into_iter().copied() {
+                                    let address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
+                                        &iface,
+                                        subnet,
+                                        fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+                                    )
+                                        .await
+                                        .expect("add subnet address and route");
+                                    let () = address_state_provider.detach()
+                                        .expect("detach address lifetime");
                                 }
                                 (iface, server_should_bind.then(|| if_name))
                             })

@@ -15,39 +15,6 @@ use fuchsia_zircon as zx;
 use futures::future::{FusedFuture, Future, FutureExt as _, TryFutureExt as _};
 use std::collections::{HashMap, HashSet};
 
-/// Waits for an interface to come up with the specified address.
-pub async fn wait_for_interface_up_and_address(
-    state: &fidl_fuchsia_net_interfaces::StateProxy,
-    id: u64,
-    // TODO(https://fxbug.dev/89901): Migrate to `fidl_fuchsia_net::InterfaceAddress`.
-    want_addr: &fidl_fuchsia_net::Subnet,
-) {
-    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&state)
-            .expect("failed to get interfaces event stream"),
-        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
-        |fidl_fuchsia_net_interfaces_ext::Properties { online, addresses, .. }| {
-            if !online {
-                return None;
-            }
-
-            // If configuring static addresses, make sure the addresses are
-            // present (this ensures that DAD has resolved for IPv6 addresses).
-            if !addresses.iter().any(
-                |fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                    addr == want_addr
-                },
-            ) {
-                return None;
-            }
-
-            Some(())
-        },
-    )
-    .await
-    .expect("failed waiting for interface to be up and configured")
-}
-
 /// Waits for a non-loopback interface to come up with an ID not in `exclude_ids`.
 ///
 /// Useful when waiting for an interface to be discovered and brought up by a
@@ -129,6 +96,60 @@ pub async fn add_address_wait_assigned(
         .await?;
     }
     Ok(address_state_provider)
+}
+
+/// Add a subnet address and route, returning once the address' assignment state is `Assigned`.
+pub async fn add_subnet_address_and_route_wait_assigned<'a>(
+    iface: &'a netemul::TestInterface<'a>,
+    subnet: fidl_fuchsia_net::Subnet,
+    address_parameters: fidl_fuchsia_net_interfaces_admin::AddressParameters,
+) -> Result<fidl_fuchsia_net_interfaces_admin::AddressStateProviderProxy> {
+    let fidl_fuchsia_net::Subnet { addr, prefix_len } = subnet;
+    let address = match addr {
+        fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
+            fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                addr,
+                prefix_len,
+            })
+        }
+        fidl_fuchsia_net::IpAddress::Ipv6(addr) => fidl_fuchsia_net::InterfaceAddress::Ipv6(addr),
+    };
+    let (address_state_provider, ()) = futures::future::try_join(
+        add_address_wait_assigned(iface.control(), address, address_parameters)
+            .map(|res| res.context("add address")),
+        iface.add_subnet_route(subnet),
+    )
+    .await?;
+    Ok(address_state_provider)
+}
+
+/// Remove a subnet address and route, returning true if the address was removed.
+pub async fn remove_subnet_address_and_route<'a>(
+    iface: &'a netemul::TestInterface<'a>,
+    subnet: fidl_fuchsia_net::Subnet,
+) -> Result<bool> {
+    let fidl_fuchsia_net::Subnet { addr, prefix_len } = subnet;
+    let mut address = match addr {
+        fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
+            fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                addr,
+                prefix_len,
+            })
+        }
+        fidl_fuchsia_net::IpAddress::Ipv6(addr) => fidl_fuchsia_net::InterfaceAddress::Ipv6(addr),
+    };
+    let (did_remove, ()) = futures::future::try_join(
+        iface.control().remove_address(&mut address).map_err(anyhow::Error::new).and_then(|res| {
+            futures::future::ready(res.map_err(
+                |e: fidl_fuchsia_net_interfaces_admin::ControlRemoveAddressError| {
+                    anyhow::anyhow!("{:?}", e)
+                },
+            ))
+        }),
+        iface.del_subnet_route(subnet),
+    )
+    .await?;
+    Ok(did_remove)
 }
 
 /// Wait until there is an IPv4 and an IPv6 link-local address assigned to the

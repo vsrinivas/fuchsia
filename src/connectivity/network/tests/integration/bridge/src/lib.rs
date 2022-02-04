@@ -261,21 +261,19 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
                 let did_enable =
                     switch_interface_control.enable().await.expect("send enable").expect("enable");
                 assert!(did_enable);
+                let addr = fidl_fuchsia_net::Ipv4Address {
+                    addr: [
+                        192,
+                        168,
+                        254,
+                        u8::try_from(bridge_id).expect("bridge interface ID does not fit into u8"),
+                    ],
+                };
+                let prefix_len = 16;
                 let address_state_provider = interfaces::add_address_wait_assigned(
                     &switch_interface_control,
                     fidl_fuchsia_net::InterfaceAddress::Ipv4(
-                        fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                            addr: fidl_fuchsia_net::Ipv4Address {
-                                addr: [
-                                    192,
-                                    168,
-                                    254,
-                                    u8::try_from(bridge_id)
-                                        .expect("bridge interface ID does not fit into u8"),
-                                ],
-                            },
-                            prefix_len: 16,
-                        },
+                        fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len },
                     ),
                     fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                 )
@@ -287,7 +285,10 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
 
                 let () = switch_stack
                     .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
-                        subnet: fidl_subnet!("192.168.0.0/16"),
+                        subnet: fidl_fuchsia_net_ext::apply_subnet_mask(fidl_fuchsia_net::Subnet {
+                            addr: fidl_fuchsia_net::IpAddress::Ipv4(addr),
+                            prefix_len,
+                        }),
                         device_id: bridge_id.into(),
                         next_hop: None,
                         metric: 0,

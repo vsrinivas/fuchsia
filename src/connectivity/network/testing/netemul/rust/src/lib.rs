@@ -15,6 +15,7 @@ use fidl_fuchsia_hardware_network as fnetwork;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
+use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
@@ -229,7 +230,7 @@ impl TestSandbox {
 
 /// Interface configuration used by [`TestRealm::join_network`].
 pub enum InterfaceConfig {
-    /// Interface is configured with a static address.
+    /// Interface is configured with a static address and subnet route.
     StaticIp(fnet::Subnet),
     /// Interface is configured to use DHCP to obtain an address.
     Dhcp,
@@ -368,15 +369,6 @@ impl<'a> TestRealm<'a> {
             .await
             .context("failed to add endpoint")?;
         let () = interface.set_link_up(true).await.context("failed to start endpoint")?;
-        let () = match config {
-            InterfaceConfig::StaticIp(addr) => {
-                interface.add_ip_addr(*addr).await.context("failed to add static IP")?
-            }
-            InterfaceConfig::Dhcp => {
-                interface.start_dhcp().await.context("failed to start DHCP")?;
-            }
-            InterfaceConfig::None => (),
-        };
         let _did_enable: bool = interface
             .control()
             .enable()
@@ -388,6 +380,47 @@ impl<'a> TestRealm<'a> {
                 })
             })
             .context("failed to enable interface")?;
+        let () = match config {
+            InterfaceConfig::StaticIp(subnet) => {
+                let subnet = *subnet;
+                let fnet::Subnet { addr, prefix_len } = subnet;
+                let mut addr = match addr {
+                    fnet::IpAddress::Ipv4(addr) => {
+                        fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
+                            addr,
+                            prefix_len,
+                        })
+                    }
+                    fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
+                };
+                let (address_state_provider, server) = fidl::endpoints::create_proxy::<
+                    fnet_interfaces_admin::AddressStateProviderMarker,
+                >()
+                .context("create proxy")?;
+                let () = address_state_provider.detach().context("detach address lifetime")?;
+                let () = interface
+                    .control()
+                    .add_address(&mut addr, fnet_interfaces_admin::AddressParameters::EMPTY, server)
+                    .context("Control.AddAddress FIDL error")?;
+
+                let state_stream =
+                    fnet_interfaces_ext::admin::assignment_state_stream(address_state_provider);
+                futures::pin_mut!(state_stream);
+                let ((), ()) = futures::future::try_join(
+                    fnet_interfaces_ext::admin::wait_assignment_state(
+                        &mut state_stream,
+                        fnet_interfaces_admin::AddressAssignmentState::Assigned,
+                    )
+                    .map(|res| res.context("assignment state")),
+                    interface.add_subnet_route(subnet).map(|res| res.context("add subnet route")),
+                )
+                .await?;
+            }
+            InterfaceConfig::Dhcp => {
+                interface.start_dhcp().await.context("failed to start DHCP")?;
+            }
+            InterfaceConfig::None => (),
+        };
 
         // Wait for Netstack to observe interface up so callers can safely
         // assume the state of the world on return.
@@ -980,18 +1013,30 @@ impl<'a> TestInterface<'a> {
         &self.control
     }
 
-    /// Add interface address.
-    ///
-    /// Equivalent to `stack.add_interface_address(test_interface.id(), &mut addr)`.
-    pub async fn add_ip_addr(&self, mut addr: fnet::Subnet) -> Result<()> {
-        self.stack.add_interface_address(self.id, &mut addr).await.squash_result().with_context(
-            || {
-                format!(
-                    "stack.add_interface_address({}, {:?}) for endpoint {} failed",
-                    self.id, addr, self.endpoint.name
-                )
-            },
-        )
+    /// Add a direct route from the interface to the given subnet.
+    pub async fn add_subnet_route(&self, subnet: fnet::Subnet) -> Result<()> {
+        let subnet = fnet_ext::apply_subnet_mask(subnet);
+        let mut entry =
+            fnet_stack::ForwardingEntry { subnet, device_id: self.id, next_hop: None, metric: 0 };
+        self.stack.add_forwarding_entry(&mut entry).await.squash_result().with_context(|| {
+            format!(
+                "stack.add_forwarding_entry({:?}) for endpoint {} failed",
+                entry, self.endpoint.name
+            )
+        })
+    }
+
+    /// Delete a direct route from the interface to the given subnet.
+    pub async fn del_subnet_route(&self, subnet: fnet::Subnet) -> Result<()> {
+        let subnet = fnet_ext::apply_subnet_mask(subnet);
+        let mut entry =
+            fnet_stack::ForwardingEntry { subnet, device_id: self.id, next_hop: None, metric: 0 };
+        self.stack.del_forwarding_entry(&mut entry).await.squash_result().with_context(|| {
+            format!(
+                "stack.del_forwarding_entry({:?}) for endpoint {} failed",
+                entry, self.endpoint.name
+            )
+        })
     }
 
     /// Gets the interface's properties.
