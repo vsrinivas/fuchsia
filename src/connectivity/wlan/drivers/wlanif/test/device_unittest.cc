@@ -27,6 +27,7 @@
 #include <gtest/gtest.h>
 
 #include "fuchsia/hardware/wlan/fullmac/c/banjo.h"
+#include "fuchsia/wlan/common/c/banjo.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 #include "test_bss.h"
 
@@ -168,6 +169,12 @@ wlan_fullmac_impl_protocol_ops_t EmptyProtoOps() {
       // Each instance is required to provide its own .start() method to store the MLME channels.
       // SME Channel will be provided to wlanif-impl-driver when it calls back into its parent.
       .query = [](void* ctx, wlan_fullmac_query_info_t* info) { memset(info, 0, sizeof(*info)); },
+      .query_mac_sublayer_support =
+          [](void* ctx, mac_sublayer_support_t* resp) { memset(resp, 0, sizeof(*resp)); },
+      .query_security_support = [](void* ctx,
+                                   security_support_t* resp) { memset(resp, 0, sizeof(*resp)); },
+      .query_spectrum_management_support =
+          [](void* ctx, spectrum_management_support_t* resp) { memset(resp, 0, sizeof(*resp)); },
       .start_scan = [](void* ctx, const wlan_fullmac_scan_req_t* req) {},
       .join_req = [](void* ctx, const wlan_fullmac_join_req_t* req) {},
       .auth_req = [](void* ctx, const wlan_fullmac_auth_req_t* req) {},
@@ -641,7 +648,7 @@ struct EthernetTestFixture : public DeviceTestFixture {
   ethernet_ifc_protocol_t eth_proto_ = {.ops = &eth_ops_, .ctx = this};
   wlan_mac_role_t role_ = WLAN_MAC_ROLE_CLIENT;
   uint32_t ethernet_status_{0};
-  uint32_t driver_features_{0};
+  data_plane_type_t data_plane_type_ = DATA_PLANE_TYPE_ETHERNET_DEVICE;
   std::optional<bool> link_state_;
   std::function<void(const wlan_fullmac_start_req_t*)> start_req_cb_;
 
@@ -651,8 +658,12 @@ struct EthernetTestFixture : public DeviceTestFixture {
 #define ETH_DEV(c) static_cast<EthernetTestFixture*>(c)
 static void hook_query(void* ctx, wlan_fullmac_query_info_t* info) {
   info->role = ETH_DEV(ctx)->role_;
-  info->driver_features = ETH_DEV(ctx)->driver_features_;
 }
+
+static void hook_query_mac_sublayer_support(void* ctx, mac_sublayer_support_t* out_resp) {
+  out_resp->data_plane.data_plane_type = ETH_DEV(ctx)->data_plane_type_;
+}
+
 static void hook_eth_status(void* ctx, uint32_t status) { ETH_DEV(ctx)->ethernet_status_ = status; }
 static void hook_eth_recv(void* ctx, const uint8_t* buffer, size_t data_size, uint32_t flags) {
   ETH_DEV(ctx)->eth_recv_called_ = true;
@@ -668,6 +679,7 @@ void EthernetTestFixture::InitDeviceWithRole(wlan_mac_role_t role) {
   role_ = role;
   proto_ops_.start = hook_start;
   proto_ops_.query = hook_query;
+  proto_ops_.query_mac_sublayer_support = hook_query_mac_sublayer_support;
   proto_ops_.start_req = hook_start_req;
   eth_proto_.ops->status = hook_eth_status;
   eth_proto_.ops->recv = hook_eth_recv;
@@ -734,8 +746,8 @@ TEST_F(EthernetTestFixture, EthernetDataPlane) {
             ZX_OK);
 }
 
-TEST_F(EthernetTestFixture, SeparateDataPlane) {
-  driver_features_ = WLAN_INFO_DRIVER_FEATURE_SEPARATE_DATA_PLANE;
+TEST_F(EthernetTestFixture, GndDataPlane) {
+  data_plane_type_ = DATA_PLANE_TYPE_GENERIC_NETWORK_DEVICE;
   InitDeviceWithRole(WLAN_MAC_ROLE_CLIENT);
 
   // The device added should NOT support the ethernet impl protocol

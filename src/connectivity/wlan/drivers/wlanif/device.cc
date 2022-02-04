@@ -21,6 +21,7 @@
 #include "convert.h"
 #include "debug.h"
 #include "driver.h"
+#include "fuchsia/wlan/common/c/banjo.h"
 
 namespace wlanif {
 
@@ -147,7 +148,9 @@ zx_status_t Device::AddDevice() {
   args.name = "wlanif";
   args.ctx = this;
   args.ops = &device_ops;
-  if ((query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SEPARATE_DATA_PLANE) == 0) {
+  mac_sublayer_support mac_sublayer_support;
+  wlan_fullmac_impl_query_mac_sublayer_support(&wlan_fullmac_impl_, &mac_sublayer_support);
+  if (mac_sublayer_support.data_plane.data_plane_type == DATA_PLANE_TYPE_ETHERNET_DEVICE) {
     // This is an ethernet driver, add the custom protocol to the device
     args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
     args.proto_ops = &ethernet_impl_ops;
@@ -173,6 +176,9 @@ zx_status_t Device::Bind() {
   }
   VERIFY_PROTO_OP(start);
   VERIFY_PROTO_OP(query);
+  VERIFY_PROTO_OP(query_mac_sublayer_support);
+  VERIFY_PROTO_OP(query_security_support);
+  VERIFY_PROTO_OP(query_spectrum_management_support);
   VERIFY_PROTO_OP(start_scan);
   VERIFY_PROTO_OP(join_req);
   VERIFY_PROTO_OP(auth_req);
@@ -201,10 +207,13 @@ zx_status_t Device::Bind() {
 
   // Query the device.
   wlan_fullmac_impl_query(&wlan_fullmac_impl_, &query_info_);
+
+  mac_sublayer_support_t mac_sublayer_support;
+  wlan_fullmac_impl_query_mac_sublayer_support(&wlan_fullmac_impl_, &mac_sublayer_support);
   if (wlan_fullmac_impl_.ops->data_queue_tx &&
-      (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SEPARATE_DATA_PLANE) != 0) {
+      mac_sublayer_support.data_plane.data_plane_type == DATA_PLANE_TYPE_GENERIC_NETWORK_DEVICE) {
     lwarn(
-        "driver implements data_queue_tx while indicating a separate data plane, data_queue_tx "
+        "driver implements data_queue_tx while indicating a GND data plane, data_queue_tx "
         "will not be called.");
   }
 

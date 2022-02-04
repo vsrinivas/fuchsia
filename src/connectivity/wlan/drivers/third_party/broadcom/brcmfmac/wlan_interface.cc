@@ -48,6 +48,18 @@ wlan_fullmac_impl_protocol_ops_t wlan_interface_proto_ops = {
         [](void* ctx, wlan_fullmac_query_info_t* info) {
           return static_cast<WlanInterface*>(ctx)->Query(info);
         },
+    .query_mac_sublayer_support =
+        [](void* ctx, mac_sublayer_support_t* resp) {
+          return static_cast<WlanInterface*>(ctx)->QueryMacSublayerSupport(resp);
+        },
+    .query_security_support =
+        [](void* ctx, security_support_t* resp) {
+          return static_cast<WlanInterface*>(ctx)->QuerySecuritySupport(resp);
+        },
+    .query_spectrum_management_support =
+        [](void* ctx, spectrum_management_support_t* resp) {
+          return static_cast<WlanInterface*>(ctx)->QuerySpectrumManagementSupport(resp);
+        },
     .start_scan =
         [](void* ctx, const wlan_fullmac_scan_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->StartScan(req);
@@ -261,6 +273,27 @@ void WlanInterface::Query(wlan_fullmac_query_info_t* info) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_query(wdev_->netdev, info);
+  }
+}
+
+void WlanInterface::QueryMacSublayerSupport(mac_sublayer_support_t* resp) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_query_mac_sublayer_support(wdev_->netdev, resp);
+  }
+}
+
+void WlanInterface::QuerySecuritySupport(security_support_t* resp) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_query_security_support(wdev_->netdev, resp);
+  }
+}
+
+void WlanInterface::QuerySpectrumManagementSupport(spectrum_management_support_t* resp) {
+  std::shared_lock<std::shared_mutex> guard(lock_);
+  if (wdev_ != nullptr) {
+    brcmf_if_query_spectrum_management_support(wdev_->netdev, resp);
   }
 }
 

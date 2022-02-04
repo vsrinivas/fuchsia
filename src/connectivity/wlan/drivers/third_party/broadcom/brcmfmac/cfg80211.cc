@@ -4168,16 +4168,18 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
   info->role = wdev->iftype;
 
   // features
-  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_DFS)) {
-    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_DFS;
-  }
-
-  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_EXTSAE)) {
+  security_support_t security_support;
+  brcmf_if_query_security_support(ndev, &security_support);
+  if (security_support.sae.supported && security_support.sae.handler == SAE_HANDLER_SME) {
     info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH;
   }
-
-  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP)) {
+  if (security_support.mfp.supported) {
     info->driver_features |= WLAN_INFO_DRIVER_FEATURE_MFP;
+  }
+  spectrum_management_support_t spectrum_management_support;
+  brcmf_if_query_spectrum_management_support(ndev, &spectrum_management_support);
+  if (spectrum_management_support.dfs.supported) {
+    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_DFS;
   }
 
   // bands
@@ -4340,6 +4342,37 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
 
 fail_pbuf:
   free(pbuf);
+}
+
+void brcmf_if_query_mac_sublayer_support(net_device* ndev, mac_sublayer_support_t* resp) {
+  BRCMF_IFDBG(WLANIF, ndev, "Query MAC sublayer feature support request received from SME.");
+
+  memset(resp, 0, sizeof(*resp));
+  resp->data_plane.data_plane_type = DATA_PLANE_TYPE_ETHERNET_DEVICE;
+}
+
+void brcmf_if_query_security_support(net_device* ndev, security_support_t* resp) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  BRCMF_IFDBG(WLANIF, ndev, "Query security feature support request received from SME.");
+
+  memset(resp, 0, sizeof(*resp));
+
+  resp->sae.supported = brcmf_feat_is_enabled(ifp, BRCMF_FEAT_EXTSAE);
+  if (resp->sae.supported) {
+    resp->sae.handler = SAE_HANDLER_SME;
+  }
+
+  resp->mfp.supported = brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP);
+}
+
+void brcmf_if_query_spectrum_management_support(net_device* ndev,
+                                                spectrum_management_support_t* resp) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  BRCMF_IFDBG(WLANIF, ndev, "Query spectrum management support request received from SME.");
+
+  memset(resp, 0, sizeof(*resp));
+
+  resp->dfs.supported = brcmf_feat_is_enabled(ifp, BRCMF_FEAT_DFS);
 }
 
 namespace {

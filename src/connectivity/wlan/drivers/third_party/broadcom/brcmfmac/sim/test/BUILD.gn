@@ -429,6 +429,24 @@ executable("ifc_query_test") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
+executable("ifc_query_feature_support_test") {
+  output_name = "ifc_query_feature_support_test"
+  testonly = true
+  sources = [ "ifc_query_feature_support_test.cc" ]
+  deps = [
+    ":sim_test",
+    "//sdk/banjo/fuchsia.hardware.wlan.fullmac:fuchsia.hardware.wlan.fullmac_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.phyinfo:fuchsia.hardware.wlan.phyinfo_banjo_cpp",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_banjo_c",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/public",
+  ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
 executable("iovar_test") {
   output_name = "iovar_test"
   testonly = true
@@ -687,6 +705,7 @@ _tests = [
   "escan_params_test",
   "firmware_config_test",
   "ifc_query_test",
+  "ifc_query_feature_support_test",
   "iovar_test",
   "lifecycle_test",
   "mfg_test",

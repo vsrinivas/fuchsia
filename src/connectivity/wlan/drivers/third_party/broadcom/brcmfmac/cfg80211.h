@@ -25,6 +25,7 @@
 
 #include <atomic>
 
+#include "fuchsia/wlan/common/c/banjo.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 /* for brcmu_d11inf */
@@ -544,6 +545,10 @@ zx_status_t brcmf_if_start(net_device* ndev, const wlan_fullmac_impl_ifc_protoco
                            zx_handle_t* out_mlme_channel);
 void brcmf_if_stop(net_device* ndev);
 void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info);
+void brcmf_if_query_mac_sublayer_support(net_device* ndev, mac_sublayer_support_t* resp);
+void brcmf_if_query_security_support(net_device* ndev, security_support_t* resp);
+void brcmf_if_query_spectrum_management_support(net_device* ndev,
+                                                spectrum_management_support_t* resp);
 void brcmf_if_start_scan(net_device* ndev, const wlan_fullmac_scan_req_t* req);
 void brcmf_if_connect_req(net_device* ndev, const wlan_fullmac_connect_req_t* req);
 void brcmf_if_join_req(net_device* ndev, const wlan_fullmac_join_req_t* req);

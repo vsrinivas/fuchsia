@@ -239,6 +239,21 @@ void SimInterface::Query(wlan_fullmac_query_info_t* out_info) {
   if_impl_ops_->query(if_impl_ctx_, out_info);
 }
 
+void SimInterface::QueryMacSublayerSupport(mac_sublayer_support_t* out_resp) {
+  ZX_ASSERT(if_impl_ops_);
+  if_impl_ops_->query_mac_sublayer_support(if_impl_ctx_, out_resp);
+}
+
+void SimInterface::QuerySecuritySupport(security_support_t* out_resp) {
+  ZX_ASSERT(if_impl_ops_);
+  if_impl_ops_->query_security_support(if_impl_ctx_, out_resp);
+}
+
+void SimInterface::QuerySpectrumManagementSupport(spectrum_management_support_t* out_resp) {
+  ZX_ASSERT(if_impl_ops_);
+  if_impl_ops_->query_spectrum_management_support(if_impl_ctx_, out_resp);
+}
+
 void SimInterface::GetMacAddr(common::MacAddr* out_macaddr) {
   wlan_fullmac_query_info_t info;
   Query(&info);

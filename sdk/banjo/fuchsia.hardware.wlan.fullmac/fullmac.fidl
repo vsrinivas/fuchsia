@@ -785,6 +785,15 @@ protocol WlanFullmacImpl {
     Query() -> (struct {
         info WlanFullmacQueryInfo;
     });
+    QueryMacSublayerSupport() -> (struct {
+        resp fuchsia.wlan.common.MacSublayerSupport;
+    });
+    QuerySecuritySupport() -> (struct {
+        resp fuchsia.wlan.common.SecuritySupport;
+    });
+    QuerySpectrumManagementSupport() -> (struct {
+        resp fuchsia.wlan.common.SpectrumManagementSupport;
+    });
 
     // MLME operations
     StartScan(struct {

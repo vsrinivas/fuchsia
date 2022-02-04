@@ -115,6 +115,15 @@ class SimInterface {
   // Query an interface
   void Query(wlan_fullmac_query_info_t* out_info);
 
+  // Query for MAC sublayer feature support on an interface
+  void QueryMacSublayerSupport(mac_sublayer_support_t* out_resp);
+
+  // Query for security feature support on an interface
+  void QuerySecuritySupport(security_support_t* out_resp);
+
+  // Query for spectrum management support on an interface
+  void QuerySpectrumManagementSupport(spectrum_management_support_t* out_resp);
+
   // Stop an interface
   void StopInterface();
 

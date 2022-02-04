@@ -13,5 +13,8 @@ fidl("fuchsia.wlan.common") {
 
   sdk_category = "partner"
 
-  sources = [ "wlan_common.fidl" ]
+  sources = [
+    "driver_features.fidl",
+    "wlan_common.fidl",
+  ]
 }

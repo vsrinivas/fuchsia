@@ -9,6 +9,13 @@ enum/member fuchsia.wlan.common/ChannelBandwidth.CBW40BELOW 2
 enum/member fuchsia.wlan.common/ChannelBandwidth.CBW80 3
 enum/member fuchsia.wlan.common/ChannelBandwidth.CBW80P80 5
 strict enum fuchsia.wlan.common/ChannelBandwidth uint32
+struct/member fuchsia.wlan.common/DataPlaneExtension.data_plane_type fuchsia.wlan.common/DataPlaneType
+struct fuchsia.wlan.common/DataPlaneExtension
+enum/member fuchsia.wlan.common/DataPlaneType.ETHERNET_DEVICE 1
+enum/member fuchsia.wlan.common/DataPlaneType.GENERIC_NETWORK_DEVICE 2
+strict enum fuchsia.wlan.common/DataPlaneType uint8
+struct/member fuchsia.wlan.common/DfsFeature.supported bool
+struct fuchsia.wlan.common/DfsFeature
 enum/member fuchsia.wlan.common/DriverFeature.DFS 4
 enum/member fuchsia.wlan.common/DriverFeature.MFP 8
 enum/member fuchsia.wlan.common/DriverFeature.PROBE_RESP_OFFLOAD 5
@@ -24,6 +31,11 @@ enum/member fuchsia.wlan.common/GuardInterval.LONG_GI 1
 enum/member fuchsia.wlan.common/GuardInterval.SHORT_GI 2
 strict enum fuchsia.wlan.common/GuardInterval uint8
 const fuchsia.wlan.common/MAX_SUPPORTED_MAC_ROLES uint8 16
+struct/member fuchsia.wlan.common/MacSublayerSupport.data_plane fuchsia.wlan.common/DataPlaneExtension
+struct/member fuchsia.wlan.common/MacSublayerSupport.rate_selection_offload fuchsia.wlan.common/RateSelectionOffloadExtension
+struct fuchsia.wlan.common/MacSublayerSupport
+struct/member fuchsia.wlan.common/MfpFeature.supported bool
+struct fuchsia.wlan.common/MfpFeature
 enum/member fuchsia.wlan.common/PHY.ERP 2
 enum/member fuchsia.wlan.common/PHY.HEW 5
 enum/member fuchsia.wlan.common/PHY.HR 1
@@ -34,15 +46,28 @@ enum/member fuchsia.wlan.common/PowerSaveType.FAST_PS_MODE 1
 enum/member fuchsia.wlan.common/PowerSaveType.PS_MODE_OFF 0
 enum/member fuchsia.wlan.common/PowerSaveType.PS_POLL_MODE 2
 strict enum fuchsia.wlan.common/PowerSaveType uint32
+struct/member fuchsia.wlan.common/RateSelectionOffloadExtension.supported bool
+struct fuchsia.wlan.common/RateSelectionOffloadExtension
 enum/member fuchsia.wlan.common/RequestStatus.ACKNOWLEDGED 0
 enum/member fuchsia.wlan.common/RequestStatus.REJECTED_ALREADY_IN_USE 3
 enum/member fuchsia.wlan.common/RequestStatus.REJECTED_DUPLICATE_REQUEST 4
 enum/member fuchsia.wlan.common/RequestStatus.REJECTED_INCOMPATIBLE_MODE 2
 enum/member fuchsia.wlan.common/RequestStatus.REJECTED_NOT_SUPPORTED 1
 strict enum fuchsia.wlan.common/RequestStatus uint32
+struct/member fuchsia.wlan.common/SaeFeature.handler fuchsia.wlan.common/SaeHandler
+struct/member fuchsia.wlan.common/SaeFeature.supported bool
+struct fuchsia.wlan.common/SaeFeature
+enum/member fuchsia.wlan.common/SaeHandler.DRIVER 1
+enum/member fuchsia.wlan.common/SaeHandler.SME 2
+strict enum fuchsia.wlan.common/SaeHandler uint8
 enum/member fuchsia.wlan.common/ScanType.ACTIVE 1
 enum/member fuchsia.wlan.common/ScanType.PASSIVE 2
 strict enum fuchsia.wlan.common/ScanType uint32
+struct/member fuchsia.wlan.common/SecuritySupport.mfp fuchsia.wlan.common/MfpFeature
+struct/member fuchsia.wlan.common/SecuritySupport.sae fuchsia.wlan.common/SaeFeature
+struct fuchsia.wlan.common/SecuritySupport
+struct/member fuchsia.wlan.common/SpectrumManagementSupport.dfs fuchsia.wlan.common/DfsFeature
+struct fuchsia.wlan.common/SpectrumManagementSupport
 struct/member fuchsia.wlan.common/WlanChannel.cbw fuchsia.wlan.common/ChannelBandwidth
 struct/member fuchsia.wlan.common/WlanChannel.primary uint8
 struct/member fuchsia.wlan.common/WlanChannel.secondary80 uint8

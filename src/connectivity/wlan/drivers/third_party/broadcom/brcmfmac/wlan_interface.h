@@ -59,6 +59,9 @@ class WlanInterface {
   zx_status_t Start(const wlan_fullmac_impl_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel);
   void Stop();
   void Query(wlan_fullmac_query_info_t* info);
+  void QueryMacSublayerSupport(mac_sublayer_support_t* resp);
+  void QuerySecuritySupport(security_support_t* resp);
+  void QuerySpectrumManagementSupport(spectrum_management_support_t* resp);
   void StartScan(const wlan_fullmac_scan_req_t* req);
   void ConnectReq(const wlan_fullmac_connect_req_t* req);
   void JoinReq(const wlan_fullmac_join_req_t* req);
