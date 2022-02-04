@@ -33,7 +33,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
  public:
   // If we're going to experience device level failures that result in data loss
   // or corruption, let's be very sure.
-  static constexpr size_t kNandReadRetries = 8;
+  static constexpr size_t kNandReadRetries = 100;
 
   explicit NandDevice(zx_device_t* parent) : DeviceType(parent), raw_nand_(parent) {}
 
