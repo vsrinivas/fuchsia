@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Error};
+use anyhow::{Context as _, Error};
 use once_cell::sync::OnceCell;
 use serde::Serialize;
 
@@ -130,7 +130,6 @@ impl From<(fidl_fuchsia_net_interfaces_ext::Properties, Option<fidl_fuchsia_net:
 /// Network stack operations.
 #[derive(Debug, Default)]
 pub struct NetstackFacade {
-    net_stack: OnceCell<fidl_fuchsia_net_stack::StackProxy>,
     interfaces_state: OnceCell<fidl_fuchsia_net_interfaces::StateProxy>,
     debug_interfaces: OnceCell<fidl_fuchsia_net_debug::InterfacesProxy>,
 }
@@ -140,17 +139,8 @@ const NETSTACK_EXPOSED_DIR: &str =
     "/hub-v2/children/core/children/network/children/netstack/exec/expose";
 
 impl NetstackFacade {
-    fn get_net_stack(&self) -> Result<&fidl_fuchsia_net_stack::StackProxy, Error> {
-        let Self { net_stack, interfaces_state: _, debug_interfaces: _ } = self;
-        net_stack.get_or_try_init(|| {
-            fuchsia_component::client::connect_to_protocol_at::<fidl_fuchsia_net_stack::StackMarker>(
-                NETSTACK_EXPOSED_DIR,
-            )
-        })
-    }
-
     fn get_interfaces_state(&self) -> Result<&fidl_fuchsia_net_interfaces::StateProxy, Error> {
-        let Self { net_stack: _, interfaces_state, debug_interfaces: _ } = self;
+        let Self { interfaces_state, debug_interfaces: _ } = self;
         interfaces_state.get_or_try_init(|| {
             fuchsia_component::client::connect_to_protocol_at::<
                 fidl_fuchsia_net_interfaces::StateMarker,
@@ -159,7 +149,7 @@ impl NetstackFacade {
     }
 
     fn get_debug_interfaces(&self) -> Result<&fidl_fuchsia_net_debug::InterfacesProxy, Error> {
-        let Self { net_stack: _, interfaces_state: _, debug_interfaces } = self;
+        let Self { interfaces_state: _, debug_interfaces } = self;
         debug_interfaces.get_or_try_init(|| {
             fuchsia_component::client::connect_to_protocol_at::<
                 fidl_fuchsia_net_debug::InterfacesMarker,
@@ -167,18 +157,46 @@ impl NetstackFacade {
         })
     }
 
+    fn get_control(
+        &self,
+        id: u64,
+    ) -> Result<fidl_fuchsia_net_interfaces_ext::admin::Control, Error> {
+        let debug_interfaces = self.get_debug_interfaces()?;
+        let (control, server_end) =
+            fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
+                .context("create admin control endpoints")?;
+        let () = debug_interfaces.get_admin(id, server_end).context("send get admin request")?;
+        Ok(control)
+    }
+
     pub async fn enable_interface(&self, id: u64) -> Result<(), Error> {
-        let net_stack = self.get_net_stack()?;
-        net_stack.enable_interface(id).await?.map_err(|err: fidl_fuchsia_net_stack::Error| {
-            anyhow!("failed to enable interface {}: {:?}", id, err)
-        })
+        let control = self.get_control(id)?;
+        let _did_enable: bool = control
+            .enable()
+            .await
+            .map_err(anyhow::Error::new)
+            .and_then(|res| {
+                res.map_err(|e: fidl_fuchsia_net_interfaces_admin::ControlEnableError| {
+                    anyhow::anyhow!("{:?}", e)
+                })
+            })
+            .with_context(|| format!("failed to enable interface {}", id))?;
+        Ok(())
     }
 
     pub async fn disable_interface(&self, id: u64) -> Result<(), Error> {
-        let net_stack = self.get_net_stack()?;
-        net_stack.disable_interface(id).await?.map_err(|err: fidl_fuchsia_net_stack::Error| {
-            anyhow!("failed to disable interface {}: {:?}", id, err)
-        })
+        let control = self.get_control(id)?;
+        let _did_disable: bool = control
+            .disable()
+            .await
+            .map_err(anyhow::Error::new)
+            .and_then(|res| {
+                res.map_err(|e: fidl_fuchsia_net_interfaces_admin::ControlDisableError| {
+                    anyhow::anyhow!("{:?}", e)
+                })
+            })
+            .with_context(|| format!("failed to disable interface {}", id))?;
+        Ok(())
     }
 
     pub async fn list_interfaces(&self) -> Result<Vec<Properties>, Error> {
