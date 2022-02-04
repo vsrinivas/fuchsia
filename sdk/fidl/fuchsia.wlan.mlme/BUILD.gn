@@ -13,7 +13,7 @@ fidl("fuchsia.wlan.mlme") {
     "vector-bounds-not-specified",
   ]
 
-  sdk_category = "internal"
+  sdk_category = "partner"
 
   sources = [
     "wlan_mlme.fidl",

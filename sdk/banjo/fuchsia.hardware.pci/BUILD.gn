@@ -5,6 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.pci") {
+  sdk_category = "partner"
   sources = [ "pci.fidl" ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.syscalls.pci",

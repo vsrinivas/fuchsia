@@ -5,6 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("ddk.hw.wlan.ieee80211") {
+  sdk_category = "partner"
   sources = [ "ieee80211.fidl" ]
   public_deps = []
   excluded_checks = [ "wrong-prefix-for-platform-source-library" ]

@@ -1,10 +1,3 @@
-const fuchsia.hardware.wlan.associnfo/WLAN_CHANNEL_BANDWIDTH__160 uint8 4
-const fuchsia.hardware.wlan.associnfo/WLAN_CHANNEL_BANDWIDTH__20 uint8 0
-const fuchsia.hardware.wlan.associnfo/WLAN_CHANNEL_BANDWIDTH__40 uint8 1
-const fuchsia.hardware.wlan.associnfo/WLAN_CHANNEL_BANDWIDTH__40ABOVE uint8 1
-const fuchsia.hardware.wlan.associnfo/WLAN_CHANNEL_BANDWIDTH__40BELOW uint8 2
-const fuchsia.hardware.wlan.associnfo/WLAN_CHANNEL_BANDWIDTH__80 uint8 3
-const fuchsia.hardware.wlan.associnfo/WLAN_CHANNEL_BANDWIDTH__80P80 uint8 5
 const fuchsia.hardware.wlan.associnfo/WLAN_GI__1600NS uint8 32
 const fuchsia.hardware.wlan.associnfo/WLAN_GI__200NS uint8 4
 const fuchsia.hardware.wlan.associnfo/WLAN_GI__3200NS uint8 16
@@ -20,8 +13,8 @@ enum/member fuchsia.hardware.wlan.associnfo/WlanAc.VOICE 4
 strict enum fuchsia.hardware.wlan.associnfo/WlanAc uint32
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.aid uint16
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.bssid array<uint8,6>
-struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.cap_info uint16
-struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.chan fuchsia.hardware.wlan.associnfo/WlanChannel
+struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.capability_info uint16
+struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.channel fuchsia.wlan.common/WlanChannel
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.has_ht_cap bool
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.has_ht_op bool
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.has_vht_cap bool
@@ -37,27 +30,6 @@ struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.vht_cap ddk.hw.wlan.i
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.vht_op fuchsia.hardware.wlan.associnfo/WlanVhtOp
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.wmm_params fuchsia.hardware.wlan.associnfo/WlanWmmParams
 struct fuchsia.hardware.wlan.associnfo/WlanAssocCtx
-struct/member fuchsia.hardware.wlan.associnfo/WlanBssConfig.bss_type fuchsia.hardware.wlan.associnfo/WlanBssType
-struct/member fuchsia.hardware.wlan.associnfo/WlanBssConfig.bssid array<uint8,6>
-struct/member fuchsia.hardware.wlan.associnfo/WlanBssConfig.remote bool
-struct fuchsia.hardware.wlan.associnfo/WlanBssConfig
-enum/member fuchsia.hardware.wlan.associnfo/WlanBssType.ANY_BSS 5
-enum/member fuchsia.hardware.wlan.associnfo/WlanBssType.IBSS 2
-enum/member fuchsia.hardware.wlan.associnfo/WlanBssType.INFRASTRUCTURE 1
-enum/member fuchsia.hardware.wlan.associnfo/WlanBssType.MESH 4
-enum/member fuchsia.hardware.wlan.associnfo/WlanBssType.PERSONAL 3
-strict enum fuchsia.hardware.wlan.associnfo/WlanBssType uint8
-struct/member fuchsia.hardware.wlan.associnfo/WlanChannel.cbw fuchsia.hardware.wlan.associnfo/WlanChannelBandwidth
-struct/member fuchsia.hardware.wlan.associnfo/WlanChannel.primary uint8
-struct/member fuchsia.hardware.wlan.associnfo/WlanChannel.secondary80 uint8
-struct fuchsia.hardware.wlan.associnfo/WlanChannel
-enum/member fuchsia.hardware.wlan.associnfo/WlanChannelBandwidth.B_160 4
-enum/member fuchsia.hardware.wlan.associnfo/WlanChannelBandwidth.B_20 0
-enum/member fuchsia.hardware.wlan.associnfo/WlanChannelBandwidth.B_40 1
-enum/member fuchsia.hardware.wlan.associnfo/WlanChannelBandwidth.B_40BELOW 2
-enum/member fuchsia.hardware.wlan.associnfo/WlanChannelBandwidth.B_80 3
-enum/member fuchsia.hardware.wlan.associnfo/WlanChannelBandwidth.B_80P80 5
-strict enum fuchsia.hardware.wlan.associnfo/WlanChannelBandwidth uint8
 enum/member fuchsia.hardware.wlan.associnfo/WlanGi.G_1600NS 32
 enum/member fuchsia.hardware.wlan.associnfo/WlanGi.G_200NS 4
 enum/member fuchsia.hardware.wlan.associnfo/WlanGi.G_3200NS 16
@@ -65,7 +37,7 @@ enum/member fuchsia.hardware.wlan.associnfo/WlanGi.G_400NS 2
 enum/member fuchsia.hardware.wlan.associnfo/WlanGi.G_800NS 1
 strict enum fuchsia.hardware.wlan.associnfo/WlanGi uint8
 struct/member fuchsia.hardware.wlan.associnfo/WlanHtOp.head uint32
-struct/member fuchsia.hardware.wlan.associnfo/WlanHtOp.primary_chan uint8
+struct/member fuchsia.hardware.wlan.associnfo/WlanHtOp.primary_channel uint8
 struct/member fuchsia.hardware.wlan.associnfo/WlanHtOp.rx_mcs_head uint64
 struct/member fuchsia.hardware.wlan.associnfo/WlanHtOp.rx_mcs_tail uint32
 struct/member fuchsia.hardware.wlan.associnfo/WlanHtOp.tail uint8
@@ -83,9 +55,6 @@ enum/member fuchsia.hardware.wlan.associnfo/WlanRxInfoValid.PHY 1
 enum/member fuchsia.hardware.wlan.associnfo/WlanRxInfoValid.RSSI 16
 enum/member fuchsia.hardware.wlan.associnfo/WlanRxInfoValid.SNR 32
 strict enum fuchsia.hardware.wlan.associnfo/WlanRxInfoValid uint32
-struct/member fuchsia.hardware.wlan.associnfo/WlanSsid.len uint8
-struct/member fuchsia.hardware.wlan.associnfo/WlanSsid.ssid array<uint8,32>
-struct fuchsia.hardware.wlan.associnfo/WlanSsid
 struct/member fuchsia.hardware.wlan.associnfo/WlanVhtOp.basic_mcs uint16
 struct/member fuchsia.hardware.wlan.associnfo/WlanVhtOp.center_freq_seg0 uint8
 struct/member fuchsia.hardware.wlan.associnfo/WlanVhtOp.center_freq_seg1 uint8

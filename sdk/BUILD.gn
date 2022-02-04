@@ -638,9 +638,14 @@ sdk_molecule("banjo") {
   visibility = [ ":*" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_sdk($fidl_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_sdk($fidl_toolchain)",
     "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_sdk($fidl_toolchain)",
     "//sdk/banjo/fuchsia.hardware.serialimpl:fuchsia.hardware.serialimpl_sdk($fidl_toolchain)",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_sdk($fidl_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.wlan.associnfo:fuchsia.hardware.wlan.associnfo_sdk($fidl_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.wlan.phyinfo:fuchsia.hardware.wlan.phyinfo_sdk($fidl_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_sdk($fidl_toolchain)",
+    "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_sdk($fidl_toolchain)",
   ]
 }
 
@@ -657,6 +662,10 @@ sdk_molecule("ddk_fidl") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_sdk($fidl_toolchain)",
   ]
 }
 

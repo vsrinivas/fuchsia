@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.wlan.internal") {
-  sdk_category = "internal"
+  sdk_category = "partner"
 
   sources = [ "wlan_internal.fidl" ]
 

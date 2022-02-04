@@ -5,6 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.wlan.associnfo") {
+  sdk_category = "partner"
   sources = [ "associnfo.fidl" ]
   public_deps = [
     "//sdk/banjo/ddk.hw.wlan.ieee80211",
