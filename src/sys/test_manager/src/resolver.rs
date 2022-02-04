@@ -25,7 +25,6 @@ fn get_global_allowlist() -> HashSet<String> {
         "stash".to_string(),
         "wlanstack".to_string(),
         "blobfs-integration".to_string(),
-        "mock-piconet-server".to_string(),
         "archivist-with-feedback-filtering".to_string(),
         "archivist-with-legacy-metrics".to_string(),
         "archivist-with-feedback-filtering-disabled".to_string(),
