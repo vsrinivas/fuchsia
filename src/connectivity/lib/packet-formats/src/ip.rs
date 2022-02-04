@@ -317,22 +317,24 @@ pub trait IpPacketBuilder<I: IpExt>: PacketBuilder + Clone + Debug {
     /// given source and destination IP addresses, TTL (IPv4)/Hop Limit (IPv4)
     /// and Protocol Number.
     fn new(src_ip: I::Addr, dst_ip: I::Addr, ttl: u8, proto: I::Proto) -> Self;
-}
 
-impl IpPacketBuilder<Ipv4> for Ipv4PacketBuilder {
-    fn new(src_ip: Ipv4Addr, dst_ip: Ipv4Addr, ttl: u8, proto: Ipv4Proto) -> Ipv4PacketBuilder {
-        Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto)
-    }
-}
+    /// Returns the source IP address for the builder.
+    fn src_ip(&self) -> I::Addr;
 
-impl IpPacketBuilder<Ipv6> for Ipv6PacketBuilder {
-    fn new(src_ip: Ipv6Addr, dst_ip: Ipv6Addr, ttl: u8, proto: Ipv6Proto) -> Ipv6PacketBuilder {
-        Ipv6PacketBuilder::new(src_ip, dst_ip, ttl, proto)
-    }
+    /// Returns the destination IP address for the builder.
+    fn dst_ip(&self) -> I::Addr;
 }
 
 impl<I: IpExt> IpPacketBuilder<I> for Never {
     fn new(_src_ip: I::Addr, _dst_ip: I::Addr, _ttl: u8, _proto: I::Proto) -> Never {
+        unreachable!()
+    }
+
+    fn src_ip(&self) -> I::Addr {
+        unreachable!()
+    }
+
+    fn dst_ip(&self) -> I::Addr {
         unreachable!()
     }
 }

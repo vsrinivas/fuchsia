@@ -27,7 +27,9 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{IpParseError, IpParseResult, ParseError};
-use crate::ip::{IpProto, Ipv4Proto, Ipv6Proto, Nat64Error, Nat64TranslationResult};
+use crate::ip::{
+    IpPacketBuilder, IpProto, Ipv4Proto, Ipv6Proto, Nat64Error, Nat64TranslationResult,
+};
 use crate::ipv6::Ipv6PacketBuilder;
 use crate::tcp::{TcpParseArgs, TcpSegment};
 use crate::udp::{UdpPacket, UdpParseArgs};
@@ -856,6 +858,20 @@ impl PacketBuilder for Ipv4PacketBuilder {
         hdr_prefix.hdr_checksum = checksum;
         let mut header = &mut header;
         header.write_obj_front(&hdr_prefix).expect("too few bytes for IPv4 header prefix");
+    }
+}
+
+impl IpPacketBuilder<Ipv4> for Ipv4PacketBuilder {
+    fn new(src_ip: Ipv4Addr, dst_ip: Ipv4Addr, ttl: u8, proto: Ipv4Proto) -> Ipv4PacketBuilder {
+        Ipv4PacketBuilder::new(src_ip, dst_ip, ttl, proto)
+    }
+
+    fn src_ip(&self) -> Ipv4Addr {
+        self.src_ip
+    }
+
+    fn dst_ip(&self) -> Ipv4Addr {
+        self.dst_ip
     }
 }
 

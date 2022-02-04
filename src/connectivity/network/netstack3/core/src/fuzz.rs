@@ -9,7 +9,7 @@ use std::convert::TryInto as _;
 
 use crate::{testutil::DummyEventDispatcher, Ctx, DeviceId, TimerId};
 use arbitrary::{Arbitrary, Unstructured};
-use fuzz_util::{zerocopy::ArbitraryFromBytes, Fuzzed};
+use fuzz_util::Fuzzed;
 use net_declare::net_mac;
 use net_types::{
     ip::{IpAddress, Ipv4Addr},
@@ -20,7 +20,8 @@ use packet::{
     FragmentedBuffer, Nested, NestedPacketBuilder, Serializer,
 };
 use packet_formats::{
-    ethernet::EthernetFrameBuilder, ipv4::Ipv4PacketBuilder, udp::UdpPacketBuilder,
+    ethernet::EthernetFrameBuilder, ip::IpPacketBuilder, ipv4::Ipv4PacketBuilder,
+    udp::UdpPacketBuilder,
 };
 
 fn initialize_logging() {
@@ -144,8 +145,7 @@ impl EthernetFrameType {
         match self {
             EthernetFrameType::Raw => arbitrary_packet(outer, u),
             EthernetFrameType::Ipv4(ip_type) => {
-                let ip_builder = Fuzzed::<Ipv4PacketBuilder>::arbitrary(u)?.into();
-                ip_type.arbitrary_buf::<Ipv4Addr, _>(ip_builder.encapsulate(outer), u)
+                ip_type.arbitrary_buf::<Ipv4Addr, Ipv4PacketBuilder, _>(outer, u)
             }
         }
     }
@@ -154,18 +154,22 @@ impl EthernetFrameType {
 impl IpFrameType {
     fn arbitrary_buf<
         'a,
-        A: IpAddress + ArbitraryFromBytes<'a>,
+        A: IpAddress,
+        IPB: IpPacketBuilder<A::Version>,
         O: NestedPacketBuilder + std::fmt::Debug,
     >(
         &self,
         outer: O,
         u: &mut Unstructured<'a>,
-    ) -> arbitrary::Result<(Buf<Vec<u8>>, String)> {
+    ) -> arbitrary::Result<(Buf<Vec<u8>>, String)>
+    where
+        Fuzzed<IPB>: Arbitrary<'a>,
+    {
         match self {
             IpFrameType::Raw => arbitrary_packet(outer, u),
             IpFrameType::Udp => {
-                let udp_builder = Fuzzed::<UdpPacketBuilder<A>>::arbitrary(u)?.into();
-                arbitrary_packet(udp_builder.encapsulate(outer), u)
+                let udp_in_ip = Fuzzed::<Nested<UdpPacketBuilder<A>, IPB>>::arbitrary(u)?.into();
+                arbitrary_packet(udp_in_ip.encapsulate(outer), u)
             }
         }
     }

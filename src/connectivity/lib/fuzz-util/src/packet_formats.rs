@@ -7,8 +7,10 @@ use net_types::{
     ethernet::Mac,
     ip::{IpAddress, Ipv4Addr},
 };
+use packet::{Nested, NestedPacketBuilder as _};
 use packet_formats::{
     ethernet::{EtherType, EthernetFrameBuilder},
+    ip::IpPacketBuilder,
     ipv4::Ipv4PacketBuilder,
     udp::UdpPacketBuilder,
 };
@@ -26,7 +28,7 @@ impl<'a> Arbitrary<'a> for Fuzzed<EthernetFrameBuilder> {
         Ok(Self(EthernetFrameBuilder::new(
             Mac::arbitrary_from_bytes(u)?,
             Mac::arbitrary_from_bytes(u)?,
-            Fuzzed::arbitrary(u)?.into(),
+            Fuzzed::<EtherType>::arbitrary(u)?.into(),
         )))
     }
 }
@@ -49,13 +51,24 @@ impl<'a> Arbitrary<'a> for Fuzzed<Ipv4PacketBuilder> {
     }
 }
 
-impl<'a, A: IpAddress + ArbitraryFromBytes<'a>> Arbitrary<'a> for Fuzzed<UdpPacketBuilder<A>> {
+// Since UDP packets have a checksum that includes parameters from the IP layer
+// (source and destination addresses), generate UDP packet builders as
+// Nested<UDP, I> where I is the IP layer builder. This ensures that the inner
+// UDP transport builder uses the correct addresses.
+
+impl<'a, A: IpAddress, IPB: IpPacketBuilder<A::Version>> Arbitrary<'a>
+    for Fuzzed<Nested<UdpPacketBuilder<A>, IPB>>
+where
+    Fuzzed<IPB>: Arbitrary<'a>,
+{
     fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
-        Ok(Self(UdpPacketBuilder::new(
-            A::arbitrary_from_bytes(u)?.into(),
-            A::arbitrary_from_bytes(u)?.into(),
+        let ip_builder: IPB = Fuzzed::<IPB>::arbitrary(u)?.into();
+        let udp_builder = UdpPacketBuilder::new(
+            ip_builder.src_ip(),
+            ip_builder.dst_ip(),
             u.arbitrary()?,
             u.arbitrary()?,
-        )))
+        );
+        Ok(Self(udp_builder.encapsulate(ip_builder)))
     }
 }

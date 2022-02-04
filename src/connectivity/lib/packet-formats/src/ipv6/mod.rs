@@ -28,8 +28,10 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 
 use crate::error::{IpParseError, IpParseErrorAction, IpParseResult, ParseError};
 use crate::icmp::Icmpv6ParameterProblemCode;
-use crate::ip::{IpProto, Ipv4Proto, Nat64Error, Nat64TranslationResult};
-use crate::ip::{Ipv6ExtHdrType, Ipv6Proto};
+use crate::ip::{
+    IpPacketBuilder, IpProto, Ipv4Proto, Ipv6ExtHdrType, Ipv6Proto, Nat64Error,
+    Nat64TranslationResult,
+};
 use crate::ipv4::{Ipv4PacketBuilder, HDR_PREFIX_LEN};
 use crate::ipv6::ext_hdrs::{HopByHopOption, HopByHopOptionData};
 use crate::tcp::{TcpParseArgs, TcpSegment};
@@ -1101,6 +1103,20 @@ impl PacketBuilder for Ipv6PacketBuilder {
     fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let (mut header, body, _) = buffer.parts();
         self.serialize_fixed_hdr(&mut header, body.len(), self.proto.into());
+    }
+}
+
+impl IpPacketBuilder<Ipv6> for Ipv6PacketBuilder {
+    fn new(src_ip: Ipv6Addr, dst_ip: Ipv6Addr, ttl: u8, proto: Ipv6Proto) -> Ipv6PacketBuilder {
+        Ipv6PacketBuilder::new(src_ip, dst_ip, ttl, proto)
+    }
+
+    fn src_ip(&self) -> Ipv6Addr {
+        self.src_ip
+    }
+
+    fn dst_ip(&self) -> Ipv6Addr {
+        self.dst_ip
     }
 }
 
