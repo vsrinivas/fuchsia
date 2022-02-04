@@ -40,6 +40,11 @@ change would have no material impact.
 
 It's time to face the truth, this ain't going to happen. Rejected.
 
+**June 2021: this topic was revisited and performance was measured with
+targeted benchmarks. This was conclusive and [RFC-0113](
+/docs/contribute/governance/rfcs/0113_efficient_envelopes.md) proposed
+reintroducing the change, which was accepted.**
+
 ## Summary
 
 This FTP proposes a more compact encoding for envelopes[^1].
