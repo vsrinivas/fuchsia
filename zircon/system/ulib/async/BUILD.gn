@@ -19,7 +19,7 @@ zx_library("async") {
   ]
 
   public_deps = [
-    # <lib/async/cpp/executor.h> has #include <lib/fit/promise.h>
+    # <lib/async/cpp/executor.h> has #include <lib/fpromise/promise.h>
     "//sdk/lib/fit-promise:headers",
 
     # <lib/async/cpp/wait.h> has #include <lib/fit/function.h>.
