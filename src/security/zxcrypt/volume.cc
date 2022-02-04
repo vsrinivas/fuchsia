@@ -117,6 +117,14 @@ zx_status_t Volume::Shred() {
       return rc;
     }
   }
+
+  // We must ensure that writes intending to destroy data actually make it out
+  // to the underlying storage before we return, or write deferral elsewhere in
+  // the storage stack could mean that this data is still retrievable.
+  if ((rc = Flush()) != ZX_OK) {
+    return rc;
+  }
+
   Reset();
 
   return ZX_OK;

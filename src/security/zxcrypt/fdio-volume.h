@@ -186,6 +186,9 @@ class __EXPORT FdioVolume final : public Volume {
   // Writes a block to the current offset on the underlying device.
   zx_status_t Write();
 
+  // Flushes all pending writes to the underlying device.
+  zx_status_t Flush();
+
   // OpenManager, but using a pre-created fdio_t.
   zx_status_t OpenManagerWithCaller(fdio_cpp::UnownedFdioCaller& caller, const zx::duration& timeout,
                                     zx_handle_t* out);

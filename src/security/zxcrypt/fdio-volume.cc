@@ -627,6 +627,13 @@ zx_status_t FdioVolume::Write() {
   return ZX_OK;
 }
 
+zx_status_t FdioVolume::Flush() {
+  // On Fuchsia, an FD produced by opening a block device out of the device tree doesn't implement
+  // fsync(), so we stub this out.  FdioVolume is only used for tests anyway, which don't need to
+  // worry too much about durability.
+  return ZX_OK;
+}
+
 zx_status_t FdioVolume::OpenManagerWithCaller(fdio_cpp::UnownedFdioCaller& caller,
                                               const zx::duration& timeout, zx_handle_t* out) {
   zx_status_t rc;

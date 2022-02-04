@@ -308,6 +308,7 @@ class TestVolume : public zxcrypt::Volume {
 
   zx_status_t Read() override { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t Write() override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t Flush() override { return ZX_ERR_NOT_SUPPORTED; }
 
   int extend_calls_ = 0;
   uint64_t last_extend_start_slice_ = 0;
