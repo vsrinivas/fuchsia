@@ -390,8 +390,24 @@ TEST_F(PointSamplerRechannelTest, QuadToMono) {
 
   // Express expected values as "int24" (not int32) to clearly show fractional and min/max values.
   auto accum = std::vector<float>(source.size() / 4);
-  auto expect = std::vector<float>{
-      // clang-format off
+  std::vector<float> expect;
+  if constexpr (kResampler4ChannelWorkaround) {
+    // For now, 4->1 just ignores channels 2 & 3.
+    // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
+    expect = {
+        // clang-format off
+              0.5,
+             -0.5,
+              1.0,
+             -1.0,
+      -0x800000,
+       0x7FFFFF,
+       0x7FFFFF,
+        // clang-format on
+    };
+  } else {
+    expect = {
+        // clang-format off
               0.25,
              -0.25,
               0.75,
@@ -399,8 +415,9 @@ TEST_F(PointSamplerRechannelTest, QuadToMono) {
       -0x800000,
        0x7FFFFF,
               0,
-      // clang-format on
-  };
+        // clang-format on
+    };
+  }
   ShiftRightBy(expect, 23);  // right-shift these "int24" values into float range
 
   auto mixer =
@@ -424,7 +441,7 @@ TEST_F(PointSamplerRechannelTest, QuadToStereo) {
 
   // Express expected values as "int24" (not int32) to clearly show fractional and min/max values.
   std::vector<float> expect;
-  if constexpr (kChannelMap4to2Workaround) {
+  if constexpr (kResampler4ChannelWorkaround) {
     // For now, 4->2 just ignores channels 2 & 3.
     // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
     expect = {1, -1, -0x800000, 0x7FFFFF, 0x7FFFFF, 0};

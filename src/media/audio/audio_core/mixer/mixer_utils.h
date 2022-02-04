@@ -13,8 +13,8 @@
 
 namespace media::audio {
 
-constexpr bool kChannelMap4to2Workaround = true;
 // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
+constexpr bool kResampler4ChannelWorkaround = true;
 
 namespace mixer {
 
@@ -219,10 +219,17 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
   // This simple 4:1 channel mapping averages the incoming 4 source channels to determine the value
   // for the lone destination channel.
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
-    return 0.25f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + 0) +
-                    SampleNormalizer<SourceSampleType>::Read(source_ptr + 1) +
-                    SampleNormalizer<SourceSampleType>::Read(source_ptr + 2) +
-                    SampleNormalizer<SourceSampleType>::Read(source_ptr + 3));
+    if constexpr (kResampler4ChannelWorkaround) {
+      // As a temporary measure, ignore channels 2 and 3.
+      // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
+      return 0.5f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + 0) +
+                     SampleNormalizer<SourceSampleType>::Read(source_ptr + 1));
+    } else {
+      return 0.25f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + 0) +
+                      SampleNormalizer<SourceSampleType>::Read(source_ptr + 1) +
+                      SampleNormalizer<SourceSampleType>::Read(source_ptr + 2) +
+                      SampleNormalizer<SourceSampleType>::Read(source_ptr + 3));
+    }
   }
 };
 
@@ -235,7 +242,7 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
   // a "four corners" Quad config: FrontL|FrontR|BackL|BackR). Thus in each 4-chan source frame and
   // 2-chan dest frame, we mix source chans 0+2 to dest chan 0, and source chans 1+3 to dest chan 1.
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
-    if constexpr (kChannelMap4to2Workaround) {
+    if constexpr (kResampler4ChannelWorkaround) {
       // As a temporary measure, ignore channels 2 and 3.
       // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
       return SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan);
