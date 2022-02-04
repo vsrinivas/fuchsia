@@ -2,19 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <threads.h>
 
 #include <virtio/balloon.h>
 
+#include "fuchsia/logger/cpp/fidl.h"
+#include "fuchsia/virtualization/hardware/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioBalloonUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cmx";
 static constexpr uint16_t kNumQueues = 3;
 static constexpr uint16_t kQueueSize = 16;
 
-class VirtioBalloonTest : public TestWithDevice {
+using component_testing::ChildRef;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmRoot;
+using component_testing::Route;
+using RealmBuilder = component_testing::RealmBuilder;
+
+class VirtioBalloonTest : public TestWithDeviceV2 {
  protected:
   VirtioBalloonTest()
       : inflate_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
@@ -22,14 +31,34 @@ class VirtioBalloonTest : public TestWithDevice {
         stats_queue_(phys_mem_, deflate_queue_.end(), 1) {}
 
   void SetUp() override {
-    // Launch device process.
-    fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status = LaunchDevice(kVirtioBalloonUrl, stats_queue_.end(), &start_info);
-    ASSERT_EQ(ZX_OK, status);
+    constexpr auto kComponentUrl =
+        "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cm";
+    constexpr auto kComponentName = "virtio_balloon";
 
-    // Start device execution.
-    services_->Connect(balloon_.NewRequest());
-    RunLoopUntilIdle();
+    auto realm_builder = RealmBuilder::Create();
+    realm_builder.AddChild(kComponentName, kComponentUrl);
+
+    realm_builder
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::logger::LogSink::Name_},
+                                Protocol{fuchsia::tracing::provider::Registry::Name_},
+                            },
+                        .source = ParentRef(),
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::virtualization::hardware::VirtioBalloon::Name_},
+                            },
+                        .source = ChildRef{kComponentName},
+                        .targets = {ParentRef()}});
+
+    realm_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
+    balloon_ = realm_->ConnectSync<fuchsia::virtualization::hardware::VirtioBalloon>();
+
+    fuchsia::virtualization::hardware::StartInfo start_info;
+    zx_status_t status = MakeStartInfo(stats_queue_.end(), &start_info);
+    ASSERT_EQ(ZX_OK, status);
 
     status = balloon_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
@@ -53,7 +82,8 @@ class VirtioBalloonTest : public TestWithDevice {
   VirtioQueueFake inflate_queue_;
   VirtioQueueFake deflate_queue_;
   VirtioQueueFake stats_queue_;
-  using TestWithDevice::WaitOnInterrupt;
+  using TestWithDeviceV2::WaitOnInterrupt;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
 TEST_F(VirtioBalloonTest, Inflate) {
