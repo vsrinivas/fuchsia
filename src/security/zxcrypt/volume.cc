@@ -103,6 +103,10 @@ zx_status_t Volume::Format(const crypto::Secret& key, key_slot_t slot) {
     return rc;
   }
 
+  if ((rc = Flush()) != ZX_OK) {
+    return rc;
+  }
+
   return ZX_OK;
 }
 
@@ -137,6 +141,14 @@ zx_status_t Volume::Shred() {
       return rc;
     }
   }
+
+  // We must ensure that writes intending to destroy data actually make it out
+  // to the underlying storage before we return, or write deferral elsewhere in
+  // the storage stack could mean that this data is still retrievable.
+  if ((rc = Flush()) != ZX_OK) {
+    return rc;
+  }
+
   Reset();
 
   return ZX_OK;
