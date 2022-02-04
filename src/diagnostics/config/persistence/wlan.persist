@@ -51,10 +51,22 @@
         max_bytes: 2000,
         min_seconds_between_fetch: 60,
         selectors: [
+            'INSPECT:core/wlanstack:root:latest_active_client_iface',
             'INSPECT:wlanstack.cmx:root/device_events',
             'INSPECT:core/wlanstack:root/device_events',
             'INSPECT:wlanstack.cmx:root/device_events:*',
             'INSPECT:core/wlanstack:root/device_events:*',
+        ],
+    },
+    {
+        tag: 'wlanstack-last-pulse',
+        service_name: 'wlan',
+        max_bytes: 500,
+        min_seconds_between_fetch: 60,
+        selectors: [
+            'INSPECT:core/wlanstack:root/iface-*/last_pulse/status:status_str',
+            'INSPECT:core/wlanstack:root/iface-*/last_pulse:last_link_up',
+            'INSPECT:core/wlanstack:root/iface-*/last_pulse:last_updated',
         ],
     },
     {
